@@ -188,11 +188,13 @@ fn custom_runner_cfg() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains("\
+        .with_stderr_contains(
+            "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-")
+",
+        )
         .run();
 }
 
@@ -220,11 +222,13 @@ fn custom_runner_cfg_precedence() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains("\
+        .with_stderr_contains(
+            "\
             [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-")
+",
+        )
         .run();
 }
 
@@ -246,8 +250,10 @@ fn custom_runner_cfg_collision() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains("\
+        .with_stderr_contains(
+            "\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
-")
+",
+        )
         .run();
 }

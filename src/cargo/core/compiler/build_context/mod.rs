@@ -265,9 +265,7 @@ impl TargetConfig {
                     }
                     "rustc-cdylib-link-arg" => {
                         let args = value.list(k)?;
-                        output
-                            .linker_args
-                            .extend(args.iter().map(|v| v.0.clone()));
+                        output.linker_args.extend(args.iter().map(|v| v.0.clone()));
                     }
                     "rustc-cfg" => {
                         let list = value.list(k)?;

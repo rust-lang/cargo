@@ -19,8 +19,11 @@ pub fn cli() -> App {
                 .last(true),
         )
         .arg(
-            opt("quiet", "Display one character per test instead of one line")
-            .short("q")
+            opt(
+                "quiet",
+                "Display one character per test instead of one line",
+            )
+            .short("q"),
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -131,9 +134,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else if test_name.is_some() {
         if let CompileFilter::Default { .. } = compile_opts.filter {
             compile_opts.filter = ops::CompileFilter::new(
-                LibRule::Default, // compile the library, so the unit tests can be run filtered
-                FilterRule::All,    // compile the binaries, so the unit tests in binaries can be run filtered
-                FilterRule::All,    // compile the tests, so the integration tests can be run filtered
+                LibRule::Default,   // compile the library, so the unit tests can be run filtered
+                FilterRule::All, // compile the binaries, so the unit tests in binaries can be run filtered
+                FilterRule::All, // compile the tests, so the integration tests can be run filtered
                 FilterRule::none(), // specify --examples to unit test binaries filtered
                 FilterRule::none(), // specify --benches to unit test benchmarks filtered
             ); // also, specify --doc to run doc tests filtered

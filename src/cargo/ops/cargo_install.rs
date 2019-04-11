@@ -6,13 +6,14 @@ use std::{env, fs};
 use failure::{bail, format_err};
 use tempfile::Builder as TempFileBuilder;
 
+use crate::core::compiler::Freshness;
 use crate::core::compiler::{DefaultExecutor, Executor};
 use crate::core::{Edition, PackageId, Source, SourceId, Workspace};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{paths, Config, Filesystem, Freshness};
+use crate::util::{paths, Config, Filesystem};
 
 struct Transaction {
     bins: Vec<PathBuf>,

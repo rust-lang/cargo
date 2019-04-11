@@ -126,12 +126,16 @@ impl Packages {
                 if !opt_out.is_empty() {
                     ws.config().shell().warn(format!(
                         "excluded package(s) {} not found in workspace `{}`",
-                        opt_out.iter().map(|x| x.as_ref()).collect::<Vec<_>>().join(", "),
+                        opt_out
+                            .iter()
+                            .map(|x| x.as_ref())
+                            .collect::<Vec<_>>()
+                            .join(", "),
                         ws.root().display(),
                     ))?;
                 }
                 packages
-            },
+            }
             Packages::Packages(packages) if packages.is_empty() => {
                 vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
             }
@@ -443,7 +447,11 @@ impl CompileFilter {
         all_bens: bool,
         all_targets: bool,
     ) -> CompileFilter {
-        let rule_lib = if lib_only { LibRule::True } else { LibRule::False };
+        let rule_lib = if lib_only {
+            LibRule::True
+        } else {
+            LibRule::False
+        };
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
@@ -527,11 +535,13 @@ impl CompileFilter {
                     TargetKind::Test => tests,
                     TargetKind::Bench => benches,
                     TargetKind::ExampleBin | TargetKind::ExampleLib(..) => examples,
-                    TargetKind::Lib(..) => return match *lib {
-                        LibRule::True => true,
-                        LibRule::Default => true,
-                        LibRule::False => false,
-                    },
+                    TargetKind::Lib(..) => {
+                        return match *lib {
+                            LibRule::True => true,
+                            LibRule::Default => true,
+                            LibRule::False => false,
+                        };
+                    }
                     TargetKind::CustomBuild => return false,
                 };
                 rule.matches(target)
