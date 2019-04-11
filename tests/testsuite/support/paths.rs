@@ -153,7 +153,7 @@ impl CargoPathExt for Path {
         where
             F: Fn(i64, u32) -> ((i64, u32)),
         {
-            let stat = t!(path.metadata());
+            let stat = t!(path.symlink_metadata());
 
             let mtime = FileTime::from_last_modification_time(&stat);
 
