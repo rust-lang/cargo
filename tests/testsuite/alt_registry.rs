@@ -620,7 +620,13 @@ Caused by:
         .run();
 
     for cmd in &[
-        "init", "install foo", "login", "owner", "publish", "search", "yank",
+        "init",
+        "install foo",
+        "login",
+        "owner",
+        "publish",
+        "search",
+        "yank",
     ] {
         p.cargo(cmd)
             .arg("--registry")

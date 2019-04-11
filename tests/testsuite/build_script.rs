@@ -2406,7 +2406,6 @@ fn fresh_builds_possible_with_link_libs() {
         .run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
@@ -3694,5 +3693,117 @@ fn optional_build_dep_and_required_normal_dep() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]foo[EXE]`",
         )
+        .run();
+}
+
+#[test]
+fn using_rerun_if_changed_does_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+}
+
+#[test]
+fn links_interrupted_can_restart() {
+    // Test for a `links` dependent build script getting canceled and then
+    // restarted. Steps:
+    // 1. Build to establish fingerprints.
+    // 2. Change something (an env var in this case) that triggers the
+    //    dependent build script to run again. Kill the top-level build script
+    //    while it is running (such as hitting Ctrl-C).
+    // 3. Run the build again, it should re-run the build script.
+    let bar = project()
+        .at("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-env-changed=SOMEVAR");
+            }
+            "#,
+        )
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                build = "build.rs"
+
+                [dependencies.bar]
+                path = '{}'
+                "#,
+                bar.root().display()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+            fn main() {
+                println!("cargo:rebuild-if-changed=build.rs");
+                if std::path::Path::new("abort").exists() {
+                    panic!("Crash!");
+                }
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    // Simulate the user hitting Ctrl-C during a build.
+    p.change_file("abort", "");
+    // Set SOMEVAR to trigger a rebuild.
+    p.cargo("build")
+        .env("SOMEVAR", "1")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+    fs::remove_file(p.root().join("abort")).unwrap();
+    // Try again without aborting the script.
+    // ***This is currently broken, the script does not re-run.
+    p.cargo("build -v")
+        .env("SOMEVAR", "1")
+        .with_stderr_contains("[RUNNING] [..]/foo-[..]/build-script-build[..]")
         .run();
 }

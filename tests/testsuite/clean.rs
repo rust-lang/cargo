@@ -28,10 +28,7 @@ fn different_dir() {
     p.cargo("build").run();
     assert!(p.build_dir().is_dir());
 
-    p.cargo("clean")
-        .cwd("src")
-        .with_stdout("")
-        .run();
+    p.cargo("clean").cwd("src").with_stdout("").run();
     assert!(!p.build_dir().is_dir());
 }
 

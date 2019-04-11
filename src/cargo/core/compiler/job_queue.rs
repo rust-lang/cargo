@@ -11,17 +11,20 @@ use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
 use log::{debug, info, trace};
 
+use super::context::OutputFile;
+use super::job::{
+    Freshness::{self, Dirty, Fresh},
+    Job,
+};
+use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 use crate::core::profiles::Profile;
 use crate::core::{PackageId, Target, TargetKind};
 use crate::handle_error;
 use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
-use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
+use crate::util::{Config, DependencyQueue};
 use crate::util::{Progress, ProgressStyle};
-use super::context::OutputFile;
-use super::job::Job;
-use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -29,7 +32,7 @@ use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a, 'cfg> {
-    queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
+    queue: DependencyQueue<Key<'a>, Vec<Job>>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
@@ -45,9 +48,6 @@ pub struct JobQueue<'a, 'cfg> {
 struct PendingBuild {
     /// The number of jobs currently active.
     amt: usize,
-    /// The current freshness state of this package. Any dirty target within a
-    /// package will cause the entire package to become dirty.
-    fresh: Freshness,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
@@ -154,13 +154,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         cx: &Context<'a, 'cfg>,
         unit: &Unit<'a>,
         job: Job,
-        fresh: Freshness,
     ) -> CargoResult<()> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
-        self.queue
-            .queue(Fresh, &key, Vec::new(), &deps)
-            .push((job, fresh));
+        self.queue.queue(&key, Vec::new(), &deps).push(job);
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
     }
@@ -239,17 +236,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // possible that can run. Note that this is also the point where we
             // start requesting job tokens. Each job after the first needs to
             // request a token.
-            while let Some((fresh, key, jobs)) = self.queue.dequeue() {
-                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| f.combine(fresh));
-                self.pending.insert(
-                    key,
-                    PendingBuild {
-                        amt: jobs.len(),
-                        fresh: total_fresh,
-                    },
-                );
-                for (job, f) in jobs {
-                    queue.push((key, job, f.combine(fresh)));
+            while let Some((key, jobs)) = self.queue.dequeue() {
+                self.pending.insert(key, PendingBuild { amt: jobs.len() });
+                for job in jobs {
+                    queue.push((key, job));
                     if !self.active.is_empty() || !queue.is_empty() {
                         jobserver_helper.request_token();
                     }
@@ -260,8 +250,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // try to spawn it so long as we've got a jobserver token which says
             // we're able to perform some parallel work.
             while error.is_none() && self.active.len() < tokens.len() + 1 && !queue.is_empty() {
-                let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.bcx.config, scope, build_plan)?;
+                let (key, job) = queue.remove(0);
+                self.run(key, job, cx.bcx.config, scope, build_plan)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -409,7 +399,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     fn run(
         &mut self,
         key: Key<'a>,
-        fresh: Freshness,
         job: Job,
         config: &Config,
         scope: &Scope<'a>,
@@ -421,8 +410,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         *self.counts.get_mut(&key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
+        let fresh = job.freshness();
         let doit = move || {
-            let res = job.run(fresh, &JobState { tx: my_tx.clone() });
+            let res = job.run(&JobState { tx: my_tx.clone() });
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
 
@@ -477,7 +467,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let state = self.pending.get_mut(&key).unwrap();
         state.amt -= 1;
         if state.amt == 0 {
-            self.queue.finish(&key, state.fresh);
+            self.queue.finish(&key);
         }
         Ok(())
     }

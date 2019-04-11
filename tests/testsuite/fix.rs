@@ -685,7 +685,10 @@ fn fix_features() {
 #[test]
 fn shows_warnings() {
     let p = project()
-        .file("src/lib.rs", "#[deprecated] fn bar() {} pub fn foo() { let _ = bar(); }")
+        .file(
+            "src/lib.rs",
+            "#[deprecated] fn bar() {} pub fn foo() { let _ = bar(); }",
+        )
         .build();
 
     p.cargo("fix --allow-no-vcs")
