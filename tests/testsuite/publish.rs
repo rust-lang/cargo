@@ -354,8 +354,8 @@ fn unpublishable_crate() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
@@ -644,8 +644,8 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
@@ -675,8 +675,8 @@ fn publish_empty_list() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
@@ -745,11 +745,45 @@ fn block_publish_no_registry() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
+}
+
+#[test]
+fn publish_with_crates_io_explicit() {
+    // Explicitly setting `crates-io` in the publish list.
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = ["crates-io"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+",
+        )
+        .run();
+
+    p.cargo("publish").run();
 }
 
 #[test]
