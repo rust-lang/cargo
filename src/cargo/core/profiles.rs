@@ -282,7 +282,7 @@ impl ProfileMaker {
             let name_matches: Vec<String> = packages
                 .package_ids()
                 .filter_map(|pkg_id| {
-                    if pkg_id.name().as_str() == spec.name() {
+                    if pkg_id.name() == spec.name() {
                         Some(pkg_id.to_string())
                     } else {
                         None
@@ -292,7 +292,7 @@ impl ProfileMaker {
             if name_matches.is_empty() {
                 let suggestion = packages
                     .package_ids()
-                    .map(|p| (lev_distance(spec.name(), &p.name()), p.name()))
+                    .map(|p| (lev_distance(&*spec.name(), &p.name()), p.name()))
                     .filter(|&(d, _)| d < 4)
                     .min_by_key(|p| p.0)
                     .map(|p| p.1);
