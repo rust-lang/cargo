@@ -283,7 +283,7 @@ pub fn prepare_target<'a, 'cfg>(
         // "consider everything a dependency mode" and then we switch to "deps
         // are explicitly specified" mode.
         //
-        // To handlet his movement we need to regenerate the `local` field of a
+        // To handle this movement we need to regenerate the `local` field of a
         // build script's fingerprint after it's executed. We do this by
         // using the `build_script_local_fingerprints` function which returns a
         // thunk we can invoke on a foreign thread to calculate this.
@@ -378,7 +378,7 @@ pub struct Fingerprint {
     local: Vec<LocalFingerprint>,
     /// Cached hash of the `Fingerprint` struct. Used to improve performance
     /// for hashing.
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     memoized_hash: Mutex<Option<u64>>,
     /// RUSTFLAGS/RUSTDOCFLAGS environment variable value (or config value).
     rustflags: Vec<String>,
@@ -388,13 +388,13 @@ pub struct Fingerprint {
     metadata: u64,
     /// Description of whether the filesystem status for this unit is up to date
     /// or should be considered stale.
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     fs_status: FsStatus,
     /// Files, relative to `target_root`, that are produced by the step that
     /// this `Fingerprint` represents. This is used to detect when the whole
     /// fingerprint is out of date if this is missing, or if previous
     /// fingerprints output files are regenerated and look newer than this one.
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     outputs: Vec<PathBuf>,
 }
 
@@ -454,16 +454,65 @@ impl<'de> Deserialize<'de> for DepFingerprint {
     }
 }
 
+/// A `LocalFingerprint` represents something that we use to detect direct
+/// changes to a `Fingerprint`.
+///
+/// This is where we track file information, env vars, etc. This
+/// `LocalFingerprint` struct is hashed and if the hash changes will force a
+/// recompile of any fingerprint it's included into. Note that the "local"
+/// terminology comes from the fact that it only has to do with one crate, and
+/// `Fingerprint` tracks the transitive propagation of fingerprint changes.
+///
+/// Note that because this is hashed its contents are carefully managed. Like
+/// mentioned in the above module docs, we don't want to hash absolute paths or
+/// mtime information.
+///
+/// Also note that a `LocalFingerprint` is used in `check_filesystem` to detect
+/// when the filesystem contains stale information (based on mtime currently).
+/// The paths here don't change much between compilations but they're used as
+/// inputs when we probe the filesystem looking at information.
 #[derive(Debug, Serialize, Deserialize, Hash)]
 enum LocalFingerprint {
+    /// This is a precalculated fingerprint which has an opaque string we just
+    /// hash as usual. This variant is primarily used for git/crates.io
+    /// dependencies where the source never changes so we can quickly conclude
+    /// that there's some string we can hash and it won't really change much.
+    ///
+    /// This is also used for build scripts with no `rerun-if-*` statements, but
+    /// that's overall a mistake and causes bugs in Cargo. We shouldn't use this
+    /// for build scripts.
     Precalculated(String),
+
+    /// This is used for crate compilations. The `dep_info` file is a relative
+    /// path anchored at `target_root(...)` to the dep-info file that Cargo
+    /// generates (which is a custom serialization after parsing rustc's own
+    /// `dep-info` output).
+    ///
+    /// The `dep_info` file, when present, also lists a number of other files
+    /// for us to look at. If any of those files are newer than this file then
+    /// we need to recompile.
     CheckDepInfo {
         dep_info: PathBuf,
     },
+
+    /// This represents a nonempty set of `rerun-if-changed` annotations printed
+    /// out by a build script. The `output` file is a arelative file anchored at
+    /// `target_root(...)` which is the actual output of the build script. That
+    /// output has already been parsed and the paths printed out via
+    /// `rerun-if-changed` are listed in `paths`. The `paths` field is relative
+    /// to `pkg.root()`
+    ///
+    /// This is considered up-to-date if all of the `paths` are older than
+    /// `output`, otherwise we need to recompile.
     RerunIfChanged {
         output: PathBuf,
         paths: Vec<PathBuf>,
     },
+
+    /// This represents a single `rerun-if-env-changed` annotation printed by a
+    /// build script. The exact env var and value are hashed here. There's no
+    /// filesystem dependence here, and if the values are changed the hash will
+    /// change forcing a recompile.
     RerunIfEnvChanged {
         var: String,
         val: Option<String>,
@@ -778,6 +827,10 @@ impl Fingerprint {
             // If the dependency is newer than our own output then it was
             // recompiled previously. We transitively become stale ourselves in
             // that case, so bail out.
+            //
+            // Note that this comparison should probably be `>=`, not `>`, but
+            // for a discussion of why it's `>` see the discussion about #5918
+            // below in `find_stale`.
             if dep_mtime > mtime {
                 return Ok(());
             }
