@@ -200,7 +200,7 @@ impl SymlinkBuilder {
     fn mk(&self) {
         self.dirname().mkdir_p();
         if self.src_is_dir {
-            t!(os::window::fs::symlink_dir(&self.dst, &self.src));
+            t!(os::windows::fs::symlink_dir(&self.dst, &self.src));
         } else {
             t!(os::windows::fs::symlink_file(&self.dst, &self.src));
         }
@@ -261,7 +261,7 @@ impl ProjectBuilder {
             .push(FileBuilder::new(self.root.root().join(path), body));
     }
 
-    /// Adds a symlink to the project.
+    /// Adds a symlink to a file to the project.
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
             self.root.root().join(dst),
@@ -270,6 +270,7 @@ impl ProjectBuilder {
         self
     }
 
+    /// Create a symlink to a directory
     pub fn symlink_dir<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new_dir(
                 self.root.root().join(dst),
