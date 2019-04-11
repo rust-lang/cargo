@@ -388,3 +388,11 @@ pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
 fn _internal(error: &dyn fmt::Display) -> failure::Error {
     Internal::new(failure::format_err!("{}", error)).into()
 }
+
+pub fn display_causes(error: &Error) -> String {
+    error
+        .iter_chain()
+        .map(|e| e.to_string())
+        .collect::<Vec<_>>()
+        .join("\nCaused by:\n  ")
+}
