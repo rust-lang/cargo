@@ -3720,9 +3720,7 @@ fn using_rerun_if_changed_does_not_rebuild() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build")
-        .with_stderr("[FINISHED] [..]")
-        .run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[test]
@@ -3806,4 +3804,33 @@ fn links_interrupted_can_restart() {
         .env("SOMEVAR", "1")
         .with_stderr_contains("[RUNNING] [..]/foo-[..]/build-script-build[..]")
         .run();
+}
+
+#[test]
+#[cfg(unix)]
+fn build_script_scan_eacces() {
+    // build.rs causes a scan of the whole project, which can be a problem if
+    // a directory is not accessible.
+    use std::os::unix::fs::PermissionsExt;
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("secrets/stuff", "")
+        .build();
+    let path = p.root().join("secrets");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0)).unwrap();
+    // "Caused by" is a string from libc such as the following:
+    //   Permission denied (os error 13)
+    p.cargo("build")
+        .with_stderr(
+            "\
+[ERROR] cannot read \"[..]/foo/secrets\"
+
+Caused by:
+  [..]
+",
+        )
+        .with_status(101)
+        .run();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }
