@@ -62,8 +62,9 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
+use self::dep_cache::RegistryQueryer;
 use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
-use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
+use self::types::{RcVecIter, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
@@ -73,6 +74,7 @@ pub use self::types::Method;
 
 mod conflict_cache;
 mod context;
+mod dep_cache;
 mod encode;
 mod errors;
 mod resolve;
