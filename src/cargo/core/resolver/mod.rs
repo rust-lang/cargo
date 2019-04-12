@@ -682,7 +682,12 @@ fn activate(
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(registry, parent.map(|p| p.0), &candidate, method)?;
+    let deps = cx.build_deps(
+        registry,
+        parent.map(|p| p.0.package_id()),
+        &candidate,
+        method,
+    )?;
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,

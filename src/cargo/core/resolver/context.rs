@@ -151,7 +151,7 @@ impl Context {
     pub fn build_deps(
         &mut self,
         registry: &mut RegistryQueryer<'_>,
-        parent: Option<&Summary>,
+        parent: Option<PackageId>,
         candidate: &Summary,
         method: &Method<'_>,
     ) -> ActivateResult<Vec<DepInfo>> {
@@ -215,7 +215,7 @@ impl Context {
     /// Returns all dependencies and the features we want from them.
     pub fn resolve_features<'b>(
         &mut self,
-        parent: Option<&Summary>,
+        parent: Option<PackageId>,
         s: &'b Summary,
         method: &'b Method<'_>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
@@ -299,7 +299,7 @@ impl Context {
                     features
                 )
                 .into(),
-                Some(p) => (p.package_id(), ConflictReason::MissingFeatures(features)).into(),
+                Some(p) => (p, ConflictReason::MissingFeatures(features)).into(),
             });
         }
 
