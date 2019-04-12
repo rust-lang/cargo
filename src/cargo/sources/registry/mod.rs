@@ -534,10 +534,27 @@ impl<'cfg> RegistrySource<'cfg> {
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
         let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
-        let pkg = match src.download(package)? {
+        let mut pkg = match src.download(package)? {
             MaybePackage::Ready(pkg) => pkg,
             MaybePackage::Download { .. } => unreachable!(),
         };
+
+        // After we've loaded the package configure it's summary's `checksum`
+        // field with the checksum we know for this `PackageId`.
+        let summaries = self
+            .index
+            .summaries(package.name().as_str(), &mut *self.ops)?;
+        let summary_with_cksum = summaries
+            .iter()
+            .map(|s| &s.0)
+            .find(|s| s.package_id() == package)
+            .expect("summary not found");
+        if let Some(cksum) = summary_with_cksum.checksum() {
+            pkg.manifest_mut()
+                .summary_mut()
+                .set_checksum(cksum.to_string());
+        }
+
         Ok(pkg)
     }
 }
