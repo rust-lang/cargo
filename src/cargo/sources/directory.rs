@@ -116,7 +116,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let mut src = PathSource::new(&path, self.source_id, self.config);
             src.update()?;
-            let pkg = src.root_package()?;
+            let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
             let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
@@ -136,13 +136,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 )
             })?;
 
-            let mut manifest = pkg.manifest().clone();
-            let mut summary = manifest.summary().clone();
-            if let Some(ref package) = cksum.package {
-                summary = summary.set_checksum(package.clone());
+            if let Some(package) = &cksum.package {
+                pkg.manifest_mut()
+                    .summary_mut()
+                    .set_checksum(package.clone());
             }
-            manifest.set_summary(summary);
-            let pkg = Package::new(manifest, pkg.manifest_path());
             self.packages.insert(pkg.package_id(), (pkg, cksum));
         }
 

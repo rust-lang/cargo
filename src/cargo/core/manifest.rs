@@ -428,6 +428,9 @@ impl Manifest {
     pub fn summary(&self) -> &Summary {
         &self.summary
     }
+    pub fn summary_mut(&mut self) -> &mut Summary {
+        &mut self.summary
+    }
     pub fn targets(&self) -> &[Target] {
         &self.targets
     }
@@ -468,10 +471,6 @@ impl Manifest {
 
     pub fn features(&self) -> &Features {
         &self.features
-    }
-
-    pub fn set_summary(&mut self, summary: Summary) {
-        self.summary = summary;
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
