@@ -11,9 +11,7 @@ use log::{trace, warn};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
-use crate::util::paths;
-use crate::util::Config;
-use crate::util::{internal, CargoResult};
+use crate::util::{internal, paths, CargoResult, CargoResultExt, Config};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -455,7 +453,10 @@ impl<'cfg> PathSource<'cfg> {
         //
         // TODO: drop `collect` and sort after transition period and dropping warning tests.
         // See rust-lang/cargo#4268 and rust-lang/cargo#4270.
-        let mut entries: Vec<PathBuf> = fs::read_dir(path)?.map(|e| e.unwrap().path()).collect();
+        let mut entries: Vec<PathBuf> = fs::read_dir(path)
+            .chain_err(|| format!("cannot read {:?}", path))?
+            .map(|e| e.unwrap().path())
+            .collect();
         entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
         for path in entries {
             let name = path.file_name().and_then(|s| s.to_str());
