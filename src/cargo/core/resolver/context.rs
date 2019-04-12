@@ -12,8 +12,9 @@ use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use crate::util::CargoResult;
 use crate::util::Graph;
 
+use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
-use super::types::{ConflictMap, ConflictReason, DepInfo, Method, RegistryQueryer};
+use super::types::{ConflictMap, ConflictReason, DepInfo, Method};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
