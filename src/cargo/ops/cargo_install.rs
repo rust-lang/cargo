@@ -215,18 +215,15 @@ fn install_one(
         Some(Filesystem::new(config.cwd().join("target-install")))
     };
 
-    let ws = match overidden_target_dir {
-        Some(dir) => {
-            let mut ws = Workspace::ephemeral(pkg, config, Some(dir), false)?;
-            ws.set_ignore_lock(config.lock_update_allowed());
-            ws
-        }
+    let mut ws = match overidden_target_dir {
+        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
         None => {
             let mut ws = Workspace::new(pkg.manifest_path(), config)?;
             ws.set_require_optional_deps(false);
             ws
         }
     };
+    ws.set_ignore_lock(config.lock_update_allowed());
     let pkg = ws.current()?;
 
     if from_cwd {
