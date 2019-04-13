@@ -104,9 +104,8 @@ impl Summary {
         self
     }
 
-    pub fn set_checksum(mut self, cksum: String) -> Summary {
+    pub fn set_checksum(&mut self, cksum: String) {
         Rc::make_mut(&mut self.inner).checksum = Some(cksum);
-        self
     }
 
     pub fn map_dependencies<F>(mut self, f: F) -> Summary
