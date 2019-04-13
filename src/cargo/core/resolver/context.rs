@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
@@ -20,6 +20,7 @@ use super::types::{ConflictMap, DepInfo, Method};
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
 pub use super::resolve::Resolve;
+use std::collections::btree_set::BTreeSet;
 
 // A `Context` is basically a bunch of local resolution information which is
 // kept around for all `BacktrackFrame` instances. As a result, this runs the
@@ -29,7 +30,7 @@ pub use super::resolve::Resolve;
 pub struct Context {
     pub activations: Activations,
     /// list the features that are activated for each package
-    pub resolve_features: im_rc::HashMap<PackageId, Rc<HashSet<InternedString>>>,
+    pub resolve_features: im_rc::HashMap<PackageId, Rc<BTreeSet<InternedString>>>,
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,
@@ -102,7 +103,7 @@ impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns `true` if this summary with the given method is already activated.
-    pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
+    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let age: ContextAge = self.age();
         match self.activations.entry(id.as_activations_key()) {
@@ -127,7 +128,7 @@ impl Context {
             }
         }
         debug!("checking if {} is already activated", summary.package_id());
-        let (features, use_default) = match *method {
+        let (features, use_default) = match method {
             Method::Everything
             | Method::Required {
                 all_features: true, ..
@@ -142,7 +143,7 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
-                features.iter().all(|f| prev.contains(f))
+                features.is_subset(prev)
                     && (!use_default || prev.contains("default") || !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature),
@@ -154,7 +155,7 @@ impl Context {
         registry: &mut dep_cache::RegistryQueryer<'_>,
         parent: Option<PackageId>,
         candidate: &Summary,
-        method: &Method<'_>,
+        method: &Method,
     ) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -166,7 +167,7 @@ impl Context {
             Rc::make_mut(
                 self.resolve_features
                     .entry(candidate.package_id())
-                    .or_insert_with(|| Rc::new(HashSet::with_capacity(used_features.len()))),
+                    .or_insert_with(Rc::default),
             )
             .extend(used_features);
         }

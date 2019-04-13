@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 use log::debug;
@@ -181,10 +181,10 @@ impl<'a> RegistryQueryer<'a> {
 pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
-    method: &'b Method<'_>,
+    method: &'b Method,
 ) -> ActivateResult<(
     HashSet<InternedString>,
-    Vec<(Dependency, Vec<InternedString>)>,
+    Vec<(Dependency, BTreeSet<InternedString>)>,
 )> {
     let dev_deps = match *method {
         Method::Everything => true,
@@ -198,7 +198,7 @@ pub fn resolve_features<'b>(
     let reqs = build_requirements(s, method)?;
     let mut ret = Vec::new();
     let mut used_features = HashSet::new();
-    let default_dep = (false, Vec::new());
+    let default_dep = (false, BTreeSet::new());
 
     // Next, collect all actually enabled dependencies and their features.
     for dep in deps {
@@ -278,11 +278,11 @@ pub fn resolve_features<'b>(
 /// dependency features in a `Requirements` object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method<'_>,
+    method: &'b Method,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    match *method {
+    match method {
         Method::Everything
         | Method::Required {
             all_features: true, ..
@@ -329,7 +329,7 @@ struct Requirements<'a> {
     // specified set of features enabled. The boolean indicates whether this
     // package was specifically requested (rather than just requesting features
     // *within* this package).
-    deps: HashMap<InternedString, (bool, Vec<InternedString>)>,
+    deps: HashMap<InternedString, (bool, BTreeSet<InternedString>)>,
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
@@ -355,9 +355,9 @@ impl Requirements<'_> {
         self.used.insert(package);
         self.deps
             .entry(package)
-            .or_insert((false, Vec::new()))
+            .or_insert((false, BTreeSet::new()))
             .1
-            .push(feat);
+            .insert(feat);
     }
 
     fn seen(&mut self, feat: InternedString) -> bool {
@@ -373,7 +373,7 @@ impl Requirements<'_> {
         if self.seen(pkg) {
             return;
         }
-        self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
+        self.deps.entry(pkg).or_insert((false, BTreeSet::new())).0 = true;
     }
 
     fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -89,26 +89,26 @@ impl ResolverProgress {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum Method<'a> {
+#[derive(Clone)]
+pub enum Method {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
         dev_deps: bool,
-        features: &'a [InternedString],
+        features: Rc<BTreeSet<InternedString>>,
         all_features: bool,
         uses_default_features: bool,
     },
 }
 
-impl<'r> Method<'r> {
-    pub fn split_features(features: &[String]) -> Vec<InternedString> {
+impl Method {
+    pub fn split_features(features: &[String]) -> BTreeSet<InternedString> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(|s| InternedString::new(s))
-            .collect::<Vec<InternedString>>()
+            .map(InternedString::new)
+            .collect::<BTreeSet<InternedString>>()
     }
 }
 
@@ -221,7 +221,7 @@ impl RemainingDeps {
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<Vec<InternedString>>);
+pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<BTreeSet<InternedString>>);
 
 /// All possible reasons that a package might fail to activate.
 ///

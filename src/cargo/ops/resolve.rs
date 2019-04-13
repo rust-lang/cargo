@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::rc::Rc;
 
 use log::{debug, trace};
 
@@ -43,7 +44,7 @@ pub fn resolve_ws_precisely<'a>(
     } else {
         Method::Required {
             dev_deps: true,
-            features: &features,
+            features: Rc::new(features),
             all_features: false,
             uses_default_features: !no_default_features,
         }
@@ -53,7 +54,7 @@ pub fn resolve_ws_precisely<'a>(
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
-    method: Method<'_>,
+    method: Method,
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -138,7 +139,7 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    method: Method<'_>,
+    method: Method,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
@@ -222,7 +223,7 @@ pub fn resolve_with_previous<'cfg>(
     let mut summaries = Vec::new();
     if ws.config().cli_unstable().package_features {
         let mut members = Vec::new();
-        match method {
+        match &method {
             Method::Everything => members.extend(ws.members()),
             Method::Required {
                 features,
@@ -241,7 +242,7 @@ pub fn resolve_with_previous<'cfg>(
                 // of current workspace. Add all packages from workspace to get `foo`
                 // into the resolution graph.
                 if members.is_empty() {
-                    if !(features.is_empty() && !all_features && uses_default_features) {
+                    if !(features.is_empty() && !all_features && *uses_default_features) {
                         failure::bail!("cannot specify features for packages outside of workspace");
                     }
                     members.extend(ws.members());
@@ -250,7 +251,7 @@ pub fn resolve_with_previous<'cfg>(
         }
         for member in members {
             let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, method))
+            summaries.push((summary, method.clone()))
         }
     } else {
         for member in ws.members() {
@@ -281,13 +282,13 @@ pub fn resolve_with_previous<'cfg>(
                 } => {
                     let base = Method::Required {
                         dev_deps,
-                        features: &[],
+                        features: Rc::default(),
                         all_features,
                         uses_default_features: true,
                     };
                     let member_id = member.package_id();
                     match ws.current_opt() {
-                        Some(current) if member_id == current.package_id() => method,
+                        Some(current) if member_id == current.package_id() => method.clone(),
                         _ => {
                             if specs.iter().any(|spec| spec.matches(member_id)) {
                                 base

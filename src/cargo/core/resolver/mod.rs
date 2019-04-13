@@ -47,7 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -121,7 +121,7 @@ mod types;
 ///     When we have a decision for how to implement is without breaking existing functionality
 ///     this flag can be removed.
 pub fn resolve(
-    summaries: &[(Summary, Method<'_>)],
+    summaries: &[(Summary, Method)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
@@ -169,7 +169,7 @@ pub fn resolve(
 fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
-    summaries: &[(Summary, Method<'_>)],
+    summaries: &[(Summary, Method)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -374,7 +374,7 @@ fn activate_deps_loop(
             let pid = candidate.summary.package_id();
             let method = Method::Required {
                 dev_deps: false,
-                features: &features,
+                features: Rc::clone(&features),
                 all_features: false,
                 uses_default_features: dep.uses_default_features(),
             };
@@ -597,7 +597,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
-    method: &Method<'_>,
+    method: &Method,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
@@ -704,7 +704,7 @@ struct BacktrackFrame {
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
-    features: Rc<Vec<InternedString>>,
+    features: Rc<BTreeSet<InternedString>>,
     conflicting_activations: ConflictMap,
 }
 
