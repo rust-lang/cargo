@@ -218,9 +218,9 @@ impl RemainingDeps {
     }
 }
 
-// Information about the dependencies for a crate, a tuple of:
-//
-// (dependency info, candidates, features activated)
+/// Information about the dependencies for a crate, a tuple of:
+///
+/// (dependency info, candidates, features activated)
 pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<BTreeSet<InternedString>>);
 
 /// All possible reasons that a package might fail to activate.

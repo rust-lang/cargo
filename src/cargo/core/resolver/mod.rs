@@ -682,12 +682,23 @@ fn activate(
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(
+    let (used_features, deps) = dep_cache::build_deps(
         registry,
         parent.map(|p| p.0.package_id()),
         &candidate,
         method,
     )?;
+
+    // Record what list of features is active for this package.
+    if !used_features.is_empty() {
+        Rc::make_mut(
+            cx.resolve_features
+                .entry(candidate.package_id())
+                .or_insert_with(Rc::default),
+        )
+        .extend(used_features);
+    }
+
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
