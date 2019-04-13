@@ -177,34 +177,63 @@ impl<'a> RegistryQueryer<'a> {
     }
 }
 
-pub fn build_deps(
-    registry: &mut RegistryQueryer<'_>,
-    parent: Option<PackageId>,
-    candidate: &Summary,
-    method: &Method,
-) -> ActivateResult<(HashSet<InternedString>, Vec<DepInfo>)> {
-    // First, figure out our set of dependencies based on the requested set
-    // of features. This also calculates what features we're going to enable
-    // for our own dependencies.
-    let (used_features, deps) = resolve_features(parent, candidate, method)?;
+pub struct DepsCache<'a> {
+    pub registry: RegistryQueryer<'a>,
+    cache: HashMap<
+        (Option<PackageId>, Summary, Method),
+        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
+    >,
+}
 
-    // Next, transform all dependencies into a list of possible candidates
-    // which can satisfy that dependency.
-    let mut deps = deps
-        .into_iter()
-        .map(|(dep, features)| {
-            let candidates = registry.query(&dep)?;
-            Ok((dep, candidates, Rc::new(features)))
-        })
-        .collect::<CargoResult<Vec<DepInfo>>>()?;
+impl<'a> DepsCache<'a> {
+    pub fn new(registry: RegistryQueryer<'a>) -> Self {
+        DepsCache {
+            registry,
+            cache: HashMap::new(),
+        }
+    }
 
-    // Attempt to resolve dependencies with fewer candidates before trying
-    // dependencies with more candidates. This way if the dependency with
-    // only one candidate can't be resolved we don't have to do a bunch of
-    // work before we figure that out.
-    deps.sort_by_key(|&(_, ref a, _)| a.len());
+    pub fn build_deps(
+        &mut self,
+        parent: Option<PackageId>,
+        candidate: &Summary,
+        method: &Method,
+    ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
+        if let Some(out) = self
+            .cache
+            .get(&(parent, candidate.clone(), method.clone()))
+            .cloned()
+        {
+            return Ok(out);
+        }
+        // First, figure out our set of dependencies based on the requested set
+        // of features. This also calculates what features we're going to enable
+        // for our own dependencies.
+        let (used_features, deps) = resolve_features(parent, candidate, method)?;
 
-    Ok((used_features, deps))
+        // Next, transform all dependencies into a list of possible candidates
+        // which can satisfy that dependency.
+        let mut deps = deps
+            .into_iter()
+            .map(|(dep, features)| {
+                let candidates = self.registry.query(&dep)?;
+                Ok((dep, candidates, Rc::new(features)))
+            })
+            .collect::<CargoResult<Vec<DepInfo>>>()?;
+
+        // Attempt to resolve dependencies with fewer candidates before trying
+        // dependencies with more candidates. This way if the dependency with
+        // only one candidate can't be resolved we don't have to do a bunch of
+        // work before we figure that out.
+        deps.sort_by_key(|&(_, ref a, _)| a.len());
+
+        let out = Rc::new((used_features, Rc::new(deps)));
+
+        self.cache
+            .insert((parent, candidate.clone(), method.clone()), out.clone());
+
+        Ok(out)
+    }
 }
 
 /// Returns all dependencies and the features we want from them.

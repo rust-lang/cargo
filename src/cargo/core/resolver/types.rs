@@ -89,7 +89,7 @@ impl ResolverProgress {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub enum Method {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
