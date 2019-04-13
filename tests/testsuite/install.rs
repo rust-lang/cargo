@@ -1190,8 +1190,7 @@ fn custom_target_dir_for_git_source() {
 
 #[test]
 fn install_respects_lock_file() {
-    // `cargo install` now requires --locked to use a Cargo.lock for non
-    // --path installs.
+    // `cargo install` now requires --locked to use a Cargo.lock.
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
         .file("src/lib.rs", "not rust")
@@ -1230,7 +1229,8 @@ dependencies = [
 
 #[test]
 fn install_path_respects_lock_file() {
-    // For --path installs, always use local Cargo.lock.
+    // --path version of install_path_respects_lock_file, --locked is required
+    // to use Cargo.lock.
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
         .file("src/lib.rs", "not rust")
@@ -1266,7 +1266,11 @@ dependencies = [
         )
         .build();
 
-    p.cargo("install --path .").run();
+    p.cargo("install --path .")
+        .with_stderr_contains("[..]not rust[..]")
+        .with_status(101)
+        .run();
+    p.cargo("install --path . --locked").run();
 }
 
 #[test]
