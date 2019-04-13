@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
@@ -18,7 +18,6 @@ use super::types::{ConflictMap, Method};
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
 pub use super::resolve::Resolve;
-use std::collections::btree_set::BTreeSet;
 
 // A `Context` is basically a bunch of local resolution information which is
 // kept around for all `BacktrackFrame` instances. As a result, this runs the
