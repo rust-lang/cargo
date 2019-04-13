@@ -8,7 +8,7 @@ use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
 
-use crate::core::resolver::types::{Candidate, ConflictReason};
+use crate::core::resolver::types::{Candidate, ConflictReason, DepInfo};
 use crate::core::resolver::{ActivateResult, Method};
 
 pub struct RegistryQueryer<'a> {
@@ -175,6 +175,36 @@ impl<'a> RegistryQueryer<'a> {
 
         Ok(out)
     }
+}
+
+pub fn build_deps(
+    registry: &mut RegistryQueryer<'_>,
+    parent: Option<PackageId>,
+    candidate: &Summary,
+    method: &Method,
+) -> ActivateResult<(HashSet<InternedString>, Vec<DepInfo>)> {
+    // First, figure out our set of dependencies based on the requested set
+    // of features. This also calculates what features we're going to enable
+    // for our own dependencies.
+    let (used_features, deps) = resolve_features(parent, candidate, method)?;
+
+    // Next, transform all dependencies into a list of possible candidates
+    // which can satisfy that dependency.
+    let mut deps = deps
+        .into_iter()
+        .map(|(dep, features)| {
+            let candidates = registry.query(&dep)?;
+            Ok((dep, candidates, Rc::new(features)))
+        })
+        .collect::<CargoResult<Vec<DepInfo>>>()?;
+
+    // Attempt to resolve dependencies with fewer candidates before trying
+    // dependencies with more candidates. This way if the dependency with
+    // only one candidate can't be resolved we don't have to do a bunch of
+    // work before we figure that out.
+    deps.sort_by_key(|&(_, ref a, _)| a.len());
+
+    Ok((used_features, deps))
 }
 
 /// Returns all dependencies and the features we want from them.

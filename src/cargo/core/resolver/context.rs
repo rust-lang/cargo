@@ -12,10 +12,8 @@ use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::util::CargoResult;
 use crate::util::Graph;
 
-use super::dep_cache;
 use super::dep_cache::RegistryQueryer;
-use super::errors::ActivateResult;
-use super::types::{ConflictMap, DepInfo, Method};
+use super::types::{ConflictMap, Method};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -148,47 +146,6 @@ impl Context {
             }
             None => features.is_empty() && (!use_default || !has_default_feature),
         })
-    }
-
-    pub fn build_deps(
-        &mut self,
-        registry: &mut dep_cache::RegistryQueryer<'_>,
-        parent: Option<PackageId>,
-        candidate: &Summary,
-        method: &Method,
-    ) -> ActivateResult<Vec<DepInfo>> {
-        // First, figure out our set of dependencies based on the requested set
-        // of features. This also calculates what features we're going to enable
-        // for our own dependencies.
-        let (used_features, deps) = dep_cache::resolve_features(parent, candidate, method)?;
-
-        // Record what list of features is active for this package.
-        if !used_features.is_empty() {
-            Rc::make_mut(
-                self.resolve_features
-                    .entry(candidate.package_id())
-                    .or_insert_with(Rc::default),
-            )
-            .extend(used_features);
-        }
-
-        // Next, transform all dependencies into a list of possible candidates
-        // which can satisfy that dependency.
-        let mut deps = deps
-            .into_iter()
-            .map(|(dep, features)| {
-                let candidates = registry.query(&dep)?;
-                Ok((dep, candidates, Rc::new(features)))
-            })
-            .collect::<CargoResult<Vec<DepInfo>>>()?;
-
-        // Attempt to resolve dependencies with fewer candidates before trying
-        // dependencies with more candidates. This way if the dependency with
-        // only one candidate can't be resolved we don't have to do a bunch of
-        // work before we figure that out.
-        deps.sort_by_key(|&(_, ref a, _)| a.len());
-
-        Ok(deps)
     }
 
     /// Returns the `ContextAge` of this `Context`.
