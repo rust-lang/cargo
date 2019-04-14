@@ -75,6 +75,32 @@ fn simple_with_args() {
     p.cargo("run hello world").run();
 }
 
+#[cfg(unix)]
+#[test]
+fn simple_with_non_utf8_args() {
+    use std::os::unix::ffi::OsStrExt;
+
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+            use std::ffi::OsStr;
+            use std::os::unix::ffi::OsStrExt;
+
+            fn main() {
+                assert_eq!(std::env::args_os().nth(1).unwrap(), OsStr::from_bytes(b"hello"));
+                assert_eq!(std::env::args_os().nth(2).unwrap(), OsStr::from_bytes(b"ab\xffcd"));
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .arg("hello")
+        .arg(std::ffi::OsStr::from_bytes(b"ab\xFFcd"))
+        .run();
+}
+
 #[test]
 fn exit_code() {
     let p = project()

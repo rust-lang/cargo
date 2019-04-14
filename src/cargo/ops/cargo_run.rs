@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::iter;
 use std::path::Path;
 
@@ -9,6 +10,15 @@ pub fn run(
     ws: &Workspace<'_>,
     options: &ops::CompileOptions<'_>,
     args: &[String],
+) -> CargoResult<Option<ProcessError>> {
+    let osargs: Vec<OsString> = args.iter().map(|s| OsString::from(s)).collect();
+    run_os(ws, options, osargs.as_slice())
+}
+
+pub fn run_os(
+    ws: &Workspace<'_>,
+    options: &ops::CompileOptions<'_>,
+    args: &[OsString],
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
