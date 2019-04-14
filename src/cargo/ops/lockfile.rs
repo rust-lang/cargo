@@ -29,7 +29,57 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     Ok(resolve)
 }
 
+/// Generate a toml String of Cargo.lock from a Resolve.
+pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<String> {
+    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve)?;
+    Ok(out)
+}
+
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<()> {
+    let (orig, out, ws_root) = resolve_to_string_orig(ws, resolve)?;
+
+    // If the lock file contents haven't changed so don't rewrite it. This is
+    // helpful on read-only filesystems.
+    if let Some(orig) = orig {
+        if are_equal_lockfiles(orig, &out, ws) {
+            return Ok(());
+        }
+    }
+
+    if !ws.config().lock_update_allowed() {
+        if ws.config().cli_unstable().offline {
+            failure::bail!("can't update in the offline mode");
+        }
+
+        let flag = if ws.config().network_allowed() {
+            "--locked"
+        } else {
+            "--frozen"
+        };
+        failure::bail!(
+            "the lock file {} needs to be updated but {} was passed to \
+             prevent this",
+            ws.root().to_path_buf().join("Cargo.lock").display(),
+            flag
+        );
+    }
+
+    // Ok, if that didn't work just write it out
+    ws_root
+        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
+        .and_then(|mut f| {
+            f.file().set_len(0)?;
+            f.write_all(out.as_bytes())?;
+            Ok(())
+        })
+        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
+    Ok(())
+}
+
+fn resolve_to_string_orig(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+) -> CargoResult<(Option<String>, String, Filesystem)> {
     // Load the original lock file if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
@@ -94,42 +144,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         out.push_str(&meta.to_string());
     }
 
-    // If the lock file contents haven't changed so don't rewrite it. This is
-    // helpful on read-only filesystems.
-    if let Ok(orig) = orig {
-        if are_equal_lockfiles(orig, &out, ws) {
-            return Ok(());
-        }
-    }
-
-    if !ws.config().lock_update_allowed() {
-        if ws.config().cli_unstable().offline {
-            failure::bail!("can't update in the offline mode");
-        }
-
-        let flag = if ws.config().network_allowed() {
-            "--locked"
-        } else {
-            "--frozen"
-        };
-        failure::bail!(
-            "the lock file {} needs to be updated but {} was passed to \
-             prevent this",
-            ws.root().to_path_buf().join("Cargo.lock").display(),
-            flag
-        );
-    }
-
-    // Ok, if that didn't work just write it out
-    ws_root
-        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
-        .and_then(|mut f| {
-            f.file().set_len(0)?;
-            f.write_all(out.as_bytes())?;
-            Ok(())
-        })
-        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
-    Ok(())
+    Ok((orig.ok(), out, ws_root))
 }
 
 fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> bool {

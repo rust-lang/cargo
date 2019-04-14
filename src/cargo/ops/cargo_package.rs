@@ -3,12 +3,14 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{self, Path, PathBuf};
+use std::rc::Rc;
 use std::sync::Arc;
 
+use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
 use serde_json::{self, json};
-use tar::{Builder, EntryType, Header};
+use tar::{Archive, Builder, EntryType, Header};
 use termcolor::Color;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
@@ -20,6 +22,7 @@ use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
+use crate::util::toml::TomlManifest;
 use crate::util::{self, internal, Config, FileLock};
 
 pub struct PackageOpts<'cfg> {
@@ -102,7 +105,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src_files, vcs_info.as_ref(), &dst, &filename)
+    tar(ws, &src_files, vcs_info.as_ref(), dst.file(), &filename)
         .chain_err(|| failure::format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -116,6 +119,34 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
             .chain_err(|| "failed to move temporary tarball into final location")?;
     }
     Ok(Some(dst))
+}
+
+/// Construct `Cargo.lock` for the package to be published.
+fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
+    let config = ws.config();
+    let orig_resolve = ops::load_pkg_lockfile(ws)?;
+
+    // Convert Package -> TomlManifest -> Manifest -> Package
+    let orig_pkg = ws.current()?;
+    let toml_manifest = Rc::new(orig_pkg.manifest().original().prepare_for_publish(config)?);
+    let package_root = orig_pkg.root();
+    let source_id = orig_pkg.package_id().source_id();
+    let (manifest, _nested_paths) =
+        TomlManifest::to_real_manifest(&toml_manifest, source_id, package_root, config)?;
+    let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
+
+    // Regenerate Cargo.lock using the old one as a guide.
+    let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
+    let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
+    let (pkg_set, new_resolve) =
+        ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?;
+
+    if let Some(orig_resolve) = orig_resolve {
+        compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
+    }
+    check_yanked(config, &pkg_set, &new_resolve)?;
+
+    ops::resolve_to_string(&tmp_ws, &new_resolve)
 }
 
 fn include_lockfile(pkg: &Package) -> bool {
@@ -283,28 +314,21 @@ fn tar(
     ws: &Workspace<'_>,
     src_files: &[PathBuf],
     vcs_info: Option<&serde_json::Value>,
-    dst: &FileLock,
+    dst: &File,
     filename: &str,
 ) -> CargoResult<()> {
     // Prepare the encoder and its header.
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
         .filename(util::path2bytes(filename)?)
-        .write(dst.file(), Compression::best());
+        .write(dst, Compression::best());
 
     // Put all package files into a compressed archive.
     let mut ar = Builder::new(encoder);
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
-    // While creating the tar file, also copy to the output directory.
-    let dest_copy_root = dst
-        .parent()
-        .join(format!("{}-{}", pkg.name(), pkg.version()));
-    if dest_copy_root.exists() {
-        paths::remove_dir_all(&dest_copy_root)?;
-    }
-    fs::create_dir_all(&dest_copy_root)?;
+
     for src_file in src_files {
         let relative = src_file.strip_prefix(root)?;
         check_filename(relative)?;
@@ -369,19 +393,11 @@ fn tar(
             ar.append(&header, toml.as_bytes()).chain_err(|| {
                 internal(format!("could not archive source file `{}`", relative_str))
             })?;
-            fs::write(dest_copy_root.join(relative), toml)?;
-            fs::copy(src_file, dest_copy_root.join("Cargo.toml.orig"))?;
         } else {
             header.set_cksum();
             ar.append(&header, &mut file).chain_err(|| {
                 internal(format!("could not archive source file `{}`", relative_str))
             })?;
-            let dest = dest_copy_root.join(relative);
-            let parent = dest.parent().unwrap();
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::copy(src_file, dest)?;
         }
     }
 
@@ -415,29 +431,8 @@ fn tar(
     }
 
     if include_lockfile(pkg) {
-        let orig_lock_path = ws.root().join("Cargo.lock");
-        let new_lock_path = dest_copy_root.join("Cargo.lock");
-        if orig_lock_path.exists() {
-            fs::copy(&orig_lock_path, &new_lock_path)?;
-        }
+        let new_lock = build_lock(&ws)?;
 
-        // Regenerate Cargo.lock using the old one as a guide.
-        let orig_resolve = ops::load_pkg_lockfile(ws)?;
-        let id = SourceId::for_path(&dest_copy_root)?;
-        let mut src = PathSource::new(&dest_copy_root, id, ws.config());
-        let new_pkg = src.root_package()?;
-        let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
-        let tmp_ws = Workspace::ephemeral(new_pkg, config, None, true)?;
-        let (pkg_set, new_resolve) =
-            ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?;
-        // resolve_ws_with_method won't save for ephemeral, do it manually.
-        ops::write_pkg_lockfile(&tmp_ws, &new_resolve)?;
-        if let Some(orig_resolve) = orig_resolve {
-            compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
-        }
-        check_yanked(config, &pkg_set, &new_resolve)?;
-
-        let toml = paths::read(&new_lock_path)?;
         let path = format!(
             "{}-{}{}Cargo.lock",
             pkg.name(),
@@ -448,9 +443,9 @@ fn tar(
         header.set_path(&path)?;
         header.set_entry_type(EntryType::file());
         header.set_mode(0o644);
-        header.set_size(toml.len() as u64);
+        header.set_size(new_lock.len() as u64);
         header.set_cksum();
-        ar.append(&header, toml.as_bytes())
+        ar.append(&header, new_lock.as_bytes())
             .chain_err(|| internal("could not archive source file `Cargo.lock`"))?;
     }
 
@@ -566,9 +561,18 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
 
     config.shell().status("Verifying", pkg)?;
 
+    let f = GzDecoder::new(tar.file());
     let dst = tar
         .parent()
         .join(&format!("{}-{}", pkg.name(), pkg.version()));
+    if dst.exists() {
+        paths::remove_dir_all(&dst)?;
+    }
+    let mut archive = Archive::new(f);
+    // We don't need to set the Modified Time, as it's not relevant to verification
+    // and it errors on filesystems that don't support setting a modified timestamp
+    archive.set_preserve_mtime(false);
+    archive.unpack(dst.parent().unwrap())?;
 
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.

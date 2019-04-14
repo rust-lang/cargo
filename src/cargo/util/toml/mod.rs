@@ -822,7 +822,7 @@ impl TomlManifest {
         }
     }
 
-    fn to_real_manifest(
+    pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
         source_id: SourceId,
         package_root: &Path,
