@@ -139,7 +139,7 @@ fn lock_file_and_workspace() {
 }
 
 #[test]
-fn warn_resolve_changes() {
+fn note_resolve_changes() {
     // `multi` has multiple sources (path and registry).
     Package::new("mutli", "0.1.0").publish();
     // `updated` is always from registry, but should not change.
@@ -178,14 +178,16 @@ fn warn_resolve_changes() {
     // Make sure this does not change or warn.
     Package::new("updated", "1.0.1").publish();
 
-    p.cargo("package --no-verify")
+    p.cargo("package --no-verify -v --allow-dirty")
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[WARNING] package `mutli v0.1.0` added to Cargo.lock, was originally sourced from `[..]/foo/mutli`
-[WARNING] package `patched v1.0.0` added to Cargo.lock, was originally sourced from `[..]/foo/patched`
+[NOTE] package `mutli v0.1.0` added to Cargo.lock, was originally sourced from `[..]/foo/mutli`
+[NOTE] package `patched v1.0.0` added to Cargo.lock, was originally sourced from `[..]/foo/patched`
 ",
         )
         .run();
@@ -267,7 +269,7 @@ fn no_warn_workspace_extras() {
 }
 
 #[test]
-fn out_of_date_lock_warn() {
+fn out_of_date_lock_note() {
     // Dependency is force-changed from an out-of-date Cargo.lock.
     Package::new("dep", "1.0.0").publish();
     Package::new("dep", "2.0.0").publish();
@@ -300,13 +302,15 @@ fn out_of_date_lock_warn() {
             "#,
         ),
     );
-    p.cargo("package --no-verify")
+    p.cargo("package --no-verify -v --allow-dirty")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[WARNING] package `dep v2.0.0` added to Cargo.lock, previous version was `1.0.0`
+[NOTE] package `dep v2.0.0` added to Cargo.lock, previous version was `1.0.0`
 ",
         )
         .run();

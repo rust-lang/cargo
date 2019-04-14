@@ -9,11 +9,12 @@ use flate2::{Compression, GzBuilder};
 use log::debug;
 use serde_json::{self, json};
 use tar::{Builder, EntryType, Header};
+use termcolor::Color;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::Method;
 use crate::core::{
-    Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Workspace,
+    Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
 };
 use crate::ops;
 use crate::sources::PathSource;
@@ -465,6 +466,9 @@ fn compare_resolve(
     orig_resolve: &Resolve,
     new_resolve: &Resolve,
 ) -> CargoResult<()> {
+    if config.shell().verbosity() != Verbosity::Verbose {
+        return Ok(());
+    }
     let new_set: BTreeSet<PackageId> = new_resolve.iter().collect();
     let orig_set: BTreeSet<PackageId> = orig_resolve.iter().collect();
     let added = new_set.difference(&orig_set);
@@ -533,9 +537,8 @@ fn compare_resolve(
                 )
             }
         };
-        config
-            .shell()
-            .warn(format!("package `{}` added to Cargo.lock{}", pkg_id, extra))?;
+        let msg = format!("package `{}` added to Cargo.lock{}", pkg_id, extra);
+        config.shell().status_with_color("Note", msg, Color::Cyan)?;
     }
     Ok(())
 }
