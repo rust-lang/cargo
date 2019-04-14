@@ -12,7 +12,7 @@ pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadat
 pub use self::cargo_package::{package, PackageOpts};
 pub use self::cargo_pkgid::pkgid;
 pub use self::cargo_read_manifest::{read_package, read_packages};
-pub use self::cargo_run::run;
+pub use self::cargo_run::{run, run_os};
 pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_uninstall::uninstall;
 pub use self::fix::{fix, fix_maybe_exec_rustc, FixOptions};
