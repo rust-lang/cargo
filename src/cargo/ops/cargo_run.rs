@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::iter;
 use std::path::Path;
 
@@ -8,7 +9,7 @@ use crate::util::{CargoResult, ProcessError};
 pub fn run(
     ws: &Workspace<'_>,
     options: &ops::CompileOptions<'_>,
-    args: &[String],
+    args: &[OsString],
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 

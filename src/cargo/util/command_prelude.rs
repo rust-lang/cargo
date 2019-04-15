@@ -1,3 +1,4 @@
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::PathBuf;
 
@@ -463,6 +464,10 @@ about this warning.";
 
     fn _values_of(&self, name: &str) -> Vec<String>;
 
+    fn _value_of_os(&self, name: &str) -> Option<&OsStr>;
+
+    fn _values_of_os(&self, name: &str) -> Vec<OsString>;
+
     fn _is_present(&self, name: &str) -> bool;
 }
 
@@ -471,10 +476,21 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
         self.value_of(name)
     }
 
+    fn _value_of_os(&self, name: &str) -> Option<&OsStr> {
+        self.value_of_os(name)
+    }
+
     fn _values_of(&self, name: &str) -> Vec<String> {
         self.values_of(name)
             .unwrap_or_default()
             .map(|s| s.to_string())
+            .collect()
+    }
+
+    fn _values_of_os(&self, name: &str) -> Vec<OsString> {
+        self.values_of_os(name)
+            .unwrap_or_default()
+            .map(|s| s.to_os_string())
             .collect()
     }
 
@@ -485,6 +501,10 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
 
 pub fn values(args: &ArgMatches<'_>, name: &str) -> Vec<String> {
     args._values_of(name)
+}
+
+pub fn values_os(args: &ArgMatches<'_>, name: &str) -> Vec<OsString> {
+    args._values_of_os(name)
 }
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
