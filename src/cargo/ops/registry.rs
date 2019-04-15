@@ -69,6 +69,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.index.clone(),
         opts.registry.clone(),
         true,
+        !opts.dry_run
     )?;
     verify_dependencies(pkg, &registry, reg_id)?;
 
@@ -334,12 +335,13 @@ pub fn registry_configuration(
     Ok(RegistryConfig { index, token })
 }
 
-pub fn registry(
+fn registry(
     config: &Config,
     token: Option<String>,
     index: Option<String>,
     registry: Option<String>,
     force_update: bool,
+    validate_token: bool
 ) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
@@ -363,6 +365,9 @@ pub fn registry(
             .ok_or_else(|| format_err!("{} does not support API commands", sid))?
     };
     let handle = http_handle(config)?;
+    if validate_token && token.is_none() {
+        bail!("no upload token found, please run `cargo login`");
+    };
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
@@ -536,7 +541,7 @@ pub fn registry_login(
     token: Option<String>,
     reg: Option<String>,
 ) -> CargoResult<()> {
-    let (registry, _) = registry(config, token.clone(), None, reg.clone(), false)?;
+    let (registry, _) = registry(config, token.clone(), None, reg.clone(), false, false)?;
 
     let token = match token {
         Some(token) => token,
@@ -604,6 +609,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.index.clone(),
         opts.registry.clone(),
         true,
+        true
     )?;
 
     if let Some(ref v) = opts.to_add {
@@ -664,7 +670,7 @@ pub fn yank(
         None => bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _) = registry(config, token, index, reg, true)?;
+    let (mut registry, _) = registry(config, token, index, reg, true, true)?;
 
     if undo {
         config
@@ -720,7 +726,7 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, source_id) = registry(config, None, index, reg, false)?;
+    let (mut registry, source_id) = registry(config, None, index, reg, false, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

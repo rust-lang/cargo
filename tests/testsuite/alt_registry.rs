@@ -289,6 +289,9 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         )
         .build();
 
+    // Login so that we have the token available
+    p.cargo("login --registry fakeio TOKEN").run();
+
     p.cargo("publish --registry fakeio")
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
