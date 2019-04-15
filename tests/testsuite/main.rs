@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "deny-warnings", deny(warnings))]
 #![allow(clippy::blacklisted_name)]
 #![allow(clippy::explicit_iter_loop)]
+#![allow(clippy::redundant_closure)]
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 
