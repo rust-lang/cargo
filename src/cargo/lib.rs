@@ -10,6 +10,7 @@
 #![allow(clippy::identity_op)] // used for vertical alignment
 #![allow(clippy::implicit_hasher)] // large project
 #![allow(clippy::large_enum_variant)] // large project
+#![allow(clippy::redundant_closure)] // closures can be less verbose
 #![allow(clippy::redundant_closure_call)] // closures over try catch blocks
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
