@@ -72,7 +72,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             };
         }
     };
-    match ops::run(&ws, &compile_opts, &values(args, "args"))? {
+    match ops::run(&ws, &compile_opts, &values_os(args, "args"))? {
         None => Ok(()),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty
