@@ -130,7 +130,7 @@ The keys are:
   may have the markers `{crate}` and `{version}` which are replaced with the
   name and version of the crate to download. If the markers are not present,
   then the value `/{crate}/{version}/download` is appended to the end.
-- `api`: This is the base URL for the web API. This key is optional, and if it
+- `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
 
