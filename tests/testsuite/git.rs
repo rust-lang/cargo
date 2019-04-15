@@ -2484,132 +2484,50 @@ fn two_at_rev_instead_of_tag() {
 }
 
 #[test]
-#[ignore] // accesses crates.io
 fn include_overrides_gitignore() {
-    let p = git::new("reduction", |repo| {
+    // Make sure that `package.include` takes precedence over .gitignore.
+    let p = git::new("foo", |repo| {
         repo.file(
             "Cargo.toml",
             r#"
             [package]
-            name = "reduction"
+            name = "foo"
             version = "0.5.0"
-            authors = ["pnkfelix"]
-            build = "tango-build.rs"
-            include = ["src/lib.rs", "src/incl.rs", "src/mod.md", "tango-build.rs", "Cargo.toml"]
-
-            [build-dependencies]
-            filetime = "0.1"
+            include = ["src/lib.rs", "ignored.txt", "Cargo.toml"]
         "#,
         )
         .file(
             ".gitignore",
             r#"
-            target
+            /target
             Cargo.lock
-            # Below files represent generated code, thus not managed by `git`
-            src/incl.rs
-            src/not_incl.rs
+            ignored.txt
         "#,
         )
-        .file(
-            "tango-build.rs",
-            r#"
-            extern crate filetime;
-            use filetime::FileTime;
-            use std::fs::{self, File};
-
-            fn main() {
-                // generate files, or bring their timestamps into sync.
-                let source = "src/mod.md";
-
-                let metadata = fs::metadata(source).unwrap();
-                let mtime = FileTime::from_last_modification_time(&metadata);
-                let atime = FileTime::from_last_access_time(&metadata);
-
-                // sync time stamps for generated files with time stamp of source file.
-
-                let files = ["src/not_incl.rs", "src/incl.rs"];
-                for file in files.iter() {
-                    File::create(file).unwrap();
-                    filetime::set_file_times(file, atime, mtime).unwrap();
-                }
-            }
-        "#,
-        )
-        .file("src/lib.rs", "mod not_incl; mod incl;")
-        .file(
-            "src/mod.md",
-            r#"
-            (The content of this file does not matter since we are not doing real codegen.)
-        "#,
-        )
+        .file("src/lib.rs", "")
+        .file("ignored.txt", "")
+        .file("build.rs", "fn main() {}")
     })
     .unwrap();
 
-    println!("build 1: all is new");
+    p.cargo("build").run();
+    p.change_file("ignored.txt", "Trigger rebuild.");
     p.cargo("build -v")
         .with_stderr(
             "\
-[UPDATING] `[..]` index
-[DOWNLOADED] filetime [..]
-[DOWNLOADED] libc [..]
-[COMPILING] libc [..]
-[RUNNING] `rustc --crate-name libc [..]`
-[COMPILING] filetime [..]
-[RUNNING] `rustc --crate-name filetime [..]`
-[COMPILING] reduction [..]
-[RUNNING] `rustc --crate-name build_script_tango_build tango-build.rs --crate-type bin [..]`
-[RUNNING] `[..]/build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
+[COMPILING] foo v0.5.0 ([..])
+[RUNNING] `[..]build-script-build[..]`
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
-
-    println!("build 2: nothing changed; file timestamps reset by build script");
-    p.cargo("build -v")
-        .with_stderr(
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
             "\
-[FRESH] libc [..]
-[FRESH] filetime [..]
-[FRESH] reduction [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-
-    println!("build 3: touch `src/not_incl.rs`; expect build script **not** re-run");
-    sleep_ms(1000);
-    File::create(p.root().join("src").join("not_incl.rs")).unwrap();
-
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] libc [..]
-[FRESH] filetime [..]
-[COMPILING] reduction [..]
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-
-    // This final case models the bug from rust-lang/cargo#4135: an
-    // explicitly included file should cause a build-script re-run,
-    // even if that same file is matched by `.gitignore`.
-    println!("build 4: touch `src/incl.rs`; expect build script re-run");
-    sleep_ms(1000);
-    File::create(p.root().join("src").join("incl.rs")).unwrap();
-
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] libc [..]
-[FRESH] filetime [..]
-[COMPILING] reduction [..]
-[RUNNING] `[..]/build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+Cargo.toml
+ignored.txt
+src/lib.rs
 ",
         )
         .run();
