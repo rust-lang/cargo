@@ -32,7 +32,6 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// taking into account `paths` overrides and activated features.
 pub fn resolve_ws_precisely<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<dyn Source + 'a>>,
     features: &[String],
     all_features: bool,
     no_default_features: bool,
@@ -49,19 +48,15 @@ pub fn resolve_ws_precisely<'a>(
             uses_default_features: !no_default_features,
         }
     };
-    resolve_ws_with_method(ws, source, method, specs)
+    resolve_ws_with_method(ws, method, specs)
 }
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<dyn Source + 'a>>,
     method: Method<'_>,
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    if let Some(source) = source {
-        registry.add_preloaded(source);
-    }
     let mut add_patches = true;
 
     let resolve = if ws.ignore_lock() {

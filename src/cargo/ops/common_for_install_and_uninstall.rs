@@ -560,7 +560,7 @@ pub fn select_pkg<'a, T>(
     config: &Config,
     needs_update: bool,
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
-) -> CargoResult<(Package, Box<dyn Source + 'a>)>
+) -> CargoResult<Package>
 where
     T: Source + 'a,
 {
@@ -647,7 +647,7 @@ where
         match deps.iter().map(|p| p.package_id()).max() {
             Some(pkgid) => {
                 let pkg = Box::new(&mut source).download_now(pkgid, config)?;
-                Ok((pkg, Box::new(source)))
+                Ok(pkg)
             }
             None => {
                 let vers_info = vers
@@ -679,7 +679,7 @@ where
                 ),
             },
         };
-        return Ok((pkg.clone(), Box::new(source)));
+        return Ok(pkg.clone());
 
         fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
             pkgs.sort_unstable_by_key(|a| a.name());
