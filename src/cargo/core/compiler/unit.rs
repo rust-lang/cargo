@@ -54,6 +54,12 @@ impl<'a> Unit<'a> {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
     }
+
+    /// Returns a new `Unit` with all the same fields as this one except with a
+    /// different `mode`
+    pub fn with_mode(&self, mode: CompileMode, units: &'a UnitInterner<'a>) -> Unit<'a> {
+        units.intern(self.pkg, self.target, self.profile, self.kind, mode)
+    }
 }
 
 // Just hash the pointer for fast hashing

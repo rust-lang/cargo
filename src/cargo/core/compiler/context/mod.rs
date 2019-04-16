@@ -42,6 +42,18 @@ pub struct Context<'a, 'cfg: 'a> {
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
     package_cache: HashMap<PackageId, &'a Package>,
+
+    // A map from a unit to the dependencies listed for it which are considered
+    // as "order only" dependencies. These dependencies are only used to
+    // sequence compilation correctly and shouldn't inject `--extern` flags, for
+    // example.
+    pub order_only_dependencies: HashMap<Unit<'a>, HashSet<Unit<'a>>>,
+
+    // A set of units which have been "pipelined". These units are in `Build`
+    // mode and depend on a `BuildRmeta` mode unit. The pipelined `Build` units
+    // should do no work because the `BuildRmeta` unit will do all the work for
+    // them.
+    pub pipelined_units: HashSet<Unit<'a>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -76,6 +88,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             unit_dependencies: HashMap::new(),
             files: None,
             package_cache: HashMap::new(),
+            order_only_dependencies: HashMap::new(),
+            pipelined_units: HashSet::new(),
         })
     }
 
@@ -266,6 +280,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             self.bcx,
             &mut self.unit_dependencies,
             &mut self.package_cache,
+            &mut self.order_only_dependencies,
+            &mut self.pipelined_units,
         )?;
         let files = CompilationFiles::new(
             units,
@@ -452,6 +468,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         Ok(())
+    }
+
+    /// Returns the `BuildRmeta` unit which is actually doing compilation if the
+    /// `unit` specified has been pipelined.
+    ///
+    /// If the unit specified has not been pipelined then `None` will be
+    /// returned.
+    pub fn rmeta_unit_if_pipelined(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
+        if self.pipelined_units.contains(unit) {
+            assert_eq!(unit.mode, CompileMode::Build);
+            Some(unit.with_mode(CompileMode::BuildRmeta, self.bcx.units))
+        } else {
+            None
+        }
     }
 }
 

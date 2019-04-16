@@ -127,6 +127,7 @@ pub enum CompileMode {
     Test,
     /// Building a target with `rustc` (lib or bin).
     Build,
+    BuildRmeta,
     /// Building a target with `rustc` to emit `rmeta` metadata only. If
     /// `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
@@ -154,6 +155,7 @@ impl ser::Serialize for CompileMode {
         match *self {
             Test => "test".serialize(s),
             Build => "build".serialize(s),
+            BuildRmeta => "build-rmeta".serialize(s),
             Check { .. } => "check".serialize(s),
             Bench => "bench".serialize(s),
             Doc { .. } => "doc".serialize(s),
@@ -202,9 +204,10 @@ impl CompileMode {
     /// List of all modes (currently used by `cargo clean -p` for computing
     /// all possible outputs).
     pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 9] = [
+        static ALL: &[CompileMode] = &[
             CompileMode::Test,
             CompileMode::Build,
+            CompileMode::BuildRmeta,
             CompileMode::Check { test: true },
             CompileMode::Check { test: false },
             CompileMode::Bench,
@@ -213,6 +216,6 @@ impl CompileMode {
             CompileMode::Doctest,
             CompileMode::RunCustomBuild,
         ];
-        &ALL
+        ALL
     }
 }

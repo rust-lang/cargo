@@ -15,7 +15,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::{self, Write};
-use std::path::{self, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use failure::Error;
@@ -155,7 +155,11 @@ fn compile<'a, 'cfg: 'a>(
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
         job.before(if job.freshness() == Freshness::Dirty {
-            let work = if unit.mode.is_doc() {
+            let work = if cx.pipelined_units.contains(unit) {
+                // If we're a pipelined unit then we're just a phantom
+                // dependency node so there's no actual work for us to do.
+                Work::new(|_| Ok(()))
+            } else if unit.mode.is_doc() {
                 rustdoc(cx, unit)?
             } else {
                 rustc(cx, unit, exec)?
@@ -789,7 +793,7 @@ fn build_base_args<'a, 'cfg>(
     if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
     } else {
-        cmd.arg("--emit=dep-info,link");
+        cmd.arg("--emit=dep-info,metadata,link");
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
@@ -984,6 +988,17 @@ fn build_deps_args<'a, 'cfg>(
         dep: &Unit<'a>,
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
+
+        // If this dependency edge was "order only" then we explicitly don't
+        // want to pass `--extern` because there's no actual dependency and it
+        // would accidentally let the crate use apis it shouldn't have access
+        // to.
+        if let Some(set) = cx.order_only_dependencies.get(current) {
+            if set.contains(dep) {
+                return Ok(());
+            }
+        }
+
         for output in cx.outputs(dep)?.iter() {
             if output.flavor != FileFlavor::Linkable {
                 continue;
@@ -992,9 +1007,7 @@ fn build_deps_args<'a, 'cfg>(
             let name = bcx.extern_crate_name(current, dep)?;
             v.push(name);
             v.push("=");
-            v.push(cx.files().out_dir(dep));
-            v.push(&path::MAIN_SEPARATOR.to_string());
-            v.push(&output.path.file_name().unwrap());
+            v.push(&output.path);
             cmd.arg("--extern").arg(&v);
         }
         Ok(())

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 use log::info;
 
-use super::{BuildContext, Context, FileFlavor, Kind, Layout};
+use super::{BuildContext, Context, FileFlavor, Kind, Layout, CompileMode};
 use crate::core::compiler::Unit;
 use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
@@ -299,18 +299,19 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let mut ret = Vec::new();
         let mut unsupported = Vec::new();
-        {
-            if unit.mode.is_check() {
+        match unit.mode {
+            CompileMode::BuildRmeta | CompileMode::Check { .. } => {
                 // This may be confusing. rustc outputs a file named `lib*.rmeta`
                 // for both libraries and binaries.
                 let path = out_dir.join(format!("lib{}.rmeta", file_stem));
                 ret.push(OutputFile {
-                    path,
+                    path: path.clone(),
                     hardlink: None,
                     export_path: None,
                     flavor: FileFlavor::Linkable,
                 });
-            } else {
+            }
+            CompileMode::Test | CompileMode::Build | CompileMode::Bench => {
                 let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
                     let crate_type = if crate_type == "lib" {
                         "rlib"
@@ -324,34 +325,35 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                         bcx.target_triple(),
                     )?;
 
-                    match file_types {
-                        Some(types) => {
-                            for file_type in types {
-                                let path = out_dir.join(file_type.filename(&file_stem));
-                                let hardlink = link_stem
-                                    .as_ref()
-                                    .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
-                                let export_path = if unit.target.is_custom_build() {
-                                    None
-                                } else {
-                                    self.export_dir.as_ref().and_then(|export_dir| {
-                                        hardlink.as_ref().and_then(|hardlink| {
-                                            Some(export_dir.join(hardlink.file_name().unwrap()))
-                                        })
-                                    })
-                                };
-                                ret.push(OutputFile {
-                                    path,
-                                    hardlink,
-                                    export_path,
-                                    flavor: file_type.flavor,
-                                });
-                            }
-                        }
+                    let types = match file_types {
+                        Some(types) => types,
                         // Not supported; don't worry about it.
                         None => {
                             unsupported.push(crate_type.to_string());
+                            return Ok(());
                         }
+                    };
+
+                    for file_type in types {
+                        let path = out_dir.join(file_type.filename(&file_stem));
+                        let hardlink = link_stem
+                            .as_ref()
+                            .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                        let export_path = if unit.target.is_custom_build() {
+                            None
+                        } else {
+                            self.export_dir.as_ref().and_then(|export_dir| {
+                                hardlink.as_ref().and_then(|hardlink| {
+                                    Some(export_dir.join(hardlink.file_name().unwrap()))
+                                })
+                            })
+                        };
+                        ret.push(OutputFile {
+                            path,
+                            hardlink,
+                            export_path,
+                            flavor: file_type.flavor,
+                        });
                     }
                     Ok(())
                 };
@@ -380,6 +382,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                         }
                     }
                 }
+            }
+            CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::RunCustomBuild => {
+                return Ok(Arc::new(ret));
             }
         }
         if ret.is_empty() {
@@ -425,6 +430,14 @@ fn compute_metadata<'a, 'cfg>(
     cx: &Context<'a, 'cfg>,
     metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
 ) -> Option<Metadata> {
+    // Check to see if this is a pipelined unit which means that it doesn't
+    // actually do any work, but rather its dependency on an rmeta unit will do
+    // all the work. In that case we'll take the same metadata as our rmeta
+    // compile to ensure that our file names all align.
+    if let Some(rmeta) = cx.rmeta_unit_if_pipelined(unit) {
+        return compute_metadata(&rmeta, cx, metas);
+    }
+
     // No metadata for dylibs because of a couple issues:
     // - macOS encodes the dylib name in the executable,
     // - Windows rustc multiple files of which we can't easily link all of them.

@@ -60,7 +60,10 @@ fn build_dep_info_rlib() {
         .file("examples/ex.rs", "")
         .build();
 
-    p.cargo("build --example=ex").run();
+    p.cargo("build --example=ex")
+        .stream()
+        .env("RUST_LOG", "cargo")
+        .run();
     assert!(p.example_lib("ex", "rlib").with_extension("d").is_file());
 }
 

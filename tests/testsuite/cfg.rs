@@ -409,7 +409,9 @@ fn any_ok() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("build -v").run();
+    p.cargo("build -v")
+        .env("RUST_LOG", "cargo")
+        .run();
 }
 
 // https://github.com/rust-lang/cargo/issues/5313

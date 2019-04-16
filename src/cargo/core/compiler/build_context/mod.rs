@@ -8,9 +8,9 @@ use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
 use crate::util::errors::CargoResult;
-use crate::util::{profile, Cfg, Config, Rustc};
-use crate::core::compiler::{Unit, Kind, BuildConfig, BuildOutput};
+use crate::core::compiler::{Unit, Kind, BuildConfig, BuildOutput, CompileMode};
 use crate::core::compiler::unit::UnitInterner;
+use crate::util::{profile, Cfg, Config, Rustc};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
@@ -179,7 +179,18 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
-        self.extra_compiler_args.get(unit)
+        // Extra arguments are currently only registered for top-level units and
+        // this is how `cargo rustc` and `cargo rustdoc` are implemented. We may
+        // split a top level unit though for pipelining, and the actual work
+        // happens in the `BuildRmeta` stage and not the `Build` stage. To
+        // handle that difference and ensure arguments get to the right place be
+        // sure to switch `BuildRmeta` modes to `Build` for lookup.
+        if unit.mode == CompileMode::BuildRmeta {
+            let build = unit.with_mode(CompileMode::Build, self.units);
+            self.extra_compiler_args.get(&build)
+        } else {
+            self.extra_compiler_args.get(unit)
+        }
     }
 }
 

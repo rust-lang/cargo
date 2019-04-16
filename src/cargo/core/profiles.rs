@@ -93,6 +93,7 @@ impl Profiles {
                 }
             }
             CompileMode::Build
+            | CompileMode::BuildRmeta
             | CompileMode::Check { .. }
             | CompileMode::Doctest
             | CompileMode::RunCustomBuild => {

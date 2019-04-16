@@ -212,7 +212,7 @@ use super::job::{
     Freshness::{Dirty, Fresh},
     Job, Work,
 };
-use super::{BuildContext, Context, FileFlavor, Kind, Unit};
+use super::{BuildContext, CompileMode, Context, FileFlavor, Kind, Unit};
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
@@ -478,9 +478,7 @@ enum LocalFingerprint {
     /// The `dep_info` file, when present, also lists a number of other files
     /// for us to look at. If any of those files are newer than this file then
     /// we need to recompile.
-    CheckDepInfo {
-        dep_info: PathBuf,
-    },
+    CheckDepInfo { dep_info: PathBuf },
 
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
     /// out by a build script. The `output` file is a arelative file anchored at
@@ -500,10 +498,7 @@ enum LocalFingerprint {
     /// build script. The exact env var and value are hashed here. There's no
     /// filesystem dependence here, and if the values are changed the hash will
     /// change forcing a recompile.
-    RerunIfEnvChanged {
-        var: String,
-        val: Option<String>,
-    },
+    RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
 enum StaleFile {
@@ -899,7 +894,16 @@ impl DepFingerprint {
         dep: &Unit<'a>,
     ) -> CargoResult<DepFingerprint> {
         let fingerprint = calculate(cx, dep)?;
-        let name = cx.bcx.extern_crate_name(parent, dep)?;
+        let order_only = cx
+            .order_only_dependencies
+            .get(parent)
+            .map(|s| s.contains(dep))
+            .unwrap_or(false);
+        let name = if order_only {
+            String::new()
+        } else {
+            cx.bcx.extern_crate_name(parent, dep)?
+        };
 
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
@@ -1013,7 +1017,12 @@ fn calculate_normal<'a, 'cfg>(
     // get bland fingerprints because they don't change without their
     // `PackageId` changing.
     let target_root = target_root(cx, unit);
-    let local = if use_dep_info(unit) {
+    let local = if cx.pipelined_units.contains(unit) {
+        // If we're a "pipelined" unit then our fingerprint information is used
+        // and checked in the rmeta dependency that we depend on, so nothing new
+        // here.
+        Vec::new()
+    } else if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let dep_info = dep_info.strip_prefix(&target_root).unwrap().to_path_buf();
         vec![LocalFingerprint::CheckDepInfo { dep_info }]
@@ -1307,9 +1316,14 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 /// Returns the location that the dep-info file will show up at for the `unit`
 /// specified.
 pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
+    // If `unit` is a pipelined unit, or one that doesn't actually do any work
+    // because it's happening elsewhere, then we want to switch to the actual
+    // `rmeta` unit that does the work which will generate dep info. Otherwise
+    // the `unit` will produce its own dep info.
+    let unit = cx.rmeta_unit_if_pipelined(unit).unwrap_or(*unit);
     cx.files()
-        .fingerprint_dir(unit)
-        .join(&format!("dep-{}", filename(cx, unit)))
+        .fingerprint_dir(&unit)
+        .join(&format!("dep-{}", filename(cx, &unit)))
 }
 
 /// Returns an absolute path that the `unit`'s outputs should always be relative
@@ -1453,14 +1467,15 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     // even if the package is fresh, we'll still link the fresh target
     let file_stem = cx.files().file_stem(unit);
     let kind = unit.target.kind().description();
-    let flavor = if unit.mode.is_any_test() {
-        "test-"
-    } else if unit.mode.is_doc() {
-        "doc-"
-    } else if unit.mode.is_run_custom_build() {
-        "run-"
-    } else {
-        ""
+    let flavor = match unit.mode {
+        CompileMode::Test
+        | CompileMode::Bench
+        | CompileMode::Check { test: true }
+        | CompileMode::Doctest => "test-",
+        CompileMode::Doc { .. } => "doc-",
+        CompileMode::RunCustomBuild => "run-",
+        CompileMode::BuildRmeta => "rmeta-",
+        CompileMode::Check { test: false } | CompileMode::Build => "",
     };
     format!("{}{}-{}", flavor, kind, file_stem)
 }

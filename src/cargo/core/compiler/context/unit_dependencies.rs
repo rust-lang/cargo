@@ -16,6 +16,7 @@
 //! graph of `Unit`s, which capture these properties.
 
 use std::cell::RefCell;
+use std::mem;
 use std::collections::{HashMap, HashSet};
 
 use log::trace;
@@ -31,6 +32,8 @@ use crate::CargoResult;
 struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     bcx: &'tmp BuildContext<'a, 'cfg>,
     deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    order_only_dependencies: &'tmp mut HashMap<Unit<'a>, HashSet<Unit<'a>>>,
+    pipelined_units: &'tmp mut HashSet<Unit<'a>>,
     pkgs: RefCell<&'tmp mut HashMap<PackageId, &'a Package>>,
     waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,
@@ -41,6 +44,8 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     bcx: &BuildContext<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     pkgs: &mut HashMap<PackageId, &'a Package>,
+    order_only_dependencies: &mut HashMap<Unit<'a>, HashSet<Unit<'a>>>,
+    pipelined_units: &mut HashSet<Unit<'a>>,
 ) -> CargoResult<()> {
     assert!(deps.is_empty(), "can only build unit deps once");
 
@@ -50,6 +55,8 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         pkgs: RefCell::new(pkgs),
         waiting_on_download: HashSet::new(),
         downloads: bcx.packages.enable_download()?,
+        order_only_dependencies,
+        pipelined_units,
     };
 
     loop {
@@ -84,9 +91,14 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             break;
         }
     }
-    trace!("ALL UNIT DEPENDENCIES {:#?}", state.deps);
 
     connect_run_custom_build_deps(&mut state);
+
+    trace!("BEFORE PIPELINING {:#?}", state.deps);
+
+    pipeline_compilations(&mut state)?;
+
+    trace!("ALL UNIT DEPENDENCIES {:#?}", state.deps);
 
     // Dependencies are used in tons of places throughout the backend, many of
     // which affect the determinism of the build itself. As a result be sure
@@ -498,6 +510,200 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_, '_>) {
     // And finally, add in all the missing dependencies!
     for (unit, new_deps) in new_deps {
         state.deps.get_mut(&unit).unwrap().extend(new_deps);
+    }
+}
+
+fn pipeline_compilations(state: &mut State<'_, '_, '_>) -> CargoResult<()> {
+    // Disable pipelining in build plan mode for now. Pipelining doesn't really
+    // reflect well to the build plan and only really gets benefits within Cargo
+    // itself, so let's not export it just yet.
+    if state.bcx.build_config.build_plan {
+        return Ok(())
+    }
+
+    // Additionally use a config variable for testing for now while the
+    // pipelining implementation is still relatively new. This should allow easy
+    // disabling if there's accidental bugs or just for local testing.
+    if !state.bcx.config.get_bool("build.pipelining")?.map(|t| t.val).unwrap_or(true) {
+        return Ok(());
+    }
+
+    // First thing to do is to restructure the dependency graph in two ways:
+    //
+    // 1. First, we need to split all rlib builds into an actual build which
+    //    depends on the metadata build. The metadata build will actually do all
+    //    the work and the normal build will be an effective noop.
+    //
+    // 2. Next, for candidate dependencies, we depend on rmeta builds instead of
+    //    full builds. This ensures that we're only depending on what's
+    //    absolutely necessary, ensuring we don't wait too long to start
+    //    compilations.
+    let mut new_nodes = Vec::new();
+    for (unit, deps) in state.deps.iter_mut() {
+        // Only building rlibs are candidates for pipelining. The first check
+        // here is effectively "is this an rlib" and the second filters out all
+        // other forms of units that aren't compilations (like unit tests,
+        // documentation, etc).
+        if unit.target.requires_upstream_objects() || unit.mode != CompileMode::Build {
+            continue;
+        }
+        state.pipelined_units.insert(*unit);
+
+        // Update all `deps`, that we can, to depend on `BuildRmeta` instead of
+        // `Build`. This is where we get pipelining wins by hoping that our
+        // dependencies can be fulfilled faster by only depending on metadata
+        // information.
+        for dep in deps.iter_mut() {
+            if dep.target.requires_upstream_objects() {
+                continue;
+            }
+            match dep.mode {
+                CompileMode::Build => {}
+                _ => continue,
+            }
+            *dep = dep.with_mode(CompileMode::BuildRmeta, state.bcx.units);
+        }
+
+        // Rewrite our `Build` unit and its dependencies. Our `Build` unit will
+        // now only depend on the `BuildRmeta` unit which we're about to create.
+        // Our `BuildRmeta` unit then actually lists all of the dependencies
+        // that we previously had.
+        let build_rmeta = unit.with_mode(CompileMode::BuildRmeta, state.bcx.units);
+        let new_deps = vec![build_rmeta];
+        new_nodes.push((build_rmeta, mem::replace(deps, new_deps)));
+
+        // As a bit of side information flag that the `Build` -> `BuildRmeta`
+        // dependency we've created here is an "order only" dependency which
+        // means we won't try to pass `--extern` to ourselves which would be
+        // silly.
+        state
+            .order_only_dependencies
+            .entry(*unit)
+            .or_insert_with(HashSet::new)
+            .insert(build_rmeta);
+    }
+    state.deps.extend(new_nodes);
+
+    // The next step we need to perform is to add more dependencies in the
+    // dependency graph (more than we've already done). Let's take an example
+    // dependency graph like:
+    //
+    //      A (exe) -> B (rlib) -> C (rlib)
+    //
+    // our above loop transformed this graph into:
+    //
+    //      A (exe) -> B (rlib) -> B (rmeta) -> C (remta)
+    //                                          ^
+    //                                          |
+    //                                      C (rlib)
+    //
+    // This is actually incorrect because "A (exe)" actually depends on "C
+    // (rlib)". Technically just the linking phase depends on it but we take a
+    // coarse approximation and say the entirety of "A (exe)" depend on it.
+    //
+    // The graph that we actually want is:
+    //
+    //      A (exe) -> B (rlib) -> B (rmeta) -> C (remta)
+    //               \                          ^
+    //                \                         |
+    //                 -------------------> C (rlib)
+    //
+    // To do this transformation we're going to take a look at all rlib builds
+    // which now depend on just an `BuildRmeta` node.  We walk from these nodes
+    // higher up to the root of the dependency graph (all paths to the root). As
+    // soon as any path has a node that is not `BuildRmeta` we add a dependency
+    // in its list of dependencies to the `Build` version of our unit.
+    //
+    // In reality this means that the graph we produce will be:
+    //
+    //      A (exe) -> B (rlib) -> B (rmeta) -> C (remta)
+    //                          \               ^
+    //                           \              |
+    //                            --------> C (rlib)
+    //
+    // and this should have the same performance characteristics as our desired
+    // graph from above because "B (rlib)" is a free phantom dependency node.
+    let mut reverse_deps = HashMap::new();
+    for (unit, deps) in state.deps.iter() {
+        for dep in deps {
+            reverse_deps
+                .entry(*dep)
+                .or_insert_with(HashSet::new)
+                .insert(*unit);
+        }
+    }
+
+    let mut updated = HashSet::new();
+    for build_unit in state.pipelined_units.clone() {
+        let build_rmeta_unit = build_unit.with_mode(CompileMode::BuildRmeta, state.bcx.units);
+        update_built_parents(
+            &build_unit,
+            &build_rmeta_unit,
+            state,
+            &reverse_deps,
+            &mut updated,
+        );
+    }
+
+    return Ok(());
+
+    /// Walks the dependency graph upwards from `build_rmeta_unit` to find a
+    /// unit which is *not* `BuildRmeta`. When found, adds `build_unit` to that
+    /// unit's list of dependencies.
+    fn update_built_parents<'a>(
+        build_unit: &Unit<'a>,
+        build_rmeta_unit: &Unit<'a>,
+        state: &mut State<'a, '_, '_>,
+        reverse_deps: &HashMap<Unit<'a>, HashSet<Unit<'a>>>,
+        updated: &mut HashSet<(Unit<'a>, Unit<'a>)>,
+    ) {
+        debug_assert_eq!(build_rmeta_unit.mode, CompileMode::BuildRmeta);
+        debug_assert_eq!(build_unit.mode, CompileMode::Build);
+
+        // There may be multiple paths to the root of the depenency graph as we
+        // walk upwards, but we don't want to add units more than once. Use a
+        // visited set to guard against this.
+        if !updated.insert((*build_unit, *build_rmeta_unit)) {
+            return;
+        }
+
+        // Look for anything that depends on our `BuildRmeta` unit. If nothing
+        // depends on us then we've reached the root of the graph, and nothing
+        // needs to depend on the `Build` version!
+        let parents = match reverse_deps.get(build_rmeta_unit) {
+            Some(list) => list,
+            None => return,
+        };
+
+        for parent in parents {
+            match parent.mode {
+                // If a `BuildRmeta` depends on this `BuildRmeta`, then we
+                // recurse and keep walking up the graph to add the `build_unit`
+                // into the dependency list
+                CompileMode::BuildRmeta => {
+                    update_built_parents(build_unit, parent, state, reverse_deps, updated);
+                }
+                // ... otherwise this unit is not a `BuildRmeta`, but very
+                // likely a `Build`. In that case for it to actually execute we
+                // need to finish all transitive `BuildRmeta` units, so we
+                // update its list of dependencies to include the full built
+                // artifact.
+                _ => {
+                    // If these are the same that means we're propagating the
+                    // `BuildRmeta` unit to the `Build` of itself so we can
+                    // safely skip that.
+                    if parent == build_unit {
+                        continue;
+                    }
+                    state.deps.get_mut(parent).unwrap().push(*build_unit);
+                    state
+                        .order_only_dependencies
+                        .entry(*parent)
+                        .or_insert_with(HashSet::new)
+                        .insert(*build_unit);
+                }
+            }
+        }
     }
 }
 

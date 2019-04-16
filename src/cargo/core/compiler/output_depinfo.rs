@@ -45,9 +45,10 @@ fn add_deps_for_unit<'a, 'b>(
             }
         } else {
             debug!(
-                "can't find dep_info for {:?} {}",
+                "can't find dep_info for {:?} {} at {:?}",
                 unit.pkg.package_id(),
-                unit.target
+                unit.target,
+                dep_info_loc,
             );
             return Err(internal("dep_info missing"));
         }
