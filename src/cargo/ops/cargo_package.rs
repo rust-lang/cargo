@@ -532,7 +532,7 @@ fn compare_resolve(
                 )
             }
         };
-        let msg = format!("package `{}` added to Cargo.lock{}", pkg_id, extra);
+        let msg = format!("package `{}` added to the packaged Cargo.lock file{}", pkg_id, extra);
         config.shell().status_with_color("Note", msg, Color::Cyan)?;
     }
     Ok(())
