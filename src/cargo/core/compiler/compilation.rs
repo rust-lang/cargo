@@ -187,7 +187,6 @@ impl<'cfg> Compilation<'cfg> {
                 search_path.push(PathBuf::from(home).join("lib"));
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
-            search_path.push(PathBuf::from("/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
         }
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
