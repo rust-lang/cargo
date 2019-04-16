@@ -1228,4 +1228,8 @@ fn run_link_system_path_macos() {
     // was set by the cargo that invoked the test.
     p2.cargo("run").env_remove(VAR).run();
     p2.cargo("test").env_remove(VAR).run();
+    // Ensure this still works when DYLD_FALLBACK_LIBRARY_PATH has
+    // a value set.
+    p2.cargo("run").env(VAR, &libdir).run();
+    p2.cargo("test").env(VAR, &libdir).run();
 }
