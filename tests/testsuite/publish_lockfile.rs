@@ -269,54 +269,6 @@ fn no_warn_workspace_extras() {
 }
 
 #[test]
-fn out_of_date_lock_note() {
-    // Dependency is force-changed from an out-of-date Cargo.lock.
-    Package::new("dep", "1.0.0").publish();
-    Package::new("dep", "2.0.0").publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &pl_manifest(
-                "foo",
-                "0.0.1",
-                r#"
-                [dependencies]
-                dep = "1.0"
-                "#,
-            ),
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-    p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo()
-        .run();
-    p.change_file(
-        "Cargo.toml",
-        &pl_manifest(
-            "foo",
-            "0.0.1",
-            r#"
-            [dependencies]
-            dep = "2.0"
-            "#,
-        ),
-    );
-    p.cargo("package --no-verify -v --allow-dirty")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] Cargo.toml
-[ARCHIVING] src/main.rs
-[UPDATING] `[..]` index
-[NOTE] package `dep v2.0.0` added to the packaged Cargo.lock file, previous version was `1.0.0`
-",
-        )
-        .run();
-}
-
-#[test]
 fn warn_package_with_yanked() {
     Package::new("bar", "0.1.0").publish();
     let p = project()
@@ -377,7 +329,6 @@ dependencies = [
         )
         .publish();
 
-    // It is unfortunate that this displays UPDATING twice.
     cargo_process("install --locked foo")
         .with_stderr(
             "\
@@ -385,7 +336,6 @@ dependencies = [
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `[..]`)
 [INSTALLING] foo v0.1.0
-[UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
     `crates.io`, consider running without --locked
 [DOWNLOADING] crates ...
