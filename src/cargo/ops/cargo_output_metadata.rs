@@ -52,7 +52,6 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
     let specs = Packages::All.to_package_id_specs(ws)?;
     let (package_set, resolve) = ops::resolve_ws_precisely(
         ws,
-        None,
         &opt.features,
         opt.all_features,
         opt.no_default_features,

@@ -141,7 +141,7 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
     let (pkg_set, new_resolve) =
-        ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?;
+        ops::resolve_ws_with_method(&tmp_ws, Method::Everything, &specs)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
@@ -587,7 +587,6 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     ops::compile_ws(
         &ws,
-        None,
         &ops::CompileOptions {
             config,
             build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,

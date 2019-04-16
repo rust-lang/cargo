@@ -145,7 +145,7 @@ fn install_one(
 ) -> CargoResult<()> {
     let config = opts.config;
 
-    let (pkg, source) = if source_id.is_git() {
+    let pkg = if source_id.is_git() {
         select_pkg(
             GitSource::new(source_id, config)?,
             krate,
@@ -307,7 +307,7 @@ fn install_one(
     check_yanked_install(&ws)?;
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
+    let compile = ops::compile_ws(&ws, opts, &exec).chain_err(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
             td.into_path();
@@ -489,7 +489,7 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
     // It would be best if `source` could be passed in here to avoid a
     // duplicate "Updating", but since `source` is taken by value, then it
     // wouldn't be available for `compile_ws`.
-    let (pkg_set, resolve) = ops::resolve_ws_with_method(ws, None, Method::Everything, &specs)?;
+    let (pkg_set, resolve) = ops::resolve_ws_with_method(ws, Method::Everything, &specs)?;
     let mut sources = pkg_set.sources_mut();
     for pkg_id in resolve.iter() {
         if let Some(source) = sources.get_mut(pkg_id.source_id()) {
