@@ -992,6 +992,7 @@ root: [..]
 fn new_warning_with_corrupt_ws() {
     let p = project().file("Cargo.toml", "asdf").build();
     p.cargo("new bar")
+        .env("USER", "foo")
         .with_stderr(
             "\
 [WARNING] compiling this new crate may not work due to invalid workspace configuration
