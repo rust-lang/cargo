@@ -48,9 +48,6 @@ pub struct Context {
     // at the very end and actually construct the map that we're making.
     pub resolve_graph: RcList<GraphNode>,
     pub resolve_replacements: RcList<(PackageId, PackageId)>,
-
-    // These warnings are printed after resolution.
-    pub warnings: RcList<String>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -109,7 +106,6 @@ impl Context {
             parents: Graph::new(),
             resolve_replacements: RcList::new(),
             activations: im_rc::HashMap::new(),
-            warnings: RcList::new(),
         }
     }
 
@@ -174,7 +170,7 @@ impl Context {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps = self.resolve_features(parent, candidate, method)?;
+        let deps = self.resolve_features(parent, candidate, method, None)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -229,11 +225,12 @@ impl Context {
     }
 
     /// Returns all dependencies and the features we want from them.
-    fn resolve_features<'b>(
+    pub fn resolve_features<'b>(
         &mut self,
         parent: Option<&Summary>,
         s: &'b Summary,
         method: &'b Method<'_>,
+        config: Option<&crate::util::config::Config>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -261,20 +258,23 @@ impl Context {
             // name.
             let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
             used_features.insert(dep.name_in_toml());
-            let always_required = !dep.is_optional()
-                && !s
-                    .dependencies()
-                    .iter()
-                    .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
-            if always_required && base.0 {
-                self.warnings.push(format!(
-                    "Package `{}` does not have feature `{}`. It has a required dependency \
-                     with that name, but only optional dependencies can be used as features. \
-                     This is currently a warning to ease the transition, but it will become an \
-                     error in the future.",
-                    s.package_id(),
-                    dep.name_in_toml()
-                ));
+            if let Some(config) = config {
+                let mut shell = config.shell();
+                let always_required = !dep.is_optional()
+                    && !s
+                        .dependencies()
+                        .iter()
+                        .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
+                if always_required && base.0 {
+                    shell.warn(&format!(
+                        "Package `{}` does not have feature `{}`. It has a required dependency \
+                         with that name, but only optional dependencies can be used as features. \
+                         This is currently a warning to ease the transition, but it will become an \
+                         error in the future.",
+                        s.package_id(),
+                        dep.name_in_toml()
+                    ))?
+                }
             }
             let mut base = base.1.clone();
             base.extend(dep.features().iter());

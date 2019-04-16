@@ -158,13 +158,18 @@ pub fn resolve(
     trace!("resolved: {:?}", resolve);
 
     // If we have a shell, emit warnings about required deps used as feature.
-    if let Some(config) = config {
-        if print_warnings {
-            let mut shell = config.shell();
-            let mut warnings = &cx.warnings;
-            while let Some(ref head) = warnings.head {
-                shell.warn(&head.0)?;
-                warnings = &head.1;
+    if print_warnings && config.is_some() {
+        let mut new_cx = cx.clone();
+        for (j, _) in cx.activations.values() {
+            if let Some(features) = cx.resolve_features.get(&j.package_id()) {
+                let features: Vec<_> = features.iter().cloned().collect();
+                let method = Method::Required {
+                    dev_deps: false,
+                    features: &features,
+                    all_features: false,
+                    uses_default_features: false,
+                };
+                let _ = new_cx.resolve_features(None, j, &method, config);
             }
         }
     }
