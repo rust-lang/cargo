@@ -41,6 +41,8 @@ pub struct PackageOpts<'cfg> {
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
+    // Make sure the Cargo.lock is up-to-date and valid.
+    ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
     let config = ws.config();
 
