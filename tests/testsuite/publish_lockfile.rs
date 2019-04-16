@@ -186,8 +186,8 @@ fn note_resolve_changes() {
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[NOTE] package `mutli v0.1.0` added to Cargo.lock, was originally sourced from `[..]/foo/mutli`
-[NOTE] package `patched v1.0.0` added to Cargo.lock, was originally sourced from `[..]/foo/patched`
+[NOTE] package `mutli v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/mutli`
+[NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
 ",
         )
         .run();
@@ -310,7 +310,7 @@ fn out_of_date_lock_note() {
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/main.rs
 [UPDATING] `[..]` index
-[NOTE] package `dep v2.0.0` added to Cargo.lock, previous version was `1.0.0`
+[NOTE] package `dep v2.0.0` added to the packaged Cargo.lock file, previous version was `1.0.0`
 ",
         )
         .run();
