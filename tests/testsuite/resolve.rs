@@ -111,13 +111,13 @@ proptest! {
     ) {
         let reg = registry(input.clone());
         let mut removed_input = input.clone();
-        for (summery_idx, dep_idx) in indexes_to_remove {
+        for (summary_idx, dep_idx) in indexes_to_remove {
             if !removed_input.is_empty() {
-                let summery_idx = summery_idx.index(removed_input.len());
-                let deps = removed_input[summery_idx].dependencies();
+                let summary_idx = summary_idx.index(removed_input.len());
+                let deps = removed_input[summary_idx].dependencies();
                 if !deps.is_empty() {
-                    let new = remove_dep(&removed_input[summery_idx], dep_idx.index(deps.len()));
-                    removed_input[summery_idx] = new;
+                    let new = remove_dep(&removed_input[summary_idx], dep_idx.index(deps.len()));
+                    removed_input[summary_idx] = new;
                 }
             }
         }

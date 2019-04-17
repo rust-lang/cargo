@@ -219,8 +219,21 @@ impl<'a> RegistryQueryer<'a> {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
             }
             if let Some(r) = &replace {
-                self.used_replacements
-                    .insert(summary.package_id(), r.package_id());
+                if let Some(old) = self
+                    .used_replacements
+                    .insert(summary.package_id(), r.package_id())
+                {
+                    debug_assert_eq!(
+                        r.package_id(),
+                        old,
+                        "we are inconsistent about witch replacement is used for {:?}, \
+                         one time we used {:?}, \
+                         now we are adding {:?}.",
+                        summary.package_id(),
+                        old,
+                        r.package_id()
+                    )
+                }
             }
 
             candidate.replace = replace;

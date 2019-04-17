@@ -9,6 +9,7 @@ use log::debug;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
+use crate::util::config::Config;
 use crate::util::CargoResult;
 use crate::util::Graph;
 
@@ -217,7 +218,7 @@ impl Context {
         parent: Option<&Summary>,
         s: &'b Summary,
         method: &'b Method<'_>,
-        config: Option<&crate::util::config::Config>,
+        config: Option<&Config>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -329,14 +330,16 @@ impl Context {
     }
 
     pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
-        let mut graph = Graph::new();
+        let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));
         for i in self.parents.iter() {
             graph.add(*i);
             for (o, e) in self.parents.edges(i) {
-                *graph.link(*o, *i) = e.to_vec();
+                let old_link = graph.link(*o, *i);
+                debug_assert!(old_link.is_empty());
+                *old_link = e.to_vec();
             }
         }
         graph
