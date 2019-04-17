@@ -95,11 +95,12 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
-    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
     // If set the list of dependency candidates will be sorted by minimal
     // versions first. That allows `cargo update -Z minimal-versions` which will
     // specify minimum dependency versions to be used.
     minimal_versions: bool,
+    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    used_replacements: HashMap<PackageId, PackageId>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -112,10 +113,15 @@ impl<'a> RegistryQueryer<'a> {
         RegistryQueryer {
             registry,
             replacements,
-            cache: HashMap::new(),
             try_to_use,
             minimal_versions,
+            cache: HashMap::new(),
+            used_replacements: HashMap::new(),
         }
+    }
+
+    pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
+        self.used_replacements.get(&p).map(|&r| (p, r))
     }
 
     /// Queries the `registry` to return a list of candidates for `dep`.
@@ -211,6 +217,10 @@ impl<'a> RegistryQueryer<'a> {
 
             for dep in summary.dependencies() {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
+            }
+            if let Some(r) = &replace {
+                self.used_replacements
+                    .insert(summary.package_id(), r.package_id());
             }
 
             candidate.replace = replace;

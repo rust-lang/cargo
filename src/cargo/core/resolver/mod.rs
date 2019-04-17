@@ -143,7 +143,7 @@ pub fn resolve(
     }
     let resolve = Resolve::new(
         cx.graph(),
-        cx.resolve_replacements(),
+        cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
             .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
@@ -668,8 +668,6 @@ fn activate(
 
     let candidate = match candidate.replace {
         Some(replace) => {
-            cx.resolve_replacements
-                .push((candidate_pid, replace.package_id()));
             if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
