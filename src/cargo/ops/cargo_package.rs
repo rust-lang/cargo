@@ -79,7 +79,8 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
             .iter()
             .map(|file| file.strip_prefix(root).unwrap().to_path_buf())
             .collect();
-        if include_lockfile(pkg) {
+        if pkg.include_lockfile() && !list.contains(&PathBuf::from("Cargo.lock")) {
+            // A generated Cargo.lock will be included.
             list.push("Cargo.lock".into());
         }
         if vcs_info.is_some() {
@@ -140,8 +141,7 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     // Regenerate Cargo.lock using the old one as a guide.
     let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let (pkg_set, new_resolve) =
-        ops::resolve_ws_with_method(&tmp_ws, Method::Everything, &specs)?;
+    let (pkg_set, new_resolve) = ops::resolve_ws_with_method(&tmp_ws, Method::Everything, &specs)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
@@ -149,10 +149,6 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     check_yanked(config, &pkg_set, &new_resolve)?;
 
     ops::resolve_to_string(&tmp_ws, &new_resolve)
-}
-
-fn include_lockfile(pkg: &Package) -> bool {
-    pkg.manifest().publish_lockfile() && pkg.targets().iter().any(|t| t.is_example() || t.is_bin())
 }
 
 // Checks that the package has some piece of metadata that a human can
@@ -337,6 +333,10 @@ fn tar(
         let relative_str = relative.to_str().ok_or_else(|| {
             failure::format_err!("non-utf8 path in source directory: {}", relative.display())
         })?;
+        if relative_str == "Cargo.lock" {
+            // This is added manually below.
+            continue;
+        }
         config
             .shell()
             .verbose(|shell| shell.status("Archiving", &relative_str))?;
@@ -432,9 +432,12 @@ fn tar(
             .chain_err(|| internal(format!("could not archive source file `{}`", fnd)))?;
     }
 
-    if include_lockfile(pkg) {
+    if pkg.include_lockfile() {
         let new_lock = build_lock(&ws)?;
 
+        config
+            .shell()
+            .verbose(|shell| shell.status("Archiving", "Cargo.lock"))?;
         let path = format!(
             "{}-{}{}Cargo.lock",
             pkg.name(),
@@ -534,7 +537,10 @@ fn compare_resolve(
                 )
             }
         };
-        let msg = format!("package `{}` added to the packaged Cargo.lock file{}", pkg_id, extra);
+        let msg = format!(
+            "package `{}` added to the packaged Cargo.lock file{}",
+            pkg_id, extra
+        );
         config.shell().status_with_color("Note", msg, Color::Cyan)?;
     }
     Ok(())
@@ -625,9 +631,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
     fn wrap(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
         let mut result = HashMap::new();
         let walker = walkdir::WalkDir::new(path).into_iter();
-        for entry in walker.filter_entry(|e| {
-            !(e.depth() == 1 && (e.file_name() == "target" || e.file_name() == "Cargo.lock"))
-        }) {
+        for entry in walker.filter_entry(|e| !(e.depth() == 1 && e.file_name() == "target")) {
             let entry = entry?;
             let file_type = entry.file_type();
             if file_type.is_file() {

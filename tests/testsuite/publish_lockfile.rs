@@ -90,6 +90,23 @@ src/main.rs
 ",
         )
         .run();
+    cargo_process("package -v")
+        .cwd(g.root())
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
+[ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
+[VERIFYING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo src/main.rs [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
 }
 
 #[test]
@@ -185,6 +202,7 @@ fn note_resolve_changes() {
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/main.rs
+[ARCHIVING] Cargo.lock
 [UPDATING] `[..]` index
 [NOTE] package `mutli v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/mutli`
 [NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
