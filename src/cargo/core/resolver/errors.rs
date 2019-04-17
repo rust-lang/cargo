@@ -50,6 +50,7 @@ impl fmt::Display for ResolveError {
 
 pub type ActivateResult<T> = Result<T, ActivateError>;
 
+#[derive(Debug)]
 pub enum ActivateError {
     Fatal(failure::Error),
     Conflict(PackageId, ConflictReason),
