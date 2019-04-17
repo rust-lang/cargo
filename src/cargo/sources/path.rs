@@ -240,8 +240,13 @@ impl<'cfg> PathSource<'cfg> {
                 }
             }
 
-            // Update to `ignore_should_package` for Stage 2.
-            Ok(glob_should_package)
+            let should_include = match path.file_name().and_then(|s| s.to_str()) {
+                Some("Cargo.lock") => pkg.include_lockfile(),
+                // Update to `ignore_should_package` for Stage 2.
+                _ => glob_should_package,
+            };
+
+            Ok(should_include)
         };
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
@@ -332,7 +337,11 @@ impl<'cfg> PathSource<'cfg> {
         }
         let statuses = repo.statuses(Some(&mut opts))?;
         let untracked = statuses.iter().filter_map(|entry| match entry.status() {
-            git2::Status::WT_NEW => Some((join(root, entry.path_bytes()), None)),
+            // Don't include Cargo.lock if it is untracked. Packaging will
+            // generate a new one as needed.
+            git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
+                Some((join(root, entry.path_bytes()), None))
+            }
             _ => None,
         });
 
@@ -342,17 +351,15 @@ impl<'cfg> PathSource<'cfg> {
             let file_path = file_path?;
 
             // Filter out files blatantly outside this package. This is helped a
-            // bit obove via the `pathspec` function call, but we need to filter
+            // bit above via the `pathspec` function call, but we need to filter
             // the entries in the index as well.
             if !file_path.starts_with(pkg_path) {
                 continue;
             }
 
             match file_path.file_name().and_then(|s| s.to_str()) {
-                // Filter out `Cargo.lock` and `target` always; we don't want to
-                // package a lock file no one will ever read and we also avoid
-                // build artifacts.
-                Some("Cargo.lock") | Some("target") => continue,
+                // The `target` directory is never included.
+                Some("target") => continue,
 
                 // Keep track of all sub-packages found and also strip out all
                 // matches we've found so far. Note, though, that if we find
@@ -467,7 +474,7 @@ impl<'cfg> PathSource<'cfg> {
             if is_root {
                 // Skip Cargo artifacts.
                 match name {
-                    Some("target") | Some("Cargo.lock") => continue,
+                    Some("target") => continue,
                     _ => {}
                 }
             }
