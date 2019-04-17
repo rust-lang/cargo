@@ -1223,6 +1223,13 @@ fn run_link_system_path_macos() {
     )
     .unwrap();
     p.root().rm_rf();
-    p2.cargo("run").run();
-    p2.cargo("test").run();
+    const VAR: &str = "DYLD_FALLBACK_LIBRARY_PATH";
+    // Reset DYLD_FALLBACK_LIBRARY_PATH so that we don't inherit anything that
+    // was set by the cargo that invoked the test.
+    p2.cargo("run").env_remove(VAR).run();
+    p2.cargo("test").env_remove(VAR).run();
+    // Ensure this still works when DYLD_FALLBACK_LIBRARY_PATH has
+    // a value set.
+    p2.cargo("run").env(VAR, &libdir).run();
+    p2.cargo("test").env(VAR, &libdir).run();
 }
