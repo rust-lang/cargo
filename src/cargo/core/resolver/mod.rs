@@ -62,7 +62,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};

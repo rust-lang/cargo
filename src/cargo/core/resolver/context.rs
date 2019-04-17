@@ -13,7 +13,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::errors::ActivateResult;
-use super::types::{ConflictMap, ConflictReason, DepInfo, GraphNode, Method, RegistryQueryer};
+use super::types::{ConflictMap, ConflictReason, DepInfo, Method, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
