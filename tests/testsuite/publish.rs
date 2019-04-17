@@ -977,3 +977,39 @@ fn publish_with_patch() {
         &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
+
+#[test]
+fn publish_checks_for_token_before_verify() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+
+    // Assert upload token error before the package is verified
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
+        .run();
+
+    // Assert package verified successfully on dry run
+    p.cargo("publish --dry-run")
+        .with_status(0)
+        .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
+        .run();
+}
