@@ -159,45 +159,7 @@ pub fn resolve(
 
     // If we have a shell, emit warnings about required deps used as feature.
     if print_warnings && config.is_some() {
-        let mut new_cx = cx.clone();
-        new_cx.resolve_features = im_rc::HashMap::new();
-        let mut features_from_dep = HashMap::new();
-        for (summery, method) in summaries {
-            for (dep, features) in new_cx
-                .resolve_features(None, summery, &method, config)
-                .expect("can not resolve_features for a required summery")
-            {
-                features_from_dep.insert((summery.package_id(), dep), features);
-            }
-        }
-        for summery in resolve.sort().iter().rev().map(|id| {
-            cx.activations
-                .get(&id.as_activations_key())
-                .expect("id in dependency graph but not in activations")
-                .0
-                .clone()
-        }) {
-            for (parent, deps) in cx.parents.edges(&summery.package_id()) {
-                for dep in deps.iter() {
-                    let features = features_from_dep
-                        .remove(&(*parent, dep.clone()))
-                        .expect("fulfilled a dep that was not needed");
-                    let method = Method::Required {
-                        dev_deps: false,
-                        features: &features,
-                        all_features: false,
-                        uses_default_features: dep.uses_default_features(),
-                    };
-                    for (dep, features) in new_cx
-                        .resolve_features(None, &summery, &method, config)
-                        .expect("can not resolve_features for a used dep")
-                    {
-                        features_from_dep.insert((summery.package_id(), dep), features);
-                    }
-                }
-            }
-        }
-        assert_eq!(cx.resolve_features, new_cx.resolve_features);
+        emit_warnings(&cx, &resolve, summaries, config)
     }
 
     Ok(resolve)
@@ -1128,4 +1090,52 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
         }
     }
     Ok(())
+}
+
+/// re-run all used resolve_features so it can print warnings
+fn emit_warnings(
+    cx: &Context,
+    resolve: &Resolve,
+    summaries: &[(Summary, Method<'_>)],
+    config: Option<&Config>,
+) {
+    let mut new_cx = cx.clone();
+    new_cx.resolve_features = im_rc::HashMap::new();
+    let mut features_from_dep = HashMap::new();
+    for (summery, method) in summaries {
+        for (dep, features) in new_cx
+            .resolve_features(None, summery, &method, config)
+            .expect("can not resolve_features for a required summery")
+        {
+            features_from_dep.insert((summery.package_id(), dep), features);
+        }
+    }
+    for summery in resolve.sort().iter().rev().map(|id| {
+        cx.activations
+            .get(&id.as_activations_key())
+            .expect("id in dependency graph but not in activations")
+            .0
+            .clone()
+    }) {
+        for (parent, deps) in cx.parents.edges(&summery.package_id()) {
+            for dep in deps.iter() {
+                let features = features_from_dep
+                    .remove(&(*parent, dep.clone()))
+                    .expect("fulfilled a dep that was not needed");
+                let method = Method::Required {
+                    dev_deps: false,
+                    features: &features,
+                    all_features: false,
+                    uses_default_features: dep.uses_default_features(),
+                };
+                for (dep, features) in new_cx
+                    .resolve_features(None, &summery, &method, config)
+                    .expect("can not resolve_features for a used dep")
+                {
+                    features_from_dep.insert((summery.package_id(), dep), features);
+                }
+            }
+        }
+    }
+    assert_eq!(cx.resolve_features, new_cx.resolve_features);
 }
