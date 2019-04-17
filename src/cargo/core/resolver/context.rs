@@ -13,9 +13,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::errors::ActivateResult;
-use super::types::{
-    ConflictMap, ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer,
-};
+use super::types::{ConflictMap, ConflictReason, DepInfo, GraphNode, Method, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -37,16 +35,9 @@ pub struct Context {
     pub public_dependency:
         Option<im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>>,
 
-    // This is somewhat redundant with the `resolve_graph` that stores the same data,
-    //   but for querying in the opposite order.
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
-
-    // These are two cheaply-cloneable lists (O(1) clone) which are effectively
-    // hash maps but are built up as "construction lists". We'll iterate these
-    // at the very end and actually construct the map that we're making.
-    pub resolve_graph: RcList<GraphNode>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -94,7 +85,6 @@ impl PackageId {
 impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
         Context {
-            resolve_graph: RcList::new(),
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
             public_dependency: if check_public_visible_dependencies {
@@ -122,7 +112,6 @@ impl Context {
                 );
             }
             im_rc::hashmap::Entry::Vacant(v) => {
-                self.resolve_graph.push(GraphNode::Add(id));
                 if let Some(link) = summary.links() {
                     ensure!(
                         self.links.insert(link, id).is_none(),
@@ -340,16 +329,15 @@ impl Context {
     }
 
     pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
-        let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
-        let mut cur = &self.resolve_graph;
-        while let Some(ref node) = cur.head {
-            match node.0 {
-                GraphNode::Add(ref p) => graph.add(p.clone()),
-                GraphNode::Link(ref a, ref b, ref dep) => {
-                    graph.link(a.clone(), b.clone()).push(dep.clone());
-                }
+        let mut graph = Graph::new();
+        self.activations
+            .values()
+            .for_each(|(r, _)| graph.add(r.package_id()));
+        for i in self.parents.iter() {
+            graph.add(*i);
+            for (o, e) in self.parents.edges(i) {
+                *graph.link(*o, *i) = e.to_vec();
             }
-            cur = &node.1;
         }
         graph
     }
