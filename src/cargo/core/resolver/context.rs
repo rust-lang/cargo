@@ -47,7 +47,6 @@ pub struct Context {
     // hash maps but are built up as "construction lists". We'll iterate these
     // at the very end and actually construct the map that we're making.
     pub resolve_graph: RcList<GraphNode>,
-    pub resolve_replacements: RcList<(PackageId, PackageId)>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -104,7 +103,6 @@ impl Context {
                 None
             },
             parents: Graph::new(),
-            resolve_replacements: RcList::new(),
             activations: im_rc::HashMap::new(),
         }
     }
@@ -331,15 +329,14 @@ impl Context {
         Ok(ret)
     }
 
-    pub fn resolve_replacements(&self) -> HashMap<PackageId, PackageId> {
-        let mut replacements = HashMap::new();
-        let mut cur = &self.resolve_replacements;
-        while let Some(ref node) = cur.head {
-            let (k, v) = node.0;
-            replacements.insert(k, v);
-            cur = &node.1;
-        }
-        replacements
+    pub fn resolve_replacements(
+        &self,
+        registry: &RegistryQueryer<'_>,
+    ) -> HashMap<PackageId, PackageId> {
+        self.activations
+            .values()
+            .filter_map(|(s, _)| registry.used_replacement_for(s.package_id()))
+            .collect()
     }
 
     pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
