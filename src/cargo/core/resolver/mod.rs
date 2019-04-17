@@ -606,8 +606,6 @@ fn activate(
     let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        cx.resolve_graph
-            .push(GraphNode::Link(parent_pid, candidate_pid, dep.clone()));
         Rc::make_mut(
             // add a edge from candidate to parent in the parents graph
             cx.parents.link(candidate_pid, parent_pid),
