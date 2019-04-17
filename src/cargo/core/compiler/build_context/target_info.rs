@@ -258,6 +258,17 @@ impl TargetInfo {
                 should_replace_hyphens: false,
             })
         }
+        else if target_triple.ends_with("windows-gnu")
+                && crate_type.ends_with("dylib")
+                && suffix == ".dll"
+        {
+            ret.push(FileType {
+                suffix: ".dll.a".to_string(),
+                prefix: "lib".to_string(),
+                flavor: FileFlavor::Normal,
+                should_replace_hyphens: false,
+            })
+        }
 
         // See rust-lang/cargo#4535.
         if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
