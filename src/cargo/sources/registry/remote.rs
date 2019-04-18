@@ -181,6 +181,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         if self.config.cli_unstable().no_index_update {
             return Ok(());
         }
+        // Make sure the index is only updated once per session since it is an
+        // expensive operation. This generally only happens when the resolver
+        // is run multiple times, such as during `cargo publish`.
+        if self.config.updated_sources().contains(&self.source_id) {
+            return Ok(());
+        }
 
         debug!("updating the index");
 
@@ -200,7 +206,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
         self.config
             .shell()
-            .status("Updating", self.source_id.display_registry())?;
+            .status("Updating", self.source_id.display_index())?;
 
         // git fetch origin master
         let url = self.source_id.url();
@@ -208,6 +214,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let repo = self.repo.borrow_mut().unwrap();
         git::fetch(repo, url, refspec, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
+        self.config.updated_sources().insert(self.source_id);
         Ok(())
     }
 

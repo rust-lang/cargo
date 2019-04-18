@@ -85,7 +85,7 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
     let tracker = InstallTracker::load(config, root)?;
     let source_id = SourceId::for_path(config.cwd())?;
     let src = path_source(source_id, config)?;
-    let (pkg, _source) = select_pkg(src, None, None, config, true, &mut |path| {
+    let pkg = select_pkg(src, None, None, config, true, &mut |path| {
         path.read_packages()
     })?;
     let pkgid = pkg.package_id();

@@ -74,6 +74,8 @@ pub struct Config {
     env: HashMap<String, String>,
     /// Profiles loaded from config.
     profiles: LazyCell<ConfigProfiles>,
+    /// Tracks which sources have been updated to avoid multiple updates.
+    updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
 }
 
 impl Config {
@@ -129,6 +131,7 @@ impl Config {
             target_dir: None,
             env,
             profiles: LazyCell::new(),
+            updated_sources: LazyCell::new(),
         }
     }
 
@@ -269,6 +272,12 @@ impl Config {
                 Ok(ConfigProfiles::default())
             }
         })
+    }
+
+    pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
+        self.updated_sources.borrow_with(|| {
+            RefCell::new(HashSet::new())
+        }).borrow_mut()
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
