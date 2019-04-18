@@ -50,6 +50,7 @@ fn maybe_spurious(err: &Error) -> bool {
                 || curl_err.is_couldnt_resolve_host()
                 || curl_err.is_operation_timedout()
                 || curl_err.is_recv_error()
+                || curl_err.is_http2_stream_error()
             {
                 return true;
             }
@@ -124,4 +125,11 @@ fn with_retry_finds_nested_spurious_errors() {
     let config = Config::default().unwrap();
     let result = with_retry(&config, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
+}
+
+#[test]
+fn curle_http2_stream_is_spurious() {
+    let code = curl_sys::CURLE_HTTP2_STREAM;
+    let err = curl::Error::new(code);
+    assert!(maybe_spurious(&err.into()));
 }

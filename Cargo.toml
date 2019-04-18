@@ -24,8 +24,8 @@ bytesize = "1.0"
 crates-io = { path = "src/crates-io", version = "0.24" }
 crossbeam-utils = "0.6"
 crypto-hash = "0.3.1"
-curl = { version = "0.4.19", features = ['http2'] }
-curl-sys = "0.4.15"
+curl = { version = "0.4.21", features = ['http2'] }
+curl-sys = "0.4.18"
 env_logger = "0.6.0"
 pretty_env_logger = { version = "0.3", optional = true }
 failure = "0.1.5"
