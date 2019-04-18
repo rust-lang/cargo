@@ -1,4 +1,4 @@
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -236,6 +236,12 @@ impl Package {
             toml
         ))
     }
+
+    /// Returns if package should include `Cargo.lock`.
+    pub fn include_lockfile(&self) -> bool {
+        self.manifest().publish_lockfile()
+            && self.targets().iter().any(|t| t.is_example() || t.is_bin())
+    }
 }
 
 impl fmt::Display for Package {
@@ -453,6 +459,10 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
         self.sources.borrow()
+    }
+
+    pub fn sources_mut(&self) -> RefMut<'_, SourceMap<'cfg>> {
+        self.sources.borrow_mut()
     }
 }
 

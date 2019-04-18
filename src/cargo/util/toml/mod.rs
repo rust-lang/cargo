@@ -822,7 +822,7 @@ impl TomlManifest {
         }
     }
 
-    fn to_real_manifest(
+    pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
         source_id: SourceId,
         package_root: &Path,
@@ -1035,7 +1035,7 @@ impl TomlManifest {
                 features.require(Feature::publish_lockfile())?;
                 b
             }
-            None => false,
+            None => features.is_enabled(Feature::publish_lockfile()),
         };
 
         if summary.features().contains_key("default-features") {

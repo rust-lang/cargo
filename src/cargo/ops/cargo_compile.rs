@@ -31,7 +31,7 @@ use crate::core::compiler::{
 use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Method, Resolve};
-use crate::core::{Package, Source, Target};
+use crate::core::{Package, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::util::config::Config;
@@ -247,12 +247,11 @@ pub fn compile_with_exec<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
-    compile_ws(ws, None, options, exec)
+    compile_ws(ws, options, exec)
 }
 
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<dyn Source + 'a>>,
     options: &CompileOptions<'a>,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
@@ -305,7 +304,7 @@ pub fn compile_ws<'a>(
         all_features,
         uses_default_features: !no_default_features,
     };
-    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
+    let resolve = ops::resolve_ws_with_method(ws, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
     let to_build_ids = specs
