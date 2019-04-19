@@ -207,7 +207,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     ) -> CargoResult<()> {
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
-        let build_plan = cx.bcx.build_config.build_plan;
         let mut print = DiagnosticPrinter::new(cx.bcx.config);
         trace!("queue: {:#?}", self.queue);
 
@@ -240,7 +239,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // we're able to perform some parallel work.
             while error.is_none() && self.active.len() < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job) = queue.remove(0);
-                self.run(key, job, cx.bcx.config, scope, build_plan)?;
+                self.run(key, job, cx, scope)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -358,7 +357,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            if !build_plan {
+            if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
             Ok(())
@@ -389,9 +388,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         &mut self,
         key: Key<'a>,
         job: Job,
-        config: &Config,
+        cx: &Context<'_, '_>,
         scope: &Scope<'a>,
-        build_plan: bool,
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
@@ -405,9 +403,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
 
-        if !build_plan {
+        if !cx.bcx.build_config.build_plan {
             // Print out some nice progress information.
-            self.note_working_on(config, &key, fresh)?;
+            self.note_working_on(cx.bcx.config, &key, fresh)?;
         }
 
         match fresh {
