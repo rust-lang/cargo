@@ -32,22 +32,15 @@ use crate::util::{Progress, ProgressStyle};
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a, 'cfg> {
-    queue: DependencyQueue<Key<'a>, Vec<Job>>,
+    queue: DependencyQueue<Key<'a>, Job>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
-    pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
     is_release: bool,
     progress: Progress<'cfg>,
-}
-
-/// A helper structure for metadata about the state of a building package.
-struct PendingBuild {
-    /// The number of jobs currently active.
-    amt: usize,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
@@ -140,7 +133,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             tx,
             rx,
             active: Vec::new(),
-            pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
             counts: HashMap::new(),
@@ -157,7 +149,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     ) -> CargoResult<()> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
-        self.queue.queue(&key, Vec::new(), &deps).push(job);
+        self.queue.queue(&key, job, &deps);
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
     }
@@ -236,13 +228,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // possible that can run. Note that this is also the point where we
             // start requesting job tokens. Each job after the first needs to
             // request a token.
-            while let Some((key, jobs)) = self.queue.dequeue() {
-                self.pending.insert(key, PendingBuild { amt: jobs.len() });
-                for job in jobs {
-                    queue.push((key, job));
-                    if !self.active.is_empty() || !queue.is_empty() {
-                        jobserver_helper.request_token();
-                    }
+            while let Some((key, job)) = self.queue.dequeue() {
+                queue.push((key, job));
+                if !self.active.is_empty() || !queue.is_empty() {
+                    jobserver_helper.request_token();
                 }
             }
 
@@ -463,12 +452,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         if key.mode.is_run_custom_build() && cx.bcx.show_warnings(key.pkg) {
             self.emit_warnings(None, &key, cx)?;
         }
-
-        let state = self.pending.get_mut(&key).unwrap();
-        state.amt -= 1;
-        if state.amt == 0 {
-            self.queue.finish(&key);
-        }
+        self.queue.finish(&key);
         Ok(())
     }
 
