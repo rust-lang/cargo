@@ -298,9 +298,21 @@ is-it-maintained-issue-resolution = { repository = "..." }
 # Is it maintained percentage of open issues: `repository` is required.
 is-it-maintained-open-issues = { repository = "..." }
 
-# Maintenance: `status` is required. Available options are `actively-developed`,
-# `passively-maintained`, `as-is`, `experimental`, `looking-for-maintainer`,
-# `deprecated`, and the default `none`, which displays no badge on crates.io.
+# Maintenance: `status` is required. Available options are:
+# - `actively-developed`: New features are being added and bugs are being fixed.
+# - `passively-maintained`: There are no plans for new features, but the maintainer intends to
+#   respond to issues that get filed.
+# - `as-is`: The crate is feature complete, the maintainer does not intend to continue working on
+#   it or providing support, but it works for the purposes it was designed for.
+# - `experimental`: The author wants to share it with the community but is not intending to meet
+#   anyone's particular use case.
+# - `looking-for-maintainer`: The current maintainer would like to transfer the crate to someone
+#   else.
+# - `deprecated`: The maintainer does not recommend using this crate (the description of the crate
+#   can describe why, there could be a better solution available or there could be problems with
+#   the crate that the author does not want to fix).
+# - `none`: Displays no badge on crates.io, since the maintainer has not chosen to specify
+#   their intentions, potential crate users will need to investigate on their own.
 maintenance = { status = "..." }
 ```
 
