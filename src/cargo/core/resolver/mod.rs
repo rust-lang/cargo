@@ -1103,24 +1103,30 @@ fn emit_warnings(
     new_cx.resolve_features = im_rc::HashMap::new();
     let mut features_from_dep = HashMap::new();
     for (summary, method) in summaries {
+        let replacement = &cx.activations[&resolve
+            .replacements()
+            .get(&summary.package_id())
+            .unwrap_or(&summary.package_id())
+            .as_activations_key()]
+            .0;
         for (dep, features) in new_cx
-            .resolve_features(None, summary, &method, config)
-            .expect("can not resolve_features for a required summary")
+            .resolve_features(None, replacement, &method, config)
+            .expect("can not resolve_features for a required summery")
         {
-            features_from_dep.insert((summary.package_id(), dep), features);
+            features_from_dep.insert((replacement.package_id(), dep), features);
         }
     }
     // crates enable features for their dependencies.
     // So by iterating reverse topologically we process all of the parents before each child.
     // Then we know all the needed features for each crate.
     let topological_sort = resolve.sort();
-    for summary in topological_sort.iter().rev().map(|id| {
-        cx.activations
-            .get(&id.as_activations_key())
-            .expect("id in dependency graph but not in activations")
-            .0
-            .clone()
-    }) {
+    for id in topological_sort
+        .iter()
+        .rev()
+        .filter(|&id| !resolve.replacements().contains_key(id))
+    {
+        let summary = &cx.activations[&id.as_activations_key()].0;
+
         for (parent, deps) in cx.parents.edges(&summary.package_id()) {
             for dep in deps.iter() {
                 let features = features_from_dep
@@ -1133,7 +1139,7 @@ fn emit_warnings(
                     uses_default_features: dep.uses_default_features(),
                 };
                 for (dep, features) in new_cx
-                    .resolve_features(None, &summary, &method, config)
+                    .resolve_features(None, summary, &method, config)
                     .expect("can not resolve_features for a used dep")
                 {
                     features_from_dep.insert((summary.package_id(), dep), features);

@@ -338,7 +338,7 @@ impl Context {
             graph.add(*i);
             for (o, e) in self.parents.edges(i) {
                 let old_link = graph.link(*o, *i);
-                debug_assert!(old_link.is_empty());
+                assert!(old_link.is_empty());
                 *old_link = e.to_vec();
             }
         }
