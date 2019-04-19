@@ -132,6 +132,19 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         Some((key, data))
     }
 
+    /// Forcibly dequeues a particular key from the dependency queue.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `key`'s dependencies haven't finished yet or if `key` isn't in
+    /// the dependency queue.
+    pub fn dequeue_key(&mut self, key: &K) -> V {
+        let (deps, data) = self.dep_map.remove(&key).unwrap();
+        assert!(deps.is_empty());
+        self.pending.insert(key.clone());
+        return data;
+    }
+
     /// Returns `true` if there are remaining packages to be built.
     pub fn is_empty(&self) -> bool {
         self.dep_map.is_empty() && self.pending.is_empty()

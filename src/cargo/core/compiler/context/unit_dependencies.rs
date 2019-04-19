@@ -660,7 +660,7 @@ fn pipeline_compilations(state: &mut State<'_, '_, '_>) -> CargoResult<()> {
         debug_assert_eq!(build_rmeta_unit.mode, CompileMode::BuildRmeta);
         debug_assert_eq!(build_unit.mode, CompileMode::Build);
 
-        // There may be multiple paths to the root of the depenency graph as we
+        // There may be multiple paths to the root of the dependency graph as we
         // walk upwards, but we don't want to add units more than once. Use a
         // visited set to guard against this.
         if !updated.insert((*build_unit, *build_rmeta_unit)) {

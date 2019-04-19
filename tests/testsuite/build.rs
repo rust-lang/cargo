@@ -1451,11 +1451,11 @@ fn cargo_default_env_metadata_env_var() {
 
     // No metadata on libbar since it's a dylib path dependency
     p.cargo("build -v")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
-        --emit=[..]link \
+        --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -1467,9 +1467,11 @@ fn cargo_default_env_metadata_env_var() {
         -C extra-filename=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/libbar[..]`
+        --extern bar=[CWD]/target/debug/deps/{prefix}bar{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
+            prefix = env::consts::DLL_PREFIX,
+            suffix = env::consts::DLL_SUFFIX,
+        ))
         .run();
 
     p.cargo("clean").run();
@@ -1477,11 +1479,11 @@ fn cargo_default_env_metadata_env_var() {
     // If you set the env-var, then we expect metadata on libbar
     p.cargo("build -v")
         .env("__CARGO_DEFAULT_LIB_METADATA", "stable")
-        .with_stderr(
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
-        --emit=[..]link \
+        --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -1493,10 +1495,12 @@ fn cargo_default_env_metadata_env_var() {
         -C extra-filename=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/libbar-[..]`
+        --extern bar=[CWD]/target/debug/deps/{prefix}bar-[..]{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )
+            prefix = env::consts::DLL_PREFIX,
+            suffix = env::consts::DLL_SUFFIX,
+        ))
         .run();
 }
 
@@ -1921,9 +1925,6 @@ fn verbose_release_build_deps() {
             version = "0.0.0"
             authors = []
 
-            [lib]
-            crate-type = ['cdylib']
-
             [dependencies.foo]
             path = "foo"
         "#,
@@ -1958,7 +1959,7 @@ fn verbose_release_build_deps() {
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type cdylib \
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=[..]link \
         -C opt-level=3 \
         -C metadata=[..] \

@@ -124,7 +124,7 @@ impl LibKind {
     pub fn requires_upstream_objects(&self) -> bool {
         match *self {
             // "lib" == "rlib" and is a compilation that doesn't actually
-            // require upstream object files to exist, only upstream etadata
+            // require upstream object files to exist, only upstream metadata
             // files. As a result, it doesn't require upstream artifacts
             LibKind::Lib | LibKind::Rlib => false,
 

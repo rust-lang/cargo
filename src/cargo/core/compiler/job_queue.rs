@@ -1,3 +1,67 @@
+//! A job queue for executing Cargo's dependency graph
+//!
+//! This module primarily contains a `JobQueue` type which is the source of
+//! executing Cargo's jobs in parallel. This is the module where we actually
+//! execute rustc and the job graph. The internal `DependencyQueue` is
+//! constructed elsewhere in Cargo, and the job of this module is to simply
+//! execute what's described internally in the `DependencyQueue` as fast as it
+//! can (using configured parallelism settings).
+//!
+//! Note that this is also the primary module where jobserver management comes
+//! into play because that governs how many jobs we can execute in parallel.
+//! Additionally of note is that everything here is using blocking/synchronous
+//! I/O and such. We spawn a thread per rustc instance and it all coordinates
+//! back to the main Cargo thread which coordinates everything. Perhaps one day
+//! we can use async I/O, but it's not super pressing right now.
+//!
+//! ## Pipelining
+//!
+//! Another major feature of this module is the execution of a pipelined job
+//! graph. The term "pipelining" here refers to executing rustc in an overlapped
+//! fashion. We can build rlibs, for example, as soon as their dependencies have
+//! metadata files available. No need to wait for codegen!
+//!
+//! Pipelined execution is modeled in Cargo with a few properties:
+//!
+//! * The `DependencyQueue` dependency graph has two nodes for each rlib. One
+//!   node is a `BuildRmeta` node while the other is a `Build` node (which
+//!   depends on `BuildRmeta`). This is prepared elsewhere.
+//!
+//! * Each node in a `DependencyQueue` is associated with a unit of work to
+//!   complete that node. In the case of pipelined compilation the `BuildRmeta`
+//!   node's work actually performs the full compile for both `BuildRmeta` and
+//!   `Build`. The work associated with `Build` is just some bookkeeping that
+//!   doesn't do any actual work.
+//!
+//! * The execution of a `BuildRmeta` unit will, before the end of the work,
+//!   send a message through `JobState` that the metadata file is ready. Later,
+//!   when it's fully finished, it will flag that the `Build` work is ready.
+//!
+//! All of this is somewhat wonky and doesn't fit perfectly into the
+//! `JobQueue`'s management of all other sorts of jobs, but it looks like it
+//! generally works ok below. The strategy is that we specially handle pipelined
+//! units in the `run` and `finish` methods, but ideally not many other places.
+//!
+//! When a `BuildRmeta` unit is executed we'll arrange for the the correct
+//! messages to be sent. A `Finish` for the `BuildRmeta` will be sent ASAP as
+//! the work indicates, and then `Finish` for the `Build` will be sent
+//! afterwards. This means that running a `BuildRmeta` unit allocates some
+//! metadata for the `Build` unit as well.
+//!
+//! When a `BuildRmeta` unit finishes we try hard to make sure the `Build` unit
+//! doesn't leak into the standard paths elsewhere because it's, well, not very
+//! standard. To handle this we immediately remove the `Build` from the
+//! dependency graph and specially handle it. It's internally flagged as an
+//! active unit which allocates a jobserver token, and then execution proceeds
+//! as usual.
+//!
+//! When the original work queued with the `BuildRmeta` completes it will send a
+//! `Finish` notification for the `Build` unit. When this happens we catch this
+//! happening and run the deferred `Job` we found during the completion of the
+//! `BuildRmeta`. This should handle everything in theory and add up to a
+//! working system!
+
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::marker;
@@ -29,20 +93,59 @@ use crate::util::{Progress, ProgressStyle};
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a, 'cfg> {
+    // An instance of a dependency queue which keeps track of all units and jobs
+    // associated to execute with them. This is built up over time while we're
+    // preparing a `JobQueue` and is then used to dynamically track what work is
+    // ready to execute as work finishes.
     queue: DependencyQueue<Unit<'a>, Job>,
+
+    // A cross-thread channel used to send messages to the main reactor thread
+    // which spawns off work.
     tx: Sender<Message>,
     rx: Receiver<Message>,
+
+    // All work items that are currently executing. Maps from a unique ID
+    // assigned in a monotonically increasing fashion (allocated from `next_id`)
+    // to the `Unit` that is being executed. `Finish` messages will contain
+    // these ids and allow mapping back to the original `Unit`.
     active: HashMap<u32, Unit<'a>>,
+    next_id: u32,
+
+    // Metadata information used to keep track of what we're printing on the
+    // console. This ensures we don't print messages more than once and we print
+    // them at reasonable-ish times.
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
     is_release: bool,
     progress: Progress<'cfg>,
-    next_id: u32,
+
+    // Auxiliary tables to track the status of pipelined units. A `Unit` with a
+    // `BuildRmeta` mode will actually perform the work of a `Build` unit that
+    // depends on it, so we need to track that information here to ensure that
+    // we execute all the callbacks and finish units at the right time.
+    //
+    // The `pipelined` map keeps track of `BuildRmeta` units to their
+    // corresponding `Build` unit along with a preallocated id for the `Build`
+    // unit. This is created during `self.run`, and then consumed later during
+    // `self.finish` for the `BuildRmeta` unit.
+    //
+    // The `deferred` map keeps track of a mapping of the id of the `Build` unit
+    // to the `Job` that should execute when it's finished. The `Job` should
+    // always be a quick noop.
+    pipelined: HashMap<Unit<'a>, (Unit<'a>, u32)>,
+    deferred: HashMap<u32, Job>,
 }
 
 pub struct JobState<'a> {
+    // Communication channel back to the main coordination thread.
     tx: Sender<Message>,
+
+    // If this job is executing as part of a pipelined compilation this will
+    // list the id of the rmeta job. This is mutated to `None` once we send a
+    // message saying that the rmeta if finished.
+    rmeta_id: Cell<Option<u32>>,
+
     // Historical versions of Cargo made use of the `'a` argument here, so to
     // leave the door open to future refactorings keep it here.
     _marker: marker::PhantomData<&'a ()>,
@@ -93,6 +196,19 @@ impl<'a> JobState<'a> {
             capture_output,
         )
     }
+
+    /// A method to only be used when rustc is being executed to compile an
+    /// rlib. As soon as the job learns that a metadata file is available this
+    /// method is called to send a notification back to the job queue that
+    /// metadata is ready to go and work that only depends on the metadata
+    /// should be executed ASAP.
+    ///
+    /// This will panic if executed twice or outside of a unit that's not for an
+    /// rlib.
+    pub fn finish_rmeta(&self) {
+        let id = self.rmeta_id.replace(None).unwrap();
+        self.tx.send(Message::Finish(id, Ok(()))).unwrap();
+    }
 }
 
 impl<'a, 'cfg> JobQueue<'a, 'cfg> {
@@ -110,6 +226,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             is_release: bcx.build_config.release,
             progress,
             next_id: 0,
+            deferred: Default::default(),
+            pipelined: Default::default(),
         }
     }
 
@@ -119,18 +237,25 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         unit: &Unit<'a>,
         job: Job,
     ) -> CargoResult<()> {
+        // Binaries aren't actually needed to *compile* tests, just to run
+        // them, so we don't include this dependency edge in the job graph.
         let dependencies = cx.dep_targets(unit);
         let dependencies = dependencies
             .iter()
-            .filter(|unit| {
-                // Binaries aren't actually needed to *compile* tests, just to run
-                // them, so we don't include this dependency edge in the job graph.
-                !unit.target.is_test() || !unit.target.is_bin()
-            })
+            .filter(|unit| !unit.target.is_test() || !unit.target.is_bin())
             .cloned()
             .collect::<Vec<_>>();
         self.queue.queue(unit, job, &dependencies);
-        *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
+
+        // Keep track of how many work items we have for each package. This'll
+        // help us later print whether a package is "fresh" or not if all of its
+        // component units are indeed fresh.
+        //
+        // Note that we skip pipelined units since they don't make their way
+        // into `run` below.
+        if !cx.pipelined_units.contains(unit) {
+            *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
+        }
         Ok(())
     }
 
@@ -139,7 +264,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context<'a, 'cfg>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -176,7 +301,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
     fn drain_the_queue(
         &mut self,
-        cx: &mut Context<'_, '_>,
+        cx: &mut Context<'a, 'cfg>,
         plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
@@ -265,15 +390,11 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         print.print(&msg)?;
                     }
                     Message::Finish(id, result) => {
+                        trace!("end id {}", id);
                         let unit = self.active.remove(&id).unwrap();
                         info!("end: {:?}", unit);
-
-                        if !self.active.is_empty() {
-                            assert!(!tokens.is_empty());
-                            drop(tokens.pop());
-                        }
                         match result {
-                            Ok(()) => self.finish(&unit, cx)?,
+                            Ok(()) => self.finish(&unit, id, cx)?,
                             Err(e) => {
                                 let msg = "The following warnings were emitted during compilation:";
                                 self.emit_warnings(Some(msg), &unit, cx)?;
@@ -376,24 +497,71 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         &mut self,
         unit: &Unit<'a>,
         job: Job,
-        cx: &Context<'_, '_>,
+        cx: &Context<'a, 'cfg>,
         scope: &Scope<'a>,
     ) -> CargoResult<()> {
-        info!("start: {:?}", unit);
+        // This unit should never run with a unit which has been pipelined.
+        // These units are handled specially in `finish` below so just assert we
+        // don't handle those here.
+        assert!(cx.rmeta_unit_if_pipelined(unit).is_none());
 
-        let id = self.next_id;
-        self.next_id = id.checked_add(1).unwrap();
+        let id = self.next_id();
+        info!("start: {} {:?}", id, unit);
         assert!(self.active.insert(id, *unit).is_none());
         *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
 
-        let my_tx = self.tx.clone();
+        // If we're the rmeta component of a build then our work will actually
+        // produce the `Build` unit as well. Allocate a `build_id` for that unit
+        // here and prepare some internal state to know about how this unit is
+        // pipelined with another `Build` unit. This will also configure what
+        // messages are sent back to the coordination thread to ensure that we
+        // finish the `BuildRmeta` unit first and then the `Build` unit.
         let fresh = job.freshness();
+        let (rmeta_id, last_id) = if unit.mode == CompileMode::BuildRmeta {
+            log::debug!("preparing state to pipeline next unit");
+            let build_id = self.next_id();
+            let build_unit = unit.with_mode(CompileMode::Build, cx.bcx.units);
+            assert!(self
+                .pipelined
+                .insert(*unit, (build_unit, build_id))
+                .is_none());
+            (Some(id), build_id)
+        } else {
+            (None, id)
+        };
+
+        let my_tx = self.tx.clone();
         let doit = move || {
-            let res = job.run(&JobState {
+            let state = JobState {
                 tx: my_tx.clone(),
                 _marker: marker::PhantomData,
-            });
-            my_tx.send(Message::Finish(id, res)).unwrap();
+                rmeta_id: Cell::new(rmeta_id),
+            };
+            let res = job.run(&state);
+
+            // If the `rmeta_id` wasn't consumed but it was set previously, then
+            // we either have:
+            //
+            // 1. The `job` didn't do anything because it was "fresh".
+            // 2. The `job` returned an error and didn't reach the point where
+            //    it called `finish_rmeta`.
+            // 3. We forgot to call `finish_rmeta` and there's a bug in Cargo.
+            //
+            // Ruling out the third, the other two are pretty common and we just need
+            // to say that both the `BuildRmeta` and `Build` (which we're
+            // responsible for) are finished. If an error happens we don't
+            // finish `Build` because it didn't actually complete.
+            if let Some(rmeta_id) = state.rmeta_id.replace(None) {
+                let ok = res.is_ok();
+                my_tx.send(Message::Finish(rmeta_id, res)).unwrap();
+                if ok {
+                    my_tx.send(Message::Finish(last_id, Ok(()))).unwrap();
+                }
+            } else {
+                // ... otherwise if we don't have anything to do with pipelining
+                // this is business as usual...
+                my_tx.send(Message::Finish(last_id, res)).unwrap();
+            }
         };
 
         if !cx.bcx.build_config.build_plan {
@@ -409,6 +577,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
 
         Ok(())
+    }
+
+    fn next_id(&mut self) -> u32 {
+        let ret = self.next_id;
+        self.next_id = ret.checked_add(1).unwrap();
+        return ret;
     }
 
     fn emit_warnings(
@@ -439,11 +613,38 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
-    fn finish(&mut self, unit: &Unit<'a>, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+    fn finish(&mut self, unit: &Unit<'a>, id: u32, cx: &mut Context<'_, '_>) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
         }
         self.queue.finish(unit);
+
+        // Specially handled pipelined units here. If we're finishing the
+        // metadata component of a pipelined unit then we have an invariant that
+        // the `Build` unit is always ready to go. Forcibly dequeue that from
+        // the dependency queue and save off the work it would otherwise do.
+        // Along the way we also update the `active` map which should transition
+        // the jobserver token we were previously using to this unit.
+        //
+        // If we're finishing a `Build` unit then the whole pipeline is now
+        // finished, so we need to actually run the work we deferred earlier
+        // which should complete quickly.
+        if unit.mode == CompileMode::BuildRmeta {
+            log::debug!("first of a pipelined unit finished");
+            let (build_unit, build_id) = self.pipelined[unit];
+            assert!(self.active.insert(build_id, build_unit).is_none());
+            let job = self.queue.dequeue_key(&build_unit);
+            assert!(self.deferred.insert(build_id, job).is_none());
+        } else if cx.pipelined_units.contains(unit) {
+            log::debug!("completing the work of a pipelined unit");
+            let job = self.deferred.remove(&id).unwrap();
+            job.run(&JobState {
+                tx: self.tx.clone(),
+                _marker: marker::PhantomData,
+                rmeta_id: Cell::new(None),
+            })?;
+        }
+
         Ok(())
     }
 

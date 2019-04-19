@@ -127,6 +127,10 @@ pub enum CompileMode {
     Test,
     /// Building a target with `rustc` (lib or bin).
     Build,
+    /// Building just the metadata of an rlib with `rustc`
+    ///
+    /// This is somewhat of a special mode, and for more information see the
+    /// documentation in `job_queue.rs`
     BuildRmeta,
     /// Building a target with `rustc` to emit `rmeta` metadata only. If
     /// `test` is true, then it is also compiled with `--test` to check it like

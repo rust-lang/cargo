@@ -244,6 +244,7 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
+    let is_build_rmeta = unit.mode == CompileMode::BuildRmeta;
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -313,6 +314,25 @@ fn rustc<'a, 'cfg>(
             exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
                 .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
+        }
+
+        // FIXME(rust-lang/rust#58465): this is the whole point of "pipelined
+        // compilation" in Cargo.  We want to, here in this unit, call
+        // `finish_rmeta` as soon as we can which indicates that the metadata
+        // file is emitted by rustc and ready to go. This will start dependency
+        // compilations as soon as possible.
+        //
+        // The compiler doesn't currently actually implement the ability to let
+        // us know, however, when the metadata file is ready to go. It actually
+        // today produces the file very late in compilation, far later than it
+        // would otherwise be able to do!
+        //
+        // In any case this is all covered by the issue above. This is just a
+        // marker for "yes we unconditionally do this today but tomorrow we
+        // should actually read what rustc is doing and execute this at an
+        // appropriate time, ideally long before rustc finishes completely".
+        if is_build_rmeta {
+            state.finish_rmeta();
         }
 
         if do_rename && real_name != crate_name {
@@ -790,11 +810,14 @@ fn build_base_args<'a, 'cfg>(
         }
     }
 
-    if unit.mode.is_check() {
-        cmd.arg("--emit=dep-info,metadata");
-    } else {
-        cmd.arg("--emit=dep-info,metadata,link");
-    }
+    cmd.arg(match unit.mode {
+        CompileMode::Build | CompileMode::Test | CompileMode::Bench => "--emit=dep-info,link",
+        CompileMode::BuildRmeta => "--emit=dep-info,metadata,link",
+        CompileMode::Check { .. } => "--emit=dep-info,metadata",
+        CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::RunCustomBuild => {
+            unreachable!()
+        }
+    });
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
         || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| p != unit.pkg));
