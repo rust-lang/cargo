@@ -230,7 +230,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // request a token.
             while let Some((key, job)) = self.queue.dequeue() {
                 queue.push((key, job));
-                if !self.active.is_empty() || !queue.is_empty() {
+                if self.active.len() + queue.len() > 1 {
                     jobserver_helper.request_token();
                 }
             }
