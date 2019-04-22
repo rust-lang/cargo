@@ -517,6 +517,7 @@ fn register_previous_locks(
         if !visited.insert(member.package_id()) {
             continue;
         }
+        let is_ws_member = ws.is_member(&member);
         for dep in member.dependencies() {
             // If this dependency didn't match anything special then we may want
             // to poison the source as it may have been added. If this path
@@ -529,11 +530,7 @@ fn register_previous_locks(
             // non-workspace member and then simultaneously editing the
             // dependency on that crate to enable the feature. For now,
             // this bug is better than the always-updating registry though.
-            if !ws
-                .members()
-                .any(|pkg| pkg.package_id() == member.package_id())
-                && (dep.is_optional() || !dep.is_transitive())
-            {
+            if !is_ws_member && (dep.is_optional() || !dep.is_transitive()) {
                 continue;
             }
 
