@@ -23,7 +23,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// lock file.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry, true)?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -64,7 +64,7 @@ pub fn resolve_ws_with_method<'a>(
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, false)?;
+        let resolve = resolve_with_registry(ws, &mut registry)?;
         add_patches = false;
 
         // Second, resolve with precisely what we're doing. Filter out
@@ -98,7 +98,6 @@ pub fn resolve_ws_with_method<'a>(
         None,
         specs,
         add_patches,
-        true,
     )?;
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry)?;
@@ -109,7 +108,6 @@ pub fn resolve_ws_with_method<'a>(
 fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
-    warn: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let resolve = resolve_with_previous(
@@ -120,7 +118,6 @@ fn resolve_with_registry<'cfg>(
         None,
         &[],
         true,
-        warn,
     )?;
 
     if !ws.is_ephemeral() {
@@ -146,7 +143,6 @@ pub fn resolve_with_previous<'cfg>(
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
-    warn: bool,
 ) -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a Git
@@ -334,7 +330,6 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &try_to_use,
         Some(ws.config()),
-        warn,
         false, // TODO: use "public and private dependencies" feature flag
     )?;
     resolved.register_used_patches(registry.patches());

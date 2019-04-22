@@ -9,7 +9,6 @@ use log::debug;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
-use crate::util::config::Config;
 use crate::util::CargoResult;
 use crate::util::Graph;
 
@@ -158,7 +157,7 @@ impl Context {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps = self.resolve_features(parent, candidate, method, None)?;
+        let deps = self.resolve_features(parent, candidate, method)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -218,7 +217,6 @@ impl Context {
         parent: Option<&Summary>,
         s: &'b Summary,
         method: &'b Method<'_>,
-        config: Option<&Config>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -246,23 +244,26 @@ impl Context {
             // name.
             let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
             used_features.insert(dep.name_in_toml());
-            if let Some(config) = config {
-                let mut shell = config.shell();
-                let always_required = !dep.is_optional()
-                    && !s
-                        .dependencies()
-                        .iter()
-                        .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
-                if always_required && base.0 {
-                    shell.warn(&format!(
+            let always_required = !dep.is_optional()
+                && !s
+                    .dependencies()
+                    .iter()
+                    .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
+            if always_required && base.0 {
+                return Err(match parent {
+                    None => failure::format_err!(
                         "Package `{}` does not have feature `{}`. It has a required dependency \
-                         with that name, but only optional dependencies can be used as features. \
-                         This is currently a warning to ease the transition, but it will become an \
-                         error in the future.",
+                         with that name, but only optional dependencies can be used as features.",
                         s.package_id(),
                         dep.name_in_toml()
-                    ))?
-                }
+                    )
+                    .into(),
+                    Some(p) => (
+                        p.package_id(),
+                        ConflictReason::RequiredDependencyAsFeatures(dep.name_in_toml()),
+                    )
+                        .into(),
+                });
             }
             let mut base = base.1.clone();
             base.extend(dep.features().iter());

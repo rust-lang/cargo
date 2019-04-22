@@ -291,13 +291,12 @@ fn invalid9() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build --features bar").with_stderr("\
-warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
-that name, but only optional dependencies can be used as features. [..]
-   Compiling bar v0.0.1 ([..])
-   Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..]s
-").run();
+    p.cargo("build --features bar")
+.with_stderr(
+            "\
+error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
+",
+        ).with_status(101).run();
 }
 
 #[test]
@@ -335,13 +334,17 @@ fn invalid10() {
         .build();
 
     p.cargo("build").with_stderr("\
-warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
-that name, but only optional dependencies can be used as features. [..]
-   Compiling baz v0.0.1 ([..])
-   Compiling bar v0.0.1 ([..])
-   Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..]s
-").run();
+error: failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([..])`
+versions that meet the requirements `*` are: 0.0.1
+
+the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
+ It has a required dependency with that name, but only optional dependencies can be used as features.
+
+
+failed to select a version for `bar` which could resolve this conflict
+").with_status(101)
+        .run();
 }
 
 #[test]
