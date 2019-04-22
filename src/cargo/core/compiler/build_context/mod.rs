@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -9,7 +8,7 @@ use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
 use crate::util::errors::CargoResult;
-use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
+use crate::util::{profile, Cfg, Config, Rustc};
 
 use super::{BuildConfig, BuildOutput, Kind, Unit};
 
@@ -157,26 +156,12 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config.requested_target,
-            self.host_triple(),
-            self.info(unit.kind).cfg(),
-            unit.kind,
-            "RUSTFLAGS",
-        )
+    pub fn rustflags_args(&self, unit: &Unit<'_>) -> &[String] {
+        &self.info(unit.kind).rustflags
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config.requested_target,
-            self.host_triple(),
-            self.info(unit.kind).cfg(),
-            unit.kind,
-            "RUSTDOCFLAGS",
-        )
+    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> &[String] {
+        &self.info(unit.kind).rustdocflags
     }
 
     pub fn show_warnings(&self, pkg: PackageId) -> bool {
@@ -291,125 +276,4 @@ impl TargetConfig {
 
         Ok(ret)
     }
-}
-
-/// Acquire extra flags to pass to the compiler from various locations.
-///
-/// The locations are:
-///
-///  - the `RUSTFLAGS` environment variable
-///
-/// then if this was not found
-///
-///  - `target.*.rustflags` from the manifest (Cargo.toml)
-///  - `target.cfg(..).rustflags` from the manifest
-///
-/// then if neither of these were found
-///
-///  - `build.rustflags` from the manifest
-///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
-fn env_args(
-    config: &Config,
-    requested_target: &Option<String>,
-    host_triple: &str,
-    target_cfg: Option<&[Cfg]>,
-    kind: Kind,
-    name: &str,
-) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
-    //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g., even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    let compiling_with_target = requested_target.is_some();
-    let is_target_kind = kind == Kind::Target;
-
-    if compiling_with_target && !is_target_kind {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
-    }
-
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
-        let args = a
-            .split(' ')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Ok(args.collect());
-    }
-
-    let mut rustflags = Vec::new();
-
-    let name = name
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
-    // Then the target.*.rustflags value...
-    let target = requested_target
-        .as_ref()
-        .map(|s| s.as_str())
-        .unwrap_or(host_triple);
-    let key = format!("target.{}.{}", target, name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        rustflags.extend(args);
-    }
-    // ...including target.'cfg(...)'.rustflags
-    if let Some(target_cfg) = target_cfg {
-        if let Some(table) = config.get_table("target")? {
-            let cfgs = table
-                .val
-                .keys()
-                .filter(|key| CfgExpr::matches_key(key, target_cfg));
-
-            // Note that we may have multiple matching `[target]` sections and
-            // because we're passing flags to the compiler this can affect
-            // cargo's caching and whether it rebuilds. Ensure a deterministic
-            // ordering through sorting for now. We may perhaps one day wish to
-            // ensure a deterministic ordering via the order keys were defined
-            // in files perhaps.
-            let mut cfgs = cfgs.collect::<Vec<_>>();
-            cfgs.sort();
-
-            for n in cfgs {
-                let key = format!("target.{}.{}", n, name);
-                if let Some(args) = config.get_list_or_split_string(&key)? {
-                    let args = args.val.into_iter();
-                    rustflags.extend(args);
-                }
-            }
-        }
-    }
-
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
-    }
-
-    // Then the `build.rustflags` value.
-    let key = format!("build.{}", name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        return Ok(args.collect());
-    }
-
-    Ok(Vec::new())
 }
