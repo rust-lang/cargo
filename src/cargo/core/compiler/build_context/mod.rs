@@ -9,8 +9,8 @@ use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
 use crate::util::errors::CargoResult;
 use crate::util::{profile, Cfg, Config, Rustc};
-
-use super::{BuildConfig, BuildOutput, Kind, Unit};
+use crate::core::compiler::{Unit, Kind, BuildConfig, BuildOutput};
+use crate::core::compiler::unit::UnitInterner;
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
@@ -37,6 +37,7 @@ pub struct BuildContext<'a, 'cfg: 'a> {
     pub target_config: TargetConfig,
     pub target_info: TargetInfo,
     pub host_info: TargetInfo,
+    pub units: &'a UnitInterner<'a>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -47,6 +48,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         config: &'cfg Config,
         build_config: &'a BuildConfig,
         profiles: &'a Profiles,
+        units: &'a UnitInterner<'a>,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let mut rustc = config.load_global_rustc(Some(ws))?;
@@ -82,6 +84,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             build_config,
             profiles,
             extra_compiler_args,
+            units,
         })
     }
 

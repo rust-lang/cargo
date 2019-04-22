@@ -8,7 +8,8 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 use log::info;
 
-use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
+use super::{BuildContext, Context, FileFlavor, Kind, Layout};
+use crate::core::compiler::Unit;
 use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 

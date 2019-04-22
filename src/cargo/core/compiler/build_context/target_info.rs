@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str::{self, FromStr};
 
-use super::Kind;
+use crate::core::compiler::Kind;
 use crate::core::TargetKind;
 use crate::util::CfgExpr;
 use crate::util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
