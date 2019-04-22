@@ -115,7 +115,6 @@ pub fn resolve_with_config_raw(
         &HashSet::new(),
         config,
         true,
-        true,
     );
 
     // The largest test in our suite takes less then 30 sec.

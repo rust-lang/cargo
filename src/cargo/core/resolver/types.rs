@@ -426,6 +426,12 @@ pub enum ConflictReason {
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 
+    /// A dependency listed features that ended up being a required dependency.
+    /// For example we tried to activate feature `foo` but the
+    /// candidate we're activating didn't actually have the feature `foo`
+    /// it had a dependency `foo` instead.
+    RequiredDependencyAsFeatures(InternedString),
+
     // TODO: needs more info for `activation_error`
     // TODO: needs more info for `find_candidate`
     /// pub dep error
@@ -442,6 +448,13 @@ impl ConflictReason {
 
     pub fn is_missing_features(&self) -> bool {
         if let ConflictReason::MissingFeatures(_) = *self {
+            return true;
+        }
+        false
+    }
+
+    pub fn is_required_dependency_as_features(&self) -> bool {
+        if let ConflictReason::RequiredDependencyAsFeatures(_) = *self {
             return true;
         }
         false

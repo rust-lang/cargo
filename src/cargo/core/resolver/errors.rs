@@ -127,7 +127,7 @@ pub(super) fn activation_error(
             msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
         }
 
-        let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
+        let (features_errors, mut other_errors): (Vec<_>, Vec<_>) = other_errors
             .drain(..)
             .partition(|&(_, r)| r.is_missing_features());
 
@@ -142,6 +142,29 @@ pub(super) fn activation_error(
                 msg.push_str("` but `");
                 msg.push_str(&*dep.package_name());
                 msg.push_str("` does not have these features.\n");
+            }
+            // p == parent so the full path is redundant.
+        }
+
+        let (required_dependency_as_features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
+            .drain(..)
+            .partition(|&(_, r)| r.is_required_dependency_as_features());
+
+        for &(p, r) in required_dependency_as_features_errors.iter() {
+            if let ConflictReason::RequiredDependencyAsFeatures(ref features) = *r {
+                msg.push_str("\n\nthe package `");
+                msg.push_str(&*p.name());
+                msg.push_str("` depends on `");
+                msg.push_str(&*dep.package_name());
+                msg.push_str("`, with features: `");
+                msg.push_str(features);
+                msg.push_str("` but `");
+                msg.push_str(&*dep.package_name());
+                msg.push_str("` does not have these features.\n");
+                msg.push_str(
+                    " It has a required dependency with that name, \
+                     but only optional dependencies can be used as features.\n",
+                );
             }
             // p == parent so the full path is redundant.
         }

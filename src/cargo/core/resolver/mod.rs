@@ -124,7 +124,6 @@ pub fn resolve(
     registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
-    print_warnings: bool,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
     let cx = Context::new(check_public_visible_dependencies);
@@ -156,11 +155,6 @@ pub fn resolve(
     check_cycles(&resolve, &cx.activations)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
-
-    // If we have a shell, emit warnings about required deps used as feature.
-    if print_warnings && config.is_some() {
-        emit_warnings(&cx, &resolve, summaries, config)
-    }
 
     Ok(resolve)
 }
@@ -1086,66 +1080,4 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
         }
     }
     Ok(())
-}
-
-/// Re-run all used `resolve_features` so it can print warnings.
-/// Within the resolution loop we do not pass a `config` to `resolve_features`
-/// this tells it not to print warnings. Hear we do pass `config` triggering it to print them.
-/// This is done as the resolution is NP-Hard so the loop can potentially call `resolve features`
-/// an exponential number of times, but this pass is linear in the number of dependencies.
-fn emit_warnings(
-    cx: &Context,
-    resolve: &Resolve,
-    summaries: &[(Summary, Method<'_>)],
-    config: Option<&Config>,
-) {
-    let mut new_cx = cx.clone();
-    new_cx.resolve_features = im_rc::HashMap::new();
-    let mut features_from_dep = HashMap::new();
-    for (summary, method) in summaries {
-        let replacement = &cx.activations[&resolve
-            .replacements()
-            .get(&summary.package_id())
-            .unwrap_or(&summary.package_id())
-            .as_activations_key()]
-            .0;
-        for (dep, features) in new_cx
-            .resolve_features(None, replacement, &method, config)
-            .expect("can not resolve_features for a required summery")
-        {
-            features_from_dep.insert((replacement.package_id(), dep), features);
-        }
-    }
-    // crates enable features for their dependencies.
-    // So by iterating reverse topologically we process all of the parents before each child.
-    // Then we know all the needed features for each crate.
-    let topological_sort = resolve.sort();
-    for id in topological_sort
-        .iter()
-        .rev()
-        .filter(|&id| !resolve.replacements().contains_key(id))
-    {
-        let summary = &cx.activations[&id.as_activations_key()].0;
-
-        for (parent, deps) in cx.parents.edges(&summary.package_id()) {
-            for dep in deps.iter() {
-                let features = features_from_dep
-                    .remove(&(*parent, dep.clone()))
-                    .expect("fulfilled a dep that was not needed");
-                let method = Method::Required {
-                    dev_deps: false,
-                    features: &features,
-                    all_features: false,
-                    uses_default_features: dep.uses_default_features(),
-                };
-                for (dep, features) in new_cx
-                    .resolve_features(None, summary, &method, config)
-                    .expect("can not resolve_features for a used dep")
-                {
-                    features_from_dep.insert((summary.package_id(), dep), features);
-                }
-            }
-        }
-    }
-    assert_eq!(cx.resolve_features, new_cx.resolve_features);
 }
