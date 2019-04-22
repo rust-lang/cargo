@@ -20,7 +20,8 @@ use std::collections::{HashMap, HashSet};
 
 use log::trace;
 
-use super::{BuildContext, CompileMode, Kind, Unit};
+use super::{BuildContext, CompileMode, Kind};
+use crate::core::compiler::Unit;
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::UnitFor;
@@ -350,7 +351,7 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
 
 fn maybe_lib<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'_, '_>,
+    bcx: &BuildContext<'a, '_>,
     unit_for: UnitFor,
 ) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
@@ -369,7 +370,7 @@ fn maybe_lib<'a>(
 /// build script.
 fn dep_build_script<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'_, '_>,
+    bcx: &BuildContext<'a, '_>,
 ) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg
         .targets()
@@ -378,16 +379,15 @@ fn dep_build_script<'a>(
         .map(|t| {
             // The profile stored in the Unit is the profile for the thing
             // the custom build script is running for.
-            (
-                Unit {
-                    pkg: unit.pkg,
-                    target: t,
-                    profile: bcx.profiles.get_profile_run_custom_build(&unit.profile),
-                    kind: unit.kind,
-                    mode: CompileMode::RunCustomBuild,
-                },
-                UnitFor::new_build(),
-            )
+            let unit = bcx.units.intern(
+                unit.pkg,
+                t,
+                bcx.profiles.get_profile_run_custom_build(&unit.profile),
+                unit.kind,
+                CompileMode::RunCustomBuild,
+            );
+
+            (unit, UnitFor::new_build())
         })
 }
 
@@ -410,7 +410,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 fn new_unit<'a>(
-    bcx: &BuildContext<'_, '_>,
+    bcx: &BuildContext<'a, '_>,
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
@@ -424,13 +424,8 @@ fn new_unit<'a>(
         mode,
         bcx.build_config.release,
     );
-    Unit {
-        pkg,
-        target,
-        profile,
-        kind,
-        mode,
-    }
+
+    bcx.units.intern(pkg, target, profile, kind, mode)
 }
 
 /// Fill in missing dependencies for units of the `RunCustomBuild`
