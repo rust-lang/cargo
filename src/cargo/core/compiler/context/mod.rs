@@ -238,12 +238,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .collect()
                     });
             }
-            let rustdocflags = self.bcx.rustdocflags_args(unit)?;
+            let rustdocflags = self.bcx.rustdocflags_args(unit);
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags
                     .entry(unit.pkg.package_id())
-                    .or_insert(rustdocflags);
+                    .or_insert(rustdocflags.to_vec());
             }
 
             super::output_depinfo(&mut self, unit)?;

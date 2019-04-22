@@ -222,7 +222,7 @@ fn rustc<'a, 'cfg>(
     .with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
-    rustc.args(&cx.bcx.rustflags_args(unit)?);
+    rustc.args(cx.bcx.rustflags_args(unit));
     let json_messages = cx.bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
@@ -643,7 +643,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     build_deps_args(&mut rustdoc, cx, unit)?;
 
-    rustdoc.args(&bcx.rustdocflags_args(unit)?);
+    rustdoc.args(bcx.rustdocflags_args(unit));
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();

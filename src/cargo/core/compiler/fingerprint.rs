@@ -1042,9 +1042,9 @@ fn calculate_normal<'a, 'cfg>(
     // hashed to take up less space on disk as we just need to know when things
     // change.
     let extra_flags = if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit)?
+        cx.bcx.rustdocflags_args(unit)
     } else {
-        cx.bcx.rustflags_args(unit)?
+        cx.bcx.rustflags_args(unit)
     };
     let profile_hash = util::hash_u64((&unit.profile, unit.mode, cx.bcx.extra_args_for(unit)));
     // Include metadata since it is exposed as environment variables.
@@ -1065,7 +1065,7 @@ fn calculate_normal<'a, 'cfg>(
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
-        rustflags: extra_flags,
+        rustflags: extra_flags.to_vec(),
         fs_status: FsStatus::Stale,
         outputs,
     })
