@@ -87,6 +87,14 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 
     connect_run_custom_build_deps(&mut state);
 
+    // Dependencies are used in tons of places throughout the backend, many of
+    // which affect the determinism of the build itself. As a result be sure
+    // that dependency lists are always sorted to ensure we've always got a
+    // deterministic output.
+    for list in state.deps.values_mut() {
+        list.sort();
+    }
+
     Ok(())
 }
 

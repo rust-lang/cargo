@@ -380,9 +380,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 return Vec::new();
             }
         }
-        let mut deps = self.unit_dependencies[unit].clone();
-        deps.sort();
-        deps
+        self.unit_dependencies[unit].clone()
     }
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
