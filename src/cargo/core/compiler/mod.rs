@@ -1006,14 +1006,24 @@ fn build_deps_args<'a, 'cfg>(
             v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&output.path.file_name().unwrap());
-            cmd.arg("--extern").arg(&v);
+
+            let mut private = false;
 
             if current.pkg.manifest().features().require(Feature::public_dependency()).is_ok() {
                 if !bcx.is_public_dependency(current, dep) {
-                    cmd.arg("--extern-private").arg(&v);
-                    *need_unstable_opts = true
+                    private = true;
                 }
             }
+
+            if private {
+                cmd.arg("--extern-private");
+            } else {
+                cmd.arg("--extern");
+            }
+
+            cmd.arg(&v);
+            *need_unstable_opts |= private;
+
         }
         Ok(())
     }
