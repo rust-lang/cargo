@@ -49,6 +49,7 @@
         * [metadata](commands/cargo-metadata.md)
         * [pkgid](commands/cargo-pkgid.md)
         * [update](commands/cargo-update.md)
+        * [vendor](commands/cargo-vendor.md)
         * [verify-project](commands/cargo-verify-project.md)
     * [Package Commands](commands/package-commands.md)
         * [init](commands/cargo-init.md)

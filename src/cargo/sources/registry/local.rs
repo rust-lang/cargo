@@ -1,9 +1,8 @@
 use crate::core::{InternedString, PackageId};
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
-use hex;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -99,18 +98,8 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
         // We don't actually need to download anything per-se, we just need to
         // verify the checksum matches the .crate file itself.
-        let mut state = Sha256::new();
-        let mut buf = [0; 64 * 1024];
-        loop {
-            let n = crate_file
-                .read(&mut buf)
-                .chain_err(|| format!("failed to read `{}`", path.display()))?;
-            if n == 0 {
-                break;
-            }
-            state.update(&buf[..n]);
-        }
-        if hex::encode(state.finish()) != checksum {
+        let actual = Sha256::new().update_file(&crate_file)?.finish_hex();
+        if actual != checksum {
             failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
