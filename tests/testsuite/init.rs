@@ -63,7 +63,7 @@ fn simple_git_ignore_exists() {
     fs::create_dir_all(paths::root().join("foo")).unwrap();
     fs::write(
         paths::root().join("foo/.gitignore"),
-        "/target\n**/some.file",
+        "**/target\n**/some.file",
     )
     .unwrap();
 
@@ -85,14 +85,81 @@ fn simple_git_ignore_exists() {
         .unwrap();
     assert_eq!(
         contents,
-        "/target\n\
-         **/some.file\n\n\
-         #Added by cargo\n\
-         #\n\
-         #already existing elements are commented out\n\
-         \n\
-         #/target\n\
+        "**/target\n\
+         **/some.file\n\
          **/*.rs.bk\n\
+         Cargo.lock\n",
+    );
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
+#[test]
+fn simple_git_empty_ignore() {
+    // write an empty .gitignore file
+    fs::create_dir_all(paths::root().join("foo")).unwrap();
+    fs::write(
+        paths::root().join("foo/.gitignore"),
+        "",
+    )
+    .unwrap();
+
+    cargo_process("init --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(
+        contents,
+        "**/target\n\
+         **/*.rs.bk\n\
+         Cargo.lock\n",
+    );
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
+#[test]
+fn simple_git_ignore_with_missing_patterns() {
+    // write an .gitignore file with only **/*.rs.bk
+    fs::create_dir_all(paths::root().join("foo")).unwrap();
+    fs::write(
+        paths::root().join("foo/.gitignore"),
+        "**/*.rs.bk",
+    )
+    .unwrap();
+
+    cargo_process("init --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(
+        contents,
+        "**/*.rs.bk\n\
+         **/target\n\
          Cargo.lock\n",
     );
 

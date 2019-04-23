@@ -89,7 +89,7 @@ fn simple_git() {
         .unwrap()
         .read_to_string(&mut contents)
         .unwrap();
-    assert_eq!(contents, "/target\n**/*.rs.bk\nCargo.lock\n",);
+    assert_eq!(contents, "**/target\n**/*.rs.bk\nCargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
