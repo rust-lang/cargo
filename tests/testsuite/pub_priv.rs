@@ -1,5 +1,5 @@
 use crate::support::registry::Package;
-use crate::support::{project, is_nightly};
+use crate::support::{is_nightly, project};
 
 #[test]
 fn exported_priv_warning() {
@@ -7,10 +7,7 @@ fn exported_priv_warning() {
         return;
     }
     Package::new("priv_dep", "0.1.0")
-        .file(
-            "src/lib.rs",
-            "pub struct FromPriv;"
-        )
+        .file("src/lib.rs", "pub struct FromPriv;")
         .publish();
 
     let p = project()
@@ -58,10 +55,7 @@ fn exported_pub_dep() {
         return;
     }
     Package::new("pub_dep", "0.1.0")
-        .file(
-            "src/lib.rs",
-            "pub struct FromPub;"
-        )
+        .file("src/lib.rs", "pub struct FromPub;")
         .publish();
 
     let p = project()
@@ -97,10 +91,9 @@ fn exported_pub_dep() {
 [COMPILING] pub_dep v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"
+",
         )
         .run()
-
 }
 
 #[test]
@@ -112,10 +105,7 @@ pub fn requires_nightly_cargo() {
             cargo-features = ["public-dependency"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            ""
-        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build --message-format=short")
@@ -134,15 +124,9 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
 
 #[test]
 fn requires_feature() {
-
-
     Package::new("pub_dep", "0.1.0")
-        .file(
-            "src/lib.rs",
-            ""
-        )
+        .file("src/lib.rs", "")
         .publish();
-
 
     let p = project()
         .file(
@@ -157,10 +141,7 @@ fn requires_feature() {
             pub_dep = { version = "0.1.0", public = true }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            ""
-        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build --message-format=short")
@@ -174,8 +155,7 @@ Caused by:
   feature `public-dependency` is required
 
 consider adding `cargo-features = [\"public-dependency\"]` to the manifest
-"
+",
         )
         .run()
-
 }
