@@ -92,6 +92,13 @@ impl<'a> fmt::Debug for Unit<'a> {
     }
 }
 
+/// A small structure used to "intern" `Unit` values.
+///
+/// A `Unit` is just a thin pointer to an internal `UnitInner`. This is done to
+/// ensure that `Unit` itself is quite small as well as enabling a very
+/// efficient hash/equality implementation for `Unit`. All units are
+/// manufactured through an interner which guarantees that each equivalent value
+/// is only produced once.
 pub struct UnitInterner<'a> {
     state: RefCell<InternerState<'a>>,
 }
@@ -101,6 +108,7 @@ struct InternerState<'a> {
 }
 
 impl<'a> UnitInterner<'a> {
+    /// Creates a new blank interner
     pub fn new() -> UnitInterner<'a> {
         UnitInterner {
             state: RefCell::new(InternerState {
@@ -109,6 +117,9 @@ impl<'a> UnitInterner<'a> {
         }
     }
 
+    /// Creates a new `unit` from its components. The returned `Unit`'s fields
+    /// will all be equivalent to the provided arguments, although they may not
+    /// be the exact same instance.
     pub fn intern(
         &'a self,
         pkg: &'a Package,
@@ -127,9 +138,30 @@ impl<'a> UnitInterner<'a> {
         Unit { inner }
     }
 
+    // Ok so interning here is a little unsafe, hence the usage of `unsafe`
+    // internally. The primary issue here is that we've got an internal cache of
+    // `UnitInner` instances added so far, but we may need to mutate it to add
+    // it, and the mutation for an interner happens behind a shared borrow.
+    //
+    // Our goal though is to escape the lifetime `borrow_mut` to the same
+    // lifetime as the borrowed passed into this function. That's where `unsafe`
+    // comes into play. What we're subverting here is resizing internally in the
+    // `HashSet` as well as overwriting previous keys in the `HashSet`.
+    //
+    // As a result we store `Box<UnitInner>` internally to have an extra layer
+    // of indirection. That way `*const UnitInner` is a stable address that
+    // doesn't change with `HashSet` resizing. Furthermore we're careful to
+    // never overwrite an entry once inserted.
+    //
+    // Ideally we'd use an off-the-shelf interner from crates.io which avoids a
+    // small amount of unsafety here, but at the time this was written one
+    // wasn't obviously available.
     fn intern_inner(&'a self, item: &UnitInner<'a>) -> &'a UnitInner<'a> {
         let mut me = self.state.borrow_mut();
         if let Some(item) = me.cache.get(item) {
+            // note that `item` has type `&Box<UnitInner<'a>`. Use `&**` to
+            // convert that to `&UnitInner<'a>`, then do some trickery to extend
+            // the lifetime to the `'a` on the function here.
             return unsafe { &*(&**item as *const UnitInner<'a>) };
         }
         me.cache.insert(Box::new(item.clone()));
