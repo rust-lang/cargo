@@ -56,6 +56,7 @@ mod metabuild;
 mod metadata;
 mod net_config;
 mod new;
+mod offline;
 mod out_dir;
 mod overrides;
 mod package;
