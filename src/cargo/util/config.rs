@@ -294,6 +294,13 @@ impl Config {
         self.values.try_borrow_with(|| self.load_values())
     }
 
+    pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
+        match self.values.borrow_mut() {
+            Some(map) => Ok(map),
+            None => failure::bail!("config values not loaded yet"),
+        }
+    }
+
     // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {

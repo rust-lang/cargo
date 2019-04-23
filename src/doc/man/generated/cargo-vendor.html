@@ -1,0 +1,207 @@
+<h2 id="cargo_vendor_name">NAME</h2>
+<div class="sectionbody">
+<p>cargo-vendor - Vendor all dependencies locally</p>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_synopsis">SYNOPSIS</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>cargo vendor [<em>OPTIONS</em>] [<em>PATH</em>]</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This cargo subcommand will vendor all crates.io and git dependencies for a
+project into the specified directory at <code>&lt;path&gt;</code>. After this command completes
+the vendor directory specified by <code>&lt;path&gt;</code> will contain all remote sources from
+dependencies specified. Additional manifests beyond the default one can be
+specified with the <code>-s</code> option.</p>
+</div>
+<div class="paragraph">
+<p>The <code>cargo vendor</code> command will also print out the configuration necessary
+to use the vendored sources, which you will need to add to <code>.cargo/config</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_options">OPTIONS</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="cargo_vendor_owner_options">Owner Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-s</strong> <em>MANIFEST</em></dt>
+<dt class="hdlist1"><strong>--sync</strong> <em>MANIFEST</em></dt>
+<dd>
+<p>Specify extra <code>Cargo.toml</code> manifests to workspaces which should also be
+vendored and synced to the output.</p>
+</dd>
+<dt class="hdlist1"><strong>--no-delete</strong></dt>
+<dd>
+<p>Don&#8217;t delete the "vendor" directory when vendoring, but rather keep all
+existing contents of the vendor directory</p>
+</dd>
+<dt class="hdlist1"><strong>--respect-source-config</strong></dt>
+<dd>
+<p>Instead of ignoring <code>[source]</code> configuration by default in <code>.cargo/config</code>
+read it and use it when downloading crates from crates.io, for example</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_vendor_manifest_options">Manifest Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
+<dd>
+<p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches in the current
+directory or any parent directory for the <code>Cargo.toml</code> file.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_vendor_display_options">Display Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-v</strong></dt>
+<dt class="hdlist1"><strong>--verbose</strong></dt>
+<dd>
+<p>Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the <code>term.verbose</code>
+<a href="reference/config.html">config value</a>.</p>
+</dd>
+<dt class="hdlist1"><strong>-q</strong></dt>
+<dt class="hdlist1"><strong>--quiet</strong></dt>
+<dd>
+<p>No output printed to stdout.</p>
+</dd>
+<dt class="hdlist1"><strong>--color</strong> <em>WHEN</em></dt>
+<dd>
+<p>Control when colored output is used. Valid values:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>auto</code> (default): Automatically detect if color support is available on the
+terminal.</p>
+</li>
+<li>
+<p><code>always</code>: Always display colors.</p>
+</li>
+<li>
+<p><code>never</code>: Never display colors.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>term.color</code>
+<a href="reference/config.html">config value</a>.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_vendor_common_options">Common Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-h</strong></dt>
+<dt class="hdlist1"><strong>--help</strong></dt>
+<dd>
+<p>Prints help information.</p>
+</dd>
+<dt class="hdlist1"><strong>-Z</strong> <em>FLAG</em>&#8230;&#8203;</dt>
+<dd>
+<p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for
+details.</p>
+</dd>
+<dt class="hdlist1"><strong>--frozen</strong></dt>
+<dt class="hdlist1"><strong>--locked</strong></dt>
+<dd>
+<p>Either of these flags requires that the <code>Cargo.lock</code> file is
+up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
+exit with an error. The <code>--frozen</code> flag also prevents Cargo from
+attempting to access the network to determine if it is out-of-date.</p>
+<div class="paragraph">
+<p>These may be used in environments where you want to assert that the
+<code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
+access.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_environment">ENVIRONMENT</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>See <a href="reference/environment-variables.html">the reference</a> for
+details on environment variables that Cargo reads.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_exit_status">Exit Status</h2>
+<div class="sectionbody">
+<div class="dlist">
+<dl>
+<dt class="hdlist1">0</dt>
+<dd>
+<p>Cargo succeeded.</p>
+</dd>
+<dt class="hdlist1">101</dt>
+<dd>
+<p>Cargo failed to complete.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_examples">EXAMPLES</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Vendor all dependencies into a local "vendor" folder</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo vendor</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Vendor all dependencies into a local "third-part/vendor" folder</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo vendor third-party/vendor</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Vendor the current workspace as well as another to "vendor"</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo vendor -s ../path/to/Cargo.toml</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_vendor_see_also">SEE ALSO</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="commands/index.html">cargo(1)</a></p>
+</div>
+</div>
+</div>

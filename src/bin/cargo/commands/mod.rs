@@ -30,6 +30,7 @@ pub fn builtin() -> Vec<App> {
         test::cli(),
         uninstall::cli(),
         update::cli(),
+        vendor::cli(),
         verify_project::cli(),
         version::cli(),
         yank::cli(),
@@ -66,6 +67,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "test" => test::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
+        "vendor" => vendor::exec,
         "verify-project" => verify_project::exec,
         "version" => version::exec,
         "yank" => yank::exec,
@@ -102,6 +104,7 @@ pub mod search;
 pub mod test;
 pub mod uninstall;
 pub mod update;
+pub mod vendor;
 pub mod verify_project;
 pub mod version;
 pub mod yank;
