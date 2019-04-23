@@ -459,19 +459,19 @@ impl IgnoreList {
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n#Added by cargo\n\
-                       #\n\
-                       #already existing elements are commented out\n\n"
-            .to_string();
+        let mut out = "".to_string();
 
         for item in ignore_items {
             if existing_items.contains(item) {
-                out.push('#');
+                continue
             }
             out.push_str(item);
-            out.push('\n');
+            out.push_str("\n");
         }
 
+        if !out.is_empty() && !existing_items.is_empty() {
+            out.insert_str(0, "\n");
+        }
         out
     }
 }
@@ -506,7 +506,7 @@ fn write_ignore_file(
 }
 
 /// Initializes the correct VCS system based on the provided config.
-fn init_vcs(root: &Path, path: & Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
+fn init_vcs(root: &Path, path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !root.join(".git").exists() {
@@ -528,7 +528,7 @@ fn init_vcs(root: &Path, path: & Path, vcs: VersionControl, config: &Config) -> 
                 FossilRepo::init(path, config.cwd())?;
             }
         }
-        VersionControl::NoVcs => { }
+        VersionControl::NoVcs => {}
     };
 
     if !path.exists() {
@@ -547,7 +547,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // Using the push method with two arguments ensures that the entries for
     // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
-    ignore.push("/target", "^target/");
+    ignore.push("**/target", "^target/");
     ignore.push("**/*.rs.bk", "glob:*.rs.bk");
     if !opts.bin {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
@@ -561,7 +561,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
             (_, Some((root, vcs))) => {
                 project_root = root;
                 vcs
-            },
+            }
         }
     });
 

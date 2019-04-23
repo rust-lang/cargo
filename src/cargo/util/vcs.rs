@@ -50,7 +50,7 @@ impl HgRepo {
         Ok(HgRepo)
     }
     pub fn discover(path: &Path, cwd: &Path) -> CargoResult<Option<(PathBuf, VersionControl)>> {
-        let mut stdout = process("hg")
+        let stdout = process("hg")
             .cwd(cwd)
             .arg("--cwd")
             .arg(path)
@@ -58,11 +58,9 @@ impl HgRepo {
             .exec_with_output()?
             .stdout;
 
-        // We remove the last new-line character from stdout
-        stdout = stdout[ .. stdout.len() - 1].to_vec();
-
         let root = String::from_utf8(stdout)?;
-        Ok(Some((PathBuf::from(root), Hg)))
+        // We remove the last new-line character from stdout
+        Ok(Some((PathBuf::from(root.trim()), Hg)))
     }
 }
 
