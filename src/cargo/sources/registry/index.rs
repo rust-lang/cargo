@@ -300,6 +300,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries
             .iter()
             .filter(|&(summary, yanked)| {
+                // Note: This particular logic can cause problems with
+                // optional dependencies when offline. If at least 1 version
+                // of an optional dependency is downloaded, but that version
+                // does not satisfy the requirements, then resolution will
+                // fail. Unfortunately, whether or not something is optional
+                // is not known here.
                 (online || load.is_crate_downloaded(summary.package_id()))
                     && (!yanked || {
                         log::debug!("{:?}", yanked_whitelist);

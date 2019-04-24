@@ -171,13 +171,15 @@ fn cargo_compile_offline_not_try_update() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `not_cached_dep` found
-location searched: registry `[..]`
-required by package `bar v0.1.0 ([..])`
-As a reminder, you're using offline mode (-Z offline) \
-which can sometimes cause surprising resolution failures, \
-if this error is too confusing you may wish to retry \
-without the offline flag.",
+[ERROR] failed to load source for a dependency on `not_cached_dep`
+
+Caused by:
+  Unable to update registry `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  unable to fetch registry `https://github.com/rust-lang/crates.io-index` in offline mode
+Run `cargo fetch` to download the registry index and all of a project's dependencies before going offline.
+",
         )
         .run();
 }
@@ -484,5 +486,62 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .run();
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev1\n")
+        .run();
+}
+
+#[test]
+fn offline_resolve_optional_fail() {
+    // Example where resolve fails offline.
+    //
+    // This happens if at least 1 version of an optional dependency is
+    // available, but none of them satisfy the requirements. The current logic
+    // that handles this is `RegistryIndex::query_inner`, and it doesn't know
+    // if the package being queried is an optional one. This is not ideal, it
+    // would be best if it just ignored optional (unselected) dependencies.
+    Package::new("dep", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = { version = "1.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    // Change dep to 2.0.
+    p.change_file(
+        "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = { version = "2.0", optional = true }
+            "#,
+    );
+
+    p.cargo("build -Z offline")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("\
+[ERROR] failed to select a version for the requirement `dep = \"^2.0\"`
+  candidate versions found which didn't match: 1.0.0
+  location searched: `[..]` index (which is replacing registry `https://github.com/rust-lang/crates.io-index`)
+required by package `foo v0.1.0 ([..]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+As a reminder, you're using offline mode (-Z offline) which can sometimes cause \
+surprising resolution failures, if this error is too confusing you may wish to \
+retry without the offline flag.
+")
         .run();
 }

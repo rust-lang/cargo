@@ -36,7 +36,7 @@ impl<'a> Retry<'a> {
     }
 }
 
-fn maybe_spurious(err: &Error) -> bool {
+pub fn maybe_spurious(err: &Error) -> bool {
     for e in err.iter_chain() {
         if let Some(git_err) = e.downcast_ref::<git2::Error>() {
             match git_err.class() {
