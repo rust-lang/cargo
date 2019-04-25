@@ -95,11 +95,11 @@ impl Rustc {
     }
 }
 
-/// It is a well known that `rustc` is not the fastest compiler in the world.
-/// What is less known is that even `rustc --version --verbose` takes about a
-/// hundred milliseconds! Because we need compiler version info even for no-op
-/// builds, we cache it here, based on compiler's mtime and rustup's current
-/// toolchain.
+/// It is a well known fact that `rustc` is not the fastest compiler in the
+/// world.  What is less known is that even `rustc --version --verbose` takes
+/// about a hundred milliseconds! Because we need compiler version info even
+/// for no-op builds, we cache it here, based on compiler's mtime and rustup's
+/// current toolchain.
 ///
 /// https://github.com/rust-lang/cargo/issues/5315
 /// https://github.com/rust-lang/rust/issues/49761
