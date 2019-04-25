@@ -109,7 +109,7 @@ impl BuildPlan {
         }
     }
 
-    pub fn add(&mut self, cx: &Context<'_, '_>, unit: &Unit<'_>) -> CargoResult<()> {
+    pub fn add<'a>(&mut self, cx: &Context<'a, '_>, unit: &Unit<'a>) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx

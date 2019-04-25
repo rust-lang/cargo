@@ -8,7 +8,8 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 use log::info;
 
-use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
+use super::{BuildContext, Context, FileFlavor, Kind, Layout};
+use crate::core::compiler::Unit;
 use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
@@ -504,9 +505,9 @@ fn compute_metadata<'a, 'cfg>(
     // This helps when the target directory is a shared cache for projects with different cargo configs,
     // or if the user is experimenting with different rustflags manually.
     if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit).ok().hash(&mut hasher);
+        cx.bcx.rustdocflags_args(unit).hash(&mut hasher);
     } else {
-        cx.bcx.rustflags_args(unit).ok().hash(&mut hasher);
+        cx.bcx.rustflags_args(unit).hash(&mut hasher);
     }
 
     // Artifacts compiled for the host should have a different metadata
