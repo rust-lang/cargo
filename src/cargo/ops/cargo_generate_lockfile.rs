@@ -21,16 +21,8 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = ops::resolve_with_previous(
-        &mut registry,
-        ws,
-        Method::Everything,
-        None,
-        None,
-        &[],
-        true,
-        true,
-    )?;
+    let resolve =
+        ops::resolve_with_previous(&mut registry, ws, Method::Everything, None, None, &[], true)?;
     ops::write_pkg_lockfile(ws, &resolve)?;
     Ok(())
 }
@@ -91,7 +83,6 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],
-        true,
         true,
     )?;
 

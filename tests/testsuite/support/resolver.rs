@@ -114,7 +114,6 @@ pub fn resolve_with_config_raw(
         &mut registry,
         &HashSet::new(),
         config,
-        false,
         true,
     );
 
