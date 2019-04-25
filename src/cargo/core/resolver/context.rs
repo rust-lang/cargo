@@ -13,9 +13,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::errors::ActivateResult;
-use super::types::{
-    ConflictMap, ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer,
-};
+use super::types::{ConflictMap, ConflictReason, DepInfo, Method, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -37,20 +35,9 @@ pub struct Context {
     pub public_dependency:
         Option<im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>>,
 
-    // This is somewhat redundant with the `resolve_graph` that stores the same data,
-    //   but for querying in the opposite order.
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
-
-    // These are two cheaply-cloneable lists (O(1) clone) which are effectively
-    // hash maps but are built up as "construction lists". We'll iterate these
-    // at the very end and actually construct the map that we're making.
-    pub resolve_graph: RcList<GraphNode>,
-    pub resolve_replacements: RcList<(PackageId, PackageId)>,
-
-    // These warnings are printed after resolution.
-    pub warnings: RcList<String>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -98,7 +85,6 @@ impl PackageId {
 impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
         Context {
-            resolve_graph: RcList::new(),
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
             public_dependency: if check_public_visible_dependencies {
@@ -107,9 +93,7 @@ impl Context {
                 None
             },
             parents: Graph::new(),
-            resolve_replacements: RcList::new(),
             activations: im_rc::HashMap::new(),
-            warnings: RcList::new(),
         }
     }
 
@@ -128,7 +112,6 @@ impl Context {
                 );
             }
             im_rc::hashmap::Entry::Vacant(v) => {
-                self.resolve_graph.push(GraphNode::Add(id));
                 if let Some(link) = summary.links() {
                     ensure!(
                         self.links.insert(link, id).is_none(),
@@ -229,7 +212,7 @@ impl Context {
     }
 
     /// Returns all dependencies and the features we want from them.
-    fn resolve_features<'b>(
+    pub fn resolve_features<'b>(
         &mut self,
         parent: Option<&Summary>,
         s: &'b Summary,
@@ -267,14 +250,20 @@ impl Context {
                     .iter()
                     .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
             if always_required && base.0 {
-                self.warnings.push(format!(
-                    "Package `{}` does not have feature `{}`. It has a required dependency \
-                     with that name, but only optional dependencies can be used as features. \
-                     This is currently a warning to ease the transition, but it will become an \
-                     error in the future.",
-                    s.package_id(),
-                    dep.name_in_toml()
-                ));
+                return Err(match parent {
+                    None => failure::format_err!(
+                        "Package `{}` does not have feature `{}`. It has a required dependency \
+                         with that name, but only optional dependencies can be used as features.",
+                        s.package_id(),
+                        dep.name_in_toml()
+                    )
+                    .into(),
+                    Some(p) => (
+                        p.package_id(),
+                        ConflictReason::RequiredDependencyAsFeatures(dep.name_in_toml()),
+                    )
+                        .into(),
+                });
             }
             let mut base = base.1.clone();
             base.extend(dep.features().iter());
@@ -331,28 +320,28 @@ impl Context {
         Ok(ret)
     }
 
-    pub fn resolve_replacements(&self) -> HashMap<PackageId, PackageId> {
-        let mut replacements = HashMap::new();
-        let mut cur = &self.resolve_replacements;
-        while let Some(ref node) = cur.head {
-            let (k, v) = node.0;
-            replacements.insert(k, v);
-            cur = &node.1;
-        }
-        replacements
+    pub fn resolve_replacements(
+        &self,
+        registry: &RegistryQueryer<'_>,
+    ) -> HashMap<PackageId, PackageId> {
+        self.activations
+            .values()
+            .filter_map(|(s, _)| registry.used_replacement_for(s.package_id()))
+            .collect()
     }
 
     pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
         let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
-        let mut cur = &self.resolve_graph;
-        while let Some(ref node) = cur.head {
-            match node.0 {
-                GraphNode::Add(ref p) => graph.add(p.clone()),
-                GraphNode::Link(ref a, ref b, ref dep) => {
-                    graph.link(a.clone(), b.clone()).push(dep.clone());
-                }
+        self.activations
+            .values()
+            .for_each(|(r, _)| graph.add(r.package_id()));
+        for i in self.parents.iter() {
+            graph.add(*i);
+            for (o, e) in self.parents.edges(i) {
+                let old_link = graph.link(*o, *i);
+                assert!(old_link.is_empty());
+                *old_link = e.to_vec();
             }
-            cur = &node.1;
         }
         graph
     }

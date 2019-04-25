@@ -95,11 +95,12 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
-    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
     // If set the list of dependency candidates will be sorted by minimal
     // versions first. That allows `cargo update -Z minimal-versions` which will
     // specify minimum dependency versions to be used.
     minimal_versions: bool,
+    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    used_replacements: HashMap<PackageId, PackageId>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -112,10 +113,15 @@ impl<'a> RegistryQueryer<'a> {
         RegistryQueryer {
             registry,
             replacements,
-            cache: HashMap::new(),
             try_to_use,
             minimal_versions,
+            cache: HashMap::new(),
+            used_replacements: HashMap::new(),
         }
+    }
+
+    pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
+        self.used_replacements.get(&p).map(|&r| (p, r))
     }
 
     /// Queries the `registry` to return a list of candidates for `dep`.
@@ -211,6 +217,23 @@ impl<'a> RegistryQueryer<'a> {
 
             for dep in summary.dependencies() {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
+            }
+            if let Some(r) = &replace {
+                if let Some(old) = self
+                    .used_replacements
+                    .insert(summary.package_id(), r.package_id())
+                {
+                    debug_assert_eq!(
+                        r.package_id(),
+                        old,
+                        "we are inconsistent about witch replacement is used for {:?}, \
+                         one time we used {:?}, \
+                         now we are adding {:?}.",
+                        summary.package_id(),
+                        old,
+                        r.package_id()
+                    )
+                }
             }
 
             candidate.replace = replace;
@@ -403,6 +426,12 @@ pub enum ConflictReason {
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 
+    /// A dependency listed features that ended up being a required dependency.
+    /// For example we tried to activate feature `foo` but the
+    /// candidate we're activating didn't actually have the feature `foo`
+    /// it had a dependency `foo` instead.
+    RequiredDependencyAsFeatures(InternedString),
+
     // TODO: needs more info for `activation_error`
     // TODO: needs more info for `find_candidate`
     /// pub dep error
@@ -419,6 +448,13 @@ impl ConflictReason {
 
     pub fn is_missing_features(&self) -> bool {
         if let ConflictReason::MissingFeatures(_) = *self {
+            return true;
+        }
+        false
+    }
+
+    pub fn is_required_dependency_as_features(&self) -> bool {
+        if let ConflictReason::RequiredDependencyAsFeatures(_) = *self {
             return true;
         }
         false
@@ -481,50 +517,3 @@ where
 }
 
 impl<T: Clone> ExactSizeIterator for RcVecIter<T> {}
-
-pub struct RcList<T> {
-    pub head: Option<Rc<(T, RcList<T>)>>,
-}
-
-impl<T> RcList<T> {
-    pub fn new() -> RcList<T> {
-        RcList { head: None }
-    }
-
-    pub fn push(&mut self, data: T) {
-        let node = Rc::new((
-            data,
-            RcList {
-                head: self.head.take(),
-            },
-        ));
-        self.head = Some(node);
-    }
-}
-
-// Not derived to avoid `T: Clone`
-impl<T> Clone for RcList<T> {
-    fn clone(&self) -> RcList<T> {
-        RcList {
-            head: self.head.clone(),
-        }
-    }
-}
-
-// Avoid stack overflows on drop by turning recursion into a loop
-impl<T> Drop for RcList<T> {
-    fn drop(&mut self) {
-        let mut cur = self.head.take();
-        while let Some(head) = cur {
-            match Rc::try_unwrap(head) {
-                Ok((_data, mut next)) => cur = next.head.take(),
-                Err(_) => break,
-            }
-        }
-    }
-}
-
-pub enum GraphNode {
-    Add(PackageId),
-    Link(PackageId, PackageId, Dependency),
-}

@@ -62,7 +62,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -124,7 +124,6 @@ pub fn resolve(
     registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
-    print_warnings: bool,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
     let cx = Context::new(check_public_visible_dependencies);
@@ -143,7 +142,7 @@ pub fn resolve(
     }
     let resolve = Resolve::new(
         cx.graph(),
-        cx.resolve_replacements(),
+        cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
             .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
@@ -156,18 +155,6 @@ pub fn resolve(
     check_cycles(&resolve, &cx.activations)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
-
-    // If we have a shell, emit warnings about required deps used as feature.
-    if let Some(config) = config {
-        if print_warnings {
-            let mut shell = config.shell();
-            let mut warnings = &cx.warnings;
-            while let Some(ref head) = warnings.head {
-                shell.warn(&head.0)?;
-                warnings = &head.1;
-            }
-        }
-    }
 
     Ok(resolve)
 }
@@ -613,8 +600,6 @@ fn activate(
     let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        cx.resolve_graph
-            .push(GraphNode::Link(parent_pid, candidate_pid, dep.clone()));
         Rc::make_mut(
             // add a edge from candidate to parent in the parents graph
             cx.parents.link(candidate_pid, parent_pid),
@@ -675,8 +660,6 @@ fn activate(
 
     let candidate = match candidate.replace {
         Some(replace) => {
-            cx.resolve_replacements
-                .push((candidate_pid, replace.package_id()));
             if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
