@@ -25,10 +25,9 @@ use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::core::compiler::{
-    BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor,
-};
+use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileMode, Kind, Unit};
+use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Method, Resolve};
 use crate::core::{Package, Target};
@@ -349,6 +348,17 @@ pub fn compile_ws<'a>(
     let profiles = ws.profiles();
     profiles.validate_packages(&mut config.shell(), &packages)?;
 
+    let interner = UnitInterner::new();
+    let mut bcx = BuildContext::new(
+        ws,
+        &resolve_with_overrides,
+        &packages,
+        config,
+        build_config,
+        profiles,
+        &interner,
+        HashMap::new(),
+    )?;
     let units = generate_targets(
         ws,
         profiles,
@@ -356,10 +366,9 @@ pub fn compile_ws<'a>(
         filter,
         default_arch_kind,
         &resolve_with_overrides,
-        build_config,
+        &bcx,
     )?;
 
-    let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
         if units.len() != 1 {
             failure::bail!(
@@ -369,27 +378,18 @@ pub fn compile_ws<'a>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(units[0], args);
+        bcx.extra_compiler_args.insert(units[0], args);
     }
     if let Some(args) = local_rustdoc_args {
         for unit in &units {
             if unit.mode.is_doc() {
-                extra_compiler_args.insert(*unit, args.clone());
+                bcx.extra_compiler_args.insert(*unit, args.clone());
             }
         }
     }
 
     let ret = {
         let _p = profile::start("compiling");
-        let bcx = BuildContext::new(
-            ws,
-            &resolve_with_overrides,
-            &packages,
-            config,
-            build_config,
-            profiles,
-            extra_compiler_args,
-        )?;
         let cx = Context::new(config, &bcx)?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
@@ -581,11 +581,11 @@ fn generate_targets<'a>(
     filter: &CompileFilter,
     default_arch_kind: Kind,
     resolve: &Resolve,
-    build_config: &BuildConfig,
+    bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
-        let unit_for = if build_config.mode.is_any_test() {
+        let unit_for = if bcx.build_config.mode.is_any_test() {
             // NOTE: the `UnitFor` here is subtle. If you have a profile
             // with `panic` set, the `panic` flag is cleared for
             // tests/benchmarks and their dependencies. If this
@@ -650,15 +650,9 @@ fn generate_targets<'a>(
             ws.is_member(pkg),
             unit_for,
             target_mode,
-            build_config.release,
+            bcx.build_config.release,
         );
-        Unit {
-            pkg,
-            target,
-            profile,
-            kind,
-            mode: target_mode,
-        }
+        bcx.units.intern(pkg, target, profile, kind, target_mode)
     };
 
     // Create a list of proposed targets.
@@ -669,14 +663,14 @@ fn generate_targets<'a>(
             required_features_filterable,
         } => {
             for pkg in packages {
-                let default = filter_default_targets(pkg.targets(), build_config.mode);
+                let default = filter_default_targets(pkg.targets(), bcx.build_config.mode);
                 proposals.extend(default.into_iter().map(|target| Proposal {
                     pkg,
                     target,
                     requires_features: !required_features_filterable,
-                    mode: build_config.mode,
+                    mode: bcx.build_config.mode,
                 }));
-                if build_config.mode == CompileMode::Test {
+                if bcx.build_config.mode == CompileMode::Test {
                     if let Some(t) = pkg
                         .targets()
                         .iter()
@@ -702,9 +696,9 @@ fn generate_targets<'a>(
         } => {
             if *lib != LibRule::False {
                 let mut libs = Vec::new();
-                for proposal in filter_targets(packages, Target::is_lib, false, build_config.mode) {
+                for proposal in filter_targets(packages, Target::is_lib, false, bcx.build_config.mode) {
                     let Proposal { target, pkg, .. } = proposal;
-                    if build_config.mode == CompileMode::Doctest && !target.doctestable() {
+                    if bcx.build_config.mode == CompileMode::Doctest && !target.doctestable() {
                         ws.config().shell().warn(format!(
                             "doc tests are not supported for crate type(s) `{}` in package `{}`",
                             target.rustc_crate_types().join(", "),
@@ -734,10 +728,10 @@ fn generate_targets<'a>(
                 FilterRule::All => Target::tested,
                 FilterRule::Just(_) => Target::is_test,
             };
-            let test_mode = match build_config.mode {
+            let test_mode = match bcx.build_config.mode {
                 CompileMode::Build => CompileMode::Test,
                 CompileMode::Check { .. } => CompileMode::Check { test: true },
-                _ => build_config.mode,
+                _ => bcx.build_config.mode,
             };
             // If `--benches` was specified, add all targets that would be
             // generated by `cargo bench`.
@@ -745,10 +739,10 @@ fn generate_targets<'a>(
                 FilterRule::All => Target::benched,
                 FilterRule::Just(_) => Target::is_bench,
             };
-            let bench_mode = match build_config.mode {
+            let bench_mode = match bcx.build_config.mode {
                 CompileMode::Build => CompileMode::Bench,
                 CompileMode::Check { .. } => CompileMode::Check { test: true },
-                _ => build_config.mode,
+                _ => bcx.build_config.mode,
             };
 
             proposals.extend(list_rule_targets(
@@ -756,14 +750,14 @@ fn generate_targets<'a>(
                 bins,
                 "bin",
                 Target::is_bin,
-                build_config.mode,
+                bcx.build_config.mode,
             )?);
             proposals.extend(list_rule_targets(
                 packages,
                 examples,
                 "example",
                 Target::is_example,
-                build_config.mode,
+                bcx.build_config.mode,
             )?);
             proposals.extend(list_rule_targets(
                 packages,
