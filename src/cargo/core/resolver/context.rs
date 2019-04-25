@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
@@ -13,7 +13,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;
-use super::types::{ConflictMap, Method};
+use super::types::{ConflictMap, FeaturesSet, Method};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -27,7 +27,7 @@ pub use super::resolve::Resolve;
 pub struct Context {
     pub activations: Activations,
     /// list the features that are activated for each package
-    pub resolve_features: im_rc::HashMap<PackageId, Rc<BTreeSet<InternedString>>>,
+    pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,

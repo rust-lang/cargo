@@ -47,14 +47,13 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use log::{debug, trace};
 
-use crate::core::interning::InternedString;
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
@@ -64,7 +63,7 @@ use crate::util::profile;
 use self::context::{Activations, Context};
 use self::dep_cache::{DepsCache, RegistryQueryer};
 use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
-use self::types::{RcVecIter, RemainingDeps, ResolverProgress};
+use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
@@ -712,7 +711,7 @@ struct BacktrackFrame {
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
-    features: Rc<BTreeSet<InternedString>>,
+    features: FeaturesSet,
     conflicting_activations: ConflictMap,
 }
 
