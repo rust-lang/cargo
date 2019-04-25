@@ -160,9 +160,8 @@ impl Layout {
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
             fs::create_dir_all(&self.root)?;
+            self.exclude_from_backups(&self.root);
         }
-
-        self.exclude_from_backups(&self.root);
 
         mkdir(&self.deps)?;
         mkdir(&self.native)?;
