@@ -166,7 +166,7 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use log::debug;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tar::Archive;
 
@@ -358,7 +358,7 @@ pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
     fn load(
         &self,
-        _root: &Path,
+        root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()>;
@@ -548,13 +548,12 @@ impl<'cfg> RegistrySource<'cfg> {
 
         // After we've loaded the package configure it's summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let summaries = self
+        let req = VersionReq::exact(package.version());
+        let summary_with_cksum = self
             .index
-            .summaries(package.name().as_str(), &mut *self.ops)?;
-        let summary_with_cksum = summaries
-            .iter()
-            .map(|s| &s.0)
-            .find(|s| s.package_id() == package)
+            .summaries(package.name(), &req, &mut *self.ops)?
+            .map(|s| s.summary.clone())
+            .next()
             .expect("summary not found");
         if let Some(cksum) = summary_with_cksum.checksum() {
             pkg.manifest_mut()

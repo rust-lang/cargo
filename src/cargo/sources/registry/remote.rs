@@ -213,7 +213,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
-        let _lock =
+        let lock =
             self.index_path
                 .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
         self.config
@@ -227,6 +227,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         git::fetch(repo, url, refspec, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
+
+        // Make a write to the lock file to record the mtime on the filesystem
+        // of when the last update happened.
+        lock.file().set_len(0)?;
+        lock.file().write(&[0])?;
         Ok(())
     }
 
