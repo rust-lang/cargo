@@ -722,7 +722,7 @@ pub fn fetch(
         // repository. It could also fail, however, for a whole slew of other
         // reasons (aka network related reasons). We want Cargo to automatically
         // recover from corrupt repositories, but we don't want Cargo to stomp
-        // over other legitimate errors.o
+        // over other legitimate errors.
         //
         // Consequently we save off the error of the `fetch` operation and if it
         // looks like a "corrupt repo" error then we blow away the repo and try
