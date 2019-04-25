@@ -1,13 +1,13 @@
 //! There are 2 sources of facts for the resolver:
 //!
-//! - The Registry tells us for a Dependency what versions are available to fulfil it.
-//! - The Summary tells us for a version (and features) what dependencies need to be fulfilled for it to be activated.
+//! - The `Registry` tells us for a `Dependency` what versions are available to fulfil it.
+//! - The `Summary` tells us for a version (and features) what dependencies need to be fulfilled for it to be activated.
 //!
 //! These constitute immutable facts, the soled ground truth that all other inference depends on.
 //! Theoretically this could all be enumerated ahead of time, but we want to be lazy and only
 //! look up things we need to. The compromise is to cache the results as they are computed.
 //!
-//! The structs in this module impl that cache in all the gory details
+//! This module impl that cache in all the gory details
 
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -26,11 +26,18 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
-    // If set the list of dependency candidates will be sorted by minimal
-    // versions first. That allows `cargo update -Z minimal-versions` which will
-    // specify minimum dependency versions to be used.
+    /// If set the list of dependency candidates will be sorted by minimal
+    /// versions first. That allows `cargo update -Z minimal-versions` which will
+    /// specify minimum dependency versions to be used.
     minimal_versions: bool,
-    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    /// a cache of `Candidate`s that fulfil a `Dependency`
+    registry_cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    /// a cache of `Dependency`s that are required for a `Summary`
+    summary_cache: HashMap<
+        (Option<PackageId>, Summary, Method),
+        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
+    >,
+    /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, PackageId>,
 }
 
@@ -46,7 +53,8 @@ impl<'a> RegistryQueryer<'a> {
             replacements,
             try_to_use,
             minimal_versions,
-            cache: HashMap::new(),
+            registry_cache: HashMap::new(),
+            summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
         }
     }
@@ -62,7 +70,7 @@ impl<'a> RegistryQueryer<'a> {
     /// applied by performing a second query for what the override should
     /// return.
     pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Candidate>>> {
-        if let Some(out) = self.cache.get(dep).cloned() {
+        if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
         }
 
@@ -182,26 +190,9 @@ impl<'a> RegistryQueryer<'a> {
 
         let out = Rc::new(ret);
 
-        self.cache.insert(dep.clone(), out.clone());
+        self.registry_cache.insert(dep.clone(), out.clone());
 
         Ok(out)
-    }
-}
-
-pub struct DepsCache<'a> {
-    pub registry: RegistryQueryer<'a>,
-    cache: HashMap<
-        (Option<PackageId>, Summary, Method),
-        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
-    >,
-}
-
-impl<'a> DepsCache<'a> {
-    pub fn new(registry: RegistryQueryer<'a>) -> Self {
-        DepsCache {
-            registry,
-            cache: HashMap::new(),
-        }
     }
 
     /// Find out what dependencies will be added by activating `candidate`,
@@ -217,7 +208,7 @@ impl<'a> DepsCache<'a> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
         if let Some(out) = self
-            .cache
+            .summary_cache
             .get(&(parent, candidate.clone(), method.clone()))
             .cloned()
         {
@@ -233,7 +224,7 @@ impl<'a> DepsCache<'a> {
         let mut deps = deps
             .into_iter()
             .map(|(dep, features)| {
-                let candidates = self.registry.query(&dep)?;
+                let candidates = self.query(&dep)?;
                 Ok((dep, candidates, features))
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
@@ -248,7 +239,7 @@ impl<'a> DepsCache<'a> {
 
         // If we succeed we add the result to the cache so we can use it again next time.
         // We dont cache the failure cases as they dont impl Clone.
-        self.cache
+        self.summary_cache
             .insert((parent, candidate.clone(), method.clone()), out.clone());
 
         Ok(out)
