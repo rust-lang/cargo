@@ -61,7 +61,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::dep_cache::{DepsCache, RegistryQueryer};
+use self::dep_cache::RegistryQueryer;
 use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
@@ -133,8 +133,7 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let mut registry = DepsCache::new(registry);
+    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
@@ -144,7 +143,7 @@ pub fn resolve(
     }
     let resolve = Resolve::new(
         cx.graph(),
-        cx.resolve_replacements(&registry.registry),
+        cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
             .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
@@ -168,7 +167,7 @@ pub fn resolve(
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop(
     mut cx: Context,
-    registry: &mut DepsCache<'_>,
+    registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, Method)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
@@ -328,7 +327,7 @@ fn activate_deps_loop(
                         debug!("no candidates found");
                         Err(errors::activation_error(
                             &cx,
-                            registry.registry.registry,
+                            registry.registry,
                             &parent,
                             &dep,
                             &conflicting_activations,
@@ -594,7 +593,7 @@ fn activate_deps_loop(
 /// iterate through next.
 fn activate(
     cx: &mut Context,
-    registry: &mut DepsCache<'_>,
+    registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
     method: Method,
@@ -858,7 +857,7 @@ impl RemainingCandidates {
 /// Panics if the input conflict is not all active in `cx`.
 fn generalize_conflicting(
     cx: &Context,
-    registry: &mut DepsCache<'_>,
+    registry: &mut RegistryQueryer<'_>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
     parent: &Summary,
     dep: &Dependency,
@@ -897,7 +896,6 @@ fn generalize_conflicting(
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if registry
-                .registry
                 .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
                 .iter()
