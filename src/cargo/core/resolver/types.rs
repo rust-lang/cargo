@@ -89,12 +89,22 @@ impl ResolverProgress {
     }
 }
 
+/// The preferred way to store the set of activated features for a package.
+/// This is sorted so that it impls Hash, and owns its contents,
+/// needed so it can be part of the key for caching in the `DepsCache`.
+/// It is also cloned often as part of `Context`, hence the `RC`.
+/// `im-rs::OrdSet` was slower of small sets like this,
+/// but this can change with improvements to std, im, or llvm.
+/// Using a consistent type for this allows us to use the highly
+/// optimized comparison operators like `is_subset` at the interfaces.
+pub type FeaturesSet = Rc<BTreeSet<InternedString>>;
+
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum Method {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
         dev_deps: bool,
-        features: Rc<BTreeSet<InternedString>>,
+        features: FeaturesSet,
         all_features: bool,
         uses_default_features: bool,
     },
@@ -221,7 +231,7 @@ impl RemainingDeps {
 /// Information about the dependencies for a crate, a tuple of:
 ///
 /// (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<BTreeSet<InternedString>>);
+pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, FeaturesSet);
 
 /// All possible reasons that a package might fail to activate.
 ///

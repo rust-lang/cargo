@@ -1,3 +1,14 @@
+//! There are 2 sources of facts for the resolver:
+//!
+//! - The Registry tells us for a Dependency what versions are available to fulfil it.
+//! - The Summary tells us for a version (and features) what dependencies need to be fulfilled for it to be activated.
+//!
+//! These constitute immutable facts, the soled ground truth that all other inference depends on.
+//! Theoretically this could all be enumerated ahead of time, but we want to be lazy and only
+//! look up things we need to. The compromise is to cache the results as they are computed.
+//!
+//! The structs in this module impl that cache in all the gory details
+
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -8,7 +19,7 @@ use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
 
-use crate::core::resolver::types::{Candidate, ConflictReason, DepInfo};
+use crate::core::resolver::types::{Candidate, ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, Method};
 
 pub struct RegistryQueryer<'a> {
@@ -193,12 +204,18 @@ impl<'a> DepsCache<'a> {
         }
     }
 
+    /// Find out what dependencies will be added by activating `candidate`,
+    /// with features described in `method`. Then look up in the `registry`
+    /// the candidates that will fulfil each of these dependencies, as it is the
+    /// next obvious question.
     pub fn build_deps(
         &mut self,
         parent: Option<PackageId>,
         candidate: &Summary,
         method: &Method,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
+        // if we have calculated a result before, then we can just return it,
+        // as it is a "pure" query of its arguments.
         if let Some(out) = self
             .cache
             .get(&(parent, candidate.clone(), method.clone()))
@@ -217,7 +234,7 @@ impl<'a> DepsCache<'a> {
             .into_iter()
             .map(|(dep, features)| {
                 let candidates = self.registry.query(&dep)?;
-                Ok((dep, candidates, Rc::new(features)))
+                Ok((dep, candidates, features))
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
@@ -229,6 +246,8 @@ impl<'a> DepsCache<'a> {
 
         let out = Rc::new((used_features, Rc::new(deps)));
 
+        // If we succeed we add the result to the cache so we can use it again next time.
+        // We dont cache the failure cases as they dont impl Clone.
         self.cache
             .insert((parent, candidate.clone(), method.clone()), out.clone());
 
@@ -236,15 +255,13 @@ impl<'a> DepsCache<'a> {
     }
 }
 
-/// Returns all dependencies and the features we want from them.
+/// Returns the features we ended up using and
+/// all dependencies and the features we want from each of them.
 pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     method: &'b Method,
-) -> ActivateResult<(
-    HashSet<InternedString>,
-    Vec<(Dependency, BTreeSet<InternedString>)>,
-)> {
+) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     let dev_deps = match *method {
         Method::Everything => true,
         Method::Required { dev_deps, .. } => dev_deps,
@@ -303,7 +320,7 @@ pub fn resolve_features<'b>(
                 .into());
             }
         }
-        ret.push((dep.clone(), base));
+        ret.push((dep.clone(), Rc::new(base)));
     }
 
     // Any entries in `reqs.dep` which weren't used are bugs in that the
