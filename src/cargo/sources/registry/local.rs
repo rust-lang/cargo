@@ -1,12 +1,13 @@
-use std::io::prelude::*;
+use std::fs::File;
 use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::path::Path;
 
 use crate::core::PackageId;
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::{Config, FileLock, Filesystem, Sha256};
+use crate::util::{Config, Filesystem, Sha256};
 use hex;
 
 pub struct LocalRegistry<'cfg> {
@@ -34,6 +35,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
     fn index_path(&self) -> &Filesystem {
         &self.index_path
+    }
+
+    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
+        // Note that the `*_unlocked` variant is used here since we're not
+        // modifying the index and it's required to be externally synchronized.
+        path.as_path_unlocked()
     }
 
     fn load(
@@ -71,7 +78,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let mut crate_file = self.root.open_ro(&crate_file, self.config, "crate file")?;
+
+        // Note that the usage of `into_path_unlocked` here is because the local
+        // crate files here never change in that we're not the one writing them,
+        // so it's not our responsibility to synchronize access to them.
+        let path = self.root.join(&crate_file).into_path_unlocked();
+        let mut crate_file = File::open(&path)?;
 
         // If we've already got an unpacked version of this crate, then skip the
         // checksum below as it is in theory already verified.
@@ -89,7 +101,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         loop {
             let n = crate_file
                 .read(&mut buf)
-                .chain_err(|| format!("failed to read `{}`", crate_file.path().display()))?;
+                .chain_err(|| format!("failed to read `{}`", path.display()))?;
             if n == 0 {
                 break;
             }
@@ -109,7 +121,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         _pkg: PackageId,
         _checksum: &str,
         _data: &[u8],
-    ) -> CargoResult<FileLock> {
+    ) -> CargoResult<File> {
         panic!("this source doesn't download")
     }
 }

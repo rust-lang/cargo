@@ -161,6 +161,7 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -177,9 +178,8 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::to_url::ToUrl;
-use crate::util::{internal, CargoResult, Config, FileLock, Filesystem};
+use crate::util::{internal, CargoResult, Config, Filesystem};
 
-const INDEX_LOCK: &str = ".cargo-index-lock";
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
@@ -194,7 +194,6 @@ pub struct RegistrySource<'cfg> {
     ops: Box<dyn RegistryData + 'cfg>,
     index: index::RegistryIndex<'cfg>,
     yanked_whitelist: HashSet<PackageId>,
-    index_locked: bool,
 }
 
 #[derive(Deserialize)]
@@ -365,20 +364,17 @@ pub trait RegistryData {
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
-    fn finish_download(
-        &mut self,
-        pkg: PackageId,
-        checksum: &str,
-        data: &[u8],
-    ) -> CargoResult<FileLock>;
+    fn finish_download(&mut self, pkg: PackageId, checksum: &str, data: &[u8])
+        -> CargoResult<File>;
 
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
         true
     }
+    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
 }
 
 pub enum MaybeLock {
-    Ready(FileLock),
+    Ready(File),
     Download { url: String, descriptor: String },
 }
 
@@ -400,14 +396,7 @@ impl<'cfg> RegistrySource<'cfg> {
     ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(
-            source_id,
-            config,
-            &name,
-            Box::new(ops),
-            yanked_whitelist,
-            true,
-        )
+        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 
     pub fn local(
@@ -418,14 +407,7 @@ impl<'cfg> RegistrySource<'cfg> {
     ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
-        RegistrySource::new(
-            source_id,
-            config,
-            &name,
-            Box::new(ops),
-            yanked_whitelist,
-            false,
-        )
+        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 
     fn new(
@@ -434,16 +416,14 @@ impl<'cfg> RegistrySource<'cfg> {
         name: &str,
         ops: Box<dyn RegistryData + 'cfg>,
         yanked_whitelist: &HashSet<PackageId>,
-        index_locked: bool,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config,
             source_id,
             updated: false,
-            index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
+            index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
-            index_locked,
             ops,
         }
     }
@@ -459,36 +439,26 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self, pkg: PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
+    fn unpack_package(&self, pkg: PackageId, tarball: &File) -> CargoResult<PathBuf> {
         // The `.cargo-ok` file is used to track if the source is already
-        // unpacked and to lock the directory for unpacking.
-        let mut ok = {
-            let package_dir = format!("{}-{}", pkg.name(), pkg.version());
-            let dst = self.src_path.join(&package_dir);
-            dst.create_dir()?;
-
-            // Attempt to open a read-only copy first to avoid an exclusive write
-            // lock and also work with read-only filesystems. If the file has
-            // any data, assume the source is already unpacked.
-            if let Ok(ok) = dst.open_ro(PACKAGE_SOURCE_LOCK, self.config, &package_dir) {
-                let meta = ok.file().metadata()?;
-                if meta.len() > 0 {
-                    let unpack_dir = ok.parent().to_path_buf();
-                    return Ok(unpack_dir);
-                }
-            }
-
-            dst.open_rw(PACKAGE_SOURCE_LOCK, self.config, &package_dir)?
-        };
-        let unpack_dir = ok.parent().to_path_buf();
-
-        // If the file has any data, assume the source is already unpacked.
-        let meta = ok.file().metadata()?;
+        // unpacked.
+        let package_dir = format!("{}-{}", pkg.name(), pkg.version());
+        let dst = self.src_path.join(&package_dir);
+        dst.create_dir()?;
+        let path = dst.join(PACKAGE_SOURCE_LOCK);
+        let path = self.config.assert_package_cache_locked(&path);
+        let unpack_dir = path.parent().unwrap();
+        let mut ok = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)?;
+        let meta = ok.metadata()?;
         if meta.len() > 0 {
-            return Ok(unpack_dir);
+            return Ok(unpack_dir.to_path_buf());
         }
 
-        let gz = GzDecoder::new(tarball.file());
+        let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -523,19 +493,18 @@ impl<'cfg> RegistrySource<'cfg> {
         // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
 
-        Ok(unpack_dir)
+        Ok(unpack_dir.to_path_buf())
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
         self.ops.update_index()?;
         let path = self.ops.index_path();
-        self.index =
-            index::RegistryIndex::new(self.source_id, path, self.config, self.index_locked);
+        self.index = index::RegistryIndex::new(self.source_id, path, self.config);
         self.updated = true;
         Ok(())
     }
 
-    fn get_pkg(&mut self, package: PackageId, path: &FileLock) -> CargoResult<Package> {
+    fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;

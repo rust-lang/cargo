@@ -78,8 +78,7 @@ use semver::{Version, VersionReq};
 
 use crate::core::dependency::Dependency;
 use crate::core::{InternedString, PackageId, SourceId, Summary};
-use crate::sources::registry::RegistryData;
-use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
+use crate::sources::registry::{RegistryData, RegistryPackage};
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
@@ -172,7 +171,6 @@ pub struct RegistryIndex<'cfg> {
     path: Filesystem,
     summaries_cache: HashMap<InternedString, Summaries>,
     config: &'cfg Config,
-    locked: bool,
 }
 
 /// An internal cache of summaries for a particular package.
@@ -237,14 +235,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         source_id: SourceId,
         path: &Filesystem,
         config: &'cfg Config,
-        locked: bool,
     ) -> RegistryIndex<'cfg> {
         RegistryIndex {
             source_id,
             path: path.clone(),
             summaries_cache: HashMap::new(),
             config,
-            locked,
         }
     }
 
@@ -314,35 +310,19 @@ impl<'cfg> RegistryIndex<'cfg> {
         }
 
         // Prepare the `RegistryData` which will lazily initialize internal data
-        // structures. Note that this is also importantly needed to initialize
-        // to avoid deadlocks where we acquire a lock below but the `load`
-        // function inside *also* wants to acquire a lock. See an instance of
-        // this on #5551.
+        // structures.
         load.prepare()?;
 
-        // Synchronize access to the index. For remote indices we want to make
-        // sure that while we're reading the index no one is trying to update
-        // it.
-        let (root, lock) = if self.locked {
-            let lock = self
-                .path
-                .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index");
-            match lock {
-                Ok(lock) => (lock.path().parent().unwrap().to_path_buf(), Some(lock)),
-                Err(_) => {
-                    self.summaries_cache.insert(name, Summaries::default());
-                    return Ok(self.summaries_cache.get_mut(&name).unwrap());
-                }
-            }
-        } else {
-            (self.path.clone().into_path_unlocked(), None)
-        };
+        // let root = self.config.assert_package_cache_locked(&self.path);
+        let root = load.assert_index_locked(&self.path);
         let cache_root = root.join(".cache");
+
         // TODO: comment
-        let lock_mtime = lock
-            .as_ref()
-            .and_then(|l| l.file().metadata().ok())
-            .map(|t| FileTime::from_last_modification_time(&t));
+        let lock_mtime = None;
+        // let lock_mtime = lock
+        //     .as_ref()
+        //     .and_then(|l| l.file().metadata().ok())
+        //     .map(|t| FileTime::from_last_modification_time(&t));
 
 
         // See module comment in `registry/mod.rs` for why this is structured
@@ -371,6 +351,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 path.as_ref(),
                 self.source_id,
                 load,
+                self.config,
             )?;
             if let Some(summaries) = summaries {
                 self.summaries_cache.insert(name, summaries);
@@ -503,6 +484,7 @@ impl Summaries {
         relative: &Path,
         source_id: SourceId,
         load: &mut dyn RegistryData,
+        config: &Config,
     ) -> CargoResult<Option<Summaries>> {
         // First up, attempt to load the cache. This could fail for all manner
         // of reasons, but consider all of them non-fatal and just log their
@@ -579,7 +561,8 @@ impl Summaries {
         // This is opportunistic so we ignore failure here but are sure to log
         // something in case of error.
         if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-            // TODO: somehow need to globally synchronize this
+            let path = Filesystem::new(cache_path.clone());
+            config.assert_package_cache_locked(&path);
             if let Err(e) = fs::write(cache_path, cache_bytes) {
                 log::info!("failed to write cache: {}", e);
             }

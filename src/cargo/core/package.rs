@@ -25,6 +25,7 @@ use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
 use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
+use crate::util::config::PackageCacheLock;
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -339,6 +340,9 @@ pub struct Downloads<'a, 'cfg: 'a> {
     /// trigger a timeout; reset `next_speed_check` and set this back to the
     /// configured threshold.
     next_speed_check_bytes_threshold: Cell<u64>,
+    /// Global filesystem lock to ensure only one Cargo is downloading at a
+    /// time.
+    _lock: PackageCacheLock<'cfg>,
 }
 
 struct Download<'cfg> {
@@ -437,6 +441,7 @@ impl<'cfg> PackageSet<'cfg> {
             timeout,
             next_speed_check: Cell::new(Instant::now()),
             next_speed_check_bytes_threshold: Cell::new(0),
+            _lock: self.config.acquire_package_cache_lock()?,
         })
     }
 
