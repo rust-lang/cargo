@@ -15,7 +15,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::{self, Write};
-use std::path::{self, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use failure::Error;
@@ -241,6 +241,7 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
+    let rmeta_produced = cx.rmeta_required(unit);
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -310,6 +311,25 @@ fn rustc<'a, 'cfg>(
             exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
                 .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
+        }
+
+        // FIXME(rust-lang/rust#58465): this is the whole point of "pipelined
+        // compilation" in Cargo.  We want to, here in this unit, call
+        // `finish_rmeta` as soon as we can which indicates that the metadata
+        // file is emitted by rustc and ready to go. This will start dependency
+        // compilations as soon as possible.
+        //
+        // The compiler doesn't currently actually implement the ability to let
+        // us know, however, when the metadata file is ready to go. It actually
+        // today produces the file very late in compilation, far later than it
+        // would otherwise be able to do!
+        //
+        // In any case this is all covered by the issue above. This is just a
+        // marker for "yes we unconditionally do this today but tomorrow we
+        // should actually read what rustc is doing and execute this at an
+        // appropriate time, ideally long before rustc finishes completely".
+        if rmeta_produced {
+            state.rmeta_produced();
         }
 
         if do_rename && real_name != crate_name {
@@ -789,6 +809,11 @@ fn build_base_args<'a, 'cfg>(
 
     if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
+    } else if !unit.target.requires_upstream_objects() {
+        // Always produce metdata files for rlib outputs. Metadata may be used
+        // in this session for a pipelined compilation, or it may be used in a
+        // future Cargo session as part of a pipelined compile.c
+        cmd.arg("--emit=dep-info,metadata,link");
     } else {
         cmd.arg("--emit=dep-info,link");
     }
@@ -995,16 +1020,19 @@ fn build_deps_args<'a, 'cfg>(
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
         for output in cx.outputs(dep)?.iter() {
-            if output.flavor != FileFlavor::Linkable {
-                continue;
-            }
+            let rmeta = match &output.flavor {
+                FileFlavor::Linkable { rmeta } => rmeta,
+                _ => continue,
+            };
             let mut v = OsString::new();
             let name = bcx.extern_crate_name(current, dep)?;
             v.push(name);
             v.push("=");
-            v.push(cx.files().out_dir(dep));
-            v.push(&path::MAIN_SEPARATOR.to_string());
-            v.push(&output.path.file_name().unwrap());
+            if cx.only_requires_rmeta(current, dep) {
+                v.push(&rmeta);
+            } else {
+                v.push(&output.path);
+            }
 
             if current
                 .pkg

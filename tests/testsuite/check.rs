@@ -204,7 +204,7 @@ fn issue_3418() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --emit=dep-info,metadata [..]")
+        .with_stderr_contains("[..] --emit=[..]metadata [..]")
         .run();
 }
 

@@ -120,6 +120,19 @@ impl LibKind {
             LibKind::Other(..) => false,
         }
     }
+
+    pub fn requires_upstream_objects(&self) -> bool {
+        match *self {
+            // "lib" == "rlib" and is a compilation that doesn't actually
+            // require upstream object files to exist, only upstream metadata
+            // files. As a result, it doesn't require upstream artifacts
+            LibKind::Lib | LibKind::Rlib => false,
+
+            // Everything else, however, is some form of "linkable output" or
+            // something that requires upstream object files.
+            _ => true,
+        }
+    }
 }
 
 impl fmt::Debug for LibKind {
@@ -795,10 +808,28 @@ impl Target {
         })
     }
 
+    /// Returns whether this target produces an artifact which can be linked
+    /// into a Rust crate.
+    ///
+    /// This only returns true for certain kinds of libraries.
     pub fn linkable(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref kinds) => kinds.iter().any(|k| k.linkable()),
             _ => false,
+        }
+    }
+
+    /// Returns whether production of this artifact requires the object files
+    /// from dependencies to be available.
+    ///
+    /// This only returns `false` when all we're producing is an rlib, otherwise
+    /// it will return `true`.
+    pub fn requires_upstream_objects(&self) -> bool {
+        match &self.kind {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
+                kinds.iter().any(|k| k.requires_upstream_objects())
+            }
+            _ => true,
         }
     }
 
