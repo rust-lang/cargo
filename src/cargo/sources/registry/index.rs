@@ -316,14 +316,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // let root = self.config.assert_package_cache_locked(&self.path);
         let root = load.assert_index_locked(&self.path);
         let cache_root = root.join(".cache");
-
-        // TODO: comment
-        let lock_mtime = None;
-        // let lock_mtime = lock
-        //     .as_ref()
-        //     .and_then(|l| l.file().metadata().ok())
-        //     .map(|t| FileTime::from_last_modification_time(&t));
-
+        let last_index_update = load.last_modified();;
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
@@ -345,7 +338,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // along the way produce helpful "did you mean?" suggestions.
         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let summaries = Summaries::parse(
-                lock_mtime,
+                last_index_update,
                 &root,
                 &cache_root,
                 path.as_ref(),
@@ -465,7 +458,7 @@ impl Summaries {
     /// for `relative` from the underlying index (aka typically libgit2 with
     /// crates.io) and then parse everything in there.
     ///
-    /// * `lock_mtime` - this is a file modification time where if any cache
+    /// * `last_index_update` - this is a file modification time where if any cache
     ///   file is older than this the cache should be considered out of date and
     ///   needs to be rebuilt.
     /// * `root` - this is the root argument passed to `load`
@@ -478,7 +471,7 @@ impl Summaries {
     /// * `load` - the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
     pub fn parse(
-        lock_mtime: Option<FileTime>,
+        last_index_update: Option<FileTime>,
         root: &Path,
         cache_root: &Path,
         relative: &Path,
@@ -490,12 +483,12 @@ impl Summaries {
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
         let cache_path = cache_root.join(relative);
-        if let Some(lock_mtime) = lock_mtime {
+        if let Some(last_index_update) = last_index_update {
             match File::open(&cache_path) {
                 Ok(file) => {
                     let metadata = file.metadata()?;
                     let cache_mtime = FileTime::from_last_modification_time(&metadata);
-                    if cache_mtime > lock_mtime {
+                    if cache_mtime > last_index_update {
                         log::debug!("cache for {:?} is fresh", relative);
                         match Summaries::parse_cache(&file, &metadata) {
                             Ok(s) => return Ok(Some(s)),
@@ -560,7 +553,10 @@ impl Summaries {
         //
         // This is opportunistic so we ignore failure here but are sure to log
         // something in case of error.
-        if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+        //
+        // Note that we also skip this when `last_index_update` is `None` because it
+        // means we can't handle the cache anyway.
+        if last_index_update.is_some() && fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
             let path = Filesystem::new(cache_path.clone());
             config.assert_package_cache_locked(&path);
             if let Err(e) = fs::write(cache_path, cache_bytes) {

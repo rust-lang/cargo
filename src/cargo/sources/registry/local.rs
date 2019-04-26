@@ -1,14 +1,14 @@
-use std::fs::File;
-use std::io::SeekFrom;
-use std::io::prelude::*;
-use std::path::Path;
-
 use crate::core::PackageId;
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
+use filetime::FileTime;
 use hex;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::SeekFrom;
+use std::path::Path;
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -41,6 +41,10 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // Note that the `*_unlocked` variant is used here since we're not
         // modifying the index and it's required to be externally synchronized.
         path.as_path_unlocked()
+    }
+
+    fn last_modified(&self) -> Option<FileTime> {
+        None
     }
 
     fn load(

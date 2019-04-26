@@ -165,6 +165,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use filetime::FileTime;
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::{Version, VersionReq};
@@ -371,6 +372,7 @@ pub trait RegistryData {
         true
     }
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
+    fn last_modified(&self) -> Option<FileTime>;
 }
 
 pub enum MaybeLock {

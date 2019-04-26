@@ -1,3 +1,13 @@
+use crate::core::{PackageId, SourceId};
+use crate::sources::git;
+use crate::sources::registry::MaybeLock;
+use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{Config, Filesystem, Sha256};
+use crate::util::paths;
+use filetime::FileTime;
+use lazycell::LazyCell;
+use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
 use std::fs::{self, File, OpenOptions};
@@ -7,16 +17,6 @@ use std::mem;
 use std::path::Path;
 use std::str;
 
-use lazycell::LazyCell;
-use log::{debug, trace};
-
-use crate::core::{PackageId, SourceId};
-use crate::sources::git;
-use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, Filesystem, Sha256};
-
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
     cache_path: Filesystem,
@@ -25,6 +25,7 @@ pub struct RemoteRegistry<'cfg> {
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
+    last_updated: Cell<Option<FileTime>>,
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -37,6 +38,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
+            last_updated: Cell::new(None),
         }
     }
 
@@ -123,6 +125,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
     }
 }
 
+const LAST_UPDATED_FILE: &str = ".last-updated";
+
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?; // create intermediate dirs and initialize the repo
@@ -135,6 +139,16 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
         self.config.assert_package_cache_locked(path)
+    }
+
+    fn last_modified(&self) -> Option<FileTime> {
+        if let Some(time) = self.last_updated.get() {
+            return Some(time);
+        }
+        let path = self.config.assert_package_cache_locked(&self.index_path);
+        let mtime = paths::mtime(&path.join(LAST_UPDATED_FILE)).ok();
+        self.last_updated.set(mtime);
+        self.last_updated.get()
     }
 
     fn load(
@@ -209,7 +223,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
-        self.config.assert_package_cache_locked(&self.index_path);
+        self.last_updated.set(None);
+        let path = self.config.assert_package_cache_locked(&self.index_path);
         self.config
             .shell()
             .status("Updating", self.source_id.display_index())?;
@@ -221,6 +236,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         git::fetch(repo, url, refspec, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
+
+        // Create a dummy file to record the mtime for when we updated the
+        // index.
+        File::create(&path.join(LAST_UPDATED_FILE))?;
 
         Ok(())
     }
