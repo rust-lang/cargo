@@ -12,7 +12,7 @@ fn build_lib_only() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`

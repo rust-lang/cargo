@@ -241,7 +241,7 @@ fn custom_build_script_rustc_flags() {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir [CWD]/target \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -L [CWD]/target \
         -L [CWD]/target/deps`
 ",
@@ -1015,19 +1015,19 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
 [RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin \
-    --emit=dep-info,link \
+    --emit=[..]link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
     -L [..]target/debug/deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`
@@ -2217,6 +2217,7 @@ fn diamond_passes_args_only_once() {
         .build();
 
     p.cargo("build -v")
+        .env("CARGO_BUILD_PIPELINING", "true")
         .with_stderr(
             "\
 [COMPILING] c v0.5.0 ([..]
@@ -2228,7 +2229,7 @@ fn diamond_passes_args_only_once() {
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..]
-[RUNNING] `[..]rlib -L native=test`
+[RUNNING] `[..]rmeta -L native=test`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
