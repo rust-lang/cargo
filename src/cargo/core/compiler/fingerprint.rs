@@ -315,11 +315,13 @@ pub fn prepare_target<'a, 'cfg>(
 /// A compilation unit dependency has a fingerprint that is comprised of:
 /// * its package ID
 /// * its extern crate name
+/// * its public/private status
 /// * its calculated fingerprint for the dependency
 #[derive(Clone)]
 struct DepFingerprint {
     pkg_id: u64,
     name: String,
+    public: bool,
     fingerprint: Arc<Fingerprint>,
 }
 
@@ -420,7 +422,7 @@ impl Serialize for DepFingerprint {
     where
         S: ser::Serializer,
     {
-        (&self.pkg_id, &self.name, &self.fingerprint.hash()).serialize(ser)
+        (&self.pkg_id, &self.name, &self.public, &self.fingerprint.hash()).serialize(ser)
     }
 }
 
@@ -429,10 +431,11 @@ impl<'de> Deserialize<'de> for DepFingerprint {
     where
         D: de::Deserializer<'de>,
     {
-        let (pkg_id, name, hash) = <(u64, String, u64)>::deserialize(d)?;
+        let (pkg_id, name, public, hash) = <(u64, String, bool, u64)>::deserialize(d)?;
         Ok(DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint: Arc::new(Fingerprint {
                 memoized_hash: Mutex::new(Some(hash)),
                 ..Fingerprint::new()
@@ -845,11 +848,13 @@ impl hash::Hash for Fingerprint {
         for DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint,
         } in deps
         {
             pkg_id.hash(h);
             name.hash(h);
+            public.hash(h);
             // use memoized dep hashes to avoid exponential blowup
             h.write_u64(Fingerprint::hash(fingerprint));
         }
@@ -895,6 +900,7 @@ impl DepFingerprint {
     ) -> CargoResult<DepFingerprint> {
         let fingerprint = calculate(cx, dep)?;
         let name = cx.bcx.extern_crate_name(parent, dep)?;
+        let public = cx.bcx.is_public_dependency(parent, dep);
 
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
@@ -915,6 +921,7 @@ impl DepFingerprint {
         Ok(DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint,
         })
     }

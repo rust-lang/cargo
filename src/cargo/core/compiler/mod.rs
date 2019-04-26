@@ -23,6 +23,7 @@ use log::debug;
 use same_file::is_same_file;
 use serde::Serialize;
 
+use crate::core::Feature;
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
@@ -966,14 +967,23 @@ fn build_deps_args<'a, 'cfg>(
         }
     }
 
+    let mut unstable_opts = false;
+
     for dep in dep_targets {
         if dep.mode.is_run_custom_build() {
             cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep));
         }
         if dep.target.linkable() && !dep.mode.is_doc() {
-            link_to(cmd, cx, unit, &dep)?;
+            link_to(cmd, cx, unit, &dep, &mut unstable_opts)?;
         }
     }
+
+    // This will only be set if we're already usign a feature
+    // requiring nightly rust
+    if unstable_opts {
+        cmd.arg("-Z").arg("unstable-options");
+    }
+
 
     return Ok(());
 
@@ -982,6 +992,7 @@ fn build_deps_args<'a, 'cfg>(
         cx: &mut Context<'a, 'cfg>,
         current: &Unit<'a>,
         dep: &Unit<'a>,
+        need_unstable_opts: &mut bool
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
         for output in cx.outputs(dep)?.iter() {
@@ -995,7 +1006,17 @@ fn build_deps_args<'a, 'cfg>(
             v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&output.path.file_name().unwrap());
-            cmd.arg("--extern").arg(&v);
+
+            if current.pkg.manifest().features().require(Feature::public_dependency()).is_ok() &&
+                !bcx.is_public_dependency(current, dep)  {
+
+                    cmd.arg("--extern-private");
+                    *need_unstable_opts = true;
+            } else {
+                cmd.arg("--extern");
+            }
+
+            cmd.arg(&v);
         }
         Ok(())
     }
