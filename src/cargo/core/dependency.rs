@@ -301,8 +301,8 @@ impl Dependency {
 
     /// Sets whether the dependency is public.
     pub fn set_public(&mut self, public: bool) -> &mut Dependency {
-        if !public {
-            // Setting 'private' only makes sense for normal dependencies
+        if public {
+            // Setting 'public' only makes sense for normal dependencies
             assert_eq!(self.kind(), Kind::Normal);
         }
         Rc::make_mut(&mut self.inner).public = public;
