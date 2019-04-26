@@ -12,6 +12,7 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::Config;
 
+#[derive(Debug)]
 pub struct FileLock {
     f: Option<File>,
     path: PathBuf,
@@ -134,6 +135,14 @@ impl Filesystem {
     /// with great caution!.
     pub fn into_path_unlocked(self) -> PathBuf {
         self.root
+    }
+
+    /// Returns the underlying `Path`.
+    ///
+    /// Note that this is a relatively dangerous operation and should be used
+    /// with great caution!.
+    pub fn as_path_unlocked(&self) -> &Path {
+        &self.root
     }
 
     /// Creates the directory pointed to by this filesystem.

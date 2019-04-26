@@ -108,8 +108,10 @@ fn not_update() {
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
     let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
+    let lock = cfg.acquire_package_cache_lock().unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();
+    drop(lock);
 
     cargo_process("search postgres")
         .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")

@@ -40,6 +40,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         failure::bail!("you can't update in the offline mode");
     }
 
+    // Updates often require a lot of modifications to the registry, so ensure
+    // that we're synchronized against other Cargos.
+    let _lock = ws.config().acquire_package_cache_lock()?;
+
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
@@ -73,6 +77,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 });
             }
         }
+
         registry.add_sources(sources)?;
     }
 

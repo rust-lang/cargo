@@ -146,6 +146,10 @@ pub fn resolve_with_previous<'cfg>(
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
+    // We only want one Cargo at a time resolving a crate graph since this can
+    // involve a lot of frobbing of the global caches.
+    let _lock = ws.config().acquire_package_cache_lock()?;
+
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a Git
     // repository provides more than one package, they must all be updated in
