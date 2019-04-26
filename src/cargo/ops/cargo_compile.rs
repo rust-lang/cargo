@@ -23,6 +23,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
@@ -299,7 +300,7 @@ pub fn compile_ws<'a>(
     let features = Method::split_features(features);
     let method = Method::Required {
         dev_deps: ws.require_optional_deps() || filter.need_dev_deps(build_config.mode),
-        features: &features,
+        features: Rc::new(features),
         all_features,
         uses_default_features: !no_default_features,
     };

@@ -461,10 +461,7 @@ fn install_one(
         let mut pkg_map = BTreeMap::new();
         for (bin_name, opt_pkg_id) in &duplicates {
             let key = opt_pkg_id.map_or_else(|| "unknown".to_string(), |pkg_id| pkg_id.to_string());
-            pkg_map
-                .entry(key)
-                .or_insert_with(|| Vec::new())
-                .push(bin_name);
+            pkg_map.entry(key).or_insert_with(Vec::new).push(bin_name);
         }
         for (pkg_descr, bin_names) in &pkg_map {
             config.shell().status(

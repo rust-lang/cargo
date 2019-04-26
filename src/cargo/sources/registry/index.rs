@@ -269,10 +269,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
-        if self.config.cli_unstable().offline {
-            if self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0 {
-                return Ok(());
-            }
+        if self.config.cli_unstable().offline
+            && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0
+        {
+            return Ok(());
             // If offline, and there are no matches, try again with online.
             // This is necessary for dependencies that are not used (such as
             // target-cfg or optional), but are not downloaded. Normally the
