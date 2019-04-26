@@ -337,7 +337,7 @@ impl SourceId {
             Kind::Registry => {}
             _ => return false,
         }
-        self.inner.url.to_string() == CRATES_IO_INDEX
+        self.inner.url.as_str() == CRATES_IO_INDEX
     }
 
     /// Hashes `self`.
