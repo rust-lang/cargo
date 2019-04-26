@@ -895,24 +895,62 @@ fn generalize_conflicting(
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
-            if registry
+            if let Some(others) = registry
                 .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
-                .all(|other| {
-                    let mut con = conflicting_activations.clone();
-                    con.remove(&backtrack_critical_id);
-                    con.insert(
-                        other.summary.package_id(),
-                        backtrack_critical_reason.clone(),
-                    );
-                    past_conflicting_activations.contains(dep, &con)
+                .map(|other| {
+                    past_conflicting_activations
+                        .find(
+                            dep,
+                            &|id| {
+                                if id == other.summary.package_id() {
+                                    // we are imagining that we used other instead
+                                    Some(backtrack_critical_age)
+                                } else {
+                                    cx.is_active(id).filter(|&age|
+                                        // we only care about things that are older then critical_age
+                                        age < backtrack_critical_age)
+                                }
+                            },
+                            Some(other.summary.package_id()),
+                        )
+                        .map(|con| (other.summary.package_id(), con))
                 })
+                .collect::<Option<Vec<(PackageId, &ConflictMap)>>>()
             {
                 let mut con = conflicting_activations.clone();
-                con.remove(&backtrack_critical_id);
+                // It is always valid to combine previously inserted conflicts.
+                // A, B are both known bad states each that can never be activated.
+                // A + B is redundant but cant be activated, as if
+                // A + B is active then A is active and we know that is not ok.
+                for (_, other) in &others {
+                    con.extend(other.iter().map(|(&id, re)| (id, re.clone())));
+                }
+                // Now that we have this combined conflict, we can do a substitution:
+                // A dep is equivalent to one of the things it can resolve to.
+                // So we can remove all the things that it resolves to and replace with the parent.
+                for (other_id, _) in &others {
+                    con.remove(other_id);
+                }
                 con.insert(*critical_parent, backtrack_critical_reason);
+
+                #[cfg(debug_assertions)]
+                {
+                    // the entire point is to find an older conflict, so let's make sure we did
+                    let new_age = con
+                        .keys()
+                        .map(|&c| cx.is_active(c).expect("not currently active!?"))
+                        .max()
+                        .unwrap();
+                    assert!(
+                        new_age < backtrack_critical_age,
+                        "new_age {} < backtrack_critical_age {}",
+                        new_age,
+                        backtrack_critical_age
+                    );
+                }
                 past_conflicting_activations.insert(dep, &con);
                 return Some(con);
             }
