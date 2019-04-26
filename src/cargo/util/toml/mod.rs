@@ -1465,6 +1465,11 @@ impl DetailedTomlDependency {
 
         if let Some(p) = self.public {
             cx.features.require(Feature::public_dependency())?;
+
+            if dep.kind() != Kind::Normal {
+                bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
+            }
+
             dep.set_public(p);
         }
         Ok(dep)
