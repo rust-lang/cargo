@@ -159,3 +159,47 @@ consider adding `cargo-features = [\"public-dependency\"]` to the manifest
         )
         .run()
 }
+
+
+#[test]
+fn pub_dev_dependency() {
+    Package::new("pub_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPub;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dev-dependencies]
+            pub_dep = {version = "0.1.0", public = true}
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pub_dep;
+            pub fn use_pub(_: pub_dep::FromPub) {}
+        ",
+        )
+        .build();
+
+    p.cargo("build --message-format=short")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  'public' specifier can only be used on regular dependencies, not Development dependencies
+",
+        )
+        .run()
+}
