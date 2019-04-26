@@ -140,10 +140,7 @@ fn run_doc_tests(
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/run doc tests if `target` does not equal `host`.
-    if compilation.host != compilation.target {
-        return Ok((Test::Doc, errors));
-    }
+    let runtool = compilation.target_runner();
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -157,6 +154,18 @@ fn run_doc_tests(
             .arg(target.src_path().path().unwrap())
             .arg("--crate-name")
             .arg(&target.crate_name());
+
+        p.arg("-Z");
+        p.arg("unstable-options");
+        p.arg("--enable-per-target-ignores");
+
+        runtool.as_ref().map(|(runtool, runtool_args)| {
+            p.arg("--target").arg(&compilation.target);
+            p.arg("--runtool").arg(runtool);
+            for arg in runtool_args {
+                p.arg("--runtool-arg").arg(arg);
+            }
+        });
 
         for &rust_dep in &[&compilation.deps_output] {
             let mut arg = OsString::from("dependency=");
@@ -194,7 +203,6 @@ fn run_doc_tests(
         if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {
             p.args(flags);
         }
-
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
