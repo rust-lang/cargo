@@ -348,8 +348,8 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("baz", "1.0.1")),
                 pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build, false)]),
                 pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", Kind::Development, false)]),
-                pkg!(("cat", "1.0.4") => [dep_req_kind("other", "2", Kind::Build, true)]),
-                pkg!(("cat", "1.0.5") => [dep_req_kind("other", "2", Kind::Development, true)]),
+                pkg!(("cat", "1.0.4") => [dep_req_kind("other", "2", Kind::Build, false)]),
+                pkg!(("cat", "1.0.5") => [dep_req_kind("other", "2", Kind::Development, false)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -363,8 +363,8 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"baz\", \"1.0.1\")),\
          pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
          pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
-         pkg!((\"cat\", \"1.0.4\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, true),]),\
-         pkg!((\"cat\", \"1.0.5\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, true),]),\
+         pkg!((\"cat\", \"1.0.4\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
+         pkg!((\"cat\", \"1.0.5\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
