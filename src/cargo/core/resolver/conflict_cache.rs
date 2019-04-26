@@ -234,7 +234,7 @@ impl ConflictCache {
     /// all the `PackageId` entries are activated.
     pub fn contains(&self, dep: &Dependency, con: &ConflictMap) -> bool {
         if let Some(cst) = self.con_from_dep.get(dep) {
-            cst.contains(con.keys().cloned(), &con)
+            cst.contains(con.keys().cloned(), con)
         } else {
             false
         }
