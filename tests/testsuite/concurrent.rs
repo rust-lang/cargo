@@ -453,7 +453,7 @@ fn debug_release_ok() {
     let a = a.join().unwrap();
 
     execs()
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -461,7 +461,7 @@ fn debug_release_ok() {
         )
         .run_output(&a);
     execs()
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] release [optimized] target(s) in [..]
