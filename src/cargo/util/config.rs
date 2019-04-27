@@ -684,8 +684,8 @@ impl Config {
     }
 
     fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
-        let base = index.definition.root(&self);
-        let url = index.val.to_url_with_base(Some(base))?;
+        let base = index.definition.root(&self).join("truncated-by-url-with-base");
+        let url = index.val.to_url_with_base(Some(&*base))?;
         if url.password().is_some() {
             failure::bail!("Registry URLs may not contain passwords");
         }

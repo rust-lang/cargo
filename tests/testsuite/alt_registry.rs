@@ -528,7 +528,31 @@ fn publish_with_crates_io_dep() {
 }
 
 #[test]
-fn passwords_in_url_forbidden() {
+fn passwords_in_registry_index_url_forbidden() {
+    registry::init();
+
+    let config = paths::home().join(".cargo/config");
+
+    File::create(config)
+        .unwrap()
+        .write_all(
+            br#"
+        [registry]
+        index = "ssh://git:secret@foobar.com"
+        "#,
+        )
+        .unwrap();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr_contains("error: Registry URLs may not contain passwords")
+        .run();
+}
+
+#[test]
+fn passwords_in_registries_index_url_forbidden() {
     registry::init();
 
     let config = paths::home().join(".cargo/config");
@@ -1139,5 +1163,103 @@ fn unknown_registry() {
             }
             "#,
         )
+        .run();
+}
+
+#[test]
+fn registries_index_relative_path() {
+    let config = paths::root().join(".cargo/config");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap()
+        .write_all(br#"
+            [registries.relative]
+            index = "alternative-registry"
+        "#).unwrap();
+
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "relative"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .alternative(true)
+        .publish();
+
+    p.cargo("build")
+        .with_stderr(&format!(
+            "\
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+            reg = registry::alt_registry_path().to_str().unwrap()
+        ))
+        .run();
+}
+
+#[test]
+fn registry_index_relative_path() {
+    let config = paths::root().join(".cargo/config");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap()
+        .write_all(br#"
+            [registry]
+            index = "alternative-registry"
+        "#).unwrap();
+
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .alternative(true)
+        .publish();
+
+    fs::remove_file(paths::home().join(".cargo/config")).unwrap();
+
+    p.cargo("build")
+        .with_stderr(&format!(
+            "\
+warning: custom registry support via the `registry.index` configuration is being removed, this functionality will not work in the future
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+            reg = registry::alt_registry_path().to_str().unwrap()
+        ))
         .run();
 }
