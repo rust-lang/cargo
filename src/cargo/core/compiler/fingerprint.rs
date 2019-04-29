@@ -315,11 +315,13 @@ pub fn prepare_target<'a, 'cfg>(
 /// A compilation unit dependency has a fingerprint that is comprised of:
 /// * its package ID
 /// * its extern crate name
+/// * its public/private status
 /// * its calculated fingerprint for the dependency
 #[derive(Clone)]
 struct DepFingerprint {
     pkg_id: u64,
     name: String,
+    public: bool,
     fingerprint: Arc<Fingerprint>,
 }
 
@@ -420,7 +422,7 @@ impl Serialize for DepFingerprint {
     where
         S: ser::Serializer,
     {
-        (&self.pkg_id, &self.name, &self.fingerprint.hash()).serialize(ser)
+        (&self.pkg_id, &self.name, &self.public, &self.fingerprint.hash()).serialize(ser)
     }
 }
 
@@ -429,10 +431,11 @@ impl<'de> Deserialize<'de> for DepFingerprint {
     where
         D: de::Deserializer<'de>,
     {
-        let (pkg_id, name, hash) = <(u64, String, u64)>::deserialize(d)?;
+        let (pkg_id, name, public, hash) = <(u64, String, bool, u64)>::deserialize(d)?;
         Ok(DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint: Arc::new(Fingerprint {
                 memoized_hash: Mutex::new(Some(hash)),
                 ..Fingerprint::new()
@@ -478,9 +481,7 @@ enum LocalFingerprint {
     /// The `dep_info` file, when present, also lists a number of other files
     /// for us to look at. If any of those files are newer than this file then
     /// we need to recompile.
-    CheckDepInfo {
-        dep_info: PathBuf,
-    },
+    CheckDepInfo { dep_info: PathBuf },
 
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
     /// out by a build script. The `output` file is a arelative file anchored at
@@ -500,10 +501,7 @@ enum LocalFingerprint {
     /// build script. The exact env var and value are hashed here. There's no
     /// filesystem dependence here, and if the values are changed the hash will
     /// change forcing a recompile.
-    RerunIfEnvChanged {
-        var: String,
-        val: Option<String>,
-    },
+    RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
 enum StaleFile {
@@ -762,7 +760,7 @@ impl Fingerprint {
                     let t = FileTime::from_system_time(SystemTime::now());
                     drop(filetime::set_file_times(f, t, t));
                 }
-                return mtime;
+                mtime
             })
             .min();
 
@@ -850,11 +848,13 @@ impl hash::Hash for Fingerprint {
         for DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint,
         } in deps
         {
             pkg_id.hash(h);
             name.hash(h);
+            public.hash(h);
             // use memoized dep hashes to avoid exponential blowup
             h.write_u64(Fingerprint::hash(fingerprint));
         }
@@ -900,6 +900,7 @@ impl DepFingerprint {
     ) -> CargoResult<DepFingerprint> {
         let fingerprint = calculate(cx, dep)?;
         let name = cx.bcx.extern_crate_name(parent, dep)?;
+        let public = cx.bcx.is_public_dependency(parent, dep);
 
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
@@ -920,6 +921,7 @@ impl DepFingerprint {
         Ok(DepFingerprint {
             pkg_id,
             name,
+            public,
             fingerprint,
         })
     }
@@ -1042,9 +1044,9 @@ fn calculate_normal<'a, 'cfg>(
     // hashed to take up less space on disk as we just need to know when things
     // change.
     let extra_flags = if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit)?
+        cx.bcx.rustdocflags_args(unit)
     } else {
-        cx.bcx.rustflags_args(unit)?
+        cx.bcx.rustflags_args(unit)
     };
     let profile_hash = util::hash_u64((&unit.profile, unit.mode, cx.bcx.extra_args_for(unit)));
     // Include metadata since it is exposed as environment variables.
@@ -1065,7 +1067,7 @@ fn calculate_normal<'a, 'cfg>(
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
-        rustflags: extra_flags,
+        rustflags: extra_flags.to_vec(),
         fs_status: FsStatus::Stale,
         outputs,
     })
@@ -1350,7 +1352,7 @@ fn compare_old_fingerprint(
     debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
     let result = new_fingerprint.compare(&old_fingerprint);
     assert!(result.is_err());
-    return result;
+    result
 }
 
 fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
@@ -1444,7 +1446,7 @@ where
         });
     }
 
-    return None;
+    None
 }
 
 fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {

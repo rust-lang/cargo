@@ -5,6 +5,7 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
+use crate::core::interning::InternedString;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{validate_package_name, ToSemver, ToUrl};
@@ -20,7 +21,7 @@ use crate::util::{validate_package_name, ToSemver, ToUrl};
 /// sufficient to uniquely define a package ID.
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub struct PackageIdSpec {
-    name: String,
+    name: InternedString,
     version: Option<Version>,
     url: Option<Url>,
 }
@@ -66,7 +67,7 @@ impl PackageIdSpec {
         };
         validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
-            name: name.to_string(),
+            name: InternedString::new(name),
             version,
             url: None,
         })
@@ -86,7 +87,7 @@ impl PackageIdSpec {
     /// fields filled in.
     pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
         PackageIdSpec {
-            name: package_id.name().to_string(),
+            name: package_id.name(),
             version: Some(package_id.version().clone()),
             url: Some(package_id.source_id().url().clone()),
         }
@@ -117,19 +118,19 @@ impl PackageIdSpec {
                     match parts.next() {
                         Some(part) => {
                             let version = part.to_semver()?;
-                            (name_or_version.to_string(), Some(version))
+                            (InternedString::new(name_or_version), Some(version))
                         }
                         None => {
                             if name_or_version.chars().next().unwrap().is_alphabetic() {
-                                (name_or_version.to_string(), None)
+                                (InternedString::new(name_or_version), None)
                             } else {
                                 let version = name_or_version.to_semver()?;
-                                (path_name.to_string(), Some(version))
+                                (InternedString::new(path_name), Some(version))
                             }
                         }
                     }
                 }
-                None => (path_name.to_string(), None),
+                None => (InternedString::new(path_name), None),
             }
         };
         Ok(PackageIdSpec {
@@ -139,8 +140,8 @@ impl PackageIdSpec {
         })
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> InternedString {
+        self.name
     }
 
     pub fn version(&self) -> Option<&Version> {
@@ -157,7 +158,7 @@ impl PackageIdSpec {
 
     /// Checks whether the given `PackageId` matches the `PackageIdSpec`.
     pub fn matches(&self, package_id: PackageId) -> bool {
-        if self.name() != &*package_id.name() {
+        if self.name() != package_id.name() {
             return false;
         }
 
@@ -234,7 +235,7 @@ impl fmt::Display for PackageIdSpec {
                 } else {
                     write!(f, "{}", url)?;
                 }
-                if url.path_segments().unwrap().next_back().unwrap() != self.name {
+                if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
                 }
@@ -273,6 +274,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 #[cfg(test)]
 mod tests {
     use super::PackageIdSpec;
+    use crate::core::interning::InternedString;
     use crate::core::{PackageId, SourceId};
     use crate::util::ToSemver;
     use url::Url;
@@ -288,7 +290,7 @@ mod tests {
         ok(
             "https://crates.io/foo#1.2.3",
             PackageIdSpec {
-                name: "foo".to_string(),
+                name: InternedString::new("foo"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
@@ -296,7 +298,7 @@ mod tests {
         ok(
             "https://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
-                name: "bar".to_string(),
+                name: InternedString::new("bar"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
@@ -304,7 +306,7 @@ mod tests {
         ok(
             "crates.io/foo",
             PackageIdSpec {
-                name: "foo".to_string(),
+                name: InternedString::new("foo"),
                 version: None,
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
@@ -312,7 +314,7 @@ mod tests {
         ok(
             "crates.io/foo#1.2.3",
             PackageIdSpec {
-                name: "foo".to_string(),
+                name: InternedString::new("foo"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
@@ -320,7 +322,7 @@ mod tests {
         ok(
             "crates.io/foo#bar",
             PackageIdSpec {
-                name: "bar".to_string(),
+                name: InternedString::new("bar"),
                 version: None,
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
@@ -328,7 +330,7 @@ mod tests {
         ok(
             "crates.io/foo#bar:1.2.3",
             PackageIdSpec {
-                name: "bar".to_string(),
+                name: InternedString::new("bar"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
@@ -336,7 +338,7 @@ mod tests {
         ok(
             "foo",
             PackageIdSpec {
-                name: "foo".to_string(),
+                name: InternedString::new("foo"),
                 version: None,
                 url: None,
             },
@@ -344,7 +346,7 @@ mod tests {
         ok(
             "foo:1.2.3",
             PackageIdSpec {
-                name: "foo".to_string(),
+                name: InternedString::new("foo"),
                 version: Some("1.2.3".to_semver().unwrap()),
                 url: None,
             },

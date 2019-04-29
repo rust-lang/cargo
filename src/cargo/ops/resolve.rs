@@ -1,7 +1,9 @@
 use std::collections::HashSet;
+use std::rc::Rc;
 
 use log::{debug, trace};
 
+use crate::core::Feature;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::{self, Method, Resolve};
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -23,7 +25,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// lock file.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry, true)?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -43,7 +45,7 @@ pub fn resolve_ws_precisely<'a>(
     } else {
         Method::Required {
             dev_deps: true,
-            features: &features,
+            features: Rc::new(features),
             all_features: false,
             uses_default_features: !no_default_features,
         }
@@ -53,7 +55,7 @@ pub fn resolve_ws_precisely<'a>(
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
-    method: Method<'_>,
+    method: Method,
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -64,7 +66,7 @@ pub fn resolve_ws_with_method<'a>(
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, false)?;
+        let resolve = resolve_with_registry(ws, &mut registry)?;
         add_patches = false;
 
         // Second, resolve with precisely what we're doing. Filter out
@@ -98,7 +100,6 @@ pub fn resolve_ws_with_method<'a>(
         None,
         specs,
         add_patches,
-        true,
     )?;
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry)?;
@@ -109,7 +110,6 @@ pub fn resolve_ws_with_method<'a>(
 fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
-    warn: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let resolve = resolve_with_previous(
@@ -120,7 +120,6 @@ fn resolve_with_registry<'cfg>(
         None,
         &[],
         true,
-        warn,
     )?;
 
     if !ws.is_ephemeral() {
@@ -141,12 +140,11 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    method: Method<'_>,
+    method: Method,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
-    warn: bool,
 ) -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a Git
@@ -226,7 +224,7 @@ pub fn resolve_with_previous<'cfg>(
     let mut summaries = Vec::new();
     if ws.config().cli_unstable().package_features {
         let mut members = Vec::new();
-        match method {
+        match &method {
             Method::Everything => members.extend(ws.members()),
             Method::Required {
                 features,
@@ -245,7 +243,7 @@ pub fn resolve_with_previous<'cfg>(
                 // of current workspace. Add all packages from workspace to get `foo`
                 // into the resolution graph.
                 if members.is_empty() {
-                    if !(features.is_empty() && !all_features && uses_default_features) {
+                    if !(features.is_empty() && !all_features && *uses_default_features) {
                         failure::bail!("cannot specify features for packages outside of workspace");
                     }
                     members.extend(ws.members());
@@ -254,7 +252,7 @@ pub fn resolve_with_previous<'cfg>(
         }
         for member in members {
             let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, method))
+            summaries.push((summary, method.clone()))
         }
     } else {
         for member in ws.members() {
@@ -285,13 +283,13 @@ pub fn resolve_with_previous<'cfg>(
                 } => {
                     let base = Method::Required {
                         dev_deps,
-                        features: &[],
+                        features: Rc::default(),
                         all_features,
                         uses_default_features: true,
                     };
                     let member_id = member.package_id();
                     match ws.current_opt() {
-                        Some(current) if member_id == current.package_id() => method,
+                        Some(current) if member_id == current.package_id() => method.clone(),
                         _ => {
                             if specs.iter().any(|spec| spec.matches(member_id)) {
                                 base
@@ -334,8 +332,7 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &try_to_use,
         Some(ws.config()),
-        warn,
-        false, // TODO: use "public and private dependencies" feature flag
+        ws.features().require(Feature::public_dependency()).is_ok(),
     )?;
     resolved.register_used_patches(registry.patches());
     if register_patches {
@@ -517,6 +514,7 @@ fn register_previous_locks(
         if !visited.insert(member.package_id()) {
             continue;
         }
+        let is_ws_member = ws.is_member(&member);
         for dep in member.dependencies() {
             // If this dependency didn't match anything special then we may want
             // to poison the source as it may have been added. If this path
@@ -529,11 +527,7 @@ fn register_previous_locks(
             // non-workspace member and then simultaneously editing the
             // dependency on that crate to enable the feature. For now,
             // this bug is better than the always-updating registry though.
-            if !ws
-                .members()
-                .any(|pkg| pkg.package_id() == member.package_id())
-                && (dep.is_optional() || !dep.is_transitive())
-            {
+            if !is_ws_member && (dep.is_optional() || !dep.is_transitive()) {
                 continue;
             }
 

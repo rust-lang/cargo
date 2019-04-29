@@ -3562,13 +3562,13 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
         )
         .run();
 
-    p.cargo("test --doc")
-        .with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo
-",
-        )
+    // This has been modified to attempt to diagnose spurious errors on CI.
+    // For some reason, this is recompiling the lib when it shouldn't. If the
+    // root cause is ever found, the changes here should be reverted.
+    // See https://github.com/rust-lang/cargo/issues/6887
+    p.cargo("test --doc -vv")
+        .with_stderr_does_not_contain("[COMPILING] foo [..]")
+        .with_stderr_contains("[DOCTEST] foo")
         .with_stdout(
             "
 running 1 test
@@ -3578,6 +3578,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 ",
         )
+        .env("RUST_LOG", "cargo=trace")
         .run();
 
     p.cargo("test --lib --doc")

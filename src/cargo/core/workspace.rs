@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::slice;
 
@@ -8,9 +8,10 @@ use glob::glob;
 use log::debug;
 use url::Url;
 
+use crate::core::features::Features;
 use crate::core::profiles::Profiles;
 use crate::core::registry::PackageRegistry;
-use crate::core::{Dependency, PackageIdSpec};
+use crate::core::{Dependency, PackageIdSpec, PackageId};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;
@@ -51,6 +52,7 @@ pub struct Workspace<'cfg> {
     // paths. The packages themselves can be looked up through the `packages`
     // set above.
     members: Vec<PathBuf>,
+    member_ids: HashSet<PackageId>,
 
     // The subset of `members` that are used by the
     // `build`, `check`, `test`, and `bench` subcommands
@@ -148,6 +150,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir,
             members: Vec::new(),
+            member_ids: HashSet::new(),
             default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
@@ -185,6 +188,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir: None,
             members: Vec::new(),
+            member_ids: HashSet::new(),
             default_members: Vec::new(),
             is_ephemeral: true,
             require_optional_deps,
@@ -193,6 +197,7 @@ impl<'cfg> Workspace<'cfg> {
         };
         {
             let key = ws.current_manifest.parent().unwrap();
+            let id = package.package_id();
             let package = MaybePackage::Package(package);
             ws.packages.packages.insert(key.to_path_buf(), package);
             ws.target_dir = if let Some(dir) = target_dir {
@@ -201,6 +206,7 @@ impl<'cfg> Workspace<'cfg> {
                 ws.config.target_dir()?
             };
             ws.members.push(ws.current_manifest.clone());
+            ws.member_ids.insert(id);
             ws.default_members.push(ws.current_manifest.clone());
         }
         Ok(ws)
@@ -315,7 +321,7 @@ impl<'cfg> Workspace<'cfg> {
 
     /// Returns true if the package is a member of the workspace.
     pub fn is_member(&self, pkg: &Package) -> bool {
-        self.members().any(|p| p == pkg)
+        self.member_ids.contains(&pkg.package_id())
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -430,6 +436,10 @@ impl<'cfg> Workspace<'cfg> {
                 debug!("find_members - only me as a member");
                 self.members.push(self.current_manifest.clone());
                 self.default_members.push(self.current_manifest.clone());
+                if let Ok(pkg) = self.current() {
+                    let id = pkg.package_id();
+                    self.member_ids.insert(id);
+                }
                 return Ok(());
             }
         };
@@ -515,6 +525,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
+            self.member_ids.insert(pkg.package_id());
             pkg.dependencies()
                 .iter()
                 .map(|d| d.source_id())
@@ -530,6 +541,13 @@ impl<'cfg> Workspace<'cfg> {
         Ok(())
     }
 
+    pub fn features(&self) -> &Features {
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().features(),
+            MaybePackage::Virtual(vm) => vm.features(),
+        }
+    }
+
     /// Validates a workspace, ensuring that a number of invariants are upheld:
     ///
     /// 1. A workspace only has one root.
@@ -537,10 +555,7 @@ impl<'cfg> Workspace<'cfg> {
     /// 3. The current crate is a member of this workspace.
     fn validate(&mut self) -> CargoResult<()> {
         // Validate config profiles only once per workspace.
-        let features = match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().features(),
-            MaybePackage::Virtual(vm) => vm.features(),
-        };
+        let features = self.features();
         let mut warnings = Vec::new();
         self.config.profiles()?.validate(features, &mut warnings)?;
         for warning in warnings {
