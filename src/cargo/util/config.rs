@@ -29,7 +29,7 @@ use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
-use crate::util::ToUrlWithBase;
+use crate::util::{ToUrl, ToUrlWithBase};
 use crate::util::{paths, validate_package_name};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
@@ -684,7 +684,9 @@ impl Config {
     }
 
     fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
-        let base = index.definition.root(&self).join("truncated-by-url-with-base");
+        let base = index.definition.root(&self).join("truncated-by-url_with_base");
+        // Parse val to check it is a URL, not a relative path without a protocol.
+        let _parsed = index.val.to_url()?;
         let url = index.val.to_url_with_base(Some(&*base))?;
         if url.password().is_some() {
             failure::bail!("Registry URLs may not contain passwords");
