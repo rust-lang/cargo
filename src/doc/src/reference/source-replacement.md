@@ -4,42 +4,9 @@ This document is about replacing the crate index. You can read about overriding
 dependencies in the [overriding dependencies][overriding] section of this
 documentation.
 
-Cargo supports the ability to **replace one source with another** to express
-strategies along the lines of mirrors or vendoring dependencies. Configuration
-is currently done through the [`.cargo/config` configuration][config] mechanism,
-like so:
-
-[config]: reference/config.html
-
-```toml
-# The `source` table is where all keys related to source-replacement
-# are stored.
-[source]
-
-# Under the `source` table are a number of other tables whose keys are a
-# name for the relevant source. For example this section defines a new
-# source, called `my-awesome-source`, which comes from a directory
-# located at `vendor` relative to the directory containing this `.cargo/config`
-# file
-[source.my-awesome-source]
-directory = "vendor"
-
-# Git sources can optionally specify a branch/tag/rev as well
-git = "https://example.com/path/to/repo"
-# branch = "master"
-# tag = "v1.0.1"
-# rev = "313f44e8"
-
-# The crates.io default source for crates is available under the name
-# "crates-io", and here we use the `replace-with` key to indicate that it's
-# replaced with our source above.
-[source.crates-io]
-replace-with = "my-awesome-source"
-```
-
-With this configuration Cargo attempts to look up all crates in the directory
-"vendor" rather than querying the online registry at crates.io. Using source
-replacement Cargo can express:
+A *source* is a provider that contains crates that may be included as
+dependencies for a package. Cargo supports the ability to **replace one source
+with another** to express strategies such as:
 
 * Vendoring - custom sources can be defined which represent crates on the local
   filesystem. These sources are subsets of the source that they're replacing and
@@ -49,18 +16,18 @@ replacement Cargo can express:
   cache for crates.io itself.
 
 Cargo has a core assumption about source replacement that the source code is
-exactly the same from both sources. In our above example Cargo assumes that all
-of the crates coming from `my-awesome-source` are the exact same as the copies
-from `crates-io`. Note that this also means that `my-awesome-source` is not
-allowed to have crates which are not present in the `crates-io` source.
+exactly the same from both sources. Note that this also means that
+a replacement source is not allowed to have crates which are not present in the
+original source.
 
 As a consequence, source replacement is not appropriate for situations such as
 patching a dependency or a private registry. Cargo supports patching
 dependencies through the usage of [the `[replace]` key][replace-section], and
-private registry support is planned for a future version of Cargo.
+private registry support is described in [Registries][registries].
 
 [replace-section]: reference/manifest.html#the-replace-section
 [overriding]: reference/specifying-dependencies.html#overriding-dependencies
+[registries]: reference/registries.html
 
 ### Configuration
 
@@ -68,6 +35,24 @@ Configuration of replacement sources is done through [`.cargo/config`][config]
 and the full set of available keys are:
 
 ```toml
+# The `source` table is where all keys related to source-replacement
+# are stored.
+[source]
+
+# Under the `source` table are a number of other tables whose keys are a
+# name for the relevant source. For example this section defines a new
+# source, called `my-vendor-source`, which comes from a directory
+# located at `vendor` relative to the directory containing this `.cargo/config`
+# file
+[source.my-vendor-source]
+directory = "vendor"
+
+# The crates.io default source for crates is available under the name
+# "crates-io", and here we use the `replace-with` key to indicate that it's
+# replaced with our source above.
+[source.crates-io]
+replace-with = "my-vendor-source"
+
 # Each source has its own table where the key is the name of the source
 [source.the-source-name]
 
@@ -75,19 +60,19 @@ and the full set of available keys are:
 # defined elsewhere
 replace-with = "another-source"
 
-# Available kinds of sources that can be specified (described below)
+# Several kinds of sources can be specified (described in more detail below):
 registry = "https://example.com/path/to/index"
 local-registry = "path/to/registry"
 directory = "path/to/vendor"
+
+# Git sources can optionally specify a branch/tag/rev as well
+git = "https://example.com/path/to/repo"
+# branch = "master"
+# tag = "v1.0.1"
+# rev = "313f44e8"
 ```
 
-The `crates-io` represents the crates.io online registry (default source of
-crates) and can be replaced with:
-
-```toml
-[source.crates-io]
-replace-with = 'another-source'
-```
+[config]: reference/config.html
 
 ### Registry Sources
 
@@ -107,8 +92,9 @@ are downloaded ahead of time, typically sync'd with a `Cargo.lock`, and are
 made up of a set of `*.crate` files and an index like the normal registry is.
 
 The primary way to manage and create local registry sources is through the
-[`cargo-local-registry`][cargo-local-registry] subcommand, available on
-crates.io and can be installed with `cargo install cargo-local-registry`.
+[`cargo-local-registry`][cargo-local-registry] subcommand,
+[available on crates.io][cargo-local-registry] and can be installed with
+`cargo install cargo-local-registry`.
 
 [cargo-local-registry]: https://crates.io/crates/cargo-local-registry
 
@@ -122,7 +108,8 @@ the crates that are present).
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring
 dependencies. Also like local registries, directory sources can primarily be
-managed by an external subcommand, [`cargo-vendor`][cargo-vendor], which can be
+managed by an external subcommand, [`cargo-vendor`][cargo-vendor],
+[available on crates.io][cargo-vendor] and can be
 installed with `cargo install cargo-vendor`.
 
 [cargo-vendor]: https://crates.io/crates/cargo-vendor
