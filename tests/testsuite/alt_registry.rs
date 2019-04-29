@@ -1167,13 +1167,13 @@ fn unknown_registry() {
 }
 
 #[test]
-fn registries_index_relative_path() {
+fn registries_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     File::create(&config).unwrap()
         .write_all(br#"
             [registries.relative]
-            index = "alternative-registry"
+            index = "file:alternative-registry"
         "#).unwrap();
 
     registry::init();
@@ -1215,13 +1215,13 @@ fn registries_index_relative_path() {
 }
 
 #[test]
-fn registry_index_relative_path() {
+fn registry_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     File::create(&config).unwrap()
         .write_all(br#"
             [registry]
-            index = "alternative-registry"
+            index = "file:alternative-registry"
         "#).unwrap();
 
     registry::init();
@@ -1261,5 +1261,51 @@ warning: custom registry support via the `registry.index` configuration is being
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
         ))
+        .run();
+}
+
+#[test]
+fn registries_index_relative_path_not_allowed() {
+    let config = paths::root().join(".cargo/config");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(&config).unwrap()
+        .write_all(br#"
+            [registries.relative]
+            index = "alternative-registry"
+        "#).unwrap();
+
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "relative"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .alternative(true)
+        .publish();
+
+    p.cargo("build")
+        .with_stderr(&format!(
+            "\
+error: failed to parse manifest at `{root}/foo/Cargo.toml`
+
+Caused by:
+  invalid url `alternative-registry`: relative URL without a base
+"
+        , root = paths::root().to_str().unwrap()))
+        .with_status(101)
         .run();
 }
