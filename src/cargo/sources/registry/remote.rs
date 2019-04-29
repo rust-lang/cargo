@@ -9,14 +9,13 @@ use std::str;
 use lazycell::LazyCell;
 use log::{debug, trace};
 
-use crate::core::{nightly_features_allowed, PackageId, SourceId};
+use crate::core::{PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
     RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE,
 };
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::network::maybe_spurious;
 use crate::util::{Config, Sha256};
 use crate::util::{FileLock, Filesystem};
 
@@ -221,18 +220,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        let result = git::fetch(repo, url, refspec, self.config);
-        if let Err(e) = result {
-            let extra = if maybe_spurious(&e) && nightly_features_allowed() && !repo.is_empty()? {
-                "\nIf the network is unavailable, consider running with the -Zoffline \
-                 flag to run in offline mode."
-            } else {
-                ""
-            };
-            return Err(e
-                .context(format!("failed to fetch `{}`{}", url, extra))
-                .into());
-        }
+        git::fetch(repo, url, refspec, self.config)
+            .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
         Ok(())
     }
