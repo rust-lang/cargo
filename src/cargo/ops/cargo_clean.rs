@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
+use crate::core::compiler::UnitInterner;
+use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind};
 use crate::core::profiles::UnitFor;
 use crate::core::Workspace;
 use crate::ops;
@@ -50,6 +51,19 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let profiles = ws.profiles();
+    let interner = UnitInterner::new();
+    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
+    build_config.release = opts.release;
+    let bcx = BuildContext::new(
+        ws,
+        &resolve,
+        &packages,
+        opts.config,
+        &build_config,
+        profiles,
+        &interner,
+        HashMap::new(),
+    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -79,30 +93,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 opts.release,
                             )
                         };
-                        units.push(Unit {
-                            pkg,
-                            target,
-                            profile,
-                            kind: *kind,
-                            mode: *mode,
-                        });
+                        units.push(bcx.units.intern(pkg, target, profile, *kind, *mode));
                     }
                 }
             }
         }
     }
 
-    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
-    build_config.release = opts.release;
-    let bcx = BuildContext::new(
-        ws,
-        &resolve,
-        &packages,
-        opts.config,
-        &build_config,
-        profiles,
-        HashMap::new(),
-    )?;
     let mut cx = Context::new(config, &bcx)?;
     cx.prepare_units(None, &units)?;
 

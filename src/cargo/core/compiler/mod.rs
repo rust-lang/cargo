@@ -9,6 +9,7 @@ mod job;
 mod job_queue;
 mod layout;
 mod output_depinfo;
+mod unit;
 
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -22,17 +23,19 @@ use log::debug;
 use same_file::is_same_file;
 use serde::Serialize;
 
+use crate::core::Feature;
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
-pub use self::context::{Context, Unit};
+pub use self::context::Context;
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
-use self::job::{Job, Work};
 pub use self::job::Freshness;
+use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
+pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::{PackageId, Target};
@@ -222,7 +225,7 @@ fn rustc<'a, 'cfg>(
     .with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
-    rustc.args(&cx.bcx.rustflags_args(unit)?);
+    rustc.args(cx.bcx.rustflags_args(unit));
     let json_messages = cx.bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
@@ -643,7 +646,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     build_deps_args(&mut rustdoc, cx, unit)?;
 
-    rustdoc.args(&bcx.rustdocflags_args(unit)?);
+    rustdoc.args(bcx.rustdocflags_args(unit));
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
@@ -964,14 +967,23 @@ fn build_deps_args<'a, 'cfg>(
         }
     }
 
+    let mut unstable_opts = false;
+
     for dep in dep_targets {
         if dep.mode.is_run_custom_build() {
             cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep));
         }
         if dep.target.linkable() && !dep.mode.is_doc() {
-            link_to(cmd, cx, unit, &dep)?;
+            link_to(cmd, cx, unit, &dep, &mut unstable_opts)?;
         }
     }
+
+    // This will only be set if we're already usign a feature
+    // requiring nightly rust
+    if unstable_opts {
+        cmd.arg("-Z").arg("unstable-options");
+    }
+
 
     return Ok(());
 
@@ -980,6 +992,7 @@ fn build_deps_args<'a, 'cfg>(
         cx: &mut Context<'a, 'cfg>,
         current: &Unit<'a>,
         dep: &Unit<'a>,
+        need_unstable_opts: &mut bool
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
         for output in cx.outputs(dep)?.iter() {
@@ -993,7 +1006,17 @@ fn build_deps_args<'a, 'cfg>(
             v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&output.path.file_name().unwrap());
-            cmd.arg("--extern").arg(&v);
+
+            if current.pkg.manifest().features().require(Feature::public_dependency()).is_ok() &&
+                !bcx.is_public_dependency(current, dep)  {
+
+                    cmd.arg("--extern-private");
+                    *need_unstable_opts = true;
+            } else {
+                cmd.arg("--extern");
+            }
+
+            cmd.arg(&v);
         }
         Ok(())
     }

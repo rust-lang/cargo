@@ -4,7 +4,6 @@
 //! This structure is used to store the dependency graph and dynamically update
 //! it to figure out when a dependency should be built.
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
@@ -53,11 +52,8 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn queue(&mut self, key: &K, value: V, dependencies: &[K]) -> &mut V {
-        let slot = match self.dep_map.entry(key.clone()) {
-            Occupied(v) => return &mut v.into_mut().1,
-            Vacant(v) => v,
-        };
+    pub fn queue(&mut self, key: &K, value: V, dependencies: &[K]) {
+        assert!(!self.dep_map.contains_key(key));
 
         let mut my_dependencies = HashSet::new();
         for dep in dependencies {
@@ -68,7 +64,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
                 .or_insert_with(HashSet::new);
             rev.insert(key.clone());
         }
-        &mut slot.insert((my_dependencies, value)).1
+        self.dep_map.insert(key.clone(), (my_dependencies, value));
     }
 
     /// All nodes have been added, calculate some internal metadata and prepare

@@ -264,3 +264,20 @@ conflicting binaries from another package.
 Additionally, a new flag `--no-track` is available to prevent `cargo install`
 from writing tracking information in `$CARGO_HOME` about which packages are
 installed.
+
+### public-dependency
+* Tracking Issue: [#44663](https://github.com/rust-lang/rust/issues/44663)
+
+The 'public-dependency' features allows marking dependencies as 'public'
+or 'private'. When this feature is enabled, additional information is passed to rustc to allow
+the 'exported_private_dependencies' lint to function properly.
+
+This requires the appropriate key to be set in `cargo-features`:
+
+```toml
+cargo-features = ["public-dependency"]
+
+[dependencies]
+my_dep = { version = "1.2.3", public = true }
+private_dep = "2.0.0" # Will be 'private' by default
+```
