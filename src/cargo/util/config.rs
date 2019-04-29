@@ -29,7 +29,7 @@ use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
-use crate::util::ToUrl;
+use crate::util::{ToUrl, ToUrlWithBase};
 use crate::util::{paths, validate_package_name};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
@@ -667,16 +667,31 @@ impl Config {
         validate_package_name(registry, "registry name", "")?;
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
-                Some(index) => {
-                    let url = index.val.to_url()?;
-                    if url.password().is_some() {
-                        failure::bail!("Registry URLs may not contain passwords");
-                    }
-                    url
-                }
+                Some(index) => self.resolve_registry_index(index)?,
                 None => failure::bail!("No index found for registry: `{}`", registry),
             },
         )
+    }
+
+    /// Gets the index for the default registry.
+    pub fn get_default_registry_index(&self) -> CargoResult<Option<Url>> {
+        Ok(
+            match self.get_string("registry.index")? {
+                Some(index) => Some(self.resolve_registry_index(index)?),
+                None => None,
+            },
+        )
+    }
+
+    fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
+        let base = index.definition.root(&self).join("truncated-by-url_with_base");
+        // Parse val to check it is a URL, not a relative path without a protocol.
+        let _parsed = index.val.to_url()?;
+        let url = index.val.to_url_with_base(Some(&*base))?;
+        if url.password().is_some() {
+            failure::bail!("Registry URLs may not contain passwords");
+        }
+        Ok(url)
     }
 
     /// Loads credentials config from the credentials file into the `ConfigValue` object, if
@@ -1648,3 +1663,4 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
         Ok(())
     }
 }
+
