@@ -324,9 +324,9 @@ pub fn registry_configuration(
             )
         }
         None => {
-            // Checking out for default index and token
+            // Checking for default index and token
             (
-                config.get_string("registry.index")?.map(|p| p.val),
+                config.get_default_registry_index()?.map(|url| url.to_string()),
                 config.get_string("registry.token")?.map(|p| p.val),
             )
         }

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use url::Url;
 
@@ -20,5 +20,11 @@ impl<'a> ToUrl for &'a Path {
     fn to_url(self) -> CargoResult<Url> {
         Url::from_file_path(self)
             .map_err(|()| failure::format_err!("invalid path url `{}`", self.display()))
+    }
+}
+
+impl<'a> ToUrl for &'a PathBuf {
+    fn to_url(self) -> CargoResult<Url> {
+        self.as_path().to_url()
     }
 }
