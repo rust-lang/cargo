@@ -178,7 +178,8 @@ Caused by:
 
 Caused by:
   unable to fetch registry `https://github.com/rust-lang/crates.io-index` in offline mode
-Run `cargo fetch` to download the registry index and all of a project's dependencies before going offline.
+Try running without the offline flag, or try running `cargo fetch` within your \
+project directory before going offline.
 ",
         )
         .run();
