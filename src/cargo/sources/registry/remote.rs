@@ -176,6 +176,18 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn update_index(&mut self) -> CargoResult<()> {
         if self.config.cli_unstable().offline {
+            if self.repo()?.is_empty()? {
+                // An empty repository is guaranteed to fail, since hitting
+                // this path means we need at least one crate. This is an
+                // attempt to provide a better error message other than "no
+                // matching package named …".
+                failure::bail!(
+                    "unable to fetch {} in offline mode\n\
+                     Try running without the offline flag, or try running \
+                     `cargo fetch` within your project directory before going offline.",
+                    self.source_id
+                );
+            }
             return Ok(());
         }
         if self.config.cli_unstable().no_index_update {
