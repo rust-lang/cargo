@@ -18,7 +18,7 @@ with another** to express strategies such as:
 Cargo has a core assumption about source replacement that the source code is
 exactly the same from both sources. Note that this also means that
 a replacement source is not allowed to have crates which are not present in the
-default crates.io source.
+original source.
 
 As a consequence, source replacement is not appropriate for situations such as
 patching a dependency or a private registry. Cargo supports patching
