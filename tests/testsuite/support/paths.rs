@@ -70,6 +70,8 @@ pub trait CargoPathExt {
     fn move_in_time<F>(&self, travel_amount: F)
     where
         F: Fn(i64, u32) -> (i64, u32);
+
+    fn is_symlink(&self) -> bool;
 }
 
 impl CargoPathExt for Path {
@@ -141,6 +143,10 @@ impl CargoPathExt for Path {
                 filetime::set_file_times(path, newtime, newtime)
             });
         }
+    }
+
+    fn is_symlink(&self) -> bool {
+        fs::symlink_metadata(self).map(|m| m.file_type().is_symlink()).unwrap_or(false)
     }
 }
 

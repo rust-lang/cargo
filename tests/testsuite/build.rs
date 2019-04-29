@@ -4132,10 +4132,8 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
 }
 
 #[test]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac() {
-    if !cfg!(any(target_os = "macos", target_os = "ios")) {
-        return;
-    }
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
@@ -4144,23 +4142,17 @@ fn uplift_dsym_of_bin_on_mac() {
         .build();
 
     p.cargo("build --bins --examples --tests").run();
-    assert!(p.bin("foo.dSYM").is_dir());
-    assert!(p.bin("b.dSYM").is_dir());
-    assert!(p
-        .bin("b.dSYM")
-        .symlink_metadata()
-        .expect("read metadata from b.dSYM")
-        .file_type()
-        .is_symlink());
-    assert!(!p.bin("c.dSYM").is_dir());
-    assert!(!p.bin("d.dSYM").is_dir());
+    assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
+    assert!(p.target_debug_dir().join("b.dSYM").is_dir());
+    assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
+    assert!(p.target_debug_dir().join("examples/c.dSYM").is_symlink());
+    assert!(!p.target_debug_dir().join("c.dSYM").exists());
+    assert!(!p.target_debug_dir().join("d.dSYM").exists());
 }
 
 #[test]
+#[cfg(all(target_os = "windows", target_env = "msvc"))]
 fn uplift_pdb_of_bin_on_windows() {
-    if !cfg!(all(target_os = "windows", target_env = "msvc")) {
-        return;
-    }
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
@@ -4171,8 +4163,10 @@ fn uplift_pdb_of_bin_on_windows() {
     p.cargo("build --bins --examples --tests").run();
     assert!(p.target_debug_dir().join("foo.pdb").is_file());
     assert!(p.target_debug_dir().join("b.pdb").is_file());
-    assert!(!p.target_debug_dir().join("c.pdb").is_file());
-    assert!(!p.target_debug_dir().join("d.pdb").is_file());
+    assert!(!p.target_debug_dir().join("examples/c.pdb").exists());
+    assert_eq!(p.glob("target/debug/examples/c-*.pdb").count(), 1);
+    assert!(!p.target_debug_dir().join("c.pdb").exists());
+    assert!(!p.target_debug_dir().join("d.pdb").exists());
 }
 
 // Ensure that `cargo build` chooses the correct profile for building
