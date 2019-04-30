@@ -456,9 +456,9 @@ impl Summaries {
     /// for `relative` from the underlying index (aka typically libgit2 with
     /// crates.io) and then parse everything in there.
     ///
-    /// * `last_index_update` - this is a file modification time where if any cache
-    ///   file is older than this the cache should be considered out of date and
-    ///   needs to be rebuilt.
+    /// * `index_version` - a version string to describe the current state of
+    ///   the index which for remote registries is the current git sha and
+    ///   for local registries is not available.
     /// * `root` - this is the root argument passed to `load`
     /// * `cache_root` - this is the root on the filesystem itself of where to
     ///   store cache files.
@@ -481,12 +481,17 @@ impl Summaries {
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
         let cache_path = cache_root.join(relative);
+        let mut cache_contents = None;
         if let Some(index_version) = index_version {
             match fs::read(&cache_path) {
                 Ok(contents) => match Summaries::parse_cache(contents, index_version) {
                     Ok(s) => {
                         log::debug!("fast path for registry cache of {:?}", relative);
-                        return Ok(Some(s))
+                        if cfg!(debug_assertions) {
+                            cache_contents = Some(s.raw_data);
+                        } else {
+                            return Ok(Some(s))
+                        }
                     }
                     Err(e) => {
                         log::debug!("failed to parse {:?} cache: {}", relative, e);
@@ -537,9 +542,18 @@ impl Summaries {
         // or we haven't updated the registry yet. If we actually ran the
         // closure though then we care about those errors.
         if !hit_closure {
+            debug_assert!(cache_contents.is_none());
             return Ok(None);
         }
         err?;
+
+        // If we've got debug assertions enabled and the cache was previously
+        // present and considered fresh this is where the debug assertions
+        // actually happens to verify that our cache is indeed fresh and
+        // computes exactly the same value as before.
+        if cfg!(debug_assertions) && cache_contents.is_some() {
+            assert_eq!(cache_bytes, cache_contents);
+        }
 
         // Once we have our `cache_bytes` which represents the `Summaries` we're
         // about to return, write that back out to disk so future Cargo
@@ -556,6 +570,7 @@ impl Summaries {
                 }
             }
         }
+
         Ok(Some(ret))
     }
 
@@ -589,9 +604,15 @@ impl Summaries {
 // Implementation of serializing/deserializing the cache of summaries on disk.
 // Currently the format looks like:
 //
-// +--------------+----------------+---+----------------+---+
-// | version byte | version string | 0 |  JSON blob ... | 0 |   ...
-// +--------------+----------------+---+----------------+---+
+// +--------------+-------------+---+
+// | version byte | git sha rev | 0 |
+// +--------------+-------------+---+
+//
+// followed by...
+//
+// +----------------+---+------------+---+
+// | semver version | 0 |  JSON blob | 0 | ...
+// +----------------+---+------------+---+
 //
 // The idea is that this is a very easy file for Cargo to parse in future
 // invocations. The read from disk should be quite fast and then afterwards all
@@ -599,7 +620,9 @@ impl Summaries {
 //
 // The leading version byte is intended to ensure that there's some level of
 // future compatibility against changes to this cache format so if different
-// versions of Cargo share the same cache they don't get too confused.
+// versions of Cargo share the same cache they don't get too confused. The git
+// sha lets us know when the file needs to be regenerated (it needs regeneration
+// whenever the index itself updates).
 
 const CURRENT_CACHE_VERSION: u8 = 1;
 
