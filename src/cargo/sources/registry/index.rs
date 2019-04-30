@@ -67,12 +67,10 @@
 //! hopefully those are more obvious inline in the code itself.
 
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
-use std::io::Read;
+use std::fs;
 use std::path::Path;
 use std::str;
 
-use filetime::FileTime;
 use log::info;
 use semver::{Version, VersionReq};
 
@@ -316,7 +314,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // let root = self.config.assert_package_cache_locked(&self.path);
         let root = load.assert_index_locked(&self.path);
         let cache_root = root.join(".cache");
-        let last_index_update = load.last_modified();;
+        let index_version = load.current_version();
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
@@ -338,7 +336,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // along the way produce helpful "did you mean?" suggestions.
         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let summaries = Summaries::parse(
-                last_index_update,
+                index_version.as_ref().map(|s| &**s),
                 &root,
                 &cache_root,
                 path.as_ref(),
@@ -471,7 +469,7 @@ impl Summaries {
     /// * `load` - the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
     pub fn parse(
-        last_index_update: Option<FileTime>,
+        index_version: Option<&str>,
         root: &Path,
         cache_root: &Path,
         relative: &Path,
@@ -483,24 +481,18 @@ impl Summaries {
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
         let cache_path = cache_root.join(relative);
-        if let Some(last_index_update) = last_index_update {
-            match File::open(&cache_path) {
-                Ok(file) => {
-                    let metadata = file.metadata()?;
-                    let cache_mtime = FileTime::from_last_modification_time(&metadata);
-                    if cache_mtime > last_index_update {
-                        log::debug!("cache for {:?} is fresh", relative);
-                        match Summaries::parse_cache(&file, &metadata) {
-                            Ok(s) => return Ok(Some(s)),
-                            Err(e) => {
-                                log::debug!("failed to parse {:?} cache: {}", relative, e);
-                            }
-                        }
-                    } else {
-                        log::debug!("cache for {:?} is out of date", relative);
+        if let Some(index_version) = index_version {
+            match fs::read(&cache_path) {
+                Ok(contents) => match Summaries::parse_cache(contents, index_version) {
+                    Ok(s) => {
+                        log::debug!("fast path for registry cache of {:?}", relative);
+                        return Ok(Some(s))
                     }
-                }
-                Err(e) => log::debug!("cache for {:?} error: {}", relative, e),
+                    Err(e) => {
+                        log::debug!("failed to parse {:?} cache: {}", relative, e);
+                    }
+                },
+                Err(e) => log::debug!("cache missing for {:?} error: {}", relative, e),
             }
         }
 
@@ -510,7 +502,7 @@ impl Summaries {
         log::debug!("slow path for {:?}", relative);
         let mut ret = Summaries::default();
         let mut hit_closure = false;
-        let mut cache_bytes = Vec::new();
+        let mut cache_bytes = None;
         let err = load.load(root, relative, &mut |contents| {
             ret.raw_data = contents.to_vec();
             let mut cache = SummariesCache::default();
@@ -535,7 +527,9 @@ impl Summaries {
                 ret.versions.insert(version, summary.into());
                 start = end + 1;
             }
-            cache_bytes = cache.serialize();
+            if let Some(index_version) = index_version {
+                cache_bytes = Some(cache.serialize(index_version));
+            }
             Ok(())
         });
 
@@ -553,14 +547,13 @@ impl Summaries {
         //
         // This is opportunistic so we ignore failure here but are sure to log
         // something in case of error.
-        //
-        // Note that we also skip this when `last_index_update` is `None` because it
-        // means we can't handle the cache anyway.
-        if last_index_update.is_some() && fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-            let path = Filesystem::new(cache_path.clone());
-            config.assert_package_cache_locked(&path);
-            if let Err(e) = fs::write(cache_path, cache_bytes) {
-                log::info!("failed to write cache: {}", e);
+        if let Some(cache_bytes) = cache_bytes {
+            if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+                let path = Filesystem::new(cache_path.clone());
+                config.assert_package_cache_locked(&path);
+                if let Err(e) = fs::write(cache_path, cache_bytes) {
+                    log::info!("failed to write cache: {}", e);
+                }
             }
         }
         Ok(Some(ret))
@@ -568,11 +561,8 @@ impl Summaries {
 
     /// Parses an open `File` which represents information previously cached by
     /// Cargo.
-    pub fn parse_cache(mut file: &File, meta: &fs::Metadata) -> CargoResult<Summaries> {
-        let mut contents = Vec::new();
-        contents.reserve(meta.len() as usize + 1);
-        file.read_to_end(&mut contents)?;
-        let cache = SummariesCache::parse(&contents)?;
+    pub fn parse_cache(contents: Vec<u8>, last_index_update: &str) -> CargoResult<Summaries> {
+        let cache = SummariesCache::parse(&contents, last_index_update)?;
         let mut ret = Summaries::default();
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
@@ -614,7 +604,7 @@ impl Summaries {
 const CURRENT_CACHE_VERSION: u8 = 1;
 
 impl<'a> SummariesCache<'a> {
-    fn parse(data: &'a [u8]) -> CargoResult<SummariesCache<'a>> {
+    fn parse(data: &'a [u8], last_index_update: &str) -> CargoResult<SummariesCache<'a>> {
         // NB: keep this method in sync with `serialize` below
         let (first_byte, rest) = data
             .split_first()
@@ -624,6 +614,19 @@ impl<'a> SummariesCache<'a> {
         }
         let mut iter = memchr::Memchr::new(0, rest);
         let mut start = 0;
+        if let Some(end) = iter.next() {
+            let update = &rest[start..end];
+            if update != last_index_update.as_bytes() {
+                failure::bail!(
+                    "cache out of date: current index ({}) != cache ({})",
+                    last_index_update,
+                    str::from_utf8(update)?,
+                )
+            }
+            start = end + 1;
+        } else {
+            failure::bail!("malformed file");
+        }
         let mut ret = SummariesCache::default();
         while let Some(version_end) = iter.next() {
             let version = &rest[start..version_end];
@@ -637,7 +640,7 @@ impl<'a> SummariesCache<'a> {
         Ok(ret)
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn serialize(&self, index_version: &str) -> Vec<u8> {
         // NB: keep this method in sync with `parse` above
         let size = self
             .versions
@@ -646,6 +649,8 @@ impl<'a> SummariesCache<'a> {
             .sum();
         let mut contents = Vec::with_capacity(size);
         contents.push(CURRENT_CACHE_VERSION);
+        contents.extend_from_slice(index_version.as_bytes());
+        contents.push(0);
         for (version, data) in self.versions.iter() {
             contents.extend_from_slice(version.to_string().as_bytes());
             contents.push(0);

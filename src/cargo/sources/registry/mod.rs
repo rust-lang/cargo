@@ -165,7 +165,6 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use filetime::FileTime;
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::{Version, VersionReq};
@@ -174,7 +173,7 @@ use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, Source, SourceId, Summary, InternedString};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
@@ -372,7 +371,7 @@ pub trait RegistryData {
         true
     }
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
-    fn last_modified(&self) -> Option<FileTime>;
+    fn current_version(&self) -> Option<InternedString>;
 }
 
 pub enum MaybeLock {
