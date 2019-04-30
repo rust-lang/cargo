@@ -225,12 +225,16 @@ impl TargetInfo {
         }
 
         // See rust-lang/cargo#4490, rust-lang/cargo#4960.
-        //  - Only uplift debuginfo for binaries.
-        //    Tests are run directly from `target/debug/deps/`
-        //    and examples are inside target/debug/examples/ which already have symbols next to them,
-        //    so no need to do anything.
-        if *kind == TargetKind::Bin {
-            if target_triple.contains("-apple-") {
+        // Only uplift debuginfo for binaries.
+        // - Tests are run directly from `target/debug/deps/` with the
+        //   metadata hash still in the filename.
+        // - Examples are only uplifted for apple because the symbol file
+        //   needs to match the executable file name to be found (i.e., it
+        //   needs to remove the hash in the filename). On Windows, the path
+        //   to the .pdb with the hash is embedded in the executable.
+        let is_apple = target_triple.contains("-apple-");
+        if *kind == TargetKind::Bin || (*kind == TargetKind::ExampleBin && is_apple) {
+            if is_apple {
                 ret.push(FileType {
                     suffix: ".dSYM".to_string(),
                     prefix: prefix.clone(),
