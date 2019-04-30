@@ -29,13 +29,8 @@ use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
-<<<<<<< HEAD
-use crate::util::{paths, validate_package_name};
-use crate::util::{ToUrl, ToUrlWithBase};
-=======
-use crate::util::{ToUrl, ToUrlWithBase};
 use crate::util::{paths, validate_package_name, FileLock};
->>>>>>> Make registry locking more coarse
+use crate::util::{ToUrl, ToUrlWithBase};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
