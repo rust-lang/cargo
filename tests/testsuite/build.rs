@@ -4572,6 +4572,10 @@ Caused by:
 
 #[test]
 fn tricky_pipelining() {
+    if !crate::support::is_nightly() {
+        return;
+    }
+
     let foo = project()
         .file(
             "Cargo.toml",

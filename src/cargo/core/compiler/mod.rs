@@ -231,12 +231,16 @@ fn rustc<'a, 'cfg>(
     // present it if we can.
     let extract_rendered_errors = if rmeta_produced {
         match cx.bcx.build_config.message_format {
-            MessageFormat::Json => false,
+            MessageFormat::Json => {
+                rustc.arg("-Zemit-directives");
+                false
+            }
             MessageFormat::Human => {
                 rustc
                     .arg("--error-format=json")
                     .arg("--json-rendered=termcolor")
-                    .arg("-Zunstable-options");
+                    .arg("-Zunstable-options")
+                    .arg("-Zemit-directives");
                 true
             }
 
@@ -315,30 +319,18 @@ fn rustc<'a, 'cfg>(
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
                 &mut |line| {
-                    on_stderr_line(state, line, package_id, &target, extract_rendered_errors)
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &target,
+                        extract_rendered_errors,
+                        rmeta_produced,
+                    )
                 },
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
-        }
-
-        // FIXME(rust-lang/rust#58465): this is the whole point of "pipelined
-        // compilation" in Cargo.  We want to, here in this unit, call
-        // `finish_rmeta` as soon as we can which indicates that the metadata
-        // file is emitted by rustc and ready to go. This will start dependency
-        // compilations as soon as possible.
-        //
-        // The compiler doesn't currently actually implement the ability to let
-        // us know, however, when the metadata file is ready to go. It actually
-        // today produces the file very late in compilation, far later than it
-        // would otherwise be able to do!
-        //
-        // In any case this is all covered by the issue above. This is just a
-        // marker for "yes we unconditionally do this today but tomorrow we
-        // should actually read what rustc is doing and execute this at an
-        // appropriate time, ideally long before rustc finishes completely".
-        if rmeta_produced {
-            state.rmeta_produced();
         }
 
         if do_rename && real_name != crate_name {
@@ -698,7 +690,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, false),
+                &mut |line| on_stderr_line(state, line, package_id, &target, false, false),
                 false,
             )
             .chain_err(|| format!("Could not document `{}`.", name))?;
@@ -1094,6 +1086,7 @@ fn on_stderr_line(
     package_id: PackageId,
     target: &Target,
     extract_rendered_errors: bool,
+    look_for_metadata_directive: bool,
 ) -> CargoResult<()> {
     // We primarily want to use this function to process JSON messages from
     // rustc. The compiler should always print one JSON message per line, and
@@ -1121,6 +1114,29 @@ fn on_stderr_line(
         if let Ok(error) = serde_json::from_str::<CompilerError>(compiler_message.get()) {
             state.stderr(&error.rendered);
             return Ok(());
+        }
+    }
+
+    // In some modes of execution we will execute rustc with `-Z
+    // emit-directives` to look for metadata files being produced. When this
+    // happens we may be able to start subsequent compilations more quickly than
+    // waiting for an entire compile to finish, possibly using more parallelism
+    // available to complete a compilation session more quickly.
+    //
+    // In these cases look for a matching directive and inform Cargo internally
+    // that a metadata file has been produced.
+    if look_for_metadata_directive {
+        #[derive(serde::Deserialize)]
+        struct CompilerDirective {
+            directive: String,
+        }
+        if let Ok(directive) = serde_json::from_str::<CompilerDirective>(compiler_message.get()) {
+            log::trace!("found directive from rustc: `{}`", directive.directive);
+            if directive.directive.starts_with("metadata file written") {
+                log::debug!("looks like metadata finished early!");
+                state.rmeta_produced();
+                return Ok(())
+            }
         }
     }
 
