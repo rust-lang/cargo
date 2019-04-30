@@ -35,7 +35,9 @@ fn custom_build_script_failed() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
         )
         .run();
 }

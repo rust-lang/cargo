@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::cell::Cell;
 use std::io;
 use std::marker;
-use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
@@ -106,24 +105,12 @@ impl<'a> JobState<'a> {
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
-    pub fn capture_output(
-        &self,
-        cmd: &ProcessBuilder,
-        prefix: Option<String>,
-        capture_output: bool,
-    ) -> CargoResult<Output> {
-        let prefix = prefix.unwrap_or_else(String::new);
-        cmd.exec_with_streaming(
-            &mut |out| {
-                let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
-                Ok(())
-            },
-            &mut |err| {
-                let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
-                Ok(())
-            },
-            capture_output,
-        )
+    pub fn stdout(&self, stdout: &str) {
+        drop(self.tx.send(Message::Stdout(stdout.to_string())));
+    }
+
+    pub fn stderr(&self, stderr: &str) {
+        drop(self.tx.send(Message::Stderr(stderr.to_string())));
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file
