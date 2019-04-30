@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
+use crate::core::compiler::job_queue::JobState;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::machine_message;
@@ -96,20 +97,21 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRe
     }
 }
 
-fn emit_build_output(output: &BuildOutput, package_id: PackageId) {
+fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: PackageId) {
     let library_paths = output
         .library_paths
         .iter()
         .map(|l| l.display().to_string())
         .collect::<Vec<_>>();
 
-    machine_message::emit(&machine_message::BuildScript {
+    let msg = machine_message::emit(&machine_message::BuildScript {
         package_id,
         linked_libs: &output.library_links,
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
         env: &output.env,
     });
+    state.stdout(&msg);
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
@@ -299,52 +301,58 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             }
         }
 
-        // And now finally, run the build command itself!
         if build_plan {
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
-        } else {
-            state.running(&cmd);
-            let timestamp = paths::set_invocation_time(&script_run_dir)?;
-            let output = if extra_verbose {
-                let prefix = format!("[{} {}] ", id.name(), id.version());
-                state.capture_output(&cmd, Some(prefix), true)
-            } else {
-                cmd.exec_with_output()
-            };
-            let output = output.map_err(|e| {
-                failure::format_err!(
-                    "failed to run custom build command for `{}`\n{}",
-                    pkg_name,
-                    e
-                )
-            })?;
-
-            // After the build command has finished running, we need to be sure to
-            // remember all of its output so we can later discover precisely what it
-            // was, even if we don't run the build command again (due to freshness).
-            //
-            // This is also the location where we provide feedback into the build
-            // state informing what variables were discovered via our script as
-            // well.
-            paths::write(&output_file, &output.stdout)?;
-            filetime::set_file_times(output_file, timestamp, timestamp)?;
-            paths::write(&err_file, &output.stderr)?;
-            paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
-            let parsed_output =
-                BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
-
-            if json_messages {
-                emit_build_output(&parsed_output, id);
-            }
-            build_state.insert(id, kind, parsed_output);
+            return Ok(());
         }
+
+        // And now finally, run the build command itself!
+        state.running(&cmd);
+        let timestamp = paths::set_invocation_time(&script_run_dir)?;
+        let prefix = format!("[{} {}] ", id.name(), id.version());
+        let output = cmd
+            .exec_with_streaming(
+                &mut |stdout| {
+                    if extra_verbose {
+                        state.stdout(&format!("{}{}", prefix, stdout));
+                    }
+                    Ok(())
+                },
+                &mut |stderr| {
+                    if extra_verbose {
+                        state.stderr(&format!("{}{}", prefix, stderr));
+                    }
+                    Ok(())
+                },
+                true,
+            )
+            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_name))?;
+
+        // After the build command has finished running, we need to be sure to
+        // remember all of its output so we can later discover precisely what it
+        // was, even if we don't run the build command again (due to freshness).
+        //
+        // This is also the location where we provide feedback into the build
+        // state informing what variables were discovered via our script as
+        // well.
+        paths::write(&output_file, &output.stdout)?;
+        filetime::set_file_times(output_file, timestamp, timestamp)?;
+        paths::write(&err_file, &output.stderr)?;
+        paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
+        let parsed_output =
+            BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
+
+        if json_messages {
+            emit_build_output(state, &parsed_output, id);
+        }
+        build_state.insert(id, kind, parsed_output);
         Ok(())
     });
 
     // Now that we've prepared our work-to-do, we need to prepare the fresh work
     // itself to run when we actually end up just discarding what we calculated
     // above.
-    let fresh = Work::new(move |_tx| {
+    let fresh = Work::new(move |state| {
         let (id, pkg_name, build_state, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
@@ -357,7 +365,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         };
 
         if json_messages {
-            emit_build_output(&output, id);
+            emit_build_output(state, &output, id);
         }
 
         build_state.insert(id, kind, output);

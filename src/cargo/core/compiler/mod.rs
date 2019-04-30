@@ -14,7 +14,6 @@ mod unit;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -31,7 +30,7 @@ pub use self::context::Context;
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
-use self::job_queue::JobQueue;
+use self::job_queue::{JobQueue, JobState};
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
@@ -67,38 +66,12 @@ pub trait Executor: Send + Sync + 'static {
     fn exec(
         &self,
         cmd: ProcessBuilder,
-        _id: PackageId,
-        _target: &Target,
-        _mode: CompileMode,
-    ) -> CargoResult<()> {
-        cmd.exec()?;
-        Ok(())
-    }
-
-    fn exec_and_capture_output(
-        &self,
-        cmd: ProcessBuilder,
         id: PackageId,
         target: &Target,
         mode: CompileMode,
-        _state: &job_queue::JobState<'_>,
-    ) -> CargoResult<()> {
-        // We forward to `exec()` to keep RLS working.
-        self.exec(cmd, id, target, mode)
-    }
-
-    fn exec_json(
-        &self,
-        cmd: ProcessBuilder,
-        _id: PackageId,
-        _target: &Target,
-        _mode: CompileMode,
-        handle_stdout: &mut dyn FnMut(&str) -> CargoResult<()>,
-        handle_stderr: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
-        Ok(())
-    }
+        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+    ) -> CargoResult<()>;
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
@@ -113,15 +86,17 @@ pub trait Executor: Send + Sync + 'static {
 pub struct DefaultExecutor;
 
 impl Executor for DefaultExecutor {
-    fn exec_and_capture_output(
+    fn exec(
         &self,
         cmd: ProcessBuilder,
         _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
-        state: &job_queue::JobState<'_>,
+        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
     ) -> CargoResult<()> {
-        state.capture_output(&cmd, None, false).map(drop)
+        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
+            .map(drop)
     }
 }
 
@@ -226,7 +201,6 @@ fn rustc<'a, 'cfg>(
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
-    let json_messages = cx.bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mode = unit.mode;
@@ -294,23 +268,19 @@ fn rustc<'a, 'cfg>(
 
         state.running(&rustc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
-        if json_messages {
-            exec.exec_json(
+        if build_plan {
+            state.build_plan(buildkey, rustc.clone(), outputs.clone());
+        } else {
+            exec.exec(
                 rustc,
                 package_id,
                 &target,
                 mode,
-                &mut assert_is_empty,
-                &mut |line| json_stderr(line, package_id, &target),
+                &mut |line| on_stdout_line(state, line, package_id, &target),
+                &mut |line| on_stderr_line(state, line, package_id, &target),
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
-        } else if build_plan {
-            state.build_plan(buildkey, rustc.clone(), outputs.clone());
-        } else {
-            exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
-                .map_err(internal_if_simple_exit_code)
-                .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
         // FIXME(rust-lang/rust#58465): this is the whole point of "pipelined
@@ -447,7 +417,7 @@ fn link_targets<'a, 'cfg>(
         target.set_src_path(TargetSourcePath::Path(path));
     }
 
-    Ok(Work::new(move |_| {
+    Ok(Work::new(move |state| {
         // If we're a "root crate", e.g., the target of this compilation, then we
         // hard link our outputs out of the `deps` directory into the directory
         // above. This means that `cargo build` will produce binaries in
@@ -488,7 +458,7 @@ fn link_targets<'a, 'cfg>(
                 test: unit_mode.is_any_test(),
             };
 
-            machine_message::emit(&machine_message::Artifact {
+            let msg = machine_message::emit(&machine_message::Artifact {
                 package_id,
                 target: &target,
                 profile: art_profile,
@@ -497,6 +467,7 @@ fn link_targets<'a, 'cfg>(
                 executable,
                 fresh,
             });
+            state.stdout(&msg);
         }
         Ok(())
     }))
@@ -658,7 +629,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format(bcx, &mut rustdoc);
+    add_error_format(cx, &mut rustdoc);
 
     if let Some(args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -671,7 +642,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id(), unit.kind);
-    let json_messages = bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
 
@@ -686,18 +656,13 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         }
         state.running(&rustdoc);
 
-        let exec_result = if json_messages {
-            rustdoc
-                .exec_with_streaming(
-                    &mut assert_is_empty,
-                    &mut |line| json_stderr(line, package_id, &target),
-                    false,
-                )
-                .map(drop)
-        } else {
-            state.capture_output(&rustdoc, None, false).map(drop)
-        };
-        exec_result.chain_err(|| format!("Could not document `{}`.", name))?;
+        rustdoc
+            .exec_with_streaming(
+                &mut |line| on_stdout_line(state, line, package_id, &target),
+                &mut |line| on_stderr_line(state, line, package_id, &target),
+                false,
+            )
+            .chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
     }))
 }
@@ -760,8 +725,8 @@ fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.args(&["--color", color]);
 }
 
-fn add_error_format(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
-    match bcx.build_config.message_format {
+fn add_error_format(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
+    match cx.bcx.build_config.message_format {
         MessageFormat::Human => (),
         MessageFormat::Json => {
             cmd.arg("--error-format").arg("json");
@@ -799,7 +764,7 @@ fn build_base_args<'a, 'cfg>(
 
     add_path_args(bcx, unit, cmd);
     add_color(bcx, cmd);
-    add_error_format(bcx, cmd);
+    add_error_format(cx, cmd);
 
     if !test {
         for crate_type in crate_types.iter() {
@@ -1074,32 +1039,37 @@ impl Kind {
     }
 }
 
-fn assert_is_empty(line: &str) -> CargoResult<()> {
-    if !line.is_empty() {
-        Err(internal(&format!(
-            "compiler stdout is not empty: `{}`",
-            line
-        )))
-    } else {
-        Ok(())
-    }
+fn on_stdout_line(
+    state: &JobState<'_>,
+    line: &str,
+    _package_id: PackageId,
+    _target: &Target,
+) -> CargoResult<()> {
+    state.stdout(line);
+    Ok(())
 }
 
-fn json_stderr(line: &str, package_id: PackageId, target: &Target) -> CargoResult<()> {
-    // Stderr from rustc/rustdoc can have a mix of JSON and non-JSON output.
+fn on_stderr_line(
+    state: &JobState<'_>,
+    line: &str,
+    package_id: PackageId,
+    target: &Target,
+) -> CargoResult<()> {
+    // Switch json lines from rustc/rustdoc that appear on stderr to instead.
+    // We want the stdout of Cargo to always be machine parseable as stderr has
+    // our colorized human-readable messages.
     if line.starts_with('{') {
-        // Handle JSON lines.
         let compiler_message = serde_json::from_str(line)
             .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
 
-        machine_message::emit(&machine_message::FromCompiler {
+        let msg = machine_message::emit(&machine_message::FromCompiler {
             package_id,
             target,
             message: compiler_message,
         });
+        state.stdout(&msg);
     } else {
-        // Forward non-JSON to stderr.
-        writeln!(io::stderr(), "{}", line)?;
+        state.stderr(line);
     }
     Ok(())
 }

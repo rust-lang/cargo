@@ -10,11 +10,11 @@ pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
 }
 
-pub fn emit<T: Message>(t: &T) {
+pub fn emit<T: Message>(t: &T) -> String {
     let json = serde_json::to_string(t).unwrap();
     assert!(json.starts_with("{\""));
     let reason = json!(t.reason());
-    println!("{{\"reason\":{},{}", reason, &json[1..]);
+    format!("{{\"reason\":{},{}", reason, &json[1..])
 }
 
 #[derive(Serialize)]
