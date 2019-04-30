@@ -17,7 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use failure::Error;
+use failure::{bail, Error};
 use log::debug;
 use same_file::is_same_file;
 use serde::Serialize;
@@ -217,6 +217,43 @@ fn rustc<'a, 'cfg>(
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
     let rmeta_produced = cx.rmeta_required(unit);
 
+    // If this unit is producing a required rmeta file then we need to know
+    // when the rmeta file is ready so we can signal to the rest of Cargo that
+    // it can continue dependant compilations. To do this we are currently
+    // required to switch the compiler into JSON message mode, but we still
+    // want to present human readable errors as well. (this rabbit hole just
+    // goes and goes)
+    //
+    // All that means is that if we're not already in JSON mode we need to
+    // switch to JSON mode, ensure that rustc error messages can be rendered
+    // prettily, and then when parsing JSON messages from rustc we need to
+    // internally understand that we should extract the `rendered` field and
+    // present it if we can.
+    let extract_rendered_errors = if rmeta_produced {
+        match cx.bcx.build_config.message_format {
+            MessageFormat::Json => false,
+            MessageFormat::Human => {
+                rustc
+                    .arg("--error-format=json")
+                    .arg("--json-rendered=termcolor")
+                    .arg("-Zunstable-options");
+                true
+            }
+
+            // FIXME(rust-lang/rust#60419): right now we have no way of turning
+            // on JSON messages from the compiler and also asking the rendered
+            // field to be in the `short` format.
+            MessageFormat::Short => {
+                bail!(
+                    "currently `--message-format short` is incompatible with \
+                     pipelined compilation"
+                );
+            }
+        }
+    } else {
+        false
+    };
+
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -277,7 +314,9 @@ fn rustc<'a, 'cfg>(
                 &target,
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target),
+                &mut |line| {
+                    on_stderr_line(state, line, package_id, &target, extract_rendered_errors)
+                },
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
@@ -659,7 +698,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target),
+                &mut |line| on_stderr_line(state, line, package_id, &target, false),
                 false,
             )
             .chain_err(|| format!("Could not document `{}`.", name))?;
@@ -1054,22 +1093,49 @@ fn on_stderr_line(
     line: &str,
     package_id: PackageId,
     target: &Target,
+    extract_rendered_errors: bool,
 ) -> CargoResult<()> {
+    // We primarily want to use this function to process JSON messages from
+    // rustc. The compiler should always print one JSON message per line, and
+    // otherwise it may have other output intermingled (think RUST_LOG or
+    // something like that), so skip over everything that doesn't look like a
+    // JSON message.
+    if !line.starts_with('{') {
+        state.stderr(line);
+        return Ok(());
+    }
+
+    let compiler_message: Box<serde_json::value::RawValue> = serde_json::from_str(line)
+        .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
+
+    // In some modes of compilation Cargo switches the compiler to JSON mode but
+    // the user didn't request that so we still want to print pretty rustc
+    // colorized errors. In those cases (`extract_rendered_errors`) we take a
+    // look at the JSON blob we go, see if it's a relevant diagnostics, and if
+    // so forward just that diagnostic for us to print.
+    if extract_rendered_errors {
+        #[derive(serde::Deserialize)]
+        struct CompilerError {
+            rendered: String,
+        }
+        if let Ok(error) = serde_json::from_str::<CompilerError>(compiler_message.get()) {
+            state.stderr(&error.rendered);
+            return Ok(());
+        }
+    }
+
+    // And failing all that above we should have a legitimate JSON diagnostic
+    // from the compiler, so wrap it in an external Cargo JSON message
+    // indicating which package it came from and then emit it.
+    let msg = machine_message::emit(&machine_message::FromCompiler {
+        package_id,
+        target,
+        message: compiler_message,
+    });
+
     // Switch json lines from rustc/rustdoc that appear on stderr to instead.
     // We want the stdout of Cargo to always be machine parseable as stderr has
     // our colorized human-readable messages.
-    if line.starts_with('{') {
-        let compiler_message = serde_json::from_str(line)
-            .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
-
-        let msg = machine_message::emit(&machine_message::FromCompiler {
-            package_id,
-            target,
-            message: compiler_message,
-        });
-        state.stdout(&msg);
-    } else {
-        state.stderr(line);
-    }
+    state.stdout(&msg);
     Ok(())
 }
