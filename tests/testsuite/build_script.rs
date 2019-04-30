@@ -2219,7 +2219,6 @@ fn diamond_passes_args_only_once() {
         .build();
 
     p.cargo("build -v")
-        .env("CARGO_BUILD_PIPELINING", "true")
         .with_stderr(
             "\
 [COMPILING] c v0.5.0 ([..]
@@ -2231,7 +2230,7 @@ fn diamond_passes_args_only_once() {
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..]
-[RUNNING] `[..]rmeta -L native=test`
+[RUNNING] `[..]rlib -L native=test`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
