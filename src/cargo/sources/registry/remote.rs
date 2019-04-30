@@ -1,11 +1,9 @@
-use crate::core::{PackageId, SourceId};
+use crate::core::{PackageId, SourceId, InternedString};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Config, Filesystem, Sha256};
-use crate::util::paths;
-use filetime::FileTime;
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
@@ -25,7 +23,7 @@ pub struct RemoteRegistry<'cfg> {
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
-    last_updated: Cell<Option<FileTime>>,
+    current_sha: Cell<Option<InternedString>>,
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -38,7 +36,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
-            last_updated: Cell::new(None),
+            current_sha: Cell::new(None),
         }
     }
 
@@ -141,14 +139,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.config.assert_package_cache_locked(path)
     }
 
-    fn last_modified(&self) -> Option<FileTime> {
-        if let Some(time) = self.last_updated.get() {
-            return Some(time);
+    fn current_version(&self) -> Option<InternedString> {
+        if let Some(sha) = self.current_sha.get() {
+            return Some(sha);
         }
-        let path = self.config.assert_package_cache_locked(&self.index_path);
-        let mtime = paths::mtime(&path.join(LAST_UPDATED_FILE)).ok();
-        self.last_updated.set(mtime);
-        self.last_updated.get()
+        let sha = InternedString::new(&self.head().ok()?.to_string());
+        self.current_sha.set(Some(sha));
+        Some(sha)
     }
 
     fn load(
@@ -223,7 +220,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
-        self.last_updated.set(None);
+        self.current_sha.set(None);
         let path = self.config.assert_package_cache_locked(&self.index_path);
         self.config
             .shell()

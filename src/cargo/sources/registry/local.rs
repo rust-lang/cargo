@@ -1,9 +1,8 @@
-use crate::core::PackageId;
+use crate::core::{PackageId, InternedString};
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
-use filetime::FileTime;
 use hex;
 use std::fs::File;
 use std::io::prelude::*;
@@ -43,7 +42,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         path.as_path_unlocked()
     }
 
-    fn last_modified(&self) -> Option<FileTime> {
+    fn current_version(&self) -> Option<InternedString> {
         None
     }
 
