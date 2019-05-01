@@ -422,7 +422,13 @@ impl Serialize for DepFingerprint {
     where
         S: ser::Serializer,
     {
-        (&self.pkg_id, &self.name, &self.public, &self.fingerprint.hash()).serialize(ser)
+        (
+            &self.pkg_id,
+            &self.name,
+            &self.public,
+            &self.fingerprint.hash(),
+        )
+            .serialize(ser)
     }
 }
 

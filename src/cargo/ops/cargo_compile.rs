@@ -697,7 +697,9 @@ fn generate_targets<'a>(
         } => {
             if *lib != LibRule::False {
                 let mut libs = Vec::new();
-                for proposal in filter_targets(packages, Target::is_lib, false, bcx.build_config.mode) {
+                for proposal in
+                    filter_targets(packages, Target::is_lib, false, bcx.build_config.mode)
+                {
                     let Proposal { target, pkg, .. } = proposal;
                     if bcx.build_config.mode == CompileMode::Doctest && !target.doctestable() {
                         ws.config().shell().warn(format!(

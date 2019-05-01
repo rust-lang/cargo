@@ -146,7 +146,9 @@ impl CargoPathExt for Path {
     }
 
     fn is_symlink(&self) -> bool {
-        fs::symlink_metadata(self).map(|m| m.file_type().is_symlink()).unwrap_or(false)
+        fs::symlink_metadata(self)
+            .map(|m| m.file_type().is_symlink())
+            .unwrap_or(false)
     }
 }
 

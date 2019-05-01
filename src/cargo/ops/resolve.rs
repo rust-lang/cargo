@@ -3,9 +3,9 @@ use std::rc::Rc;
 
 use log::{debug, trace};
 
-use crate::core::Feature;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::{self, Method, Resolve};
+use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;

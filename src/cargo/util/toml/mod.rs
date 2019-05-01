@@ -239,7 +239,7 @@ pub struct DetailedTomlDependency {
     #[serde(rename = "default_features")]
     default_features2: Option<bool>,
     package: Option<String>,
-    public: Option<bool>
+    public: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -160,7 +160,6 @@ consider adding `cargo-features = [\"public-dependency\"]` to the manifest
         .run()
 }
 
-
 #[test]
 fn pub_dev_dependency() {
     Package::new("pub_dep", "0.1.0")
