@@ -191,7 +191,6 @@ fn cli() -> App {
             AppSettings::VersionlessSubcommands,
             AppSettings::AllowExternalSubcommands,
         ])
-        .about("")
         .template(
             "\
 Rust's package manager
