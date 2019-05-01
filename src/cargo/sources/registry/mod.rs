@@ -285,7 +285,7 @@ struct RegistryDependency<'a> {
     kind: Option<Cow<'a, str>>,
     registry: Option<Cow<'a, str>>,
     package: Option<Cow<'a, str>>,
-    public: Option<bool>
+    public: Option<bool>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -301,7 +301,7 @@ impl<'a> RegistryDependency<'a> {
             kind,
             registry,
             package,
-            public
+            public,
         } = self;
 
         let id = if let Some(registry) = &registry {

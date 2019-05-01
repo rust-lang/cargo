@@ -521,7 +521,7 @@ fn offline_resolve_optional_fail() {
     // Change dep to 2.0.
     p.change_file(
         "Cargo.toml",
-            r#"
+        r#"
             [package]
             name = "foo"
             version = "0.1.0"

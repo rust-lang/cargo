@@ -11,7 +11,7 @@ use url::Url;
 use crate::core::features::Features;
 use crate::core::profiles::Profiles;
 use crate::core::registry::PackageRegistry;
-use crate::core::{Dependency, PackageIdSpec, PackageId};
+use crate::core::{Dependency, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;

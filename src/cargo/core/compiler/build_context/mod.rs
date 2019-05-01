@@ -4,13 +4,13 @@ use std::str;
 
 use log::debug;
 
+use crate::core::compiler::unit::UnitInterner;
+use crate::core::compiler::{BuildConfig, BuildOutput, Kind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
 use crate::util::errors::CargoResult;
 use crate::util::{profile, Cfg, Config, Rustc};
-use crate::core::compiler::{Unit, Kind, BuildConfig, BuildOutput};
-use crate::core::compiler::unit::UnitInterner;
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};

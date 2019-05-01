@@ -69,7 +69,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.index.clone(),
         opts.registry.clone(),
         true,
-        !opts.dry_run
+        !opts.dry_run,
     )?;
     verify_dependencies(pkg, &registry, reg_id)?;
 
@@ -326,7 +326,9 @@ pub fn registry_configuration(
         None => {
             // Checking for default index and token
             (
-                config.get_default_registry_index()?.map(|url| url.to_string()),
+                config
+                    .get_default_registry_index()?
+                    .map(|url| url.to_string()),
                 config.get_string("registry.token")?.map(|p| p.val),
             )
         }
@@ -341,7 +343,7 @@ fn registry(
     index: Option<String>,
     registry: Option<String>,
     force_update: bool,
-    validate_token: bool
+    validate_token: bool,
 ) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
@@ -609,7 +611,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.index.clone(),
         opts.registry.clone(),
         true,
-        true
+        true,
     )?;
 
     if let Some(ref v) = opts.to_add {
