@@ -15,10 +15,10 @@ use termcolor::Color;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::Method;
+use crate::core::Feature;
 use crate::core::{
     Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
 };
-use crate::core::Feature;
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -591,7 +591,12 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     let pkg_fingerprint = hash_all(&dst)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
-    let rustc_args = if pkg.manifest().features().require(Feature::public_dependency()).is_ok() {
+    let rustc_args = if pkg
+        .manifest()
+        .features()
+        .require(Feature::public_dependency())
+        .is_ok()
+    {
         // FIXME: Turn this on at some point in the future
         //Some(vec!["-D exported_private_dependencies".to_string()])
         None

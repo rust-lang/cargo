@@ -5,8 +5,8 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::core::dependency::Kind;
+use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
 use crate::util::Graph;
 
@@ -44,20 +44,29 @@ impl Resolve {
         unused_patches: Vec<PackageId>,
     ) -> Resolve {
         let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
-        let public_dependencies = graph.iter().map(|p| {
-            let public_deps = graph.edges(p).flat_map(|(dep_package, deps)| {
-                let id_opt: Option<PackageId> = deps.iter().find(|d| d.kind() == Kind::Normal).and_then(|d| {
-                    if d.is_public() {
-                        Some(dep_package.clone())
-                    } else {
-                        None
-                    }
-                });
-                id_opt
-            }).collect::<HashSet<PackageId>>();
+        let public_dependencies = graph
+            .iter()
+            .map(|p| {
+                let public_deps = graph
+                    .edges(p)
+                    .flat_map(|(dep_package, deps)| {
+                        let id_opt: Option<PackageId> = deps
+                            .iter()
+                            .find(|d| d.kind() == Kind::Normal)
+                            .and_then(|d| {
+                                if d.is_public() {
+                                    Some(dep_package.clone())
+                                } else {
+                                    None
+                                }
+                            });
+                        id_opt
+                    })
+                    .collect::<HashSet<PackageId>>();
 
-            (p.clone(), public_deps)
-        }).collect();
+                (p.clone(), public_deps)
+            })
+            .collect();
 
         Resolve {
             graph,
@@ -68,7 +77,7 @@ impl Resolve {
             unused_patches,
             empty_features: HashSet::new(),
             reverse_replacements,
-            public_dependencies
+            public_dependencies,
         }
     }
 
@@ -217,7 +226,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn is_public_dep(&self, pkg: PackageId, dep: PackageId) -> bool {
-        self.public_dependencies.get(&pkg)
+        self.public_dependencies
+            .get(&pkg)
             .map(|public_deps| public_deps.contains(&dep))
             .unwrap_or_else(|| panic!("Unknown dependency {:?} for package {:?}", dep, pkg))
     }

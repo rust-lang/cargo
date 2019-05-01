@@ -1983,10 +1983,7 @@ fn rename_with_path_deps() {
                 a = { path = 'a' }
             "#,
         )
-        .file(
-            "src/lib.rs",
-            "extern crate a; pub fn foo() { a::foo(); }",
-        )
+        .file("src/lib.rs", "extern crate a; pub fn foo() { a::foo(); }")
         .file(
             "a/Cargo.toml",
             r#"
@@ -1999,10 +1996,7 @@ fn rename_with_path_deps() {
                 b = { path = 'b' }
             "#,
         )
-        .file(
-            "a/src/lib.rs",
-            "extern crate b; pub fn foo() { b::foo() }",
-        )
+        .file("a/src/lib.rs", "extern crate b; pub fn foo() { b::foo() }")
         .file(
             "a/b/Cargo.toml",
             r#"
@@ -2012,10 +2006,7 @@ fn rename_with_path_deps() {
                 authors = []
             "#,
         )
-        .file(
-            "a/b/src/lib.rs",
-            "pub fn foo() { }",
-        );
+        .file("a/b/src/lib.rs", "pub fn foo() { }");
     let p = p.build();
 
     p.cargo("build").run();
