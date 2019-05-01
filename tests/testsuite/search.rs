@@ -112,11 +112,9 @@ fn not_update() {
     regsrc.update().unwrap();
 
     cargo_process("search postgres")
-            .with_stdout_contains(
-                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            )
-            .with_stderr("") // without "Updating ... index"
-    .run();
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stderr("") // without "Updating ... index"
+        .run();
 }
 
 #[test]

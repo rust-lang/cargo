@@ -1170,11 +1170,15 @@ fn unknown_registry() {
 fn registries_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config).unwrap()
-        .write_all(br#"
+    File::create(&config)
+        .unwrap()
+        .write_all(
+            br#"
             [registries.relative]
             index = "file:alternative-registry"
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
     registry::init();
 
@@ -1195,9 +1199,7 @@ fn registries_index_relative_url() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("bar", "0.0.1")
-        .alternative(true)
-        .publish();
+    Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("build")
         .with_stderr(&format!(
@@ -1218,11 +1220,15 @@ fn registries_index_relative_url() {
 fn registry_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config).unwrap()
-        .write_all(br#"
+    File::create(&config)
+        .unwrap()
+        .write_all(
+            br#"
             [registry]
             index = "file:alternative-registry"
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
     registry::init();
 
@@ -1242,9 +1248,7 @@ fn registry_index_relative_url() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("bar", "0.0.1")
-        .alternative(true)
-        .publish();
+    Package::new("bar", "0.0.1").alternative(true).publish();
 
     fs::remove_file(paths::home().join(".cargo/config")).unwrap();
 
@@ -1268,11 +1272,15 @@ warning: custom registry support via the `registry.index` configuration is being
 fn registries_index_relative_path_not_allowed() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config).unwrap()
-        .write_all(br#"
+    File::create(&config)
+        .unwrap()
+        .write_all(
+            br#"
             [registries.relative]
             index = "alternative-registry"
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
     registry::init();
 
@@ -1293,9 +1301,7 @@ fn registries_index_relative_path_not_allowed() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("bar", "0.0.1")
-        .alternative(true)
-        .publish();
+    Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("build")
         .with_stderr(&format!(
@@ -1304,8 +1310,9 @@ error: failed to parse manifest at `{root}/foo/Cargo.toml`
 
 Caused by:
   invalid url `alternative-registry`: relative URL without a base
-"
-        , root = paths::root().to_str().unwrap()))
+",
+            root = paths::root().to_str().unwrap()
+        ))
         .with_status(101)
         .run();
 }

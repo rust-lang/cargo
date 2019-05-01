@@ -23,7 +23,6 @@ use log::debug;
 use same_file::is_same_file;
 use serde::Serialize;
 
-use crate::core::Feature;
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
@@ -38,6 +37,7 @@ use self::output_depinfo::output_depinfo;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
+use crate::core::Feature;
 use crate::core::{PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
@@ -984,7 +984,6 @@ fn build_deps_args<'a, 'cfg>(
         cmd.arg("-Z").arg("unstable-options");
     }
 
-
     return Ok(());
 
     fn link_to<'a, 'cfg>(
@@ -992,7 +991,7 @@ fn build_deps_args<'a, 'cfg>(
         cx: &mut Context<'a, 'cfg>,
         current: &Unit<'a>,
         dep: &Unit<'a>,
-        need_unstable_opts: &mut bool
+        need_unstable_opts: &mut bool,
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
         for output in cx.outputs(dep)?.iter() {
@@ -1007,11 +1006,16 @@ fn build_deps_args<'a, 'cfg>(
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&output.path.file_name().unwrap());
 
-            if current.pkg.manifest().features().require(Feature::public_dependency()).is_ok() &&
-                !bcx.is_public_dependency(current, dep)  {
-
-                    cmd.arg("--extern-private");
-                    *need_unstable_opts = true;
+            if current
+                .pkg
+                .manifest()
+                .features()
+                .require(Feature::public_dependency())
+                .is_ok()
+                && !bcx.is_public_dependency(current, dep)
+            {
+                cmd.arg("--extern-private");
+                *need_unstable_opts = true;
             } else {
                 cmd.arg("--extern");
             }
