@@ -648,10 +648,6 @@ Cargo will also treat any files located in `src/bin/*.rs` as executables. If you
 executable consists of more than just one source file, you might also use a directory
 inside `src/bin` containing a `main.rs` file which will be treated as an executable
 with a name of the parent directory.
-Do note, however, once you add a `[[bin]]` section ([see
-below](#configuring-a-target)), Cargo will no longer automatically build files
-located in `src/bin/*.rs`. Instead you must create a `[[bin]]` section for
-each file you want to build.
 
 Your package can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing examples,
@@ -683,6 +679,11 @@ may be composed of single files or directories with a `main.rs` file.
 To structure your code after you've created the files and folders for your
 package, you should remember to use Rust's module system, which you can read
 about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+
+See [Configuring a target](#configuring-a-target) below for more details on
+manually configuring target settings. See [Target
+auto-discovery](#target-auto-discovery) below for more information on
+controlling how Cargo automatically infers targets.
 
 ### Examples
 
@@ -800,9 +801,45 @@ name = "my-cool-binary"
 path = "src/my-cool-binary.rs"
 ```
 
-The `[package]` also includes the optional `autobins`, `autoexamples`,
-`autotests`, and `autobenches` keys to explicitly opt-in or opt-out of
-auto-discovering specific target kinds.
+#### Target auto-discovery
+
+By default, Cargo automatically determines the targets to build based on the
+[layout of the files](#the-project-layout) on the filesystem. The target
+configuration tables, such as `[lib]`, `[[bin]]`, `[[test]]`, `[[bench]]`, or
+`[[example]]`, can be used to add additional targets that don't follow the
+standard directory layout.
+
+The automatic target discovery can be disabled so that only manually
+configured targets will be built. Setting the keys `autobins`, `autoexamples`,
+`autotests`, or `autobenches` to `false` in the `[package]` section will
+disable auto-discovery of the corresponding target type.
+
+Disabling automatic discovery should only be needed for specialized
+situations. For example, if you have a library where you want a *module* named
+`bin`, this would present a problem because Cargo would usually attempt to
+compile anything in the `bin` directory as an executable. Here is a sample
+layout of this scenario:
+
+```
+├── Cargo.toml
+└── src
+    ├── lib.rs
+    └── bin
+        └── mod.rs
+```
+
+To prevent Cargo from inferring `src/bin/mod.rs` as an executable, set
+`autobins = false` in `Cargo.toml` to disable auto-discovery:
+
+```toml
+[package]
+# …
+autobins = false
+```
+
+> **Note**: For packages with the 2015 edition, the default for auto-discovery
+> is `false` if at least one target is manually defined in `Cargo.toml`.
+> Beginning with the 2018 edition, the default is always `true`.
 
 #### The `required-features` field (optional)
 
