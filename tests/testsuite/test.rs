@@ -3049,7 +3049,7 @@ fn cargo_test_env() {
         #[test]
         fn env_test() {{
             use std::env;
-            println!("{{}}", env::var("{}").unwrap());
+            eprintln!("{{}}", env::var("{}").unwrap());
         }}
         "#,
         cargo::CARGO_ENV
@@ -3062,12 +3062,16 @@ fn cargo_test_env() {
 
     let cargo = cargo_exe().canonicalize().unwrap();
     p.cargo("test --lib -- --nocapture")
-        .with_stdout_contains(format!(
+        .with_stderr_contains(format!(
             "\
 {}
-test env_test ... ok
 ",
             cargo.to_str().unwrap()
+        ))
+        .with_stdout_contains(format!(
+            "\
+test env_test ... ok
+",
         ))
         .run();
 }
