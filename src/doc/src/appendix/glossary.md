@@ -176,7 +176,7 @@ manifest is located.
 [Directory Sources]: reference/source-replacement.html#directory-sources
 [Local Registry Sources]: reference/source-replacement.html#local-registry-sources
 [Source Replacement]: reference/source-replacement.html
-[cargo-unstable]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
+[cargo-unstable]: reference/unstable.html
 [config option]: reference/config.html
 [directory layout]: reference/manifest.html#the-project-layout
 [edition guide]: ../edition-guide/index.html

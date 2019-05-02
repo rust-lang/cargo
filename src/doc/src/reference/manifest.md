@@ -27,7 +27,7 @@ a keyword. [crates.io][cratesio] imposes even more restrictions, such as
 enforcing only ASCII characters, not a reserved name, not a special Windows
 name such as "nul", is not too long, etc.
 
-[alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
+[alphanumeric]: ../std/primitive.char.html#method.is_alphanumeric
 
 #### The `version` field
 
@@ -682,7 +682,8 @@ may be composed of single files or directories with a `main.rs` file.
 
 To structure your code after you've created the files and folders for your
 package, you should remember to use Rust's module system, which you can read
-about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+about in [the
+book](../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html).
 
 ### Examples
 
@@ -698,7 +699,7 @@ You can run individual executable examples with the command `cargo run --example
 
 Specify `crate-type` to make an example be compiled as a library (additional
 information about crate types is available in
-[The Rust Reference](https://doc.rust-lang.org/reference/linkage.html)):
+[The Rust Reference](../reference/linkage.html)):
 
 ```toml
 [[example]]
@@ -840,7 +841,7 @@ The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
 `proc-macro`.
 
 You can read more about the different crate types in the
-[Rust Reference Manual](https://doc.rust-lang.org/reference/linkage.html)
+[Rust Reference Manual](../reference/linkage.html)
 
 ### The `[patch]` Section
 
