@@ -7,6 +7,9 @@
 #![warn(clippy::redundant_clone)]
 
 #[macro_use]
+extern crate cargo_test_macro;
+
+#[macro_use]
 mod support;
 
 mod alt_registry;
