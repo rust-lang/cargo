@@ -522,3 +522,11 @@ fn new_with_blank_email() {
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
 }
+
+#[test]
+fn new_with_reference_link() {
+    cargo_process("new foo").env("USER", "foo").run();
+
+    let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(contents.contains("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"))
+}
