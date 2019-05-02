@@ -1,0 +1,12 @@
+[package]
+name = "cargo-test-macro"
+version = "0.1.0"
+authors = ["Jethro Beekman <jethro@fortanix.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "0.6"
+syn = { version = "0.15", features = ["full"] }
