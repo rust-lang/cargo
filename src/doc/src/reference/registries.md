@@ -584,7 +584,7 @@ browser to log in and retrieve an API token.
 [`cargo login`]: commands/cargo-login.html
 [`cargo package`]: commands/cargo-package.html
 [`cargo publish`]: commands/cargo-publish.html
-[alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
+[alphanumeric]: ../std/primitive.char.html#method.is_alphanumeric
 [config]: reference/config.html
 [crates.io]: https://crates.io/
 [publishing documentation]: reference/publishing.html#cargo-owner

@@ -131,7 +131,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    information.
 
 [links]: reference/build-scripts.html#the-links-manifest-key
-[configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
+[configuration]: ../reference/conditional-compilation.html
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
 [cargo-config]: reference/config.html
 [Target Triple]: appendix/glossary.html#target
