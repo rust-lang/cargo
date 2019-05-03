@@ -208,7 +208,7 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
 }
 
 // Checks if the package source is in a *git* DVCS repository. If *git*, and
-// the source is *dirty* (e.g., has uncommited changes) and not `allow_dirty`
+// the source is *dirty* (e.g., has uncommitted changes) and not `allow_dirty`
 // then `bail!` with an informative message. Otherwise return the sha1 hash of
 // the current *HEAD* commit, or `None` if *dirty*.
 fn check_repo_state(
