@@ -978,7 +978,7 @@ fn build_deps_args<'a, 'cfg>(
         }
     }
 
-    // This will only be set if we're already usign a feature
+    // This will only be set if we're already using a feature
     // requiring nightly rust
     if unstable_opts {
         cmd.arg("-Z").arg("unstable-options");

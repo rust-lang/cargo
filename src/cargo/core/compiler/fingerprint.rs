@@ -131,7 +131,7 @@
 //!   and reuse the cache. This means that we can't ever hash an absolute path
 //!   name. Instead we always hash relative path names and the "root" is passed
 //!   in at runtime dynamically. Some of this is best effort, but the general
-//!   idea is that we assume all acceses within a crate stay within that
+//!   idea is that we assume all accesses within a crate stay within that
 //!   crate.
 //!
 //! These are pretty tricky to test for unfortunately, but we should have a good
