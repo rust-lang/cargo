@@ -29,7 +29,7 @@ use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
-use crate::util::{paths, validate_package_name};
+use crate::util::{paths, validate_package_name, FileLock};
 use crate::util::{ToUrl, ToUrlWithBase};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
@@ -76,6 +76,9 @@ pub struct Config {
     profiles: LazyCell<ConfigProfiles>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
+    /// Lock, if held, of the global package cache along with the number of
+    /// acquisitions so far.
+    package_cache_lock: RefCell<Option<(FileLock, usize)>>,
 }
 
 impl Config {
@@ -132,6 +135,7 @@ impl Config {
             env,
             profiles: LazyCell::new(),
             updated_sources: LazyCell::new(),
+            package_cache_lock: RefCell::new(None),
         }
     }
 
@@ -828,6 +832,36 @@ impl Config {
         };
         T::deserialize(d).map_err(|e| e.into())
     }
+
+    pub fn assert_package_cache_locked<'a>(&self, f: &'a Filesystem) -> &'a Path {
+        let ret = f.as_path_unlocked();
+        assert!(
+            self.package_cache_lock.borrow().is_some(),
+            "pacakge cache lock is not currently held, Cargo forgot to call \
+             `acquire_package_cache_lock` before we got to this stack frame",
+        );
+        assert!(ret.starts_with(self.home_path.as_path_unlocked()));
+        return ret;
+    }
+
+    pub fn acquire_package_cache_lock<'a>(&'a self) -> CargoResult<PackageCacheLock<'a>> {
+        let mut slot = self.package_cache_lock.borrow_mut();
+        match *slot {
+            Some((_, ref mut cnt)) => {
+                *cnt += 1;
+            }
+            None => {
+                let lock = self
+                    .home_path
+                    .open_rw(".package-cache", self, "package cache lock")
+                    .chain_err(|| "failed to acquire package cache lock")?;
+                *slot = Some((lock, 1));
+            }
+        }
+        Ok(PackageCacheLock(self))
+    }
+
+    pub fn release_package_cache_lock(&self) {}
 }
 
 /// A segment of a config key.
@@ -1662,5 +1696,18 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
     #[allow(unused)]
     fn set_permissions(file: &File, mode: u32) -> CargoResult<()> {
         Ok(())
+    }
+}
+
+pub struct PackageCacheLock<'a>(&'a Config);
+
+impl Drop for PackageCacheLock<'_> {
+    fn drop(&mut self) {
+        let mut slot = self.0.package_cache_lock.borrow_mut();
+        let (_, cnt) = slot.as_mut().unwrap();
+        *cnt -= 1;
+        if *cnt == 0 {
+            *slot = None;
+        }
     }
 }

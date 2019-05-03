@@ -548,6 +548,10 @@ fn compare_resolve(
 }
 
 fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) -> CargoResult<()> {
+    // Checking the yanked status invovles taking a look at the registry and
+    // maybe updating files, so be sure to lock it here.
+    let _lock = config.acquire_package_cache_lock()?;
+
     let mut sources = pkg_set.sources_mut();
     for pkg_id in resolve.iter() {
         if let Some(source) = sources.get_mut(pkg_id.source_id()) {

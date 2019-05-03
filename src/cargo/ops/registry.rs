@@ -353,6 +353,7 @@ fn registry(
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
+        let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
         let cfg = src.config();

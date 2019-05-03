@@ -488,6 +488,11 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
     // wouldn't be available for `compile_ws`.
     let (pkg_set, resolve) = ops::resolve_ws_with_method(ws, Method::Everything, &specs)?;
     let mut sources = pkg_set.sources_mut();
+
+    // Checking the yanked status invovles taking a look at the registry and
+    // maybe updating files, so be sure to lock it here.
+    let _lock = ws.config().acquire_package_cache_lock()?;
+
     for pkg_id in resolve.iter() {
         if let Some(source) = sources.get_mut(pkg_id.source_id()) {
             if source.is_yanked(pkg_id)? {
