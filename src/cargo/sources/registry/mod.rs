@@ -207,7 +207,7 @@ pub struct RegistryConfig {
     ///
     /// For backwards compatibility, if the string does not contain `{crate}` or
     /// `{version}`, it will be extended with `/{crate}/{version}/download` to
-    /// support registries like crates.io which were crated before the
+    /// support registries like crates.io which were created before the
     /// templating setup was created.
     pub dl: String,
 

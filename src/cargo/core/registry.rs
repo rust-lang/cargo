@@ -221,7 +221,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             .iter()
             .map(|dep| {
                 debug!(
-                    "registring a patch for `{}` with `{}`",
+                    "registering a patch for `{}` with `{}`",
                     url,
                     dep.package_name()
                 );

@@ -534,7 +534,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // Ok we're going to download this crate, so let's set up all our
         // internal state and hand off an `Easy` handle to our libcurl `Multi`
         // handle. This won't actually start the transfer, but later it'll
-        // hapen during `wait_for_download`
+        // happen during `wait_for_download`
         let token = self.next;
         self.next += 1;
         debug!("downloading {} as {}", id, token);

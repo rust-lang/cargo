@@ -171,7 +171,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // comment has been sitting here for a long time feel free to refactor
         // away crossbeam.
         crossbeam_utils::thread::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
-            .expect("child threads should't panic")
+            .expect("child threads shouldn't panic")
     }
 
     fn drain_the_queue(
