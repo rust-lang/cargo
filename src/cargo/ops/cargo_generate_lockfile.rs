@@ -46,7 +46,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
-        None => return generate_lockfile(ws),
+        None => {
+            generate_lockfile(ws)?;
+            match opts.precise {
+                None => return Ok(()),
+
+                // Precise option specified, so re-run to do the rest of the update.
+                Some(_) => return update_lockfile(ws, opts)
+            }
+        }
     };
     let mut registry = PackageRegistry::new(opts.config)?;
     let mut to_avoid = HashSet::new();
