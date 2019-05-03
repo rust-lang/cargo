@@ -14,6 +14,7 @@ pub use self::shell::{Shell, Verbosity};
 pub use self::source::{GitReference, Source, SourceId, SourceMap};
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConfig};
+pub use self::interning::InternedString;
 
 pub mod compiler;
 pub mod dependency;

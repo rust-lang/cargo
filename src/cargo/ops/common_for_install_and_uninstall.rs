@@ -564,6 +564,11 @@ pub fn select_pkg<'a, T>(
 where
     T: Source + 'a,
 {
+    // This operation may involve updating some sources or making a few queries
+    // which may involve frobbing caches, as a result make sure we synchronize
+    // with other global Cargos
+    let _lock = config.acquire_package_cache_lock()?;
+
     if needs_update {
         source.update()?;
     }

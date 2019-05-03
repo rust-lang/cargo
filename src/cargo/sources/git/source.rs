@@ -154,12 +154,9 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn update(&mut self) -> CargoResult<()> {
-        let lock =
-            self.config
-                .git_path()
-                .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;
-
-        let db_path = lock.parent().join("db").join(&self.ident);
+        let git_path = self.config.git_path();
+        let git_path = self.config.assert_package_cache_locked(&git_path);
+        let db_path = git_path.join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
             failure::bail!(
@@ -189,21 +186,17 @@ impl<'cfg> Source for GitSource<'cfg> {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
 
-        // Don’t use the full hash, in order to contribute less to reaching the path length limit
-        // on Windows. See <https://github.com/servo/servo/pull/14397>.
+        // Don’t use the full hash, in order to contribute less to reaching the
+        // path length limit on Windows. See
+        // <https://github.com/servo/servo/pull/14397>.
         let short_id = db.to_short_id(&actual_rev).unwrap();
 
-        let checkout_path = lock
-            .parent()
+        let checkout_path = git_path
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
 
-        // Copy the database to the checkout location. After this we could drop
-        // the lock on the database as we no longer needed it, but we leave it
-        // in scope so the destructors here won't tamper with too much.
-        // Checkout is immutable, so we don't need to protect it with a lock once
-        // it is created.
+        // Copy the database to the checkout location.
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
