@@ -1,3 +1,7 @@
+# Required for bash versions < 4.1
+# Default bash version is 3.2 on latest macOS. See #6874
+shopt -s extglob
+
 command -v cargo >/dev/null 2>&1 &&
 _cargo()
 {
