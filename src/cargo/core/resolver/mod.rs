@@ -936,8 +936,7 @@ fn generalize_conflicting(
                 }
                 con.insert(*critical_parent, backtrack_critical_reason);
 
-                #[cfg(debug_assertions)]
-                {
+                if cfg!(debug_assertions) {
                     // the entire point is to find an older conflict, so let's make sure we did
                     let new_age = con
                         .keys()
