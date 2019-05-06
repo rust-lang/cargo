@@ -490,7 +490,7 @@ impl Summaries {
                         if cfg!(debug_assertions) {
                             cache_contents = Some(s.raw_data);
                         } else {
-                            return Ok(Some(s))
+                            return Ok(Some(s));
                         }
                     }
                     Err(e) => {
@@ -512,15 +512,12 @@ impl Summaries {
             ret.raw_data = contents.to_vec();
             let mut cache = SummariesCache::default();
             hit_closure = true;
-            let mut start = 0;
-            for end in memchr::Memchr::new(b'\n', contents) {
+            for line in split(contents, b'\n') {
                 // Attempt forwards-compatibility on the index by ignoring
                 // everything that we ourselves don't understand, that should
                 // allow future cargo implementations to break the
                 // interpretation of each line here and older cargo will simply
                 // ignore the new lines.
-                let line = &contents[start..end];
-                start = end + 1;
                 let summary = match IndexSummary::parse(line, source_id) {
                     Ok(summary) => summary,
                     Err(e) => {
@@ -635,10 +632,8 @@ impl<'a> SummariesCache<'a> {
         if *first_byte != CURRENT_CACHE_VERSION {
             failure::bail!("looks like a different Cargo's cache, bailing out");
         }
-        let mut iter = memchr::Memchr::new(0, rest);
-        let mut start = 0;
-        if let Some(end) = iter.next() {
-            let update = &rest[start..end];
+        let mut iter = split(rest, 0);
+        if let Some(update) = iter.next() {
             if update != last_index_update.as_bytes() {
                 failure::bail!(
                     "cache out of date: current index ({}) != cache ({})",
@@ -646,19 +641,15 @@ impl<'a> SummariesCache<'a> {
                     str::from_utf8(update)?,
                 )
             }
-            start = end + 1;
         } else {
             failure::bail!("malformed file");
         }
         let mut ret = SummariesCache::default();
-        while let Some(version_end) = iter.next() {
-            let version = &rest[start..version_end];
+        while let Some(version) = iter.next() {
             let version = str::from_utf8(version)?;
             let version = Version::parse(version)?;
-            let summary_end = iter.next().unwrap();
-            let summary = &rest[version_end + 1..summary_end];
+            let summary = iter.next().unwrap();
             ret.versions.push((version, summary));
-            start = summary_end + 1;
         }
         Ok(ret)
     }
@@ -739,4 +730,29 @@ impl IndexSummary {
             hash: cksum,
         })
     }
+}
+
+fn split<'a>(haystack: &'a [u8], needle: u8) -> impl Iterator<Item = &'a [u8]> + 'a {
+    struct Split<'a> {
+        haystack: &'a [u8],
+        needle: u8,
+    }
+
+    impl<'a> Iterator for Split<'a> {
+        type Item = &'a [u8];
+
+        fn next(&mut self) -> Option<&'a [u8]> {
+            if self.haystack.is_empty() {
+                return None;
+            }
+            let (ret, remaining) = match memchr::memchr(self.needle, self.haystack) {
+                Some(pos) => (&self.haystack[..pos], &self.haystack[pos + 1..]),
+                None => (self.haystack, &[][..]),
+            };
+            self.haystack = remaining;
+            Some(ret)
+        }
+    }
+
+    Split { haystack, needle }
 }
