@@ -288,7 +288,6 @@ fn activate_deps_loop(
                         &cx,
                         registry,
                         &mut past_conflicting_activations,
-                        &parent,
                         &dep,
                         &conflicting_activations,
                     ) {
@@ -847,7 +846,7 @@ impl RemainingCandidates {
     }
 }
 
-/// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
+/// Attempts to find a new conflict that allows `find_candidate` to go further back then the input one.
 /// It will add the new conflict to the cache if one is found.
 ///
 /// Panics if the input conflict is not all active in `cx`.
@@ -855,11 +854,10 @@ fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
-    parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
-    if conflicting_activations.is_empty() {
+    if conflicting_activations.len() != 1 {
         return None;
     }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
@@ -871,15 +869,46 @@ fn generalize_conflicting(
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
 
-    if cx
-        .parents
-        .is_path_from_to(&parent.package_id(), &backtrack_critical_id)
-    {
-        // We are a descendant of the trigger of the problem.
-        // The best generalization of this is to let things bubble up
-        // and let `backtrack_critical_id` figure this out.
+    // we will need to know the range of versions we can use
+    let our_candidates = registry
+        .query(dep)
+        .expect("an already used dep now error!?");
+
+    if our_candidates.is_empty() {
         return None;
     }
+
+    let our_activation_keys: HashSet<_> = our_candidates
+        .iter()
+        .map(|c| c.package_id().as_activations_key())
+        .collect();
+
+    // if our dep only matches one semver range then we can fast path any other dep
+    // that also targets that semver range and has no overlap
+    let our_activation_key = if our_activation_keys.len() == 1 {
+        our_activation_keys.iter().next().cloned()
+    } else {
+        None
+    };
+
+    let our_links: Option<HashSet<_>> = our_candidates.iter().map(|c| c.links()).collect();
+
+    // if our dep only matches things that have a links set then we can fast path any other dep
+    // that also all use that links and has no overlap
+    let our_link = if let Some(our_links) = our_links {
+        if our_links.len() == 1 {
+            our_links.iter().next().cloned()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    if !(our_activation_key.is_some() || our_link.is_some()) {
+        return None;
+    }
+
     // What parents does that critical activation have
     for (critical_parent, critical_parents_deps) in
         cx.parents.edges(&backtrack_critical_id).filter(|(p, _)| {
@@ -888,48 +917,35 @@ fn generalize_conflicting(
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
-            // A dep is equivalent to one of the things it can resolve to.
-            // Thus, if all the things it can resolve to have already ben determined
-            // to be conflicting, then we can just say that we conflict with the parent.
-            if let Some(others) = registry
+            let critical_parent_candidates = registry
                 .query(critical_parents_dep)
-                .expect("an already used dep now error!?")
-                .iter()
-                .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
-                .map(|other| {
-                    past_conflicting_activations
-                        .find(
-                            dep,
-                            &|id| {
-                                if id == other.package_id() {
-                                    // we are imagining that we used other instead
-                                    Some(backtrack_critical_age)
-                                } else {
-                                    cx.is_active(id).filter(|&age|
-                                        // we only care about things that are older then critical_age
-                                        age < backtrack_critical_age)
-                                }
-                            },
-                            Some(other.package_id()),
-                        )
-                        .map(|con| (other.package_id(), con))
-                })
-                .collect::<Option<Vec<(PackageId, &ConflictMap)>>>()
-            {
+                .expect("an already used dep now error!?");
+
+            if (
+                our_activation_key.is_some()
+                    && critical_parent_candidates.iter().all(|other| {
+                        other.package_id().as_activations_key() == our_activation_key.unwrap()
+                            && our_candidates
+                                .iter()
+                                .all(|our| our.package_id() != other.package_id())
+                    })
+                // all of `critical_parent_candidates` are semver compatible with all of `our_candidates`
+                // and we have none in common. Thus `dep` can not be resolved when `critical_parents_dep` has bean resolved.
+            ) || (
+                our_link.is_some()
+                    && critical_parent_candidates.iter().all(|other| {
+                        other.links() == our_link
+                            && our_candidates
+                                .iter()
+                                .all(|our| our.package_id() != other.package_id())
+                    })
+                // all of `critical_parent_candidates` have the same `links` as all of `our_candidates`
+                // and we have none in common. Thus `dep` can not be resolved when `critical_parents_dep` has bean resolved.
+            ) {
+                // but that is not how the cache is set up. So we add the less general but much faster,
+                // "our dep will not succeed if critical_parent is activated".
                 let mut con = conflicting_activations.clone();
-                // It is always valid to combine previously inserted conflicts.
-                // A, B are both known bad states each that can never be activated.
-                // A + B is redundant but cant be activated, as if
-                // A + B is active then A is active and we know that is not ok.
-                for (_, other) in &others {
-                    con.extend(other.iter().map(|(&id, re)| (id, re.clone())));
-                }
-                // Now that we have this combined conflict, we can do a substitution:
-                // A dep is equivalent to one of the things it can resolve to.
-                // So we can remove all the things that it resolves to and replace with the parent.
-                for (other_id, _) in &others {
-                    con.remove(other_id);
-                }
+                con.remove(&backtrack_critical_id);
                 con.insert(*critical_parent, backtrack_critical_reason);
 
                 if cfg!(debug_assertions) {

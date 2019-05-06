@@ -1361,10 +1361,13 @@ fn large_conflict_cache() {
         input.push(pkg!(("last", format!("{}.0.0", in_len)) => [dep_req(&plane_name, "=1.0.0")]));
         root_deps.push(dep_req(&plane_name, ">= 1.0.1"));
 
-        for i in 0..=NUM_VERSIONS {
+        for i in 0..NUM_VERSIONS {
             input.push(pkg!((&sys_name, format!("{}.0.0", i))));
             input.push(pkg!((&plane_name, format!("1.0.{}", i))));
         }
+        // and one version that can't be activated for some other reason
+        input.push(pkg!((&sys_name, format!("{}.0.0", NUM_VERSIONS)) => [dep("bad")]));
+        input.push(pkg!((&plane_name, format!("1.0.{}", NUM_VERSIONS)) => [dep("bad")]));
     }
     let reg = registry(input);
     let _ = resolve(pkg_id("root"), root_deps, &reg);
