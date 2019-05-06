@@ -321,6 +321,9 @@ impl ProcessBuilder {
                 }
             }
         }
+        if let Some(cargo_path) = env::var_os("CARGO_PATH") {
+            command.env("PATH", cargo_path);
+        }
         if let Some(ref c) = self.jobserver {
             c.configure(&mut command);
         }
