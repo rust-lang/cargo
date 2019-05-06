@@ -520,6 +520,7 @@ impl Summaries {
                 // interpretation of each line here and older cargo will simply
                 // ignore the new lines.
                 let line = &contents[start..end];
+                start = end + 1;
                 let summary = match IndexSummary::parse(line, source_id) {
                     Ok(summary) => summary,
                     Err(e) => {
@@ -530,7 +531,6 @@ impl Summaries {
                 let version = summary.summary.package_id().version().clone();
                 cache.versions.push((version.clone(), line));
                 ret.versions.insert(version, summary.into());
-                start = end + 1;
             }
             if let Some(index_version) = index_version {
                 cache_bytes = Some(cache.serialize(index_version));

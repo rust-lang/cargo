@@ -1953,3 +1953,31 @@ fn rename_deps_and_features() {
     p.cargo("build --features bar/foo01").run();
     p.cargo("build --features bar/another").run();
 }
+
+#[test]
+fn ignore_invalid_json_lines() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("foo", "0.1.1")
+        .invalid_json(true)
+        .publish();
+    Package::new("foo", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                foo = '0.1.0'
+                foo02 = { version = '0.2.0', package = 'foo' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+}
