@@ -73,7 +73,10 @@ pub fn resolve_with_config_raw(
     registry: &[Summary],
     config: Option<&Config>,
 ) -> CargoResult<Resolve> {
-    struct MyRegistry<'a>(&'a [Summary]);
+    struct MyRegistry<'a> {
+        list: &'a [Summary],
+        used: HashSet<PackageId>,
+    };
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
             &mut self,
@@ -81,8 +84,9 @@ pub fn resolve_with_config_raw(
             f: &mut dyn FnMut(Summary),
             fuzzy: bool,
         ) -> CargoResult<()> {
-            for summary in self.0.iter() {
+            for summary in self.list.iter() {
                 if fuzzy || dep.matches(summary) {
+                    self.used.insert(summary.package_id());
                     f(summary.clone());
                 }
             }
@@ -97,7 +101,28 @@ pub fn resolve_with_config_raw(
             false
         }
     }
-    let mut registry = MyRegistry(registry);
+    impl<'a> Drop for MyRegistry<'a> {
+        fn drop(&mut self) {
+            if std::thread::panicking() && self.list.len() != self.used.len() {
+                // we found a case that causes a panic and did not use all of the input.
+                // lets print the part of the input that was used for minimization.
+                println!(
+                    "{:?}",
+                    PrettyPrintRegistry(
+                        self.list
+                            .iter()
+                            .filter(|s| { self.used.contains(&s.package_id()) })
+                            .cloned()
+                            .collect()
+                    )
+                );
+            }
+        }
+    }
+    let mut registry = MyRegistry {
+        list: registry,
+        used: HashSet::new(),
+    };
     let summary = Summary::new(
         pkg,
         deps,
@@ -348,8 +373,6 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("baz", "1.0.1")),
                 pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build, false)]),
                 pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", Kind::Development, false)]),
-                pkg!(("cat", "1.0.4") => [dep_req_kind("other", "2", Kind::Build, false)]),
-                pkg!(("cat", "1.0.5") => [dep_req_kind("other", "2", Kind::Development, false)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -363,8 +386,6 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"baz\", \"1.0.1\")),\
          pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
          pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
-         pkg!((\"cat\", \"1.0.4\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
-         pkg!((\"cat\", \"1.0.5\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )

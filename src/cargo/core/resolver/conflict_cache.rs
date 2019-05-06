@@ -18,20 +18,17 @@ enum ConflictStoreTrie {
 
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
-    /// which are activated in `cx` and contain `PackageId` specified.
+    /// where all elements return some from `is_active` and contain `PackageId` specified.
     /// If more then one are activated, then it will return
     /// one that will allow for the most jump-back.
-    fn find_conflicting(
+    fn find(
         &self,
-        cx: &Context,
+        is_active: &impl Fn(PackageId) -> Option<usize>,
         must_contain: Option<PackageId>,
     ) -> Option<(&ConflictMap, usize)> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
                 if must_contain.is_none() {
-                    // `is_conflicting` checks that all the elements are active,
-                    // but we have checked each one by the recursion of this function.
-                    debug_assert!(cx.is_conflicting(None, c).is_some());
                     Some((c, 0))
                 } else {
                     // We did not find `must_contain`, so we need to keep looking.
@@ -45,9 +42,9 @@ impl ConflictStoreTrie {
                     .unwrap_or_else(|| m.range(..))
                 {
                     // If the key is active, then we need to check all of the corresponding subtrie.
-                    if let Some(age_this) = cx.is_active(pid) {
+                    if let Some(age_this) = is_active(pid) {
                         if let Some((o, age_o)) =
-                            store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
+                            store.find(is_active, must_contain.filter(|&f| f != pid))
                         {
                             let age = if must_contain == Some(pid) {
                                 // all the results will include `must_contain`
@@ -102,28 +99,6 @@ impl ConflictStoreTrie {
             *self = ConflictStoreTrie::Leaf(con)
         }
     }
-
-    fn contains(&self, mut iter: impl Iterator<Item = PackageId>, con: &ConflictMap) -> bool {
-        match (self, iter.next()) {
-            (ConflictStoreTrie::Leaf(c), None) => {
-                if cfg!(debug_assertions) {
-                    let a: Vec<_> = con.keys().collect();
-                    let b: Vec<_> = c.keys().collect();
-                    assert_eq!(a, b);
-                }
-                true
-            }
-            (ConflictStoreTrie::Leaf(_), Some(_)) => false,
-            (ConflictStoreTrie::Node(_), None) => false,
-            (ConflictStoreTrie::Node(m), Some(n)) => {
-                if let Some(next) = m.get(&n) {
-                    next.contains(iter, con)
-                } else {
-                    false
-                }
-            }
-        }
-    }
 }
 
 pub(super) struct ConflictCache {
@@ -172,6 +147,17 @@ impl ConflictCache {
             dep_from_pid: HashMap::new(),
         }
     }
+    pub fn find(
+        &self,
+        dep: &Dependency,
+        is_active: &impl Fn(PackageId) -> Option<usize>,
+        must_contain: Option<PackageId>,
+    ) -> Option<&ConflictMap> {
+        self.con_from_dep
+            .get(dep)?
+            .find(is_active, must_contain)
+            .map(|(c, _)| c)
+    }
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and contain `PackageId` specified.
     /// If more then one are activated, then it will return
@@ -182,14 +168,11 @@ impl ConflictCache {
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
-        let out = self
-            .con_from_dep
-            .get(dep)?
-            .find_conflicting(cx, must_contain)
-            .map(|(c, _)| c);
+        let out = self.find(dep, &|id| cx.is_active(id), must_contain);
         if cfg!(debug_assertions) {
-            if let Some(f) = must_contain {
-                if let Some(c) = &out {
+            if let Some(c) = &out {
+                assert!(cx.is_conflicting(None, c).is_some());
+                if let Some(f) = must_contain {
                     assert!(c.contains_key(&f));
                 }
             }
@@ -226,17 +209,6 @@ impl ConflictCache {
                 .entry(c.clone())
                 .or_insert_with(HashSet::new)
                 .insert(dep.clone());
-        }
-    }
-
-    /// Check if a conflict was previously added of the form:
-    /// `dep` is known to be unresolvable if
-    /// all the `PackageId` entries are activated.
-    pub fn contains(&self, dep: &Dependency, con: &ConflictMap) -> bool {
-        if let Some(cst) = self.con_from_dep.get(dep) {
-            cst.contains(con.keys().cloned(), con)
-        } else {
-            false
         }
     }
 
