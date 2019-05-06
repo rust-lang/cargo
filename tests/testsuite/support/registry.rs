@@ -7,8 +7,6 @@ use cargo::sources::CRATES_IO_INDEX;
 use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use git2;
-use hex;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -137,6 +135,7 @@ pub struct Package {
     features: HashMap<String, Vec<String>>,
     local: bool,
     alternative: bool,
+    invalid_json: bool,
 }
 
 #[derive(Clone)]
@@ -232,6 +231,7 @@ impl Package {
             features: HashMap::new(),
             local: false,
             alternative: false,
+            invalid_json: false,
         }
     }
 
@@ -342,6 +342,13 @@ impl Package {
         self
     }
 
+    /// Causes the JSON line emitted in the index to be invalid, presumably
+    /// causing Cargo to skip over this version.
+    pub fn invalid_json(&mut self, invalid: bool) -> &mut Package {
+        self.invalid_json = invalid;
+        self
+    }
+
     /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
@@ -384,8 +391,13 @@ impl Package {
             t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
             cksum(&c)
         };
+        let name = if self.invalid_json {
+            serde_json::json!(1)
+        } else {
+            serde_json::json!(self.name)
+        };
         let line = serde_json::json!({
-            "name": self.name,
+            "name": name,
             "vers": self.vers,
             "deps": deps,
             "cksum": cksum,
