@@ -173,7 +173,7 @@ use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary, InternedString};
+use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
