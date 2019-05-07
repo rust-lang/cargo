@@ -951,7 +951,10 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
             ByteSize(self.downloaded_bytes),
             util::elapsed(self.start.elapsed())
         );
-        if self.largest.0 > ByteSize::mb(1).0 {
+        // print the size of largest crate if it was >1mb
+        // however don't print if only a single crate was downloaded
+        // because it is obvious that it will be the largest then
+        if self.largest.0 > ByteSize::mb(1).0 && self.downloads_finished > 1 {
             status.push_str(&format!(
                 " (largest was `{}` at {})",
                 self.largest.1,
