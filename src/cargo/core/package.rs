@@ -22,10 +22,10 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{FeatureMap, SourceMap, Summary};
 use crate::ops;
+use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
 use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
-use crate::util::config::PackageCacheLock;
 
 /// Information about a package that is available somewhere in the file system.
 ///
