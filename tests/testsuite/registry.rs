@@ -1957,9 +1957,7 @@ fn rename_deps_and_features() {
 #[test]
 fn ignore_invalid_json_lines() {
     Package::new("foo", "0.1.0").publish();
-    Package::new("foo", "0.1.1")
-        .invalid_json(true)
-        .publish();
+    Package::new("foo", "0.1.1").invalid_json(true).publish();
     Package::new("foo", "0.2.0").publish();
 
     let p = project()
