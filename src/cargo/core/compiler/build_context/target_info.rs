@@ -75,7 +75,7 @@ impl TargetInfo {
             .arg("___")
             .arg("--print=file-names")
             .args(&rustflags)
-            .env_remove("RUST_LOG");
+            .env_remove("RUSTC_LOG");
 
         let target_triple = requested_target
             .as_ref()
