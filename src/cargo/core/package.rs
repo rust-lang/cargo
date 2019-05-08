@@ -945,9 +945,16 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
         if !self.success {
             return;
         }
+        // pick the correct plural of crate(s)
+        let crate_string = if self.downloads_finished == 1 {
+            "crate"
+        } else {
+            "crates"
+        };
         let mut status = format!(
-            "{} crates ({}) in {}",
+            "{} {} ({}) in {}",
             self.downloads_finished,
+            crate_string,
             ByteSize(self.downloaded_bytes),
             util::elapsed(self.start.elapsed())
         );
