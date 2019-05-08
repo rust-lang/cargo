@@ -313,17 +313,24 @@ pub fn prepare_target<'a, 'cfg>(
     Ok(Job::new(write_fingerprint, Dirty))
 }
 
-/// A compilation unit dependency has a fingerprint that is comprised of:
-/// * its package ID
-/// * its extern crate name
-/// * its public/private status
-/// * its calculated fingerprint for the dependency
+/// Dependency edge information for fingerprints. This is generated for each
+/// unit in `dep_targets` and is stored in a `Fingerprint` below.
 #[derive(Clone)]
 struct DepFingerprint {
+    /// The hash of the package id that this dependency points to
     pkg_id: u64,
+    /// The crate name we're using for this dependency, which if we change we'll
+    /// need to recompile!
     name: String,
+    /// Whether or not this dependency is flagged as a public dependency or not.
     public: bool,
+    /// Whether or not this dependency is an rmeta dependency or a "full"
+    /// dependency. In the case of an rmeta dependency our dependency edge only
+    /// actually requires the rmeta from what we depend on, so when checking
+    /// mtime information all files other than the rmeta can be ignored.
     only_requires_rmeta: bool,
+    /// The dependency's fingerprint we recursively point to, containing all the
+    /// other hash information we'd otherwise need.
     fingerprint: Arc<Fingerprint>,
 }
 
@@ -442,11 +449,14 @@ impl<'de> Deserialize<'de> for DepFingerprint {
             pkg_id,
             name,
             public,
-            only_requires_rmeta: false,
             fingerprint: Arc::new(Fingerprint {
                 memoized_hash: Mutex::new(Some(hash)),
                 ..Fingerprint::new()
             }),
+            // This field is never read since it's only used in
+            // `check_filesystem` which isn't used by fingerprints loaded from
+            // disk.
+            only_requires_rmeta: false,
         })
     }
 }
@@ -878,7 +888,7 @@ impl hash::Hash for Fingerprint {
             name,
             public,
             fingerprint,
-            only_requires_rmeta: _,
+            only_requires_rmeta: _, // static property, no need to hash
         } in deps
         {
             pkg_id.hash(h);
