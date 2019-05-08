@@ -390,7 +390,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     }
 
     fn show_progress(&mut self, total: usize) {
-        let count = total - self.queue.len();
+        let count = total - self.queue.len() - self.active.len();
         let active_names = self
             .active
             .values()
