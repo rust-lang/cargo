@@ -1099,8 +1099,17 @@ fn on_stderr_line(
         return Ok(());
     }
 
-    let compiler_message: Box<serde_json::value::RawValue> = serde_json::from_str(line)
-        .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
+    let compiler_message: Box<serde_json::value::RawValue> = match serde_json::from_str(line) {
+        Ok(msg) => msg,
+
+        // If the compiler produced a line that started with `{` but it wasn't
+        // valid JSON, maybe it wasn't JSON in the first place! Forward it along
+        // to stderr.
+        Err(_) => {
+            state.stderr(line);
+            return Ok(());
+        }
+    };
 
     // In some modes of compilation Cargo switches the compiler to JSON mode
     // but the user didn't request that so we still want to print pretty rustc
