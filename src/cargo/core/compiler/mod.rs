@@ -42,6 +42,7 @@ use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
 use crate::util::{self, machine_message, process, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
+use crate::util::machine_message::Message;
 
 /// Indicates whether an object is for the host architcture or the target architecture.
 ///
@@ -489,7 +490,7 @@ fn link_targets<'a, 'cfg>(
                 test: unit_mode.is_any_test(),
             };
 
-            let msg = machine_message::emit(&machine_message::Artifact {
+            let msg = machine_message::Artifact {
                 package_id,
                 target: &target,
                 profile: art_profile,
@@ -497,7 +498,7 @@ fn link_targets<'a, 'cfg>(
                 filenames: destinations,
                 executable,
                 fresh,
-            });
+            }.to_json_string();
             state.stdout(&msg);
         }
         Ok(())
@@ -808,7 +809,7 @@ fn build_base_args<'a, 'cfg>(
     } else if !unit.target.requires_upstream_objects() {
         // Always produce metdata files for rlib outputs. Metadata may be used
         // in this session for a pipelined compilation, or it may be used in a
-        // future Cargo session as part of a pipelined compile.c
+        // future Cargo session as part of a pipelined compile.
         cmd.arg("--emit=dep-info,metadata,link");
     } else {
         cmd.arg("--emit=dep-info,link");
@@ -1085,7 +1086,7 @@ fn on_stderr_line(
     line: &str,
     package_id: PackageId,
     target: &Target,
-    extract_rendered_errors: bool,
+    extract_rendered_messages: bool,
     look_for_metadata_directive: bool,
 ) -> CargoResult<()> {
     // We primarily want to use this function to process JSON messages from
@@ -1101,17 +1102,17 @@ fn on_stderr_line(
     let compiler_message: Box<serde_json::value::RawValue> = serde_json::from_str(line)
         .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
 
-    // In some modes of compilation Cargo switches the compiler to JSON mode but
-    // the user didn't request that so we still want to print pretty rustc
-    // colorized errors. In those cases (`extract_rendered_errors`) we take a
-    // look at the JSON blob we go, see if it's a relevant diagnostics, and if
-    // so forward just that diagnostic for us to print.
-    if extract_rendered_errors {
+    // In some modes of compilation Cargo switches the compiler to JSON mode
+    // but the user didn't request that so we still want to print pretty rustc
+    // colorized diagnostics. In those cases (`extract_rendered_messages`) we
+    // take a look at the JSON blob we go, see if it's a relevant diagnostics,
+    // and if so forward just that diagnostic for us to print.
+    if extract_rendered_messages {
         #[derive(serde::Deserialize)]
-        struct CompilerError {
+        struct CompilerMessage {
             rendered: String,
         }
-        if let Ok(error) = serde_json::from_str::<CompilerError>(compiler_message.get()) {
+        if let Ok(error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
             state.stderr(&error.rendered);
             return Ok(());
         }
@@ -1143,15 +1144,15 @@ fn on_stderr_line(
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
-    let msg = machine_message::emit(&machine_message::FromCompiler {
+    let msg = machine_message::FromCompiler {
         package_id,
         target,
         message: compiler_message,
-    });
+    }.to_json_string();
 
-    // Switch json lines from rustc/rustdoc that appear on stderr to instead.
-    // We want the stdout of Cargo to always be machine parseable as stderr has
-    // our colorized human-readable messages.
+    // Switch json lines from rustc/rustdoc that appear on stderr to stdout
+    // instead. We want the stdout of Cargo to always be machine parseable as
+    // stderr has our colorized human-readable messages.
     state.stdout(&msg);
     Ok(())
 }
