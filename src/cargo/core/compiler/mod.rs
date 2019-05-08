@@ -39,10 +39,10 @@ use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::Feature;
 use crate::core::{PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::machine_message::Message;
 use crate::util::paths;
 use crate::util::{self, machine_message, process, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
-use crate::util::machine_message::Message;
 
 /// Indicates whether an object is for the host architcture or the target architecture.
 ///
@@ -498,7 +498,8 @@ fn link_targets<'a, 'cfg>(
                 filenames: destinations,
                 executable,
                 fresh,
-            }.to_json_string();
+            }
+            .to_json_string();
             state.stdout(&msg);
         }
         Ok(())
@@ -1016,20 +1017,14 @@ fn build_deps_args<'a, 'cfg>(
         need_unstable_opts: &mut bool,
     ) -> CargoResult<()> {
         let bcx = cx.bcx;
-        for output in cx.outputs(dep)?.iter() {
-            let rmeta = match &output.flavor {
-                FileFlavor::Linkable { rmeta } => rmeta,
-                _ => continue,
-            };
-            let mut v = OsString::new();
-            let name = bcx.extern_crate_name(current, dep)?;
-            v.push(name);
-            v.push("=");
-            if cx.only_requires_rmeta(current, dep) {
-                v.push(&rmeta);
-            } else {
-                v.push(&output.path);
-            }
+
+        let mut value = OsString::new();
+        value.push(bcx.extern_crate_name(current, dep)?);
+        value.push("=");
+
+        let mut pass = |file| {
+            let mut value = value.clone();
+            value.push(file);
 
             if current
                 .pkg
@@ -1045,7 +1040,26 @@ fn build_deps_args<'a, 'cfg>(
                 cmd.arg("--extern");
             }
 
-            cmd.arg(&v);
+            cmd.arg(&value);
+        };
+
+        let outputs = cx.outputs(dep)?;
+        let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
+            FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
+            _ => None,
+        });
+
+        if cx.only_requires_rmeta(current, dep) {
+            let (output, _rmeta) = outputs
+                .find(|(_output, rmeta)| *rmeta)
+                .expect("failed to find rlib dep for pipelined dep");
+            pass(&output.path);
+        } else {
+            for (output, rmeta) in outputs {
+                if !rmeta {
+                    pass(&output.path);
+                }
+            }
         }
         Ok(())
     }
@@ -1146,7 +1160,7 @@ fn on_stderr_line(
                 log::debug!("looks like metadata finished early!");
                 state.rmeta_produced();
             }
-            return Ok(())
+            return Ok(());
         }
     }
 
@@ -1157,7 +1171,8 @@ fn on_stderr_line(
         package_id,
         target,
         message: compiler_message,
-    }.to_json_string();
+    }
+    .to_json_string();
 
     // Switch json lines from rustc/rustdoc that appear on stderr to stdout
     // instead. We want the stdout of Cargo to always be machine parseable as

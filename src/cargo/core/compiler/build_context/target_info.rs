@@ -25,7 +25,7 @@ pub enum FileFlavor {
     /// Not a special file type.
     Normal,
     /// Something you can link against (e.g., a library).
-    Linkable { rmeta: PathBuf },
+    Linkable { rmeta: bool },
     /// Piece of external debug information (e.g., `.dSYM`/`.pdb` file).
     DebugInfo,
 }

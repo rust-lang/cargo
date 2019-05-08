@@ -3101,7 +3101,10 @@ fn compiler_json_error_format() {
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
-        "filenames":["[..].rlib"],
+        "filenames":[
+            "[..].rlib",
+            "[..].rmeta"
+        ],
         "fresh": false
     }
 
@@ -3200,7 +3203,10 @@ fn compiler_json_error_format() {
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
-        "filenames":["[..].rlib"],
+        "filenames":[
+            "[..].rlib",
+            "[..].rmeta"
+        ],
         "fresh": true
     }
 
@@ -4496,74 +4502,6 @@ fn signal_display() {
 
 Caused by:
   process didn't exit successfully: `rustc [..]` (signal: 6, SIGABRT: process abort signal)
-",
-        )
-        .with_status(101)
-        .run();
-}
-
-#[test]
-fn json_parse_fail() {
-    // Ensure when JSON parsing fails, and rustc exits with non-zero exit
-    // code, a useful error message is displayed.
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            [dependencies]
-            pm = { path = "pm" }
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[macro_use]
-            extern crate pm;
-
-            #[derive(Foo)]
-            pub struct S;
-        "#,
-        )
-        .file(
-            "pm/Cargo.toml",
-            r#"
-            [package]
-            name = "pm"
-            version = "0.1.0"
-            [lib]
-            proc-macro = true
-        "#,
-        )
-        .file(
-            "pm/src/lib.rs",
-            r#"
-            extern crate proc_macro;
-            use proc_macro::TokenStream;
-
-            #[proc_macro_derive(Foo)]
-            pub fn derive(_input: TokenStream) -> TokenStream {
-                eprintln!("{{evil proc macro}}");
-                panic!("something went wrong");
-            }
-        "#,
-        )
-        .build();
-
-    foo.cargo("build --message-format=json")
-        .with_stderr(
-            "\
-[COMPILING] pm [..]
-[COMPILING] foo [..]
-[ERROR] Could not compile `foo`.
-
-Caused by:
-  compiler produced invalid json: `{evil proc macro}`
-
-Caused by:
-  failed to parse process output: `rustc [..]
 ",
         )
         .with_status(101)
