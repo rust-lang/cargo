@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use crate::core::compiler::job_queue::JobState;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::machine_message;
+use crate::util::machine_message::{self, Message};
 use crate::util::Cfg;
 use crate::util::{self, internal, paths, profile};
 
@@ -104,13 +104,13 @@ fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: Pac
         .map(|l| l.display().to_string())
         .collect::<Vec<_>>();
 
-    let msg = machine_message::emit(&machine_message::BuildScript {
+    let msg = machine_message::BuildScript {
         package_id,
         linked_libs: &output.library_links,
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
         env: &output.env,
-    });
+    }.to_json_string();
     state.stdout(&msg);
 }
 
