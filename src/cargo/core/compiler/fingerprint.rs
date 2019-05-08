@@ -79,7 +79,7 @@
 //!   quick loading and comparison.
 //! - A `.json` file that contains details about the Fingerprint. This is only
 //!   used to log details about *why* a fingerprint is considered dirty.
-//!   `RUST_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
+//!   `CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
 //!   used to display this log information.
 //! - A "dep-info" file which contains a list of source filenames for the
 //!   target. This is produced by reading the output of `rustc
@@ -936,7 +936,7 @@ impl DepFingerprint {
 impl StaleFile {
     /// Use the `log` crate to log a hopefully helpful message in diagnosing
     /// what file is considered stale and why. This is intended to be used in
-    /// conjunction with `RUST_LOG` to determine why Cargo is recompiling
+    /// conjunction with `CARGO_LOG` to determine why Cargo is recompiling
     /// something. Currently there's no user-facing usage of this other than
     /// that.
     fn log(&self) {

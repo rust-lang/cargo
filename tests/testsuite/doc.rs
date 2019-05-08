@@ -115,7 +115,7 @@ fn doc_deps() {
     assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
     p.cargo("doc")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
         .with_stdout("")
         .run();
 
