@@ -4599,3 +4599,36 @@ fn tricky_pipelining() {
         .env("CARGO_BUILD_PIPELINING", "true")
         .run();
 }
+
+#[test]
+fn pipelining_works() {
+    if !crate::support::is_nightly() {
+        return;
+    }
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .env("CARGO_BUILD_PIPELINING", "true")
+        .with_stdout("")
+        .with_stderr("\
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+")
+        .run();
+}

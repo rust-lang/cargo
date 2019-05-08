@@ -233,7 +233,7 @@ fn rustc<'a, 'cfg>(
     let extract_rendered_errors = if rmeta_produced {
         match cx.bcx.build_config.message_format {
             MessageFormat::Json => {
-                rustc.arg("-Zemit-directives");
+                rustc.arg("-Zemit-artifact-notifications");
                 false
             }
             MessageFormat::Human => {
@@ -241,7 +241,7 @@ fn rustc<'a, 'cfg>(
                     .arg("--error-format=json")
                     .arg("--json-rendered=termcolor")
                     .arg("-Zunstable-options")
-                    .arg("-Zemit-directives");
+                    .arg("-Zemit-artifact-notifications");
                 true
             }
 
@@ -1119,7 +1119,7 @@ fn on_stderr_line(
     }
 
     // In some modes of execution we will execute rustc with `-Z
-    // emit-directives` to look for metadata files being produced. When this
+    // emit-artifact-notifications` to look for metadata files being produced. When this
     // happens we may be able to start subsequent compilations more quickly than
     // waiting for an entire compile to finish, possibly using more parallelism
     // available to complete a compilation session more quickly.
@@ -1128,16 +1128,16 @@ fn on_stderr_line(
     // that a metadata file has been produced.
     if look_for_metadata_directive {
         #[derive(serde::Deserialize)]
-        struct CompilerDirective {
-            directive: String,
+        struct ArtifactNotification {
+            artifact: String,
         }
-        if let Ok(directive) = serde_json::from_str::<CompilerDirective>(compiler_message.get()) {
-            log::trace!("found directive from rustc: `{}`", directive.directive);
-            if directive.directive.starts_with("metadata file written") {
+        if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
+            log::trace!("found directive from rustc: `{}`", artifact.artifact);
+            if artifact.artifact.ends_with(".rmeta") {
                 log::debug!("looks like metadata finished early!");
                 state.rmeta_produced();
-                return Ok(())
             }
+            return Ok(())
         }
     }
 
