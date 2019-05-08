@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::core::compiler::{UnitInterner, FileFlavor};
+use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind};
 use crate::core::profiles::UnitFor;
 use crate::core::Workspace;
@@ -118,9 +118,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
             rm_rf(&output.path, config)?;
             if let Some(ref dst) = output.hardlink {
                 rm_rf(dst, config)?;
-            }
-            if let FileFlavor::Linkable { rmeta } = &output.flavor {
-                rm_rf(rmeta, config)?;
             }
         }
     }

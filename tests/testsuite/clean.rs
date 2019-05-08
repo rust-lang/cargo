@@ -289,6 +289,7 @@ fn clean_verbose() {
             "\
 [REMOVING] [..]
 [REMOVING] [..]
+[REMOVING] [..]
 ",
         )
         .run();
