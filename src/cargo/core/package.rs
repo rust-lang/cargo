@@ -22,10 +22,10 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{FeatureMap, SourceMap, Summary};
 use crate::ops;
+use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
 use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
-use crate::util::config::PackageCacheLock;
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -951,7 +951,10 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
             ByteSize(self.downloaded_bytes),
             util::elapsed(self.start.elapsed())
         );
-        if self.largest.0 > ByteSize::mb(1).0 {
+        // print the size of largest crate if it was >1mb
+        // however don't print if only a single crate was downloaded
+        // because it is obvious that it will be the largest then
+        if self.largest.0 > ByteSize::mb(1).0 && self.downloads_finished > 1 {
             status.push_str(&format!(
                 " (largest was `{}` at {})",
                 self.largest.1,
