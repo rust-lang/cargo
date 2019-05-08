@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet};
 use std::cell::Cell;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::marker;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -152,7 +152,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         job: Job,
     ) -> CargoResult<()> {
         let dependencies = cx.dep_targets(unit);
-        let dependencies = dependencies
+        let mut queue_deps = dependencies
             .iter()
             .filter(|unit| {
                 // Binaries aren't actually needed to *compile* tests, just to run
@@ -171,10 +171,52 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     Artifact::All
                 };
                 (dep, artifact)
-            });
-        self.queue.queue(*unit, job, dependencies);
+            })
+            .collect::<Vec<_>>();
+
+        // This is somewhat tricky, but we may need to synthesize some
+        // dependencies for this target if it requires full upstream
+        // compilations to have completed. If we're in pipelining mode then some
+        // dependency edges may be `Metadata` due to the above clause (as
+        // opposed to everything being `All`). For example consider:
+        //
+        //    a (binary)
+        //    └ b (lib)
+        //        └ c (lib)
+        //
+        // Here the dependency edge from B to C will be `Metadata`, and the
+        // dependency edge from A to B will be `All`. For A to be compiled,
+        // however, it currently actually needs the full rlib of C. This means
+        // that we need to synthesize a dependency edge for the dependency graph
+        // from A to C. That's done here.
+        //
+        // This will walk all dependencies of the current target, and if any of
+        // *their* dependencies are `Metadata` then we depend on the `All` of
+        // the target as well. This should ensure that edges changed to
+        // `Metadata` propagate upwards `All` dependencies to anything that
+        // transitively contains the `Metadata` edge.
+        if unit.target.requires_upstream_objects() {
+            for dep in dependencies.iter() {
+                depend_on_deps_of_deps(cx, &mut queue_deps, dep);
+            }
+
+            fn depend_on_deps_of_deps<'a>(
+                cx: &Context<'a, '_>,
+                deps: &mut Vec<(Unit<'a>, Artifact)>,
+                unit: &Unit<'a>,
+            ) {
+                for dep in cx.dep_targets(unit) {
+                    if cx.only_requires_rmeta(unit, &dep) {
+                        deps.push((dep, Artifact::All));
+                        depend_on_deps_of_deps(cx, deps, &dep);
+                    }
+                }
+            }
+        }
+
+        self.queue.queue(*unit, job, queue_deps);
         *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
-        Ok(())
+        return Ok(());
     }
 
     /// Executes all jobs necessary to build the dependency graph.
@@ -430,7 +472,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         cx: &Context<'a, '_>,
         scope: &Scope<'a>,
     ) -> CargoResult<()> {
-
         let id = self.next_id;
         self.next_id = id.checked_add(1).unwrap();
 
@@ -464,7 +505,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // we need to make sure that the metadata is flagged as produced so
             // send a synthetic message here.
             if state.rmeta_required.get() && res.is_ok() {
-                my_tx.send(Message::Finish(id, Artifact::Metadata, Ok(()))).unwrap();
+                my_tx
+                    .send(Message::Finish(id, Artifact::Metadata, Ok(())))
+                    .unwrap();
             }
 
             my_tx.send(Message::Finish(id, Artifact::All, res)).unwrap();
@@ -513,7 +556,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
-    fn finish(&mut self, unit: &Unit<'a>, artifact: Artifact, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+    fn finish(
+        &mut self,
+        unit: &Unit<'a>,
+        artifact: Artifact,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
         }
