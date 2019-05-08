@@ -4632,3 +4632,61 @@ fn pipelining_works() {
 ")
         .run();
 }
+
+#[test]
+fn forward_rustc_output() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = '2018'
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "bar::foo!();")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                extern crate proc_macro;
+                use proc_macro::*;
+
+                #[proc_macro]
+                pub fn foo(input: TokenStream) -> TokenStream {
+                    println!("a");
+                    println!("b");
+                    println!("{{}}");
+                    eprintln!("c");
+                    eprintln!("d");
+                    eprintln!("{{a"); // "malformed json"
+                    input
+                }
+            "#,
+        )
+        .build();
+
+    foo.cargo("build")
+        .with_stdout("a\nb\n{}")
+        .with_stderr("\
+[COMPILING] [..]
+[COMPILING] [..]
+c
+d
+{a
+[FINISHED] [..]
+")
+        .run();
+}
