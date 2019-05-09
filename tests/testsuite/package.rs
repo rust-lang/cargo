@@ -1154,3 +1154,23 @@ fn package_no_default_features() {
         .with_status(101)
         .run();
 }
+
+#[test]
+fn include_cargo_toml_implicit() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            include = ["src/lib.rs"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout("Cargo.toml\nsrc/lib.rs\n")
+        .run();
+}
