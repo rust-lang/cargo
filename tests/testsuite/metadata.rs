@@ -1208,8 +1208,6 @@ fn package_edition_2018() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-
             [package]
             name = "foo"
             version = "0.1.0"
@@ -1219,7 +1217,6 @@ fn package_edition_2018() {
         )
         .build();
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
         {
@@ -1291,8 +1288,6 @@ fn target_edition_2018() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-
             [package]
             name = "foo"
             version = "0.1.0"
@@ -1305,7 +1300,6 @@ fn target_edition_2018() {
         )
         .build();
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
         {
@@ -1389,8 +1383,6 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rename-dependency"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1405,7 +1397,6 @@ fn rename_dependency() {
         .build();
 
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
 {

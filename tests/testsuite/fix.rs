@@ -930,9 +930,7 @@ fn fix_idioms() {
 fn idioms_2015_ok() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("fix --edition-idioms --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("fix --edition-idioms --allow-no-vcs").run();
 }
 
 #[test]
