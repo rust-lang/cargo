@@ -122,7 +122,7 @@ fn lots_of_names() {
         .file("foo/src/lib.rs", "pub fn foo4() {}")
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().run();
+    p.cargo("build -v").run();
 }
 
 #[test]
