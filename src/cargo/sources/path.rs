@@ -199,6 +199,14 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut filter = |path: &Path| -> CargoResult<bool> {
             let relative_path = path.strip_prefix(root)?;
+
+            let rel = relative_path.as_os_str();
+            if rel == "Cargo.lock" {
+                return Ok(pkg.include_lockfile());
+            } else if rel == "Cargo.toml" {
+                return Ok(true);
+            }
+
             let glob_should_package = glob_should_package(relative_path);
             let ignore_should_package = ignore_should_package(relative_path)?;
 
@@ -240,13 +248,8 @@ impl<'cfg> PathSource<'cfg> {
                 }
             }
 
-            let should_include = match path.file_name().and_then(|s| s.to_str()) {
-                Some("Cargo.lock") => pkg.include_lockfile(),
-                // Update to `ignore_should_package` for Stage 2.
-                _ => glob_should_package,
-            };
-
-            Ok(should_include)
+            // Update to `ignore_should_package` for Stage 2.
+            Ok(glob_should_package)
         };
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
