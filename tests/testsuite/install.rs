@@ -780,8 +780,6 @@ fn installs_from_cwd_with_2018_warnings() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-
             [package]
             name = "foo"
             version = "0.1.0"
@@ -793,7 +791,6 @@ fn installs_from_cwd_with_2018_warnings() {
         .build();
 
     p.cargo("install")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "error: Using `cargo install` to install the binaries for the \
