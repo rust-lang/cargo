@@ -795,9 +795,7 @@ fn generated_manifest() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("package --no-verify")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --no-verify").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let rewritten_toml = format!(
@@ -949,11 +947,6 @@ fn test_edition() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
-        // --edition is still in flux and we're not passing -Zunstable-options
-        // from Cargo so it will probably error. Only partially match the output
-        // until stuff stabilizes
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1086,9 +1079,7 @@ fn package_with_select_features() {
         )
         .build();
 
-    p.cargo("package --features required")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --features required").run();
 }
 
 #[test]
@@ -1117,9 +1108,7 @@ fn package_with_all_features() {
         )
         .build();
 
-    p.cargo("package --all-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --all-features").run();
 }
 
 #[test]
@@ -1149,7 +1138,6 @@ fn package_no_default_features() {
         .build();
 
     p.cargo("package --no-default-features")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
         .run();
