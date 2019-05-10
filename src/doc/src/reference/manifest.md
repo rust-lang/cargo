@@ -145,7 +145,8 @@ include = ["src/**/*", "Cargo.toml"]
 
 The options are mutually exclusive: setting `include` will override an
 `exclude`. Note that `include` must be an exhaustive list of files as otherwise
-necessary source files may not be included.
+necessary source files may not be included. The package's `Cargo.toml` is
+automatically included.
 
 [globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
