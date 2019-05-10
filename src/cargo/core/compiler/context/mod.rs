@@ -42,6 +42,17 @@ pub struct Context<'a, 'cfg: 'a> {
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
     package_cache: HashMap<PackageId, &'a Package>,
+
+    /// A flag indicating whether pipelining is enabled for this compilation
+    /// session. Pipelining largely only affects the edges of the dependency
+    /// graph that we generate at the end, and otherwise it's pretty
+    /// straightforward.
+    pipelining: bool,
+
+    /// A set of units which are compiling rlibs and are expected to produce
+    /// metadata files in addition to the rlib itself. This is only filled in
+    /// when `pipelining` above is enabled.
+    rmeta_required: HashSet<Unit<'a>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -60,6 +71,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 .chain_err(|| "failed to create jobserver")?,
         };
 
+        let pipelining = bcx
+            .config
+            .get_bool("build.pipelining")?
+            .map(|t| t.val)
+            .unwrap_or(false);
+
         Ok(Self {
             bcx,
             compilation: Compilation::new(bcx)?,
@@ -76,6 +93,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             unit_dependencies: HashMap::new(),
             files: None,
             package_cache: HashMap::new(),
+            rmeta_required: HashSet::new(),
+            pipelining,
         })
     }
 
@@ -261,12 +280,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.primary_packages
             .extend(units.iter().map(|u| u.pkg.package_id()));
 
-        build_unit_dependencies(
-            units,
-            self.bcx,
-            &mut self.unit_dependencies,
-            &mut self.package_cache,
-        )?;
+        build_unit_dependencies(self, units)?;
         let files = CompilationFiles::new(
             units,
             host_layout,
@@ -452,6 +466,27 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         Ok(())
+    }
+
+    /// Returns whether when `parent` depends on `dep` if it only requires the
+    /// metadata file from `dep`.
+    pub fn only_requires_rmeta(&self, parent: &Unit<'a>, dep: &Unit<'a>) -> bool {
+        // this is only enabled when pipelining is enabled
+        self.pipelining
+            // We're only a candidate for requiring an `rmeta` file if we
+            // ourselves are building an rlib,
+            && !parent.target.requires_upstream_objects()
+            && parent.mode == CompileMode::Build
+            // Our dependency must also be built as an rlib, otherwise the
+            // object code must be useful in some fashion
+            && !dep.target.requires_upstream_objects()
+            && dep.mode == CompileMode::Build
+    }
+
+    /// Returns whether when `unit` is built whether it should emit metadata as
+    /// well because some compilations rely on that.
+    pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
+        self.rmeta_required.contains(unit)
     }
 }
 

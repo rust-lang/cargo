@@ -27,7 +27,7 @@ fn profile_overrides() {
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C metadata=[..] \
@@ -63,7 +63,7 @@ fn opt_level_override_0() {
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -96,7 +96,7 @@ fn debug_override_1() {
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C debuginfo=1 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -132,7 +132,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
             "\
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C opt-level={level} \
         -C debuginfo=2 \
         -C debug-assertions=on \
@@ -206,7 +206,7 @@ fn top_level_overrides_deps() {
 [COMPILING] foo v0.0.0 ([CWD]/foo)
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs --color never \
         --crate-type dylib --crate-type rlib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C prefer-dynamic \
         -C opt-level=1 \
         -C debuginfo=2 \
@@ -215,7 +215,7 @@ fn top_level_overrides_deps() {
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
