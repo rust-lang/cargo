@@ -151,7 +151,7 @@ case $state in
 
             init)
                 _arguments \
-                    '--bin[use binary template]' \
+                    '--lib[use library template]' \
                     '--vcs:initialize a new repo with a given VCS:(git hg none)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--name=[set the resulting package name]' \
@@ -213,7 +213,7 @@ case $state in
 
             new)
                 _arguments \
-                    '--bin[use binary template]' \
+                    '--lib[use library template]' \
                     '--vcs:initialize a new repo with a given VCS:(git hg none)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--name=[set the resulting package name]' \
