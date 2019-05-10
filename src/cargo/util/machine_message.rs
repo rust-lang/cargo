@@ -8,13 +8,13 @@ use crate::core::{PackageId, Target};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
-}
 
-pub fn emit<T: Message>(t: &T) {
-    let json = serde_json::to_string(t).unwrap();
-    assert!(json.starts_with("{\""));
-    let reason = json!(t.reason());
-    println!("{{\"reason\":{},{}", reason, &json[1..]);
+    fn to_json_string(&self) -> String {
+        let json = serde_json::to_string(self).unwrap();
+        assert!(json.starts_with("{\""));
+        let reason = json!(self.reason());
+        format!("{{\"reason\":{},{}", reason, &json[1..])
+    }
 }
 
 #[derive(Serialize)]

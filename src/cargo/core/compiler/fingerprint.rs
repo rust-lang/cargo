@@ -187,6 +187,7 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::hash::{self, Hasher};
@@ -312,16 +313,24 @@ pub fn prepare_target<'a, 'cfg>(
     Ok(Job::new(write_fingerprint, Dirty))
 }
 
-/// A compilation unit dependency has a fingerprint that is comprised of:
-/// * its package ID
-/// * its extern crate name
-/// * its public/private status
-/// * its calculated fingerprint for the dependency
+/// Dependency edge information for fingerprints. This is generated for each
+/// unit in `dep_targets` and is stored in a `Fingerprint` below.
 #[derive(Clone)]
 struct DepFingerprint {
+    /// The hash of the package id that this dependency points to
     pkg_id: u64,
+    /// The crate name we're using for this dependency, which if we change we'll
+    /// need to recompile!
     name: String,
+    /// Whether or not this dependency is flagged as a public dependency or not.
     public: bool,
+    /// Whether or not this dependency is an rmeta dependency or a "full"
+    /// dependency. In the case of an rmeta dependency our dependency edge only
+    /// actually requires the rmeta from what we depend on, so when checking
+    /// mtime information all files other than the rmeta can be ignored.
+    only_requires_rmeta: bool,
+    /// The dependency's fingerprint we recursively point to, containing all the
+    /// other hash information we'd otherwise need.
     fingerprint: Arc<Fingerprint>,
 }
 
@@ -395,17 +404,15 @@ enum FsStatus {
     /// unit needs to subsequently be recompiled.
     Stale,
 
-    /// This unit is up-to-date, it does not need to be recompiled. If there are
-    /// any outputs then the `FileTime` listed here is the minimum of all their
-    /// mtimes. This is then later used to see if a unit is newer than one of
-    /// its dependants, causing the dependant to be recompiled.
-    UpToDate(Option<FileTime>),
+    /// This unit is up-to-date. All outputs and their corresponding mtime are
+    /// listed in the payload here for other dependencies to compare against.
+    UpToDate { mtimes: HashMap<PathBuf, FileTime> },
 }
 
 impl FsStatus {
     fn up_to_date(&self) -> bool {
         match self {
-            FsStatus::UpToDate(_) => true,
+            FsStatus::UpToDate { .. } => true,
             FsStatus::Stale => false,
         }
     }
@@ -446,6 +453,10 @@ impl<'de> Deserialize<'de> for DepFingerprint {
                 memoized_hash: Mutex::new(Some(hash)),
                 ..Fingerprint::new()
             }),
+            // This field is never read since it's only used in
+            // `check_filesystem` which isn't used by fingerprints loaded from
+            // disk.
+            only_requires_rmeta: false,
         })
     }
 }
@@ -753,51 +764,71 @@ impl Fingerprint {
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
+        let mut mtimes = HashMap::new();
+
         // Get the `mtime` of all outputs. Optionally update their mtime
         // afterwards based on the `mtime_on_use` flag. Afterwards we want the
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
-        let status = self
-            .outputs
-            .iter()
-            .map(|f| {
-                let mtime = paths::mtime(f).ok();
-                if mtime_on_use {
-                    let t = FileTime::from_system_time(SystemTime::now());
-                    drop(filetime::set_file_times(f, t, t));
-                }
-                mtime
-            })
-            .min();
+        for output in self.outputs.iter() {
+            let mtime = match paths::mtime(output) {
+                Ok(mtime) => mtime,
 
-        let mtime = match status {
+                // This path failed to report its `mtime`. It probably doesn't
+                // exists, so leave ourselves as stale and bail out.
+                Err(e) => {
+                    log::debug!("failed to get mtime of {:?}: {}", output, e);
+                    return Ok(());
+                }
+            };
+            if mtime_on_use {
+                let t = FileTime::from_system_time(SystemTime::now());
+                filetime::set_file_times(output, t, t)?;
+            }
+            assert!(mtimes.insert(output.clone(), mtime).is_none());
+        }
+
+        let max_mtime = match mtimes.values().max() {
+            Some(mtime) => mtime,
+
             // We had no output files. This means we're an overridden build
             // script and we're just always up to date because we aren't
             // watching the filesystem.
             None => {
-                self.fs_status = FsStatus::UpToDate(None);
+                self.fs_status = FsStatus::UpToDate { mtimes };
                 return Ok(());
             }
-
-            // At least one path failed to report its `mtime`. It probably
-            // doesn't exists, so leave ourselves as stale and bail out.
-            Some(None) => return Ok(()),
-
-            // All files successfully reported an `mtime`, and we've got the
-            // minimum one, so let's keep going with that.
-            Some(Some(mtime)) => mtime,
         };
 
         for dep in self.deps.iter() {
-            let dep_mtime = match dep.fingerprint.fs_status {
+            let dep_mtimes = match &dep.fingerprint.fs_status {
+                FsStatus::UpToDate { mtimes } => mtimes,
                 // If our dependency is stale, so are we, so bail out.
                 FsStatus::Stale => return Ok(()),
+            };
 
-                // If our dependencies is up to date and has no filesystem
-                // interactions, then we can move on to the next dependency.
-                FsStatus::UpToDate(None) => continue,
-
-                FsStatus::UpToDate(Some(mtime)) => mtime,
+            // If our dependency edge only requires the rmeta fiel to be present
+            // then we only need to look at that one output file, otherwise we
+            // need to consider all output files to see if we're out of date.
+            let dep_mtime = if dep.only_requires_rmeta {
+                dep_mtimes
+                    .iter()
+                    .filter_map(|(path, mtime)| {
+                        if path.extension().and_then(|s| s.to_str()) == Some("rmeta") {
+                            Some(mtime)
+                        } else {
+                            None
+                        }
+                    })
+                    .next()
+                    .expect("failed to find rmeta")
+            } else {
+                match dep_mtimes.values().max() {
+                    Some(mtime) => mtime,
+                    // If our dependencies is up to date and has no filesystem
+                    // interactions, then we can move on to the next dependency.
+                    None => continue,
+                }
             };
 
             // If the dependency is newer than our own output then it was
@@ -807,7 +838,8 @@ impl Fingerprint {
             // Note that this comparison should probably be `>=`, not `>`, but
             // for a discussion of why it's `>` see the discussion about #5918
             // below in `find_stale`.
-            if dep_mtime > mtime {
+            if dep_mtime > max_mtime {
+                log::info!("dependency on `{}` is newer than we are", dep.name);
                 return Ok(());
             }
         }
@@ -824,7 +856,7 @@ impl Fingerprint {
         }
 
         // Everything was up to date! Record such.
-        self.fs_status = FsStatus::UpToDate(Some(mtime));
+        self.fs_status = FsStatus::UpToDate { mtimes };
 
         Ok(())
     }
@@ -856,6 +888,7 @@ impl hash::Hash for Fingerprint {
             name,
             public,
             fingerprint,
+            only_requires_rmeta: _, // static property, no need to hash
         } in deps
         {
             pkg_id.hash(h);
@@ -929,6 +962,7 @@ impl DepFingerprint {
             name,
             public,
             fingerprint,
+            only_requires_rmeta: cx.only_requires_rmeta(parent, dep),
         })
     }
 }

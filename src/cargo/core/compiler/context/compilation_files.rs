@@ -308,7 +308,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     path,
                     hardlink: None,
                     export_path: None,
-                    flavor: FileFlavor::Linkable,
+                    flavor: FileFlavor::Linkable { rmeta: false },
                 });
             } else {
                 let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
@@ -372,11 +372,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                             add(
                                 kind.crate_type(),
                                 if kind.linkable() {
-                                    FileFlavor::Linkable
+                                    FileFlavor::Linkable { rmeta: false }
                                 } else {
                                     FileFlavor::Normal
                                 },
                             )?;
+                        }
+                        let path = out_dir.join(format!("lib{}.rmeta", file_stem));
+                        if !unit.target.requires_upstream_objects() {
+                            ret.push(OutputFile {
+                                path,
+                                hardlink: None,
+                                export_path: None,
+                                flavor: FileFlavor::Linkable { rmeta: true },
+                            });
                         }
                     }
                 }
