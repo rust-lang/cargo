@@ -1152,7 +1152,13 @@ fn include_cargo_toml_implicit() {
         .run();
 }
 
-fn include_exclude_test(include: &str, exclude: &str, files: &[&str], expected: &str) {
+fn include_exclude_test(
+    include: &str,
+    exclude: &str,
+    files: &[&str],
+    expected: &str,
+    has_warnings: bool,
+) {
     let mut pb = project().file(
         "Cargo.toml",
         &format!(
@@ -1177,10 +1183,13 @@ fn include_exclude_test(include: &str, exclude: &str, files: &[&str], expected: 
     }
     let p = pb.build();
 
-    p.cargo("package --list")
-        .with_stdout(expected)
-        // .with_stderr("") Add this back when warnings are removed.
-        .run();
+    let mut e = p.cargo("package --list");
+    if has_warnings {
+        e.with_stderr_contains("[..]");
+    } else {
+        e.with_stderr("");
+    }
+    e.with_stdout(expected).run();
     p.root().rm_rf();
 }
 
@@ -1201,6 +1210,7 @@ fn package_include_ignore_only() {
          src/abc2.rs\n\
          src/lib.rs\n\
          ",
+        false,
     )
 }
 
@@ -1216,6 +1226,7 @@ fn gitignore_patterns() {
          foo\n\
          x/foo/y\n\
          ",
+        true,
     );
 
     include_exclude_test(
@@ -1225,6 +1236,7 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          foo\n\
          ",
+        false,
     );
 
     include_exclude_test(
@@ -1237,6 +1249,7 @@ fn gitignore_patterns() {
          foo\n\
          src/lib.rs\n\
          ",
+        true,
     );
 
     include_exclude_test(
@@ -1259,6 +1272,7 @@ fn gitignore_patterns() {
          other\n\
          src/lib.rs\n\
          ",
+        false,
     );
 
     include_exclude_test(
@@ -1268,6 +1282,7 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          a/foo/bar\n\
          ",
+        false,
     );
 
     include_exclude_test(
@@ -1277,6 +1292,7 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          foo/x/y/z\n\
          ",
+        false,
     );
 
     include_exclude_test(
@@ -1288,5 +1304,54 @@ fn gitignore_patterns() {
          a/x/b\n\
          a/x/y/b\n\
          ",
+        false,
+    );
+}
+
+#[test]
+fn gitignore_negate() {
+    include_exclude_test(
+        r#"["Cargo.toml", "*.rs", "!foo.rs", "\\!important"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo.rs", "!important"],
+        "!important\n\
+         Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    // NOTE: This is unusual compared to git. Git treats `src/` as a
+    // short-circuit which means rules like `!src/foo.rs` would never run.
+    // However, because Cargo only works by iterating over *files*, it doesn't
+    // short-circuit.
+    include_exclude_test(
+        r#"["Cargo.toml", "src/", "!src/foo.rs"]"#, // include
+        "[]",
+        &["src/lib.rs", "src/foo.rs"],
+        "Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "src/**.rs", "!foo.rs"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo.rs", "src/foo.rs", "src/bar/foo.rs"],
+        "Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        "[]",
+        r#"["*.rs", "!foo.rs", "\\!important"]"#, // exclude
+        &["src/lib.rs", "foo.rs", "!important"],
+        "Cargo.toml\n\
+         foo.rs\n\
+         ",
+        false,
     );
 }
