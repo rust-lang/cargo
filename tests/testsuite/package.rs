@@ -445,6 +445,7 @@ fn include() {
             "\
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
