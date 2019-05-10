@@ -283,6 +283,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // and then immediately return.
         let mut error = None;
         let total = self.queue.len();
+        let mut finished = 0;
         loop {
             // Dequeue as much work as we can, learning about everything
             // possible that can run. Note that this is also the point where we
@@ -320,7 +321,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // unnecessarily.
             let events: Vec<_> = self.rx.try_iter().collect();
             let events = if events.is_empty() {
-                self.show_progress(total);
+                self.show_progress(finished, total);
                 vec![self.rx.recv().unwrap()]
             } else {
                 events
@@ -355,6 +356,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                             // from the `active` map ...
                             Artifact::All => {
                                 info!("end: {:?}", id);
+                                finished += 1;
                                 self.active.remove(&id).unwrap()
                             }
                             // ... otherwise if it hasn't finished we leave it
@@ -431,8 +433,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
     }
 
-    fn show_progress(&mut self, total: usize) {
-        let count = total - self.queue.len() - self.active.len();
+    fn show_progress(&mut self, count: usize, total: usize) {
         let active_names = self
             .active
             .values()
