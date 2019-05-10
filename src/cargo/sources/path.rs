@@ -138,8 +138,16 @@ impl<'cfg> PathSource<'cfg> {
             .map(|p| glob_parse(p))
             .collect::<Result<Vec<_>, _>>();
 
+        // Don't warn if using a negate pattern, since those weren't ever
+        // previously supported.
+        let has_negate = pkg
+            .manifest()
+            .exclude()
+            .iter()
+            .chain(pkg.manifest().include().iter())
+            .any(|p| p.starts_with("!"));
         // Don't warn about glob mismatch if it doesn't parse.
-        let glob_is_valid = glob_exclude.is_ok() && glob_include.is_ok();
+        let glob_is_valid = glob_exclude.is_ok() && glob_include.is_ok() && !has_negate;
         let glob_exclude = glob_exclude.unwrap_or_else(|_| Vec::new());
         let glob_include = glob_include.unwrap_or_else(|_| Vec::new());
 
@@ -180,10 +188,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(pattern) => Err(failure::format_err!(
-                        "exclude rules cannot start with `!`: {}",
-                        pattern.original()
-                    )),
+                    Match::Whitelist(_) => Ok(true),
                 }
             } else {
                 match ignore_include
@@ -191,10 +196,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(pattern) => Err(failure::format_err!(
-                        "include rules cannot start with `!`: {}",
-                        pattern.original()
-                    )),
+                    Match::Whitelist(_) => Ok(false),
                 }
             }
         };

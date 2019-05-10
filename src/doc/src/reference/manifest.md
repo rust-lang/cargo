@@ -148,7 +148,9 @@ The patterns should be [gitignore]-style patterns. Briefly:
   `foo`.
 - `/**/` matches zero or more directories. For example, `a/**/b` matches
   `a/b`, `a/x/b`, `a/x/y/b`, and so on.
-- `!` prefixed patterns are not supported.
+- `!` prefix negates a pattern. For example, a pattern of `src/**.rs` and
+  `!foo.rs` would match all files with the `.rs` extension inside the `src`
+  directory, except for any file named `foo.rs`.
 
 If git is being used for a package, the `exclude` field will be seeded with
 the `gitignore` settings from the repository.
