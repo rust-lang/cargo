@@ -73,11 +73,11 @@ examples, etc.
 
 #### The `build` field (optional)
 
-This field specifies a file in the package root which is a [build script][1] for
-building native code. More information can be found in the build script
-[guide][1].
+This field specifies a file in the package root which is a [build script] for
+building native code. More information can be found in the [build script
+guide][build script].
 
-[1]: reference/build-scripts.html
+[build script]: reference/build-scripts.html
 
 ```toml
 [package]
@@ -121,15 +121,39 @@ may be replaced by docs.rs links.
 
 #### The `exclude` and `include` fields (optional)
 
-You can explicitly specify to Cargo that a set of [globs][globs] should be
-ignored or included for the purposes of packaging and rebuilding a package. The
-globs specified in the `exclude` field identify a set of files that are not
-included when a package is published as well as ignored for the purposes of
-detecting when to rebuild a package, and the globs in `include` specify files
-that are explicitly included.
+You can explicitly specify that a set of file patterns should be ignored or
+included for the purposes of packaging. The patterns specified in the
+`exclude` field identify a set of files that are not included, and the
+patterns in `include` specify files that are explicitly included.
 
-If a VCS is being used for a package, the `exclude` field will be seeded with
-the VCS’ ignore settings (`.gitignore` for git for example).
+The patterns should be [gitignore]-style patterns. Briefly:
+
+- `foo` matches any file or directory with the name `foo` anywhere in the
+  package. This is equivalent to the pattern `**/foo`.
+- `/foo` matches any file or directory with the name `foo` only in the root of
+  the package.
+- `foo/` matches any *directory* with the name `foo` anywhere in the package.
+- Common glob patterns like `*`, `?`, and `[]` are supported:
+  - `*` matches zero or more characters except `/`.  For example, `*.html`
+    matches any file or directory with the `.html` extension anywhere in the
+    package.
+  - `?` matches any character except `/`. For example, `foo?` matches `food`,
+    but not `foo`.
+  - `[]` allows for matching a range of characters. For example, `[ab]`
+    matches either `a` or `b`. `[a-z]` matches letters a through z.
+- `**/` prefix matches in any directory. For example, `**/foo/bar` matches the
+  file or directory `bar` anywhere that is directly under directory `foo`.
+- `/**` suffix matches everything inside. For example, `foo/**` matches all
+  files inside directory `foo`, including all files in subdirectories below
+  `foo`.
+- `/**/` matches zero or more directories. For example, `a/**/b` matches
+  `a/b`, `a/x/b`, `a/x/y/b`, and so on.
+- `!` prefix negates a pattern. For example, a pattern of `src/**.rs` and
+  `!foo.rs` would match all files with the `.rs` extension inside the `src`
+  directory, except for any file named `foo.rs`.
+
+If git is being used for a package, the `exclude` field will be seeded with
+the `gitignore` settings from the repository.
 
 ```toml
 [package]
@@ -148,21 +172,14 @@ The options are mutually exclusive: setting `include` will override an
 necessary source files may not be included. The package's `Cargo.toml` is
 automatically included.
 
-[globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
+The include/exclude list is also used for change tracking in some situations.
+For targets built with `rustdoc`, it is used to determine the list of files to
+track to determine if the target should be rebuilt. If the package has a
+[build script] that does not emit any `rerun-if-*` directives, then the
+include/exclude list is used for tracking if the build script should be re-run
+if any of those files change.
 
-#### Migrating to `gitignore`-like pattern matching
-
-The current interpretation of these configs is based on UNIX Globs, as
-implemented in the [`glob` crate](https://crates.io/crates/glob). We want
-Cargo's `include` and `exclude` configs to work as similar to `gitignore` as
-possible. [The `gitignore` specification](https://git-scm.com/docs/gitignore) is
-also based on Globs, but has a bunch of additional features that enable easier
-pattern writing and more control. Therefore, we are migrating the interpretation
-for the rules of these configs to use the [`ignore`
-crate](https://crates.io/crates/ignore), and treat them each rule as a single
-line in a `gitignore` file. See [the tracking
-issue](https://github.com/rust-lang/cargo/issues/4268) for more details on the
-migration.
+[gitignore]: https://git-scm.com/docs/gitignore
 
 #### The `publish`  field (optional)
 
@@ -614,6 +631,8 @@ and also be a member crate of another workspace (contain `package.workspace`).
 
 Most of the time workspaces will not need to be dealt with as `cargo new` and
 `cargo init` will handle workspace configuration automatically.
+
+[globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
 #### Virtual Manifest
 

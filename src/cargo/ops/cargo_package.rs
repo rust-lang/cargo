@@ -56,6 +56,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
 
     verify_dependencies(pkg)?;
 
+    if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
+        config.shell().warn(
+            "both package.include and package.exclude are specified; \
+             the exclude list will be ignored",
+        )?;
+    }
     // `list_files` outputs warnings as a side effect, so only do it once.
     let src_files = src.list_files(pkg)?;
 

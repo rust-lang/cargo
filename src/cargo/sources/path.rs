@@ -101,10 +101,10 @@ impl<'cfg> PathSource<'cfg> {
     /// stages are:
     ///
     /// 1) Only warn users about the future change iff their matching rules are
-    ///    affected. (CURRENT STAGE)
+    ///    affected.
     ///
     /// 2) Switch to the new strategy and update documents. Still keep warning
-    ///    affected users.
+    ///    affected users. (CURRENT STAGE)
     ///
     /// 3) Drop the old strategy and no more warnings.
     ///
@@ -122,7 +122,6 @@ impl<'cfg> PathSource<'cfg> {
                 p
             };
             Pattern::new(pattern)
-                .map_err(|e| failure::format_err!("could not parse glob pattern `{}`: {}", p, e))
         };
 
         let glob_exclude = pkg
@@ -130,14 +129,27 @@ impl<'cfg> PathSource<'cfg> {
             .exclude()
             .iter()
             .map(|p| glob_parse(p))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>();
 
         let glob_include = pkg
             .manifest()
             .include()
             .iter()
             .map(|p| glob_parse(p))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>();
+
+        // Don't warn if using a negate pattern, since those weren't ever
+        // previously supported.
+        let has_negate = pkg
+            .manifest()
+            .exclude()
+            .iter()
+            .chain(pkg.manifest().include().iter())
+            .any(|p| p.starts_with("!"));
+        // Don't warn about glob mismatch if it doesn't parse.
+        let glob_is_valid = glob_exclude.is_ok() && glob_include.is_ok() && !has_negate;
+        let glob_exclude = glob_exclude.unwrap_or_else(|_| Vec::new());
+        let glob_include = glob_include.unwrap_or_else(|_| Vec::new());
 
         let glob_should_package = |relative_path: &Path| -> bool {
             fn glob_match(patterns: &[Pattern], relative_path: &Path) -> bool {
@@ -176,10 +188,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(pattern) => Err(failure::format_err!(
-                        "exclude rules cannot start with `!`: {}",
-                        pattern.original()
-                    )),
+                    Match::Whitelist(_) => Ok(true),
                 }
             } else {
                 match ignore_include
@@ -187,10 +196,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(pattern) => Err(failure::format_err!(
-                        "include rules cannot start with `!`: {}",
-                        pattern.original()
-                    )),
+                    Match::Whitelist(_) => Ok(false),
                 }
             }
         };
@@ -210,20 +216,20 @@ impl<'cfg> PathSource<'cfg> {
             let glob_should_package = glob_should_package(relative_path);
             let ignore_should_package = ignore_should_package(relative_path)?;
 
-            if glob_should_package != ignore_should_package {
+            if glob_is_valid && glob_should_package != ignore_should_package {
                 if glob_should_package {
                     if no_include_option {
                         self.config.shell().warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields is changing and \
-                             file `{}` WILL be excluded in a future Cargo version.\n\
+                            "Pattern matching for Cargo's include/exclude fields has changed and \
+                             file `{}` is now excluded.\n\
                              See <https://github.com/rust-lang/cargo/issues/4268> for more \
                              information.",
                             relative_path.display()
                         ))?;
                     } else {
                         self.config.shell().warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields is changing and \
-                             file `{}` WILL NOT be included in a future Cargo version.\n\
+                            "Pattern matching for Cargo's include/exclude fields has changed and \
+                             file `{}` is no longer included.\n\
                              See <https://github.com/rust-lang/cargo/issues/4268> for more \
                              information.",
                             relative_path.display()
@@ -231,16 +237,16 @@ impl<'cfg> PathSource<'cfg> {
                     }
                 } else if no_include_option {
                     self.config.shell().warn(format!(
-                        "Pattern matching for Cargo's include/exclude fields is changing and \
-                         file `{}` WILL NOT be excluded in a future Cargo version.\n\
+                        "Pattern matching for Cargo's include/exclude fields has changed and \
+                         file `{}` is NOT excluded.\n\
                          See <https://github.com/rust-lang/cargo/issues/4268> for more \
                          information.",
                         relative_path.display()
                     ))?;
                 } else {
                     self.config.shell().warn(format!(
-                        "Pattern matching for Cargo's include/exclude fields is changing and \
-                         file `{}` WILL be included in a future Cargo version.\n\
+                        "Pattern matching for Cargo's include/exclude fields has changed and \
+                         file `{}` is now included.\n\
                          See <https://github.com/rust-lang/cargo/issues/4268> for more \
                          information.",
                         relative_path.display()
@@ -248,8 +254,7 @@ impl<'cfg> PathSource<'cfg> {
                 }
             }
 
-            // Update to `ignore_should_package` for Stage 2.
-            Ok(glob_should_package)
+            Ok(ignore_should_package)
         };
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
