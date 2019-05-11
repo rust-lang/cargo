@@ -47,12 +47,16 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => {
-            generate_lockfile(ws)?;
             match opts.precise {
-                None => return Ok(()),
+                None => return generate_lockfile(ws),
 
-                // Precise option specified, so re-run to do the rest of the update.
-                Some(_) => return update_lockfile(ws, opts)
+                // Precise option specified, so calculate a previous_resolve required
+                // by precise package update later.
+                Some(_) => {
+                    let mut registry = PackageRegistry::new(opts.config)?;
+                    ops::resolve_with_previous(&mut registry, ws, Method::Everything,
+                                               None, None, &[], true)?
+                }
             }
         }
     };
