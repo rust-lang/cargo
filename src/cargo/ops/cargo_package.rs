@@ -56,6 +56,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
 
     verify_dependencies(pkg)?;
 
+    if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
+        config.shell().warn(
+            "both package.include and package.exclude are specified; \
+             the exclude list will be ignored",
+        )?;
+    }
     // `list_files` outputs warnings as a side effect, so only do it once.
     let src_files = src.list_files(pkg)?;
 
@@ -208,7 +214,7 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
 }
 
 // Checks if the package source is in a *git* DVCS repository. If *git*, and
-// the source is *dirty* (e.g., has uncommited changes) and not `allow_dirty`
+// the source is *dirty* (e.g., has uncommitted changes) and not `allow_dirty`
 // then `bail!` with an informative message. Otherwise return the sha1 hash of
 // the current *HEAD* commit, or `None` if *dirty*.
 fn check_repo_state(

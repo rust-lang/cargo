@@ -16,7 +16,7 @@ fn build_lib_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -38,7 +38,7 @@ fn lib() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
@@ -61,12 +61,12 @@ fn build_main_and_allow_unstable_options() {
             "\
 [COMPILING] {name} v{version} ([CWD])
 [RUNNING] `rustc --crate-name {name} src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs --color never --crate-type bin \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
@@ -106,10 +106,10 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=[..]link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src/bin/bar.rs --color never --crate-type bin --emit=dep-info,link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs --color never --crate-type bin --emit=[..]link \
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -144,10 +144,10 @@ fn build_with_args_to_one_of_multiple_tests() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=[..]link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs --color never --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs --color never --emit=[..]link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -233,18 +233,18 @@ fn targets_selected_default() {
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+             --emit=[..]link[..]",
         )
         // bench
         .with_stderr_does_not_contain(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // unit test
         .with_stderr_does_not_contain(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -258,12 +258,12 @@ fn targets_selected_all() {
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+             --emit=[..]link[..]",
         )
         // unit test
         .with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();

@@ -85,7 +85,8 @@ fn cargo_build_plan_single_dep() {
                 "kind": "Host",
                 "links": "{...}",
                 "outputs": [
-                    "[..]/foo/target/debug/deps/libbar-[..].rlib"
+                    "[..]/foo/target/debug/deps/libbar-[..].rlib",
+                    "[..]/foo/target/debug/deps/libbar-[..].rmeta"
                 ],
                 "package_name": "bar",
                 "package_version": "0.0.1",
@@ -101,7 +102,8 @@ fn cargo_build_plan_single_dep() {
                 "kind": "Host",
                 "links": "{...}",
                 "outputs": [
-                    "[..]/foo/target/debug/deps/libfoo-[..].rlib"
+                    "[..]/foo/target/debug/deps/libfoo-[..].rlib",
+                    "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
                 ],
                 "package_name": "foo",
                 "package_version": "0.5.0",

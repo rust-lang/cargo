@@ -35,7 +35,9 @@ fn custom_build_script_failed() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
         )
         .run();
 }
@@ -241,7 +243,7 @@ fn custom_build_script_rustc_flags() {
         -C metadata=[..] \
         -C extra-filename=-[..] \
         --out-dir [CWD]/target \
-        --emit=dep-info,link \
+        --emit=[..]link \
         -L [CWD]/target \
         -L [CWD]/target/deps`
 ",
@@ -1015,19 +1017,19 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
 [RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin \
-    --emit=dep-info,link \
+    --emit=[..]link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
     -L [..]target/debug/deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`
@@ -1547,13 +1549,13 @@ fn build_script_with_dynamic_native_dependency() {
 
     build
         .cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 
     let root = build.root().join("target").join("debug");
     foo.cargo("build -v")
         .env("BUILDER_ROOT", root)
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 }
 
@@ -2460,7 +2462,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])

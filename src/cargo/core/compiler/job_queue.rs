@@ -1,7 +1,7 @@
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::marker;
-use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ use crate::util::{Progress, ProgressStyle};
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a, 'cfg> {
-    queue: DependencyQueue<Unit<'a>, Job>,
+    queue: DependencyQueue<Unit<'a>, Artifact, Job>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
     active: HashMap<u32, Unit<'a>>,
@@ -42,10 +42,41 @@ pub struct JobQueue<'a, 'cfg> {
 }
 
 pub struct JobState<'a> {
+    /// Channel back to the main thread to coordinate messages and such.
     tx: Sender<Message>,
+
+    /// The job id that this state is associated with, used when sending
+    /// messages back to the main thread.
+    id: u32,
+
+    /// Whether or not we're expected to have a call to `rmeta_produced`. Once
+    /// that method is called this is dynamically set to `false` to prevent
+    /// sending a double message later on.
+    rmeta_required: Cell<bool>,
+
     // Historical versions of Cargo made use of the `'a` argument here, so to
     // leave the door open to future refactorings keep it here.
     _marker: marker::PhantomData<&'a ()>,
+}
+
+/// Possible artifacts that can be produced by compilations, used as edge values
+/// in the dependency graph.
+///
+/// As edge values we can have multiple kinds of edges depending on one node,
+/// for example some units may only depend on the metadata for an rlib while
+/// others depend on the full rlib. This `Artifact` enum is used to distinguish
+/// this case and track the progress of compilations as they proceed.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+enum Artifact {
+    /// A generic placeholder for "depends on everything run by a step" and
+    /// means that we can't start the next compilation until the previous has
+    /// finished entirely.
+    All,
+
+    /// A node indicating that we only depend on the metadata of a compilation,
+    /// but the compilation is typically also producing an rlib. We can start
+    /// our step, however, before the full rlib is available.
+    Metadata,
 }
 
 enum Message {
@@ -55,7 +86,7 @@ enum Message {
     Stderr(String),
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
-    Finish(u32, CargoResult<()>),
+    Finish(u32, Artifact, CargoResult<()>),
 }
 
 impl<'a> JobState<'a> {
@@ -74,24 +105,25 @@ impl<'a> JobState<'a> {
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
-    pub fn capture_output(
-        &self,
-        cmd: &ProcessBuilder,
-        prefix: Option<String>,
-        capture_output: bool,
-    ) -> CargoResult<Output> {
-        let prefix = prefix.unwrap_or_else(String::new);
-        cmd.exec_with_streaming(
-            &mut |out| {
-                let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
-                Ok(())
-            },
-            &mut |err| {
-                let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
-                Ok(())
-            },
-            capture_output,
-        )
+    pub fn stdout(&self, stdout: &str) {
+        drop(self.tx.send(Message::Stdout(stdout.to_string())));
+    }
+
+    pub fn stderr(&self, stderr: &str) {
+        drop(self.tx.send(Message::Stderr(stderr.to_string())));
+    }
+
+    /// A method used to signal to the coordinator thread that the rmeta file
+    /// for an rlib has been produced. This is only called for some rmeta
+    /// builds when required, and can be called at any time before a job ends.
+    /// This should only be called once because a metadata file can only be
+    /// produced once!
+    pub fn rmeta_produced(&self) {
+        assert!(self.rmeta_required.get());
+        self.rmeta_required.set(false);
+        let _ = self
+            .tx
+            .send(Message::Finish(self.id, Artifact::Metadata, Ok(())));
     }
 }
 
@@ -120,7 +152,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         job: Job,
     ) -> CargoResult<()> {
         let dependencies = cx.dep_targets(unit);
-        let dependencies = dependencies
+        let mut queue_deps = dependencies
             .iter()
             .filter(|unit| {
                 // Binaries aren't actually needed to *compile* tests, just to run
@@ -128,10 +160,63 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 !unit.target.is_test() || !unit.target.is_bin()
             })
             .cloned()
+            .map(|dep| {
+                // Handle the case here where our `unit -> dep` dependency may
+                // only require the metadata, not the full compilation to
+                // finish. Use the tables in `cx` to figure out what kind
+                // of artifact is associated with this dependency.
+                let artifact = if cx.only_requires_rmeta(unit, &dep) {
+                    Artifact::Metadata
+                } else {
+                    Artifact::All
+                };
+                (dep, artifact)
+            })
             .collect::<Vec<_>>();
-        self.queue.queue(unit, job, &dependencies);
+
+        // This is somewhat tricky, but we may need to synthesize some
+        // dependencies for this target if it requires full upstream
+        // compilations to have completed. If we're in pipelining mode then some
+        // dependency edges may be `Metadata` due to the above clause (as
+        // opposed to everything being `All`). For example consider:
+        //
+        //    a (binary)
+        //    └ b (lib)
+        //        └ c (lib)
+        //
+        // Here the dependency edge from B to C will be `Metadata`, and the
+        // dependency edge from A to B will be `All`. For A to be compiled,
+        // however, it currently actually needs the full rlib of C. This means
+        // that we need to synthesize a dependency edge for the dependency graph
+        // from A to C. That's done here.
+        //
+        // This will walk all dependencies of the current target, and if any of
+        // *their* dependencies are `Metadata` then we depend on the `All` of
+        // the target as well. This should ensure that edges changed to
+        // `Metadata` propagate upwards `All` dependencies to anything that
+        // transitively contains the `Metadata` edge.
+        if unit.target.requires_upstream_objects() {
+            for dep in dependencies.iter() {
+                depend_on_deps_of_deps(cx, &mut queue_deps, dep);
+            }
+
+            fn depend_on_deps_of_deps<'a>(
+                cx: &Context<'a, '_>,
+                deps: &mut Vec<(Unit<'a>, Artifact)>,
+                unit: &Unit<'a>,
+            ) {
+                for dep in cx.dep_targets(unit) {
+                    if cx.only_requires_rmeta(unit, &dep) {
+                        deps.push((dep, Artifact::All));
+                        depend_on_deps_of_deps(cx, deps, &dep);
+                    }
+                }
+            }
+        }
+
+        self.queue.queue(*unit, job, queue_deps);
         *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
-        Ok(())
+        return Ok(());
     }
 
     /// Executes all jobs necessary to build the dependency graph.
@@ -139,7 +224,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context<'a, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -171,12 +256,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // comment has been sitting here for a long time feel free to refactor
         // away crossbeam.
         crossbeam_utils::thread::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
-            .expect("child threads should't panic")
+            .expect("child threads shouldn't panic")
     }
 
     fn drain_the_queue(
         &mut self,
-        cx: &mut Context<'_, '_>,
+        cx: &mut Context<'a, '_>,
         plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
@@ -198,6 +283,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // and then immediately return.
         let mut error = None;
         let total = self.queue.len();
+        let mut finished = 0;
         loop {
             // Dequeue as much work as we can, learning about everything
             // possible that can run. Note that this is also the point where we
@@ -235,7 +321,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // unnecessarily.
             let events: Vec<_> = self.rx.try_iter().collect();
             let events = if events.is_empty() {
-                self.show_progress(total);
+                self.show_progress(finished, total);
                 vec![self.rx.recv().unwrap()]
             } else {
                 events
@@ -264,16 +350,25 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     Message::FixDiagnostic(msg) => {
                         print.print(&msg)?;
                     }
-                    Message::Finish(id, result) => {
-                        let unit = self.active.remove(&id).unwrap();
-                        info!("end: {:?}", unit);
-
-                        if !self.active.is_empty() {
-                            assert!(!tokens.is_empty());
-                            drop(tokens.pop());
-                        }
+                    Message::Finish(id, artifact, result) => {
+                        let unit = match artifact {
+                            // If `id` has completely finished we remove it
+                            // from the `active` map ...
+                            Artifact::All => {
+                                info!("end: {:?}", id);
+                                finished += 1;
+                                self.active.remove(&id).unwrap()
+                            }
+                            // ... otherwise if it hasn't finished we leave it
+                            // in there as we'll get another `Finish` later on.
+                            Artifact::Metadata => {
+                                info!("end (meta): {:?}", id);
+                                self.active[&id]
+                            }
+                        };
+                        info!("end ({:?}): {:?}", unit, result);
                         match result {
-                            Ok(()) => self.finish(&unit, cx)?,
+                            Ok(()) => self.finish(&unit, artifact, cx)?,
                             Err(e) => {
                                 let msg = "The following warnings were emitted during compilation:";
                                 self.emit_warnings(Some(msg), &unit, cx)?;
@@ -321,7 +416,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
 
-        if self.queue.is_empty() {
+        if let Some(e) = error {
+            Err(e)
+        } else if self.queue.is_empty() && queue.is_empty() {
             let message = format!(
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
@@ -330,16 +427,13 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
             Ok(())
-        } else if let Some(e) = error {
-            Err(e)
         } else {
             debug!("queue: {:#?}", self.queue);
             Err(internal("finished with jobs still left in the queue"))
         }
     }
 
-    fn show_progress(&mut self, total: usize) {
-        let count = total - self.queue.len();
+    fn show_progress(&mut self, count: usize, total: usize) {
         let active_names = self
             .active
             .values()
@@ -376,24 +470,48 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         &mut self,
         unit: &Unit<'a>,
         job: Job,
-        cx: &Context<'_, '_>,
+        cx: &Context<'a, '_>,
         scope: &Scope<'a>,
     ) -> CargoResult<()> {
-        info!("start: {:?}", unit);
-
         let id = self.next_id;
         self.next_id = id.checked_add(1).unwrap();
+
+        info!("start {}: {:?}", id, unit);
+
         assert!(self.active.insert(id, *unit).is_none());
         *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
         let fresh = job.freshness();
+        let rmeta_required = cx.rmeta_required(unit);
         let doit = move || {
-            let res = job.run(&JobState {
+            let state = JobState {
+                id,
                 tx: my_tx.clone(),
+                rmeta_required: Cell::new(rmeta_required),
                 _marker: marker::PhantomData,
-            });
-            my_tx.send(Message::Finish(id, res)).unwrap();
+            };
+            let res = job.run(&state);
+
+            // If the `rmeta_required` wasn't consumed but it was set
+            // previously, then we either have:
+            //
+            // 1. The `job` didn't do anything because it was "fresh".
+            // 2. The `job` returned an error and didn't reach the point where
+            //    it called `rmeta_produced`.
+            // 3. We forgot to call `rmeta_produced` and there's a bug in Cargo.
+            //
+            // Ruling out the third, the other two are pretty common for 2
+            // we'll just naturally abort the compilation operation but for 1
+            // we need to make sure that the metadata is flagged as produced so
+            // send a synthetic message here.
+            if state.rmeta_required.get() && res.is_ok() {
+                my_tx
+                    .send(Message::Finish(id, Artifact::Metadata, Ok(())))
+                    .unwrap();
+            }
+
+            my_tx.send(Message::Finish(id, Artifact::All, res)).unwrap();
         };
 
         if !cx.bcx.build_config.build_plan {
@@ -439,11 +557,16 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
-    fn finish(&mut self, unit: &Unit<'a>, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+    fn finish(
+        &mut self,
+        unit: &Unit<'a>,
+        artifact: Artifact,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
         }
-        self.queue.finish(unit);
+        self.queue.finish(unit, &artifact);
         Ok(())
     }
 

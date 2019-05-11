@@ -461,7 +461,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb-[..].rlib"],
+            "outputs": [
+                "[..]/target/debug/deps/libmb-[..].rlib",
+                "[..]/target/debug/deps/libmb-[..].rmeta"
+            ],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -475,7 +478,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb_other-[..].rlib"],
+            "outputs": [
+                "[..]/target/debug/deps/libmb_other-[..].rlib",
+                "[..]/target/debug/deps/libmb_other-[..].rmeta"
+            ],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -517,7 +523,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [3],
-            "outputs": ["[..]/foo/target/debug/deps/libfoo-[..].rlib"],
+            "outputs": [
+                "[..]/foo/target/debug/deps/libfoo-[..].rlib",
+                "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
+            ],
             "links": "{...}",
             "program": "rustc",
             "args": "{...}",

@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use crate::support::cargo_process;
+use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{
     basic_manifest, git, path2url, paths, project, publish::validate_crate_contents, registry,
@@ -363,25 +364,19 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_1/some_dir/file` is now excluded.
 See [..]
-[WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_2/some_dir/file` is now excluded.
 See [..]
-[WARNING] [..] file `dir_root_3/some_dir/file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_3/some_dir/file` is now excluded.
 See [..]
-[WARNING] [..] file `some_dir/dir_deep_1/some_dir/file` WILL be excluded [..]
+[WARNING] [..] file `some_dir/dir_deep_1/some_dir/file` is now excluded.
 See [..]
-[WARNING] [..] file `some_dir/dir_deep_3/some_dir/file` WILL be excluded [..]
+[WARNING] [..] file `some_dir/dir_deep_3/some_dir/file` is now excluded.
 See [..]
-[WARNING] [..] file `some_dir/file_deep_1` WILL be excluded [..]
+[WARNING] [..] file `some_dir/file_deep_1` is now excluded.
 See [..]
 [PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -407,18 +402,12 @@ See [..]
             "\
 .cargo_vcs_info.json
 Cargo.toml
-dir_root_1/some_dir/file
-dir_root_2/some_dir/file
-dir_root_3/some_dir/file
 file_root_3
 file_root_4
 file_root_5
-some_dir/dir_deep_1/some_dir/file
 some_dir/dir_deep_2/some_dir/file
-some_dir/dir_deep_3/some_dir/file
 some_dir/dir_deep_4/some_dir/file
 some_dir/dir_deep_5/some_dir/file
-some_dir/file_deep_1
 some_dir/file_deep_2
 some_dir/file_deep_3
 some_dir/file_deep_4
@@ -456,6 +445,7 @@ fn include() {
             "\
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -795,9 +785,7 @@ fn generated_manifest() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("package --no-verify")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --no-verify").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let rewritten_toml = format!(
@@ -949,11 +937,6 @@ fn test_edition() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
-        // --edition is still in flux and we're not passing -Zunstable-options
-        // from Cargo so it will probably error. Only partially match the output
-        // until stuff stabilizes
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1086,9 +1069,7 @@ fn package_with_select_features() {
         )
         .build();
 
-    p.cargo("package --features required")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --features required").run();
 }
 
 #[test]
@@ -1117,9 +1098,7 @@ fn package_with_all_features() {
         )
         .build();
 
-    p.cargo("package --all-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package --all-features").run();
 }
 
 #[test]
@@ -1149,8 +1128,231 @@ fn package_no_default_features() {
         .build();
 
     p.cargo("package --no-default-features")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
         .run();
+}
+
+#[test]
+fn include_cargo_toml_implicit() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            include = ["src/lib.rs"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout("Cargo.toml\nsrc/lib.rs\n")
+        .run();
+}
+
+fn include_exclude_test(
+    include: &str,
+    exclude: &str,
+    files: &[&str],
+    expected: &str,
+    has_warnings: bool,
+) {
+    let mut pb = project().file(
+        "Cargo.toml",
+        &format!(
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            include = {}
+            exclude = {}
+            "#,
+            include, exclude
+        ),
+    );
+    for file in files {
+        pb = pb.file(file, "");
+    }
+    let p = pb.build();
+
+    let mut e = p.cargo("package --list");
+    if has_warnings {
+        e.with_stderr_contains("[..]");
+    } else {
+        e.with_stderr("");
+    }
+    e.with_stdout(expected).run();
+    p.root().rm_rf();
+}
+
+#[test]
+fn package_include_ignore_only() {
+    // Test with a gitignore pattern that fails to parse with glob.
+    // This is a somewhat nonsense pattern, but is an example of something git
+    // allows and glob does not.
+    assert!(glob::Pattern::new("src/abc**").is_err());
+
+    include_exclude_test(
+        r#"["Cargo.toml", "src/abc**", "src/lib.rs"]"#,
+        "[]",
+        &["src/lib.rs", "src/abc1.rs", "src/abc2.rs", "src/abc/mod.rs"],
+        "Cargo.toml\n\
+         src/abc/mod.rs\n\
+         src/abc1.rs\n\
+         src/abc2.rs\n\
+         src/lib.rs\n\
+         ",
+        false,
+    )
+}
+
+#[test]
+fn gitignore_patterns() {
+    include_exclude_test(
+        r#"["Cargo.toml", "foo"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
+        "Cargo.toml\n\
+         a/b/foo\n\
+         a/foo\n\
+         foo\n\
+         x/foo/y\n\
+         ",
+        true,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "/foo"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
+        "Cargo.toml\n\
+         foo\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        "[]",
+        r#"["foo/"]"#, // exclude
+        &["src/lib.rs", "foo", "a/foo", "x/foo/y", "bar"],
+        "Cargo.toml\n\
+         a/foo\n\
+         bar\n\
+         foo\n\
+         src/lib.rs\n\
+         ",
+        true,
+    );
+
+    include_exclude_test(
+        "[]",
+        r#"["*.txt", "[ab]", "[x-z]"]"#, // exclude
+        &[
+            "src/lib.rs",
+            "foo.txt",
+            "bar/foo.txt",
+            "other",
+            "a",
+            "b",
+            "c",
+            "x",
+            "y",
+            "z",
+        ],
+        "Cargo.toml\n\
+         c\n\
+         other\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "**/foo/bar"]"#, // include
+        "[]",
+        &["src/lib.rs", "a/foo/bar", "foo", "bar"],
+        "Cargo.toml\n\
+         a/foo/bar\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "foo/**"]"#, // include
+        "[]",
+        &["src/lib.rs", "a/foo/bar", "foo/x/y/z"],
+        "Cargo.toml\n\
+         foo/x/y/z\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "a/**/b"]"#, // include
+        "[]",
+        &["src/lib.rs", "a/b", "a/x/b", "a/x/y/b"],
+        "Cargo.toml\n\
+         a/b\n\
+         a/x/b\n\
+         a/x/y/b\n\
+         ",
+        false,
+    );
+}
+
+#[test]
+fn gitignore_negate() {
+    include_exclude_test(
+        r#"["Cargo.toml", "*.rs", "!foo.rs", "\\!important"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo.rs", "!important"],
+        "!important\n\
+         Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    // NOTE: This is unusual compared to git. Git treats `src/` as a
+    // short-circuit which means rules like `!src/foo.rs` would never run.
+    // However, because Cargo only works by iterating over *files*, it doesn't
+    // short-circuit.
+    include_exclude_test(
+        r#"["Cargo.toml", "src/", "!src/foo.rs"]"#, // include
+        "[]",
+        &["src/lib.rs", "src/foo.rs"],
+        "Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "src/**.rs", "!foo.rs"]"#, // include
+        "[]",
+        &["src/lib.rs", "foo.rs", "src/foo.rs", "src/bar/foo.rs"],
+        "Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+        false,
+    );
+
+    include_exclude_test(
+        "[]",
+        r#"["*.rs", "!foo.rs", "\\!important"]"#, // exclude
+        &["src/lib.rs", "foo.rs", "!important"],
+        "Cargo.toml\n\
+         foo.rs\n\
+         ",
+        false,
+    );
 }

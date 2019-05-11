@@ -703,7 +703,7 @@ pub fn fetch(
     // request we're about to issue.
     maybe_gc_repo(repo)?;
 
-    // Unfortuantely `libgit2` is notably lacking in the realm of authentication
+    // Unfortunately `libgit2` is notably lacking in the realm of authentication
     // when compared to the `git` command line. As a result, allow an escape
     // hatch for users that would prefer to use `git`-the-CLI for fetching
     // repositories instead of `libgit2`-the-library. This should make more
@@ -864,7 +864,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
 
 fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     let mut opts = git2::RepositoryInitOptions::new();
-    // Skip anyting related to templates, they just call all sorts of issues as
+    // Skip anything related to templates, they just call all sorts of issues as
     // we really don't want to use them yet they insist on being used. See #6240
     // for an example issue that comes up.
     opts.external_template(false);

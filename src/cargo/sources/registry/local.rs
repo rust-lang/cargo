@@ -1,4 +1,4 @@
-use crate::core::{PackageId, InternedString};
+use crate::core::{InternedString, PackageId};
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;

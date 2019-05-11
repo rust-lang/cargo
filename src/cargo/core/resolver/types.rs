@@ -30,7 +30,7 @@ impl ResolverProgress {
             printed: false,
             deps_time: Duration::new(0, 0),
             // Some CI setups are much slower then the equipment used by Cargo itself.
-            // Architectures that do not have a modern processor, hardware emulation, ect.
+            // Architectures that do not have a modern processor, hardware emulation, etc.
             // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
             #[cfg(debug_assertions)]
             slow_cpu_multiplier: std::env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")

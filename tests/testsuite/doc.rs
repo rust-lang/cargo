@@ -115,7 +115,7 @@ fn doc_deps() {
     assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
     p.cargo("doc")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
         .with_stdout("")
         .run();
 
@@ -1141,7 +1141,6 @@ fn doc_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
             [package]
             name = "foo"
             version = "0.0.1"
@@ -1153,12 +1152,10 @@ fn doc_edition() {
         .build();
 
     p.cargo("doc -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
         .run();
 
     p.cargo("test -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
         .run();
 }
@@ -1169,7 +1166,6 @@ fn doc_target_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
             [package]
             name = "foo"
             version = "0.0.1"
@@ -1183,12 +1179,10 @@ fn doc_target_edition() {
         .build();
 
     p.cargo("doc -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
         .run();
 
     p.cargo("test -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
         .run();
 }

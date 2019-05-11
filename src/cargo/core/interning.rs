@@ -67,7 +67,7 @@ impl Hash for InternedString {
 
 impl Borrow<str> for InternedString {
     // If we implement Hash as `identity(self).hash(state)`,
-    // then this will nead to be removed.
+    // then this will need to be removed.
     fn borrow(&self) -> &str {
         self.as_str()
     }

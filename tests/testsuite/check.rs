@@ -190,8 +190,8 @@ fn build_check() {
         .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
-    foo.cargo("build").run();
-    foo.cargo("check").run();
+    foo.cargo("build -v").run();
+    foo.cargo("check -v").run();
 }
 
 // Checks that where a project has both a lib and a bin, the lib is only checked
@@ -204,7 +204,7 @@ fn issue_3418() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --emit=dep-info,metadata [..]")
+        .with_stderr_contains("[..] --emit=[..]metadata [..]")
         .run();
 }
 
@@ -730,7 +730,7 @@ fn proc_macro() {
             "#,
         )
         .build();
-    p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
+    p.cargo("check -v").env("CARGO_LOG", "cargo=trace").run();
 }
 
 #[test]

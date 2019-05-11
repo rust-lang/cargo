@@ -173,7 +173,7 @@ use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary, InternedString};
+use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
@@ -207,7 +207,7 @@ pub struct RegistryConfig {
     ///
     /// For backwards compatibility, if the string does not contain `{crate}` or
     /// `{version}`, it will be extended with `/{crate}/{version}/download` to
-    /// support registries like crates.io which were crated before the
+    /// support registries like crates.io which were created before the
     /// templating setup was created.
     pub dl: String,
 

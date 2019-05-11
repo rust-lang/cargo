@@ -289,8 +289,32 @@ fn clean_verbose() {
             "\
 [REMOVING] [..]
 [REMOVING] [..]
+[REMOVING] [..]
 ",
         )
         .run();
     p.cargo("build").run();
+}
+
+#[test]
+fn clean_remove_rlib_rmeta() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    assert!(p.target_debug_dir().join("libfoo.rlib").exists());
+    let rmeta = p.glob("target/debug/deps/*.rmeta").next().unwrap().unwrap();
+    assert!(rmeta.exists());
+    p.cargo("clean -p foo").run();
+    assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
+    assert!(!rmeta.exists());
 }
