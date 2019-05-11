@@ -205,7 +205,7 @@ fn update_via_new_dep() {
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").env("RUST_LOG", "cargo=trace").run();
+    p.cargo("build").env("CARGO_LOG", "cargo=trace").run();
 }
 
 #[test]

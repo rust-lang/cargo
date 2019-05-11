@@ -1740,7 +1740,7 @@ pub fn is_coarse_mtime() -> bool {
 }
 
 /// Some CI setups are much slower then the equipment used by Cargo itself.
-/// Architectures that do not have a modern processor, hardware emulation, ect.
+/// Architectures that do not have a modern processor, hardware emulation, etc.
 /// This provides a way for those setups to increase the cut off for all the time based test.
 pub fn slow_cpu_multiplier(main: u64) -> Duration {
     lazy_static::lazy_static! {

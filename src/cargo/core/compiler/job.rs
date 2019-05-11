@@ -62,7 +62,7 @@ impl Job {
     }
 
     /// Returns whether this job was fresh/dirty, where "fresh" means we're
-    /// likely to perform just some small bookeeping where "dirty" means we'll
+    /// likely to perform just some small bookkeeping where "dirty" means we'll
     /// probably do something slow like invoke rustc.
     pub fn freshness(&self) -> Freshness {
         self.fresh

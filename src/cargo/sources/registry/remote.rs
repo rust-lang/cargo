@@ -1,4 +1,4 @@
-use crate::core::{PackageId, SourceId, InternedString};
+use crate::core::{InternedString, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};

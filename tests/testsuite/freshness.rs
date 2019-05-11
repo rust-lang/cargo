@@ -760,7 +760,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
     p.root().move_into_the_future();
 
     p.cargo("build")
-        .env("RUST_LOG", "")
+        .env("CARGO_LOG", "")
         .with_stdout("")
         .with_stderr(
             "\
@@ -1439,8 +1439,8 @@ fn reuse_panic_pm() {
         .with_stderr_unordered(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=dep-info,link -C debuginfo=2 [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C debuginfo=2 [..]
 [COMPILING] somepm [..]
 [RUNNING] `rustc --crate-name somepm [..]
 [COMPILING] foo [..]
