@@ -299,9 +299,9 @@ pub(super) fn activation_error(
     };
 
     if let Some(config) = config {
-        if config.cli_unstable().offline {
+        if config.offline() {
             msg.push_str(
-                "\nAs a reminder, you're using offline mode (-Z offline) \
+                "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
                  without the offline flag.",

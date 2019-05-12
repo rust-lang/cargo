@@ -182,7 +182,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
-        if self.config.cli_unstable().offline {
+        if self.config.offline() {
             if self.repo()?.is_empty()? {
                 // An empty repository is guaranteed to fail, since hitting
                 // this path means we need at least one crate. This is an

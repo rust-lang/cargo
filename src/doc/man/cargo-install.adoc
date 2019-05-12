@@ -100,6 +100,10 @@ include::options-target-triple.adoc[]
 *--debug*::
     Build with the `dev` profile instead the `release` profile.
 
+=== Manifest Options
+
+include::options-locked.adoc[]
+
 === Miscellaneous Options
 
 include::options-jobs.adoc[]

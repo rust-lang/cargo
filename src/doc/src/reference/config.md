@@ -141,6 +141,7 @@ color = 'auto'         # whether cargo colorizes output
 [net]
 retry = 2 # number of times a network call will automatically retried
 git-fetch-with-cli = false  # if `true` we'll use `git`-the-CLI to fetch git repos
+offline = false # do not access the network, but otherwise try to proceed if possible
 
 # Alias cargo commands. The first 4 aliases are built in. If your
 # command requires grouped whitespace use the list format.

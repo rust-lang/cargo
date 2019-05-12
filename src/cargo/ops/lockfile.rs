@@ -47,7 +47,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
     }
 
     if !ws.config().lock_update_allowed() {
-        if ws.config().cli_unstable().offline {
+        if ws.config().offline() {
             failure::bail!("can't update in the offline mode");
         }
 
