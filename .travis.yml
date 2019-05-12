@@ -39,6 +39,7 @@ matrix:
 
 before_script:
   - rustup target add $ALT
+  - rustup component add clippy || echo "clippy not available"
 script:
   - cargo test --features=deny-warnings
 

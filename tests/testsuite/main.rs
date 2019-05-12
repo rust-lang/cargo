@@ -19,6 +19,7 @@ mod build_lib;
 mod build_plan;
 mod build_script;
 mod build_script_env;
+mod cache_messages;
 mod cargo_alias_config;
 mod cargo_command;
 mod cargo_features;
