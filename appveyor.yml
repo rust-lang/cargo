@@ -9,6 +9,7 @@ install:
   - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain nightly
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - if defined OTHER_TARGET rustup target add %OTHER_TARGET%
+  - rustup component add clippy || exit 0
   - rustc -V
   - cargo -V
   - git submodule update --init

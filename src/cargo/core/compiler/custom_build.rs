@@ -112,7 +112,7 @@ fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: Pac
         env: &output.env,
     }
     .to_json_string();
-    state.stdout(&msg);
+    state.stdout(msg);
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
@@ -248,7 +248,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     );
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
-    let json_messages = bcx.build_config.json_messages();
+    let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.config.extra_verbose();
     let (prev_output, prev_script_out_dir) = prev_build_output(cx, unit);
 
@@ -315,13 +315,13 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             .exec_with_streaming(
                 &mut |stdout| {
                     if extra_verbose {
-                        state.stdout(&format!("{}{}", prefix, stdout));
+                        state.stdout(format!("{}{}", prefix, stdout));
                     }
                     Ok(())
                 },
                 &mut |stderr| {
                     if extra_verbose {
-                        state.stderr(&format!("{}{}", prefix, stderr));
+                        state.stderr(format!("{}{}", prefix, stderr));
                     }
                     Ok(())
                 },
