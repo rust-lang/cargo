@@ -286,6 +286,23 @@ attempting to access the network to determine if it is out-of-date.</p>
 access.</p>
 </div>
 </dd>
+<dt class="hdlist1"><strong>--offline</strong></dt>
+<dd>
+<p>Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.</p>
+<div class="paragraph">
+<p>Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the <a href="commands/cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+offline.</p>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>net.offline</code> <a href="reference/config.html">config value</a>.</p>
+</div>
+</dd>
 </dl>
 </div>
 </div>

@@ -3,7 +3,7 @@ use std::fs;
 
 #[test]
 fn offline_unused_target_dep() {
-    // -Z offline with a target dependency that is not used and not downloaded.
+    // --offline with a target dependency that is not used and not downloaded.
     Package::new("unused_dep", "1.0.0").publish();
     Package::new("used_dep", "1.0.0").publish();
     let p = project()
@@ -28,9 +28,7 @@ fn offline_unused_target_dep() {
         .run();
     p.cargo("clean").run();
     // Build offline, make sure it works.
-    p.cargo("build -Z offline")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build --offline").run();
 }
 
 #[test]
@@ -55,11 +53,8 @@ fn offline_missing_optional() {
         .run();
     p.cargo("clean").run();
     // Build offline, make sure it works.
-    p.cargo("build -Z offline")
-        .masquerade_as_nightly_cargo()
-        .run();
-    p.cargo("build -Z offline --features=opt_dep")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --offline").run();
+    p.cargo("build --offline --features=opt_dep")
         .with_stderr(
             "\
 [ERROR] failed to download `opt_dep v1.0.0`
@@ -92,9 +87,7 @@ fn cargo_compile_path_with_offline() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build --offline").run();
 }
 
 #[test]
@@ -137,8 +130,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .file("src/lib.rs", "")
         .build();
 
-    p2.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p2.cargo("build --offline")
         .with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
@@ -166,8 +158,7 @@ fn cargo_compile_offline_not_try_update() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --offline")
         .with_status(101)
         .with_stderr(
             "\
@@ -182,6 +173,12 @@ Try running without the offline flag, or try running `cargo fetch` within your \
 project directory before going offline.
 ",
         )
+        .run();
+
+    p.change_file(".cargo/config", "net.offline = true");
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]Unable to update registry[..]")
         .run();
 }
 
@@ -242,8 +239,7 @@ fn main(){
         )
         .build();
 
-    p2.cargo("run -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p2.cargo("run --offline")
         .with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
@@ -274,15 +270,14 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("build -Zoffline").masquerade_as_nightly_cargo().with_status(101).
-                    with_stderr("\
+    p.cargo("build --offline").with_status(101).with_stderr("\
 error: failed to load source for a dependency on `dep1`
 
 Caused by:
   Unable to update https://github.com/some_user/dep1.git
 
 Caused by:
-  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (-Z offline)").run();
+  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)").run();
 }
 
 #[test]
@@ -321,8 +316,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
     // Restore the file contents.
     fs::write(&baz_path, &baz_content).unwrap();
 
-    p.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --offline")
         .with_status(101)
         .with_stderr(
             "\
@@ -352,8 +346,7 @@ fn update_offline() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("update -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p.cargo("update --offline")
         .with_status(101)
         .with_stderr("error: you can't update in the offline mode[..]")
         .run();
@@ -448,8 +441,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     let git_root = git_project.root();
 
-    p.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --offline")
         .with_stderr(format!(
             "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
@@ -482,9 +474,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         ),
     );
 
-    p.cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build --offline").run();
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev1\n")
         .run();
@@ -531,8 +521,7 @@ fn offline_resolve_optional_fail() {
             "#,
     );
 
-    p.cargo("build -Z offline")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --offline")
         .with_status(101)
         .with_stderr("\
 [ERROR] failed to select a version for the requirement `dep = \"^2.0\"`
@@ -540,7 +529,7 @@ fn offline_resolve_optional_fail() {
   location searched: `[..]` index (which is replacing registry `https://github.com/rust-lang/crates.io-index`)
 required by package `foo v0.1.0 ([..]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
-As a reminder, you're using offline mode (-Z offline) which can sometimes cause \
+As a reminder, you're using offline mode (--offline) which can sometimes cause \
 surprising resolution failures, if this error is too confusing you may wish to \
 retry without the offline flag.
 ")
