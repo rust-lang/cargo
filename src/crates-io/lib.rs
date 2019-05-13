@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
+use std::time::Instant;
 
 use curl::easy::{Easy, List};
 use failure::bail;
@@ -310,6 +311,7 @@ impl Registry {
 fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
     let mut headers = Vec::new();
     let mut body = Vec::new();
+    let started;
     {
         let mut handle = handle.transfer();
         handle.read_function(|buf| Ok(read(buf)))?;
@@ -321,6 +323,7 @@ fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result
             headers.push(String::from_utf8_lossy(data).into_owned());
             true
         })?;
+        started = Instant::now();
         handle.perform()?;
     }
 
@@ -334,6 +337,10 @@ fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result
 
     match (handle.response_code()?, errors) {
         (0, None) | (200, None) => {},
+        (503, _) if started.elapsed().as_secs() >= 29 => {
+            bail!("Request took more than 30 seconds to complete. If you're\
+                   trying to upload a crate it may be too large")
+        }
         (code, Some(errors)) => {
             let code = StatusCode::from_u16(code as _)?;
             bail!("api errors (status {}): {}", code, errors.join(", "))
