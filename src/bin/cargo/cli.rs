@@ -32,7 +32,6 @@ Available unstable (nightly-only) flags:
     -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
     -Z minimal-versions -- Install minimal dependency versions instead of maximum
     -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
-    -Z offline          -- Offline mode that does not perform network requests
     -Z unstable-options -- Allow the usage of unstable options such as --registry
     -Z config-profile   -- Read profiles from .cargo/config files
     -Z install-upgrade  -- `cargo install` will upgrade instead of failing
@@ -168,6 +167,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
+        args.is_present("offline"),
         arg_target_dir,
         &args
             .values_of_lossy("unstable-features")
@@ -239,6 +239,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
+        .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
             Arg::with_name("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")

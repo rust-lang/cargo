@@ -363,7 +363,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
-        if self.config.cli_unstable().offline
+        if self.config.offline()
             && self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0
         {
             return Ok(());

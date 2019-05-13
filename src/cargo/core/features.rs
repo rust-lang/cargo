@@ -322,7 +322,6 @@ impl Features {
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
-    pub offline: bool,
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
     pub minimal_versions: bool,
@@ -367,7 +366,6 @@ impl CliUnstable {
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
-            "offline" => self.offline = true,
             "no-index-update" => self.no_index_update = true,
             "avoid-dev-deps" => self.avoid_dev_deps = true,
             "minimal-versions" => self.minimal_versions = true,

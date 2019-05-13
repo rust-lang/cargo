@@ -36,7 +36,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         failure::bail!("you can't generate a lockfile for an empty workspace.")
     }
 
-    if opts.config.cli_unstable().offline {
+    if opts.config.offline() {
         failure::bail!("you can't update in the offline mode");
     }
 

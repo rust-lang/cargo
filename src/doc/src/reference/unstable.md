@@ -30,19 +30,6 @@ cargo-features = ["publish-lockfile"]
 publish-lockfile = true
 ```
 
-
-### Offline Mode
-* Original Issue: [#4686](https://github.com/rust-lang/cargo/issues/4686)
-* Tracking Issue: [#5655](https://github.com/rust-lang/cargo/issues/5655)
-
-The `-Z offline` flag prevents Cargo from attempting to access the network for
-any reason. Typically Cargo will stop with an error if it wants to access the
-network and it is not available.
-
-Beware that this may result in different dependency resolution than online
-mode. Cargo will restrict itself to crates that are available locally, even
-if there might be a newer version as indicated in the local copy of the index.
-
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
 

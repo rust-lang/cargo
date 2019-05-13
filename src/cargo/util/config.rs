@@ -52,10 +52,15 @@ pub struct Config {
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
-    /// `frozen` is set if we shouldn't access the network
+    /// `frozen` is the same as `locked`, but additionally will not access the
+    /// network to determine if the lock file is out-of-date.
     frozen: bool,
-    /// `locked` is set if we should not update lock files
+    /// `locked` is set if we should not update lock files. If the lock file
+    /// is missing, or needs to be updated, an error is produced.
     locked: bool,
+    /// `offline` is set if we should never access the network, but otherwise
+    /// continue operating if possible.
+    offline: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
     /// Cli flags of the form "-Z something"
@@ -119,6 +124,7 @@ impl Config {
             extra_verbose: false,
             frozen: false,
             locked: false,
+            offline: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -560,6 +566,7 @@ impl Config {
         color: &Option<String>,
         frozen: bool,
         locked: bool,
+        offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
     ) -> CargoResult<()> {
@@ -604,6 +611,11 @@ impl Config {
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
+        self.offline = offline
+            || self
+                .get::<Option<bool>>("net.offline")
+                .unwrap_or(None)
+                .unwrap_or(false);
         self.target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
 
@@ -619,7 +631,11 @@ impl Config {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen() && !self.cli_unstable().offline
+        !self.frozen() && !self.offline()
+    }
+
+    pub fn offline(&self) -> bool {
+        self.offline
     }
 
     pub fn frozen(&self) -> bool {
