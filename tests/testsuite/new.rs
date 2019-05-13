@@ -500,7 +500,7 @@ fn new_with_edition_2018() {
 fn new_default_edition() {
     cargo_process("new foo").env("USER", "foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(manifest.contains("edition = \"2018\""));
+    assert!(manifest.contains("edition = \"2019\""));
 }
 
 #[test]
