@@ -2,12 +2,12 @@
 .\"     Title: cargo-bench
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-23
+.\"      Date: 2019-05-08
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BENCH" "1" "2018-12-23" "\ \&" "\ \&"
+.TH "CARGO\-BENCH" "1" "2019-05-08" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -400,6 +400,23 @@ attempting to access the network to determine if it is out\-of\-date.
 These may be used in environments where you want to assert that the
 \fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
 access.
+.RE
+.sp
+\fB\-\-offline\fP
+.RS 4
+Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.
+.sp
+Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the \fBcargo\-fetch\fP(1) command to download dependencies before going
+offline.
+.sp
+May also be specified with the \fBnet.offline\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
 .sp

@@ -61,6 +61,7 @@ fn new_config(env: &[(&str, &str)]) -> Config {
             &None,
             false,
             false,
+            false,
             &None,
             &["advanced-env".into()],
         )

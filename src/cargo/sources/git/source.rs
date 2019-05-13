@@ -158,9 +158,9 @@ impl<'cfg> Source for GitSource<'cfg> {
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);
 
-        if self.config.cli_unstable().offline && !db_path.exists() {
+        if self.config.offline() && !db_path.exists() {
             failure::bail!(
-                "can't checkout from '{}': you are in the offline mode (-Z offline)",
+                "can't checkout from '{}': you are in the offline mode (--offline)",
                 self.remote.url()
             );
         }
@@ -172,7 +172,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let actual_rev = self.remote.rev_for(&db_path, &self.reference);
         let should_update = actual_rev.is_err() || self.source_id.precise().is_none();
 
-        let (db, actual_rev) = if should_update && !self.config.cli_unstable().offline {
+        let (db, actual_rev) = if should_update && !self.config.offline() {
             self.config.shell().status(
                 "Updating",
                 format!("git repository `{}`", self.remote.url()),
