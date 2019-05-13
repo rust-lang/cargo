@@ -626,7 +626,7 @@ edition = {}
             toml::Value::String(author),
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String("2018".to_string()),
+                None => toml::Value::String("2019".to_string()),
             },
             match opts.registry {
                 Some(registry) => format!(
