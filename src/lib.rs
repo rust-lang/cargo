@@ -7,8 +7,6 @@ extern crate failure;
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
-#[macro_use]
-extern crate serde_derive;
 use serde_json;
 
 use std::collections::HashSet;
