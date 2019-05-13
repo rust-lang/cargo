@@ -2,6 +2,8 @@
 //!
 //! The following data types are copied from [rust-lang/rust](https://github.com/rust-lang/rust/blob/de78655bca47cac8e783dbb563e7e5c25c1fae40/src/libsyntax/json.rs)
 
+use serde::Deserialize;
+
 #[derive(Clone, Deserialize, Debug, Hash, Eq, PartialEq)]
 pub struct Diagnostic {
     /// The primary error message.
