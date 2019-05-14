@@ -288,6 +288,7 @@ fn activate_deps_loop(
                         &cx,
                         registry,
                         &mut past_conflicting_activations,
+                        &parent,
                         &dep,
                         &conflicting_activations,
                     ) {
@@ -854,10 +855,11 @@ fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
-    if conflicting_activations.len() != 1 {
+    if conflicting_activations.is_empty() {
         return None;
     }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
@@ -868,6 +870,16 @@ fn generalize_conflicting(
         .unwrap();
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
+
+    if cx
+        .parents
+        .is_path_from_to(&parent.package_id(), &backtrack_critical_id)
+    {
+        // We are a descendant of the trigger of the problem.
+        // The best generalization of this is to let things bubble up
+        // and let `backtrack_critical_id` figure this out.
+        return None;
+    }
 
     // we will need to know the range of versions we can use
     let our_candidates = registry
@@ -905,10 +917,6 @@ fn generalize_conflicting(
         None
     };
 
-    if !(our_activation_key.is_some() || our_link.is_some()) {
-        return None;
-    }
-
     let our_candidates: HashSet<PackageId> =
         our_candidates.iter().map(|our| our.package_id()).collect();
 
@@ -920,6 +928,9 @@ fn generalize_conflicting(
         })
     {
         'dep: for critical_parents_dep in critical_parents_deps.iter() {
+            // A dep is equivalent to one of the things it can resolve to.
+            // Thus, if all the things it can resolve to have already ben determined
+            // to be conflicting, then we can just say that we conflict with the parent.
             let mut con = conflicting_activations.clone();
             con.remove(&backtrack_critical_id);
             con.insert(*critical_parent, backtrack_critical_reason.clone());
@@ -928,6 +939,8 @@ fn generalize_conflicting(
                 .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
                 .iter()
+                .rev()
+            // the last one to be tried is the least likely to be in the cache, so start with that.
             {
                 if (our_activation_key
                     .map_or(false, |our| other.package_id().as_activations_key() == our)
@@ -950,9 +963,32 @@ fn generalize_conflicting(
                 ) {
                     con.extend(conflicting.into_iter());
                     continue;
-                } else {
-                    continue 'dep;
                 }
+
+                if let Some(conflicting) = past_conflicting_activations.find(
+                    dep,
+                    &|id| {
+                        if id == other.package_id() {
+                            // we are imagining that we used other instead
+                            Some(backtrack_critical_age)
+                        } else {
+                            cx.is_active(id).filter(|&age|
+                                        // we only care about things that are older then critical_age
+                                        age < backtrack_critical_age)
+                        }
+                    },
+                    Some(other.package_id()),
+                ) {
+                    con.extend(
+                        conflicting
+                            .iter()
+                            .filter(|(&id, _)| id != other.package_id())
+                            .map(|(&id, r)| (id, r.clone())),
+                    );
+                    continue;
+                }
+
+                continue 'dep;
             }
 
             if cfg!(debug_assertions) {
