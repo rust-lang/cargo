@@ -1,5 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::path::Path;
 
 use crate::support::cargo_process;
 use crate::support::git;
@@ -1978,4 +1979,49 @@ fn ignore_invalid_json_lines() {
         .build();
 
     p.cargo("build").run();
+}
+
+#[test]
+fn readonly_registry_still_works() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                foo = '0.1.0'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    p.cargo("fetch --locked").run();
+    chmod_readonly(&paths::home());
+    p.cargo("build").run();
+
+    fn chmod_readonly(path: &Path) {
+        for entry in t!(path.read_dir()) {
+            let entry = t!(entry);
+            let path = entry.path();
+            if t!(entry.file_type()).is_dir() {
+                chmod_readonly(&path);
+            } else {
+                set_readonly(&path);
+            }
+        }
+        set_readonly(path);
+    }
+
+    fn set_readonly(path: &Path) {
+        let mut perms = t!(path.metadata()).permissions();
+        perms.set_readonly(true);
+        t!(fs::set_permissions(path, perms));
+    }
 }
