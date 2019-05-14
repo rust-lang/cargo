@@ -129,12 +129,7 @@ fn verify_dependencies(
                 // This extra hostname check is mostly to assist with testing,
                 // but also prevents someone using `--index` to specify
                 // something that points to crates.io.
-                let is_crates_io = registry
-                    .host()
-                    .to_url()
-                    .map(|u| u.host_str() == Some("crates.io"))
-                    .unwrap_or(false);
-                if registry_src.is_default_registry() || is_crates_io {
+                if registry_src.is_default_registry() || registry.host_is_crates_io() {
                     bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\

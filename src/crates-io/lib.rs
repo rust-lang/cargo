@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
+use std::time::Instant;
 
 use curl::easy::{Easy, List};
 use failure::bail;
@@ -12,6 +13,7 @@ use http::status::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
+use url::Url;
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
@@ -141,6 +143,12 @@ impl Registry {
         &self.host
     }
 
+    pub fn host_is_crates_io(&self) -> bool {
+        Url::parse(self.host())
+            .map(|u| u.host_str() == Some("crates.io"))
+            .unwrap_or(false)
+    }
+
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
@@ -207,7 +215,7 @@ impl Registry {
         headers.append(&format!("Authorization: {}", token))?;
         self.handle.http_headers(headers)?;
 
-        let body = handle(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))?;
+        let body = self.handle(&mut |buf| body.read(buf).unwrap_or(0))?;
 
         let response = if body.is_empty() {
             "{}".parse()?
@@ -300,55 +308,62 @@ impl Registry {
             Some(mut body) => {
                 self.handle.upload(true)?;
                 self.handle.in_filesize(body.len() as u64)?;
-                handle(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))
+                self.handle(&mut |buf| body.read(buf).unwrap_or(0))
             }
-            None => handle(&mut self.handle, &mut |_| 0),
+            None => self.handle(&mut |_| 0),
         }
     }
-}
 
-fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
-    let mut headers = Vec::new();
-    let mut body = Vec::new();
-    {
-        let mut handle = handle.transfer();
-        handle.read_function(|buf| Ok(read(buf)))?;
-        handle.write_function(|data| {
-            body.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        handle.header_function(|data| {
-            headers.push(String::from_utf8_lossy(data).into_owned());
-            true
-        })?;
-        handle.perform()?;
-    }
-
-    let body = match String::from_utf8(body) {
-        Ok(body) => body,
-        Err(..) => bail!("response body was not valid utf-8"),
-    };
-    let errors = serde_json::from_str::<ApiErrorList>(&body).ok().map(|s| {
-        s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>()
-    });
-
-    match (handle.response_code()?, errors) {
-        (0, None) | (200, None) => {},
-        (code, Some(errors)) => {
-            let code = StatusCode::from_u16(code as _)?;
-            bail!("api errors (status {}): {}", code, errors.join(", "))
+    fn handle(&mut self, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
+        let mut headers = Vec::new();
+        let mut body = Vec::new();
+        let started;
+        {
+            let mut handle = self.handle.transfer();
+            handle.read_function(|buf| Ok(read(buf)))?;
+            handle.write_function(|data| {
+                body.extend_from_slice(data);
+                Ok(data.len())
+            })?;
+            handle.header_function(|data| {
+                headers.push(String::from_utf8_lossy(data).into_owned());
+                true
+            })?;
+            started = Instant::now();
+            handle.perform()?;
         }
-        (code, None) => bail!(
-            "failed to get a 200 OK response, got {}\n\
-             headers:\n\
-             \t{}\n\
-             body:\n\
-             {}",
-             code,
-             headers.join("\n\t"),
-             body,
-        ),
-    }
 
-    Ok(body)
+        let body = match String::from_utf8(body) {
+            Ok(body) => body,
+            Err(..) => bail!("response body was not valid utf-8"),
+        };
+        let errors = serde_json::from_str::<ApiErrorList>(&body).ok().map(|s| {
+            s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>()
+        });
+
+        match (self.handle.response_code()?, errors) {
+            (0, None) | (200, None) => {},
+            (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => {
+                bail!("Request timed out after 30 seconds. If you're trying to \
+                       upload a crate it may be too large. If the crate is under \
+                       10MB in size, you can email help@crates.io for assistance.")
+            }
+            (code, Some(errors)) => {
+                let code = StatusCode::from_u16(code as _)?;
+                bail!("api errors (status {}): {}", code, errors.join(", "))
+            }
+            (code, None) => bail!(
+                "failed to get a 200 OK response, got {}\n\
+                 headers:\n\
+                 \t{}\n\
+                 body:\n\
+                 {}",
+                 code,
+                 headers.join("\n\t"),
+                 body,
+            ),
+        }
+
+        Ok(body)
+    }
 }
