@@ -336,3 +336,23 @@ Also if you'd like to see a feature that's not yet implemented and/or if
 something doesn't quite work the way you'd like it to, feel free to check out
 the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
+
+### timings
+
+The `timings` feature gives some information about how long each compilation
+takes, and tracks concurrency information over time.
+
+```
+cargo +nightly build -Z timings
+```
+
+The `-Ztimings` flag can optionally take a comma-separated list of the
+following values:
+
+- `html` — Saves a file called `cargo-timing.html` to the current directory
+  with a report of the compilation.
+- `info` — Displays a message to stdout after each compilation finishes with
+  how long it took.
+- `json` — Emits some JSON information about timing information.
+
+The default if none are specified is `html,info`.

@@ -11,6 +11,7 @@ mod layout;
 mod links;
 mod output_depinfo;
 pub mod standard_lib;
+mod timings;
 mod unit;
 pub mod unit_dependencies;
 

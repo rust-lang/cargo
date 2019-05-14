@@ -129,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
-        let mut queue = JobQueue::new(self.bcx);
+        let mut queue = JobQueue::new(self.bcx, units);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;

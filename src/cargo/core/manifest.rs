@@ -926,6 +926,19 @@ impl Target {
         self.doc = doc;
         self
     }
+
+    pub fn description_named(&self) -> String {
+        match self.kind {
+            TargetKind::Lib(..) => "lib".to_string(),
+            TargetKind::Bin => format!("bin \"{}\"", self.name()),
+            TargetKind::Test => format!("test \"{}\"", self.name()),
+            TargetKind::Bench => format!("bench \"{}\"", self.name()),
+            TargetKind::ExampleLib(..) | TargetKind::ExampleBin => {
+                format!("example \"{}\"", self.name())
+            }
+            TargetKind::CustomBuild => "custom-build".to_string(),
+        }
+    }
 }
 
 impl fmt::Display for Target {

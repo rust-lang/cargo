@@ -159,16 +159,26 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// Calling this function indicates that the `node` has produced `edge`. All
     /// remaining work items which only depend on this node/edge pair are now
     /// candidates to start their job.
-    pub fn finish(&mut self, node: &N, edge: &E) {
+    ///
+    /// Returns the nodes that are now allowed to be dequeued as a result of
+    /// finishing this node.
+    pub fn finish(&mut self, node: &N, edge: &E) -> Vec<&N> {
+        // hashset<Node>
         let reverse_deps = self.reverse_dep_map.get(node).and_then(|map| map.get(edge));
         let reverse_deps = match reverse_deps {
             Some(deps) => deps,
-            None => return,
+            None => return Vec::new(),
         };
         let key = (node.clone(), edge.clone());
+        let mut result = Vec::new();
         for dep in reverse_deps.iter() {
-            assert!(self.dep_map.get_mut(dep).unwrap().0.remove(&key));
+            let edges = &mut self.dep_map.get_mut(dep).unwrap().0;
+            assert!(edges.remove(&key));
+            if edges.is_empty() {
+                result.push(dep);
+            }
         }
+        result
     }
 }
 
