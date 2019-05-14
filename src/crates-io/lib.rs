@@ -343,7 +343,7 @@ impl Registry {
 
         match (self.handle.response_code()?, errors) {
             (0, None) | (200, None) => {},
-            (503, _) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => {
+            (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => {
                 bail!("Request timed out after 30 seconds. If you're trying to \
                        upload a crate it may be too large. If the crate is under \
                        10MB in size, you can email help@crates.io for assistance.")
