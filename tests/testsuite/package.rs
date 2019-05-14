@@ -1337,7 +1337,7 @@ fn gitignore_negate() {
     );
 
     include_exclude_test(
-        r#"["Cargo.toml", "src/**.rs", "!foo.rs"]"#, // include
+        r#"["Cargo.toml", "src/*.rs", "!foo.rs"]"#, // include
         "[]",
         &["src/lib.rs", "foo.rs", "src/foo.rs", "src/bar/foo.rs"],
         "Cargo.toml\n\
