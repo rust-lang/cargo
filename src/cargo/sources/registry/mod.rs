@@ -449,15 +449,16 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = dst.join(PACKAGE_SOURCE_LOCK);
         let path = self.config.assert_package_cache_locked(&path);
         let unpack_dir = path.parent().unwrap();
+        if let Ok(meta) = path.metadata() {
+            if meta.len() > 0 {
+                return Ok(unpack_dir.to_path_buf());
+            }
+        }
         let mut ok = OpenOptions::new()
             .create(true)
             .read(true)
             .write(true)
             .open(&path)?;
-        let meta = ok.metadata()?;
-        if meta.len() > 0 {
-            return Ok(unpack_dir.to_path_buf());
-        }
 
         let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);
