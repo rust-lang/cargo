@@ -6,7 +6,7 @@ use std::env;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::io::{self, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -860,21 +860,71 @@ impl Config {
         return ret;
     }
 
+    /// Acquires an exclusive lock on the global "package cache"
+    ///
+    /// This lock is global per-process and can be acquired recursively. An RAII
+    /// structure is returned to release the lock, and if this process
+    /// abnormally terminates the lock is also released.
     pub fn acquire_package_cache_lock<'a>(&'a self) -> CargoResult<PackageCacheLock<'a>> {
         let mut slot = self.package_cache_lock.borrow_mut();
         match *slot {
+            // We've already acquired the lock in this process, so simply bump
+            // the count and continue.
             Some((_, ref mut cnt)) => {
                 *cnt += 1;
             }
             None => {
-                let lock = self
-                    .home_path
-                    .open_rw(".package-cache", self, "package cache lock")
-                    .chain_err(|| "failed to acquire package cache lock")?;
-                *slot = Some((lock, 1));
+                let path = ".package-cache";
+                let desc = "package cache lock";
+
+                // First, attempt to open an exclusive lock which is in general
+                // the purpose of this lock!
+                //
+                // If that fails because of a readonly filesystem, though, then
+                // we don't want to fail because it's a readonly filesystem. In
+                // some situations Cargo is prepared to have a readonly
+                // filesystem yet still work since it's all been pre-downloaded
+                // and/or pre-unpacked. In these situations we want to keep
+                // Cargo running if possible, so if it's a readonly filesystem
+                // switch to a shared lock which should hopefully succeed so we
+                // can continue.
+                //
+                // Note that the package cache lock protects files in the same
+                // directory, so if it's a readonly filesystem we assume that
+                // the entire package cache is readonly, so we're just acquiring
+                // something to prove it works, we're not actually doing any
+                // synchronization at that point.
+                match self.home_path.open_rw(path, self, desc) {
+                    Ok(lock) => *slot = Some((lock, 1)),
+                    Err(e) => {
+                        if maybe_readonly(&e) {
+                            if let Ok(lock) = self.home_path.open_ro(path, self, desc) {
+                                *slot = Some((lock, 1));
+                                return Ok(PackageCacheLock(self));
+                            }
+                        }
+
+                        Err(e).chain_err(|| "failed to acquire package cache lock")?;
+                    }
+                }
             }
         }
-        Ok(PackageCacheLock(self))
+        return Ok(PackageCacheLock(self));
+
+        fn maybe_readonly(err: &failure::Error) -> bool {
+            err.iter_chain().any(|err| {
+                if let Some(io) = err.downcast_ref::<io::Error>() {
+                    if io.kind() == io::ErrorKind::PermissionDenied {
+                        return true;
+                    }
+
+                    #[cfg(unix)]
+                    return io.raw_os_error() == Some(libc::EROFS);
+                }
+
+                false
+            })
+        }
     }
 
     pub fn release_package_cache_lock(&self) {}
