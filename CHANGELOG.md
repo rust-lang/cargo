@@ -51,7 +51,7 @@
 - Added the `rustc-cdylib-link-arg` key for build scripts to specify linker
   arguments for cdylib crates.
   [#6298](https://github.com/rust-lang/cargo/pull/6298)
-- `cargo clippy` is now a built-in cargo command.
+- (Nightly only): `cargo clippy-preview` is now a built-in cargo command.
   [#6759](https://github.com/rust-lang/cargo/pull/6759)
 
 ### Changed
