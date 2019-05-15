@@ -125,7 +125,6 @@ impl Method {
 #[derive(Clone)]
 pub struct Candidate {
     pub summary: Summary,
-    pub replace: Option<Summary>,
 }
 
 #[derive(Clone)]

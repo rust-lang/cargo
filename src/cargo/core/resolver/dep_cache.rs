@@ -38,7 +38,7 @@ pub struct RegistryQueryer<'a> {
         Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
     >,
     /// all the cases we ended up using a supplied replacement
-    used_replacements: HashMap<PackageId, PackageId>,
+    used_replacements: HashMap<PackageId, Summary>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -60,7 +60,11 @@ impl<'a> RegistryQueryer<'a> {
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
-        self.used_replacements.get(&p).map(|&r| (p, r))
+        self.used_replacements.get(&p).map(|r| (p, r.package_id()))
+    }
+
+    pub fn replacement_summary(&self, p: PackageId) -> Option<&Summary> {
+        self.used_replacements.get(&p)
     }
 
     /// Queries the `registry` to return a list of candidates for `dep`.
@@ -78,10 +82,7 @@ impl<'a> RegistryQueryer<'a> {
         self.registry.query(
             dep,
             &mut |s| {
-                ret.push(Candidate {
-                    summary: s,
-                    replace: None,
-                });
+                ret.push(Candidate { summary: s });
             },
             false,
         )?;
@@ -157,12 +158,9 @@ impl<'a> RegistryQueryer<'a> {
             for dep in summary.dependencies() {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
             }
-            if let Some(r) = &replace {
-                self.used_replacements
-                    .insert(summary.package_id(), r.package_id());
+            if let Some(r) = replace {
+                self.used_replacements.insert(summary.package_id(), r);
             }
-
-            candidate.replace = replace;
         }
 
         // When we attempt versions for a package we'll want to do so in a
