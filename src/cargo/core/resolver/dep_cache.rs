@@ -19,7 +19,7 @@ use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
 
-use crate::core::resolver::types::{Candidate, ConflictReason, DepInfo, FeaturesSet};
+use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, Method};
 
 pub struct RegistryQueryer<'a> {
@@ -31,7 +31,7 @@ pub struct RegistryQueryer<'a> {
     /// specify minimum dependency versions to be used.
     minimal_versions: bool,
     /// a cache of `Candidate`s that fulfil a `Dependency`
-    registry_cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    registry_cache: HashMap<Dependency, Rc<Vec<Summary>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
         (Option<PackageId>, Summary, Method),
@@ -73,7 +73,7 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Candidate>>> {
+    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
         if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
         }
@@ -82,13 +82,11 @@ impl<'a> RegistryQueryer<'a> {
         self.registry.query(
             dep,
             &mut |s| {
-                ret.push(Candidate { summary: s });
+                ret.push(s);
             },
             false,
         )?;
-        for candidate in ret.iter_mut() {
-            let summary = &candidate.summary;
-
+        for summary in ret.iter_mut() {
             let mut potential_matches = self
                 .replacements
                 .iter()
@@ -168,12 +166,12 @@ impl<'a> RegistryQueryer<'a> {
         // prioritized summaries (those in `try_to_use`) and failing that we
         // list everything from the maximum version to the lowest version.
         ret.sort_unstable_by(|a, b| {
-            let a_in_previous = self.try_to_use.contains(&a.summary.package_id());
-            let b_in_previous = self.try_to_use.contains(&b.summary.package_id());
+            let a_in_previous = self.try_to_use.contains(&a.package_id());
+            let b_in_previous = self.try_to_use.contains(&b.package_id());
             let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
             match previous_cmp {
                 Ordering::Equal => {
-                    let cmp = a.summary.version().cmp(b.summary.version());
+                    let cmp = a.version().cmp(b.version());
                     if self.minimal_versions {
                         // Lower version ordered first.
                         cmp

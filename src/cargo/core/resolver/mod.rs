@@ -62,7 +62,7 @@ use crate::util::profile;
 
 use self::context::{Activations, Context};
 use self::dep_cache::RegistryQueryer;
-use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame};
+use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -181,10 +181,7 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let candidate = Candidate {
-            summary: summary.clone(),
-        };
-        let res = activate(&mut cx, registry, None, candidate, method.clone());
+        let res = activate(&mut cx, registry, None, summary.clone(), method.clone());
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -369,7 +366,7 @@ fn activate_deps_loop(
                 None
             };
 
-            let pid = candidate.summary.package_id();
+            let pid = candidate.package_id();
             let method = Method::Required {
                 dev_deps: false,
                 features: Rc::clone(&features),
@@ -381,7 +378,7 @@ fn activate_deps_loop(
                 parent.name(),
                 cur,
                 dep.package_name(),
-                candidate.summary.version()
+                candidate.version()
             );
             let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, method);
 
@@ -594,10 +591,10 @@ fn activate(
     cx: &mut Context,
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
-    candidate: Candidate,
+    candidate: Summary,
     method: Method,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
-    let candidate_pid = candidate.summary.package_id();
+    let candidate_pid = candidate.package_id();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
         Rc::make_mut(
@@ -656,7 +653,7 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate.summary, &method)?;
+    let activated = cx.flag_activated(&candidate, &method)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -675,7 +672,7 @@ fn activate(
                 return Ok(None);
             }
             trace!("activating {}", candidate_pid);
-            candidate.summary
+            candidate
         }
     };
 
@@ -726,13 +723,13 @@ struct BacktrackFrame {
 /// filtered out, and as they are filtered the causes will be added to `conflicting_prev_active`.
 #[derive(Clone)]
 struct RemainingCandidates {
-    remaining: RcVecIter<Candidate>,
+    remaining: RcVecIter<Summary>,
     // This is a inlined peekable generator
-    has_another: Option<Candidate>,
+    has_another: Option<Summary>,
 }
 
 impl RemainingCandidates {
-    fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
+    fn new(candidates: &Rc<Vec<Summary>>) -> RemainingCandidates {
         RemainingCandidates {
             remaining: RcVecIter::new(Rc::clone(candidates)),
             has_another: None,
@@ -761,14 +758,14 @@ impl RemainingCandidates {
         cx: &Context,
         dep: &Dependency,
         parent: PackageId,
-    ) -> Option<(Candidate, bool)> {
+    ) -> Option<(Summary, bool)> {
         'main: for (_, b) in self.remaining.by_ref() {
-            let b_id = b.summary.package_id();
+            let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
             // `links` key. If this candidate links to something that's already
             // linked to by a different package then we've gotta skip this.
-            if let Some(link) = b.summary.links() {
+            if let Some(link) = b.links() {
                 if let Some(&a) = cx.links.get(&link) {
                     if a != b_id {
                         conflicting_prev_active
@@ -788,7 +785,7 @@ impl RemainingCandidates {
             // Here we throw out our candidate if it's *compatible*, yet not
             // equal, to all previously activated versions.
             if let Some((a, _)) = cx.activations.get(&b_id.as_activations_key()) {
-                if *a != b.summary {
+                if *a != b {
                     conflicting_prev_active
                         .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
@@ -904,7 +901,7 @@ fn generalize_conflicting(
                         .find(
                             dep,
                             &|id| {
-                                if id == other.summary.package_id() {
+                                if id == other.package_id() {
                                     // we are imagining that we used other instead
                                     Some(backtrack_critical_age)
                                 } else {
@@ -913,9 +910,9 @@ fn generalize_conflicting(
                                         age < backtrack_critical_age)
                                 }
                             },
-                            Some(other.summary.package_id()),
+                            Some(other.package_id()),
                         )
-                        .map(|con| (other.summary.package_id(), con))
+                        .map(|con| (other.package_id(), con))
                 })
                 .collect::<Option<Vec<(PackageId, &ConflictMap)>>>()
             {
@@ -972,7 +969,7 @@ fn find_candidate(
     parent: &Summary,
     backtracked: bool,
     conflicting_activations: &ConflictMap,
-) -> Option<(Candidate, bool, BacktrackFrame)> {
+) -> Option<(Summary, bool, BacktrackFrame)> {
     // When we're calling this method we know that `parent` failed to
     // activate. That means that some dependency failed to get resolved for
     // whatever reason. Normally, that means that all of those reasons

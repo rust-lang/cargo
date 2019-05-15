@@ -7,7 +7,7 @@ use failure::{Error, Fail};
 use semver;
 
 use super::context::Context;
-use super::types::{Candidate, ConflictMap, ConflictReason};
+use super::types::{ConflictMap, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -74,7 +74,7 @@ pub(super) fn activation_error(
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
-    candidates: &[Candidate],
+    candidates: &[Summary],
     config: Option<&Config>,
 ) -> ResolveError {
     let to_resolve_err = |err| {
@@ -101,7 +101,7 @@ pub(super) fn activation_error(
         msg.push_str(
             &candidates
                 .iter()
-                .map(|v| v.summary.version())
+                .map(|v| v.version())
                 .map(|v| v.to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
