@@ -183,7 +183,6 @@ fn activate_deps_loop(
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate {
             summary: summary.clone(),
-            replace: None,
         };
         let res = activate(&mut cx, registry, None, candidate, method.clone());
         match res {
@@ -659,7 +658,7 @@ fn activate(
 
     let activated = cx.flag_activated(&candidate.summary, &method)?;
 
-    let candidate = match candidate.replace {
+    let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
             if cx.flag_activated(&replace, &method)? && activated {
                 return Ok(None);
@@ -669,7 +668,7 @@ fn activate(
                 replace.package_id(),
                 candidate_pid
             );
-            replace
+            replace.clone()
         }
         None => {
             if activated {
