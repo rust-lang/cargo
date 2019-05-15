@@ -123,12 +123,6 @@ impl Method {
 }
 
 #[derive(Clone)]
-pub struct Candidate {
-    pub summary: Summary,
-    pub replace: Option<Summary>,
-}
-
-#[derive(Clone)]
 pub struct DepsFrame {
     pub parent: Summary,
     pub just_for_error_messages: bool,
@@ -231,7 +225,7 @@ impl RemainingDeps {
 /// Information about the dependencies for a crate, a tuple of:
 ///
 /// (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, FeaturesSet);
+pub type DepInfo = (Dependency, Rc<Vec<Summary>>, FeaturesSet);
 
 /// All possible reasons that a package might fail to activate.
 ///
