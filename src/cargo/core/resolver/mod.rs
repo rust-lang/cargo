@@ -891,32 +891,28 @@ fn generalize_conflicting(
     }
 
     let our_activation_key = {
-        // TODO: no reason to allocate a `HashSet` we are just going to throw it out if len > 1
-        let our_activation_keys: HashSet<_> = our_candidates
-            .iter()
-            .map(|c| c.package_id().as_activations_key())
-            .collect();
+        let first_activation_key = our_candidates[0].package_id().as_activations_key();
 
         // If our dep only matches one semver range then we can fast path any other dep
         // that also targets that semver range and has no overlap.
-        if our_activation_keys.len() == 1 {
-            our_activation_keys.iter().next().cloned()
+        if our_candidates
+            .iter()
+            .all(|c| first_activation_key == c.package_id().as_activations_key())
+        {
+            Some(first_activation_key)
         } else {
             None
         }
     };
 
     let our_link = {
-        // TODO: no reason to allocate a `HashSet` we are just going to throw it out if len > 1
-        let our_links: HashSet<Option<_>> = our_candidates.iter().map(|c| c.links()).collect();
+        let first_links = our_candidates[0].links();
 
         // If our dep only matches things that have a links set then we can fast path any other dep
         // that also all use that links and has no overlap.
-        if our_links.len() == 1 {
-            // All of `our_candidates` use the same `links`.
-            // If they all use Some(value), then we can use the fast path.
-            // If they all use None, then we cant.
-            our_links.into_iter().next().unwrap()
+        if first_links.is_some() && our_candidates.iter().all(|c| first_links == c.links()) {
+            // All of `our_candidates` use the same non-`None` `links`, so we can use the fast path.
+            first_links
         } else {
             // Some of `our_candidates` use a different `links` so whatever `links` get used by
             // the conflicting dep we can select the other. We cant use the fast path.
