@@ -161,6 +161,25 @@ impl Context {
             .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
+    /// This calculates `is_active` after backtracking to `age` and activating `alternative`.
+    /// If the package is active returns the `ContextAge` when it was added
+    /// but only if it is older then `age`.
+    /// If it is not active but it is the `alternative` then it returns `age`.
+    pub fn is_older_active_or(
+        &self,
+        id: PackageId,
+        age: ContextAge,
+        alternative: PackageId,
+    ) -> Option<ContextAge> {
+        if id == alternative {
+            // we are imagining that we used other instead
+            Some(age)
+        } else {
+            // we only care about things that are older then critical_age
+            self.is_active(id).filter(|&other_age| other_age < age)
+        }
+    }
+
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
     /// If so returns the `ContextAge` when the newest one was added.

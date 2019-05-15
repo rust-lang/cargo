@@ -890,31 +890,38 @@ fn generalize_conflicting(
         return None;
     }
 
-    let our_activation_keys: HashSet<_> = our_candidates
-        .iter()
-        .map(|c| c.package_id().as_activations_key())
-        .collect();
+    let our_activation_key = {
+        // TODO: no reason to allocate a `HashSet` we are just going to throw it out if len > 1
+        let our_activation_keys: HashSet<_> = our_candidates
+            .iter()
+            .map(|c| c.package_id().as_activations_key())
+            .collect();
 
-    // if our dep only matches one semver range then we can fast path any other dep
-    // that also targets that semver range and has no overlap
-    let our_activation_key = if our_activation_keys.len() == 1 {
-        our_activation_keys.iter().next().cloned()
-    } else {
-        None
-    };
-
-    let our_links: Option<HashSet<_>> = our_candidates.iter().map(|c| c.links()).collect();
-
-    // if our dep only matches things that have a links set then we can fast path any other dep
-    // that also all use that links and has no overlap
-    let our_link = if let Some(our_links) = our_links {
-        if our_links.len() == 1 {
-            our_links.iter().next().cloned()
+        // If our dep only matches one semver range then we can fast path any other dep
+        // that also targets that semver range and has no overlap.
+        if our_activation_keys.len() == 1 {
+            our_activation_keys.iter().next().cloned()
         } else {
             None
         }
-    } else {
-        None
+    };
+
+    let our_link = {
+        // TODO: no reason to allocate a `HashSet` we are just going to throw it out if len > 1
+        let our_links: HashSet<Option<_>> = our_candidates.iter().map(|c| c.links()).collect();
+
+        // If our dep only matches things that have a links set then we can fast path any other dep
+        // that also all use that links and has no overlap.
+        if our_links.len() == 1 {
+            // All of `our_candidates` use the same `links`.
+            // If they all use Some(value), then we can use the fast path.
+            // If they all use None, then we cant.
+            our_links.into_iter().next().unwrap()
+        } else {
+            // Some of `our_candidates` use a different `links` so whatever `links` get used by
+            // the conflicting dep we can select the other. We cant use the fast path.
+            None
+        }
     };
 
     let our_candidates: HashSet<PackageId> =
@@ -942,11 +949,17 @@ fn generalize_conflicting(
                 .rev()
             // the last one to be tried is the least likely to be in the cache, so start with that.
             {
-                if (our_activation_key
-                    .map_or(false, |our| other.package_id().as_activations_key() == our)
-                    || our_link.map_or(false, |_| other.links() == our_link))
-                    && !our_candidates.contains(&other.package_id())
+                if (
+                    our_activation_key.map_or(false, |our| {
+                    other.package_id().as_activations_key() == our
+                })
+                    // `other` is semver compatible with all of `our_candidates`
+                    || our_link.map_or(false, |_| other.links() == our_link)
+                    // or `other` have the same `links` as all of `our_candidates`
+                ) && !our_candidates.contains(&other.package_id())
+                // and is not one of `our_candidates`.
                 {
+                    // Thus `dep` can not be resolved when `critical_parents_dep` has bean resolved.
                     continue;
                 }
 
@@ -967,16 +980,7 @@ fn generalize_conflicting(
 
                 if let Some(conflicting) = past_conflicting_activations.find(
                     dep,
-                    &|id| {
-                        if id == other.package_id() {
-                            // we are imagining that we used other instead
-                            Some(backtrack_critical_age)
-                        } else {
-                            cx.is_active(id).filter(|&age|
-                                        // we only care about things that are older then critical_age
-                                        age < backtrack_critical_age)
-                        }
-                    },
+                    &|id| cx.is_older_active_or(id, backtrack_critical_age, other.package_id()),
                     Some(other.package_id()),
                 ) {
                     con.extend(
@@ -988,6 +992,9 @@ fn generalize_conflicting(
                     continue;
                 }
 
+                // We don't have a reason why `other` cant work.
+                // There for `critical_parents_dep` could have used it, and we can still be activated.
+                // We can not generalize over `critical_parents_dep`, but maybe the next `critical_parents_dep`
                 continue 'dep;
             }
 
@@ -1043,16 +1050,7 @@ fn generalize_children_conflicting(
                 .filter_map(|(ref new_dep, _, _)| {
                     past_conflicting_activations.find(
                         new_dep,
-                        &|id| {
-                            if id == candidate.package_id() {
-                                // we are imagining that we used other instead
-                                Some(critical_age)
-                            } else {
-                                cx.is_active(id).filter(|&age|
-                                        // we only care about things that are older then critical_age
-                                        age < critical_age)
-                            }
-                        },
+                        &|id| cx.is_older_active_or(id, critical_age, candidate.package_id()),
                         None,
                     )
                 })
