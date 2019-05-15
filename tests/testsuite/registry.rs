@@ -2003,25 +2003,28 @@ fn readonly_registry_still_works() {
 
     p.cargo("generate-lockfile").run();
     p.cargo("fetch --locked").run();
-    chmod_readonly(&paths::home());
+    chmod_readonly(&paths::home(), true);
     p.cargo("build").run();
+    // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
+    chmod_readonly(&paths::home(), false);
 
-    fn chmod_readonly(path: &Path) {
+
+    fn chmod_readonly(path: &Path, readonly: bool) {
         for entry in t!(path.read_dir()) {
             let entry = t!(entry);
             let path = entry.path();
             if t!(entry.file_type()).is_dir() {
-                chmod_readonly(&path);
+                chmod_readonly(&path, readonly);
             } else {
-                set_readonly(&path);
+                set_readonly(&path, readonly);
             }
         }
-        set_readonly(path);
+        set_readonly(path, readonly);
     }
 
-    fn set_readonly(path: &Path) {
+    fn set_readonly(path: &Path, readonly: bool) {
         let mut perms = t!(path.metadata()).permissions();
-        perms.set_readonly(true);
+        perms.set_readonly(readonly);
         t!(fs::set_permissions(path, perms));
     }
 }
