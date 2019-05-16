@@ -14,7 +14,7 @@ mod unit;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -769,17 +769,21 @@ fn add_error_format(
         if supports_termcolor {
             cmd.arg("--json-rendered=termcolor");
         }
+        if cx.bcx.build_config.message_format == MessageFormat::Short {
+            // FIXME(rust-lang/rust#60419): right now we have no way of
+            // turning on JSON messages from the compiler and also asking
+            // the rendered field to be in the `short` format.
+            bail!(
+                "currently `--message-format short` is incompatible with {}",
+                if pipelined {
+                    "pipelined compilation"
+                } else {
+                    "cached output"
+                }
+            );
+        }
         if pipelined {
             cmd.arg("-Zemit-artifact-notifications");
-            if cx.bcx.build_config.message_format == MessageFormat::Short {
-                // FIXME(rust-lang/rust#60419): right now we have no way of
-                // turning on JSON messages from the compiler and also asking
-                // the rendered field to be in the `short` format.
-                bail!(
-                    "currently `--message-format short` is incompatible with \
-                     pipelined compilation"
-                );
-            }
         }
     } else {
         match cx.bcx.build_config.message_format {
@@ -1130,10 +1134,13 @@ fn on_stderr_line(
     color: bool,
     cache_cell: &mut Option<(PathBuf, LazyCell<File>)>,
 ) -> CargoResult<()> {
+    // Check if caching is enabled.
     if let Some((path, cell)) = cache_cell {
+        // Cache the output, which will be replayed later when Fresh.
         // The file is created lazily so that in the normal case, lots of
         // empty files are not created.
         let f = cell.try_borrow_mut_with(|| File::create(path))?;
+        debug_assert!(!line.contains('\n'));
         f.write_all(line.as_bytes())?;
         f.write_all(&[b'\n'])?;
     }
@@ -1179,9 +1186,11 @@ fn on_stderr_line(
             let rendered = if color {
                 error.rendered
             } else {
+                // Strip only fails if the the Writer fails, which is Cursor
+                // on a Vec, which should never fail.
                 strip_ansi_escapes::strip(&error.rendered)
                     .map(|v| String::from_utf8(v).expect("utf8"))
-                    .unwrap_or(error.rendered)
+                    .expect("strip should never fail")
             };
             state.stderr(rendered);
             return Ok(());
@@ -1265,25 +1274,22 @@ fn replay_output_cache(
         MessageFormat::Short => false,
     };
     Work::new(move |state| {
-        if path.exists() {
-            let mut f = BufReader::new(File::open(&path)?);
-            let mut line = String::new();
-            loop {
-                if f.read_line(&mut line)? == 0 {
-                    break;
-                }
-                on_stderr_line(
-                    state,
-                    &line,
-                    package_id,
-                    &target,
-                    extract_rendered_messages,
-                    false, // look_for_metadata_directive
-                    color,
-                    &mut None,
-                )?;
-                line.clear();
-            }
+        if !path.exists() {
+            // No cached output, probably didn't emit anything.
+            return Ok(());
+        }
+        let contents = fs::read_to_string(&path)?;
+        for line in contents.lines() {
+            on_stderr_line(
+                state,
+                &line,
+                package_id,
+                &target,
+                extract_rendered_messages,
+                false, // look_for_metadata_directive
+                color,
+                &mut None,
+            )?;
         }
         Ok(())
     })
