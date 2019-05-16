@@ -334,3 +334,15 @@ fn very_verbose() {
         .with_stderr_contains("[..]not_used[..]")
         .run();
 }
+
+#[test]
+fn short_incompatible() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check -Zcache-messages --message-format=short")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "[ERROR] currently `--message-format short` is incompatible with cached output",
+        )
+        .with_status(101)
+        .run();
+}

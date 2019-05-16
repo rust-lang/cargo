@@ -107,11 +107,6 @@ impl BuildConfig {
     /// Whether or not Cargo should cache compiler messages on disk.
     pub fn cache_messages(&self) -> bool {
         self.cache_messages
-            && match self.message_format {
-                MessageFormat::Human | MessageFormat::Json => true,
-                // short is currently not supported
-                MessageFormat::Short => false,
-            }
     }
 
     /// Whether or not the *user* wants JSON output. Whether or not rustc
