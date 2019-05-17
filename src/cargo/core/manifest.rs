@@ -287,6 +287,7 @@ struct SerializedTarget<'a> {
     edition: &'a str,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
+    doctest: bool,
 }
 
 impl ser::Serialize for Target {
@@ -307,6 +308,7 @@ impl ser::Serialize for Target {
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
+            doctest: self.doctest && self.doctestable(),
         }
         .serialize(s)
     }
