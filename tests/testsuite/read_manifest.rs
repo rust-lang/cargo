@@ -22,6 +22,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "targets":[{
         "kind":["bin"],
         "crate_types":["bin"],
+        "doctest": false,
         "edition": "2015",
         "name":"foo",
         "src_path":"[..]/foo/src/foo.rs"
