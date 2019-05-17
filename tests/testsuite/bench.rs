@@ -1620,6 +1620,7 @@ fn json_artifact_includes_executable_for_benchmark() {
                 "target": {
                     "crate_types": [ "bin" ],
                     "kind": [ "bench" ],
+                    "doctest": false,
                     "edition": "2015",
                     "name": "benchmark",
                     "src_path": "[..]/foo/benches/benchmark.rs"
