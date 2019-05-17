@@ -308,7 +308,7 @@ impl ser::Serialize for Target {
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
-            doctest: self.doctest,
+            doctest: self.doctest && self.doctestable(),
         }
         .serialize(s)
     }
