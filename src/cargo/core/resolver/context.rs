@@ -9,11 +9,11 @@ use log::debug;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
-use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;
-use super::types::{ConflictMap, FeaturesSet, Method};
+use super::types::{ConflictMap, ConflictReason, FeaturesSet, Method};
+use super::ActivateResult;
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -100,25 +100,34 @@ impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns `true` if this summary with the given method is already activated.
-    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
+    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> ActivateResult<bool> {
         let id = summary.package_id();
         let age: ContextAge = self.age();
         match self.activations.entry(id.as_activations_key()) {
             im_rc::hashmap::Entry::Occupied(o) => {
-                debug_assert_eq!(
-                    &o.get().0,
-                    summary,
-                    "cargo does not allow two semver compatible versions"
-                );
+                let other = o.get().0.package_id();
+                // Cargo dictates that you can't duplicate multiple
+                // semver-compatible versions of a crate. For example we can't
+                // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
+                // however, activate `1.0.2` and `2.0.0`.
+                //
+                // Here we throw out our candidate if it's *compatible*, yet not
+                // equal, to all previously activated versions.
+                if other != summary.package_id() {
+                    return Err((other, ConflictReason::Semver).into());
+                }
             }
             im_rc::hashmap::Entry::Vacant(v) => {
                 if let Some(link) = summary.links() {
-                    ensure!(
-                        self.links.insert(link, id).is_none(),
-                        "Attempting to resolve a dependency with more then one crate with the \
-                         links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
-                        &*link
-                    );
+                    if let Some(other) = self.links.insert(link, id) {
+                        // The `links` key in the manifest dictates that there's only one
+                        // package in a dependency graph, globally, with that particular
+                        // `links` key. If this candidate links to something that's already
+                        // linked to by a different package then we've gotta skip this.
+                        if other != summary.package_id() {
+                            return Err((other, ConflictReason::Links(link)).into());
+                        }
+                    }
                 }
                 v.insert((summary.clone(), age));
                 return Ok(false);

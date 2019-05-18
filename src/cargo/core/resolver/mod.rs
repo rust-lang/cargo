@@ -622,8 +622,11 @@ fn activate(
                 while let Some((p, public)) = stack.pop() {
                     match public_dependency.entry(p).or_default().entry(c.name()) {
                         im_rc::hashmap::Entry::Occupied(mut o) => {
-                            // the (transitive) parent can already see something by `c`s name, it had better be `c`.
-                            assert_eq!(o.get().0, c);
+                            if o.get().0 != c {
+                                // the (transitive) parent can already see a different version by `t`s name.
+                                // So, adding `b` will cause `p` to have a public dependency conflict on `c`.
+                                return Err((p, ConflictReason::PublicDependency).into());
+                            }
                             if o.get().1 {
                                 // The previous time the parent saw `c`, it was a public dependency.
                                 // So all of its parents already know about `c`
