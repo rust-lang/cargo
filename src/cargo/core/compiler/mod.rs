@@ -72,6 +72,7 @@ pub trait Executor: Send + Sync + 'static {
         mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        capture_output: bool,
     ) -> CargoResult<()>;
 
     /// Queried when queuing each unit of work. If it returns true, then the
@@ -95,8 +96,9 @@ impl Executor for DefaultExecutor {
         _mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        capture_output: bool,
     ) -> CargoResult<()> {
-        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
+        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, capture_output)
             .map(drop)
     }
 }
@@ -217,6 +219,7 @@ fn rustc<'a, 'cfg>(
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
     let rmeta_produced = cx.rmeta_required(unit);
+    let extra_verbose = cx.bcx.config.extra_verbose();
 
     // If this unit is producing a required rmeta file then we need to know
     // when the rmeta file is ready so we can signal to the rest of Cargo that
@@ -329,6 +332,7 @@ fn rustc<'a, 'cfg>(
                         rmeta_produced,
                     )
                 },
+                extra_verbose,
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
@@ -677,6 +681,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let key = (unit.pkg.package_id(), unit.kind);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
+    let extra_verbose = bcx.config.extra_verbose();
 
     Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
@@ -693,7 +698,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
                 &mut |line| on_stderr_line(state, line, package_id, &target, false, false),
-                false,
+                extra_verbose,
             )
             .chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
