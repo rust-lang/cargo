@@ -759,80 +759,10 @@ impl RemainingCandidates {
         &mut self,
         conflicting_prev_active: &mut ConflictMap,
         cx: &Context,
-        dep: &Dependency,
-        parent: PackageId,
+        _dep: &Dependency,
+        _parent: PackageId,
     ) -> Option<(Summary, bool)> {
         'main: for (_, b) in self.remaining.by_ref() {
-            let b_id = b.package_id();
-            // The `links` key in the manifest dictates that there's only one
-            // package in a dependency graph, globally, with that particular
-            // `links` key. If this candidate links to something that's already
-            // linked to by a different package then we've gotta skip this.
-            if let Some(link) = b.links() {
-                if let Some(&a) = cx.links.get(&link) {
-                    if a != b_id {
-                        conflicting_prev_active
-                            .entry(a)
-                            .or_insert_with(|| ConflictReason::Links(link));
-                        continue;
-                    }
-                }
-            }
-
-            // Otherwise the condition for being a valid candidate relies on
-            // semver. Cargo dictates that you can't duplicate multiple
-            // semver-compatible versions of a crate. For example we can't
-            // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
-            // however, activate `1.0.2` and `2.0.0`.
-            //
-            // Here we throw out our candidate if it's *compatible*, yet not
-            // equal, to all previously activated versions.
-            if let Some((a, _)) = cx.activations.get(&b_id.as_activations_key()) {
-                if *a != b {
-                    conflicting_prev_active
-                        .entry(a.package_id())
-                        .or_insert(ConflictReason::Semver);
-                    continue;
-                }
-            }
-            // We may still have to reject do to a public dependency conflict. If one of any of our
-            // ancestors that can see us already knows about a different crate with this name then
-            // we have to reject this candidate. Additionally this candidate may already have been
-            // activated and have public dependants of its own,
-            // all of witch also need to be checked the same way.
-            if let Some(public_dependency) = cx.public_dependency.as_ref() {
-                let existing_public_deps: Vec<PackageId> = public_dependency
-                    .get(&b_id)
-                    .iter()
-                    .flat_map(|x| x.values())
-                    .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                    .chain(&Some(b_id))
-                    .cloned()
-                    .collect();
-                for t in existing_public_deps {
-                    // for each (transitive) parent that can newly see `t`
-                    let mut stack = vec![(parent, dep.is_public())];
-                    while let Some((p, public)) = stack.pop() {
-                        // TODO: dont look at the same thing more then once
-                        if let Some(o) = public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
-                            if o.0 != t {
-                                // the (transitive) parent can already see a different version by `t`s name.
-                                // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
-                                conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
-                                continue 'main;
-                            }
-                        }
-                        // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
-                        if public {
-                            // if it was public, then we add all of `p`s parents to be checked
-                            for &(grand, ref d) in cx.parents.edges(&p) {
-                                stack.push((grand, d.iter().any(|x| x.is_public())));
-                            }
-                        }
-                    }
-                }
-            }
-
             // Well if we made it this far then we've got a valid dependency. We
             // want this iterator to be inherently "peekable" so we don't
             // necessarily return the item just yet. Instead we stash it away to
