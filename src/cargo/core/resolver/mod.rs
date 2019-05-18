@@ -48,7 +48,6 @@
 //! over the place.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -227,7 +226,7 @@ fn activate_deps_loop(
                 .conflicting(&cx, &dep)
                 .is_some();
 
-        let mut remaining_candidates = RemainingCandidates::new(&candidates);
+        let mut remaining_candidates = RcVecIter::new(candidates.clone());
 
         // `conflicting_activations` stores all the reasons we were unable to
         // activate candidates. One of these reasons will have to go away for
@@ -246,14 +245,9 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(
-                &mut conflicting_activations,
-                &cx,
-                &dep,
-                parent.package_id(),
-            );
+            let next = remaining_candidates.next().map(|(_, s)| s);
 
-            let (candidate, has_another) = next.ok_or(()).or_else(|_| {
+            let candidate = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
                 // exhausted, so `dep` failed to activate.
                 //
@@ -305,7 +299,7 @@ fn activate_deps_loop(
                         .as_ref()
                         .unwrap_or(&conflicting_activations),
                 ) {
-                    Some((candidate, has_another, frame)) => {
+                    Some((candidate, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
                         cur = frame.cur;
@@ -317,7 +311,7 @@ fn activate_deps_loop(
                         features = frame.features;
                         conflicting_activations = frame.conflicting_activations;
                         backtracked = true;
-                        Ok((candidate, has_another))
+                        Ok(candidate)
                     }
                     None => {
                         debug!("no candidates found");
@@ -339,7 +333,10 @@ fn activate_deps_loop(
             // more candidates we want to fast-forward to the last one as
             // otherwise we'll just backtrack here anyway (helping us to skip
             // some work).
-            if just_here_for_the_error_messages && !backtracked && has_another {
+            if just_here_for_the_error_messages
+                && !backtracked
+                && remaining_candidates.has_another()
+            {
                 continue;
             }
 
@@ -351,7 +348,7 @@ fn activate_deps_loop(
             // frame. This is a relatively important optimization as a number of
             // the `clone` calls below can be quite expensive, so we avoid them
             // if we can.
-            let backtrack = if has_another {
+            let backtrack = if remaining_candidates.has_another() {
                 Some(BacktrackFrame {
                     cur,
                     context: Context::clone(&cx),
@@ -488,18 +485,19 @@ fn activate_deps_loop(
                     // prune extra work). If we don't have any candidates in our
                     // backtrack stack then we're the last line of defense, so
                     // we'll want to present an error message for sure.
-                    let activate_for_error_message = has_past_conflicting_dep && !has_another && {
-                        just_here_for_the_error_messages || {
-                            find_candidate(
-                                &cx,
-                                &mut backtrack_stack.clone(),
-                                &parent,
-                                backtracked,
-                                &conflicting_activations,
-                            )
-                            .is_none()
-                        }
-                    };
+                    let activate_for_error_message =
+                        has_past_conflicting_dep && !remaining_candidates.has_another() && {
+                            just_here_for_the_error_messages || {
+                                find_candidate(
+                                    &cx,
+                                    &mut backtrack_stack.clone(),
+                                    &parent,
+                                    backtracked,
+                                    &conflicting_activations,
+                                )
+                                .is_none()
+                            }
+                        };
 
                     // If we're only here for the error messages then we know
                     // one of our candidate deps will fail, meaning we will
@@ -706,78 +704,11 @@ struct BacktrackFrame {
     cur: usize,
     context: Context,
     remaining_deps: RemainingDeps,
-    remaining_candidates: RemainingCandidates,
+    remaining_candidates: RcVecIter<Summary>,
     parent: Summary,
     dep: Dependency,
     features: FeaturesSet,
     conflicting_activations: ConflictMap,
-}
-
-/// A helper "iterator" used to extract candidates within a current `Context` of
-/// a dependency graph.
-///
-/// This struct doesn't literally implement the `Iterator` trait (requires a few
-/// more inputs) but in general acts like one. Each `RemainingCandidates` is
-/// created with a list of candidates to choose from. When attempting to iterate
-/// over the list of candidates only *valid* candidates are returned. Validity
-/// is defined within a `Context`.
-///
-/// Candidates passed to `new` may not be returned from `next` as they could be
-/// filtered out, and as they are filtered the causes will be added to `conflicting_prev_active`.
-#[derive(Clone)]
-struct RemainingCandidates {
-    remaining: RcVecIter<Summary>,
-    // This is a inlined peekable generator
-    has_another: Option<Summary>,
-}
-
-impl RemainingCandidates {
-    fn new(candidates: &Rc<Vec<Summary>>) -> RemainingCandidates {
-        RemainingCandidates {
-            remaining: RcVecIter::new(Rc::clone(candidates)),
-            has_another: None,
-        }
-    }
-
-    /// Attempts to find another candidate to check from this list.
-    ///
-    /// This method will attempt to move this iterator forward, returning a
-    /// candidate that's possible to activate. The `cx` argument is the current
-    /// context which determines validity for candidates returned, and the `dep`
-    /// is the dependency listing that we're activating for.
-    ///
-    /// If successful a `(Candidate, bool)` pair will be returned. The
-    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
-    /// an indicator of whether there are remaining candidates to try of if
-    /// we've reached the end of iteration.
-    ///
-    /// If we've reached the end of the iterator here then `Err` will be
-    /// returned. The error will contain a map of package ID to conflict reason,
-    /// where each package ID caused a candidate to be filtered out from the
-    /// original list for the reason listed.
-    fn next(
-        &mut self,
-        conflicting_prev_active: &mut ConflictMap,
-        cx: &Context,
-        _dep: &Dependency,
-        _parent: PackageId,
-    ) -> Option<(Summary, bool)> {
-        'main: for (_, b) in self.remaining.by_ref() {
-            // Well if we made it this far then we've got a valid dependency. We
-            // want this iterator to be inherently "peekable" so we don't
-            // necessarily return the item just yet. Instead we stash it away to
-            // get returned later, and if we replaced something then that was
-            // actually the candidate to try first so we return that.
-            if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
-                return Some((r, true));
-            }
-        }
-
-        // Alright we've entirely exhausted our list of candidates. If we've got
-        // something stashed away return that here (also indicating that there's
-        // nothing else).
-        self.has_another.take().map(|r| (r, false))
-    }
 }
 
 /// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
@@ -902,7 +833,7 @@ fn find_candidate(
     parent: &Summary,
     backtracked: bool,
     conflicting_activations: &ConflictMap,
-) -> Option<(Summary, bool, BacktrackFrame)> {
+) -> Option<(Summary, BacktrackFrame)> {
     // When we're calling this method we know that `parent` failed to
     // activate. That means that some dependency failed to get resolved for
     // whatever reason. Normally, that means that all of those reasons
@@ -925,14 +856,9 @@ fn find_candidate(
     };
 
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame.remaining_candidates.next(
-            &mut frame.conflicting_activations,
-            &frame.context,
-            &frame.dep,
-            frame.parent.package_id(),
-        );
-        let (candidate, has_another) = match next {
-            Some(pair) => pair,
+        let next = frame.remaining_candidates.next().map(|(_, s)| s);
+        let candidate = match next {
+            Some(s) => s,
             None => continue,
         };
 
@@ -968,7 +894,7 @@ fn find_candidate(
             }
         }
 
-        return Some((candidate, has_another, frame));
+        return Some((candidate, frame));
     }
     None
 }

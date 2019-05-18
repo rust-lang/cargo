@@ -303,6 +303,10 @@ impl<T> RcVecIter<T> {
         }
     }
 
+    pub fn has_another(&self) -> bool {
+        self.rest.start < self.rest.end
+    }
+
     fn peek(&self) -> Option<(usize, &T)> {
         self.rest
             .clone()
