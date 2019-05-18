@@ -207,16 +207,15 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
+        let (mut parent, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
         printed.shell_status(config)?;
 
         trace!(
-            "{}[{}]>{} {} candidates",
+            "{}>{} {} candidates",
             parent.name(),
-            cur,
             dep.package_name(),
             candidates.len()
         );
@@ -245,7 +244,7 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next().map(|(_, s)| s);
+            let next = remaining_candidates.next();
 
             let candidate = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
@@ -254,12 +253,7 @@ fn activate_deps_loop(
                 // It's our job here to backtrack, if possible, and find a
                 // different candidate to activate. If we can't find any
                 // candidates whatsoever then it's time to bail entirely.
-                trace!(
-                    "{}[{}]>{} -- no candidates",
-                    parent.name(),
-                    cur,
-                    dep.package_name()
-                );
+                trace!("{}>{} -- no candidates", parent.name(), dep.package_name());
 
                 // Use our list of `conflicting_activations` to add to our
                 // global list of past conflicting activations, effectively
@@ -302,7 +296,6 @@ fn activate_deps_loop(
                     Some((candidate, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
-                        cur = frame.cur;
                         cx = frame.context;
                         remaining_deps = frame.remaining_deps;
                         remaining_candidates = frame.remaining_candidates;
@@ -350,7 +343,6 @@ fn activate_deps_loop(
             // if we can.
             let backtrack = if remaining_candidates.has_another() {
                 Some(BacktrackFrame {
-                    cur,
                     context: Context::clone(&cx),
                     remaining_deps: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
@@ -371,9 +363,8 @@ fn activate_deps_loop(
                 uses_default_features: dep.uses_default_features(),
             };
             trace!(
-                "{}[{}]>{} trying {}",
+                "{}>{} trying {}",
                 parent.name(),
-                cur,
                 dep.package_name(),
                 candidate.version()
             );
@@ -406,7 +397,7 @@ fn activate_deps_loop(
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (ref new_dep, _, _))| {
+                            .filter_map(|(ref new_dep, _, _)| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
                             })
                             .next()
@@ -522,9 +513,8 @@ fn activate_deps_loop(
                         true
                     } else {
                         trace!(
-                            "{}[{}]>{} skipping {} ",
+                            "{}>{} skipping {} ",
                             parent.name(),
-                            cur,
                             dep.package_name(),
                             pid.version()
                         );
@@ -701,7 +691,6 @@ fn activate(
 
 #[derive(Clone)]
 struct BacktrackFrame {
-    cur: usize,
     context: Context,
     remaining_deps: RemainingDeps,
     remaining_candidates: RcVecIter<Summary>,
@@ -856,7 +845,7 @@ fn find_candidate(
     };
 
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame.remaining_candidates.next().map(|(_, s)| s);
+        let next = frame.remaining_candidates.next();
         let candidate = match next {
             Some(s) => s,
             None => continue,

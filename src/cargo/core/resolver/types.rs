@@ -139,14 +139,14 @@ impl DepsFrame {
     fn min_candidates(&self) -> usize {
         self.remaining_siblings
             .peek()
-            .map(|(_, (_, candidates, _))| candidates.len())
+            .map(|(_, candidates, _)| candidates.len())
             .unwrap_or(0)
     }
 
     pub fn flatten<'a>(&'a self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
         self.remaining_siblings
             .clone()
-            .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
+            .map(move |(d, _, _)| (self.parent.package_id(), d))
     }
 }
 
@@ -202,7 +202,7 @@ impl RemainingDeps {
         self.data.insert((x, insertion_time));
         self.time += 1;
     }
-    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
+    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, DepInfo))> {
         while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
@@ -307,11 +307,8 @@ impl<T> RcVecIter<T> {
         self.rest.start < self.rest.end
     }
 
-    fn peek(&self) -> Option<(usize, &T)> {
-        self.rest
-            .clone()
-            .next()
-            .and_then(|i| self.vec.get(i).map(|val| (i, &*val)))
+    fn peek(&self) -> Option<&T> {
+        self.rest.clone().next().and_then(|i| self.vec.get(i))
     }
 }
 
@@ -329,12 +326,10 @@ impl<T> Iterator for RcVecIter<T>
 where
     T: Clone,
 {
-    type Item = (usize, T);
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.rest
-            .next()
-            .and_then(|i| self.vec.get(i).map(|val| (i, val.clone())))
+        self.rest.next().and_then(|i| self.vec.get(i).cloned())
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
