@@ -217,9 +217,7 @@ fn rustc<'a, 'cfg>(
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
-    let emit_json = cx.bcx.build_config.emit_json();
-    let mut cache_cell = new_cache_cell(cx, unit);
-    let color = cx.bcx.config.shell().supports_color();
+    let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mode = unit.mode;
@@ -234,7 +232,6 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let rmeta_produced = cx.rmeta_required(unit);
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -296,18 +293,7 @@ fn rustc<'a, 'cfg>(
                 &target,
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &target,
-                        !emit_json,
-                        rmeta_produced,
-                        color,
-                        &mut cache_cell,
-                    )
-                },
+                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
@@ -649,11 +635,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id(), unit.kind);
-    let emit_json = bcx.build_config.emit_json();
-    let color = bcx.config.shell().supports_color();
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
-    let mut cache_cell = new_cache_cell(cx, unit);
+    let mut output_options = OutputOptions::new(cx, unit);
 
     Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
@@ -669,18 +653,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &target,
-                        !emit_json,
-                        false,
-                        color,
-                        &mut cache_cell,
-                    )
-                },
+                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
                 false,
             )
             .chain_err(|| format!("Could not document `{}`.", name))?;
@@ -1114,6 +1087,43 @@ impl Kind {
     }
 }
 
+struct OutputOptions {
+    /// Get the `"rendered"` field from the JSON output and display it on
+    /// stderr instead of the JSON message.
+    extract_rendered_messages: bool,
+    /// Look for JSON message that indicates .rmeta file is available for
+    /// pipelined compilation.
+    look_for_metadata_directive: bool,
+    /// Whether or not to display messages in color.
+    color: bool,
+    /// Where to write the JSON messages to support playback later if the unit
+    /// is fresh. The file is created lazily so that in the normal case, lots
+    /// of empty files are not created. This is None if caching is disabled.
+    cache_cell: Option<(PathBuf, LazyCell<File>)>,
+}
+
+impl OutputOptions {
+    fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
+        let extract_rendered_messages = cx.bcx.build_config.message_format != MessageFormat::Json;
+        let look_for_metadata_directive = cx.rmeta_required(unit);
+        let color = cx.bcx.config.shell().supports_color();
+        let cache_cell = if cx.bcx.build_config.cache_messages() {
+            let path = cx.files().message_cache_path(unit);
+            // Remove old cache, ignore ENOENT, which is the common case.
+            drop(fs::remove_file(&path));
+            Some((path, LazyCell::new()))
+        } else {
+            None
+        };
+        OutputOptions {
+            extract_rendered_messages,
+            look_for_metadata_directive,
+            color,
+            cache_cell,
+        }
+    }
+}
+
 fn on_stdout_line(
     state: &JobState<'_>,
     line: &str,
@@ -1129,16 +1139,11 @@ fn on_stderr_line(
     line: &str,
     package_id: PackageId,
     target: &Target,
-    extract_rendered_messages: bool,
-    look_for_metadata_directive: bool,
-    color: bool,
-    cache_cell: &mut Option<(PathBuf, LazyCell<File>)>,
+    options: &mut OutputOptions,
 ) -> CargoResult<()> {
     // Check if caching is enabled.
-    if let Some((path, cell)) = cache_cell {
+    if let Some((path, cell)) = &mut options.cache_cell {
         // Cache the output, which will be replayed later when Fresh.
-        // The file is created lazily so that in the normal case, lots of
-        // empty files are not created.
         let f = cell.try_borrow_mut_with(|| File::create(path))?;
         debug_assert!(!line.contains('\n'));
         f.write_all(line.as_bytes())?;
@@ -1173,7 +1178,7 @@ fn on_stderr_line(
     // colorized diagnostics. In those cases (`extract_rendered_messages`) we
     // take a look at the JSON blob we go, see if it's a relevant diagnostics,
     // and if so forward just that diagnostic for us to print.
-    if extract_rendered_messages {
+    if options.extract_rendered_messages {
         #[derive(serde::Deserialize)]
         struct CompilerMessage {
             rendered: String,
@@ -1183,7 +1188,7 @@ fn on_stderr_line(
             if error.rendered.ends_with('\n') {
                 error.rendered.pop();
             }
-            let rendered = if color {
+            let rendered = if options.color {
                 error.rendered
             } else {
                 // Strip only fails if the the Writer fails, which is Cursor
@@ -1227,7 +1232,7 @@ fn on_stderr_line(
     //
     // In these cases look for a matching directive and inform Cargo internally
     // that a metadata file has been produced.
-    if look_for_metadata_directive {
+    if options.look_for_metadata_directive {
         #[derive(serde::Deserialize)]
         struct ArtifactNotification {
             artifact: String,
@@ -1273,6 +1278,12 @@ fn replay_output_cache(
         // FIXME: short not supported.
         MessageFormat::Short => false,
     };
+    let mut options = OutputOptions {
+        extract_rendered_messages,
+        look_for_metadata_directive: false,
+        color,
+        cache_cell: None,
+    };
     Work::new(move |state| {
         if !path.exists() {
             // No cached output, probably didn't emit anything.
@@ -1280,28 +1291,8 @@ fn replay_output_cache(
         }
         let contents = fs::read_to_string(&path)?;
         for line in contents.lines() {
-            on_stderr_line(
-                state,
-                &line,
-                package_id,
-                &target,
-                extract_rendered_messages,
-                false, // look_for_metadata_directive
-                color,
-                &mut None,
-            )?;
+            on_stderr_line(state, &line, package_id, &target, &mut options)?;
         }
         Ok(())
     })
-}
-
-fn new_cache_cell(cx: &Context<'_, '_>, unit: &Unit<'_>) -> Option<(PathBuf, LazyCell<File>)> {
-    if cx.bcx.build_config.cache_messages() {
-        let path = cx.files().message_cache_path(unit);
-        // Remove old cache, ignore ENOENT, which is the common case.
-        drop(fs::remove_file(&path));
-        Some((path, LazyCell::new()))
-    } else {
-        None
-    }
 }
