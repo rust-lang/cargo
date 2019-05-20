@@ -19,6 +19,7 @@ use proptest::sample::Index;
 use proptest::strategy::ValueTree;
 use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
+use varisat::{self, ExtendFormula};
 
 pub fn resolve(
     pkg: PackageId,
@@ -33,7 +34,11 @@ pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
+    let should_resolve = sat_resolve(&deps, registry);
+    let resolve = resolve_with_config_raw(pkg, deps, registry, None);
+    assert_eq!(resolve.is_ok(), should_resolve.is_some());
+
+    let resolve = resolve?;
     let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
@@ -174,6 +179,106 @@ pub fn resolve_with_config_raw(
     // So lets fail the test if we have ben running for two long.
     assert!(start.elapsed() < slow_cpu_multiplier(60));
     resolve
+}
+
+// Returns if `a` and `b` are compatible in the semver sense. This is a
+// commutative operation.
+//
+// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+// same.
+fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
+    if a.major != b.major {
+        return false;
+    }
+    if a.major != 0 {
+        return true;
+    }
+    if a.minor != b.minor {
+        return false;
+    }
+    if a.minor != 0 {
+        return true;
+    }
+    a.patch == b.patch
+}
+
+/// Resolution can be reduced to the SAT problem. So this is an alternative implementation
+/// of the resolver that uses a SAT library for the hard work. This is intended to be easy to read,
+/// as compared to the real resolver.
+///
+/// For the subset of functionality that are currently made by `registry_strategy` this will,
+/// find a valid resolution if one exists.
+///
+/// The SAT library dose not optimize for the newer version,
+/// so the selected packages may not match the real resolver.
+fn sat_resolve(deps: &[Dependency], registry: &[Summary]) -> Option<Vec<PackageId>> {
+    let mut solver = varisat::Solver::new();
+    let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
+        .iter()
+        .map(|s| s.package_id())
+        .zip(solver.new_var_iter(registry.len()))
+        .collect();
+
+    let packages_is_used_for_var: HashMap<varisat::Var, PackageId> = var_for_is_packages_used
+        .iter()
+        .map(|(&p, &v)| (v, p))
+        .collect();
+
+    // the starting `deps` need to be satisfied
+    for dep in deps.iter() {
+        let matches: Vec<varisat::Lit> = registry
+            .iter()
+            .map(|s| s.package_id())
+            .filter(|&p| dep.matches_id(p))
+            .map(|p| var_for_is_packages_used[&p].positive())
+            .collect();
+        solver.add_clause(&matches);
+    }
+
+    // no two packages with the same links set
+    // no two semver compatible versions of the same package.
+    for (i, p) in registry.iter().enumerate() {
+        for o in registry[i..].iter().skip(1) {
+            assert_ne!(p.package_id(), o.package_id());
+            if (p.name() == o.name() && compatible(p.version(), o.version()))
+                || (p.links().is_some() && p.links() == o.links())
+            {
+                // These two packages can not be activated at the same time.
+                // There is a more efficient way to encode a "at most one" constraint but this works.
+                solver.add_clause(&[
+                    var_for_is_packages_used[&p.package_id()].negative(),
+                    var_for_is_packages_used[&o.package_id()].negative(),
+                ]);
+            }
+        }
+    }
+
+    // active packages need each of there `deps` to be satisfied
+    for p in registry.iter() {
+        for dep in p.dependencies() {
+            let mut matches: Vec<varisat::Lit> = registry
+                .iter()
+                .map(|s| s.package_id())
+                .filter(|&p| dep.matches_id(p))
+                .map(|p| var_for_is_packages_used[&p].positive())
+                .collect();
+            // ^ the `dep` is satisfied or `p` is not active
+            matches.push(var_for_is_packages_used[&p.package_id()].negative());
+            solver.add_clause(&matches);
+        }
+    }
+
+    // TODO: public & private deps
+
+    solver
+        .solve()
+        .expect("docs say it can't error in default config");
+
+    solver.model().map(|l| {
+        l.iter()
+            .filter_map(|v| packages_is_used_for_var.get(&v.var()).cloned())
+            .collect()
+    })
 }
 
 pub trait ToDep {
