@@ -884,8 +884,14 @@ impl Execs {
                 panic!("`.stream()` is for local debugging")
             }
             process.exec_with_streaming(
-                &mut |out| Ok(println!("{}", out)),
-                &mut |err| Ok(eprintln!("{}", err)),
+                &mut |out| {
+                    println!("{}", out);
+                    Ok(())
+                },
+                &mut |err| {
+                    eprintln!("{}", err);
+                    Ok(())
+                },
                 true,
             )
         } else {
@@ -1166,7 +1172,7 @@ impl Execs {
                 let e = out.lines();
 
                 let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
-                while let Some(..) = a.next() {
+                while a.next().is_some() {
                     let a = self.diff_lines(a.clone(), e.clone(), true);
                     if a.len() < diffs.len() {
                         diffs = a;
@@ -1214,7 +1220,7 @@ impl Execs {
                 let e = out.lines();
 
                 let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
-                while let Some(..) = a.next() {
+                while a.next().is_some() {
                     let a = self.diff_lines(a.clone(), e.clone(), true);
                     if a.len() < diffs.len() {
                         diffs = a;

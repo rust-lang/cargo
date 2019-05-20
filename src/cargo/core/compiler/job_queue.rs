@@ -216,7 +216,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
         self.queue.queue(*unit, job, queue_deps);
         *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
-        return Ok(());
+        Ok(())
     }
 
     /// Executes all jobs necessary to build the dependency graph.

@@ -211,7 +211,7 @@ impl InstallTracker {
                 // `cargo install --path ...` is always rebuilt.
                 return Ok((Freshness::Dirty, duplicates));
             }
-            if matching_duplicates.iter().all(|dupe_pkg_id| {
+            let is_up_to_date = |dupe_pkg_id| {
                 let info = self
                     .v2
                     .installs
@@ -229,7 +229,8 @@ impl InstallTracker {
                     && dupe_pkg_id.source_id() == source_id
                     && precise_equal
                     && info.is_up_to_date(opts, target, &exes)
-            }) {
+            };
+            if matching_duplicates.iter().all(is_up_to_date) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
                 Ok((Freshness::Dirty, duplicates))
