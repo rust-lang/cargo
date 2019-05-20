@@ -23,6 +23,9 @@ pub struct Registry {
     /// Optional authorization token.
     /// If None, commands requiring authorization will fail.
     token: Option<String>,
+    /// Optional user-agent
+    /// If None, a default user-agent ("crates-io") will be used
+    user_agent: Option<String>,
     /// Curl handle for issuing requests.
     handle: Easy,
 }
@@ -127,14 +130,15 @@ struct Crates {
     meta: TotalCrates,
 }
 impl Registry {
-    pub fn new(host: String, token: Option<String>) -> Registry {
-        Registry::new_handle(host, token, Easy::new())
+    pub fn new(host: String, token: Option<String>, user_agent: Option<String>) -> Registry {
+        Registry::new_handle(host, token, user_agent, Easy::new())
     }
 
-    pub fn new_handle(host: String, token: Option<String>, handle: Easy) -> Registry {
+    pub fn new_handle(host: String, token: Option<String>, user_agent: Option<String>, handle: Easy) -> Registry {
         Registry {
             host,
             token,
+            user_agent: userAgent,
             handle,
         }
     }
@@ -295,6 +299,7 @@ impl Registry {
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
         headers.append("Content-Type: application/json")?;
+        headers.append(format!("User-Agent: {}", self.user_agent.unwrap_or("crates-io".to_string())).as_str());
 
         if authorized == Auth::Authorized {
             let token = match self.token.as_ref() {
