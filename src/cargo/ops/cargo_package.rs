@@ -440,7 +440,7 @@ fn tar(
     }
 
     if pkg.include_lockfile() {
-        let new_lock = build_lock(&ws)?;
+        let new_lock = build_lock(ws)?;
 
         config
             .shell()
@@ -609,7 +609,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     {
         // FIXME: Turn this on at some point in the future
         //Some(vec!["-D exported_private_dependencies".to_string()])
-        None
+        Some(vec![])
     } else {
         None
     };

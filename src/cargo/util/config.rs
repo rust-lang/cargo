@@ -704,7 +704,7 @@ impl Config {
     fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
         let base = index
             .definition
-            .root(&self)
+            .root(self)
             .join("truncated-by-url_with_base");
         // Parse val to check it is a URL, not a relative path without a protocol.
         let _parsed = index.val.to_url()?;
@@ -857,7 +857,7 @@ impl Config {
              `acquire_package_cache_lock` before we got to this stack frame",
         );
         assert!(ret.starts_with(self.home_path.as_path_unlocked()));
-        return ret;
+        ret
     }
 
     /// Acquires an exclusive lock on the global "package cache"

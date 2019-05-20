@@ -113,7 +113,8 @@ fn build_with_args_to_one_of_multiple_binaries() {
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

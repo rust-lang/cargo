@@ -1,5 +1,6 @@
 use filetime::FileTime;
 use std::fs::{self, File, OpenOptions};
+use std::io;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -1269,10 +1270,11 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     for fing in fs::read_dir(&dir).unwrap() {
         let fing = fing.unwrap();
 
-        if fs::read_dir(fing.path()).unwrap().all(|f| {
+        let outdated = |f: io::Result<fs::DirEntry>| {
             filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
                 <= timestamp
-        }) {
+        };
+        if fs::read_dir(fing.path()).unwrap().all(outdated) {
             fs::remove_dir_all(fing.path()).unwrap();
             println!("remove: {:?}", fing.path());
             // a real cleaner would remove the big files in deps and build as well

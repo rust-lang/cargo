@@ -4573,11 +4573,13 @@ fn pipelining_works() {
     foo.cargo("build")
         .env("CARGO_BUILD_PIPELINING", "true")
         .with_stdout("")
-        .with_stderr("\
+        .with_stderr(
+            "\
 [COMPILING] [..]
 [COMPILING] [..]
 [FINISHED] [..]
-")
+",
+        )
         .run();
 }
 
@@ -4628,13 +4630,15 @@ fn forward_rustc_output() {
 
     foo.cargo("build")
         .with_stdout("a\nb\n{}")
-        .with_stderr("\
+        .with_stderr(
+            "\
 [COMPILING] [..]
 [COMPILING] [..]
 c
 d
 {a
 [FINISHED] [..]
-")
+",
+        )
         .run();
 }
