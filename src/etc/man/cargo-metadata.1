@@ -2,12 +2,12 @@
 .\"     Title: cargo-metadata
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-05-08
+.\"      Date: 2019-05-20
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-METADATA" "1" "2019-05-08" "\ \&" "\ \&"
+.TH "CARGO\-METADATA" "1" "2019-05-20" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -151,7 +151,11 @@ The output has the following format:
                     /* Array of required features.
                        This property is not included if no required features are set.
                     */
-                    "required\-features": ["feat1"]
+                    "required\-features": ["feat1"],
+                    /* Whether or not this target has doc tests enabled, and
+                       the target is compatible with doc testing.
+                    */
+                    "doctest": false
                 }
             ],
             /* Set of features defined for the package.
