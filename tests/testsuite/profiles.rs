@@ -408,3 +408,32 @@ fn panic_unwind_does_not_build_twice() {
         )
         .run();
 }
+
+#[test]
+fn debug_0_report() {
+    // The finished line handles 0 correctly.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.dev]
+            debug = 0
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C debuginfo=0 [..]
+[FINISHED] dev [unoptimized] target(s) in [..]
+",
+        )
+        .run();
+}
