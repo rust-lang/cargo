@@ -54,8 +54,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 // by precise package update later.
                 Some(_) => {
                     let mut registry = PackageRegistry::new(opts.config)?;
-                    ops::resolve_with_previous(&mut registry, ws, Method::Everything,
-                                               None, None, &[], true)?
+                    ops::resolve_with_previous(
+                        &mut registry,
+                        ws,
+                        Method::Everything,
+                        None,
+                        None,
+                        &[],
+                        true,
+                    )?
                 }
             }
         }

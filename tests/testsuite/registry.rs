@@ -2008,7 +2008,6 @@ fn readonly_registry_still_works() {
     // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
     chmod_readonly(&paths::home(), false);
 
-
     fn chmod_readonly(path: &Path, readonly: bool) {
         for entry in t!(path.read_dir()) {
             let entry = t!(entry);

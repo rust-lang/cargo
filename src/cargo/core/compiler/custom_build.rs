@@ -110,7 +110,8 @@ fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: Pac
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
         env: &output.env,
-    }.to_json_string();
+    }
+    .to_json_string();
     state.stdout(&msg);
 }
 
