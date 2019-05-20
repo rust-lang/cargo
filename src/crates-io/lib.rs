@@ -138,7 +138,7 @@ impl Registry {
         Registry {
             host,
             token,
-            user_agent: userAgent,
+            user_agent,
             handle,
         }
     }
