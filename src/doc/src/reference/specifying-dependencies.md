@@ -83,12 +83,12 @@ positioned.
 1.2.* := >=1.2.0 <1.3.0
 ```
 
-### Inequality requirements
+### Comparison requirements
 
-**Inequality requirements** allow manually specifying a version range or an
+**Comparison requirements** allow manually specifying a version range or an
 exact version to depend on.
 
-Here are some examples of inequality requirements:
+Here are some examples of comparison requirements:
 
 ```notrust
 >= 1.2.0
