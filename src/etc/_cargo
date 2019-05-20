@@ -2,9 +2,6 @@
 
 autoload -U regexp-replace
 
-zstyle -T ':completion:*:*:cargo:*' tag-order && \
-  zstyle ':completion:*:*:cargo:*' tag-order 'common-commands'
-
 _cargo() {
 local context state state_descr line
 typeset -A opt_args
@@ -24,14 +21,10 @@ _arguments \
     '(+beta +nightly)+stable[use the stable toolchain]' \
     '(+stable +nightly)+beta[use the beta toolchain]' \
     '(+stable +beta)+nightly[use the nightly toolchain]' \
-    '1: :->command' \
+    '1: :_cargo_cmds' \
     '*:: :->args'
 
 case $state in
-    command)
-      _alternative 'common-commands:common:_cargo_cmds' 'all-commands:all:_cargo_all_cmds'
-      ;;
-
     args)
         case $words[1] in
             bench)
@@ -426,44 +419,9 @@ esac
 }
 
 _cargo_cmds(){
-local -a commands;commands=(
-'bench:execute all benchmarks of a local package'
-'build:compile the current package'
-'check:check the current package without compiling'
-'clean:remove generated artifacts'
-'doc:build package documentation'
-'fetch:fetch package dependencies'
-'generate-lockfile:create lockfile'
-'git-checkout:git checkout'
-'help:get help for commands'
-'init:create new package in current directory'
-'install:install a Rust binary'
-'locate-project:print "Cargo.toml" location'
-'login:login to remote server'
-'metadata:the metadata for a package in json'
-'new:create a new package'
-'owner:manage the owners of a crate on the registry'
-'package:assemble local package into a distributable tarball'
-'pkgid:print a fully qualified package specification'
-'publish:upload package to the registry'
-'read-manifest:print manifest in JSON format'
-'run:run the main binary of the local package'
-'rustc:compile a package and all of its dependencies'
-'rustdoc:build documentation for a package'
-'search:search packages on crates.io'
-'test:execute all unit and tests of a local package'
-'uninstall:remove a Rust binary'
-'update:update dependencies'
-'verify-project:check Cargo.toml'
-'version:show version information'
-'yank:remove pushed file from index'
-)
-_describe -t common-commands 'common commands' commands
-}
-
-_cargo_all_cmds(){
-local -a commands;commands=($(cargo --list))
-_describe -t all-commands 'all commands' commands
+    local -a commands
+    commands=( ${${${(M)"${(f)$(cargo --list)}":#  *}/ ##/}/ ##/:} )
+    _describe 'command' commands
 }
 
 
