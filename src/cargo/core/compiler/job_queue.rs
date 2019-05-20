@@ -410,7 +410,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         } else {
             "optimized"
         });
-        if profile.debuginfo.is_some() {
+        if profile.debuginfo.unwrap_or(0) != 0 {
             opt_type += " + debuginfo";
         }
 
