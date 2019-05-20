@@ -556,7 +556,6 @@ fn update_precise_first_run() {
 ",
         )
         .run();
-
 }
 
 #[test]

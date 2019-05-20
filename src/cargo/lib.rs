@@ -1,8 +1,8 @@
 #![cfg_attr(test, deny(warnings))]
-#![warn(rust_2018_idioms)]
 // While we're getting used to 2018:
+#![warn(rust_2018_idioms)]
 // Clippy isn't enforced by CI (@alexcrichton isn't a fan).
-#![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
+#![allow(clippy::blacklisted_name)] // frequently used in tests
 #![allow(clippy::cyclomatic_complexity)] // large project
 #![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
 #![allow(clippy::explicit_into_iter_loop)] // explicit loops are clearer
@@ -10,6 +10,7 @@
 #![allow(clippy::identity_op)] // used for vertical alignment
 #![allow(clippy::implicit_hasher)] // large project
 #![allow(clippy::large_enum_variant)] // large project
+#![allow(clippy::new_without_default)] // explicit is maybe clearer
 #![allow(clippy::redundant_closure)] // closures can be less verbose
 #![allow(clippy::redundant_closure_call)] // closures over try catch blocks
 #![allow(clippy::too_many_arguments)] // large project
@@ -17,6 +18,12 @@
 #![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
+// Unit is now interned, and would probably be better as pass-by-copy, but
+// doing so causes a lot of & and * shenanigans that makes the code arguably
+// less clear and harder to read.
+#![allow(clippy::trivially_copy_pass_by_ref)]
+// exhaustively destructuring ensures future fields are handled
+#![allow(clippy::unneeded_field_pattern)]
 
 use std::fmt;
 

@@ -166,6 +166,6 @@ impl<'a> UnitInterner<'a> {
         }
         me.cache.insert(Box::new(item.clone()));
         let item = me.cache.get(item).unwrap();
-        return unsafe { &*(&**item as *const UnitInner<'a>) };
+        unsafe { &*(&**item as *const UnitInner<'a>) }
     }
 }

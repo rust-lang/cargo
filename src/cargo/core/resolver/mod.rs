@@ -657,7 +657,7 @@ fn activate(
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
-            if cx.flag_activated(&replace, &method)? && activated {
+            if cx.flag_activated(replace, &method)? && activated {
                 return Ok(None);
             }
             trace!(

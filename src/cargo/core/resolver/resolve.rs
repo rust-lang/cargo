@@ -55,7 +55,7 @@ impl Resolve {
                             .find(|d| d.kind() == Kind::Normal)
                             .and_then(|d| {
                                 if d.is_public() {
-                                    Some(dep_package.clone())
+                                    Some(*dep_package)
                                 } else {
                                     None
                                 }
@@ -64,7 +64,7 @@ impl Resolve {
                     })
                     .collect::<HashSet<PackageId>>();
 
-                (p.clone(), public_deps)
+                (*p, public_deps)
             })
             .collect();
 
