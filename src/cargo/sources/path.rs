@@ -145,7 +145,7 @@ impl<'cfg> PathSource<'cfg> {
             .exclude()
             .iter()
             .chain(pkg.manifest().include().iter())
-            .any(|p| p.starts_with("!"));
+            .any(|p| p.starts_with('!'));
         // Don't warn about glob mismatch if it doesn't parse.
         let glob_is_valid = glob_exclude.is_ok() && glob_include.is_ok() && !has_negate;
         let glob_exclude = glob_exclude.unwrap_or_else(|_| Vec::new());
@@ -479,12 +479,9 @@ impl<'cfg> PathSource<'cfg> {
             if name.map(|s| s.starts_with('.')) == Some(true) {
                 continue;
             }
-            if is_root {
+            if is_root && name == Some("target") {
                 // Skip Cargo artifacts.
-                match name {
-                    Some("target") => continue,
-                    _ => {}
-                }
+                continue;
             }
             PathSource::walk(&path, ret, false, filter)?;
         }

@@ -268,7 +268,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     where
         'a: 'b,
     {
-        let source_id = self.source_id.clone();
+        let source_id = self.source_id;
 
         // First up actually parse what summaries we have available. If Cargo
         // has run previously this will parse a Cargo-specific cache file rather
@@ -337,7 +337,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let summaries = Summaries::parse(
                 index_version.as_ref().map(|s| &**s),
-                &root,
+                root,
                 &cache_root,
                 path.as_ref(),
                 self.source_id,
@@ -671,7 +671,7 @@ impl<'a> SummariesCache<'a> {
             contents.extend_from_slice(data);
             contents.push(0);
         }
-        return contents;
+        contents
     }
 }
 

@@ -219,7 +219,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation
                     .rustdocflags
                     .entry(unit.pkg.package_id())
-                    .or_insert(rustdocflags.to_vec());
+                    .or_insert_with(|| rustdocflags.to_vec());
             }
 
             super::output_depinfo(&mut self, unit)?;
