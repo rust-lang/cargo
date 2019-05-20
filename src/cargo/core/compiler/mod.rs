@@ -41,7 +41,7 @@ use crate::core::{PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::machine_message::Message;
 use crate::util::paths;
-use crate::util::{self, machine_message, process, ProcessBuilder};
+use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
 
 /// Indicates whether an object is for the host architcture or the target architecture.
@@ -636,12 +636,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
-
-    let mut can_add_color_process = process(&*bcx.config.rustdoc()?);
-    can_add_color_process.args(&["--color", "never", "-V"]);
-    if bcx.rustc.cached_success(&can_add_color_process)? {
-        add_color(bcx, &mut rustdoc);
-    }
+    add_color(bcx, &mut rustdoc);
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
