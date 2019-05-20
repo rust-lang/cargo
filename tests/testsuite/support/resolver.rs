@@ -181,25 +181,14 @@ pub fn resolve_with_config_raw(
     resolve
 }
 
-// Returns if `a` and `b` are compatible in the semver sense. This is a
-// commutative operation.
-//
-// Versions `a` and `b` are compatible if their left-most nonzero digit is the
-// same.
-fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
-    if a.major != b.major {
-        return false;
+fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
+    for (i, p) in vars.iter().enumerate() {
+        for o in vars[i..].iter().skip(1) {
+            assert_ne!(p, o);
+            // There is a more efficient way to encode a "at most one" constraint but this works.
+            solver.add_clause(&[p.negative(), o.negative()]);
+        }
     }
-    if a.major != 0 {
-        return true;
-    }
-    if a.minor != b.minor {
-        return false;
-    }
-    if a.minor != 0 {
-        return true;
-    }
-    a.patch == b.patch
 }
 
 /// Resolution can be reduced to the SAT problem. So this is an alternative implementation
@@ -224,42 +213,60 @@ fn sat_resolve(deps: &[Dependency], registry: &[Summary]) -> Option<Vec<PackageI
         .map(|(&p, &v)| (v, p))
         .collect();
 
+    // no two packages with the same links set
+    let mut by_links: HashMap<_, Vec<varisat::Var>> = HashMap::new();
+    for p in registry.iter() {
+        if let Some(l) = p.links() {
+            by_links
+                .entry(l)
+                .or_default()
+                .push(var_for_is_packages_used[&p.package_id()])
+        }
+    }
+    for link in by_links.values() {
+        sat_at_most_one(&mut solver, link);
+    }
+
+    // no two semver compatible versions of the same package
+    let mut by_activations_keys: HashMap<_, Vec<varisat::Var>> = HashMap::new();
+    for p in registry.iter() {
+        by_activations_keys
+            .entry(p.package_id().as_activations_key())
+            .or_default()
+            .push(var_for_is_packages_used[&p.package_id()])
+    }
+    for key in by_activations_keys.values() {
+        sat_at_most_one(&mut solver, key);
+    }
+
+    let mut by_name: HashMap<_, Vec<PackageId>> = HashMap::new();
+
+    for p in registry.iter() {
+        by_name.entry(p.name()).or_default().push(p.package_id())
+    }
+
+    let empty_vec = vec![];
+
     // the starting `deps` need to be satisfied
     for dep in deps.iter() {
-        let matches: Vec<varisat::Lit> = registry
+        let matches: Vec<varisat::Lit> = by_name
+            .get(&dep.package_name())
+            .unwrap_or(&empty_vec)
             .iter()
-            .map(|s| s.package_id())
-            .filter(|&p| dep.matches_id(p))
+            .filter(|&p| dep.matches_id(*p))
             .map(|p| var_for_is_packages_used[&p].positive())
             .collect();
         solver.add_clause(&matches);
     }
 
-    // no two packages with the same links set
-    // no two semver compatible versions of the same package.
-    for (i, p) in registry.iter().enumerate() {
-        for o in registry[i..].iter().skip(1) {
-            assert_ne!(p.package_id(), o.package_id());
-            if (p.name() == o.name() && compatible(p.version(), o.version()))
-                || (p.links().is_some() && p.links() == o.links())
-            {
-                // These two packages can not be activated at the same time.
-                // There is a more efficient way to encode a "at most one" constraint but this works.
-                solver.add_clause(&[
-                    var_for_is_packages_used[&p.package_id()].negative(),
-                    var_for_is_packages_used[&o.package_id()].negative(),
-                ]);
-            }
-        }
-    }
-
     // active packages need each of there `deps` to be satisfied
     for p in registry.iter() {
         for dep in p.dependencies() {
-            let mut matches: Vec<varisat::Lit> = registry
+            let mut matches: Vec<varisat::Lit> = by_name
+                .get(&dep.package_name())
+                .unwrap_or(&empty_vec)
                 .iter()
-                .map(|s| s.package_id())
-                .filter(|&p| dep.matches_id(p))
+                .filter(|&p| dep.matches_id(*p))
                 .map(|p| var_for_is_packages_used[&p].positive())
                 .collect();
             // ^ the `dep` is satisfied or `p` is not active
