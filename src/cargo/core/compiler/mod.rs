@@ -719,6 +719,24 @@ fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.args(&["--color", color]);
 }
 
+/// Add error-format flags to the command.
+///
+/// This is rather convoluted right now. The general overview is:
+/// - If -Zcache-messages or `build.pipelining` is enabled, Cargo always uses
+///   JSON output. This has several benefits, such as being easier to parse,
+///   handles changing formats (for replaying cached messages), ensures
+///   atomic output (so messages aren't interleaved), etc.
+/// - `supports_termcolor` is a temporary flag. rustdoc does not yet support
+///   the `--json-rendered` flag, but it is intended to fix that soon.
+/// - `short` output is not yet supported for JSON output. We haven't yet
+///   decided how this problem will be resolved. Probably either adding
+///   "short" to the JSON output, or more ambitiously moving diagnostic
+///   rendering to an external library that Cargo can share with rustc.
+///
+/// It is intended in the future that Cargo *always* uses the JSON output, and
+/// this function can be simplified. The above issues need to be resolved, the
+/// flags need to be stabilized, and we need more testing to ensure there
+/// aren't any regressions.
 fn add_error_format(
     cx: &Context<'_, '_>,
     cmd: &mut ProcessBuilder,
