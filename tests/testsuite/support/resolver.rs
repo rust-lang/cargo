@@ -181,12 +181,25 @@ pub fn resolve_with_config_raw(
     resolve
 }
 
+const fn num_bits<T>() -> usize {
+    std::mem::size_of::<T>() * 8
+}
+
+fn log_bits(x: usize) -> usize {
+    if x == 0 {
+        return 0;
+    }
+    assert!(x > 0);
+    (num_bits::<usize>() as u32 - x.leading_zeros()) as usize
+}
+
 fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
+    // use the "Binary Encoding" from
+    // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
+    let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
     for (i, p) in vars.iter().enumerate() {
-        for o in vars[i..].iter().skip(1) {
-            assert_ne!(p, o);
-            // There is a more efficient way to encode a "at most one" constraint but this works.
-            solver.add_clause(&[p.negative(), o.negative()]);
+        for b in 0..bits.len() {
+            solver.add_clause(&[p.negative(), bits[b].lit(((1 << b) & i) > 0)]);
         }
     }
 }
