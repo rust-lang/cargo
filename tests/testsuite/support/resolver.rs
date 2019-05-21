@@ -34,11 +34,7 @@ pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
-    let should_resolve = sat_resolve(&deps, registry);
-    let resolve = resolve_with_config_raw(pkg, deps, registry, None);
-    assert_eq!(resolve.is_ok(), should_resolve.is_some());
-
-    let resolve = resolve?;
+    let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
     let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
@@ -213,92 +209,88 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
 ///
 /// The SAT library dose not optimize for the newer version,
 /// so the selected packages may not match the real resolver.
-fn sat_resolve(deps: &[Dependency], registry: &[Summary]) -> Option<Vec<PackageId>> {
-    let mut solver = varisat::Solver::new();
-    let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
-        .iter()
-        .map(|s| s.package_id())
-        .zip(solver.new_var_iter(registry.len()))
-        .collect();
+pub struct SatResolve {
+    solver: varisat::Solver<'static>,
+    var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
+}
 
-    let packages_is_used_for_var: HashMap<varisat::Var, PackageId> = var_for_is_packages_used
-        .iter()
-        .map(|(&p, &v)| (v, p))
-        .collect();
+impl SatResolve {
+    pub fn new(registry: &[Summary]) -> Self {
+        let mut solver = varisat::Solver::new();
+        let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
+            .iter()
+            .map(|s| s.package_id())
+            .zip(solver.new_var_iter(registry.len()))
+            .collect();
 
-    // no two packages with the same links set
-    let mut by_links: HashMap<_, Vec<varisat::Var>> = HashMap::new();
-    for p in registry.iter() {
-        if let Some(l) = p.links() {
-            by_links
-                .entry(l)
+        // no two packages with the same links set
+        let mut by_links: HashMap<_, Vec<varisat::Var>> = HashMap::new();
+        for p in registry.iter() {
+            if let Some(l) = p.links() {
+                by_links
+                    .entry(l)
+                    .or_default()
+                    .push(var_for_is_packages_used[&p.package_id()])
+            }
+        }
+        for link in by_links.values() {
+            sat_at_most_one(&mut solver, link);
+        }
+
+        // no two semver compatible versions of the same package
+        let mut by_activations_keys: HashMap<_, Vec<varisat::Var>> = HashMap::new();
+        for p in registry.iter() {
+            by_activations_keys
+                .entry(p.package_id().as_activations_key())
                 .or_default()
                 .push(var_for_is_packages_used[&p.package_id()])
         }
-    }
-    for link in by_links.values() {
-        sat_at_most_one(&mut solver, link);
-    }
+        for key in by_activations_keys.values() {
+            sat_at_most_one(&mut solver, key);
+        }
 
-    // no two semver compatible versions of the same package
-    let mut by_activations_keys: HashMap<_, Vec<varisat::Var>> = HashMap::new();
-    for p in registry.iter() {
-        by_activations_keys
-            .entry(p.package_id().as_activations_key())
-            .or_default()
-            .push(var_for_is_packages_used[&p.package_id()])
-    }
-    for key in by_activations_keys.values() {
-        sat_at_most_one(&mut solver, key);
-    }
+        let mut by_name: HashMap<_, Vec<PackageId>> = HashMap::new();
 
-    let mut by_name: HashMap<_, Vec<PackageId>> = HashMap::new();
+        for p in registry.iter() {
+            by_name.entry(p.name()).or_default().push(p.package_id())
+        }
 
-    for p in registry.iter() {
-        by_name.entry(p.name()).or_default().push(p.package_id())
-    }
+        let empty_vec = vec![];
 
-    let empty_vec = vec![];
+        // active packages need each of there `deps` to be satisfied
+        for p in registry.iter() {
+            for dep in p.dependencies() {
+                let mut matches: Vec<varisat::Lit> = by_name
+                    .get(&dep.package_name())
+                    .unwrap_or(&empty_vec)
+                    .iter()
+                    .filter(|&p| dep.matches_id(*p))
+                    .map(|p| var_for_is_packages_used[&p].positive())
+                    .collect();
+                // ^ the `dep` is satisfied or `p` is not active
+                matches.push(var_for_is_packages_used[&p.package_id()].negative());
+                solver.add_clause(&matches);
+            }
+        }
 
-    // the starting `deps` need to be satisfied
-    for dep in deps.iter() {
-        let matches: Vec<varisat::Lit> = by_name
-            .get(&dep.package_name())
-            .unwrap_or(&empty_vec)
-            .iter()
-            .filter(|&p| dep.matches_id(*p))
-            .map(|p| var_for_is_packages_used[&p].positive())
-            .collect();
-        solver.add_clause(&matches);
-    }
+        // TODO: public & private deps
 
-    // active packages need each of there `deps` to be satisfied
-    for p in registry.iter() {
-        for dep in p.dependencies() {
-            let mut matches: Vec<varisat::Lit> = by_name
-                .get(&dep.package_name())
-                .unwrap_or(&empty_vec)
-                .iter()
-                .filter(|&p| dep.matches_id(*p))
-                .map(|p| var_for_is_packages_used[&p].positive())
-                .collect();
-            // ^ the `dep` is satisfied or `p` is not active
-            matches.push(var_for_is_packages_used[&p.package_id()].negative());
-            solver.add_clause(&matches);
+        SatResolve {
+            solver,
+            var_for_is_packages_used,
         }
     }
+    pub fn sat_resolve(&mut self, dep: PackageId) -> bool {
+        // the starting `dep` need to be satisfied
+        self.solver
+            .assume(&[self.var_for_is_packages_used[&dep].positive()]);
 
-    // TODO: public & private deps
+        self.solver
+            .solve()
+            .expect("docs say it can't error in default config");
 
-    solver
-        .solve()
-        .expect("docs say it can't error in default config");
-
-    solver.model().map(|l| {
-        l.iter()
-            .filter_map(|v| packages_is_used_for_var.get(&v.var()).cloned())
-            .collect()
-    })
+        self.solver.model().is_some()
+    }
 }
 
 pub trait ToDep {

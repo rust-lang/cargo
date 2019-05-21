@@ -9,7 +9,7 @@ use crate::support::registry::Package;
 use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
     pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve,
-    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
+    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
 };
 
 use proptest::prelude::*;
@@ -41,15 +41,18 @@ proptest! {
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
+        let mut sat_resolve = SatResolve::new(&reg);
         // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(20) {
-            let _ = resolve_and_validated(
+            let should_resolve = sat_resolve.sat_resolve(this.package_id());
+            let resolve = resolve_and_validated(
                 pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
+            assert_eq!(resolve.is_ok(), should_resolve);
         }
     }
 
