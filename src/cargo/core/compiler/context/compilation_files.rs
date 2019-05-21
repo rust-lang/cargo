@@ -192,6 +192,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
+    /// Path where compiler output is cached.
+    pub fn message_cache_path(&self, unit: &Unit<'a>) -> PathBuf {
+        self.fingerprint_dir(unit).join("output")
+    }
+
     /// Returns the directory where a compiled build script is stored.
     /// `/path/to/target/{debug,release}/build/PKG-HASH`
     pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {

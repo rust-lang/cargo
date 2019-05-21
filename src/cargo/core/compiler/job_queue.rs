@@ -105,12 +105,12 @@ impl<'a> JobState<'a> {
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
-    pub fn stdout(&self, stdout: &str) {
-        drop(self.tx.send(Message::Stdout(stdout.to_string())));
+    pub fn stdout(&self, stdout: String) {
+        drop(self.tx.send(Message::Stdout(stdout)));
     }
 
-    pub fn stderr(&self, stderr: &str) {
-        drop(self.tx.send(Message::Stderr(stderr.to_string())));
+    pub fn stderr(&self, stderr: String) {
+        drop(self.tx.send(Message::Stderr(stderr)));
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file
