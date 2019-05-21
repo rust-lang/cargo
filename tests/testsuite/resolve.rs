@@ -46,13 +46,12 @@ proptest! {
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(20) {
-            let should_resolve = sat_resolve.sat_resolve(this.package_id());
-            let resolve = resolve_and_validated(
+            let _ = resolve_and_validated(
                 pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
+                Some(&mut sat_resolve),
             );
-            assert_eq!(resolve.is_ok(), should_resolve);
         }
     }
 
@@ -248,7 +247,7 @@ fn basic_public_dependency() {
         pkg!("C" => [dep("A"), dep("B")]),
     ]);
 
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -284,7 +283,7 @@ fn public_dependency_filling_in() {
         pkg!("d" => [dep("c"), dep("a"), dep("b")]),
     ]);
 
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("d")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("d")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -319,7 +318,7 @@ fn public_dependency_filling_in_and_update() {
         pkg!("C" => [dep("A"),dep("B")]),
         pkg!("D" => [dep("B"),dep("C")]),
     ]);
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("D")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("D")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -1410,7 +1409,7 @@ fn conflict_store_bug() {
     ];
 
     let reg = registry(input);
-    let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg, None);
 }
 
 #[test]
@@ -1438,5 +1437,5 @@ fn conflict_store_more_then_one_match() {
         ]),
     ];
     let reg = registry(input);
-    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg, None);
 }
