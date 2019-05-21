@@ -1005,7 +1005,7 @@ Caused by:
 fn do_not_package_if_src_was_modified() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
-        .file("foo.txt", "")
+        .file("dir/foo.txt", "")
         .file("bar.txt", "")
         .file(
             "build.rs",
@@ -1016,8 +1016,10 @@ fn do_not_package_if_src_was_modified() {
                 fs::write("src/generated.txt",
                     "Hello, world of generated files."
                 ).expect("failed to create file");
-                fs::remove_file("foo.txt").expect("failed to remove");
+                fs::remove_file("dir/foo.txt").expect("failed to remove file");
+                fs::remove_dir("dir").expect("failed to remove dir");
                 fs::write("bar.txt", "updated content").expect("failed to update");
+                fs::create_dir("new-dir").expect("failed to create dir");
             }
         "#,
         )
@@ -1033,8 +1035,10 @@ Caused by:
   Source directory was modified by build.rs during cargo publish. \
 Build scripts should not modify anything outside of OUT_DIR.
 Changed: [CWD]/target/package/foo-0.0.1/bar.txt
-Added: [CWD]/target/package/foo-0.0.1/src/generated.txt
-Removed: [CWD]/target/package/foo-0.0.1/foo.txt
+Added: [CWD]/target/package/foo-0.0.1/new-dir
+<tab>[CWD]/target/package/foo-0.0.1/src/generated.txt
+Removed: [CWD]/target/package/foo-0.0.1/dir
+<tab>[CWD]/target/package/foo-0.0.1/dir/foo.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
         )
