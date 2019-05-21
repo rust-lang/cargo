@@ -807,7 +807,7 @@ impl Fingerprint {
                 FsStatus::Stale => return Ok(()),
             };
 
-            // If our dependency edge only requires the rmeta fiel to be present
+            // If our dependency edge only requires the rmeta file to be present
             // then we only need to look at that one output file, otherwise we
             // need to consider all output files to see if we're out of date.
             let dep_mtime = if dep.only_requires_rmeta {
