@@ -54,6 +54,7 @@ serde = { version = "1.0.82", features = ['derive'] }
 serde_ignored = "0.0.4"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
 shell-escape = "0.1.4"
+strip-ansi-escapes = "0.1.0"
 tar = { version = "0.4.18", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
