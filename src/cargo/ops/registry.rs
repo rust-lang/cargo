@@ -366,7 +366,7 @@ fn registry(
     if validate_token && token.is_none() {
         bail!("no upload token found, please run `cargo login`");
     };
-    Ok((Registry::new_handle(api_host, token, handle), sid))
+    Ok((Registry::new_handle(api_host, token, format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")), handle), sid))
 }
 
 /// Creates a new HTTP handle with appropriate global configuration for cargo.
