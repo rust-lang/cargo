@@ -33,8 +33,17 @@ pub fn resolve_and_validated(
     pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
+    sat_resolve: Option<&mut SatResolve>,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
+    let should_resolve = if let Some(sat) = sat_resolve {
+        sat.sat_resolve(&deps)
+    } else {
+        SatResolve::new(registry).sat_resolve(&deps)
+    };
+    let resolve = resolve_with_config_raw(pkg, deps, registry, None);
+    assert_eq!(resolve.is_ok(), should_resolve);
+
+    let resolve = resolve?;
     let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
@@ -212,6 +221,7 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
 pub struct SatResolve {
     solver: varisat::Solver<'static>,
     var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
+    by_name: HashMap<&'static str, Vec<PackageId>>,
 }
 
 impl SatResolve {
@@ -249,10 +259,13 @@ impl SatResolve {
             sat_at_most_one(&mut solver, key);
         }
 
-        let mut by_name: HashMap<_, Vec<PackageId>> = HashMap::new();
+        let mut by_name: HashMap<&'static str, Vec<PackageId>> = HashMap::new();
 
         for p in registry.iter() {
-            by_name.entry(p.name()).or_default().push(p.package_id())
+            by_name
+                .entry(p.name().as_str())
+                .or_default()
+                .push(p.package_id())
         }
 
         let empty_vec = vec![];
@@ -261,7 +274,7 @@ impl SatResolve {
         for p in registry.iter() {
             for dep in p.dependencies() {
                 let mut matches: Vec<varisat::Lit> = by_name
-                    .get(&dep.package_name())
+                    .get(dep.package_name().as_str())
                     .unwrap_or(&empty_vec)
                     .iter()
                     .filter(|&p| dep.matches_id(*p))
@@ -278,12 +291,41 @@ impl SatResolve {
         SatResolve {
             solver,
             var_for_is_packages_used,
+            by_name,
         }
     }
-    pub fn sat_resolve(&mut self, dep: PackageId) -> bool {
-        // the starting `dep` need to be satisfied
-        self.solver
-            .assume(&[self.var_for_is_packages_used[&dep].positive()]);
+    pub fn sat_resolve(&mut self, deps: &[Dependency]) -> bool {
+        let mut assumption = vec![];
+        let mut this_call = None;
+
+        // the starting `deps` need to be satisfied
+        for dep in deps.iter() {
+            let empty_vec = vec![];
+            let matches: Vec<varisat::Lit> = self
+                .by_name
+                .get(dep.package_name().as_str())
+                .unwrap_or(&empty_vec)
+                .iter()
+                .filter(|&p| dep.matches_id(*p))
+                .map(|p| self.var_for_is_packages_used[&p].positive())
+                .collect();
+            if matches.is_empty() {
+                return false;
+            } else if matches.len() == 1 {
+                assumption.extend_from_slice(&matches)
+            } else {
+                if this_call.is_none() {
+                    let new_var = self.solver.new_var();
+                    this_call = Some(new_var);
+                    assumption.push(new_var.positive());
+                }
+                let mut matches = matches;
+                matches.push(this_call.unwrap().negative());
+                self.solver.add_clause(&matches);
+            }
+        }
+
+        self.solver.assume(&assumption);
 
         self.solver
             .solve()
