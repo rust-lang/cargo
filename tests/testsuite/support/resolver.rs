@@ -11,7 +11,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, ToUrl};
+use cargo::util::{CargoResult, Config, Graph, ToUrl};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -278,12 +278,15 @@ impl SatResolve {
 
         let empty_vec = vec![];
 
+        let mut graph: Graph<PackageId, ()> = Graph::new();
+
         let mut version_selected_for: HashMap<
-            (PackageId, Dependency),
-            HashMap<PackageId, varisat::Var>,
+            PackageId,
+            HashMap<Dependency, HashMap<PackageId, varisat::Var>>,
         > = HashMap::new();
         // active packages need each of there `deps` to be satisfied
         for p in registry.iter() {
+            graph.add(p.package_id());
             for dep in p.dependencies() {
                 let version: HashMap<PackageId, varisat::Var> = by_name
                     .get(dep.package_name().as_str())
@@ -302,76 +305,80 @@ impl SatResolve {
                 for (pid, var) in version.iter() {
                     // if a version is selected then it needs to be activated
                     solver.add_clause(&[var.negative(), var_for_is_packages_used[pid].positive()]);
+                    graph.link(p.package_id(), *pid);
                 }
-                version_selected_for.insert((p.package_id(), dep.clone()), version);
+                version_selected_for
+                    .entry(p.package_id())
+                    .or_default()
+                    .insert(dep.clone(), version);
             }
         }
 
-        let publicly_exports: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = registry
-            .iter()
-            .map(|s| {
-                (
-                    s.package_id(),
-                    registry
-                        .iter()
-                        .map(|s| (s.package_id(), solver.new_var()))
-                        .collect(),
-                )
-            })
-            .collect();
+        let topological_order = graph.sort();
+
+        let mut publicly_exports: HashMap<PackageId, HashMap<PackageId, varisat::Var>> =
+            HashMap::new();
 
         for s in registry.iter() {
             // everything publicly depends on itself
-            solver.add_clause(&[publicly_exports[&s.package_id()][&s.package_id()].positive()]);
+            let var = publicly_exports
+                .entry(s.package_id())
+                .or_default()
+                .entry(s.package_id())
+                .or_insert_with(|| solver.new_var());
+            solver.add_clause(&[var.positive()]);
         }
 
         // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
-        for p in registry.iter() {
-            for dep in p.dependencies().iter().filter(|d| d.is_public()) {
-                for (ver, sel) in version_selected_for[&(p.package_id(), dep.clone())].iter() {
-                    for export in registry.iter() {
-                        solver.add_clause(&[
-                            sel.negative(),
-                            publicly_exports[ver][&export.package_id()].negative(),
-                            publicly_exports[&p.package_id()][&export.package_id()].positive(),
-                        ]);
+        for &p in topological_order.iter() {
+            if let Some(deps) = version_selected_for.get(&p) {
+                for (_, versions) in deps.iter().filter(|(d, _)| d.is_public()) {
+                    for (ver, sel) in versions {
+                        for (&export_pid, &export_var) in publicly_exports[ver].clone().iter() {
+                            let our_var = publicly_exports
+                                .entry(p)
+                                .or_default()
+                                .entry(export_pid)
+                                .or_insert_with(|| solver.new_var());
+                            solver.add_clause(&[
+                                sel.negative(),
+                                export_var.negative(),
+                                our_var.positive(),
+                            ]);
+                        }
                     }
                 }
             }
         }
 
-        let can_see: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = registry
-            .iter()
-            .map(|s| {
-                (
-                    s.package_id(),
-                    registry
-                        .iter()
-                        .map(|s| (s.package_id(), solver.new_var()))
-                        .collect(),
-                )
-            })
-            .collect();
+        let mut can_see: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = HashMap::new();
 
         // if `p` `publicly_exports` `export` then it `can_see` `export`
-        for p in registry.iter() {
-            for export in registry.iter() {
-                solver.add_clause(&[
-                    publicly_exports[&p.package_id()][&export.package_id()].negative(),
-                    can_see[&p.package_id()][&export.package_id()].positive(),
-                ]);
+        for (&p, exports) in &publicly_exports {
+            for (&export_pid, export_var) in exports {
+                let our_var = can_see
+                    .entry(p)
+                    .or_default()
+                    .entry(export_pid)
+                    .or_insert_with(|| solver.new_var());
+                solver.add_clause(&[export_var.negative(), our_var.positive()]);
             }
         }
 
         // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
-        for p in registry.iter() {
-            for dep in p.dependencies().iter() {
-                for (ver, sel) in version_selected_for[&(p.package_id(), dep.clone())].iter() {
-                    for export in registry.iter() {
+        for (&p, deps) in version_selected_for.iter() {
+            for (_, versions) in deps {
+                for (ver, sel) in versions {
+                    for (&export_pid, &export_var) in publicly_exports[ver].iter() {
+                        let our_var = can_see
+                            .entry(p)
+                            .or_default()
+                            .entry(export_pid)
+                            .or_insert_with(|| solver.new_var());
                         solver.add_clause(&[
                             sel.negative(),
-                            publicly_exports[ver][&export.package_id()].negative(),
-                            can_see[&p.package_id()][&export.package_id()].positive(),
+                            export_var.negative(),
+                            our_var.positive(),
                         ]);
                     }
                 }
@@ -381,7 +388,7 @@ impl SatResolve {
         // a package `can_see` only one version by each name
         for (_, see) in can_see.iter() {
             for (_, vers) in by_name.iter() {
-                let same_name: Vec<_> = vers.iter().map(|p| see[p]).collect();
+                let same_name: Vec<_> = vers.iter().filter_map(|p| see.get(p).cloned()).collect();
                 sat_at_most_one(&mut solver, &same_name);
             }
         }
