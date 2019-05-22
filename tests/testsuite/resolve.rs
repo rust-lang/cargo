@@ -239,6 +239,18 @@ proptest! {
 }
 
 #[test]
+fn pub_fail() {
+    let input = vec![
+        pkg!(("a", "0.0.4")),
+        pkg!(("a", "0.0.5")),
+        pkg!(("e", "0.0.6") => [dep_req_kind("a", "<= 0.0.4", Kind::Normal, true),]),
+        pkg!(("kB", "0.0.3") => [dep_req("a", ">= 0.0.5"),dep("e"),]),
+    ];
+    let reg = registry(input.clone());
+    assert!(resolve_and_validated(pkg_id("root"), vec![dep("kB")], &reg, None).is_err());
+}
+
+#[test]
 fn basic_public_dependency() {
     let reg = registry(vec![
         pkg!(("A", "0.1.0")),
