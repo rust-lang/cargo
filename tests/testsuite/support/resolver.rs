@@ -199,6 +199,15 @@ fn log_bits(x: usize) -> usize {
 }
 
 fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
+    if vars.len() <= 1 {
+        return;
+    } else if vars.len() == 2 {
+        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
+    } else if vars.len() == 3 {
+        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
+        solver.add_clause(&[vars[0].negative(), vars[2].negative()]);
+        solver.add_clause(&[vars[1].negative(), vars[2].negative()]);
+    }
     // use the "Binary Encoding" from
     // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
     let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
@@ -229,8 +238,7 @@ impl SatResolve {
         let mut solver = varisat::Solver::new();
         let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
             .iter()
-            .map(|s| s.package_id())
-            .zip(solver.new_var_iter(registry.len()))
+            .map(|s| (s.package_id(), solver.new_var()))
             .collect();
 
         // no two packages with the same links set
@@ -270,23 +278,113 @@ impl SatResolve {
 
         let empty_vec = vec![];
 
+        let mut version_selected_for: HashMap<
+            (PackageId, Dependency),
+            HashMap<PackageId, varisat::Var>,
+        > = HashMap::new();
         // active packages need each of there `deps` to be satisfied
         for p in registry.iter() {
             for dep in p.dependencies() {
-                let mut matches: Vec<varisat::Lit> = by_name
+                let version: HashMap<PackageId, varisat::Var> = by_name
                     .get(dep.package_name().as_str())
                     .unwrap_or(&empty_vec)
                     .iter()
                     .filter(|&p| dep.matches_id(*p))
-                    .map(|p| var_for_is_packages_used[&p].positive())
+                    .map(|&p| (p, solver.new_var()))
                     .collect();
-                // ^ the `dep` is satisfied or `p` is not active
-                matches.push(var_for_is_packages_used[&p.package_id()].negative());
+                // if `p` is active then we need to select one of the versions
+                let matches: Vec<_> = version
+                    .values()
+                    .map(|v| v.positive())
+                    .chain(Some(var_for_is_packages_used[&p.package_id()].negative()))
+                    .collect();
                 solver.add_clause(&matches);
+                for (pid, var) in version.iter() {
+                    // if a version is selected then it needs to be activated
+                    solver.add_clause(&[var.negative(), var_for_is_packages_used[pid].positive()]);
+                }
+                version_selected_for.insert((p.package_id(), dep.clone()), version);
             }
         }
 
-        // TODO: public & private deps
+        let publicly_exports: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = registry
+            .iter()
+            .map(|s| {
+                (
+                    s.package_id(),
+                    registry
+                        .iter()
+                        .map(|s| (s.package_id(), solver.new_var()))
+                        .collect(),
+                )
+            })
+            .collect();
+
+        for s in registry.iter() {
+            // everything publicly depends on itself
+            solver.add_clause(&[publicly_exports[&s.package_id()][&s.package_id()].positive()]);
+        }
+
+        // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
+        for p in registry.iter() {
+            for dep in p.dependencies().iter().filter(|d| d.is_public()) {
+                for (ver, sel) in version_selected_for[&(p.package_id(), dep.clone())].iter() {
+                    for export in registry.iter() {
+                        solver.add_clause(&[
+                            sel.negative(),
+                            publicly_exports[ver][&export.package_id()].negative(),
+                            publicly_exports[&p.package_id()][&export.package_id()].positive(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        let can_see: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = registry
+            .iter()
+            .map(|s| {
+                (
+                    s.package_id(),
+                    registry
+                        .iter()
+                        .map(|s| (s.package_id(), solver.new_var()))
+                        .collect(),
+                )
+            })
+            .collect();
+
+        // if `p` `publicly_exports` `export` then it `can_see` `export`
+        for p in registry.iter() {
+            for export in registry.iter() {
+                solver.add_clause(&[
+                    publicly_exports[&p.package_id()][&export.package_id()].negative(),
+                    can_see[&p.package_id()][&export.package_id()].positive(),
+                ]);
+            }
+        }
+
+        // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
+        for p in registry.iter() {
+            for dep in p.dependencies().iter() {
+                for (ver, sel) in version_selected_for[&(p.package_id(), dep.clone())].iter() {
+                    for export in registry.iter() {
+                        solver.add_clause(&[
+                            sel.negative(),
+                            publicly_exports[ver][&export.package_id()].negative(),
+                            can_see[&p.package_id()][&export.package_id()].positive(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // a package `can_see` only one version by each name
+        for (_, see) in can_see.iter() {
+            for (_, vers) in by_name.iter() {
+                let same_name: Vec<_> = vers.iter().map(|p| see[p]).collect();
+                sat_at_most_one(&mut solver, &same_name);
+            }
+        }
 
         SatResolve {
             solver,
@@ -686,7 +784,7 @@ pub fn registry_strategy(
                             // => Kind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for Kind"),
                         },
-                        p,
+                        p && k == 0,
                     ))
                 }
 
