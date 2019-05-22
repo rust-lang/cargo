@@ -282,49 +282,60 @@ impl SatResolve {
 
         let mut version_selected_for: HashMap<
             PackageId,
-            HashMap<Dependency, HashMap<PackageId, varisat::Var>>,
+            HashMap<Dependency, HashMap<_, varisat::Var>>,
         > = HashMap::new();
         // active packages need each of there `deps` to be satisfied
         for p in registry.iter() {
             graph.add(p.package_id());
             for dep in p.dependencies() {
-                let version: HashMap<PackageId, varisat::Var> = by_name
+                let mut by_key: HashMap<_, Vec<varisat::Lit>> = HashMap::new();
+                for &m in by_name
                     .get(dep.package_name().as_str())
                     .unwrap_or(&empty_vec)
                     .iter()
                     .filter(|&p| dep.matches_id(*p))
-                    .map(|&p| (p, solver.new_var()))
-                    .collect();
-                // if `p` is active then we need to select one of the versions
-                let matches: Vec<_> = version
+                {
+                    by_key
+                        .entry(m.as_activations_key())
+                        .or_default()
+                        .push(var_for_is_packages_used[&m].positive());
+                }
+                let keys: HashMap<_, _> = by_key.keys().map(|&k| (k, solver.new_var())).collect();
+
+                // if `p` is active then we need to select one of the keys
+                let matches: Vec<_> = keys
                     .values()
                     .map(|v| v.positive())
                     .chain(Some(var_for_is_packages_used[&p.package_id()].negative()))
                     .collect();
                 solver.add_clause(&matches);
-                for (pid, var) in version.iter() {
-                    // if a version is selected then it needs to be activated
-                    solver.add_clause(&[var.negative(), var_for_is_packages_used[pid].positive()]);
-                    graph.link(p.package_id(), *pid);
+
+                // if a key is active then we need to select one of the versions
+                for (key, vars) in by_key.iter() {
+                    let mut matches = vars.clone();
+                    matches.push(keys[key].negative());
+                    solver.add_clause(&matches);
                 }
+
                 version_selected_for
                     .entry(p.package_id())
                     .or_default()
-                    .insert(dep.clone(), version);
+                    .insert(dep.clone(), keys);
             }
         }
 
         let topological_order = graph.sort();
 
-        let mut publicly_exports: HashMap<PackageId, HashMap<PackageId, varisat::Var>> =
-            HashMap::new();
+        // we already ensure there is only one version for each `activations_key` so we can think of
+        // `publicly_exports` as being in terms of a set of `activations_key`s
+        let mut publicly_exports: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
 
-        for s in registry.iter() {
+        for &key in by_activations_keys.keys() {
             // everything publicly depends on itself
             let var = publicly_exports
-                .entry(s.package_id())
+                .entry(key)
                 .or_default()
-                .entry(s.package_id())
+                .entry(key)
                 .or_insert_with(|| solver.new_var());
             solver.add_clause(&[var.positive()]);
         }
@@ -336,7 +347,7 @@ impl SatResolve {
                     for (ver, sel) in versions {
                         for (&export_pid, &export_var) in publicly_exports[ver].clone().iter() {
                             let our_var = publicly_exports
-                                .entry(p)
+                                .entry(p.as_activations_key())
                                 .or_default()
                                 .entry(export_pid)
                                 .or_insert_with(|| solver.new_var());
@@ -351,7 +362,9 @@ impl SatResolve {
             }
         }
 
-        let mut can_see: HashMap<PackageId, HashMap<PackageId, varisat::Var>> = HashMap::new();
+        // we already ensure there is only one version for each `activations_key` so we can think of
+        // `can_see` as being in terms of a set of `activations_key`s
+        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
 
         // if `p` `publicly_exports` `export` then it `can_see` `export`
         for (&p, exports) in &publicly_exports {
@@ -368,10 +381,10 @@ impl SatResolve {
         // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
         for (&p, deps) in version_selected_for.iter() {
             for (_, versions) in deps {
-                for (ver, sel) in versions {
-                    for (&export_pid, &export_var) in publicly_exports[ver].iter() {
+                for (&ver, sel) in versions {
+                    for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
                         let our_var = can_see
-                            .entry(p)
+                            .entry(p.as_activations_key())
                             .or_default()
                             .entry(export_pid)
                             .or_insert_with(|| solver.new_var());
@@ -387,9 +400,12 @@ impl SatResolve {
 
         // a package `can_see` only one version by each name
         for (_, see) in can_see.iter() {
-            for (_, vers) in by_name.iter() {
-                let same_name: Vec<_> = vers.iter().filter_map(|p| see.get(p).cloned()).collect();
-                sat_at_most_one(&mut solver, &same_name);
+            let mut by_name: HashMap<&'static str, Vec<varisat::Var>> = HashMap::new();
+            for ((name, _, _), &var) in see {
+                by_name.entry(name.as_str()).or_default().push(var);
+            }
+            for same_name in by_name.values() {
+                sat_at_most_one(&mut solver, same_name);
             }
         }
 
