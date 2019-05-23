@@ -235,10 +235,10 @@ pub struct SatResolve {
 
 impl SatResolve {
     pub fn new(registry: &[Summary]) -> Self {
-        let mut solver = varisat::Solver::new();
+        let mut cnf = varisat::CnfFormula::new();
         let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
             .iter()
-            .map(|s| (s.package_id(), solver.new_var()))
+            .map(|s| (s.package_id(), cnf.new_var()))
             .collect();
 
         // no two packages with the same links set
@@ -252,7 +252,7 @@ impl SatResolve {
             }
         }
         for link in by_links.values() {
-            sat_at_most_one(&mut solver, link);
+            sat_at_most_one(&mut cnf, link);
         }
 
         // no two semver compatible versions of the same package
@@ -264,7 +264,7 @@ impl SatResolve {
                 .push(var_for_is_packages_used[&p.package_id()])
         }
         for key in by_activations_keys.values() {
-            sat_at_most_one(&mut solver, key);
+            sat_at_most_one(&mut cnf, key);
         }
 
         let mut by_name: HashMap<&'static str, Vec<PackageId>> = HashMap::new();
@@ -288,6 +288,9 @@ impl SatResolve {
         for p in registry.iter() {
             graph.add(p.package_id());
             for dep in p.dependencies() {
+                // This can more easily be written as:
+                // !is_active(p) or one of the things that match dep is_active
+                // All the complexity, from here to the end, is to support public and private dependencies!
                 let mut by_key: HashMap<_, Vec<varisat::Lit>> = HashMap::new();
                 for &m in by_name
                     .get(dep.package_name().as_str())
@@ -300,7 +303,7 @@ impl SatResolve {
                         .or_default()
                         .push(var_for_is_packages_used[&m].positive());
                 }
-                let keys: HashMap<_, _> = by_key.keys().map(|&k| (k, solver.new_var())).collect();
+                let keys: HashMap<_, _> = by_key.keys().map(|&k| (k, cnf.new_var())).collect();
 
                 // if `p` is active then we need to select one of the keys
                 let matches: Vec<_> = keys
@@ -308,13 +311,13 @@ impl SatResolve {
                     .map(|v| v.positive())
                     .chain(Some(var_for_is_packages_used[&p.package_id()].negative()))
                     .collect();
-                solver.add_clause(&matches);
+                cnf.add_clause(&matches);
 
                 // if a key is active then we need to select one of the versions
                 for (key, vars) in by_key.iter() {
                     let mut matches = vars.clone();
                     matches.push(keys[key].negative());
-                    solver.add_clause(&matches);
+                    cnf.add_clause(&matches);
                 }
 
                 version_selected_for
@@ -336,8 +339,8 @@ impl SatResolve {
                 .entry(key)
                 .or_default()
                 .entry(key)
-                .or_insert_with(|| solver.new_var());
-            solver.add_clause(&[var.positive()]);
+                .or_insert_with(|| cnf.new_var());
+            cnf.add_clause(&[var.positive()]);
         }
 
         // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
@@ -350,8 +353,8 @@ impl SatResolve {
                                 .entry(p.as_activations_key())
                                 .or_default()
                                 .entry(export_pid)
-                                .or_insert_with(|| solver.new_var());
-                            solver.add_clause(&[
+                                .or_insert_with(|| cnf.new_var());
+                            cnf.add_clause(&[
                                 sel.negative(),
                                 export_var.negative(),
                                 our_var.positive(),
@@ -373,8 +376,8 @@ impl SatResolve {
                     .entry(p)
                     .or_default()
                     .entry(export_pid)
-                    .or_insert_with(|| solver.new_var());
-                solver.add_clause(&[export_var.negative(), our_var.positive()]);
+                    .or_insert_with(|| cnf.new_var());
+                cnf.add_clause(&[export_var.negative(), our_var.positive()]);
             }
         }
 
@@ -387,8 +390,8 @@ impl SatResolve {
                             .entry(p.as_activations_key())
                             .or_default()
                             .entry(export_pid)
-                            .or_insert_with(|| solver.new_var());
-                        solver.add_clause(&[
+                            .or_insert_with(|| cnf.new_var());
+                        cnf.add_clause(&[
                             sel.negative(),
                             export_var.negative(),
                             our_var.positive(),
@@ -405,9 +408,17 @@ impl SatResolve {
                 by_name.entry(name.as_str()).or_default().push(var);
             }
             for same_name in by_name.values() {
-                sat_at_most_one(&mut solver, same_name);
+                sat_at_most_one(&mut cnf, same_name);
             }
         }
+        let mut solver = varisat::Solver::new();
+        solver.add_formula(&cnf);
+
+        // We dont need to `solve` now. We know that "use nothing" will satisfy all the clauses so far.
+        // But things run faster if we let it spend some time figuring out how the constraints interact before we add assumptions.
+        solver
+            .solve()
+            .expect("docs say it can't error in default config");
 
         SatResolve {
             solver,
@@ -450,9 +461,7 @@ impl SatResolve {
 
         self.solver
             .solve()
-            .expect("docs say it can't error in default config");
-
-        self.solver.model().is_some()
+            .expect("docs say it can't error in default config")
     }
 }
 
