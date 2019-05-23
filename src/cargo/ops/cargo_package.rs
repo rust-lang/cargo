@@ -665,6 +665,9 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
             } else if file_type.is_symlink() {
                 let hash = util::hex::hash_u64(&fs::read_link(entry.path())?);
                 result.insert(entry.path().to_path_buf(), hash);
+            } else if file_type.is_dir() {
+                let hash = util::hex::hash_u64(&());
+                result.insert(entry.path().to_path_buf(), hash);
             }
         }
         Ok(result)
