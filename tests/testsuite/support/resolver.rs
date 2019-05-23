@@ -820,25 +820,30 @@ pub fn registry_strategy(
                     ))
                 }
 
-                PrettyPrintRegistry(
-                    list_of_pkgid
-                        .into_iter()
-                        .zip(dependency_by_pkgid.into_iter())
-                        .map(|(((name, ver), allow_deps), deps)| {
-                            pkg_dep(
-                                (name, ver).to_pkgid(),
-                                if !allow_deps {
-                                    vec![dep_req("bad", "*")]
-                                } else {
-                                    let mut deps = deps;
-                                    deps.sort_by_key(|d| d.name_in_toml());
-                                    deps.dedup_by_key(|d| d.name_in_toml());
-                                    deps
-                                },
-                            )
-                        })
-                        .collect(),
-                )
+                let mut out: Vec<Summary> = list_of_pkgid
+                    .into_iter()
+                    .zip(dependency_by_pkgid.into_iter())
+                    .map(|(((name, ver), allow_deps), deps)| {
+                        pkg_dep(
+                            (name, ver).to_pkgid(),
+                            if !allow_deps {
+                                vec![dep_req("bad", "*")]
+                            } else {
+                                let mut deps = deps;
+                                deps.sort_by_key(|d| d.name_in_toml());
+                                deps.dedup_by_key(|d| d.name_in_toml());
+                                deps
+                            },
+                        )
+                    })
+                    .collect();
+
+                if reverse_alphabetical {
+                    // make sure the complicated cases are at the end
+                    out.reverse();
+                }
+
+                PrettyPrintRegistry(out)
             },
         )
 }
