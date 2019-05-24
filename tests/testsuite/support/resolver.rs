@@ -218,6 +218,21 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
     }
 }
 
+fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
+    cnf: &mut impl varisat::ExtendFormula,
+    data: impl Iterator<Item = (K, varisat::Var)>,
+) -> HashMap<K, Vec<varisat::Var>> {
+    // no two packages with the same links set
+    let mut by_keys: HashMap<K, Vec<varisat::Var>> = HashMap::new();
+    for (p, v) in data {
+        by_keys.entry(p).or_default().push(v)
+    }
+    for key in by_keys.values() {
+        sat_at_most_one(cnf, key);
+    }
+    by_keys
+}
+
 /// Resolution can be reduced to the SAT problem. So this is an alternative implementation
 /// of the resolver that uses a SAT library for the hard work. This is intended to be easy to read,
 /// as compared to the real resolver.
@@ -243,30 +258,21 @@ impl SatResolve {
             .collect();
 
         // no two packages with the same links set
-        let mut by_links: HashMap<_, Vec<varisat::Var>> = HashMap::new();
-        for p in registry.iter() {
-            if let Some(l) = p.links() {
-                by_links
-                    .entry(l)
-                    .or_default()
-                    .push(var_for_is_packages_used[&p.package_id()])
-            }
-        }
-        for link in by_links.values() {
-            sat_at_most_one(&mut cnf, link);
-        }
+        sat_at_most_one_by_key(
+            &mut cnf,
+            registry
+                .iter()
+                .map(|s| (s.links(), var_for_is_packages_used[&s.package_id()]))
+                .filter(|(l, _)| l.is_some()),
+        );
 
         // no two semver compatible versions of the same package
-        let mut by_activations_keys: HashMap<_, Vec<varisat::Var>> = HashMap::new();
-        for p in registry.iter() {
-            by_activations_keys
-                .entry(p.package_id().as_activations_key())
-                .or_default()
-                .push(var_for_is_packages_used[&p.package_id()])
-        }
-        for key in by_activations_keys.values() {
-            sat_at_most_one(&mut cnf, key);
-        }
+        let by_activations_keys = sat_at_most_one_by_key(
+            &mut cnf,
+            var_for_is_packages_used
+                .iter()
+                .map(|(p, &v)| (p.as_activations_key(), v)),
+        );
 
         let mut by_name: HashMap<&'static str, Vec<PackageId>> = HashMap::new();
 
@@ -389,13 +395,7 @@ impl SatResolve {
 
         // a package `can_see` only one version by each name
         for (_, see) in can_see.iter() {
-            let mut by_name: HashMap<&'static str, Vec<varisat::Var>> = HashMap::new();
-            for ((name, _, _), &var) in see {
-                by_name.entry(name.as_str()).or_default().push(var);
-            }
-            for same_name in by_name.values() {
-                sat_at_most_one(&mut cnf, same_name);
-            }
+            sat_at_most_one_by_key(&mut cnf, see.iter().map(|((name, _, _), &v)| (name, v)));
         }
         let mut solver = varisat::Solver::new();
         solver.add_formula(&cnf);
