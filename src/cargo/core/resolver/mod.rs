@@ -603,52 +603,7 @@ fn activate(
         // and associate dep with that edge
         .push(dep.clone());
         if let Some(public_dependency) = cx.public_dependency.as_mut() {
-            // one tricky part is that `candidate_pid` may already be active and
-            // have public dependencies of its own. So we not only need to mark
-            // `candidate_pid` as visible to its parents but also all of its existing
-            // public dependencies.
-            let existing_public_deps: Vec<PackageId> = public_dependency
-                .get(&candidate_pid)
-                .iter()
-                .flat_map(|x| x.values())
-                .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                .chain(&Some(candidate_pid))
-                .cloned()
-                .collect();
-            for c in existing_public_deps {
-                // for each (transitive) parent that can newly see `t`
-                let mut stack = vec![(parent_pid, dep.is_public())];
-                while let Some((p, public)) = stack.pop() {
-                    match public_dependency.entry(p).or_default().entry(c.name()) {
-                        im_rc::hashmap::Entry::Occupied(mut o) => {
-                            // the (transitive) parent can already see something by `c`s name, it had better be `c`.
-                            assert_eq!(o.get().0, c);
-                            if o.get().1 {
-                                // The previous time the parent saw `c`, it was a public dependency.
-                                // So all of its parents already know about `c`
-                                // and we can save some time by stopping now.
-                                continue;
-                            }
-                            if public {
-                                // Mark that `c` has now bean seen publicly
-                                o.insert((c, public));
-                            }
-                        }
-                        im_rc::hashmap::Entry::Vacant(v) => {
-                            // The (transitive) parent does not have anything by `c`s name,
-                            // so we add `c`.
-                            v.insert((c, public));
-                        }
-                    }
-                    // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
-                    if public {
-                        // if it was public, then we add all of `p`s parents to be checked
-                        for &(grand, ref d) in cx.parents.edges(&p) {
-                            stack.push((grand, d.iter().any(|x| x.is_public())));
-                        }
-                    }
-                }
-            }
+            public_dependency.add_edge(candidate_pid, parent_pid, dep, &cx.parents);
         }
     }
 
@@ -762,7 +717,7 @@ impl RemainingCandidates {
         dep: &Dependency,
         parent: PackageId,
     ) -> Option<(Summary, bool)> {
-        'main: for b in self.remaining.by_ref() {
+        for b in self.remaining.by_ref() {
             let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
@@ -801,35 +756,10 @@ impl RemainingCandidates {
             // activated and have public dependants of its own,
             // all of witch also need to be checked the same way.
             if let Some(public_dependency) = cx.public_dependency.as_ref() {
-                let existing_public_deps: Vec<PackageId> = public_dependency
-                    .get(&b_id)
-                    .iter()
-                    .flat_map(|x| x.values())
-                    .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                    .chain(&Some(b_id))
-                    .cloned()
-                    .collect();
-                for t in existing_public_deps {
-                    // for each (transitive) parent that can newly see `t`
-                    let mut stack = vec![(parent, dep.is_public())];
-                    while let Some((p, public)) = stack.pop() {
-                        // TODO: dont look at the same thing more then once
-                        if let Some(o) = public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
-                            if o.0 != t {
-                                // the (transitive) parent can already see a different version by `t`s name.
-                                // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
-                                conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
-                                continue 'main;
-                            }
-                        }
-                        // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
-                        if public {
-                            // if it was public, then we add all of `p`s parents to be checked
-                            for &(grand, ref d) in cx.parents.edges(&p) {
-                                stack.push((grand, d.iter().any(|x| x.is_public())));
-                            }
-                        }
-                    }
+                if let Err((p, c)) = public_dependency.can_add_edge(b_id, parent, dep, &cx.parents)
+                {
+                    conflicting_prev_active.insert(p, c);
+                    continue;
                 }
             }
 
