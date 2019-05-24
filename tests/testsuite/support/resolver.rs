@@ -223,7 +223,8 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
 /// as compared to the real resolver.
 ///
 /// For the subset of functionality that are currently made by `registry_strategy` this will,
-/// find a valid resolution if one exists.
+/// find a valid resolution if one exists. The big thing that the real resolver does,
+/// that this one does not do is work with features and optional dependencies.
 ///
 /// The SAT library dose not optimize for the newer version,
 /// so the selected packages may not match the real resolver.
@@ -346,14 +347,12 @@ impl SatResolve {
         // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
         for &p in topological_order.iter() {
             if let Some(deps) = version_selected_for.get(&p) {
+                let mut p_exports = publicly_exports.remove(&p.as_activations_key()).unwrap();
                 for (_, versions) in deps.iter().filter(|(d, _)| d.is_public()) {
                     for (ver, sel) in versions {
-                        for (&export_pid, &export_var) in publicly_exports[ver].clone().iter() {
-                            let our_var = publicly_exports
-                                .entry(p.as_activations_key())
-                                .or_default()
-                                .entry(export_pid)
-                                .or_insert_with(|| cnf.new_var());
+                        for (&export_pid, &export_var) in publicly_exports[ver].iter() {
+                            let our_var =
+                                p_exports.entry(export_pid).or_insert_with(|| cnf.new_var());
                             cnf.add_clause(&[
                                 sel.negative(),
                                 export_var.negative(),
@@ -362,23 +361,22 @@ impl SatResolve {
                         }
                     }
                 }
+                publicly_exports.insert(p.as_activations_key(), p_exports);
             }
         }
 
         // we already ensure there is only one version for each `activations_key` so we can think of
         // `can_see` as being in terms of a set of `activations_key`s
-        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
+        // and if `p` `publicly_exports` `export` then it `can_see` `export`
+        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = publicly_exports.clone();
 
         // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
         for (&p, deps) in version_selected_for.iter() {
-            for (_, versions) in deps {
+            let p_can_see = can_see.entry(p.as_activations_key()).or_default();
+            for (_, versions) in deps.iter().filter(|(d, _)| !d.is_public()) {
                 for (&ver, sel) in versions {
                     for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
-                        let our_var = can_see
-                            .entry(p.as_activations_key())
-                            .or_default()
-                            .entry(export_pid)
-                            .or_insert_with(|| cnf.new_var());
+                        let our_var = p_can_see.entry(export_pid).or_insert_with(|| cnf.new_var());
                         cnf.add_clause(&[
                             sel.negative(),
                             export_var.negative(),
