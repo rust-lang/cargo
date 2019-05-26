@@ -603,7 +603,7 @@ fn activate(
         // and associate dep with that edge
         .push(dep.clone());
         if let Some(public_dependency) = cx.public_dependency.as_mut() {
-            public_dependency.add_edge(candidate_pid, parent_pid, dep, &cx.parents);
+            public_dependency.add_edge(candidate_pid, parent_pid, dep.is_public(), &cx.parents);
         }
     }
 
@@ -756,7 +756,8 @@ impl RemainingCandidates {
             // activated and have public dependants of its own,
             // all of witch also need to be checked the same way.
             if let Some(public_dependency) = cx.public_dependency.as_ref() {
-                if let Err((p, c)) = public_dependency.can_add_edge(b_id, parent, dep, &cx.parents)
+                if let Err((p, c)) =
+                    public_dependency.can_add_edge(b_id, parent, dep.is_public(), &cx.parents)
                 {
                     conflicting_prev_active.insert(p, c);
                     continue;
