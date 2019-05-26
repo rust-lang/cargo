@@ -343,7 +343,7 @@
   build` rebuilding when it shouldn't.
   [#6493](https://github.com/rust-lang/cargo/pull/6493)
 
-## Cargo 1.31 (2019-12-06)
+## Cargo 1.31 (2018-12-06)
 [36d96825...339d9f9c](https://github.com/rust-lang/cargo/compare/36d96825...339d9f9c)
 
 ### Added
@@ -413,7 +413,7 @@
 - Fixed some unnecessary recompiles when `panic=abort` is used.
   [#6170](https://github.com/rust-lang/cargo/pull/6170)
 
-## Cargo 1.30 (2019-10-25)
+## Cargo 1.30 (2018-10-25)
 [524a578d...36d96825](https://github.com/rust-lang/cargo/compare/524a578d...36d96825)
 
 ### Added
