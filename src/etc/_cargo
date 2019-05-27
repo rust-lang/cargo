@@ -48,6 +48,7 @@ case $state in
                 _arguments \
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
+                    '--all-targets[equivalent to specifying --lib --bins --tests --benches --examples]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     "${command_scope_spec[@]}" \
@@ -65,6 +66,7 @@ case $state in
                 _arguments \
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
+                    '--all-targets[equivalent to specifying --lib --bins --tests --benches --examples]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     "${command_scope_spec[@]}" \
