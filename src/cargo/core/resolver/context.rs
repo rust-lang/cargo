@@ -23,6 +23,7 @@ pub use super::resolve::Resolve;
 // possible.
 #[derive(Clone)]
 pub struct Context {
+    pub age: ContextAge,
     pub activations: Activations,
     /// list the features that are activated for each package
     pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
@@ -82,6 +83,7 @@ impl PackageId {
 impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
         Context {
+            age: 0,
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
             public_dependency: if check_public_visible_dependencies {
@@ -108,7 +110,7 @@ impl Context {
         parent: Option<(&Summary, &Dependency)>,
     ) -> ActivateResult<bool> {
         let id = summary.package_id();
-        let age: ContextAge = self.age();
+        let age: ContextAge = self.age;
         match self.activations.entry(id.as_activations_key()) {
             im_rc::hashmap::Entry::Occupied(o) => {
                 debug_assert_eq!(
@@ -178,13 +180,6 @@ impl Context {
                 opts.features.is_empty() && (!opts.uses_default_features || !has_default_feature)
             }
         })
-    }
-
-    /// Returns the `ContextAge` of this `Context`.
-    /// For now we use (len of activations) as the age.
-    /// See the `ContextAge` docs for more details.
-    pub fn age(&self) -> ContextAge {
-        self.activations.len()
     }
 
     /// If the package is active returns the `ContextAge` when it was added

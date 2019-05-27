@@ -218,7 +218,7 @@ fn activate_deps_loop(
         trace!(
             "{}[{}]>{} {} candidates",
             parent.name(),
-            cx.age(),
+            cx.age,
             dep.package_name(),
             candidates.len()
         );
@@ -264,7 +264,7 @@ fn activate_deps_loop(
                 trace!(
                     "{}[{}]>{} -- no candidates",
                     parent.name(),
-                    cx.age(),
+                    cx.age,
                     dep.package_name()
                 );
 
@@ -375,7 +375,7 @@ fn activate_deps_loop(
             trace!(
                 "{}[{}]>{} trying {}",
                 parent.name(),
-                cx.age(),
+                cx.age,
                 dep.package_name(),
                 candidate.version()
             );
@@ -525,7 +525,7 @@ fn activate_deps_loop(
                         trace!(
                             "{}[{}]>{} skipping {} ",
                             parent.name(),
-                            cx.age(),
+                            cx.age,
                             dep.package_name(),
                             pid.version()
                         );
@@ -594,6 +594,7 @@ fn activate(
     opts: ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
+    cx.age += 1;
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
         Rc::make_mut(
@@ -947,7 +948,7 @@ fn find_candidate(
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
         if let Some(age) = age {
-            if frame.context.age() > age {
+            if frame.context.age >= age {
                 trace!(
                     "{} = \"{}\" skip as not solving {}: {:?}",
                     frame.dep.package_name(),
