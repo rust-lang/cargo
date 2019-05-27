@@ -1,17 +1,51 @@
 # Changelog
 
+## Cargo 1.37 (2019-08-15)
+[c4fcfb72...HEAD](https://github.com/rust-lang/cargo/compare/c4fcfb72...HEAD)
+
+### Added
+- Added `doctest` field to `cargo metadata` to determine if a target's documentation is tested.
+  [#6953](https://github.com/rust-lang/cargo/pull/6953)
+  [#6965](https://github.com/rust-lang/cargo/pull/6965)
+- (Nightly only): Added [compiler message
+  caching](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cache-messages).
+  The `-Z cache-messages` flag makes cargo cache the compiler output so that
+  future runs can redisplay previous warnings.
+  [#6933](https://github.com/rust-lang/cargo/pull/6933)
+
+### Changed
+- `cargo package` now verifies that build scripts do not create empty
+  directories.
+  [#6973](https://github.com/rust-lang/cargo/pull/6973)
+
+### Fixed
+- Fixed how zsh completions fetch the list of commands.
+  [#6956](https://github.com/rust-lang/cargo/pull/6956)
+- "+ debuginfo" is no longer printed in the build summary when `debug` is set
+  to 0.
+  [#6971](https://github.com/rust-lang/cargo/pull/6971)
+
 ## Cargo 1.36 (2019-07-04)
-[6f3e9c36...HEAD](https://github.com/rust-lang/cargo/compare/6f3e9c36...HEAD)
+[6f3e9c36...c4fcfb72](https://github.com/rust-lang/cargo/compare/6f3e9c36...c4fcfb72)
 
 ### Added
 - (Nightly only): Added [`-Z install-upgrade`
-  feature](https://github.com/rust-lang/cargo/blob/7b13469ee90a24fa5aa06166d447dac3370846ef/src/doc/src/reference/unstable.md#install-upgrade)
-  to track details about installed crates and to automatically update them if
-  they are out-of-date. [#6798](https://github.com/rust-lang/cargo/pull/6798)
+  feature](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#install-upgrade)
+  to track details about installed crates and to update them if they are
+  out-of-date. [#6798](https://github.com/rust-lang/cargo/pull/6798)
 - (Nightly only): Added the [`public-dependency`
-  feature](https://github.com/rust-lang/cargo/blob/7b13469ee90a24fa5aa06166d447dac3370846ef/src/doc/src/reference/unstable.md#public-dependency)
+  feature](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#public-dependency)
   which allows tracking public versus private dependencies.
   [#6772](https://github.com/rust-lang/cargo/pull/6772)
+- Added more detailed documentation on target auto-discovery.
+  [#6898](https://github.com/rust-lang/cargo/pull/6898)
+- (Nightly only): Added build pipelining via the `build.pipelining` config
+  option (`CARGO_BUILD_PIPELINING` env var).
+  [#6883](https://github.com/rust-lang/cargo/pull/6883)
+- 🔥 Stabilize the `--offline` flag which allows using cargo without a network
+  connection.
+  [#6934](https://github.com/rust-lang/cargo/pull/6934)
+  [#6871](https://github.com/rust-lang/cargo/pull/6871)
 
 ### Changed
 - `publish = ["crates-io"]` may be added to the manifest to restrict
@@ -34,8 +68,38 @@
 - Setting a feature on a dependency where that feature points to a *required*
   dependency is now an error. Previously it was a warning.
   [#6860](https://github.com/rust-lang/cargo/pull/6860)
+- The `registry.index` config value now supports relative `file:` URLs.
+  [#6873](https://github.com/rust-lang/cargo/pull/6873)
+- macOS: The `.dSYM` directory is now symbolically linked next to example
+  binaries without the metadata hash so that debuggers can find it.
+  [#6891](https://github.com/rust-lang/cargo/pull/6891)
+- The default `Cargo.toml` template for now projects now includes a comment
+  providing a link to the documentation.
+  [#6881](https://github.com/rust-lang/cargo/pull/6881)
+- Some improvements to the wording of the crate download summary.
+  [#6916](https://github.com/rust-lang/cargo/pull/6916)
+  [#6920](https://github.com/rust-lang/cargo/pull/6920)
+- ✨ Changed `RUST_LOG` environment variable to `CARGO_LOG` so that user code
+  that uses the `log` crate will not display cargo's debug output.
+  [#6918](https://github.com/rust-lang/cargo/pull/6918)
+- `Cargo.toml` is now always included when packaging, even if it is not listed
+  in `package.include`.
+  [#6925](https://github.com/rust-lang/cargo/pull/6925)
+- Package include/exclude values now use gitignore patterns instead of glob
+  patterns. [#6924](https://github.com/rust-lang/cargo/pull/6924)
+- Provide a better error message when crates.io times out. Also improve error
+  messages with other HTTP response codes.
+  [#6936](https://github.com/rust-lang/cargo/pull/6936)
+
+### Performance
 - Resolver performance improvements for some cases.
   [#6853](https://github.com/rust-lang/cargo/pull/6853)
+- Optimized how cargo reads the index JSON files by caching the results.
+  [#6880](https://github.com/rust-lang/cargo/pull/6880)
+  [#6912](https://github.com/rust-lang/cargo/pull/6912)
+  [#6940](https://github.com/rust-lang/cargo/pull/6940)
+- Various performance improvements.
+  [#6867](https://github.com/rust-lang/cargo/pull/6867)
 
 ### Fixed
 - More carefully track the on-disk fingerprint information for dependencies.
@@ -43,6 +107,14 @@
   restarted. [#6832](https://github.com/rust-lang/cargo/pull/6832)
 - `cargo run` now correctly passes non-UTF8 arguments to the child process.
   [#6849](https://github.com/rust-lang/cargo/pull/6849)
+- Fixed bash completion to run on bash 3.2, the stock version in macOS.
+  [#6905](https://github.com/rust-lang/cargo/pull/6905)
+- Various fixes and improvements to zsh completion.
+  [#6926](https://github.com/rust-lang/cargo/pull/6926)
+  [#6929](https://github.com/rust-lang/cargo/pull/6929)
+- Fix `cargo update` ignoring `-p` arguments if the `Cargo.lock` file was
+  missing.
+  [#6904](https://github.com/rust-lang/cargo/pull/6904)
 
 ## Cargo 1.35 (2019-05-23)
 [6789d8a0...6f3e9c36](https://github.com/rust-lang/cargo/compare/6789d8a0...6f3e9c36)
