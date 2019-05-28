@@ -604,7 +604,13 @@ fn activate(
         // and associate dep with that edge
         .push(dep.clone());
         if let Some(public_dependency) = cx.public_dependency.as_mut() {
-            public_dependency.add_edge(candidate_pid, parent_pid, dep.is_public(), &cx.parents);
+            public_dependency.add_edge(
+                candidate_pid,
+                parent_pid,
+                dep.is_public(),
+                cx.age,
+                &cx.parents,
+            );
         }
     }
 

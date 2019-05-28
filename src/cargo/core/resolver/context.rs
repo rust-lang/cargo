@@ -245,8 +245,13 @@ impl Graph<PackageId, Rc<Vec<Dependency>>> {
 #[derive(Clone, Debug, Default)]
 pub struct PublicDependency {
     /// For each active package the set of all the names it can see,
-    /// for each name the exact package that name resolves to and whether it exports that visibility.
-    inner: im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>,
+    /// for each name the exact package that name resolves to,
+    ///     the `ContextAge` when it was first visible,
+    ///     and the `ContextAge` when it was first exported.
+    inner: im_rc::HashMap<
+        PackageId,
+        im_rc::HashMap<InternedString, (PackageId, ContextAge, Option<ContextAge>)>,
+    >,
 }
 
 impl PublicDependency {
@@ -260,7 +265,7 @@ impl PublicDependency {
             .get(&candidate_pid) // if we have seen it before
             .iter()
             .flat_map(|x| x.values()) // all the things we have stored
-            .filter(|x| x.1) // as publicly exported
+            .filter(|x| x.2.is_some()) // as publicly exported
             .map(|x| x.0)
             .chain(Some(candidate_pid)) // but even if not we know that everything exports itself
             .collect()
@@ -270,6 +275,7 @@ impl PublicDependency {
         candidate_pid: PackageId,
         parent_pid: PackageId,
         is_public: bool,
+        age: ContextAge,
         parents: &Graph<PackageId, Rc<Vec<Dependency>>>,
     ) {
         // one tricky part is that `candidate_pid` may already be active and
@@ -284,7 +290,7 @@ impl PublicDependency {
                     im_rc::hashmap::Entry::Occupied(mut o) => {
                         // the (transitive) parent can already see something by `c`s name, it had better be `c`.
                         assert_eq!(o.get().0, c);
-                        if o.get().1 {
+                        if o.get().2.is_some() {
                             // The previous time the parent saw `c`, it was a public dependency.
                             // So all of its parents already know about `c`
                             // and we can save some time by stopping now.
@@ -292,13 +298,14 @@ impl PublicDependency {
                         }
                         if public {
                             // Mark that `c` has now bean seen publicly
-                            o.insert((c, public));
+                            let old_age = o.get().1;
+                            o.insert((c, old_age, if public { Some(age) } else { None }));
                         }
                     }
                     im_rc::hashmap::Entry::Vacant(v) => {
                         // The (transitive) parent does not have anything by `c`s name,
                         // so we add `c`.
-                        v.insert((c, public));
+                        v.insert((c, age, if public { Some(age) } else { None }));
                     }
                 }
                 // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
@@ -331,7 +338,7 @@ impl PublicDependency {
                         // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
                         return Err((p, ConflictReason::PublicDependency));
                     }
-                    if o.1 {
+                    if o.2.is_some() {
                         // The previous time the parent saw `t`, it was a public dependency.
                         // So all of its parents already know about `t`
                         // and we can save some time by stopping now.
