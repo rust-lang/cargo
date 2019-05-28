@@ -103,6 +103,7 @@ features = [
 [dev-dependencies]
 bufstream = "0.1"
 proptest = "0.9.1"
+varisat = "0.2.1"
 
 [[bin]]
 name = "cargo"
