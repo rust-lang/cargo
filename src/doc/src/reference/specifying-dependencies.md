@@ -440,7 +440,8 @@ Cargo how to find local unpublished crates.
 
 
 Platform-specific dependencies take the same format, but are listed under a
-`target` section. Normally Rust-like `#[cfg]` syntax will be used to define
+`target` section. Normally Rust-like [`#[cfg]`
+syntax](../reference/conditional-compilation.html) will be used to define
 these sections:
 
 ```toml
@@ -458,8 +459,7 @@ native = { path = "native/x86_64" }
 ```
 
 Like with Rust, the syntax here supports the `not`, `any`, and `all` operators
-to combine various cfg name/value pairs. Note that the `cfg` syntax has only
-been available since Cargo 0.9.0 (Rust 1.8.0).
+to combine various cfg name/value pairs.
 
 If you want to know which cfg targets are available on your platform, run
 `rustc --print=cfg` from the command line. If you want to know which `cfg`
@@ -469,7 +469,8 @@ run `rustc --print=cfg --target=x86_64-pc-windows-msvc`.
 Unlike in your Rust source code,
 you cannot use `[target.'cfg(feature = "my_crate")'.dependencies]` to add
 dependencies based on optional crate features.
-Use [the `[features]` section](manifest.md#the-features-section) instead.
+Use [the `[features]` section](reference/manifest.html#the-features-section)
+instead.
 
 In addition to `#[cfg]` syntax, Cargo also supports listing out the full target
 the dependencies would apply to:
