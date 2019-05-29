@@ -377,12 +377,12 @@ impl SatResolve {
         // we already ensure there is only one version for each `activations_key` so we can think of
         // `can_see` as being in terms of a set of `activations_key`s
         // and if `p` `publicly_exports` `export` then it `can_see` `export`
-        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = publicly_exports.clone();
+        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
 
         // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
         for (&p, deps) in version_selected_for.iter() {
-            let p_can_see = can_see.entry(p.as_activations_key()).or_default();
-            for (_, versions) in deps.iter().filter(|(d, _)| !d.is_public()) {
+            let p_can_see = can_see.entry(p).or_default();
+            for (_, versions) in deps.iter() {
                 for (&ver, sel) in versions {
                     for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
                         let our_var = p_can_see.entry(export_pid).or_insert_with(|| cnf.new_var());
