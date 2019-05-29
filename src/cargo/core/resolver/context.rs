@@ -57,7 +57,7 @@ pub type Activations =
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
 /// same.
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub enum SemverCompatibility {
     Major(NonZeroU64),
     Minor(NonZeroU64),

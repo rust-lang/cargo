@@ -381,6 +381,20 @@ fn public_dependency_skipping_in_backtracking() {
 }
 
 #[test]
+fn public_sat_topological_order() {
+    let input = vec![
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.0")),
+        pkg!(("b", "0.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "0.0.0") => [dep("bad"),]),
+        pkg!("A" => [dep_req("a", "= 0.0.0"),dep_req_kind("b", "*", Kind::Normal, true)]),
+    ];
+
+    let reg = registry(input);
+    assert!(resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).is_err());
+}
+
+#[test]
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
