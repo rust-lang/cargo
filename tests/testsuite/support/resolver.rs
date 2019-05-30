@@ -203,10 +203,12 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
         return;
     } else if vars.len() == 2 {
         solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
+        return;
     } else if vars.len() == 3 {
         solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
         solver.add_clause(&[vars[0].negative(), vars[2].negative()]);
         solver.add_clause(&[vars[1].negative(), vars[2].negative()]);
+        return;
     }
     // use the "Binary Encoding" from
     // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
@@ -305,6 +307,7 @@ impl SatResolve {
                     .iter()
                     .filter(|&p| dep.matches_id(*p))
                 {
+                    graph.link(p.package_id(), m);
                     by_key
                         .entry(m.as_activations_key())
                         .or_default()
@@ -374,12 +377,12 @@ impl SatResolve {
         // we already ensure there is only one version for each `activations_key` so we can think of
         // `can_see` as being in terms of a set of `activations_key`s
         // and if `p` `publicly_exports` `export` then it `can_see` `export`
-        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = publicly_exports.clone();
+        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
 
         // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
         for (&p, deps) in version_selected_for.iter() {
-            let p_can_see = can_see.entry(p.as_activations_key()).or_default();
-            for (_, versions) in deps.iter().filter(|(d, _)| !d.is_public()) {
+            let p_can_see = can_see.entry(p).or_default();
+            for (_, versions) in deps.iter() {
                 for (&ver, sel) in versions {
                     for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
                         let our_var = p_can_see.entry(export_pid).or_insert_with(|| cnf.new_var());
