@@ -357,7 +357,7 @@ fn public_dependency_skipping() {
     ];
     let reg = registry(input);
 
-    resolve(pkg_id("root"), vec![dep("c")], &reg).unwrap();
+    resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
 }
 
 #[test]
@@ -377,7 +377,50 @@ fn public_dependency_skipping_in_backtracking() {
     ];
     let reg = registry(input);
 
-    resolve(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg, None).unwrap();
+}
+
+#[test]
+fn public_sat_topological_order() {
+    let input = vec![
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.0")),
+        pkg!(("b", "0.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "0.0.0") => [dep("bad"),]),
+        pkg!("A" => [dep_req("a", "= 0.0.0"),dep_req_kind("b", "*", Kind::Normal, true)]),
+    ];
+
+    let reg = registry(input);
+    assert!(resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).is_err());
+}
+
+#[test]
+fn public_sat_unused_makes_things_pub() {
+    let input = vec![
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.0")),
+        pkg!(("b", "8.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "8.0.0") => [dep_req("a", "= 0.0.1"),]),
+        pkg!("c" => [dep_req("b", "= 8.0.0"),dep_req("a", "= 0.0.0"),]),
+    ];
+    let reg = registry(input);
+
+    resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
+}
+
+#[test]
+fn public_sat_unused_makes_things_pub_2() {
+    let input = vec![
+        pkg!(("c", "0.0.2")),
+        pkg!(("c", "0.0.1")),
+        pkg!(("a-sys", "0.0.2")),
+        pkg!(("a-sys", "0.0.1") => [dep_req_kind("c", "= 0.0.1", Kind::Normal, true),]),
+        pkg!("P" => [dep_req_kind("a-sys", "*", Kind::Normal, true),dep_req("c", "= 0.0.1"),]),
+        pkg!("A" => [dep("P"),dep_req("c", "= 0.0.2"),]),
+    ];
+    let reg = registry(input);
+
+    resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).unwrap();
 }
 
 #[test]
