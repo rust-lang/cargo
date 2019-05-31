@@ -146,6 +146,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub fn out_dir(&self, unit: &Unit<'a>) -> PathBuf {
         if unit.mode.is_doc() {
             self.layout(unit.kind).root().parent().unwrap().join("doc")
+        } else if unit.mode.is_doc_test() {
+            panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
@@ -293,14 +295,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         unit: &Unit<'a>,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
-        let out_dir = self.out_dir(unit);
-
         let ret = match unit.mode {
             CompileMode::Check { .. } => {
                 // This may be confusing. rustc outputs a file named `lib*.rmeta`
                 // for both libraries and binaries.
                 let file_stem = self.file_stem(unit);
-                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
+                let path = self.out_dir(unit).join(format!("lib{}.rmeta", file_stem));
                 vec![OutputFile {
                     path,
                     hardlink: None,
@@ -309,7 +309,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 }]
             }
             CompileMode::Doc { .. } => {
-                let path = out_dir.join(unit.target.crate_name()).join("index.html");
+                let path = self
+                    .out_dir(unit)
+                    .join(unit.target.crate_name())
+                    .join("index.html");
                 vec![OutputFile {
                     path,
                     hardlink: None,
@@ -329,7 +332,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 vec![]
             }
             CompileMode::Test | CompileMode::Build | CompileMode::Bench => {
-                self.calc_outputs_rustc(unit, bcx, &out_dir)?
+                self.calc_outputs_rustc(unit, bcx)?
             }
         };
         info!("Target filenames: {:?}", ret);
@@ -341,11 +344,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         &self,
         unit: &Unit<'a>,
         bcx: &BuildContext<'a, 'cfg>,
-        out_dir: &Path,
     ) -> CargoResult<Vec<OutputFile>> {
         let mut ret = Vec::new();
         let mut unsupported = Vec::new();
 
+        let out_dir = self.out_dir(unit);
         let link_stem = self.link_stem(unit);
         let info = if unit.kind == Kind::Host {
             &bcx.host_info
@@ -468,6 +471,10 @@ fn compute_metadata<'a, 'cfg>(
     cx: &Context<'a, 'cfg>,
     metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
 ) -> Option<Metadata> {
+    if unit.mode.is_doc_test() {
+        // Doc tests do not have metadata.
+        return None;
+    }
     // No metadata for dylibs because of a couple issues:
     // - macOS encodes the dylib name in the executable,
     // - Windows rustc multiple files of which we can't easily link all of them.
