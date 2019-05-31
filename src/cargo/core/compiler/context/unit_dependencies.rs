@@ -129,7 +129,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, state.cx.bcx);
-    } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
+    } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
         return compute_deps_doc(unit, state);
     }

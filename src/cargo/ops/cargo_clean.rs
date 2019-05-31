@@ -104,6 +104,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {
+        if unit.mode.is_doc() || unit.mode.is_doc_test() {
+            // Cleaning individual rustdoc crates is currently not supported.
+            // For example, the search index would need to be rebuilt to fully
+            // remove it (otherwise you're left with lots of broken links).
+            // Doc tests produce no output.
+            continue;
+        }
         rm_rf(&cx.files().fingerprint_dir(unit), config)?;
         if unit.target.is_custom_build() {
             if unit.mode.is_run_custom_build() {

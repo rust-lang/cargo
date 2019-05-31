@@ -1015,6 +1015,8 @@ fn calculate<'a, 'cfg>(
     }
     let mut fingerprint = if unit.mode.is_run_custom_build() {
         calculate_run_custom_build(cx, unit)?
+    } else if unit.mode.is_doc_test() {
+        panic!("doc tests do not fingerprint");
     } else {
         calculate_normal(cx, unit)?
     };
@@ -1339,7 +1341,8 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
 pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<()> {
     let new1 = cx.files().fingerprint_dir(unit);
 
-    if fs::metadata(&new1).is_err() {
+    // Doc tests have no output, thus no fingerprint.
+    if !new1.exists() && !unit.mode.is_doc_test() {
         fs::create_dir(&new1)?;
     }
 

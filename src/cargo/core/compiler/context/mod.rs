@@ -166,7 +166,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
 
-            if unit.mode == CompileMode::Doctest {
+            if unit.mode.is_doc_test() {
                 // Note that we can *only* doc-test rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
                 // doesn't do that). A dylib output, however, can be linked by
