@@ -1068,19 +1068,12 @@ fn calculate_normal<'a, 'cfg>(
 
     // Figure out what the outputs of our unit is, and we'll be storing them
     // into the fingerprint as well.
-    let outputs = if unit.mode.is_doc() {
-        vec![cx
-            .files()
-            .out_dir(unit)
-            .join(unit.target.crate_name())
-            .join("index.html")]
-    } else {
-        cx.outputs(unit)?
-            .iter()
-            .filter(|output| output.flavor != FileFlavor::DebugInfo)
-            .map(|output| output.path.clone())
-            .collect()
-    };
+    let outputs = cx
+        .outputs(unit)?
+        .iter()
+        .filter(|output| output.flavor != FileFlavor::DebugInfo)
+        .map(|output| output.path.clone())
+        .collect();
 
     // Fill out a bunch more information that we'll be tracking typically
     // hashed to take up less space on disk as we just need to know when things
