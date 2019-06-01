@@ -113,6 +113,12 @@ impl Profiles {
                     self.dir_names.insert(name.clone(), dir_name.to_owned());
                 }
             }
+            match name.as_str() {
+                "dev" | "release" => {
+                    continue;
+                }
+                _ => {}
+            };
 
             let mut maker = self.process_chain(name,
                                                &profile, &mut set,
@@ -170,8 +176,11 @@ impl Profiles {
                 }
             }
             None => {
-                failure::bail!("An 'inherits' directive is needed for all profiles. \
-                                Here it is missing from {}", name);
+                failure::bail!(
+                    "An 'inherits' directive is needed for all \
+                    profiles that are not 'dev' or 'release. Here \
+                    it is missing from {}",
+                    name);
             }
         }
     }
