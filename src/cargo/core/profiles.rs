@@ -49,10 +49,27 @@ impl Profiles {
 
         Self::add_root_profiles(&mut profile_makers, profiles, config_profiles);
 
-        if let Some(profiles) = profiles {
-            let predefined_profiles = Self::predefined_profiles();
-            profile_makers.process_customs(profiles.get_all(), &predefined_profiles)?;
+        let mut profiles = if let Some(profiles) = profiles {
+            profiles.get_all().clone()
+        } else {
+            BTreeMap::new()
+        };
+
+        // Merge with predefined profiles
+        use std::collections::btree_map::Entry;
+        for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
+            match profiles.entry(predef_name.to_owned()) {
+                Entry::Vacant(vac) => { vac.insert(predef_prof); },
+                Entry::Occupied(mut oc) => {
+                    // Override predefined with the user-provided Toml.
+                    let r = oc.get_mut();
+                    predef_prof.merge(r);
+                    *r = predef_prof;
+                },
+            }
         }
+
+        profile_makers.process_customs(&profiles)?;
 
         Ok(profile_makers)
     }
@@ -85,21 +102,20 @@ impl Profiles {
         });
     }
 
-    fn predefined_profiles() -> BTreeMap<&'static str, TomlProfile> {
-        let mut predefined_profiles = BTreeMap::new();
-        predefined_profiles.insert("bench", TomlProfile {
-            inherits: Some(String::from("release")),
-            ..TomlProfile::default()
-        });
-        predefined_profiles.insert("test", TomlProfile {
-            inherits: Some(String::from("dev")),
-            ..TomlProfile::default()
-        });
-        predefined_profiles
+    fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
+        vec![
+            ("bench", TomlProfile {
+                inherits: Some(String::from("release")),
+                ..TomlProfile::default()
+            }),
+            ("test", TomlProfile {
+                inherits: Some(String::from("dev")),
+                ..TomlProfile::default()
+            }),
+        ]
     }
 
-    pub fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>,
-                           predefined_profiles: &BTreeMap<&'static str, TomlProfile>)
+    pub fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>)
         -> CargoResult<()>
     {
         for (name, profile) in profiles {
@@ -122,8 +138,7 @@ impl Profiles {
 
             let mut maker = self.process_chain(name,
                                                &profile, &mut set,
-                                               &mut result, profiles,
-                                               predefined_profiles)?;
+                                               &mut result, profiles)?;
             result.reverse();
             maker.inherits = result;
 
@@ -138,19 +153,9 @@ impl Profiles {
                      profile: &TomlProfile,
                      set: &mut HashSet<String>,
                      result: &mut Vec<TomlProfile>,
-                     profiles: &BTreeMap<String, TomlProfile>,
-                     predefined_profiles: &BTreeMap<&'static str, TomlProfile>)
+                     profiles: &BTreeMap<String, TomlProfile>)
         -> CargoResult<ProfileMaker>
     {
-        let profile = match predefined_profiles.get(name.as_str()) {
-            None => profile.clone(),
-            Some(predef) =>  {
-                let mut overriden_profile = predef.clone();
-                overriden_profile.merge(&profile);
-                overriden_profile
-            }
-        };
-
         result.push(profile.clone());
         match profile.inherits.as_ref().map(|x| x.as_str()) {
             Some(name@"dev") | Some(name@"release") => {
@@ -169,9 +174,7 @@ impl Profiles {
                         failure::bail!("Profile {} not found in Cargo.toml", name);
                     }
                     Some(parent) => {
-                        self.process_chain(
-                            &name, parent, set,
-                            result, profiles, predefined_profiles)
+                        self.process_chain(&name, parent, set, result, profiles)
                     }
                 }
             }
