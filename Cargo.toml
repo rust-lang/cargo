@@ -9,5 +9,15 @@ license = "MIT/Apache-2.0"
 
 [target."cfg(windows)".dependencies]
 scopeguard = "0.3"
-winapi = { version = "0.3", features = ["errhandlingapi", "handleapi", "processthreadsapi", "std", "winerror", "winnt", "userenv"] }
 
+[target."cfg(windows)".dependencies.winapi]
+version = "0.3"
+features = [
+    "errhandlingapi",
+    "handleapi",
+    "processthreadsapi",
+    "std",
+    "winerror",
+    "winnt",
+    "userenv",
+]
