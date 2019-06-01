@@ -22,11 +22,11 @@
 
 #![deny(rust_2018_idioms)]
 
+use std::env;
+use std::io;
+use std::path::{Path, PathBuf};
 #[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
-use std::path::{PathBuf, Path};
-use std::io;
-use std::env;
 
 /// Returns the path of the current user's home directory if known.
 ///
@@ -62,30 +62,38 @@ pub fn home_dir() -> Option<PathBuf> {
 
 #[cfg(windows)]
 fn home_dir_() -> Option<PathBuf> {
+    use scopeguard;
     use std::ptr;
-    use winapi::um::userenv::GetUserProfileDirectoryW;
     use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
     use winapi::um::errhandlingapi::GetLastError;
     use winapi::um::handleapi::CloseHandle;
     use winapi::um::processthreadsapi::{GetCurrentProcess, OpenProcessToken};
+    use winapi::um::userenv::GetUserProfileDirectoryW;
     use winapi::um::winnt::TOKEN_READ;
-    use scopeguard;
 
-    std::env::var_os("USERPROFILE").map(PathBuf::from).or_else(|| unsafe {
-        let me = GetCurrentProcess();
-        let mut token = ptr::null_mut();
-        if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
-            return None;
-        }
-        let _g = scopeguard::guard(token, |h| { let _ = CloseHandle(*h); });
-        fill_utf16_buf(|buf, mut sz| {
-            match GetUserProfileDirectoryW(token, buf, &mut sz) {
-                0 if GetLastError() != ERROR_INSUFFICIENT_BUFFER => 0,
-                0 => sz,
-                _ => sz - 1, // sz includes the null terminator
+    std::env::var_os("USERPROFILE")
+        .map(PathBuf::from)
+        .or_else(|| unsafe {
+            let me = GetCurrentProcess();
+            let mut token = ptr::null_mut();
+            if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
+                return None;
             }
-        }, os2path).ok()
-    })
+            let _g = scopeguard::guard(token, |h| {
+                let _ = CloseHandle(*h);
+            });
+            fill_utf16_buf(
+                |buf, mut sz| {
+                    match GetUserProfileDirectoryW(token, buf, &mut sz) {
+                        0 if GetLastError() != ERROR_INSUFFICIENT_BUFFER => 0,
+                        0 => sz,
+                        _ => sz - 1, // sz includes the null terminator
+                    }
+                },
+                os2path,
+            )
+            .ok()
+        })
 }
 
 #[cfg(windows)]
@@ -97,11 +105,12 @@ fn os2path(s: &[u16]) -> PathBuf {
 
 #[cfg(windows)]
 fn fill_utf16_buf<F1, F2, T>(mut f1: F1, f2: F2) -> io::Result<T>
-    where F1: FnMut(*mut u16, DWORD) -> DWORD,
-          F2: FnOnce(&[u16]) -> T
+where
+    F1: FnMut(*mut u16, DWORD) -> DWORD,
+    F2: FnOnce(&[u16]) -> T,
 {
-    use winapi::um::errhandlingapi::{GetLastError, SetLastError};
     use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
+    use winapi::um::errhandlingapi::{GetLastError, SetLastError};
 
     // Start off with a stack buf but then spill over to the heap if we end up
     // needing more space.
@@ -139,7 +148,7 @@ fn fill_utf16_buf<F1, F2, T>(mut f1: F1, f2: F2) -> io::Result<T>
             } else if k >= n {
                 n = k;
             } else {
-                return Ok(f2(&buf[..k]))
+                return Ok(f2(&buf[..k]));
             }
         }
     }
@@ -183,21 +192,22 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     // install to the wrong place. This check is to make the
     // multirust-rs to rustup upgrade seamless.
     let env_var = if let Some(v) = env_var {
-       let vv = v.to_string_lossy().to_string();
-       if vv.contains(".multirust/cargo") ||
-            vv.contains(r".multirust\cargo") ||
-            vv.trim().is_empty() {
-           None
-       } else {
-           Some(v)
-       }
+        let vv = v.to_string_lossy().to_string();
+        if vv.contains(".multirust/cargo")
+            || vv.contains(r".multirust\cargo")
+            || vv.trim().is_empty()
+        {
+            None
+        } else {
+            Some(v)
+        }
     } else {
         None
     };
 
     let env_cargo_home = env_var.map(|home| cwd.join(home));
-    let home_dir = home_dir()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
+    let home_dir =
+        home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
     let user_home = home_dir.map(|p| p.join(".cargo"));
 
     // Compatibility with old cargo that used the std definition of home_dir
@@ -250,13 +260,15 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let env_var = env::var_os("RUSTUP_HOME");
     let env_rustup_home = env_var.map(|home| cwd.join(home));
-    let home_dir = || home_dir()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
+    let home_dir =
+        || home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
 
-    let user_home = || if use_rustup_dir() {
-        home_dir().map(|d| d.join(".rustup"))
-    } else {
-        home_dir().map(|d| d.join(".multirust"))
+    let user_home = || {
+        if use_rustup_dir() {
+            home_dir().map(|d| d.join(".rustup"))
+        } else {
+            home_dir().map(|d| d.join(".multirust"))
+        }
     };
 
     if let Some(p) = env_rustup_home {
@@ -289,6 +301,5 @@ fn use_rustup_dir() -> bool {
             .unwrap_or(false)
     }
 
-    !rustup_old_version_exists()
-        && (rustup_dir_exists() || !multirust_dir_exists())
+    !rustup_old_version_exists() && (rustup_dir_exists() || !multirust_dir_exists())
 }
