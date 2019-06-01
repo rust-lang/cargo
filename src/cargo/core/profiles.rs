@@ -234,6 +234,7 @@ impl Profiles {
     /// times).
     pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
         let mut result = Profile::default();
+        result.root = for_unit_profile.root;
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
         result
