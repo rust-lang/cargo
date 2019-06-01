@@ -218,7 +218,7 @@ lto = false
         }
     );
 
-    let p: toml::TomlProfile = config.get("profile.lto").unwrap();
+    let p: toml::TomlProfile = config.get("profile.no-lto").unwrap();
     assert_eq!(
         p,
         toml::TomlProfile {
