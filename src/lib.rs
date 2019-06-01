@@ -1,29 +1,26 @@
-/// Canonical definitions of `home_dir`, `cargo_home`, and `rustup_home`.
-///
-/// This provides the definition of `home_dir` used by Cargo and
-/// rustup, as well functions to find the correct value of
-/// `CARGO_HOME` and `RUSTUP_HOME`.
-///
-/// The definition of `home_dir` provided by the standard library is
-/// incorrect because it considers the `HOME` environment variable on
-/// Windows. This causes surprising situations where a Rust program
-/// will behave differently depending on whether it is run under a
-/// Unix emulation environment like Cygwin or MinGW. Neither Cargo nor
-/// rustup use the standard libraries definition - they use the
-/// definition here.
-///
-/// This crate further provides two functions, `cargo_home` and
-/// `rustup_home`, which are the canonical way to determine the
-/// location that Cargo and rustup store their data.
-///
-/// See [rust-lang/rust#43321].
-///
-/// [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
+//! Canonical definitions of `home_dir`, `cargo_home`, and `rustup_home`.
+//!
+//! This provides the definition of `home_dir` used by Cargo and
+//! rustup, as well functions to find the correct value of
+//! `CARGO_HOME` and `RUSTUP_HOME`.
+//!
+//! The definition of `home_dir` provided by the standard library is
+//! incorrect because it considers the `HOME` environment variable on
+//! Windows. This causes surprising situations where a Rust program
+//! will behave differently depending on whether it is run under a
+//! Unix emulation environment like Cygwin or MinGW. Neither Cargo nor
+//! rustup use the standard libraries definition - they use the
+//! definition here.
+//!
+//! This crate further provides two functions, `cargo_home` and
+//! `rustup_home`, which are the canonical way to determine the
+//! location that Cargo and rustup store their data.
+//!
+//! See [rust-lang/rust#43321].
+//!
+//! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
-#[cfg(windows)]
-extern crate scopeguard;
-#[cfg(windows)]
-extern crate winapi;
+#![deny(rust_2018_idioms)]
 
 #[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
@@ -74,7 +71,7 @@ fn home_dir_() -> Option<PathBuf> {
     use winapi::um::winnt::TOKEN_READ;
     use scopeguard;
 
-    ::std::env::var_os("USERPROFILE").map(PathBuf::from).or_else(|| unsafe {
+    std::env::var_os("USERPROFILE").map(PathBuf::from).or_else(|| unsafe {
         let me = GetCurrentProcess();
         let mut token = ptr::null_mut();
         if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
@@ -150,7 +147,7 @@ fn fill_utf16_buf<F1, F2, T>(mut f1: F1, f2: F2) -> io::Result<T>
 
 #[cfg(any(unix, target_os = "redox"))]
 fn home_dir_() -> Option<PathBuf> {
-    ::std::env::home_dir()
+    std::env::home_dir()
 }
 
 /// Returns the storage directory used by Cargo, often knowns as
@@ -204,9 +201,9 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let user_home = home_dir.map(|p| p.join(".cargo"));
 
     // Compatibility with old cargo that used the std definition of home_dir
-    let compat_home_dir = ::std::env::home_dir();
+    let compat_home_dir = std::env::home_dir();
     let compat_user_home = compat_home_dir.map(|p| p.join(".cargo"));
-    
+
     if let Some(p) = env_cargo_home {
         Ok(p)
     } else {
@@ -215,7 +212,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
                 Ok(d)
             } else {
                 user_home
-            }                
+            }
         } else {
             user_home
         }
