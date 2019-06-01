@@ -50,7 +50,7 @@ impl fmt::Display for Metadata {
     }
 }
 
-pub struct CompilationFiles<'a, 'cfg: 'a> {
+pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host).

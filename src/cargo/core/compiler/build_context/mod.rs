@@ -16,7 +16,7 @@ mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
 
 /// The build context, containing all information about a build task.
-pub struct BuildContext<'a, 'cfg: 'a> {
+pub struct BuildContext<'a, 'cfg> {
     /// The workspace the build is for.
     pub ws: &'a Workspace<'cfg>,
     /// The cargo configuration.
