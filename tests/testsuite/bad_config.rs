@@ -699,19 +699,13 @@ warning: unused manifest key: target.foo.bar
 
            [profile.debug]
            debug = 1
+           inherits = "dev"
         "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-warning: unused manifest key: profile.debug
-warning: use `[profile.dev]` to configure debug builds
-[..]
-[..]",
-        )
         .run();
 
     let p = project()
