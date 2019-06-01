@@ -164,6 +164,11 @@ opt-level = 1
 
 [profile.dev.overrides.bar]
 codegen-units = 9
+
+[profile.no-lto]
+inherits = 'dev'
+dir-name = 'without-lto'
+lto = false
 ",
     );
 
@@ -180,31 +185,14 @@ codegen-units = 9
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
     let o_profile = toml::TomlProfile {
         opt_level: Some(toml::TomlOptLevel("2".to_string())),
-        lto: None,
         codegen_units: Some(9),
-        debug: None,
-        debug_assertions: None,
-        rpath: None,
-        panic: None,
-        overflow_checks: None,
-        incremental: None,
-        overrides: None,
-        build_override: None,
+        ..Default::default()
     };
     overrides.insert(key, o_profile);
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
     let o_profile = toml::TomlProfile {
-        opt_level: None,
-        lto: None,
         codegen_units: Some(13),
-        debug: None,
-        debug_assertions: None,
-        rpath: None,
-        panic: None,
-        overflow_checks: None,
-        incremental: None,
-        overrides: None,
-        build_override: None,
+        ..Default::default()
     };
     overrides.insert(key, o_profile);
 
@@ -223,17 +211,21 @@ codegen-units = 9
             overrides: Some(overrides),
             build_override: Some(Box::new(toml::TomlProfile {
                 opt_level: Some(toml::TomlOptLevel("1".to_string())),
-                lto: None,
                 codegen_units: Some(11),
-                debug: None,
-                debug_assertions: None,
-                rpath: None,
-                panic: None,
-                overflow_checks: None,
-                incremental: None,
-                overrides: None,
-                build_override: None
-            }))
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+    );
+
+    let p: toml::TomlProfile = config.get("profile.lto").unwrap();
+    assert_eq!(
+        p,
+        toml::TomlProfile {
+            lto: Some(toml::StringOrBool::Bool(false)),
+            dir_name: Some("without-lto".to_string()),
+            inherits: Some("dev".to_string()),
+            ..Default::default()
         }
     );
 }
