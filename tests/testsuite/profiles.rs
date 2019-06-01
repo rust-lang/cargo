@@ -362,6 +362,7 @@ fn profile_doc_deprecated() {
 
             [profile.doc]
             opt-level = 0
+            inherits = "dev"
         "#,
         )
         .file("src/lib.rs", "")
