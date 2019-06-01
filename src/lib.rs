@@ -197,7 +197,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 
     let env_cargo_home = env_var.map(|home| cwd.join(home));
     let home_dir = home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
+        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
     let user_home = home_dir.map(|p| p.join(".cargo"));
 
     // Compatibility with old cargo that used the std definition of home_dir
@@ -251,7 +251,7 @@ pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let env_var = env::var_os("RUSTUP_HOME");
     let env_rustup_home = env_var.map(|home| cwd.join(home));
     let home_dir = home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
+        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
 
     let user_home = if use_rustup_dir() {
         home_dir.map(|d| d.join(".rustup"))
