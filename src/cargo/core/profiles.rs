@@ -77,6 +77,7 @@ impl Profiles {
     fn predefined_dir_names() -> BTreeMap<String, String> {
         let mut dir_names = BTreeMap::new();
         dir_names.insert("dev".to_owned(), "debug".to_owned());
+        dir_names.insert("check".to_owned(), "debug".to_owned());
         dir_names.insert("test".to_owned(), "debug".to_owned());
         dir_names.insert("bench".to_owned(), "release".to_owned());
         dir_names
@@ -109,6 +110,10 @@ impl Profiles {
                 ..TomlProfile::default()
             }),
             ("test", TomlProfile {
+                inherits: Some(String::from("dev")),
+                ..TomlProfile::default()
+            }),
+            ("check", TomlProfile {
                 inherits: Some(String::from("dev")),
                 ..TomlProfile::default()
             }),
