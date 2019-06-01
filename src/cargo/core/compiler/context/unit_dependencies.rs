@@ -25,7 +25,7 @@ use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
 
-struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
+struct State<'a, 'cfg, 'tmp> {
     cx: &'tmp mut Context<'a, 'cfg>,
     waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,

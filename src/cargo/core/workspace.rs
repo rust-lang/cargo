@@ -125,7 +125,7 @@ pub struct WorkspaceRootConfig {
 
 /// An iterator over the member packages of a workspace, returned by
 /// `Workspace::members`
-pub struct Members<'a, 'cfg: 'a> {
+pub struct Members<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     iter: slice::Iter<'a, PathBuf>,
 }
