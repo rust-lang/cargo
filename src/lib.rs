@@ -250,19 +250,19 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let env_var = env::var_os("RUSTUP_HOME");
     let env_rustup_home = env_var.map(|home| cwd.join(home));
-    let home_dir = home_dir()
+    let home_dir = || home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
 
-    let user_home = if use_rustup_dir() {
-        home_dir.map(|d| d.join(".rustup"))
+    let user_home = || if use_rustup_dir() {
+        home_dir().map(|d| d.join(".rustup"))
     } else {
-        home_dir.map(|d| d.join(".multirust"))
+        home_dir().map(|d| d.join(".multirust"))
     };
 
     if let Some(p) = env_rustup_home {
         Ok(p)
     } else {
-        user_home
+        user_home()
     }
 }
 
