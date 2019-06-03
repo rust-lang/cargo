@@ -290,7 +290,7 @@ pub struct PackageSet<'cfg> {
 }
 
 /// Helper for downloading crates.
-pub struct Downloads<'a, 'cfg: 'a> {
+pub struct Downloads<'a, 'cfg> {
     set: &'a PackageSet<'cfg>,
     /// When a download is started, it is added to this map. The key is a
     /// "token" (see `Download::token`). It is removed once the download is
