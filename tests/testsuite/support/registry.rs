@@ -538,9 +538,7 @@ impl Package {
 }
 
 pub fn cksum(s: &[u8]) -> String {
-    let mut sha = Sha256::new();
-    sha.update(s);
-    hex::encode(&sha.finish())
+    Sha256::new().update(s).finish_hex()
 }
 
 impl Dependency {
