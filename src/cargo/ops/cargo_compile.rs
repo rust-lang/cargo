@@ -383,7 +383,7 @@ pub fn compile_ws<'a>(
     }
     if let Some(args) = local_rustdoc_args {
         for unit in &units {
-            if unit.mode.is_doc() {
+            if unit.mode.is_doc() || unit.mode.is_doc_test() {
                 bcx.extra_compiler_args.insert(*unit, args.clone());
             }
         }
@@ -701,7 +701,7 @@ fn generate_targets<'a>(
                     filter_targets(packages, Target::is_lib, false, bcx.build_config.mode)
                 {
                     let Proposal { target, pkg, .. } = proposal;
-                    if bcx.build_config.mode == CompileMode::Doctest && !target.doctestable() {
+                    if bcx.build_config.mode.is_doc_test() && !target.doctestable() {
                         ws.config().shell().warn(format!(
                             "doc tests are not supported for crate type(s) `{}` in package `{}`",
                             target.rustc_crate_types().join(", "),
