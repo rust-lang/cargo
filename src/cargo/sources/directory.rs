@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -170,23 +168,12 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             None => failure::bail!("failed to find entry for `{}` in directory source", id),
         };
 
-        let mut buf = [0; 16 * 1024];
         for (file, cksum) in cksum.files.iter() {
-            let mut h = Sha256::new();
             let file = pkg.root().join(file);
-
-            (|| -> CargoResult<()> {
-                let mut f = File::open(&file)?;
-                loop {
-                    match f.read(&mut buf)? {
-                        0 => return Ok(()),
-                        n => h.update(&buf[..n]),
-                    }
-                }
-            })()
-            .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
-
-            let actual = hex::encode(h.finish());
+            let actual = Sha256::new()
+                .update_path(&file)
+                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
+                .finish_hex();
             if &*actual != cksum {
                 failure::bail!(
                     "\

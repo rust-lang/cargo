@@ -26,6 +26,7 @@
 #![allow(clippy::unneeded_field_pattern)]
 
 use std::fmt;
+use std::io;
 
 use failure::Error;
 use log::debug;
@@ -147,23 +148,38 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
         drop(writeln!(shell.err(), "  {}", error));
     }
 
+    fn print_stderror_causes(error: &dyn std::error::Error, shell: &mut Shell) {
+        let mut cur = std::error::Error::source(error);
+        while let Some(err) = cur {
+            print(&err.to_string(), shell);
+            cur = std::error::Error::source(err);
+        }
+    }
+
     let verbose = shell.verbosity();
 
-    if verbose == Verbose {
-        // The first error has already been printed to the shell.
-        // Print all remaining errors.
-        for err in cargo_err.iter_causes() {
-            print(&err.to_string(), shell);
-        }
-    } else {
-        // The first error has already been printed to the shell.
-        // Print remaining errors until one marked as `Internal` appears.
-        for err in cargo_err.iter_causes() {
-            if err.downcast_ref::<Internal>().is_some() {
-                return false;
-            }
+    // The first error has already been printed to the shell.
+    for err in cargo_err.iter_causes() {
 
-            print(&err.to_string(), shell);
+        // If we're not in verbose mode then print remaining errors until one
+        // marked as `Internal` appears.
+        if verbose != Verbose && err.downcast_ref::<Internal>().is_some() {
+            return false;
+        }
+
+        print(&err.to_string(), shell);
+
+        // Using the `failure` crate currently means that when using
+        // `iter_causes` we're only iterating over the `failure` causes, but
+        // this doesn't include the causes from the standard library `Error`
+        // trait. We don't have a great way of getting an `&dyn Error` from a
+        // `&dyn Fail`, so we currently just special case a few errors that are
+        // known to maybe have causes and we try to print them here.
+        //
+        // Note that this isn't an exhaustive match since causes for
+        // `std::error::Error` aren't the most common thing in the world.
+        if let Some(io) = err.downcast_ref::<io::Error>() {
+            print_stderror_causes(io, shell);
         }
     }
 

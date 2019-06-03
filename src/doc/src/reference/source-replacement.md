@@ -107,12 +107,8 @@ the crates that are present).
 
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring
-dependencies. Also like local registries, directory sources can primarily be
-managed by an external subcommand, [`cargo-vendor`][cargo-vendor],
-[available on crates.io][cargo-vendor] and can be
-installed with `cargo install cargo-vendor`.
-
-[cargo-vendor]: https://crates.io/crates/cargo-vendor
+dependencies. Directory sources are primarily managed the `cargo vendor`
+subcommand.
 
 Directory sources are distinct from local registries though in that they contain
 the unpacked version of `*.crate` files, making it more suitable in some

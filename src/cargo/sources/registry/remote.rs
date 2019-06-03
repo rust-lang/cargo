@@ -281,9 +281,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         data: &[u8],
     ) -> CargoResult<File> {
         // Verify what we just downloaded
-        let mut state = Sha256::new();
-        state.update(data);
-        if hex::encode(state.finish()) != checksum {
+        let actual = Sha256::new().update(data).finish_hex();
+        if actual != checksum {
             failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
