@@ -103,3 +103,47 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 ")
         .run();
 }
+
+#[test]
+fn collision_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            foo2 = { path = "foo2" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+            [package]
+            name = "foo2"
+            version = "0.1.0"
+
+            [lib]
+            name = "foo"
+            "#,
+        )
+        .file("foo2/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr_contains(
+            "\
+[WARNING] output filename collision.
+The lib target `foo` in package `foo2 v0.1.0 ([..]/foo/foo2)` has the same output \
+filename as the lib target `foo` in package `foo v0.1.0 ([..]/foo)`.
+Colliding filename is: [..]/foo/target/doc/foo/index.html
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+",
+        )
+        .run();
+}

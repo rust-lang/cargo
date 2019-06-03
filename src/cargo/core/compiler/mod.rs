@@ -125,7 +125,7 @@ fn compile<'a, 'cfg: 'a>(
 
     let job = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
-    } else if unit.mode == CompileMode::Doctest {
+    } else if unit.mode.is_doc_test() {
         // We run these targets later, so this is just a no-op for now.
         Job::new(Work::noop(), Freshness::Fresh)
     } else if build_plan {

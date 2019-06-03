@@ -183,14 +183,17 @@ impl CompileMode {
         }
     }
 
-    /// Returns `true` if this is a doc or doc test. Be careful using this.
-    /// Although both run rustdoc, the dependencies for those two modes are
-    /// very different.
+    /// Returns `true` if this is generating documentation.
     pub fn is_doc(self) -> bool {
         match self {
-            CompileMode::Doc { .. } | CompileMode::Doctest => true,
+            CompileMode::Doc { .. } => true,
             _ => false,
         }
+    }
+
+    /// Returns `true` if this a doc test.
+    pub fn is_doc_test(self) -> bool {
+        self == CompileMode::Doctest
     }
 
     /// Returns `true` if this is any type of test (test, benchmark, doc test, or
