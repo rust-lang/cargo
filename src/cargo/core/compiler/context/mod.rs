@@ -27,7 +27,7 @@ mod compilation_files;
 use self::compilation_files::CompilationFiles;
 pub use self::compilation_files::{Metadata, OutputFile};
 
-pub struct Context<'a, 'cfg: 'a> {
+pub struct Context<'a, 'cfg> {
     pub bcx: &'a BuildContext<'a, 'cfg>,
     pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,

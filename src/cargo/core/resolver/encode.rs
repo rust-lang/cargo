@@ -325,7 +325,7 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
     }
 }
 
-pub struct WorkspaceResolve<'a, 'cfg: 'a> {
+pub struct WorkspaceResolve<'a, 'cfg> {
     pub ws: &'a Workspace<'cfg>,
     pub resolve: &'a Resolve,
 }
