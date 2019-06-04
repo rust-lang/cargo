@@ -420,7 +420,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     )?;
                 }
                 let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                if !unit.target.requires_upstream_objects() {
+                if !unit.requires_upstream_objects() {
                     ret.push(OutputFile {
                         path,
                         hardlink: None,
