@@ -1870,3 +1870,44 @@ fn warn_if_default_features() {
             "#.trim(),
         ).run();
 }
+
+#[test]
+fn no_feature_for_non_optional_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = { path = "bar" }
+             "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(not(feature = "bar"))]
+                fn main() {
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+             "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build --features bar/a").run();
+}
