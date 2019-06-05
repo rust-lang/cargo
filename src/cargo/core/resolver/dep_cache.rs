@@ -415,7 +415,19 @@ impl Requirements<'_> {
     }
 
     fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
-        self.used.insert(package);
+        // If `package` is indeed an optional dependency then we activate the
+        // feature named `package`, but otherwise if `package` is a required
+        // dependency then there's no feature associated with it.
+        if let Some(dep) = self
+            .summary
+            .dependencies()
+            .iter()
+            .find(|p| p.name_in_toml() == package)
+        {
+            if dep.is_optional() {
+                self.used.insert(package);
+            }
+        }
         self.deps
             .entry(package)
             .or_insert((false, BTreeSet::new()))
