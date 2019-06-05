@@ -139,8 +139,6 @@ pub mod git;
 pub mod paths;
 pub mod publish;
 pub mod registry;
-#[macro_use]
-pub mod resolver;
 
 /*
  *

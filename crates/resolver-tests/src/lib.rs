@@ -4,8 +4,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::time::Instant;
 
-use crate::support::slow_cpu_multiplier;
-
 use cargo::core::dependency::Kind;
 use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
@@ -16,9 +14,7 @@ use cargo::util::{CargoResult, Config, Graph, ToUrl};
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
-use proptest::strategy::ValueTree;
 use proptest::string::string_regex;
-use proptest::test_runner::TestRunner;
 use varisat::{self, ExtendFormula};
 
 pub fn resolve(
@@ -182,7 +178,7 @@ pub fn resolve_with_config_raw(
 
     // The largest test in our suite takes less then 30 sec.
     // So lets fail the test if we have ben running for two long.
-    assert!(start.elapsed() < slow_cpu_multiplier(60));
+    assert!(start.elapsed().as_secs() < 60);
     resolve
 }
 
@@ -493,14 +489,15 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     }
 }
 
+#[macro_export]
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+ $(,)* ]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
-        pkg_dep($pkgid, d)
+        $crate::pkg_dep($pkgid, d)
     });
 
     ($pkgid:expr) => ({
-        pkg($pkgid)
+        $crate::pkg($pkgid)
     })
 }
 
@@ -663,7 +660,7 @@ impl fmt::Debug for PrettyPrintRegistry {
     }
 }
 
-#[cargo_test]
+#[test]
 fn meta_test_deep_pretty_print_registry() {
     assert_eq!(
         &format!(
@@ -839,8 +836,11 @@ pub fn registry_strategy(
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
-#[cargo_test]
+#[test]
 fn meta_test_deep_trees_from_strategy() {
+    use proptest::strategy::ValueTree;
+    use proptest::test_runner::TestRunner;
+
     let mut dis = [0; 21];
 
     let strategy = registry_strategy(50, 20, 60);
@@ -878,8 +878,11 @@ fn meta_test_deep_trees_from_strategy() {
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
-#[cargo_test]
+#[test]
 fn meta_test_multiple_versions_strategy() {
+    use proptest::strategy::ValueTree;
+    use proptest::test_runner::TestRunner;
+
     let mut dis = [0; 10];
 
     let strategy = registry_strategy(50, 20, 60);

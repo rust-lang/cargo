@@ -102,9 +102,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-proptest = "0.9.1"
-varisat = "0.2.1"
-cargo-test-macro = { "path" = "tests/testsuite/support/cargo-test-macro", version = "0.1.0" }
+cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
 
 [[bin]]
 name = "cargo"

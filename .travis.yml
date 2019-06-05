@@ -42,6 +42,13 @@ matrix:
         - (cd src/doc && mdbook build --dest-dir ../../target/doc) || travis_terminate 1
       if: branch != master OR type = pull_request
 
+    - name: resolver tests
+      rust: stable
+      before_script: true
+      script:
+        - cargo test --manifest-path crates/resolver-tests/Cargo.toml
+      if: branch != master OR type = pull_request
+
   exclude:
     - rust: stable
 
