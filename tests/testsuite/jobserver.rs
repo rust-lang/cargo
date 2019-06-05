@@ -4,7 +4,7 @@ use std::thread;
 
 use crate::support::{cargo_exe, project};
 
-#[test]
+#[cargo_test]
 fn jobserver_exists() {
     let p = project()
         .file(
@@ -52,7 +52,7 @@ fn jobserver_exists() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn makes_jobserver_used() {
     let make = if cfg!(windows) {
         "mingw32-make"
@@ -164,7 +164,7 @@ all:
     child.join().unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn jobserver_and_j() {
     let make = if cfg!(windows) {
         "mingw32-make"

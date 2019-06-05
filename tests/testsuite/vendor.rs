@@ -2,7 +2,7 @@ use crate::support::git;
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, project, Project};
 
-#[test]
+#[cargo_test]
 fn vendor_simple() {
     let p = project()
         .file(
@@ -42,7 +42,7 @@ fn add_vendor_config(p: &Project) {
     );
 }
 
-#[test]
+#[cargo_test]
 fn two_versions() {
     let p = project()
         .file(
@@ -86,13 +86,13 @@ fn two_versions() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn help() {
     let p = project().build();
     p.cargo("vendor -h").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_versions() {
     let p = project()
         .file(
@@ -134,7 +134,7 @@ fn update_versions() {
     assert!(lock.contains("version = \"0.8.0\""));
 }
 
-#[test]
+#[cargo_test]
 fn two_lockfiles() {
     let p = project()
         .no_manifest()
@@ -180,7 +180,7 @@ fn two_lockfiles() {
     p.cargo("build").cwd("bar").run();
 }
 
-#[test]
+#[cargo_test]
 fn delete_old_crates() {
     let p = project()
         .file(
@@ -221,7 +221,7 @@ fn delete_old_crates() {
     assert!(!p.root().join("vendor/bitflags/Cargo.toml").exists());
 }
 
-#[test]
+#[cargo_test]
 fn ignore_files() {
     let p = project()
         .file(
@@ -255,7 +255,7 @@ fn ignore_files() {
     assert!(!csum.contains("foo.rej"));
 }
 
-#[test]
+#[cargo_test]
 fn included_files_only() {
     let git = git::new("a", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
@@ -288,7 +288,7 @@ fn included_files_only() {
     assert!(!csum.contains("a/b.md"));
 }
 
-#[test]
+#[cargo_test]
 fn dependent_crates_in_crates() {
     let git = git::new("a", |p| {
         p.file(
@@ -330,7 +330,7 @@ fn dependent_crates_in_crates() {
     p.read_file("vendor/b/.cargo-checksum.json");
 }
 
-#[test]
+#[cargo_test]
 fn vendoring_git_crates() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("serde_derive"))
@@ -374,7 +374,7 @@ fn vendoring_git_crates() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn git_simple() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
@@ -405,7 +405,7 @@ fn git_simple() {
     assert!(csum.contains("\"package\":null"));
 }
 
-#[test]
+#[cargo_test]
 fn git_duplicate() {
     let git = git::new("a", |p| {
         p.file(
@@ -466,7 +466,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn depend_on_vendor_dir_not_deleted() {
     let p = project()
         .file(

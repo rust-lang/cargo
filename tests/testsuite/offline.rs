@@ -1,7 +1,7 @@
 use crate::support::{basic_manifest, git, main_file, path2url, project, registry::Package};
 use std::fs;
 
-#[test]
+#[cargo_test]
 fn offline_unused_target_dep() {
     // --offline with a target dependency that is not used and not downloaded.
     Package::new("unused_dep", "1.0.0").publish();
@@ -31,7 +31,7 @@ fn offline_unused_target_dep() {
     p.cargo("build --offline").run();
 }
 
-#[test]
+#[cargo_test]
 fn offline_missing_optional() {
     Package::new("opt_dep", "1.0.0").publish();
     let p = project()
@@ -67,7 +67,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_path_with_offline() {
     let p = project()
         .file(
@@ -90,7 +90,7 @@ fn cargo_compile_path_with_offline() {
     p.cargo("build --offline").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_downloaded_dependency_with_offline() {
     Package::new("present_dep", "1.2.3")
         .file("Cargo.toml", &basic_manifest("present_dep", "1.2.3"))
@@ -140,7 +140,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_offline_not_try_update() {
     let p = project()
         .at("bar")
@@ -182,7 +182,7 @@ project directory before going offline.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn compile_offline_without_maxvers_cached() {
     Package::new("present_dep", "1.2.1").publish();
     Package::new("present_dep", "1.2.2").publish();
@@ -251,7 +251,7 @@ fn main(){
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_forbird_git_httpsrepo_offline() {
     let p = project()
         .file(
@@ -280,7 +280,7 @@ Caused by:
   can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)").run();
 }
 
-#[test]
+#[cargo_test]
 fn compile_offline_while_transitive_dep_not_cached() {
     let baz = Package::new("baz", "1.0.0");
     let baz_path = baz.archive_dst();
@@ -329,7 +329,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_offline() {
     let p = project()
         .file(
@@ -352,7 +352,7 @@ fn update_offline() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_offline_with_cached_git_dep() {
     let git_project = git::new("dep1", |project| {
         project
@@ -480,7 +480,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn offline_resolve_optional_fail() {
     // Example where resolve fails offline.
     //

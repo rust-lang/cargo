@@ -11,7 +11,7 @@ use crate::support::{
 use crate::support::{main_file, project, Execs};
 use cargo::util::paths::dylib_path_envvar;
 
-#[test]
+#[cargo_test]
 fn cargo_compile_simple() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -24,7 +24,7 @@ fn cargo_compile_simple() {
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_fail_with_no_stderr() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -38,7 +38,7 @@ fn cargo_fail_with_no_stderr() {
 
 /// Checks that the `CARGO_INCREMENTAL` environment variable results in
 /// `rustc` getting `-C incremental` passed to it.
-#[test]
+#[cargo_test]
 fn cargo_compile_incremental() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -60,7 +60,7 @@ fn cargo_compile_incremental() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn incremental_profile() {
     let p = project()
         .file(
@@ -102,7 +102,7 @@ fn incremental_profile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn incremental_config() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -126,7 +126,7 @@ fn incremental_config() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_workspace_excluded() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -137,7 +137,7 @@ fn cargo_compile_with_workspace_excluded() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_manifest_path() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -150,7 +150,7 @@ fn cargo_compile_manifest_path() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();
 
@@ -167,7 +167,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_manifest2() {
     let p = project()
         .file(
@@ -195,7 +195,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_manifest3() {
     let p = project().file("src/Cargo.toml", "a = bar").build();
 
@@ -215,7 +215,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_duplicate_build_targets() {
     let p = project()
         .file(
@@ -248,7 +248,7 @@ warning: file found to be present in multiple build targets: [..]main.rs
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_version() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "1.0"))
@@ -267,7 +267,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_empty_package_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("", "0.0.0"))
@@ -286,7 +286,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_package_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo::bar", "0.0.0"))
@@ -305,7 +305,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_bin_target_name() {
     let p = project()
         .file(
@@ -335,7 +335,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_forbidden_bin_target_name() {
     let p = project()
         .file(
@@ -365,7 +365,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_bin_and_crate_type() {
     let p = project()
         .file(
@@ -398,7 +398,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_bin_and_proc() {
     let p = project()
         .file(
@@ -430,7 +430,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_lib_target_name() {
     let p = project()
         .file(
@@ -460,7 +460,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_non_numeric_dep_version() {
     let p = project()
         .file(
@@ -492,7 +492,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_without_manifest() {
     let p = project().no_manifest().build();
 
@@ -502,7 +502,7 @@ fn cargo_compile_without_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_code() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -521,7 +521,7 @@ To learn more, run the command again with --verbose.\n",
     assert!(p.root().join("Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_invalid_code_in_deps() {
     let p = project()
         .file(
@@ -557,7 +557,7 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_warnings_in_the_root_package() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -569,7 +569,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_warnings_in_a_dep_package() {
     let p = project()
         .file(
@@ -612,7 +612,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_nested_deps_inferred() {
     let p = project()
         .file(
@@ -675,7 +675,7 @@ fn cargo_compile_with_nested_deps_inferred() {
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_nested_deps_correct_bin() {
     let p = project()
         .file(
@@ -738,7 +738,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_nested_deps_shorthand() {
     let p = project()
         .file(
@@ -802,7 +802,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_nested_deps_longhand() {
     let p = project()
         .file(
@@ -874,7 +874,7 @@ fn cargo_compile_with_nested_deps_longhand() {
 
 // Check that Cargo gives a sensible error if a dependency can't be found
 // because of a name mismatch.
-#[test]
+#[cargo_test]
 fn cargo_compile_with_dep_name_mismatch() {
     let p = project()
         .file(
@@ -911,7 +911,7 @@ required by package `foo v0.0.1 ([CWD])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_filename() {
     let p = project()
         .file("src/lib.rs", "")
@@ -956,7 +956,7 @@ Did you mean `a`?",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn incompatible_dependencies() {
     Package::new("bad", "0.1.0").publish();
     Package::new("bad", "1.0.0").publish();
@@ -1006,7 +1006,7 @@ failed to select a version for `bad` which could resolve this conflict",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn incompatible_dependencies_with_multi_semver() {
     Package::new("bad", "1.0.0").publish();
     Package::new("bad", "1.0.1").publish();
@@ -1055,7 +1055,7 @@ failed to select a version for `bad` which could resolve this conflict",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn compile_path_dep_then_change_version() {
     let p = project()
         .file(
@@ -1085,7 +1085,7 @@ fn compile_path_dep_then_change_version() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn ignores_carriage_return_in_lockfile() {
     let p = project()
         .file("src/main.rs", r"mod a; fn main() {}")
@@ -1108,7 +1108,7 @@ fn ignores_carriage_return_in_lockfile() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_default_env_metadata_env_var() {
     // Ensure that path dep + dylib + env_var get metadata
     // (even though path_dep + dylib should not)
@@ -1197,7 +1197,7 @@ fn cargo_default_env_metadata_env_var() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn crate_env_vars() {
     let p = project()
         .file(
@@ -1272,7 +1272,7 @@ fn crate_env_vars() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn crate_authors_env_vars() {
     let p = project()
         .file(
@@ -1321,7 +1321,7 @@ fn crate_authors_env_vars() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn vv_prints_rustc_env_vars() {
     let p = project()
         .file(
@@ -1367,7 +1367,7 @@ fn setenv_for_removing_empty_component(mut execs: Execs) -> Execs {
 }
 
 // Regression test for #4277
-#[test]
+#[cargo_test]
 fn crate_library_path_env_var() {
     let p = project()
         .file(
@@ -1389,7 +1389,7 @@ fn crate_library_path_env_var() {
 }
 
 // Regression test for #4277
-#[test]
+#[cargo_test]
 fn build_with_fake_libc_not_loading() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -1401,7 +1401,7 @@ fn build_with_fake_libc_not_loading() {
 }
 
 // this is testing that src/<pkg-name>.rs still works (for now)
-#[test]
+#[cargo_test]
 fn many_crate_types_old_style_lib_location() {
     let p = project()
         .file(
@@ -1434,7 +1434,7 @@ please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
     assert!(p.root().join("target/debug").join(&fname).is_file());
 }
 
-#[test]
+#[cargo_test]
 fn many_crate_types_correct() {
     let p = project()
         .file(
@@ -1461,7 +1461,7 @@ fn many_crate_types_correct() {
     assert!(p.root().join("target/debug").join(&fname).is_file());
 }
 
-#[test]
+#[cargo_test]
 fn self_dependency() {
     let p = project()
         .file(
@@ -1494,7 +1494,7 @@ package `test v0.0.0 ([CWD])`",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_broken_symlinks() {
     // windows and symlinks don't currently agree that well
     if cfg!(windows) {
@@ -1513,7 +1513,7 @@ fn ignore_broken_symlinks() {
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn missing_lib_and_bin() {
     let p = project().build();
     p.cargo("build")
@@ -1529,7 +1529,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lto_build() {
     // FIXME: currently this hits a linker bug on 32-bit MSVC
     if cfg!(all(target_env = "msvc", target_pointer_width = "32")) {
@@ -1569,7 +1569,7 @@ fn lto_build() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verbose_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
@@ -1587,7 +1587,7 @@ fn verbose_build() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verbose_release_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v --release")
@@ -1606,7 +1606,7 @@ fn verbose_release_build() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verbose_release_build_deps() {
     let p = project()
         .file(
@@ -1668,7 +1668,7 @@ fn verbose_release_build_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_examples() {
     let p = project()
         .file(
@@ -1725,7 +1725,7 @@ fn explicit_examples() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn non_existing_example() {
     let p = project()
         .file(
@@ -1759,7 +1759,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn non_existing_binary() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -1779,7 +1779,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn legacy_binary_paths_warnings() {
     let p = project()
         .file(
@@ -1856,7 +1856,7 @@ please set bin.path in Cargo.toml",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn implicit_examples() {
     let p = project()
         .file(
@@ -1896,7 +1896,7 @@ fn implicit_examples() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn standard_build_no_ndebug() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -1918,7 +1918,7 @@ fn standard_build_no_ndebug() {
     p.process(&p.bin("foo")).with_stdout("slow\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn release_build_ndebug() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -1940,7 +1940,7 @@ fn release_build_ndebug() {
     p.process(&p.release_bin("foo")).with_stdout("fast\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn inferred_main_bin() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -1948,7 +1948,7 @@ fn inferred_main_bin() {
     p.process(&p.bin("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn deletion_causes_failure() {
     let p = project()
         .file(
@@ -1976,7 +1976,7 @@ fn deletion_causes_failure() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_toml_in_target_dir() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -1987,7 +1987,7 @@ fn bad_cargo_toml_in_target_dir() {
     p.process(&p.bin("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_with_standard_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
@@ -2008,7 +2008,7 @@ fn lib_with_standard_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_staticlib() {
     let p = project()
         .file(
@@ -2031,7 +2031,7 @@ fn simple_staticlib() {
     p.cargo("build").env("CARGO_LOG", "nekoneko=trace").run();
 }
 
-#[test]
+#[cargo_test]
 fn staticlib_rlib_and_bin() {
     let p = project()
         .file(
@@ -2054,7 +2054,7 @@ fn staticlib_rlib_and_bin() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn opt_out_of_bin() {
     let p = project()
         .file(
@@ -2074,7 +2074,7 @@ fn opt_out_of_bin() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn single_lib() {
     let p = project()
         .file(
@@ -2095,7 +2095,7 @@ fn single_lib() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn freshness_ignores_excluded() {
     let foo = project()
         .file(
@@ -2133,7 +2133,7 @@ fn freshness_ignores_excluded() {
     foo.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_preserves_out_dir() {
     let foo = project()
         .file(
@@ -2188,7 +2188,7 @@ fn rebuild_preserves_out_dir() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_no_libs() {
     let foo = project()
         .file(
@@ -2210,7 +2210,7 @@ fn dep_no_libs() {
     foo.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn recompile_space_in_name() {
     let foo = project()
         .file(
@@ -2234,7 +2234,7 @@ fn recompile_space_in_name() {
 }
 
 #[cfg(unix)]
-#[test]
+#[cargo_test]
 fn ignore_bad_directories() {
     use std::os::unix::prelude::*;
     let foo = project()
@@ -2252,7 +2252,7 @@ fn ignore_bad_directories() {
     fs::set_permissions(&dir, perms).unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_config() {
     let foo = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
@@ -2278,7 +2278,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_platform_specific_dependency() {
     let host = rustc_host();
     let p = project()
@@ -2325,7 +2325,7 @@ fn cargo_platform_specific_dependency() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_platform_specific_dependency() {
     let p = project()
         .file(
@@ -2355,7 +2355,7 @@ fn bad_platform_specific_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_platform_specific_dependency_wrong_platform() {
     let p = project()
         .file(
@@ -2393,7 +2393,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
     assert!(lockfile.contains("bar"));
 }
 
-#[test]
+#[cargo_test]
 fn example_as_lib() {
     let p = project()
         .file(
@@ -2417,7 +2417,7 @@ fn example_as_lib() {
     assert!(p.example_lib("ex", "lib").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn example_as_rlib() {
     let p = project()
         .file(
@@ -2441,7 +2441,7 @@ fn example_as_rlib() {
     assert!(p.example_lib("ex", "rlib").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn example_as_dylib() {
     let p = project()
         .file(
@@ -2465,7 +2465,7 @@ fn example_as_dylib() {
     assert!(p.example_lib("ex", "dylib").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn example_as_proc_macro() {
     let p = project()
         .file(
@@ -2500,7 +2500,7 @@ fn example_as_proc_macro() {
     assert!(p.example_lib("ex", "proc-macro").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn example_bin_same_name() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -2520,7 +2520,7 @@ fn example_bin_same_name() {
     assert!(p.bin("examples/foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn compile_then_delete() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -2534,7 +2534,7 @@ fn compile_then_delete() {
     p.cargo("run -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_dependencies_not_available() {
     let p = project()
         .file(
@@ -2576,7 +2576,7 @@ fn transitive_dependencies_not_available() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_deps_rejected() {
     let p = project()
         .file(
@@ -2616,7 +2616,7 @@ package `a v0.0.1 ([CWD]/a)`
         ).run();
 }
 
-#[test]
+#[cargo_test]
 fn predictable_filenames() {
     let p = project()
         .file(
@@ -2641,7 +2641,7 @@ fn predictable_filenames() {
     assert!(p.root().join("target/debug").join(dylib_name).is_file());
 }
 
-#[test]
+#[cargo_test]
 fn dashes_to_underscores() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo-bar", "0.0.1"))
@@ -2653,7 +2653,7 @@ fn dashes_to_underscores() {
     assert!(p.bin("foo-bar").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn dashes_in_crate_name_bad() {
     let p = project()
         .file(
@@ -2685,7 +2685,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_env_var() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -2704,7 +2704,7 @@ Caused by:
     assert!(!p.bin("a").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn filtering() {
     let p = project()
         .file("src/lib.rs", "")
@@ -2724,7 +2724,7 @@ fn filtering() {
     assert!(!p.bin("examples/b").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn filtering_implicit_bins() {
     let p = project()
         .file("src/lib.rs", "")
@@ -2741,7 +2741,7 @@ fn filtering_implicit_bins() {
     assert!(!p.bin("examples/b").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn filtering_implicit_examples() {
     let p = project()
         .file("src/lib.rs", "")
@@ -2758,7 +2758,7 @@ fn filtering_implicit_examples() {
     assert!(p.bin("examples/b").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn ignore_dotfile() {
     let p = project()
         .file("src/bin/.a.rs", "")
@@ -2768,7 +2768,7 @@ fn ignore_dotfile() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_dotdirs() {
     let p = project()
         .file("src/bin/a.rs", "fn main() {}")
@@ -2779,7 +2779,7 @@ fn ignore_dotdirs() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn dotdir_root() {
     let p = ProjectBuilder::new(root().join(".foo"))
         .file("src/bin/a.rs", "fn main() {}")
@@ -2787,7 +2787,7 @@ fn dotdir_root() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dir_env() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -2817,7 +2817,7 @@ fn custom_target_dir_env() {
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dir_line_parameter() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -2859,7 +2859,7 @@ fn custom_target_dir_line_parameter() {
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_multiple_packages() {
     let p = project()
         .file(
@@ -2920,7 +2920,7 @@ fn build_multiple_packages() {
     p.process(d2_path).with_stdout("d2").run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_spec() {
     let p = project()
         .file(
@@ -2955,7 +2955,7 @@ fn invalid_spec() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn manifest_with_bom_is_ok() {
     let p = project()
         .file(
@@ -2972,7 +2972,7 @@ fn manifest_with_bom_is_ok() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_abort_compiles_with_panic_abort() {
     let p = project()
         .file(
@@ -2994,7 +2994,7 @@ fn panic_abort_compiles_with_panic_abort() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_color_config_is_propagated_to_rustc() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("test", "0.0.0"))
@@ -3017,7 +3017,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn compiler_json_error_format() {
     let p = project()
         .file(
@@ -3254,7 +3254,7 @@ fn compiler_json_error_format() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn wrong_message_format_option() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3272,7 +3272,7 @@ error: 'XML' isn't a valid value for '--message-format <FMT>'
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn message_format_json_forward_stderr() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3324,7 +3324,7 @@ fn message_format_json_forward_stderr() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warn_about_package_metadata() {
     let p = project()
         .file(
@@ -3354,7 +3354,7 @@ fn no_warn_about_package_metadata() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_build_empty_target() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3368,7 +3368,7 @@ fn cargo_build_empty_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_all_workspace() {
     let p = project()
         .file(
@@ -3398,7 +3398,7 @@ fn build_all_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_all_exclude() {
     let p = project()
         .file(
@@ -3426,7 +3426,7 @@ fn build_all_exclude() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_all_workspace_implicit_examples() {
     let p = project()
         .file(
@@ -3472,7 +3472,7 @@ fn build_all_workspace_implicit_examples() {
     assert!(p.bin("examples/h").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_all_virtual_manifest() {
     let p = project()
         .file(
@@ -3500,7 +3500,7 @@ fn build_all_virtual_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_virtual_manifest_all_implied() {
     let p = project()
         .file(
@@ -3528,7 +3528,7 @@ fn build_virtual_manifest_all_implied() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_virtual_manifest_one_project() {
     let p = project()
         .file(
@@ -3554,7 +3554,7 @@ fn build_virtual_manifest_one_project() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_all_virtual_manifest_implicit_examples() {
     let p = project()
         .file(
@@ -3598,7 +3598,7 @@ fn build_all_virtual_manifest_implicit_examples() {
     assert!(p.bin("examples/h").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_all_member_dependency_same_name() {
     let p = project()
         .file(
@@ -3636,7 +3636,7 @@ fn build_all_member_dependency_same_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_proper_binary() {
     let p = project()
         .file(
@@ -3663,7 +3663,7 @@ fn run_proper_binary() {
     p.cargo("run --bin other").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_proper_binary_main_rs() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3674,7 +3674,7 @@ fn run_proper_binary_main_rs() {
     p.cargo("run --bin foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_proper_alias_binary_from_src() {
     let p = project()
         .file(
@@ -3699,7 +3699,7 @@ fn run_proper_alias_binary_from_src() {
     p.process(&p.bin("bar")).with_stdout("bar\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_proper_alias_binary_main_rs() {
     let p = project()
         .file(
@@ -3723,7 +3723,7 @@ fn run_proper_alias_binary_main_rs() {
     p.process(&p.bin("bar")).with_stdout("main\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_proper_binary_main_rs_as_foo() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3737,7 +3737,7 @@ fn run_proper_binary_main_rs_as_foo() {
     p.cargo("run --bin foo").run();
 }
 
-#[test]
+#[cargo_test]
 // NOTE: we don't have `/usr/bin/env` on Windows.
 #[cfg(not(windows))]
 fn rustc_wrapper() {
@@ -3748,7 +3748,7 @@ fn rustc_wrapper() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(windows))]
 fn rustc_wrapper_relative() {
     let p = project().file("src/lib.rs", "").build();
@@ -3759,7 +3759,7 @@ fn rustc_wrapper_relative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(windows))]
 fn rustc_wrapper_from_path() {
     let p = project().file("src/lib.rs", "").build();
@@ -3770,7 +3770,7 @@ fn rustc_wrapper_from_path() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cdylib_not_lifted() {
     let p = project()
         .file(
@@ -3804,7 +3804,7 @@ fn cdylib_not_lifted() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn cdylib_final_outputs() {
     let p = project()
         .file(
@@ -3838,7 +3838,7 @@ fn cdylib_final_outputs() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn deterministic_cfg_flags() {
     // This bug is non-deterministic.
 
@@ -3890,7 +3890,7 @@ fn deterministic_cfg_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_bins_without_paths() {
     let p = project()
         .file(
@@ -3916,7 +3916,7 @@ fn explicit_bins_without_paths() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn no_bin_in_src_with_lib() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3936,7 +3936,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn inferred_bins() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -3950,7 +3950,7 @@ fn inferred_bins() {
     assert!(p.bin("baz").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn inferred_bins_duplicate_name() {
     // this should fail, because we have two binaries with the same name
     let p = project()
@@ -3965,7 +3965,7 @@ fn inferred_bins_duplicate_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn inferred_bin_path() {
     let p = project()
         .file(
@@ -3988,7 +3988,7 @@ fn inferred_bin_path() {
     assert!(p.bin("bar").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn inferred_examples() {
     let p = project()
         .file("src/lib.rs", "fn main() {}")
@@ -4001,7 +4001,7 @@ fn inferred_examples() {
     assert!(p.bin("examples/baz").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn inferred_tests() {
     let p = project()
         .file("src/lib.rs", "fn main() {}")
@@ -4012,7 +4012,7 @@ fn inferred_tests() {
     p.cargo("test --test=bar --test=baz").run();
 }
 
-#[test]
+#[cargo_test]
 fn inferred_benchmarks() {
     let p = project()
         .file("src/lib.rs", "fn main() {}")
@@ -4023,7 +4023,7 @@ fn inferred_benchmarks() {
     p.cargo("bench --bench=bar --bench=baz").run();
 }
 
-#[test]
+#[cargo_test]
 fn target_edition() {
     let p = project()
         .file(
@@ -4052,7 +4052,7 @@ fn target_edition() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_edition_override() {
     let p = project()
         .file(
@@ -4081,7 +4081,7 @@ fn target_edition_override() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn same_metadata_different_directory() {
     // A top-level crate built in two different workspaces should have the
     // same metadata hash.
@@ -4109,7 +4109,7 @@ fn same_metadata_different_directory() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn building_a_dependent_crate_witout_bin_should_fail() {
     Package::new("testless", "0.1.0")
         .file(
@@ -4147,7 +4147,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn uplift_dsym_of_bin_on_mac() {
     let p = project()
@@ -4166,7 +4166,7 @@ fn uplift_dsym_of_bin_on_mac() {
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
 }
 
-#[test]
+#[cargo_test]
 #[cfg(all(target_os = "windows", target_env = "msvc"))]
 fn uplift_pdb_of_bin_on_windows() {
     let p = project()
@@ -4187,7 +4187,7 @@ fn uplift_pdb_of_bin_on_windows() {
 
 // Ensure that `cargo build` chooses the correct profile for building
 // targets based on filters (assuming `--profile` is not specified).
-#[test]
+#[cargo_test]
 fn build_filter_infer_profile() {
     let p = project()
         .file("src/lib.rs", "")
@@ -4243,7 +4243,7 @@ fn build_filter_infer_profile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v")
@@ -4268,7 +4268,7 @@ fn targets_selected_default() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_all() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v --all-targets")
@@ -4287,7 +4287,7 @@ fn targets_selected_all() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn all_targets_no_lib() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v --all-targets")
@@ -4306,7 +4306,7 @@ fn all_targets_no_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_linkable_target() {
     // Issue 3169: this is currently not an error as per discussion in PR #4797.
     let p = project()
@@ -4344,7 +4344,7 @@ fn no_linkable_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn avoid_dev_deps() {
     Package::new("foo", "1.0.0").publish();
     let p = project()
@@ -4379,7 +4379,7 @@ required by package `bar v0.1.0 ([..]/foo)`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_jobs() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -4392,7 +4392,7 @@ fn invalid_jobs() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_filters_workspace() {
     let ws = project()
         .at("ws")
@@ -4431,7 +4431,7 @@ Did you mean `ex1`?",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_filters_workspace_not_found() {
     let ws = project()
         .at("ws")
@@ -4455,7 +4455,7 @@ fn target_filters_workspace_not_found() {
 }
 
 #[cfg(unix)]
-#[test]
+#[cargo_test]
 fn signal_display() {
     // Cause the compiler to crash with a signal.
     let foo = project()
@@ -4518,7 +4518,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn tricky_pipelining() {
     if !crate::support::is_nightly() {
         return;
@@ -4548,7 +4548,7 @@ fn tricky_pipelining() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn pipelining_works() {
     if !crate::support::is_nightly() {
         return;
@@ -4583,7 +4583,7 @@ fn pipelining_works() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn forward_rustc_output() {
     let foo = project()
         .file(

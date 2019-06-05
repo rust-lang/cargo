@@ -1,7 +1,7 @@
 use crate::support::is_nightly;
 use crate::support::project;
 
-#[test]
+#[cargo_test]
 fn probe_cfg_before_crate_type_discovery() {
     let p = project()
         .file(
@@ -60,7 +60,7 @@ fn probe_cfg_before_crate_type_discovery() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn noop() {
     let p = project()
         .file(
@@ -120,7 +120,7 @@ fn noop() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn impl_and_derive() {
     let p = project()
         .file(
@@ -201,7 +201,7 @@ fn impl_and_derive() {
     p.cargo("run").with_stdout("X { success: true }").run();
 }
 
-#[test]
+#[cargo_test]
 fn plugin_and_proc_macro() {
     if !is_nightly() {
         // plugins are unstable
@@ -252,7 +252,7 @@ fn plugin_and_proc_macro() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro_doctest() {
     let foo = project()
         .file(
@@ -297,7 +297,7 @@ fn a() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro_crate_type() {
     // Verify that `crate-type = ["proc-macro"]` is the same as `proc-macro = true`
     // and that everything, including rustdoc, works correctly.
@@ -363,7 +363,7 @@ fn proc_macro_crate_type() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro_crate_type_warning() {
     let foo = project()
         .file(
@@ -385,7 +385,7 @@ fn proc_macro_crate_type_warning() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro_crate_type_warning_plugin() {
     let foo = project()
         .file(
@@ -410,7 +410,7 @@ fn proc_macro_crate_type_warning_plugin() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro_crate_type_multiple() {
     let foo = project()
         .file(

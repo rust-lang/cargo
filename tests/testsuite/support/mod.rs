@@ -1397,7 +1397,7 @@ pub fn lines_match(expected: &str, actual: &str) -> bool {
     actual.is_empty() || expected.ends_with("[..]")
 }
 
-#[test]
+#[cargo_test]
 fn lines_match_works() {
     assert!(lines_match("a b", "a b"));
     assert!(lines_match("a[..]b", "a b"));

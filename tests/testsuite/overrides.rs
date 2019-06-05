@@ -3,7 +3,7 @@ use crate::support::paths;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn override_simple() {
     Package::new("bar", "0.1.0").publish();
 
@@ -50,7 +50,7 @@ fn override_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn missing_version() {
     let p = project()
         .file(
@@ -84,7 +84,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_semver_version() {
     let p = project()
         .file(
@@ -118,7 +118,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn different_version() {
     Package::new("bar", "0.2.0").publish();
     Package::new("bar", "0.1.0").publish();
@@ -155,7 +155,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.2.0")
@@ -208,7 +208,7 @@ fn transitive() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn persists_across_rebuilds() {
     Package::new("bar", "0.1.0").publish();
 
@@ -257,7 +257,7 @@ fn persists_across_rebuilds() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_registry_with_path() {
     Package::new("bar", "0.1.0").publish();
 
@@ -301,7 +301,7 @@ fn replace_registry_with_path() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn use_a_spec_to_select() {
     Package::new("baz", "0.1.1")
         .file("src/lib.rs", "pub fn baz1() {}")
@@ -372,7 +372,7 @@ fn use_a_spec_to_select() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_adds_some_deps() {
     Package::new("baz", "0.1.1").publish();
     Package::new("bar", "0.1.0").publish();
@@ -453,7 +453,7 @@ fn override_adds_some_deps() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn locked_means_locked_yes_no_seriously_i_mean_locked() {
     // this in theory exercises #2041
     Package::new("baz", "0.1.0").publish();
@@ -505,7 +505,7 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn override_wrong_name() {
     Package::new("baz", "0.1.0").publish();
 
@@ -550,7 +550,7 @@ version required: = 0.1.0
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_with_nothing() {
     Package::new("bar", "0.1.0").publish();
 
@@ -598,7 +598,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_wrong_version() {
     let p = project()
         .file(
@@ -629,7 +629,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_specs() {
     Package::new("bar", "0.1.0").publish();
 
@@ -680,7 +680,7 @@ both specifications match: bar v0.1.0
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_override_dep() {
     Package::new("bar", "0.1.0").publish();
 
@@ -724,7 +724,7 @@ Please re-run this command with [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update() {
     Package::new("bar", "0.1.0").publish();
 
@@ -768,7 +768,7 @@ fn update() {
 
 // foo -> near -> far
 // near is overridden with itself
-#[test]
+#[cargo_test]
 fn no_override_self() {
     let deps = git::repo(&paths::root().join("override"))
         .file("far/Cargo.toml", &basic_manifest("far", "0.1.0"))
@@ -813,7 +813,7 @@ fn no_override_self() {
     p.cargo("build --verbose").run();
 }
 
-#[test]
+#[cargo_test]
 fn broken_path_override_warns() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
@@ -891,7 +891,7 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_an_override() {
     Package::new("chrono", "0.2.0")
         .dep("serde", "< 0.9")
@@ -1001,7 +1001,7 @@ fn override_an_override() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn overriding_nonexistent_no_spurious() {
     Package::new("bar", "0.1.0").dep("baz", "0.1").publish();
     Package::new("baz", "0.1.0").publish();
@@ -1059,7 +1059,7 @@ fn overriding_nonexistent_no_spurious() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warnings_when_replace_is_used_in_another_workspace_member() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
@@ -1118,7 +1118,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_to_path_dep() {
     Package::new("bar", "0.1.0").dep("baz", "0.1").publish();
     Package::new("baz", "0.1.0").publish();
@@ -1158,7 +1158,7 @@ fn override_to_path_dep() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_to_path_dep() {
     Package::new("bar", "0.1.0").dep("baz", "0.1").publish();
     Package::new("baz", "0.1.0").publish();
@@ -1203,7 +1203,7 @@ fn replace_to_path_dep() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn paths_ok_with_optional() {
     Package::new("baz", "0.1.0").publish();
 
@@ -1261,7 +1261,7 @@ fn paths_ok_with_optional() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn paths_add_optional_bad() {
     Package::new("baz", "0.1.0").publish();
 
@@ -1307,7 +1307,7 @@ dependencies; the dependency on `baz` was either added or\
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_with_default_feature() {
     Package::new("another", "0.1.0").publish();
     Package::new("another", "0.1.1").dep("bar", "0.1").publish();
@@ -1369,7 +1369,7 @@ fn override_with_default_feature() {
     p.cargo("run").run();
 }
 
-#[test]
+#[cargo_test]
 fn override_plus_dep() {
     Package::new("bar", "0.1.0").publish();
 

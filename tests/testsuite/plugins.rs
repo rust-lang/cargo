@@ -1,7 +1,7 @@
 use crate::support::{basic_manifest, project};
 use crate::support::{is_nightly, rustc_host};
 
-#[test]
+#[cargo_test]
 fn plugin_to_the_max() {
     if !is_nightly() {
         // plugins are unstable
@@ -101,7 +101,7 @@ fn plugin_to_the_max() {
     foo.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn plugin_with_dynamic_native_dependency() {
     if !is_nightly() {
         // plugins are unstable
@@ -212,7 +212,7 @@ fn plugin_with_dynamic_native_dependency() {
     foo.cargo("build -v").env("BUILDER_ROOT", root).run();
 }
 
-#[test]
+#[cargo_test]
 fn plugin_integration() {
     let p = project()
         .file(
@@ -238,7 +238,7 @@ fn plugin_integration() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_a_plugin() {
     let p = project()
         .file(
@@ -274,7 +274,7 @@ fn doctest_a_plugin() {
 }
 
 // See #1515
-#[test]
+#[cargo_test]
 fn native_plugin_dependency_with_custom_ar_linker() {
     let target = rustc_host();
 
@@ -334,7 +334,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_abort_plugins() {
     if !is_nightly() {
         // requires rustc_private
@@ -382,7 +382,7 @@ fn panic_abort_plugins() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn shared_panic_abort_plugins() {
     if !is_nightly() {
         // requires rustc_private

@@ -2,7 +2,7 @@ use crate::support::is_nightly;
 use crate::support::paths::CargoPathExt;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn cargo_bench_simple() {
     if !is_nightly() {
         return;
@@ -48,7 +48,7 @@ fn cargo_bench_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_bench_implicit() {
     if !is_nightly() {
         return;
@@ -93,7 +93,7 @@ fn bench_bench_implicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_bin_implicit() {
     if !is_nightly() {
         return;
@@ -137,7 +137,7 @@ fn bench_bin_implicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_tarname() {
     if !is_nightly() {
         return;
@@ -172,7 +172,7 @@ fn bench_tarname() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_multiple_targets() {
     if !is_nightly() {
         return;
@@ -209,7 +209,7 @@ fn bench_multiple_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_bench_verbose() {
     if !is_nightly() {
         return;
@@ -241,7 +241,7 @@ fn cargo_bench_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_similar_names() {
     if !is_nightly() {
         return;
@@ -288,7 +288,7 @@ fn many_similar_names() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_bench_failing_test() {
     if !is_nightly() {
         return;
@@ -341,7 +341,7 @@ fn cargo_bench_failing_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_with_lib_dep() {
     if !is_nightly() {
         return;
@@ -409,7 +409,7 @@ fn bench_with_lib_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_with_deep_lib_dep() {
     if !is_nightly() {
         return;
@@ -472,7 +472,7 @@ fn bench_with_deep_lib_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn external_bench_explicit() {
     if !is_nightly() {
         return;
@@ -531,7 +531,7 @@ fn external_bench_explicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn external_bench_implicit() {
     if !is_nightly() {
         return;
@@ -578,7 +578,7 @@ fn external_bench_implicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_autodiscover_2015() {
     if !is_nightly() {
         return;
@@ -652,7 +652,7 @@ https://github.com/rust-lang/cargo/issues/5330
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_run_examples() {
     if !is_nightly() {
         return;
@@ -668,7 +668,7 @@ fn dont_run_examples() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn pass_through_command_line() {
     if !is_nightly() {
         return;
@@ -709,7 +709,7 @@ fn pass_through_command_line() {
 
 // Regression test for running cargo-bench twice with
 // tests in an rlib
-#[test]
+#[cargo_test]
 fn cargo_bench_twice() {
     if !is_nightly() {
         return;
@@ -736,7 +736,7 @@ fn cargo_bench_twice() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn lib_bin_same_name() {
     if !is_nightly() {
         return;
@@ -793,7 +793,7 @@ fn lib_bin_same_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_with_standard_name() {
     if !is_nightly() {
         return;
@@ -843,7 +843,7 @@ fn lib_with_standard_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_with_standard_name2() {
     if !is_nightly() {
         return;
@@ -893,7 +893,7 @@ fn lib_with_standard_name2() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_dylib() {
     if !is_nightly() {
         return;
@@ -987,7 +987,7 @@ fn bench_dylib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_twice_with_build_cmd() {
     if !is_nightly() {
         return;
@@ -1036,7 +1036,7 @@ fn bench_twice_with_build_cmd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_with_examples() {
     if !is_nightly() {
         return;
@@ -1123,7 +1123,7 @@ fn bench_with_examples() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_a_bench() {
     if !is_nightly() {
         return;
@@ -1163,7 +1163,7 @@ fn test_a_bench() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_bench_no_run() {
     if !is_nightly() {
         return;
@@ -1196,7 +1196,7 @@ fn test_bench_no_run() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_bench_no_fail_fast() {
     if !is_nightly() {
         return;
@@ -1240,7 +1240,7 @@ fn test_bench_no_fail_fast() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_bench_multiple_packages() {
     if !is_nightly() {
         return;
@@ -1333,7 +1333,7 @@ fn test_bench_multiple_packages() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_all_workspace() {
     if !is_nightly() {
         return;
@@ -1390,7 +1390,7 @@ fn bench_all_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_all_exclude() {
     if !is_nightly() {
         return;
@@ -1439,7 +1439,7 @@ test bar ... bench:           [..] ns/iter (+/- [..])",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_all_virtual_manifest() {
     if !is_nightly() {
         return;
@@ -1493,7 +1493,7 @@ fn bench_all_virtual_manifest() {
 }
 
 // https://github.com/rust-lang/cargo/issues/4287
-#[test]
+#[cargo_test]
 fn legacy_bench_name() {
     if !is_nightly() {
         return;
@@ -1535,7 +1535,7 @@ please set bench.path in Cargo.toml",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_virtual_manifest_all_implied() {
     if !is_nightly() {
         return;
@@ -1585,7 +1585,7 @@ fn bench_virtual_manifest_all_implied() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn json_artifact_includes_executable_for_benchmark() {
     if !is_nightly() {
         return;

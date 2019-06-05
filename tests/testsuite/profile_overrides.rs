@@ -1,7 +1,7 @@
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn profile_override_gated() {
     let p = project()
         .file(
@@ -66,7 +66,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_basic() {
     let p = project()
         .file(
@@ -106,7 +106,7 @@ fn profile_override_basic() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_warnings() {
     let p = project()
         .file(
@@ -149,7 +149,7 @@ Did you mean `bar`?
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_dev_release_only() {
     let p = project()
         .file(
@@ -185,7 +185,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_bad_settings() {
     let bad_values = [
         (
@@ -236,7 +236,7 @@ fn profile_override_bad_settings() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_hierarchy() {
     // Test that the precedence rules are correct for different types.
     let p = project()
@@ -338,7 +338,7 @@ fn profile_override_hierarchy() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_spec_multiple() {
     let p = project()
         .file(
@@ -376,7 +376,7 @@ found profile override specs: bar, bar:0.5.0",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_spec() {
     let p = project()
         .file(
@@ -441,7 +441,7 @@ fn profile_override_spec() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_proc_macro() {
     Package::new("shared", "1.0.0").publish();
     let p = project()

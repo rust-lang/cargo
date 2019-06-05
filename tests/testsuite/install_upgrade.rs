@@ -106,7 +106,7 @@ fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
     }
 }
 
-#[test]
+#[cargo_test]
 fn registry_upgrade() {
     // Installing and upgrading from a registry.
     pkg("foo", "1.0.0");
@@ -182,7 +182,7 @@ fn registry_upgrade() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn uninstall() {
     // Basic uninstall test.
     pkg("foo", "1.0.0");
@@ -198,7 +198,7 @@ fn uninstall() {
     assert_eq!(v1_table.get("v1").unwrap().as_table().unwrap().len(), 0);
 }
 
-#[test]
+#[cargo_test]
 fn upgrade_force() {
     pkg("foo", "1.0.0");
     cargo_process("install foo -Z install-upgrade")
@@ -221,7 +221,7 @@ fn upgrade_force() {
     validate_trackers("foo", "1.0.0", &["foo"]);
 }
 
-#[test]
+#[cargo_test]
 fn ambiguous_version_no_longer_allowed() {
     // Non-semver-requirement is not allowed for `--version`.
     pkg("foo", "1.0.0");
@@ -239,7 +239,7 @@ if you want to specify semver range, add an explicit qualifier, like ^1.0
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_is_always_dirty() {
     // --path should always reinstall.
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -252,7 +252,7 @@ fn path_is_always_dirty() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_for_conflicts_unknown() {
     // If an untracked file is in the way, it should fail.
     pkg("foo", "1.0.0");
@@ -266,7 +266,7 @@ fn fails_for_conflicts_unknown() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_for_conflicts_known() {
     // If the same binary exists in another package, it should fail.
     pkg("foo", "1.0.0");
@@ -285,7 +285,7 @@ fn fails_for_conflicts_known() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn supports_multiple_binary_names() {
     // Can individually install with --bin or --example
     Package::new("foo", "1.0.0")
@@ -324,7 +324,7 @@ fn supports_multiple_binary_names() {
     assert!(!installed_exe("a").exists());
 }
 
-#[test]
+#[cargo_test]
 fn v1_already_installed_fresh() {
     // Install with v1, then try to install again with v2.
     pkg("foo", "1.0.0");
@@ -335,7 +335,7 @@ fn v1_already_installed_fresh() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn v1_already_installed_dirty() {
     // Install with v1, then install a new version with v2.
     pkg("foo", "1.0.0");
@@ -349,7 +349,7 @@ fn v1_already_installed_dirty() {
     validate_trackers("foo", "1.0.1", &["foo"]);
 }
 
-#[test]
+#[cargo_test]
 fn change_features_rebuilds() {
     Package::new("foo", "1.0.0")
         .file(
@@ -395,7 +395,7 @@ fn change_features_rebuilds() {
     installed_process("foo").with_stdout("f1").run();
 }
 
-#[test]
+#[cargo_test]
 fn change_profile_rebuilds() {
     pkg("foo", "1.0.0");
     cargo_process("install foo -Z install-upgrade")
@@ -412,7 +412,7 @@ fn change_profile_rebuilds() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn change_target_rebuilds() {
     if cross_compile::disabled() {
         return;
@@ -431,7 +431,7 @@ fn change_target_rebuilds() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn change_bin_sets_rebuilds() {
     // Changing which bins in a multi-bin project should reinstall.
     Package::new("foo", "1.0.0")
@@ -467,7 +467,7 @@ fn change_bin_sets_rebuilds() {
     validate_trackers("foo", "1.0.0", &["foo", "x", "y"]);
 }
 
-#[test]
+#[cargo_test]
 fn forwards_compatible() {
     // Unknown fields should be preserved.
     pkg("foo", "1.0.0");
@@ -492,7 +492,7 @@ fn forwards_compatible() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn v2_syncs() {
     // V2 inherits the installs from V1.
     pkg("one", "1.0.0");
@@ -560,7 +560,7 @@ two v1.0.0:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn upgrade_git() {
     let git_project =
         git::new("foo", |project| project.file("src/main.rs", "fn main() {}")).unwrap();
@@ -602,7 +602,7 @@ fn upgrade_git() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn switch_sources() {
     // Installing what appears to be the same thing, but from different
     // sources should reinstall.
@@ -640,7 +640,7 @@ fn switch_sources() {
     installed_process("foo").with_stdout("git").run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_report() {
     // Testing the full output that indicates installed/ignored/replaced/summary.
     pkg("one", "1.0.0");
@@ -753,7 +753,7 @@ fn multiple_report() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_track_gated() {
     cargo_process("install --no-track foo")
         .masquerade_as_nightly_cargo()
@@ -764,7 +764,7 @@ fn no_track_gated() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_track() {
     pkg("foo", "1.0.0");
     cargo_process("install --no-track foo -Z install-upgrade")

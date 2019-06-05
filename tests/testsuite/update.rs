@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn minor_update_two_places() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -58,7 +58,7 @@ fn minor_update_two_places() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_minor_update() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
@@ -117,7 +117,7 @@ fn transitive_minor_update() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn conservative() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
@@ -168,7 +168,7 @@ fn conservative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_via_new_dep() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -208,7 +208,7 @@ fn update_via_new_dep() {
     p.cargo("build").env("CARGO_LOG", "cargo=trace").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_via_new_member() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -250,7 +250,7 @@ fn update_via_new_member() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn add_dep_deep_new_requirement() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -279,7 +279,7 @@ fn add_dep_deep_new_requirement() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn everything_real_deep() {
     Package::new("log", "0.1.0").publish();
     Package::new("foo", "0.1.0").dep("log", "0.1").publish();
@@ -309,7 +309,7 @@ fn everything_real_deep() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn change_package_version() {
     let p = project()
         .file(
@@ -345,7 +345,7 @@ fn change_package_version() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_precise() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").publish();
@@ -398,7 +398,7 @@ fn update_precise() {
 // cargo update should respect its arguments even without a lockfile.
 // See issue "Running cargo update without a Cargo.lock ignores arguments"
 // at <https://github.com/rust-lang/cargo/issues/6872>.
-#[test]
+#[cargo_test]
 fn update_precise_first_run() {
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.0").publish();
@@ -558,7 +558,7 @@ fn update_precise_first_run() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn preserve_top_comment() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -583,7 +583,7 @@ fn preserve_top_comment() {
     assert_eq!(lockfile, lockfile2);
 }
 
-#[test]
+#[cargo_test]
 fn dry_run_update() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();

@@ -1,6 +1,6 @@
 use crate::support::{basic_bin_manifest, project};
 
-#[test]
+#[cargo_test]
 fn alias_incorrect_config_type() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -24,7 +24,7 @@ expected a list, but found a integer for [..]",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alias_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -47,7 +47,7 @@ fn alias_config() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn recursive_alias() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -71,7 +71,7 @@ fn recursive_alias() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alias_list_test() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -91,7 +91,7 @@ fn alias_list_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alias_with_flags_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -111,7 +111,7 @@ fn alias_with_flags_config() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alias_cannot_shadow_builtin_command() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -136,7 +136,7 @@ fn alias_cannot_shadow_builtin_command() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alias_override_builtin_alias() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -161,7 +161,7 @@ fn alias_override_builtin_alias() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn builtin_alias_takes_options() {
     // #6381
     let p = project()
