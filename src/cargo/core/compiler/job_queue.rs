@@ -195,7 +195,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // the target as well. This should ensure that edges changed to
         // `Metadata` propagate upwards `All` dependencies to anything that
         // transitively contains the `Metadata` edge.
-        if unit.target.requires_upstream_objects() {
+        if unit.requires_upstream_objects() {
             for dep in dependencies.iter() {
                 depend_on_deps_of_deps(cx, &mut queue_deps, dep);
             }

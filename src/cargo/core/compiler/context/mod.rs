@@ -475,11 +475,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.pipelining
             // We're only a candidate for requiring an `rmeta` file if we
             // ourselves are building an rlib,
-            && !parent.target.requires_upstream_objects()
+            && !parent.requires_upstream_objects()
             && parent.mode == CompileMode::Build
             // Our dependency must also be built as an rlib, otherwise the
             // object code must be useful in some fashion
-            && !dep.target.requires_upstream_objects()
+            && !dep.requires_upstream_objects()
             && dep.mode == CompileMode::Build
     }
 

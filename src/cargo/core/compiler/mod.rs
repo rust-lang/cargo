@@ -827,7 +827,7 @@ fn build_base_args<'a, 'cfg>(
 
     if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
-    } else if !unit.target.requires_upstream_objects() {
+    } else if !unit.requires_upstream_objects() {
         // Always produce metdata files for rlib outputs. Metadata may be used
         // in this session for a pipelined compilation, or it may be used in a
         // future Cargo session as part of a pipelined compile.
