@@ -1,6 +1,6 @@
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn rustdoc_simple() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -17,7 +17,7 @@ fn rustdoc_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc_args() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -35,7 +35,7 @@ fn rustdoc_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc_foo_with_bar_dependency() {
     let foo = project()
         .file(
@@ -75,7 +75,7 @@ fn rustdoc_foo_with_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc_only_bar_dependency() {
     let foo = project()
         .file(
@@ -112,7 +112,7 @@ fn rustdoc_only_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc_same_name_documents_lib() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -133,7 +133,7 @@ fn rustdoc_same_name_documents_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn features() {
     let p = project()
         .file(
@@ -156,7 +156,7 @@ fn features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn rustdoc_target() {
     let p = project().file("src/lib.rs", "").build();

@@ -1,7 +1,7 @@
 use crate::support::rustc_host;
 use crate::support::{basic_lib_manifest, project};
 
-#[test]
+#[cargo_test]
 fn pathless_tools() {
     let target = rustc_host();
 
@@ -32,7 +32,7 @@ fn pathless_tools() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn absolute_tools() {
     let target = rustc_host();
 
@@ -71,7 +71,7 @@ fn absolute_tools() {
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn relative_tools() {
     let target = rustc_host();
 
@@ -115,7 +115,7 @@ fn relative_tools() {
         )).run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_runner() {
     let target = rustc_host();
 
@@ -173,7 +173,7 @@ fn custom_runner() {
 }
 
 // can set a custom runner via `target.'cfg(..)'.runner`
-#[test]
+#[cargo_test]
 fn custom_runner_cfg() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -199,7 +199,7 @@ fn custom_runner_cfg() {
 }
 
 // custom runner set via `target.$triple.runner` have precende over `target.'cfg(..)'.runner`
-#[test]
+#[cargo_test]
 fn custom_runner_cfg_precedence() {
     let target = rustc_host();
 
@@ -232,7 +232,7 @@ fn custom_runner_cfg_precedence() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_runner_cfg_collision() {
     let p = project()
         .file("src/main.rs", "fn main() {}")

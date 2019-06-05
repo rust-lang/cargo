@@ -1,7 +1,7 @@
 use crate::support::is_nightly;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn custom_target_minimal() {
     if !is_nightly() {
         // Requires features no_core, lang_items
@@ -51,7 +51,7 @@ fn custom_target_minimal() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dependency() {
     if !is_nightly() {
         // Requires features no_core, lang_items, optin_builtin_traits

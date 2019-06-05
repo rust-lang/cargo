@@ -2,7 +2,7 @@ use std::fs::File;
 
 use crate::support::{cross_compile, project, publish, registry};
 
-#[test]
+#[cargo_test]
 fn simple_cross_package() {
     if cross_compile::disabled() {
         return;
@@ -58,7 +58,7 @@ fn simple_cross_package() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_target() {
     if cross_compile::disabled() {
         return;

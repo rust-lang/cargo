@@ -1,7 +1,7 @@
 use crate::support::registry::Package;
 use crate::support::{is_nightly, project};
 
-#[test]
+#[cargo_test]
 fn exported_priv_warning() {
     if !is_nightly() {
         return;
@@ -49,7 +49,7 @@ src/lib.rs:3:13: warning: type `priv_dep::FromPriv` from private dependency 'pri
         .run()
 }
 
-#[test]
+#[cargo_test]
 fn exported_pub_dep() {
     if !is_nightly() {
         return;
@@ -96,7 +96,7 @@ fn exported_pub_dep() {
         .run()
 }
 
-#[test]
+#[cargo_test]
 pub fn requires_nightly_cargo() {
     let p = project()
         .file(
@@ -122,7 +122,7 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
         .run()
 }
 
-#[test]
+#[cargo_test]
 fn requires_feature() {
     Package::new("pub_dep", "0.1.0")
         .file("src/lib.rs", "")
@@ -160,7 +160,7 @@ consider adding `cargo-features = [\"public-dependency\"]` to the manifest
         .run()
 }
 
-#[test]
+#[cargo_test]
 fn pub_dev_dependency() {
     Package::new("pub_dep", "0.1.0")
         .file("src/lib.rs", "pub struct FromPub;")

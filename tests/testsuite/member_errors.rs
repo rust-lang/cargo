@@ -9,7 +9,7 @@ use crate::support::registry;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.
-#[test]
+#[cargo_test]
 fn toml_deserialize_manifest_error() {
     let p = project()
         .file(
@@ -58,7 +58,7 @@ fn toml_deserialize_manifest_error() {
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest has an invalid dependency path.
-#[test]
+#[cargo_test]
 fn member_manifest_path_io_error() {
     let p = project()
         .file(
@@ -108,7 +108,7 @@ fn member_manifest_path_io_error() {
 }
 
 /// Tests dependency version errors provide which package failed via a `ResolveError`.
-#[test]
+#[cargo_test]
 fn member_manifest_version_error() {
     let p = project()
         .file(

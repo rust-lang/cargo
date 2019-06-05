@@ -19,7 +19,7 @@ fn pkg(name: &str, vers: &str) {
         .publish();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_installs() {
     let p = project()
         .no_manifest()
@@ -48,7 +48,7 @@ fn multiple_installs() {
     assert_has_installed_exe(cargo_home(), "bar");
 }
 
-#[test]
+#[cargo_test]
 fn concurrent_installs() {
     const LOCKED_BUILD: &str = "waiting for file lock on build directory";
 
@@ -77,7 +77,7 @@ fn concurrent_installs() {
     assert_has_installed_exe(cargo_home(), "bar");
 }
 
-#[test]
+#[cargo_test]
 fn one_install_should_be_bad() {
     let p = project()
         .no_manifest()
@@ -117,7 +117,7 @@ fn one_install_should_be_bad() {
     assert_has_installed_exe(cargo_home(), "foo");
 }
 
-#[test]
+#[cargo_test]
 fn multiple_registry_fetches() {
     let mut pkg = Package::new("bar", "1.0.2");
     for i in 0..10 {
@@ -185,7 +185,7 @@ fn multiple_registry_fetches() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn git_same_repo_different_tags() {
     let a = git::new("dep", |project| {
         project
@@ -263,7 +263,7 @@ fn git_same_repo_different_tags() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn git_same_branch_different_revs() {
     let a = git::new("dep", |project| {
         project
@@ -346,7 +346,7 @@ fn git_same_branch_different_revs() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn same_project() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -372,7 +372,7 @@ fn same_project() {
 // Make sure that if Cargo dies while holding a lock that it's released and the
 // next Cargo to come in will take over cleanly.
 // older win versions don't support job objects, so skip test there
-#[test]
+#[cargo_test]
 #[cfg_attr(target_os = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
     let p = project()
@@ -434,7 +434,7 @@ fn killing_cargo_releases_the_lock() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn debug_release_ok() {
     let p = project().file("src/main.rs", "fn main() {}");
     let p = p.build();
@@ -470,7 +470,7 @@ fn debug_release_ok() {
         .run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn no_deadlock_with_git_dependencies() {
     let dep1 = git::new("dep1", |project| {
         project

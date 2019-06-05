@@ -663,7 +663,7 @@ impl fmt::Debug for PrettyPrintRegistry {
     }
 }
 
-#[test]
+#[cargo_test]
 fn meta_test_deep_pretty_print_registry() {
     assert_eq!(
         &format!(
@@ -839,7 +839,7 @@ pub fn registry_strategy(
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
-#[test]
+#[cargo_test]
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
@@ -878,7 +878,7 @@ fn meta_test_deep_trees_from_strategy() {
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
-#[test]
+#[cargo_test]
 fn meta_test_multiple_versions_strategy() {
     let mut dis = [0; 10];
 

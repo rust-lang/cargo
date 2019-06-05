@@ -4,7 +4,7 @@ const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
 the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target";
 
-#[test]
+#[cargo_test]
 fn build_lib_for_foo() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -26,7 +26,7 @@ fn build_lib_for_foo() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -49,7 +49,7 @@ fn lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_main_and_allow_unstable_options() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -80,7 +80,7 @@ fn build_main_and_allow_unstable_options() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -93,7 +93,7 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_args_to_one_of_multiple_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -117,7 +117,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_with_args_to_all_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -132,7 +132,7 @@ fn fails_with_args_to_all_binaries() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project()
         .file("tests/foo.rs", r#" "#)
@@ -156,7 +156,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_foo_with_bar_dependency() {
     let foo = project()
         .file(
@@ -192,7 +192,7 @@ fn build_foo_with_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_only_bar_dependency() {
     let foo = project()
         .file(
@@ -226,7 +226,7 @@ fn build_only_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("rustc -v")
@@ -251,7 +251,7 @@ fn targets_selected_default() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_all() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("rustc -v --all-targets")
@@ -270,7 +270,7 @@ fn targets_selected_all() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fail_with_multiple_packages() {
     let foo = project()
         .file(
@@ -328,7 +328,7 @@ error: The argument '--package <SPEC>' was provided more than once, \
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_with_other_profile() {
     let p = project()
         .file(
@@ -359,7 +359,7 @@ fn rustc_with_other_profile() {
     p.cargo("rustc --profile test").run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_fingerprint() {
     // Verify that the fingerprint includes the rustc args.
     let p = project()
@@ -407,7 +407,7 @@ fn rustc_fingerprint() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_test_with_implicit_bin() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

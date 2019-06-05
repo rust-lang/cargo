@@ -12,7 +12,7 @@ use crate::support::registry::Package;
 use crate::support::sleep_ms;
 use crate::support::{basic_manifest, is_coarse_mtime, project};
 
-#[test]
+#[cargo_test]
 fn modifying_and_moving() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
@@ -52,7 +52,7 @@ fn modifying_and_moving() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn modify_only_some_files() {
     let p = project()
         .file("src/lib.rs", "mod a;")
@@ -100,7 +100,7 @@ fn modify_only_some_files() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_sub_package_then_while_package() {
     let p = project()
         .file(
@@ -151,7 +151,7 @@ fn rebuild_sub_package_then_while_package() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_lib_features_caches_targets() {
     let p = project()
         .file(
@@ -200,7 +200,7 @@ fn changing_lib_features_caches_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_profiles_caches_targets() {
     let p = project()
         .file(
@@ -254,7 +254,7 @@ fn changing_profiles_caches_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_bin_paths_common_target_features_caches_targets() {
     // Make sure dep_cache crate is built once per feature
     let p = project()
@@ -422,7 +422,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_bin_features_caches_targets() {
     let p = project()
         .file(
@@ -489,7 +489,7 @@ fn changing_bin_features_caches_targets() {
     p.rename_run("foo", "on2").with_stdout("feature on").run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_tests_if_lib_changes() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() {}")
@@ -516,7 +516,7 @@ fn rebuild_tests_if_lib_changes() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_transitive_target_deps() {
     let p = project()
         .file(
@@ -578,7 +578,7 @@ fn no_rebuild_transitive_target_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rerun_if_changed_in_dep() {
     let p = project()
         .file(
@@ -619,7 +619,7 @@ fn rerun_if_changed_in_dep() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn same_build_dir_cached_packages() {
     let p = project()
         .no_manifest()
@@ -706,7 +706,7 @@ fn same_build_dir_cached_packages() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
     let p = project()
         .file(
@@ -736,7 +736,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_if_build_artifacts_move_forward_in_time() {
     let p = project()
         .file(
@@ -773,7 +773,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_if_environment_changes() {
     let p = project()
         .file(
@@ -832,7 +832,7 @@ fn rebuild_if_environment_changes() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_when_rename_dir() {
     let p = project()
         .file(
@@ -864,7 +864,7 @@ fn no_rebuild_when_rename_dir() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_optional_dep() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
@@ -918,7 +918,7 @@ fn unused_optional_dep() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dev_dep_registry_updates() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
@@ -972,7 +972,7 @@ fn path_dev_dep_registry_updates() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn change_panic_mode() {
     let p = project()
         .file(
@@ -1009,7 +1009,7 @@ fn change_panic_mode() {
     p.cargo("build -p baz").run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_rebuild_based_on_plugins() {
     let p = project()
         .file(
@@ -1066,7 +1066,7 @@ fn dont_rebuild_based_on_plugins() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reuse_workspace_lib() {
     let p = project()
         .file(
@@ -1099,7 +1099,7 @@ fn reuse_workspace_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reuse_shared_build_dep() {
     let p = project()
         .file(
@@ -1147,7 +1147,7 @@ fn reuse_shared_build_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_rustflags_is_cached() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -1193,7 +1193,7 @@ fn simple_deps_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     );
 }
 
-#[test]
+#[cargo_test]
 fn simple_deps_cleaner_does_not_rebuild() {
     let p = project()
         .file(
@@ -1289,7 +1289,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     );
 }
 
-#[test]
+#[cargo_test]
 fn fingerprint_cleaner_does_not_rebuild() {
     let p = project()
         .file(
@@ -1353,7 +1353,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reuse_panic_build_dep_test() {
     let p = project()
         .file(
@@ -1395,7 +1395,7 @@ fn reuse_panic_build_dep_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reuse_panic_pm() {
     // foo(panic) -> bar(panic)
     // somepm(nopanic) -> bar(nopanic)
@@ -1453,7 +1453,7 @@ fn reuse_panic_pm() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bust_patched_dep() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0")
@@ -1513,7 +1513,7 @@ fn bust_patched_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_on_mid_build_file_modification() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
@@ -1620,7 +1620,7 @@ fn rebuild_on_mid_build_file_modification() {
     t.join().ok().unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn dirty_both_lib_and_test() {
     // This tests that all artifacts that depend on the results of a build
     // script will get rebuilt when the build script reruns, even for separate
@@ -1712,7 +1712,7 @@ fn dirty_both_lib_and_test() {
     p.cargo("test --lib").run();
 }
 
-#[test]
+#[cargo_test]
 fn script_fails_stay_dirty() {
     // Check if a script is aborted (such as hitting Ctrl-C) that it will re-run.
     // Steps:
@@ -1751,7 +1751,7 @@ fn script_fails_stay_dirty() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simulated_docker_deps_stay_cached() {
     // Test what happens in docker where the nanoseconds are zeroed out.
     Package::new("regdep", "1.0.0").publish();
@@ -1897,7 +1897,7 @@ fn simulated_docker_deps_stay_cached() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn metadata_change_invalidates() {
     let p = project()
         .file(
@@ -1935,7 +1935,7 @@ fn metadata_change_invalidates() {
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn edition_change_invalidates() {
     const MANIFEST: &str = r#"
         [package]
@@ -1970,7 +1970,7 @@ fn edition_change_invalidates() {
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_path_deps() {
     let p = project()
         .file(

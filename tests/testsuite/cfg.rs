@@ -54,7 +54,7 @@ where
     );
 }
 
-#[test]
+#[cargo_test]
 fn cfg_syntax() {
     good("foo", c!(foo));
     good("_bar", c!(_bar));
@@ -66,7 +66,7 @@ fn cfg_syntax() {
     good("foo = \"3 e\"", c!(foo = "3 e"));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_syntax_bad() {
     bad::<Cfg>("", "found nothing");
     bad::<Cfg>(" ", "found nothing");
@@ -81,7 +81,7 @@ fn cfg_syntax_bad() {
     bad::<Cfg>("foo, bar", "malformed cfg value");
 }
 
-#[test]
+#[cargo_test]
 fn cfg_expr() {
     good("foo", e!(foo));
     good("_bar", e!(_bar));
@@ -100,7 +100,7 @@ fn cfg_expr() {
     good("not(all(a))", e!(not(all(a))));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_expr_bad() {
     bad::<CfgExpr>(" ", "found nothing");
     bad::<CfgExpr>(" all", "expected `(`");
@@ -112,7 +112,7 @@ fn cfg_expr_bad() {
     bad::<CfgExpr>("foo(a)", "consider using all() or any() explicitly");
 }
 
-#[test]
+#[cargo_test]
 fn cfg_matches() {
     assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)]));
     assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)]));
@@ -140,7 +140,7 @@ fn cfg_matches() {
     assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)]));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_easy() {
     let p = project()
         .file(
@@ -164,7 +164,7 @@ fn cfg_easy() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_include() {
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
     let p = project()
@@ -197,7 +197,7 @@ fn dont_include() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn works_through_the_registry() {
     Package::new("baz", "0.1.0").publish();
     Package::new("bar", "0.1.0")
@@ -240,7 +240,7 @@ fn works_through_the_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_version_from_other_platform() {
     let this_family = if cfg!(unix) { "unix" } else { "windows" };
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
@@ -286,7 +286,7 @@ fn ignore_version_from_other_platform() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_target_spec() {
     let p = project()
         .file(
@@ -320,7 +320,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_target_spec2() {
     let p = project()
         .file(
@@ -354,7 +354,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_match_ok() {
     let p = project()
         .file(
@@ -390,7 +390,7 @@ fn multiple_match_ok() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn any_ok() {
     let p = project()
         .file(
@@ -413,7 +413,7 @@ fn any_ok() {
 }
 
 // https://github.com/rust-lang/cargo/issues/5313
-#[test]
+#[cargo_test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn cfg_looks_at_rustflags_for_target() {
     let p = project()

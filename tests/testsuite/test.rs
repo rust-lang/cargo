@@ -8,7 +8,7 @@ use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use crate::support::{rustc_host, sleep_ms};
 
-#[test]
+#[cargo_test]
 fn cargo_test_simple() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -46,7 +46,7 @@ fn cargo_test_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_release() {
     let p = project()
         .file(
@@ -104,7 +104,7 @@ fn cargo_test_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_overflow_checks() {
     let p = project()
         .file(
@@ -141,7 +141,7 @@ fn cargo_test_overflow_checks() {
     p.process(&p.release_bin("foo")).with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_quiet_with_harness() {
     let p = project()
         .file(
@@ -180,7 +180,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_quiet_no_harness() {
     let p = project()
         .file(
@@ -213,7 +213,7 @@ fn cargo_test_quiet_no_harness() {
     p.cargo("test -q").with_stdout("").with_stderr("").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_verbose() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -239,7 +239,7 @@ fn cargo_test_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_similar_names() {
     let p = project()
         .file(
@@ -273,7 +273,7 @@ fn many_similar_names() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_failing_test_in_bin() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -332,7 +332,7 @@ failures:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_failing_test_in_test() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -380,7 +380,7 @@ failures:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_failing_test_in_lib() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -416,7 +416,7 @@ failures:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_with_lib_dep() {
     let p = project()
         .file(
@@ -476,7 +476,7 @@ fn test_with_lib_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_with_deep_lib_dep() {
     let p = project()
         .file(
@@ -528,7 +528,7 @@ fn test_with_deep_lib_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn external_test_explicit() {
     let p = project()
         .file(
@@ -579,7 +579,7 @@ fn external_test_explicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn external_test_named_test() {
     let p = project()
         .file(
@@ -601,7 +601,7 @@ fn external_test_named_test() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn external_test_implicit() {
     let p = project()
         .file(
@@ -639,7 +639,7 @@ fn external_test_implicit() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_run_examples() {
     let p = project()
         .file("src/lib.rs", "")
@@ -653,7 +653,7 @@ fn dont_run_examples() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn pass_through_command_line() {
     let p = project()
         .file(
@@ -691,7 +691,7 @@ fn pass_through_command_line() {
 
 // Regression test for running cargo-test twice with
 // tests in an rlib
-#[test]
+#[cargo_test]
 fn cargo_test_twice() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -711,7 +711,7 @@ fn cargo_test_twice() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn lib_bin_same_name() {
     let p = project()
         .file(
@@ -755,7 +755,7 @@ fn lib_bin_same_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_with_standard_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
@@ -797,7 +797,7 @@ fn lib_with_standard_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_with_standard_name2() {
     let p = project()
         .file(
@@ -839,7 +839,7 @@ fn lib_with_standard_name2() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib_without_name() {
     let p = project()
         .file(
@@ -880,7 +880,7 @@ fn lib_without_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bin_without_name() {
     let p = project()
         .file(
@@ -925,7 +925,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_without_name() {
     let p = project()
         .file(
@@ -981,7 +981,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_without_name() {
     let p = project()
         .file(
@@ -1041,7 +1041,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn example_without_name() {
     let p = project()
         .file(
@@ -1096,7 +1096,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bin_there_for_integration() {
     let p = project()
         .file(
@@ -1125,7 +1125,7 @@ fn bin_there_for_integration() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_dylib() {
     let p = project()
         .file(
@@ -1204,7 +1204,7 @@ fn test_dylib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_twice_with_build_cmd() {
     let p = project()
         .file(
@@ -1245,7 +1245,7 @@ fn test_twice_with_build_cmd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_then_build() {
     let p = project().file("src/lib.rs", "#[test] fn foo() {}").build();
 
@@ -1264,7 +1264,7 @@ fn test_then_build() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_no_run() {
     let p = project()
         .file("src/lib.rs", "#[test] fn foo() { panic!() }")
@@ -1280,7 +1280,7 @@ fn test_no_run() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_specific_bin_target() {
     let prj = project()
         .file(
@@ -1315,7 +1315,7 @@ fn test_run_specific_bin_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_implicit_bin_target() {
     let prj = project()
         .file(
@@ -1356,7 +1356,7 @@ fn test_run_implicit_bin_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_specific_test_target() {
     let prj = project()
         .file("src/bin/a.rs", "fn main() { }")
@@ -1376,7 +1376,7 @@ fn test_run_specific_test_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_implicit_test_target() {
     let prj = project()
         .file(
@@ -1417,7 +1417,7 @@ fn test_run_implicit_test_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_implicit_bench_target() {
     let prj = project()
         .file(
@@ -1458,7 +1458,7 @@ fn test_run_implicit_bench_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_run_implicit_example_target() {
     let prj = project()
         .file(
@@ -1532,7 +1532,7 @@ fn test_run_implicit_example_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_filtered_excludes_compiling_examples() {
     let p = project()
         .file(
@@ -1564,7 +1564,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_no_harness() {
     let p = project()
         .file(
@@ -1600,7 +1600,7 @@ fn test_no_harness() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn selective_testing() {
     let p = project()
         .file(
@@ -1696,7 +1696,7 @@ fn selective_testing() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn almost_cyclic_but_not_quite() {
     let p = project()
         .file(
@@ -1747,7 +1747,7 @@ fn almost_cyclic_but_not_quite() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_then_selective_test() {
     let p = project()
         .file(
@@ -1785,7 +1785,7 @@ fn build_then_selective_test() {
     p.cargo("test -p b").run();
 }
 
-#[test]
+#[cargo_test]
 fn example_dev_dep() {
     let p = project()
         .file(
@@ -1826,7 +1826,7 @@ fn example_dev_dep() {
     p.cargo("run --example e1 --release -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn selective_testing_with_docs() {
     let p = project()
         .file(
@@ -1878,7 +1878,7 @@ fn selective_testing_with_docs() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn example_bin_same_name() {
     let p = project()
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
@@ -1915,7 +1915,7 @@ fn example_bin_same_name() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn test_with_example_twice() {
     let p = project()
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
@@ -1930,7 +1930,7 @@ fn test_with_example_twice() {
     assert!(p.bin("examples/foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn example_with_dev_dep() {
     let p = project()
         .file(
@@ -1973,7 +1973,7 @@ fn example_with_dev_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bin_is_preserved() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1988,7 +1988,7 @@ fn bin_is_preserved() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn bad_example() {
     let p = project().file("src/lib.rs", "");
     let p = p.build();
@@ -2003,7 +2003,7 @@ fn bad_example() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_feature() {
     let p = project()
         .file(
@@ -2042,7 +2042,7 @@ fn doctest_feature() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dashes_to_underscores() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo-bar", "0.0.1"))
@@ -2060,7 +2060,7 @@ fn dashes_to_underscores() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_dev_dep() {
     let p = project()
         .file(
@@ -2091,7 +2091,7 @@ fn doctest_dev_dep() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn filter_no_doc_tests() {
     let p = project()
         .file(
@@ -2117,7 +2117,7 @@ fn filter_no_doc_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dylib_doctest() {
     let p = project()
         .file(
@@ -2156,7 +2156,7 @@ fn dylib_doctest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dylib_doctest2() {
     // Can't doc-test dylibs, as they're statically linked together.
     let p = project()
@@ -2188,7 +2188,7 @@ fn dylib_doctest2() {
     p.cargo("test").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_dev_dep_doc_test() {
     let p = project()
         .file(
@@ -2245,7 +2245,7 @@ fn cyclic_dev_dep_doc_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dev_dep_with_build_script() {
     let p = project()
         .file(
@@ -2278,7 +2278,7 @@ fn dev_dep_with_build_script() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn no_fail_fast() {
     let p = project()
         .file(
@@ -2348,7 +2348,7 @@ fn no_fail_fast() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_multiple_packages() {
     let p = project()
         .file(
@@ -2407,7 +2407,7 @@ fn test_multiple_packages() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bin_does_not_rebuild_tests() {
     let p = project()
         .file("src/lib.rs", "")
@@ -2435,7 +2435,7 @@ fn bin_does_not_rebuild_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn selective_test_wonky_profile() {
     let p = project()
         .file(
@@ -2461,7 +2461,7 @@ fn selective_test_wonky_profile() {
     p.cargo("test -v --no-run --release -p foo -p a").run();
 }
 
-#[test]
+#[cargo_test]
 fn selective_test_optional_dep() {
     let p = project()
         .file(
@@ -2493,7 +2493,7 @@ fn selective_test_optional_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn only_test_docs() {
     let p = project()
         .file(
@@ -2526,7 +2526,7 @@ fn only_test_docs() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_panic_abort_with_dep() {
     let p = project()
         .file(
@@ -2559,7 +2559,7 @@ fn test_panic_abort_with_dep() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_test_even_with_no_harness() {
     let p = project()
         .file(
@@ -2593,7 +2593,7 @@ fn cfg_test_even_with_no_harness() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_abort_multiple() {
     let p = project()
         .file(
@@ -2621,7 +2621,7 @@ fn panic_abort_multiple() {
     p.cargo("test --release -v -p foo -p a").run();
 }
 
-#[test]
+#[cargo_test]
 fn pass_correct_cfgs_flags_to_rustdoc() {
     let p = project()
         .file(
@@ -2715,7 +2715,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_release_ignore_panic() {
     let p = project()
         .file(
@@ -2748,7 +2748,7 @@ fn test_release_ignore_panic() {
     p.cargo("bench -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_many_with_features() {
     let p = project()
         .file(
@@ -2776,7 +2776,7 @@ fn test_many_with_features() {
     p.cargo("test -v -p a -p foo --features foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_all_workspace() {
     let p = project()
         .file(
@@ -2803,7 +2803,7 @@ fn test_all_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_all_exclude() {
     let p = project()
         .file(
@@ -2832,7 +2832,7 @@ test bar ... ok",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_all_virtual_manifest() {
     let p = project()
         .file(
@@ -2854,7 +2854,7 @@ fn test_all_virtual_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_virtual_manifest_all_implied() {
     let p = project()
         .file(
@@ -2876,7 +2876,7 @@ fn test_virtual_manifest_all_implied() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_all_member_dependency_same_name() {
     let p = project()
         .file(
@@ -2907,7 +2907,7 @@ fn test_all_member_dependency_same_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_only_with_dev_dep() {
     let p = project()
         .file(
@@ -2939,7 +2939,7 @@ fn doctest_only_with_dev_dep() {
     p.cargo("test --doc -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_many_targets() {
     let p = project()
         .file(
@@ -2993,7 +2993,7 @@ fn test_many_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_and_registry() {
     let p = project()
         .file(
@@ -3040,7 +3040,7 @@ fn doctest_and_registry() {
     p.cargo("test --all -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_test_env() {
     let src = format!(
         r#"
@@ -3076,7 +3076,7 @@ test env_test ... ok
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_order() {
     let p = project()
         .file("src/lib.rs", "#[test] fn test_lib() {}")
@@ -3108,7 +3108,7 @@ test result: ok. [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_dev() {
     let p = project()
         .file(
@@ -3129,7 +3129,7 @@ fn cyclic_dev() {
     p.cargo("test --all").run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_a_crate_without_tests() {
     Package::new("testless", "0.1.0")
         .file(
@@ -3171,7 +3171,7 @@ fn publish_a_crate_without_tests() {
     p.cargo("test --package testless").run();
 }
 
-#[test]
+#[cargo_test]
 fn find_dependency_of_proc_macro_dependency_with_target() {
     let p = project()
         .file(
@@ -3240,7 +3240,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
     p.cargo("test --all --target").arg(rustc_host()).run();
 }
 
-#[test]
+#[cargo_test]
 fn test_hint_not_masked_by_doctest() {
     let p = project()
         .file(
@@ -3273,7 +3273,7 @@ fn test_hint_not_masked_by_doctest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_hint_workspace_virtual() {
     let p = project()
         .file(
@@ -3300,7 +3300,7 @@ fn test_hint_workspace_virtual() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_hint_workspace_nonvirtual() {
     let p = project()
         .file(
@@ -3329,7 +3329,7 @@ fn test_hint_workspace_nonvirtual() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn json_artifact_includes_test_flag() {
     // Verify that the JSON artifact output includes `test` flag.
     let p = project()
@@ -3379,7 +3379,7 @@ fn json_artifact_includes_test_flag() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn json_artifact_includes_executable_for_library_tests() {
     let p = project()
         .file("src/main.rs", "fn main() { }")
@@ -3411,7 +3411,7 @@ fn json_artifact_includes_executable_for_library_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn json_artifact_includes_executable_for_integration_tests() {
     let p = project()
         .file(
@@ -3445,7 +3445,7 @@ fn json_artifact_includes_executable_for_integration_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_build_script_links() {
     let p = project()
         .file(
@@ -3467,7 +3467,7 @@ fn test_build_script_links() {
     p.cargo("test --no-run").run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_skip_staticlib() {
     let p = project()
         .file(
@@ -3510,7 +3510,7 @@ fn doctest_skip_staticlib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn can_not_mix_doc_tests_and_regular_tests() {
     let p = project()
         .file(
@@ -3594,7 +3594,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn can_not_no_run_doc_tests() {
     let p = project()
         .file(
@@ -3614,7 +3614,7 @@ pub fn foo() -> u8 { 1 }
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_all_targets_lib() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -3629,7 +3629,7 @@ fn test_all_targets_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_dep_with_dev() {
     Package::new("devdep", "0.1.0").publish();
     let p = project()
