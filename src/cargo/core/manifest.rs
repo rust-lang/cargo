@@ -206,6 +206,20 @@ impl TargetKind {
             TargetKind::CustomBuild => "build-script",
         }
     }
+
+    /// Returns whether production of this artifact requires the object files
+    /// from dependencies to be available.
+    ///
+    /// This only returns `false` when all we're producing is an rlib, otherwise
+    /// it will return `true`.
+    pub fn requires_upstream_objects(&self) -> bool {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
+                kinds.iter().any(|k| k.requires_upstream_objects())
+            }
+            _ => true,
+        }
+    }
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -818,20 +832,6 @@ impl Target {
         match self.kind {
             TargetKind::Lib(ref kinds) => kinds.iter().any(|k| k.linkable()),
             _ => false,
-        }
-    }
-
-    /// Returns whether production of this artifact requires the object files
-    /// from dependencies to be available.
-    ///
-    /// This only returns `false` when all we're producing is an rlib, otherwise
-    /// it will return `true`.
-    pub fn requires_upstream_objects(&self) -> bool {
-        match &self.kind {
-            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
-                kinds.iter().any(|k| k.requires_upstream_objects())
-            }
-            _ => true,
         }
     }
 
