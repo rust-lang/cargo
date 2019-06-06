@@ -554,10 +554,24 @@ fn compute_metadata<'a, 'cfg>(
     // Throw in the rustflags we're compiling with.
     // This helps when the target directory is a shared cache for projects with different cargo configs,
     // or if the user is experimenting with different rustflags manually.
-    if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit).hash(&mut hasher);
+    let mut flags = if unit.mode.is_doc() {
+        cx.bcx.rustdocflags_args(unit)
     } else {
-        cx.bcx.rustflags_args(unit).hash(&mut hasher);
+        cx.bcx.rustflags_args(unit)
+    }
+    .into_iter();
+
+    // Ignore some flags. These may affect reproducible builds if they affect
+    // the path. The fingerprint will handle recompilation if these change.
+    while let Some(flag) = flags.next() {
+        if flag.starts_with("--remap-path-prefix=") {
+            continue;
+        }
+        if flag == "--remap-path-prefix" {
+            flags.next();
+            continue;
+        }
+        flag.hash(&mut hasher);
     }
 
     // Artifacts compiled for the host should have a different metadata
