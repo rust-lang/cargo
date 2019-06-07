@@ -102,6 +102,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
 
+    compile_opts.build_config.profile_kind =
+        args.get_profile_kind(ProfileKind::Custom("test".to_owned()))?;
+
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
     let test_name: Option<&str> = args.value_of("TESTNAME");
