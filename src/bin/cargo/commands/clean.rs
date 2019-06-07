@@ -30,6 +30,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         spec: values(args, "package"),
         target: args.target(),
         profile_kind: args.get_profile_kind(ProfileKind::Dev)?,
+        release: args.is_present("release"),
+        profile_specified: args.is_present("profile"),
         doc: args.is_present("doc"),
     };
     ops::clean(&ws, &opts)?;

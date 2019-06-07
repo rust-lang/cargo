@@ -18,6 +18,10 @@ pub struct CleanOptions<'a> {
     /// The target arch triple to clean, or None for the host arch
     pub target: Option<String>,
     /// Whether to clean the release directory
+    pub release: bool,
+    /// Whether a certain build profile was specified
+    pub profile_specified: bool,
+    /// Whether to clean the directory of a certain build profile
     pub profile_kind: ProfileKind,
     /// Whether to just clean the doc directory
     pub doc: bool,
@@ -34,6 +38,20 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
+    let (packages, resolve) = ops::resolve_ws(ws)?;
+    let profiles = ws.profiles();
+
+    // If the release option is set, we set target to release directory
+    if opts.release {
+        target_dir = target_dir.join(profiles.get_dir_name(&ProfileKind::Release));
+    } else if opts.profile_specified {
+        // After parsing profiles we know the dir-name of the profile, if a profile
+        // was passed freom the command line. If so, delete only the directory of
+        // that profile.
+        let dir_name = profiles.get_dir_name(&opts.profile_kind);
+        target_dir = target_dir.join(dir_name);
+    }
+
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
     //
@@ -43,9 +61,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
-    let (packages, resolve) = ops::resolve_ws(ws)?;
-
-    let profiles = ws.profiles();
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     let profile_kind = opts.profile_kind.clone();
