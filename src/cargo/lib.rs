@@ -160,7 +160,6 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
 
     // The first error has already been printed to the shell.
     for err in cargo_err.iter_causes() {
-
         // If we're not in verbose mode then print remaining errors until one
         // marked as `Internal` appears.
         if verbose != Verbose && err.downcast_ref::<Internal>().is_some() {

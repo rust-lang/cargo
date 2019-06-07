@@ -93,13 +93,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         None
     };
     if let Some(flag) = crates_io_cargo_vendor_flag {
-        return Err(failure::format_err!("\
+        return Err(failure::format_err!(
+            "\
 the crates.io `cargo vendor` command has now been merged into Cargo itself
 and does not support the flag `{}` currently; to continue using the flag you
 can execute `cargo-vendor vendor ...`, and if you would like to see this flag
 supported in Cargo itself please feel free to file an issue at
 https://github.com/rust-lang/cargo/issues/new
-", flag).into());
+",
+            flag
+        )
+        .into());
     }
 
     let ws = args.workspace(config)?;
