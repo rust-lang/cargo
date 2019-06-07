@@ -91,7 +91,11 @@ fn http_auth_offered() {
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
     config
-        .set_str("credential.helper", &script.display().to_string())
+        .set_str(
+            "credential.helper",
+            // This is a bash script so replace `\` with `/` for Windows
+            &script.display().to_string().replace("\\", "/"),
+        )
         .unwrap();
 
     let p = project()
