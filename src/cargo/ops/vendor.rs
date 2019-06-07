@@ -27,7 +27,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
     let vendor_config =
-        sync(ws.config(), &workspaces, opts).chain_err(|| format!("failed to sync"))?;
+        sync(ws.config(), &workspaces, opts).chain_err(|| "failed to sync".to_string())?;
 
     let shell = ws.config().shell();
     if shell.verbosity() != Verbosity::Quiet {
@@ -97,7 +97,7 @@ fn sync(
     // crate to work with.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(&ws).chain_err(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws).chain_err(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
@@ -129,7 +129,7 @@ fn sync(
     // tables about them.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(&ws).chain_err(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws).chain_err(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
@@ -142,14 +142,14 @@ fn sync(
                 continue;
             }
             ids.insert(
-                pkg.clone(),
+                pkg,
                 packages
                     .get_one(pkg)
                     .chain_err(|| "failed to fetch package")?
                     .clone(),
             );
 
-            checksums.insert(pkg.clone(), resolve.checksums().get(&pkg).cloned());
+            checksums.insert(pkg, resolve.checksums().get(&pkg).cloned());
         }
     }
 
@@ -204,10 +204,10 @@ fn sync(
         )?;
 
         let _ = fs::remove_dir_all(&dst);
-        let pathsource = PathSource::new(&src, id.source_id(), config);
-        let paths = pathsource.list_files(&pkg)?;
+        let pathsource = PathSource::new(src, id.source_id(), config);
+        let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
-        cp_sources(&src, &paths, &dst, &mut map)
+        cp_sources(src, &paths, &dst, &mut map)
             .chain_err(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package

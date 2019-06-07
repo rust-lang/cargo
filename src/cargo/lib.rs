@@ -3,7 +3,7 @@
 #![warn(rust_2018_idioms)]
 // Clippy isn't enforced by CI (@alexcrichton isn't a fan).
 #![allow(clippy::blacklisted_name)] // frequently used in tests
-#![allow(clippy::cyclomatic_complexity)] // large project
+#![allow(clippy::cognitive_complexity)] // large project
 #![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
 #![allow(clippy::explicit_into_iter_loop)] // explicit loops are clearer
 #![allow(clippy::explicit_iter_loop)] // explicit loops are clearer

@@ -559,7 +559,7 @@ fn compute_metadata<'a, 'cfg>(
     } else {
         cx.bcx.rustflags_args(unit)
     }
-    .into_iter();
+    .iter();
 
     // Ignore some flags. These may affect reproducible builds if they affect
     // the path. The fingerprint will handle recompilation if these change.
