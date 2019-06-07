@@ -3,7 +3,7 @@
 #![warn(rust_2018_idioms)]
 // Clippy isn't enforced by CI (@alexcrichton isn't a fan).
 #![allow(clippy::blacklisted_name)] // frequently used in tests
-#![allow(clippy::cyclomatic_complexity)] // large project
+#![allow(clippy::cognitive_complexity)] // large project
 #![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
 #![allow(clippy::explicit_into_iter_loop)] // explicit loops are clearer
 #![allow(clippy::explicit_iter_loop)] // explicit loops are clearer
@@ -160,7 +160,6 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
 
     // The first error has already been printed to the shell.
     for err in cargo_err.iter_causes() {
-
         // If we're not in verbose mode then print remaining errors until one
         // marked as `Internal` appears.
         if verbose != Verbose && err.downcast_ref::<Internal>().is_some() {
