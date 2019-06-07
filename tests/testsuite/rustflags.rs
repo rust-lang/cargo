@@ -1360,7 +1360,7 @@ fn env_rustflags_misspelled_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reamp_path_prefix_ignored() {
     // Ensure that --remap-path-prefix does not affect metadata hash.
     let p = project().file("src/lib.rs", "").build();
