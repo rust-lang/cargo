@@ -1,9 +1,9 @@
 use self::crypto_hash::{Algorithm, Hasher};
-use std::fs::File;
-use crypto_hash;
-use std::io::{self, Write, Read};
-use std::path::Path;
 use crate::util::{CargoResult, CargoResultExt};
+use crypto_hash;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::path::Path;
 
 pub struct Sha256(Hasher);
 

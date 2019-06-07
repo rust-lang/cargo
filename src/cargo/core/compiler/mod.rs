@@ -1309,7 +1309,7 @@ fn replay_output_cache(
         }
         let contents = fs::read_to_string(&path)?;
         for line in contents.lines() {
-            on_stderr_line(state, &line, package_id, &target, &mut options)?;
+            on_stderr_line(state, line, package_id, &target, &mut options)?;
         }
         Ok(())
     })
