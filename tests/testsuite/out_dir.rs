@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::support::sleep_ms;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn binary_with_debug() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
@@ -22,7 +22,7 @@ fn binary_with_debug() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn static_library_with_debug() {
     let p = project()
         .file(
@@ -57,7 +57,7 @@ fn static_library_with_debug() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn dynamic_library_with_debug() {
     let p = project()
         .file(
@@ -92,7 +92,7 @@ fn dynamic_library_with_debug() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn rlib_with_debug() {
     let p = project()
         .file(
@@ -126,7 +126,7 @@ fn rlib_with_debug() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn include_only_the_binary_from_the_current_package() {
     let p = project()
         .file(
@@ -169,7 +169,7 @@ fn include_only_the_binary_from_the_current_package() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn out_dir_is_a_file() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
@@ -183,7 +183,7 @@ fn out_dir_is_a_file() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn replaces_artifacts() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("foo") }"#)
@@ -213,7 +213,7 @@ fn replaces_artifacts() {
     .run();
 }
 
-#[test]
+#[cargo_test]
 fn avoid_build_scripts() {
     let p = project()
         .file(

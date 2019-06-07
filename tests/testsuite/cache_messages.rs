@@ -5,7 +5,7 @@ fn as_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).expect("valid utf-8")
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -54,7 +54,7 @@ fn simple() {
     assert!(cargo_output2.stdout.is_empty());
 }
 
-#[test]
+#[cargo_test]
 fn color() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -109,7 +109,7 @@ fn color() {
     assert_eq!(rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
 }
 
-#[test]
+#[cargo_test]
 fn cached_as_json() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -148,7 +148,7 @@ fn cached_as_json() {
     assert_eq!(fix_fresh, orig_cargo_out);
 }
 
-#[test]
+#[cargo_test]
 fn clears_cache_after_fix() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -195,7 +195,7 @@ fn clears_cache_after_fix() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -239,7 +239,7 @@ fn rustdoc() {
     assert_eq!(as_str(&rustdoc_output.stderr), rustdoc_stderr);
 }
 
-#[test]
+#[cargo_test]
 fn clippy() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -277,7 +277,7 @@ fn clippy() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fix() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -293,7 +293,7 @@ fn fix() {
     assert_eq!(p.read_file("src/lib.rs"), "pub fn r#try() {}");
 }
 
-#[test]
+#[cargo_test]
 fn very_verbose() {
     if !is_nightly() {
         // --json-rendered is unstable
@@ -335,7 +335,7 @@ fn very_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn short_incompatible() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check -Zcache-messages --message-format=short")

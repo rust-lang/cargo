@@ -7,7 +7,7 @@ use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 use toml;
 
-#[test]
+#[cargo_test]
 fn replace() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0")
@@ -67,7 +67,7 @@ fn replace() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn nonexistent() {
     Package::new("baz", "0.1.0").publish();
 
@@ -108,7 +108,7 @@ fn nonexistent() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_git() {
     let bar = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -155,7 +155,7 @@ fn patch_git() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_to_git() {
     let bar = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -203,7 +203,7 @@ fn patch_to_git() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn unused() {
     Package::new("bar", "0.1.0").publish();
 
@@ -273,7 +273,7 @@ fn unused() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn unused_git() {
     Package::new("bar", "0.1.0").publish();
 
@@ -336,7 +336,7 @@ fn unused_git() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn add_patch() {
     Package::new("bar", "0.1.0").publish();
 
@@ -399,7 +399,7 @@ fn add_patch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn add_ignored_patch() {
     Package::new("bar", "0.1.0").publish();
 
@@ -485,7 +485,7 @@ fn add_ignored_patch() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warn_ws_patch() {
     Package::new("c", "0.1.0").publish();
 
@@ -529,7 +529,7 @@ fn no_warn_ws_patch() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_minor() {
     Package::new("bar", "0.1.0").publish();
 
@@ -566,7 +566,7 @@ fn new_minor() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_new_minor() {
     Package::new("baz", "0.1.0").publish();
 
@@ -617,7 +617,7 @@ fn transitive_new_minor() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_major() {
     Package::new("bar", "0.1.0").publish();
 
@@ -684,7 +684,7 @@ fn new_major() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_new_major() {
     Package::new("baz", "0.1.0").publish();
 
@@ -735,7 +735,7 @@ fn transitive_new_major() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn remove_patch() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
@@ -811,7 +811,7 @@ fn remove_patch() {
     assert_ne!(lock_file1, lock_file2);
 }
 
-#[test]
+#[cargo_test]
 fn non_crates_io() {
     Package::new("bar", "0.1.0").publish();
 
@@ -849,7 +849,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_with_crates_io() {
     Package::new("bar", "0.1.0").publish();
 
@@ -886,7 +886,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_in_virtual() {
     Package::new("bar", "0.1.0").publish();
 
@@ -922,7 +922,7 @@ fn patch_in_virtual() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_depends_on_another_patch() {
     Package::new("bar", "0.1.0")
         .file("src/lib.rs", "broken code")
@@ -975,7 +975,7 @@ fn patch_depends_on_another_patch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_prerelease() {
     Package::new("baz", "1.1.0-pre.1").publish();
     let p = project()

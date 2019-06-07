@@ -1,7 +1,7 @@
 use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_manifest, main_file, project};
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_simple() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -39,7 +39,7 @@ fn cargo_build_plan_simple() {
     assert!(!p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_single_dep() {
     let p = project()
         .file(
@@ -118,7 +118,7 @@ fn cargo_build_plan_single_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_build_script() {
     let p = project()
         .file(
@@ -196,7 +196,7 @@ fn cargo_build_plan_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_plan_with_dev_dep() {
     Package::new("bar", "0.1.0").publish();
 

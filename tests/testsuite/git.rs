@@ -20,7 +20,7 @@ fn disable_git_cli() -> bool {
     env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string())
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_simple_git_dep() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -83,7 +83,7 @@ fn cargo_compile_simple_git_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_git_dep_branch() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -154,7 +154,7 @@ fn cargo_compile_git_dep_branch() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_git_dep_tag() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -232,7 +232,7 @@ fn cargo_compile_git_dep_tag() {
     project.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_nested_paths() {
     let git_project = git::new("dep1", |project| {
         project
@@ -313,7 +313,7 @@ fn cargo_compile_with_nested_paths() {
     p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_malformed_nested_paths() {
     let git_project = git::new("dep1", |project| {
         project
@@ -366,7 +366,7 @@ fn cargo_compile_with_malformed_nested_paths() {
     p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_meta_package() {
     let git_project = git::new("meta-dep", |project| {
         project
@@ -438,7 +438,7 @@ fn cargo_compile_with_meta_package() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_short_ssh_git() {
     let url = "git@github.com:a/dep";
 
@@ -485,7 +485,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn two_revs_same_deps() {
     let bar = git::new("meta-dep", |project| {
         project
@@ -573,7 +573,7 @@ fn two_revs_same_deps() {
     foo.process(&foo.bin("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
@@ -678,7 +678,7 @@ fn recompilation() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_with_shared_deps() {
     let git_project = git::new("bar", |project| {
         project
@@ -835,7 +835,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_with_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -886,7 +886,7 @@ fn dep_with_submodule() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_with_bad_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -964,7 +964,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn two_deps_only_update_one() {
     let project = project();
     let git1 = git::new("dep1", |project| {
@@ -1045,7 +1045,7 @@ fn two_deps_only_update_one() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn stale_cached_version() {
     let bar = git::new("meta-dep", |project| {
         project
@@ -1138,7 +1138,7 @@ fn stale_cached_version() {
     foo.process(&foo.bin("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_with_changed_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -1254,7 +1254,7 @@ fn dep_with_changed_submodule() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dev_deps_with_testing() {
     let p2 = git::new("bar", |project| {
         project
@@ -1327,7 +1327,7 @@ fn dev_deps_with_testing() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn git_build_cmd_freshness() {
     let foo = git::new("foo", |project| {
         project
@@ -1369,7 +1369,7 @@ fn git_build_cmd_freshness() {
     foo.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn git_name_not_always_needed() {
     let p2 = git::new("bar", |project| {
         project
@@ -1421,7 +1421,7 @@ fn git_name_not_always_needed() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn git_repo_changing_no_rebuild() {
     let bar = git::new("bar", |project| {
         project
@@ -1509,7 +1509,7 @@ fn git_repo_changing_no_rebuild() {
     p1.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn git_dep_build_cmd() {
     let p = git::new("foo", |project| {
         project
@@ -1583,7 +1583,7 @@ fn git_dep_build_cmd() {
     p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn fetch_downloads() {
     let bar = git::new("bar", |project| {
         project
@@ -1619,7 +1619,7 @@ fn fetch_downloads() {
     p.cargo("fetch").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_in_git_dep() {
     let bar = git::new("bar", |project| {
         project
@@ -1658,7 +1658,7 @@ fn warnings_in_git_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_ambiguous() {
     let bar1 = git::new("bar1", |project| {
         project
@@ -1730,7 +1730,7 @@ following:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_one_dep_in_repo_with_many_deps() {
     let bar = git::new("bar", |project| {
         project
@@ -1768,7 +1768,7 @@ fn update_one_dep_in_repo_with_many_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn switch_deps_does_not_update_transitive() {
     let transitive = git::new("transitive", |project| {
         project
@@ -1883,7 +1883,7 @@ fn switch_deps_does_not_update_transitive() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_one_source_updates_all_packages_in_that_git_source() {
     let dep = git::new("dep", |project| {
         project
@@ -1950,7 +1950,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn switch_sources() {
     let a1 = git::new("a1", |project| {
         project
@@ -2038,7 +2038,7 @@ fn switch_sources() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_require_submodules_are_checked_out() {
     let p = project().build();
     let git1 = git::new("dep1", |p| {
@@ -2072,7 +2072,7 @@ fn dont_require_submodules_are_checked_out() {
     git1.cargo("build -v").cwd(&dst).run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_same_name() {
     let a2 = git::new("a2", |p| {
         p.file("Cargo.toml", &basic_manifest("a", "0.5.0"))
@@ -2127,7 +2127,7 @@ fn doctest_same_name() {
     p.cargo("test -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn lints_are_suppressed() {
     let a = git::new("a", |p| {
         p.file("Cargo.toml", &basic_manifest("a", "0.5.0")).file(
@@ -2170,7 +2170,7 @@ fn lints_are_suppressed() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn denied_lints_are_allowed() {
     let a = git::new("a", |p| {
         p.file("Cargo.toml", &basic_manifest("a", "0.5.0")).file(
@@ -2214,7 +2214,7 @@ fn denied_lints_are_allowed() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn add_a_git_dep() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
@@ -2268,7 +2268,7 @@ fn add_a_git_dep() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn two_at_rev_instead_of_tag() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git1", "0.5.0"))
@@ -2314,7 +2314,7 @@ fn two_at_rev_instead_of_tag() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn include_overrides_gitignore() {
     // Make sure that `package.include` takes precedence over .gitignore.
     let p = git::new("foo", |repo| {
@@ -2364,7 +2364,7 @@ src/lib.rs
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_git_dependency_manifest() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -2446,7 +2446,7 @@ fn invalid_git_dependency_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn failed_submodule_checkout() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -2526,7 +2526,7 @@ fn failed_submodule_checkout() {
     t.join().unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn use_the_cli() {
     if disable_git_cli() {
         return;
@@ -2578,7 +2578,7 @@ fn use_the_cli() {
     project.cargo("build -v").with_stderr(stderr).run();
 }
 
-#[test]
+#[cargo_test]
 fn templatedir_doesnt_cause_problems() {
     let git_project2 = git::new("dep2", |project| {
         project
@@ -2634,7 +2634,7 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn git_with_cli_force() {
     if disable_git_cli() {
         return;

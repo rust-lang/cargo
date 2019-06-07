@@ -9,7 +9,7 @@ use crate::support::registry::{self, registry_path, registry_url, Dependency, Pa
 use crate::support::{basic_manifest, project};
 use cargo::util::paths::remove_dir_all;
 
-#[test]
+#[cargo_test]
 fn simple() {
     let p = project()
         .file(
@@ -57,7 +57,7 @@ fn simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn deps() {
     let p = project()
         .file(
@@ -95,7 +95,7 @@ fn deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn nonexistent() {
     Package::new("init", "0.0.1").publish();
 
@@ -128,7 +128,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn wrong_case() {
     Package::new("init", "0.0.1").publish();
 
@@ -163,7 +163,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn mis_hyphenated() {
     Package::new("mis-hyphenated", "0.0.1").publish();
 
@@ -198,7 +198,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn wrong_version() {
     let p = project()
         .file(
@@ -247,7 +247,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cksum() {
     let p = project()
         .file(
@@ -285,7 +285,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_registry() {
     Package::new("init", "0.0.1").publish();
 
@@ -333,7 +333,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn package_with_path_deps() {
     Package::new("init", "0.0.1").publish();
 
@@ -391,7 +391,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lockfile_locks() {
     let p = project()
         .file(
@@ -430,7 +430,7 @@ fn lockfile_locks() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn lockfile_locks_transitively() {
     let p = project()
         .file(
@@ -473,7 +473,7 @@ fn lockfile_locks_transitively() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn yanks_are_not_used() {
     let p = project()
         .file(
@@ -515,7 +515,7 @@ fn yanks_are_not_used() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn relying_on_a_yank_is_bad() {
     let p = project()
         .file(
@@ -551,7 +551,7 @@ required by package `bar v0.0.1`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn yanks_in_lockfiles_are_ok() {
     let p = project()
         .file(
@@ -591,7 +591,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn yanks_in_lockfiles_are_ok_for_other_update() {
     let p = project()
         .file(
@@ -645,7 +645,7 @@ required by package `foo v0.0.1 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn yanks_in_lockfiles_are_ok_with_new_dep() {
     let p = project()
         .file(
@@ -688,7 +688,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_with_lockfile_if_packages_missing() {
     let p = project()
         .file(
@@ -723,7 +723,7 @@ fn update_with_lockfile_if_packages_missing() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_lockfile() {
     let p = project()
         .file(
@@ -820,7 +820,7 @@ fn update_lockfile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dev_dependency_not_used() {
     let p = project()
         .file(
@@ -855,7 +855,7 @@ fn dev_dependency_not_used() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn login_with_no_cargo_dir() {
     // Create a config in the root directory because `login` requires the
     // index to be updated, and we don't want to hit crates.io.
@@ -867,7 +867,7 @@ fn login_with_no_cargo_dir() {
     assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
 }
 
-#[test]
+#[cargo_test]
 fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly truncated.
     registry::init();
@@ -880,7 +880,7 @@ fn login_with_differently_sized_token() {
     assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
-#[test]
+#[cargo_test]
 fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
     let p = project()
@@ -905,7 +905,7 @@ fn bad_license_file() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn updating_a_dep() {
     let p = project()
         .file(
@@ -981,7 +981,7 @@ fn updating_a_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn git_and_registry_dep() {
     let b = git::repo(&paths::root().join("b"))
         .file(
@@ -1043,7 +1043,7 @@ fn git_and_registry_dep() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_publish_then_update() {
     // First generate a Cargo.lock and a clone of the registry index at the
     // "head" of the current registry.
@@ -1115,7 +1115,7 @@ fn update_publish_then_update() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fetch_downloads() {
     let p = project()
         .file(
@@ -1146,7 +1146,7 @@ fn fetch_downloads() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_transitive_dependency() {
     let p = project()
         .file(
@@ -1194,7 +1194,7 @@ fn update_transitive_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_backtracking_ok() {
     let p = project()
         .file(
@@ -1243,7 +1243,7 @@ fn update_backtracking_ok() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_multiple_packages() {
     let p = project()
         .file(
@@ -1303,7 +1303,7 @@ fn update_multiple_packages() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bundled_crate_in_registry() {
     let p = project()
         .file(
@@ -1345,7 +1345,7 @@ fn bundled_crate_in_registry() {
     p.cargo("run").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_same_prefix_oh_my_how_was_this_a_bug() {
     let p = project()
         .file(
@@ -1372,7 +1372,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
     p.cargo("update -pfoobar --precise=0.2.0").run();
 }
 
-#[test]
+#[cargo_test]
 fn use_semver() {
     let p = project()
         .file(
@@ -1395,7 +1395,7 @@ fn use_semver() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn only_download_relevant() {
     let p = project()
         .file(
@@ -1435,7 +1435,7 @@ fn only_download_relevant() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn resolve_and_backtracking() {
     let p = project()
         .file(
@@ -1461,7 +1461,7 @@ fn resolve_and_backtracking() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn upstream_warnings_on_extra_verbose() {
     let p = project()
         .file(
@@ -1488,7 +1488,7 @@ fn upstream_warnings_on_extra_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn disallow_network() {
     let p = project()
         .file(
@@ -1522,7 +1522,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn add_dep_dont_update_registry() {
     let p = project()
         .file(
@@ -1580,7 +1580,7 @@ fn add_dep_dont_update_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bump_version_dont_update_registry() {
     let p = project()
         .file(
@@ -1637,7 +1637,7 @@ fn bump_version_dont_update_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn old_version_req() {
     let p = project()
         .file(
@@ -1691,7 +1691,7 @@ this warning.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn old_version_req_upstream() {
     let p = project()
         .file(
@@ -1750,7 +1750,7 @@ this warning.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn toml_lies_but_index_is_truth() {
     Package::new("foo", "0.2.0").publish();
     Package::new("bar", "0.3.0")
@@ -1789,7 +1789,7 @@ fn toml_lies_but_index_is_truth() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn vv_prints_warnings() {
     Package::new("foo", "0.2.0")
         .file(
@@ -1817,7 +1817,7 @@ fn vv_prints_warnings() {
     p.cargo("build -vv").run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_and_or_malicious_packages_rejected() {
     Package::new("foo", "0.2.0")
         .extra_file("foo-0.1.0/src/lib.rs", "")
@@ -1858,7 +1858,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn git_init_templatedir_missing() {
     Package::new("foo", "0.2.0").dep("bar", "*").publish();
     Package::new("bar", "0.2.0").publish();
@@ -1896,7 +1896,7 @@ fn git_init_templatedir_missing() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_deps_and_features() {
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "pub fn f1() {}")
@@ -1955,7 +1955,7 @@ fn rename_deps_and_features() {
     p.cargo("build --features bar/another").run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_invalid_json_lines() {
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.1.1").invalid_json(true).publish();
@@ -1981,7 +1981,7 @@ fn ignore_invalid_json_lines() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn readonly_registry_still_works() {
     Package::new("foo", "0.1.0").publish();
 

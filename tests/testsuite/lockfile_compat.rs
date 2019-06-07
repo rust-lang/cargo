@@ -2,7 +2,7 @@ use crate::support::git;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, lines_match, project};
 
-#[test]
+#[cargo_test]
 fn oldest_lockfile_still_works() {
     let cargo_commands = vec!["build", "update"];
     for cargo_command in cargo_commands {
@@ -72,7 +72,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
 }
 
-#[test]
+#[cargo_test]
 fn frozen_flag_preserves_old_lockfile() {
     let cksum = Package::new("bar", "0.1.0").publish();
 
@@ -122,7 +122,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     assert_eq!(lock.lines().count(), old_lockfile.lines().count());
 }
 
-#[test]
+#[cargo_test]
 fn totally_wild_checksums_works() {
     Package::new("bar", "0.1.0").publish();
 
@@ -188,7 +188,7 @@ dependencies = [
     ));
 }
 
-#[test]
+#[cargo_test]
 fn wrong_checksum_is_an_error() {
     Package::new("bar", "0.1.0").publish();
 
@@ -251,7 +251,7 @@ unable to verify that `bar v0.1.0` is the same as when the lockfile was generate
 // If the checksum is unlisted in the lock file (e.g., <none>) yet we can
 // calculate it (e.g., it's a registry dep), then we should in theory just fill
 // it in.
-#[test]
+#[cargo_test]
 fn unlisted_checksum_is_bad_if_we_calculate() {
     Package::new("bar", "0.1.0").publish();
 
@@ -313,7 +313,7 @@ this could be indicative of a few possible situations:
 
 // If the checksum is listed in the lock file yet we cannot calculate it (e.g.,
 // Git dependencies as of today), then make sure we choke.
-#[test]
+#[cargo_test]
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -384,7 +384,7 @@ unable to verify that `bar v0.1.0 ([..])` is the same as when the lockfile was g
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn current_lockfile_format() {
     Package::new("bar", "0.1.0").publish();
 
@@ -432,7 +432,7 @@ dependencies = [
     assert_eq!(actual.lines().count(), expected.lines().count());
 }
 
-#[test]
+#[cargo_test]
 fn lockfile_without_root() {
     Package::new("bar", "0.1.0").publish();
 
@@ -476,7 +476,7 @@ dependencies = [
     assert!(lock.starts_with(lockfile.trim()));
 }
 
-#[test]
+#[cargo_test]
 fn locked_correct_error() {
     Package::new("bar", "0.1.0").publish();
 

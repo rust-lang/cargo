@@ -20,7 +20,7 @@ fn setup() {
     ));
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     setup();
     Package::new("bar", "0.0.1")
@@ -61,7 +61,7 @@ fn simple() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn depend_on_yanked() {
     setup();
     Package::new("bar", "0.0.1").local(true).publish();
@@ -100,7 +100,7 @@ fn depend_on_yanked() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_versions() {
     setup();
     Package::new("bar", "0.0.1").local(true).publish();
@@ -149,7 +149,7 @@ fn multiple_versions() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_names() {
     setup();
     Package::new("bar", "0.0.1")
@@ -202,7 +202,7 @@ fn multiple_names() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn interdependent() {
     setup();
     Package::new("bar", "0.0.1")
@@ -256,7 +256,7 @@ fn interdependent() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dep_rewritten() {
     setup();
     Package::new("bar", "0.0.1")
@@ -324,7 +324,7 @@ fn path_dep_rewritten() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_dir_bad() {
     setup();
     let p = project()
@@ -373,7 +373,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn different_directory_replacing_the_registry_is_bad() {
     setup();
 
@@ -432,7 +432,7 @@ unable to verify that `bar v0.0.1` is the same as when the lockfile was generate
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn crates_io_registry_url_is_optional() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));

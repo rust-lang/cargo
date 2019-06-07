@@ -97,7 +97,7 @@ registry = '{reg}'
         .unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn not_update() {
     setup();
     set_cargo_config();
@@ -119,7 +119,7 @@ fn not_update() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_default() {
     setup();
     set_cargo_config();
@@ -130,7 +130,7 @@ fn replace_default() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     setup();
 
@@ -142,7 +142,7 @@ fn simple() {
 
 // TODO: Deprecated
 // remove once it has been decided '--host' can be safely removed
-#[test]
+#[cargo_test]
 fn simple_with_host() {
     setup();
 
@@ -168,7 +168,7 @@ about this warning.
 
 // TODO: Deprecated
 // remove once it has been decided '--host' can be safely removed
-#[test]
+#[cargo_test]
 fn simple_with_index_and_host() {
     setup();
 
@@ -194,7 +194,7 @@ about this warning.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_query_params() {
     setup();
 
@@ -204,7 +204,7 @@ fn multiple_query_params() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn help() {
     cargo_process("search -h").run();
     cargo_process("help search").run();

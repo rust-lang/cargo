@@ -1,7 +1,7 @@
 use crate::support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 use cargo::util::paths::dylib_path_envvar;
 
-#[test]
+#[cargo_test]
 fn simple() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -19,7 +19,7 @@ fn simple() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn simple_quiet() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -30,7 +30,7 @@ fn simple_quiet() {
     p.cargo("run --quiet").with_stdout("hello").run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_quiet_and_verbose() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -42,7 +42,7 @@ fn simple_quiet_and_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn quiet_and_verbose_config() {
     let p = project()
         .file(
@@ -58,7 +58,7 @@ fn quiet_and_verbose_config() {
     p.cargo("run -q").run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_with_args() {
     let p = project()
         .file(
@@ -76,7 +76,7 @@ fn simple_with_args() {
 }
 
 #[cfg(unix)]
-#[test]
+#[cargo_test]
 fn simple_with_non_utf8_args() {
     use std::os::unix::ffi::OsStrExt;
 
@@ -101,7 +101,7 @@ fn simple_with_non_utf8_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn exit_code() {
     let p = project()
         .file("src/main.rs", "fn main() { std::process::exit(2); }")
@@ -122,7 +122,7 @@ fn exit_code() {
     p.cargo("run").with_status(2).with_stderr(output).run();
 }
 
-#[test]
+#[cargo_test]
 fn exit_code_verbose() {
     let p = project()
         .file("src/main.rs", "fn main() { std::process::exit(2); }")
@@ -145,7 +145,7 @@ fn exit_code_verbose() {
     p.cargo("run -v").with_status(2).with_stderr(output).run();
 }
 
-#[test]
+#[cargo_test]
 fn no_main_file() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -158,7 +158,7 @@ fn no_main_file() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn too_many_bins() {
     let p = project()
         .file("src/lib.rs", "")
@@ -189,7 +189,7 @@ fn too_many_bins() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn specify_name() {
     let p = project()
         .file("src/lib.rs", "")
@@ -235,7 +235,7 @@ fn specify_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn specify_default_run() {
     let p = project()
         .file(
@@ -269,7 +269,7 @@ fn specify_default_run() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bogus_default_run() {
     let p = project()
         .file(
@@ -295,7 +295,7 @@ fn bogus_default_run() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn default_run_unstable() {
     let p = project()
         .file(
@@ -347,7 +347,7 @@ consider adding `cargo-features = ["default-run"]` to the manifest
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_example() {
     let p = project()
         .file("src/lib.rs", "")
@@ -366,7 +366,7 @@ fn run_example() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_library_example() {
     let p = project()
         .file(
@@ -391,7 +391,7 @@ fn run_library_example() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_bin_example() {
     let p = project()
         .file(
@@ -458,7 +458,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
         .build()
 }
 
-#[test]
+#[cargo_test]
 fn run_example_autodiscover_2015() {
     let p = autodiscover_examples_project("2015", None);
     p.cargo("run --example a")
@@ -486,7 +486,7 @@ error: no example target named `a`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_example_autodiscover_2015_with_autoexamples_enabled() {
     let p = autodiscover_examples_project("2015", Some(true));
     p.cargo("run --example a")
@@ -500,7 +500,7 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
@@ -509,7 +509,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_example_autodiscover_2018() {
     let p = autodiscover_examples_project("2018", None);
     p.cargo("run --example a")
@@ -523,7 +523,7 @@ fn run_example_autodiscover_2018() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn autobins_disables() {
     let p = project()
         .file(
@@ -545,7 +545,7 @@ fn autobins_disables() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_bins() {
     let p = project()
         .file("src/lib.rs", "")
@@ -561,7 +561,7 @@ fn run_bins() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_with_filename() {
     let p = project()
         .file("src/lib.rs", "")
@@ -606,7 +606,7 @@ Did you mean `a`?",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn either_name_or_example() {
     let p = project()
         .file("src/bin/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
@@ -623,7 +623,7 @@ fn either_name_or_example() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn one_bin_multiple_examples() {
     let p = project()
         .file("src/lib.rs", "")
@@ -646,7 +646,7 @@ fn one_bin_multiple_examples() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn example_with_release_flag() {
     let p = project()
         .file(
@@ -751,7 +751,7 @@ slow2",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_dylib_dep() {
     let p = project()
         .file(
@@ -789,7 +789,7 @@ fn run_dylib_dep() {
     p.cargo("run hello world").run();
 }
 
-#[test]
+#[cargo_test]
 fn release_works() {
     let p = project()
         .file(
@@ -812,7 +812,7 @@ fn release_works() {
     assert!(p.release_bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn run_bin_different_name() {
     let p = project()
         .file(
@@ -833,7 +833,7 @@ fn run_bin_different_name() {
     p.cargo("run").run();
 }
 
-#[test]
+#[cargo_test]
 fn dashes_are_forwarded() {
     let p = project()
         .file(
@@ -853,7 +853,7 @@ fn dashes_are_forwarded() {
     p.cargo("run -- -- a -- b").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_from_executable_folder() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -873,7 +873,7 @@ fn run_from_executable_folder() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_with_library_paths() {
     let p = project();
 
@@ -930,7 +930,7 @@ fn run_with_library_paths() {
     p.cargo("run").run();
 }
 
-#[test]
+#[cargo_test]
 fn library_paths_sorted_alphabetically() {
     let p = project();
 
@@ -990,7 +990,7 @@ fn library_paths_sorted_alphabetically() {
     p.cargo("run").run();
 }
 
-#[test]
+#[cargo_test]
 fn fail_no_extra_verbose() {
     let p = project()
         .file("src/main.rs", "fn main() { std::process::exit(1); }")
@@ -1003,7 +1003,7 @@ fn fail_no_extra_verbose() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn run_multiple_packages() {
     let p = project()
         .no_manifest()
@@ -1066,7 +1066,7 @@ fn run_multiple_packages() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_bin_with_args() {
     let p = project()
         .file(
@@ -1083,7 +1083,7 @@ fn explicit_bin_with_args() {
     p.cargo("run --bin foo hello world").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_workspace() {
     let p = project()
         .file(
@@ -1110,7 +1110,7 @@ available binaries: a, b",
     p.cargo("run --bin a").with_stdout("run-a").run();
 }
 
-#[test]
+#[cargo_test]
 fn default_run_workspace() {
     let p = project()
         .file(
@@ -1142,7 +1142,7 @@ fn default_run_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(target_os = "macos")]
 fn run_link_system_path_macos() {
     use crate::support::paths::{self, CargoPathExt};

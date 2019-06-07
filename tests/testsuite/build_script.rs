@@ -10,7 +10,7 @@ use crate::support::{basic_manifest, cross_compile, project};
 use crate::support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 use cargo::util::paths::remove_dir_all;
 
-#[test]
+#[cargo_test]
 fn custom_build_script_failed() {
     let p = project()
         .file(
@@ -42,7 +42,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_env_vars() {
     let p = project()
         .file(
@@ -130,7 +130,7 @@ fn custom_build_env_vars() {
     p.cargo("build --features bar_feat").run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() {
         return;
@@ -165,7 +165,7 @@ fn custom_build_env_var_rustc_linker() {
     p.cargo("build --target").arg(&target).run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(
@@ -197,7 +197,7 @@ fn custom_build_script_wrong_rustc_flags() {
 }
 
 /*
-#[test]
+#[cargo_test]
 fn custom_build_script_rustc_flags() {
     let p = project()
         .file(
@@ -251,7 +251,7 @@ fn custom_build_script_rustc_flags() {
 }
 */
 
-#[test]
+#[cargo_test]
 fn links_no_build_cmd() {
     let p = project()
         .file(
@@ -278,7 +278,7 @@ not have a custom build script
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_duplicates() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -326,7 +326,7 @@ failed to select a version for `a-sys` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn links_duplicates_deep_dependency() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -390,7 +390,7 @@ failed to select a version for `a-sys` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn overrides_and_links() {
     let target = rustc_host();
 
@@ -463,7 +463,7 @@ fn overrides_and_links() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_overrides() {
     let target = rustc_host();
 
@@ -497,7 +497,7 @@ fn unused_overrides() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn links_passes_env_vars() {
     let p = project()
         .file(
@@ -554,7 +554,7 @@ fn links_passes_env_vars() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn only_rerun_build_script() {
     let p = project()
         .file(
@@ -589,7 +589,7 @@ fn only_rerun_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_continues_to_pass_env_vars() {
     let a = project()
         .at("a")
@@ -658,7 +658,7 @@ fn rebuild_continues_to_pass_env_vars() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn testing_and_such() {
     let p = project()
         .file(
@@ -725,7 +725,7 @@ fn testing_and_such() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn propagation_of_l_flags() {
     let target = rustc_host();
     let p = project()
@@ -796,7 +796,7 @@ fn propagation_of_l_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn propagation_of_l_flags_new() {
     let target = rustc_host();
     let p = project()
@@ -871,7 +871,7 @@ fn propagation_of_l_flags_new() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_deps_simple() {
     let p = project()
         .file(
@@ -914,7 +914,7 @@ fn build_deps_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_deps_not_for_normal() {
     let target = rustc_host();
     let p = project()
@@ -961,7 +961,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_cmd_with_a_build_cmd() {
     let p = project()
         .file(
@@ -1039,7 +1039,7 @@ fn build_cmd_with_a_build_cmd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn out_dir_is_preserved() {
     let p = project()
         .file(
@@ -1096,7 +1096,7 @@ fn out_dir_is_preserved() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn output_separate_lines() {
     let p = project()
         .file(
@@ -1134,7 +1134,7 @@ fn output_separate_lines() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn output_separate_lines_new() {
     let p = project()
         .file(
@@ -1173,7 +1173,7 @@ fn output_separate_lines_new() {
 }
 
 #[cfg(not(windows))] // FIXME(#867)
-#[test]
+#[cargo_test]
 fn code_generation() {
     let p = project()
         .file(
@@ -1230,7 +1230,7 @@ fn code_generation() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn release_with_build_script() {
     let p = project()
         .file(
@@ -1255,7 +1255,7 @@ fn release_with_build_script() {
     p.cargo("build -v --release").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_only() {
     let p = project()
         .file(
@@ -1283,7 +1283,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn shared_dep_with_a_build_script() {
     let p = project()
         .file(
@@ -1333,7 +1333,7 @@ fn shared_dep_with_a_build_script() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_dep_host() {
     let p = project()
         .file(
@@ -1385,7 +1385,7 @@ fn transitive_dep_host() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_a_lib_with_a_build_command() {
     let p = project()
         .file(
@@ -1431,7 +1431,7 @@ fn test_a_lib_with_a_build_command() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_dev_dep_build_script() {
     let p = project()
         .file(
@@ -1464,7 +1464,7 @@ fn test_dev_dep_build_script() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_with_dynamic_native_dependency() {
     let build = project()
         .at("builder")
@@ -1559,7 +1559,7 @@ fn build_script_with_dynamic_native_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_and_opt_level_set_correctly() {
     let p = project()
         .file(
@@ -1589,7 +1589,7 @@ fn profile_and_opt_level_set_correctly() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_debug_0() {
     let p = project()
         .file(
@@ -1620,7 +1620,7 @@ fn profile_debug_0() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_with_lto() {
     let p = project()
         .file(
@@ -1642,7 +1642,7 @@ fn build_script_with_lto() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_duplicate_deps() {
     let p = project()
         .file(
@@ -1682,7 +1682,7 @@ fn test_duplicate_deps() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_feedback() {
     let p = project()
         .file(
@@ -1704,7 +1704,7 @@ fn cfg_feedback() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override() {
     let target = rustc_host();
 
@@ -1737,7 +1737,7 @@ fn cfg_override() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_test() {
     let p = project()
         .file(
@@ -1799,7 +1799,7 @@ fn cfg_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_doc() {
     let p = project()
         .file(
@@ -1842,7 +1842,7 @@ fn cfg_doc() {
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override_test() {
     let p = project()
         .file(
@@ -1910,7 +1910,7 @@ fn cfg_override_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override_doc() {
     let p = project()
         .file(
@@ -1961,7 +1961,7 @@ fn cfg_override_doc() {
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn env_build() {
     let p = project()
         .file(
@@ -1992,7 +1992,7 @@ fn env_build() {
     p.cargo("run -v").with_stdout("foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_test() {
     let p = project()
         .file(
@@ -2045,7 +2045,7 @@ fn env_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_doc() {
     let p = project()
         .file(
@@ -2073,7 +2073,7 @@ fn env_doc() {
     p.cargo("doc -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn flags_go_into_tests() {
     let p = project()
         .file(
@@ -2154,7 +2154,7 @@ fn flags_go_into_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn diamond_passes_args_only_once() {
     let p = project()
         .file(
@@ -2237,7 +2237,7 @@ fn diamond_passes_args_only_once() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn adding_an_override_invalidates() {
     let target = rustc_host();
     let p = project()
@@ -2301,7 +2301,7 @@ fn adding_an_override_invalidates() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_an_override_invalidates() {
     let target = rustc_host();
     let p = project()
@@ -2365,7 +2365,7 @@ fn changing_an_override_invalidates() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fresh_builds_possible_with_link_libs() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
@@ -2417,7 +2417,7 @@ fn fresh_builds_possible_with_link_libs() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fresh_builds_possible_with_multiple_metadata_overrides() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
@@ -2472,7 +2472,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_only_on_explicit_paths() {
     let p = project()
         .file(
@@ -2583,7 +2583,7 @@ fn rebuild_only_on_explicit_paths() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_receives_build_link_args() {
     let p = project()
         .file(
@@ -2627,7 +2627,7 @@ fn doctest_receives_build_link_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn please_respect_the_dag() {
     let p = project()
         .file(
@@ -2679,7 +2679,7 @@ fn please_respect_the_dag() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn non_utf8_output() {
     let p = project()
         .file(
@@ -2716,7 +2716,7 @@ fn non_utf8_output() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dir() {
     let p = project()
         .file(
@@ -2756,7 +2756,7 @@ fn custom_target_dir() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_abort_with_build_scripts() {
     let p = project()
         .file(
@@ -2818,7 +2818,7 @@ fn panic_abort_with_build_scripts() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_emitted() {
     let p = project()
         .file(
@@ -2858,7 +2858,7 @@ warning: bar
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_hidden_for_upstream() {
     Package::new("bar", "0.1.0")
         .file(
@@ -2917,7 +2917,7 @@ fn warnings_hidden_for_upstream() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_printed_on_vv() {
     Package::new("bar", "0.1.0")
         .file(
@@ -2978,7 +2978,7 @@ warning: bar
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn output_shows_on_vv() {
     let p = project()
         .file(
@@ -3020,7 +3020,7 @@ fn output_shows_on_vv() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_with_dots() {
     let target = rustc_host();
 
@@ -3062,7 +3062,7 @@ fn links_with_dots() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_and_rustdoc_set_correctly() {
     let p = project()
         .file(
@@ -3091,7 +3091,7 @@ fn rustc_and_rustdoc_set_correctly() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_env_vars_available() {
     let p = project()
         .file(
@@ -3124,7 +3124,7 @@ fn cfg_env_vars_available() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn switch_features_rerun() {
     let p = project()
         .file(
@@ -3181,7 +3181,7 @@ fn switch_features_rerun() {
     p.rename_run("foo", "with_foo2").with_stdout("foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn assume_build_script_when_build_rs_present() {
     let p = project()
         .file(
@@ -3207,7 +3207,7 @@ fn assume_build_script_when_build_rs_present() {
     p.cargo("run -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     let p = project()
         .file(
@@ -3243,7 +3243,7 @@ fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     p.cargo("run -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn deterministic_rustc_dependency_flags() {
     // This bug is non-deterministic hence the large number of dependencies
     // in the hopes it will have a much higher chance of triggering it.
@@ -3362,7 +3362,7 @@ fn deterministic_rustc_dependency_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_duplicates_with_cycle() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -3426,12 +3426,12 @@ failed to select a version for `a` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_link_search_path() {
     _rename_with_link_search_path(false);
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_link_search_path_cross() {
     if cross_compile::disabled() {
         return;
@@ -3585,7 +3585,7 @@ fn _rename_with_link_search_path(cross: bool) {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_build_script_dep() {
     let p = project()
         .file(
@@ -3637,7 +3637,7 @@ fn optional_build_script_dep() {
     p.cargo("run --features bar").with_stdout("1\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_build_dep_and_required_normal_dep() {
     let p = project()
         .file(
@@ -3698,7 +3698,7 @@ fn optional_build_dep_and_required_normal_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn using_rerun_if_changed_does_not_rebuild() {
     let p = project()
         .file(
@@ -3725,7 +3725,7 @@ fn using_rerun_if_changed_does_not_rebuild() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn links_interrupted_can_restart() {
     // Test for a `links` dependent build script getting canceled and then
     // restarted. Steps:
@@ -3808,7 +3808,7 @@ fn links_interrupted_can_restart() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(unix)]
 fn build_script_scan_eacces() {
     // build.rs causes a scan of the whole project, which can be a problem if

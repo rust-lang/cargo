@@ -1,7 +1,7 @@
 use crate::support::{basic_bin_manifest, main_file, project};
 use filetime::FileTime;
 
-#[test]
+#[cargo_test]
 fn build_dep_info() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -15,7 +15,7 @@ fn build_dep_info() {
     assert!(depinfo_bin_path.is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_dep_info_lib() {
     let p = project()
         .file(
@@ -40,7 +40,7 @@ fn build_dep_info_lib() {
     assert!(p.example_lib("ex", "lib").with_extension("d").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_dep_info_rlib() {
     let p = project()
         .file(
@@ -64,7 +64,7 @@ fn build_dep_info_rlib() {
     assert!(p.example_lib("ex", "rlib").with_extension("d").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_dep_info_dylib() {
     let p = project()
         .file(
@@ -88,7 +88,7 @@ fn build_dep_info_dylib() {
     assert!(p.example_lib("ex", "dylib").with_extension("d").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn no_rewrite_if_no_change() {
     let p = project().file("src/lib.rs", "").build();
 

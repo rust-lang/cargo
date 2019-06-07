@@ -24,7 +24,7 @@ fn mercurial_available() -> bool {
     result
 }
 
-#[test]
+#[cargo_test]
 fn simple_lib() {
     cargo_process("init --lib --vcs none --edition 2015")
         .env("USER", "foo")
@@ -38,7 +38,7 @@ fn simple_lib() {
     cargo_process("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_bin() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
@@ -57,7 +57,7 @@ fn simple_bin() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn simple_git_ignore_exists() {
     // write a .gitignore file with one entry
     fs::create_dir_all(paths::root().join("foo")).unwrap();
@@ -99,7 +99,7 @@ fn simple_git_ignore_exists() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn both_lib_and_bin() {
     cargo_process("init --lib --bin")
         .env("USER", "foo")
@@ -149,37 +149,37 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     assert_eq!(Vec::from(content as &[u8]), new_content);
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_explicit() {
     bin_already_exists(true, "src/main.rs")
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_implicit() {
     bin_already_exists(false, "src/main.rs")
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_explicit_nosrc() {
     bin_already_exists(true, "main.rs")
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_implicit_nosrc() {
     bin_already_exists(false, "main.rs")
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_implicit_namenosrc() {
     bin_already_exists(false, "foo.rs")
 }
 
-#[test]
+#[cargo_test]
 fn bin_already_exists_implicit_namesrc() {
     bin_already_exists(false, "src/foo.rs")
 }
 
-#[test]
+#[cargo_test]
 fn confused_by_multiple_lib_files() {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
@@ -206,7 +206,7 @@ fn confused_by_multiple_lib_files() {
     assert!(!paths::root().join("foo/Cargo.toml").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn multibin_project_name_clash() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
@@ -274,17 +274,17 @@ fn lib_already_exists(rellocation: &str) {
     assert_eq!(Vec::from(content as &[u8]), new_content);
 }
 
-#[test]
+#[cargo_test]
 fn lib_already_exists_src() {
     lib_already_exists("src/lib.rs");
 }
 
-#[test]
+#[cargo_test]
 fn lib_already_exists_nosrc() {
     lib_already_exists("lib.rs");
 }
 
-#[test]
+#[cargo_test]
 fn simple_git() {
     cargo_process("init --lib --vcs git")
         .env("USER", "foo")
@@ -296,7 +296,7 @@ fn simple_git() {
     assert!(paths::root().join(".gitignore").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn auto_git() {
     cargo_process("init --lib").env("USER", "foo").run();
 
@@ -306,7 +306,7 @@ fn auto_git() {
     assert!(paths::root().join(".gitignore").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(&foo).unwrap();
@@ -325,7 +325,7 @@ use --name to override crate name
     assert!(!foo.join("Cargo.toml").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn reserved_name() {
     let test = &paths::root().join("test");
     fs::create_dir_all(&test).unwrap();
@@ -344,7 +344,7 @@ use --name to override crate name
     assert!(!test.join("Cargo.toml").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn git_autodetect() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -356,7 +356,7 @@ fn git_autodetect() {
     assert!(paths::root().join(".gitignore").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn mercurial_autodetect() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
@@ -368,7 +368,7 @@ fn mercurial_autodetect() {
     assert!(paths::root().join(".hgignore").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn gitignore_appended_not_replaced() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -392,7 +392,7 @@ fn gitignore_appended_not_replaced() {
     assert!(contents.contains(r#"qqqqqq"#));
 }
 
-#[test]
+#[cargo_test]
 fn gitignore_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -413,7 +413,7 @@ fn gitignore_added_newline_in_existing() {
     assert!(contents.starts_with("first\n"));
 }
 
-#[test]
+#[cargo_test]
 fn gitignore_no_newline_in_new() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -429,7 +429,7 @@ fn gitignore_no_newline_in_new() {
     assert!(!contents.starts_with('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn mercurial_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
@@ -450,7 +450,7 @@ fn mercurial_added_newline_in_existing() {
     assert!(contents.starts_with("first\n"));
 }
 
-#[test]
+#[cargo_test]
 fn mercurial_no_newline_in_new() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
@@ -466,7 +466,7 @@ fn mercurial_no_newline_in_new() {
     assert!(!contents.starts_with('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn terminating_newline_in_new_git_ignore() {
     cargo_process("init --vcs git --lib")
         .env("USER", "foo")
@@ -479,7 +479,7 @@ fn terminating_newline_in_new_git_ignore() {
     assert_ne!(last_chars.next(), Some('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn terminating_newline_in_new_mercurial_ignore() {
     if !mercurial_available() {
         return;
@@ -495,7 +495,7 @@ fn terminating_newline_in_new_mercurial_ignore() {
     assert_ne!(last_chars.next(), Some('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn terminating_newline_in_existing_git_ignore() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
     fs::write(&paths::root().join(".gitignore"), b"first").unwrap();
@@ -509,7 +509,7 @@ fn terminating_newline_in_existing_git_ignore() {
     assert_ne!(last_chars.next(), Some('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn terminating_newline_in_existing_mercurial_ignore() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
     fs::write(&paths::root().join(".hgignore"), b"first").unwrap();
@@ -523,7 +523,7 @@ fn terminating_newline_in_existing_mercurial_ignore() {
     assert_ne!(last_chars.next(), Some('\n'));
 }
 
-#[test]
+#[cargo_test]
 fn cargo_lock_gitignored_if_lib1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -541,7 +541,7 @@ fn cargo_lock_gitignored_if_lib1() {
     assert!(contents.contains(r#"Cargo.lock"#));
 }
 
-#[test]
+#[cargo_test]
 fn cargo_lock_gitignored_if_lib2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -562,7 +562,7 @@ fn cargo_lock_gitignored_if_lib2() {
     assert!(contents.contains(r#"Cargo.lock"#));
 }
 
-#[test]
+#[cargo_test]
 fn cargo_lock_not_gitignored_if_bin1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -580,7 +580,7 @@ fn cargo_lock_not_gitignored_if_bin1() {
     assert!(!contents.contains(r#"Cargo.lock"#));
 }
 
-#[test]
+#[cargo_test]
 fn cargo_lock_not_gitignored_if_bin2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
@@ -601,7 +601,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
     assert!(!contents.contains(r#"Cargo.lock"#));
 }
 
-#[test]
+#[cargo_test]
 fn with_argument() {
     cargo_process("init foo --vcs none")
         .env("USER", "foo")
@@ -609,7 +609,7 @@ fn with_argument() {
     assert!(paths::root().join("foo/Cargo.toml").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn unknown_flags() {
     cargo_process("init foo --flag")
         .with_status(1)
@@ -620,7 +620,7 @@ fn unknown_flags() {
 }
 
 #[cfg(not(windows))]
-#[test]
+#[cargo_test]
 fn no_filename() {
     cargo_process("init /")
         .with_status(101)

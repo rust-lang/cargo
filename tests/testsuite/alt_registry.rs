@@ -5,7 +5,7 @@ use cargo::util::ToUrl;
 use std::fs::{self, File};
 use std::io::Write;
 
-#[test]
+#[cargo_test]
 fn depend_on_alt_registry() {
     let p = project()
         .file(
@@ -54,7 +54,7 @@ fn depend_on_alt_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn depend_on_alt_registry_depends_on_same_registry_no_index() {
     let p = project()
         .file(
@@ -96,7 +96,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn depend_on_alt_registry_depends_on_same_registry() {
     let p = project()
         .file(
@@ -138,7 +138,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn depend_on_alt_registry_depends_on_crates_io() {
     let p = project()
         .file(
@@ -182,7 +182,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn registry_and_path_dep_works() {
     registry::init();
 
@@ -216,7 +216,7 @@ fn registry_and_path_dep_works() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn registry_incompatible_with_git() {
     registry::init();
 
@@ -246,7 +246,7 @@ fn registry_incompatible_with_git() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
     let fakeio_path = paths::root().join("fake.io");
     let fakeio_url = fakeio_path.to_url().unwrap();
@@ -304,7 +304,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_registry_dependency() {
     let p = project()
         .file(
@@ -365,7 +365,7 @@ fn publish_with_registry_dependency() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn alt_registry_and_crates_io_deps() {
     let p = project()
         .file(
@@ -410,7 +410,7 @@ fn alt_registry_and_crates_io_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn block_publish_due_to_no_token() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -426,7 +426,7 @@ fn block_publish_due_to_no_token() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_to_alt_registry() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -464,7 +464,7 @@ fn publish_to_alt_registry() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_crates_io_dep() {
     let p = project()
         .file(
@@ -527,7 +527,7 @@ fn publish_with_crates_io_dep() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn passwords_in_registry_index_url_forbidden() {
     registry::init();
 
@@ -551,7 +551,7 @@ fn passwords_in_registry_index_url_forbidden() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn passwords_in_registries_index_url_forbidden() {
     registry::init();
 
@@ -575,7 +575,7 @@ fn passwords_in_registries_index_url_forbidden() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_alt_reg() {
     Package::new("bar", "0.1.0").publish();
     let p = project()
@@ -616,7 +616,7 @@ fn patch_alt_reg() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_registry_name() {
     let p = project()
         .file(
@@ -664,7 +664,7 @@ Caused by:
     }
 }
 
-#[test]
+#[cargo_test]
 fn no_api() {
     Package::new("bar", "0.0.1").alternative(true).publish();
     // Configure without `api`.
@@ -746,7 +746,7 @@ fn no_api() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn alt_reg_metadata() {
     // Check for "registry" entries in `cargo metadata` with alternative registries.
     let p = project()
@@ -1019,7 +1019,7 @@ fn alt_reg_metadata() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unknown_registry() {
     // A known registry refers to an unknown registry.
     // foo -> bar(crates.io) -> baz(alt)
@@ -1166,7 +1166,7 @@ fn unknown_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn registries_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
@@ -1216,7 +1216,7 @@ fn registries_index_relative_url() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn registry_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
@@ -1268,7 +1268,7 @@ warning: custom registry support via the `registry.index` configuration is being
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn registries_index_relative_path_not_allowed() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();

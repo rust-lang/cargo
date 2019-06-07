@@ -11,7 +11,7 @@ use crate::support::{
 };
 use git2;
 
-#[test]
+#[cargo_test]
 fn simple() {
     let p = project()
         .file(
@@ -62,7 +62,7 @@ src/main.rs
     );
 }
 
-#[test]
+#[cargo_test]
 fn metadata_warning() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("package")
@@ -132,7 +132,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn package_verbose() {
     let root = paths::root().join("all");
     let repo = git::repo(&root)
@@ -196,7 +196,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn package_verification() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build").run();
@@ -214,7 +214,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn vcs_file_collision() {
     let p = project().build();
     let _ = git::repo(&paths::root().join("foo"))
@@ -253,7 +253,7 @@ in package source
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dependency_no_version() {
     let p = project()
         .file(
@@ -288,7 +288,7 @@ dependency `bar` does not specify a version.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn exclude() {
     let root = paths::root().join("exclude");
     let repo = git::repo(&root)
@@ -418,7 +418,7 @@ src/main.rs
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn include() {
     let root = paths::root().join("include");
     let repo = git::repo(&root)
@@ -456,7 +456,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn package_lib_with_bin() {
     let p = project()
         .file("src/main.rs", "extern crate foo; fn main() {}")
@@ -466,7 +466,7 @@ fn package_lib_with_bin() {
     p.cargo("package -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn package_git_submodule() {
     let project = git::new("foo", |project| {
         project
@@ -510,7 +510,7 @@ fn package_git_submodule() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
@@ -533,7 +533,7 @@ src/main.rs
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_nested() {
     let cargo_toml = r#"
             [project]
@@ -589,7 +589,7 @@ src[..]main.rs
 
 // Windows doesn't allow these characters in filenames.
 #[cfg(unix)]
-#[test]
+#[cargo_test]
 fn package_weird_characters() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -612,7 +612,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn repackage_on_source_change() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -657,7 +657,7 @@ See [..]
     );
 }
 
-#[test]
+#[cargo_test]
 #[cfg(unix)]
 fn broken_symlink() {
     use std::os::unix::fs;
@@ -697,7 +697,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn do_not_package_if_repository_is_dirty() {
     let p = project().build();
 
@@ -750,7 +750,7 @@ to proceed despite this, pass the `--allow-dirty` flag
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn generated_manifest() {
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
@@ -835,7 +835,7 @@ version = "1.0"
     );
 }
 
-#[test]
+#[cargo_test]
 fn ignore_workspace_specifier() {
     let p = project()
         .file(
@@ -895,7 +895,7 @@ authors = []
     );
 }
 
-#[test]
+#[cargo_test]
 fn package_two_kinds_of_deps() {
     Package::new("other", "1.0.0").publish();
     Package::new("other1", "1.0.0").publish();
@@ -919,7 +919,7 @@ fn package_two_kinds_of_deps() {
     p.cargo("package --no-verify").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_edition() {
     let p = project()
         .file(
@@ -946,7 +946,7 @@ fn test_edition() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn edition_with_metadata() {
     let p = project()
         .file(
@@ -968,7 +968,7 @@ fn edition_with_metadata() {
     p.cargo("package").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_edition_malformed() {
     let p = project()
         .file(
@@ -1001,7 +1001,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn do_not_package_if_src_was_modified() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -1047,7 +1047,7 @@ To proceed despite this, pass the `--no-verify` flag.",
     p.cargo("package --no-verify").run();
 }
 
-#[test]
+#[cargo_test]
 fn package_with_select_features() {
     let p = project()
         .file(
@@ -1076,7 +1076,7 @@ fn package_with_select_features() {
     p.cargo("package --features required").run();
 }
 
-#[test]
+#[cargo_test]
 fn package_with_all_features() {
     let p = project()
         .file(
@@ -1105,7 +1105,7 @@ fn package_with_all_features() {
     p.cargo("package --all-features").run();
 }
 
-#[test]
+#[cargo_test]
 fn package_no_default_features() {
     let p = project()
         .file(
@@ -1137,7 +1137,7 @@ fn package_no_default_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn include_cargo_toml_implicit() {
     let p = project()
         .file(
@@ -1198,7 +1198,7 @@ fn include_exclude_test(
     p.root().rm_rf();
 }
 
-#[test]
+#[cargo_test]
 fn package_include_ignore_only() {
     // Test with a gitignore pattern that fails to parse with glob.
     // This is a somewhat nonsense pattern, but is an example of something git
@@ -1219,7 +1219,7 @@ fn package_include_ignore_only() {
     )
 }
 
-#[test]
+#[cargo_test]
 fn gitignore_patterns() {
     include_exclude_test(
         r#"["Cargo.toml", "foo"]"#, // include
@@ -1313,7 +1313,7 @@ fn gitignore_patterns() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn gitignore_negate() {
     include_exclude_test(
         r#"["Cargo.toml", "*.rs", "!foo.rs", "\\!important"]"#, // include

@@ -12,7 +12,7 @@ fn create_empty_gitconfig() {
     File::create(gitconfig).unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
         .env("USER", "foo")
@@ -45,7 +45,7 @@ mod tests {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
         .env("USER", "foo")
@@ -62,7 +62,7 @@ fn simple_bin() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
         .env("USER", "foo")
@@ -71,7 +71,7 @@ fn both_lib_and_bin() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_git() {
     cargo_process("new --lib foo --edition 2015")
         .env("USER", "foo")
@@ -94,7 +94,7 @@ fn simple_git() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
-#[test]
+#[cargo_test]
 fn no_argument() {
     cargo_process("new")
         .with_status(1)
@@ -107,7 +107,7 @@ error: The following required arguments were not provided:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn existing() {
     let dst = paths::root().join("foo");
     fs::create_dir(&dst).unwrap();
@@ -120,7 +120,7 @@ fn existing() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
@@ -132,7 +132,7 @@ use --name to override crate name",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
@@ -144,7 +144,7 @@ fn reserved_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
@@ -156,7 +156,7 @@ fn reserved_binary_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
@@ -168,7 +168,7 @@ fn keyword_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_user() {
     create_empty_gitconfig();
     cargo_process("new foo").env("USER", "foo").run();
@@ -182,7 +182,7 @@ fn finds_author_user() {
     assert!(contents.contains(r#"authors = ["foo"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_user_escaped() {
     create_empty_gitconfig();
     cargo_process("new foo").env("USER", "foo \"bar\"").run();
@@ -196,7 +196,7 @@ fn finds_author_user_escaped() {
     assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_username() {
     create_empty_gitconfig();
     cargo_process("new foo")
@@ -213,7 +213,7 @@ fn finds_author_username() {
     assert!(contents.contains(r#"authors = ["foo"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_priority() {
     cargo_process("new foo")
         .env("USER", "bar2")
@@ -231,7 +231,7 @@ fn finds_author_priority() {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_email() {
     create_empty_gitconfig();
     cargo_process("new foo")
@@ -248,7 +248,7 @@ fn finds_author_email() {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_author_git() {
     git_process("config --global user.name bar").exec().unwrap();
     git_process("config --global user.email baz")
@@ -265,7 +265,7 @@ fn finds_author_git() {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_local_author_git() {
     git_process("init").exec().unwrap();
     git_process("config --global user.name foo").exec().unwrap();
@@ -287,7 +287,7 @@ fn finds_local_author_git() {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn finds_git_email() {
     cargo_process("new foo")
         .env("GIT_AUTHOR_NAME", "foo")
@@ -303,7 +303,7 @@ fn finds_git_email() {
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
 }
 
-#[test]
+#[cargo_test]
 fn finds_git_author() {
     create_empty_gitconfig();
     cargo_process("new foo")
@@ -320,7 +320,7 @@ fn finds_git_author() {
     assert!(contents.contains(r#"authors = ["gitfoo"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn author_prefers_cargo() {
     git_process("config --global user.name foo").exec().unwrap();
     git_process("config --global user.email bar")
@@ -352,7 +352,7 @@ fn author_prefers_cargo() {
     assert!(!root.join("foo/.gitignore").exists());
 }
 
-#[test]
+#[cargo_test]
 fn strip_angle_bracket_author_email() {
     create_empty_gitconfig();
     cargo_process("new foo")
@@ -369,7 +369,7 @@ fn strip_angle_bracket_author_email() {
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn git_prefers_command_line() {
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
@@ -389,7 +389,7 @@ fn git_prefers_command_line() {
     assert!(paths::root().join("foo/.gitignore").exists());
 }
 
-#[test]
+#[cargo_test]
 fn subpackage_no_git() {
     cargo_process("new foo").env("USER", "foo").run();
 
@@ -410,7 +410,7 @@ fn subpackage_no_git() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn subpackage_git_with_gitignore() {
     cargo_process("new foo").env("USER", "foo").run();
 
@@ -434,7 +434,7 @@ fn subpackage_git_with_gitignore() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn subpackage_git_with_vcs_arg() {
     cargo_process("new foo").env("USER", "foo").run();
 
@@ -452,7 +452,7 @@ fn subpackage_git_with_vcs_arg() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn unknown_flags() {
     cargo_process("new foo --flag")
         .with_status(1)
@@ -462,7 +462,7 @@ fn unknown_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_invalid_name_not_suggested() {
     cargo_process("new --name 10-invalid a")
         .with_status(101)
@@ -470,7 +470,7 @@ fn explicit_invalid_name_not_suggested() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
         .env("USER", "foo")
@@ -478,7 +478,7 @@ fn explicit_project_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_with_edition_2015() {
     cargo_process("new --edition 2015 foo")
         .env("USER", "foo")
@@ -487,7 +487,7 @@ fn new_with_edition_2015() {
     assert!(manifest.contains("edition = \"2015\""));
 }
 
-#[test]
+#[cargo_test]
 fn new_with_edition_2018() {
     cargo_process("new --edition 2018 foo")
         .env("USER", "foo")
@@ -496,14 +496,14 @@ fn new_with_edition_2018() {
     assert!(manifest.contains("edition = \"2018\""));
 }
 
-#[test]
+#[cargo_test]
 fn new_default_edition() {
     cargo_process("new foo").env("USER", "foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2018\""));
 }
 
-#[test]
+#[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
         .env("USER", "foo")
@@ -512,7 +512,7 @@ fn new_with_bad_edition() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_with_blank_email() {
     cargo_process("new foo")
         .env("CARGO_NAME", "Sen")
@@ -523,7 +523,7 @@ fn new_with_blank_email() {
     assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
 }
 
-#[test]
+#[cargo_test]
 fn new_with_reference_link() {
     cargo_process("new foo").env("USER", "foo").run();
 

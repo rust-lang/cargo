@@ -138,52 +138,52 @@ No tests available.
     }
 }
 
-#[test]
+#[cargo_test]
 fn build_list_targets() {
     list_targets_test("build", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn check_list_targets() {
     list_targets_test("check", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn doc_list_targets() {
     list_targets_test("doc", BIN);
 }
 
-#[test]
+#[cargo_test]
 fn fix_list_targets() {
     list_targets_test("fix", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn run_list_targets() {
     list_targets_test("run", EXAMPLE | BIN);
 }
 
-#[test]
+#[cargo_test]
 fn test_list_targets() {
     list_targets_test("test", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn bench_list_targets() {
     list_targets_test("bench", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn install_list_targets() {
     list_targets_test("install", EXAMPLE | BIN);
 }
 
-#[test]
+#[cargo_test]
 fn rustdoc_list_targets() {
     list_targets_test("rustdoc", EXAMPLE | BIN | TEST | BENCH);
 }
 
-#[test]
+#[cargo_test]
 fn rustc_list_targets() {
     list_targets_test("rustc", EXAMPLE | BIN | TEST | BENCH);
 }

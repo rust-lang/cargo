@@ -89,7 +89,7 @@ fn run_test(path_env: Option<&OsStr>) {
     );
 }
 
-#[test]
+#[cargo_test]
 fn use_git_gc() {
     if Command::new("git").arg("--version").output().is_err() {
         return;
@@ -97,7 +97,7 @@ fn use_git_gc() {
     run_test(None);
 }
 
-#[test]
+#[cargo_test]
 // it looks like this test passes on some windows machines but not others,
 // notably not on AppVeyor's machines. Sounds like another but for another day.
 #[cfg_attr(windows, ignore)]
