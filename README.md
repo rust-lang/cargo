@@ -50,10 +50,12 @@ a list of known community-developed subcommands.
 
 ## Releases
 
-High level release notes are available as part of [Rust's release notes][rel].
 Cargo releases coincide with Rust releases.
+High level release notes are available as part of [Rust's release notes][rel].
+Detailed release notes are available in this repo at [CHANGELOG.md].
 
 [rel]: https://github.com/rust-lang/rust/blob/master/RELEASES.md
+[CHANGELOG.md]: CHANGELOG.md
 
 ## Reporting issues
 

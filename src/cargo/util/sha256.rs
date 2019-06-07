@@ -1,6 +1,9 @@
 use self::crypto_hash::{Algorithm, Hasher};
+use crate::util::{CargoResult, CargoResultExt};
 use crypto_hash;
-use std::io::Write;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::path::Path;
 
 pub struct Sha256(Hasher);
 
@@ -10,8 +13,28 @@ impl Sha256 {
         Sha256(hasher)
     }
 
-    pub fn update(&mut self, bytes: &[u8]) {
+    pub fn update(&mut self, bytes: &[u8]) -> &mut Sha256 {
         let _ = self.0.write_all(bytes);
+        self
+    }
+
+    pub fn update_file(&mut self, mut file: &File) -> io::Result<&mut Sha256> {
+        let mut buf = [0; 64 * 1024];
+        loop {
+            let n = file.read(&mut buf)?;
+            if n == 0 {
+                break Ok(self);
+            }
+            self.update(&buf[..n]);
+        }
+    }
+
+    pub fn update_path<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<&mut Sha256> {
+        let path = path.as_ref();
+        let file = File::open(path)?;
+        self.update_file(&file)
+            .chain_err(|| format!("failed to read `{}`", path.display()))?;
+        Ok(self)
     }
 
     pub fn finish(&mut self) -> [u8; 32] {
@@ -19,6 +42,10 @@ impl Sha256 {
         let data = self.0.finish();
         ret.copy_from_slice(&data[..]);
         ret
+    }
+
+    pub fn finish_hex(&mut self) -> String {
+        hex::encode(self.finish())
     }
 }
 

@@ -9,7 +9,7 @@ use crate::support::registry::Package;
 use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
     pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve,
-    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
+    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
 };
 
 use proptest::prelude::*;
@@ -41,6 +41,7 @@ proptest! {
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
+        let mut sat_resolve = SatResolve::new(&reg);
         // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
@@ -49,6 +50,7 @@ proptest! {
                 pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
+                Some(&mut sat_resolve),
             );
         }
     }
@@ -237,6 +239,18 @@ proptest! {
 }
 
 #[test]
+fn pub_fail() {
+    let input = vec![
+        pkg!(("a", "0.0.4")),
+        pkg!(("a", "0.0.5")),
+        pkg!(("e", "0.0.6") => [dep_req_kind("a", "<= 0.0.4", Kind::Normal, true),]),
+        pkg!(("kB", "0.0.3") => [dep_req("a", ">= 0.0.5"),dep("e"),]),
+    ];
+    let reg = registry(input);
+    assert!(resolve_and_validated(pkg_id("root"), vec![dep("kB")], &reg, None).is_err());
+}
+
+#[test]
 fn basic_public_dependency() {
     let reg = registry(vec![
         pkg!(("A", "0.1.0")),
@@ -245,7 +259,7 @@ fn basic_public_dependency() {
         pkg!("C" => [dep("A"), dep("B")]),
     ]);
 
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -281,7 +295,7 @@ fn public_dependency_filling_in() {
         pkg!("d" => [dep("c"), dep("a"), dep("b")]),
     ]);
 
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("d")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("d")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -316,7 +330,7 @@ fn public_dependency_filling_in_and_update() {
         pkg!("C" => [dep("A"),dep("B")]),
         pkg!("D" => [dep("B"),dep("C")]),
     ]);
-    let res = resolve_and_validated(pkg_id("root"), vec![dep("D")], &reg).unwrap();
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("D")], &reg, None).unwrap();
     assert_same(
         &res,
         &names(&[
@@ -343,7 +357,7 @@ fn public_dependency_skipping() {
     ];
     let reg = registry(input);
 
-    resolve(pkg_id("root"), vec![dep("c")], &reg).unwrap();
+    resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
 }
 
 #[test]
@@ -363,7 +377,50 @@ fn public_dependency_skipping_in_backtracking() {
     ];
     let reg = registry(input);
 
-    resolve(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg, None).unwrap();
+}
+
+#[test]
+fn public_sat_topological_order() {
+    let input = vec![
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.0")),
+        pkg!(("b", "0.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "0.0.0") => [dep("bad"),]),
+        pkg!("A" => [dep_req("a", "= 0.0.0"),dep_req_kind("b", "*", Kind::Normal, true)]),
+    ];
+
+    let reg = registry(input);
+    assert!(resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).is_err());
+}
+
+#[test]
+fn public_sat_unused_makes_things_pub() {
+    let input = vec![
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.0")),
+        pkg!(("b", "8.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "8.0.0") => [dep_req("a", "= 0.0.1"),]),
+        pkg!("c" => [dep_req("b", "= 8.0.0"),dep_req("a", "= 0.0.0"),]),
+    ];
+    let reg = registry(input);
+
+    resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
+}
+
+#[test]
+fn public_sat_unused_makes_things_pub_2() {
+    let input = vec![
+        pkg!(("c", "0.0.2")),
+        pkg!(("c", "0.0.1")),
+        pkg!(("a-sys", "0.0.2")),
+        pkg!(("a-sys", "0.0.1") => [dep_req_kind("c", "= 0.0.1", Kind::Normal, true),]),
+        pkg!("P" => [dep_req_kind("a-sys", "*", Kind::Normal, true),dep_req("c", "= 0.0.1"),]),
+        pkg!("A" => [dep("P"),dep_req("c", "= 0.0.2"),]),
+    ];
+    let reg = registry(input);
+
+    resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).unwrap();
 }
 
 #[test]
@@ -1407,7 +1464,7 @@ fn conflict_store_bug() {
     ];
 
     let reg = registry(input);
-    let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg, None);
 }
 
 #[test]
@@ -1435,5 +1492,5 @@ fn conflict_store_more_then_one_match() {
         ]),
     ];
     let reg = registry(input);
-    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg, None);
 }

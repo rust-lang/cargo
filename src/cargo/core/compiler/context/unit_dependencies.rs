@@ -25,7 +25,7 @@ use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
 
-struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
+struct State<'a, 'cfg, 'tmp> {
     cx: &'tmp mut Context<'a, 'cfg>,
     waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,
@@ -129,7 +129,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, state.cx.bcx);
-    } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
+    } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
         return compute_deps_doc(unit, state);
     }

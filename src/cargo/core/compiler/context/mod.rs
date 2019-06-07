@@ -27,7 +27,7 @@ mod compilation_files;
 use self::compilation_files::CompilationFiles;
 pub use self::compilation_files::{Metadata, OutputFile};
 
-pub struct Context<'a, 'cfg: 'a> {
+pub struct Context<'a, 'cfg> {
     pub bcx: &'a BuildContext<'a, 'cfg>,
     pub compilation: Compilation<'cfg>,
     pub build_state: Arc<BuildState>,
@@ -166,7 +166,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
 
-            if unit.mode == CompileMode::Doctest {
+            if unit.mode.is_doc_test() {
                 // Note that we can *only* doc-test rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
                 // doesn't do that). A dylib output, however, can be linked by
@@ -472,11 +472,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.pipelining
             // We're only a candidate for requiring an `rmeta` file if we
             // ourselves are building an rlib,
-            && !parent.target.requires_upstream_objects()
+            && !parent.requires_upstream_objects()
             && parent.mode == CompileMode::Build
             // Our dependency must also be built as an rlib, otherwise the
             // object code must be useful in some fashion
-            && !dep.target.requires_upstream_objects()
+            && !dep.requires_upstream_objects()
             && dep.mode == CompileMode::Build
     }
 

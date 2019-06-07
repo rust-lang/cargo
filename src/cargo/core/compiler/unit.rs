@@ -50,6 +50,18 @@ pub struct UnitInner<'a> {
     pub mode: CompileMode,
 }
 
+impl UnitInner<'_> {
+    /// Returns whether compilation of this unit requires all upstream artifacts
+    /// to be available.
+    ///
+    /// This effectively means that this unit is a synchronization point (if the
+    /// return value is `true`) that all previously pipelined units need to
+    /// finish in their entirety before this one is started.
+    pub fn requires_upstream_objects(&self) -> bool {
+        self.mode.is_any_test() || self.target.kind().requires_upstream_objects()
+    }
+}
+
 impl<'a> Unit<'a> {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))

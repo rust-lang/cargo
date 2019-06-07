@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 use log::info;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout};
-use crate::core::compiler::Unit;
+use crate::core::compiler::{CompileMode, Unit};
 use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
@@ -50,7 +50,7 @@ impl fmt::Display for Metadata {
     }
 }
 
-pub struct CompilationFiles<'a, 'cfg: 'a> {
+pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host).
@@ -146,6 +146,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub fn out_dir(&self, unit: &Unit<'a>) -> PathBuf {
         if unit.mode.is_doc() {
             self.layout(unit.kind).root().parent().unwrap().join("doc")
+        } else if unit.mode.is_doc_test() {
+            panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
@@ -293,106 +295,138 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         unit: &Unit<'a>,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
+        let ret = match unit.mode {
+            CompileMode::Check { .. } => {
+                // This may be confusing. rustc outputs a file named `lib*.rmeta`
+                // for both libraries and binaries.
+                let file_stem = self.file_stem(unit);
+                let path = self.out_dir(unit).join(format!("lib{}.rmeta", file_stem));
+                vec![OutputFile {
+                    path,
+                    hardlink: None,
+                    export_path: None,
+                    flavor: FileFlavor::Linkable { rmeta: false },
+                }]
+            }
+            CompileMode::Doc { .. } => {
+                let path = self
+                    .out_dir(unit)
+                    .join(unit.target.crate_name())
+                    .join("index.html");
+                vec![OutputFile {
+                    path,
+                    hardlink: None,
+                    export_path: None,
+                    flavor: FileFlavor::Normal,
+                }]
+            }
+            CompileMode::RunCustomBuild => {
+                // At this time, this code path does not handle build script
+                // outputs.
+                vec![]
+            }
+            CompileMode::Doctest => {
+                // Doctests are built in a temporary directory and then
+                // deleted. There is the `--persist-doctests` unstable flag,
+                // but Cargo does not know about that.
+                vec![]
+            }
+            CompileMode::Test | CompileMode::Build | CompileMode::Bench => {
+                self.calc_outputs_rustc(unit, bcx)?
+            }
+        };
+        info!("Target filenames: {:?}", ret);
+
+        Ok(Arc::new(ret))
+    }
+
+    fn calc_outputs_rustc(
+        &self,
+        unit: &Unit<'a>,
+        bcx: &BuildContext<'a, 'cfg>,
+    ) -> CargoResult<Vec<OutputFile>> {
+        let mut ret = Vec::new();
+        let mut unsupported = Vec::new();
+
         let out_dir = self.out_dir(unit);
-        let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
         let info = if unit.kind == Kind::Host {
             &bcx.host_info
         } else {
             &bcx.target_info
         };
+        let file_stem = self.file_stem(unit);
 
-        let mut ret = Vec::new();
-        let mut unsupported = Vec::new();
-        {
-            if unit.mode.is_check() {
-                // This may be confusing. rustc outputs a file named `lib*.rmeta`
-                // for both libraries and binaries.
-                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                ret.push(OutputFile {
-                    path,
-                    hardlink: None,
-                    export_path: None,
-                    flavor: FileFlavor::Linkable { rmeta: false },
-                });
+        let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
+            let crate_type = if crate_type == "lib" {
+                "rlib"
             } else {
-                let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
-                    let crate_type = if crate_type == "lib" {
-                        "rlib"
-                    } else {
-                        crate_type
-                    };
-                    let file_types = info.file_types(
-                        crate_type,
-                        flavor,
-                        unit.target.kind(),
-                        bcx.target_triple(),
-                    )?;
+                crate_type
+            };
+            let file_types =
+                info.file_types(crate_type, flavor, unit.target.kind(), bcx.target_triple())?;
 
-                    match file_types {
-                        Some(types) => {
-                            for file_type in types {
-                                let path = out_dir.join(file_type.filename(&file_stem));
-                                let hardlink = link_stem
-                                    .as_ref()
-                                    .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
-                                let export_path = if unit.target.is_custom_build() {
-                                    None
-                                } else {
-                                    self.export_dir.as_ref().and_then(|export_dir| {
-                                        hardlink.as_ref().and_then(|hardlink| {
-                                            Some(export_dir.join(hardlink.file_name().unwrap()))
-                                        })
-                                    })
-                                };
-                                ret.push(OutputFile {
-                                    path,
-                                    hardlink,
-                                    export_path,
-                                    flavor: file_type.flavor,
-                                });
-                            }
-                        }
-                        // Not supported; don't worry about it.
-                        None => {
-                            unsupported.push(crate_type.to_string());
-                        }
+            match file_types {
+                Some(types) => {
+                    for file_type in types {
+                        let path = out_dir.join(file_type.filename(&file_stem));
+                        let hardlink = link_stem
+                            .as_ref()
+                            .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                        let export_path = if unit.target.is_custom_build() {
+                            None
+                        } else {
+                            self.export_dir.as_ref().and_then(|export_dir| {
+                                hardlink.as_ref().and_then(|hardlink| {
+                                    Some(export_dir.join(hardlink.file_name().unwrap()))
+                                })
+                            })
+                        };
+                        ret.push(OutputFile {
+                            path,
+                            hardlink,
+                            export_path,
+                            flavor: file_type.flavor,
+                        });
                     }
-                    Ok(())
-                };
-                // info!("{:?}", unit);
-                match *unit.target.kind() {
-                    TargetKind::Bin
-                    | TargetKind::CustomBuild
-                    | TargetKind::ExampleBin
-                    | TargetKind::Bench
-                    | TargetKind::Test => {
-                        add("bin", FileFlavor::Normal)?;
-                    }
-                    TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.mode.is_any_test() => {
-                        add("bin", FileFlavor::Normal)?;
-                    }
-                    TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
-                        for kind in kinds {
-                            add(
-                                kind.crate_type(),
-                                if kind.linkable() {
-                                    FileFlavor::Linkable { rmeta: false }
-                                } else {
-                                    FileFlavor::Normal
-                                },
-                            )?;
-                        }
-                        let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                        if !unit.target.requires_upstream_objects() {
-                            ret.push(OutputFile {
-                                path,
-                                hardlink: None,
-                                export_path: None,
-                                flavor: FileFlavor::Linkable { rmeta: true },
-                            });
-                        }
-                    }
+                }
+                // Not supported; don't worry about it.
+                None => {
+                    unsupported.push(crate_type.to_string());
+                }
+            }
+            Ok(())
+        };
+        match *unit.target.kind() {
+            TargetKind::Bin
+            | TargetKind::CustomBuild
+            | TargetKind::ExampleBin
+            | TargetKind::Bench
+            | TargetKind::Test => {
+                add("bin", FileFlavor::Normal)?;
+            }
+            TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.mode.is_any_test() => {
+                add("bin", FileFlavor::Normal)?;
+            }
+            TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
+                for kind in kinds {
+                    add(
+                        kind.crate_type(),
+                        if kind.linkable() {
+                            FileFlavor::Linkable { rmeta: false }
+                        } else {
+                            FileFlavor::Normal
+                        },
+                    )?;
+                }
+                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
+                if !unit.requires_upstream_objects() {
+                    ret.push(OutputFile {
+                        path,
+                        hardlink: None,
+                        export_path: None,
+                        flavor: FileFlavor::Linkable { rmeta: true },
+                    });
                 }
             }
         }
@@ -413,9 +447,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 bcx.target_triple()
             );
         }
-        info!("Target filenames: {:?}", ret);
-
-        Ok(Arc::new(ret))
+        Ok(ret)
     }
 }
 
@@ -439,6 +471,10 @@ fn compute_metadata<'a, 'cfg>(
     cx: &Context<'a, 'cfg>,
     metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
 ) -> Option<Metadata> {
+    if unit.mode.is_doc_test() {
+        // Doc tests do not have metadata.
+        return None;
+    }
     // No metadata for dylibs because of a couple issues:
     // - macOS encodes the dylib name in the executable,
     // - Windows rustc multiple files of which we can't easily link all of them.
@@ -518,10 +554,24 @@ fn compute_metadata<'a, 'cfg>(
     // Throw in the rustflags we're compiling with.
     // This helps when the target directory is a shared cache for projects with different cargo configs,
     // or if the user is experimenting with different rustflags manually.
-    if unit.mode.is_doc() {
-        cx.bcx.rustdocflags_args(unit).hash(&mut hasher);
+    let mut flags = if unit.mode.is_doc() {
+        cx.bcx.rustdocflags_args(unit)
     } else {
-        cx.bcx.rustflags_args(unit).hash(&mut hasher);
+        cx.bcx.rustflags_args(unit)
+    }
+    .iter();
+
+    // Ignore some flags. These may affect reproducible builds if they affect
+    // the path. The fingerprint will handle recompilation if these change.
+    while let Some(flag) = flags.next() {
+        if flag.starts_with("--remap-path-prefix=") {
+            continue;
+        }
+        if flag == "--remap-path-prefix" {
+            flags.next();
+            continue;
+        }
+        flag.hash(&mut hasher);
     }
 
     // Artifacts compiled for the host should have a different metadata

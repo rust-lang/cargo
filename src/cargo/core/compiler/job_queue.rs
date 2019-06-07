@@ -196,7 +196,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // the target as well. This should ensure that edges changed to
         // `Metadata` propagate upwards `All` dependencies to anything that
         // transitively contains the `Metadata` edge.
-        if unit.target.requires_upstream_objects() {
+        if unit.requires_upstream_objects() {
             for dep in dependencies.iter() {
                 depend_on_deps_of_deps(cx, &mut queue_deps, dep);
             }
@@ -597,11 +597,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // being a compiled package.
             Dirty => {
                 if unit.mode.is_doc() {
+                    self.documented.insert(unit.pkg.package_id());
+                    config.shell().status("Documenting", unit.pkg)?;
+                } else if unit.mode.is_doc_test() {
                     // Skip doc test.
-                    if !unit.mode.is_any_test() {
-                        self.documented.insert(unit.pkg.package_id());
-                        config.shell().status("Documenting", unit.pkg)?;
-                    }
                 } else {
                     self.compiled.insert(unit.pkg.package_id());
                     if unit.mode.is_check() {
@@ -614,8 +613,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             Fresh => {
                 // If doc test are last, only print "Fresh" if nothing has been printed.
                 if self.counts[&unit.pkg.package_id()] == 0
-                    && !(unit.mode == CompileMode::Doctest
-                        && self.compiled.contains(&unit.pkg.package_id()))
+                    && !(unit.mode.is_doc_test() && self.compiled.contains(&unit.pkg.package_id()))
                 {
                     self.compiled.insert(unit.pkg.package_id());
                     config.shell().verbose(|c| c.status("Fresh", unit.pkg))?;

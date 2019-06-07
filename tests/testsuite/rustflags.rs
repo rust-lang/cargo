@@ -1359,3 +1359,28 @@ fn env_rustflags_misspelled_build_script() {
         .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
         .run();
 }
+
+#[test]
+fn reamp_path_prefix_ignored() {
+    // Ensure that --remap-path-prefix does not affect metadata hash.
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build").run();
+    let rlibs = p
+        .glob("target/debug/deps/*.rlib")
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rlibs.len(), 1);
+    p.cargo("clean").run();
+
+    p.cargo("build")
+        .env(
+            "RUSTFLAGS",
+            "--remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo",
+        )
+        .run();
+    let rlibs2 = p
+        .glob("target/debug/deps/*.rlib")
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rlibs, rlibs2);
+}

@@ -11,7 +11,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, ToUrl};
+use cargo::util::{CargoResult, Config, Graph, ToUrl};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -19,6 +19,7 @@ use proptest::sample::Index;
 use proptest::strategy::ValueTree;
 use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
+use varisat::{self, ExtendFormula};
 
 pub fn resolve(
     pkg: PackageId,
@@ -32,8 +33,17 @@ pub fn resolve_and_validated(
     pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
+    sat_resolve: Option<&mut SatResolve>,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
+    let should_resolve = if let Some(sat) = sat_resolve {
+        sat.sat_resolve(&deps)
+    } else {
+        SatResolve::new(registry).sat_resolve(&deps)
+    };
+    let resolve = resolve_with_config_raw(pkg, deps, registry, None);
+    assert_eq!(resolve.is_ok(), should_resolve);
+
+    let resolve = resolve?;
     let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
@@ -174,6 +184,274 @@ pub fn resolve_with_config_raw(
     // So lets fail the test if we have ben running for two long.
     assert!(start.elapsed() < slow_cpu_multiplier(60));
     resolve
+}
+
+const fn num_bits<T>() -> usize {
+    std::mem::size_of::<T>() * 8
+}
+
+fn log_bits(x: usize) -> usize {
+    if x == 0 {
+        return 0;
+    }
+    assert!(x > 0);
+    (num_bits::<usize>() as u32 - x.leading_zeros()) as usize
+}
+
+fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
+    if vars.len() <= 1 {
+        return;
+    } else if vars.len() == 2 {
+        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
+        return;
+    } else if vars.len() == 3 {
+        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
+        solver.add_clause(&[vars[0].negative(), vars[2].negative()]);
+        solver.add_clause(&[vars[1].negative(), vars[2].negative()]);
+        return;
+    }
+    // use the "Binary Encoding" from
+    // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
+    let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
+    for (i, p) in vars.iter().enumerate() {
+        for b in 0..bits.len() {
+            solver.add_clause(&[p.negative(), bits[b].lit(((1 << b) & i) > 0)]);
+        }
+    }
+}
+
+fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
+    cnf: &mut impl varisat::ExtendFormula,
+    data: impl Iterator<Item = (K, varisat::Var)>,
+) -> HashMap<K, Vec<varisat::Var>> {
+    // no two packages with the same links set
+    let mut by_keys: HashMap<K, Vec<varisat::Var>> = HashMap::new();
+    for (p, v) in data {
+        by_keys.entry(p).or_default().push(v)
+    }
+    for key in by_keys.values() {
+        sat_at_most_one(cnf, key);
+    }
+    by_keys
+}
+
+/// Resolution can be reduced to the SAT problem. So this is an alternative implementation
+/// of the resolver that uses a SAT library for the hard work. This is intended to be easy to read,
+/// as compared to the real resolver.
+///
+/// For the subset of functionality that are currently made by `registry_strategy` this will,
+/// find a valid resolution if one exists. The big thing that the real resolver does,
+/// that this one does not do is work with features and optional dependencies.
+///
+/// The SAT library dose not optimize for the newer version,
+/// so the selected packages may not match the real resolver.
+pub struct SatResolve {
+    solver: varisat::Solver<'static>,
+    var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
+    by_name: HashMap<&'static str, Vec<PackageId>>,
+}
+
+impl SatResolve {
+    pub fn new(registry: &[Summary]) -> Self {
+        let mut cnf = varisat::CnfFormula::new();
+        let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
+            .iter()
+            .map(|s| (s.package_id(), cnf.new_var()))
+            .collect();
+
+        // no two packages with the same links set
+        sat_at_most_one_by_key(
+            &mut cnf,
+            registry
+                .iter()
+                .map(|s| (s.links(), var_for_is_packages_used[&s.package_id()]))
+                .filter(|(l, _)| l.is_some()),
+        );
+
+        // no two semver compatible versions of the same package
+        let by_activations_keys = sat_at_most_one_by_key(
+            &mut cnf,
+            var_for_is_packages_used
+                .iter()
+                .map(|(p, &v)| (p.as_activations_key(), v)),
+        );
+
+        let mut by_name: HashMap<&'static str, Vec<PackageId>> = HashMap::new();
+
+        for p in registry.iter() {
+            by_name
+                .entry(p.name().as_str())
+                .or_default()
+                .push(p.package_id())
+        }
+
+        let empty_vec = vec![];
+
+        let mut graph: Graph<PackageId, ()> = Graph::new();
+
+        let mut version_selected_for: HashMap<
+            PackageId,
+            HashMap<Dependency, HashMap<_, varisat::Var>>,
+        > = HashMap::new();
+        // active packages need each of there `deps` to be satisfied
+        for p in registry.iter() {
+            graph.add(p.package_id());
+            for dep in p.dependencies() {
+                // This can more easily be written as:
+                // !is_active(p) or one of the things that match dep is_active
+                // All the complexity, from here to the end, is to support public and private dependencies!
+                let mut by_key: HashMap<_, Vec<varisat::Lit>> = HashMap::new();
+                for &m in by_name
+                    .get(dep.package_name().as_str())
+                    .unwrap_or(&empty_vec)
+                    .iter()
+                    .filter(|&p| dep.matches_id(*p))
+                {
+                    graph.link(p.package_id(), m);
+                    by_key
+                        .entry(m.as_activations_key())
+                        .or_default()
+                        .push(var_for_is_packages_used[&m].positive());
+                }
+                let keys: HashMap<_, _> = by_key.keys().map(|&k| (k, cnf.new_var())).collect();
+
+                // if `p` is active then we need to select one of the keys
+                let matches: Vec<_> = keys
+                    .values()
+                    .map(|v| v.positive())
+                    .chain(Some(var_for_is_packages_used[&p.package_id()].negative()))
+                    .collect();
+                cnf.add_clause(&matches);
+
+                // if a key is active then we need to select one of the versions
+                for (key, vars) in by_key.iter() {
+                    let mut matches = vars.clone();
+                    matches.push(keys[key].negative());
+                    cnf.add_clause(&matches);
+                }
+
+                version_selected_for
+                    .entry(p.package_id())
+                    .or_default()
+                    .insert(dep.clone(), keys);
+            }
+        }
+
+        let topological_order = graph.sort();
+
+        // we already ensure there is only one version for each `activations_key` so we can think of
+        // `publicly_exports` as being in terms of a set of `activations_key`s
+        let mut publicly_exports: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
+
+        for &key in by_activations_keys.keys() {
+            // everything publicly depends on itself
+            let var = publicly_exports
+                .entry(key)
+                .or_default()
+                .entry(key)
+                .or_insert_with(|| cnf.new_var());
+            cnf.add_clause(&[var.positive()]);
+        }
+
+        // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
+        for &p in topological_order.iter() {
+            if let Some(deps) = version_selected_for.get(&p) {
+                let mut p_exports = publicly_exports.remove(&p.as_activations_key()).unwrap();
+                for (_, versions) in deps.iter().filter(|(d, _)| d.is_public()) {
+                    for (ver, sel) in versions {
+                        for (&export_pid, &export_var) in publicly_exports[ver].iter() {
+                            let our_var =
+                                p_exports.entry(export_pid).or_insert_with(|| cnf.new_var());
+                            cnf.add_clause(&[
+                                sel.negative(),
+                                export_var.negative(),
+                                our_var.positive(),
+                            ]);
+                        }
+                    }
+                }
+                publicly_exports.insert(p.as_activations_key(), p_exports);
+            }
+        }
+
+        // we already ensure there is only one version for each `activations_key` so we can think of
+        // `can_see` as being in terms of a set of `activations_key`s
+        // and if `p` `publicly_exports` `export` then it `can_see` `export`
+        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
+
+        // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
+        for (&p, deps) in version_selected_for.iter() {
+            let p_can_see = can_see.entry(p).or_default();
+            for (_, versions) in deps.iter() {
+                for (&ver, sel) in versions {
+                    for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
+                        let our_var = p_can_see.entry(export_pid).or_insert_with(|| cnf.new_var());
+                        cnf.add_clause(&[
+                            sel.negative(),
+                            export_var.negative(),
+                            our_var.positive(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // a package `can_see` only one version by each name
+        for (_, see) in can_see.iter() {
+            sat_at_most_one_by_key(&mut cnf, see.iter().map(|((name, _, _), &v)| (name, v)));
+        }
+        let mut solver = varisat::Solver::new();
+        solver.add_formula(&cnf);
+
+        // We dont need to `solve` now. We know that "use nothing" will satisfy all the clauses so far.
+        // But things run faster if we let it spend some time figuring out how the constraints interact before we add assumptions.
+        solver
+            .solve()
+            .expect("docs say it can't error in default config");
+
+        SatResolve {
+            solver,
+            var_for_is_packages_used,
+            by_name,
+        }
+    }
+    pub fn sat_resolve(&mut self, deps: &[Dependency]) -> bool {
+        let mut assumption = vec![];
+        let mut this_call = None;
+
+        // the starting `deps` need to be satisfied
+        for dep in deps.iter() {
+            let empty_vec = vec![];
+            let matches: Vec<varisat::Lit> = self
+                .by_name
+                .get(dep.package_name().as_str())
+                .unwrap_or(&empty_vec)
+                .iter()
+                .filter(|&p| dep.matches_id(*p))
+                .map(|p| self.var_for_is_packages_used[p].positive())
+                .collect();
+            if matches.is_empty() {
+                return false;
+            } else if matches.len() == 1 {
+                assumption.extend_from_slice(&matches)
+            } else {
+                if this_call.is_none() {
+                    let new_var = self.solver.new_var();
+                    this_call = Some(new_var);
+                    assumption.push(new_var.positive());
+                }
+                let mut matches = matches;
+                matches.push(this_call.unwrap().negative());
+                self.solver.add_clause(&matches);
+            }
+        }
+
+        self.solver.assume(&assumption);
+
+        self.solver
+            .solve()
+            .expect("docs say it can't error in default config")
+    }
 }
 
 pub trait ToDep {
@@ -527,29 +805,34 @@ pub fn registry_strategy(
                             // => Kind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for Kind"),
                         },
-                        p,
+                        p && k == 0,
                     ))
                 }
 
-                PrettyPrintRegistry(
-                    list_of_pkgid
-                        .into_iter()
-                        .zip(dependency_by_pkgid.into_iter())
-                        .map(|(((name, ver), allow_deps), deps)| {
-                            pkg_dep(
-                                (name, ver).to_pkgid(),
-                                if !allow_deps {
-                                    vec![dep_req("bad", "*")]
-                                } else {
-                                    let mut deps = deps;
-                                    deps.sort_by_key(|d| d.name_in_toml());
-                                    deps.dedup_by_key(|d| d.name_in_toml());
-                                    deps
-                                },
-                            )
-                        })
-                        .collect(),
-                )
+                let mut out: Vec<Summary> = list_of_pkgid
+                    .into_iter()
+                    .zip(dependency_by_pkgid.into_iter())
+                    .map(|(((name, ver), allow_deps), deps)| {
+                        pkg_dep(
+                            (name, ver).to_pkgid(),
+                            if !allow_deps {
+                                vec![dep_req("bad", "*")]
+                            } else {
+                                let mut deps = deps;
+                                deps.sort_by_key(|d| d.name_in_toml());
+                                deps.dedup_by_key(|d| d.name_in_toml());
+                                deps
+                            },
+                        )
+                    })
+                    .collect();
+
+                if reverse_alphabetical {
+                    // make sure the complicated cases are at the end
+                    out.reverse();
+                }
+
+                PrettyPrintRegistry(out)
             },
         )
 }
