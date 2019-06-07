@@ -343,8 +343,8 @@ fn profile_panic_test_bench() {
     p.cargo("build")
         .with_stderr_contains(
             "\
-[WARNING] `panic` setting is ignored for `test` profile
 [WARNING] `panic` setting is ignored for `bench` profile
+[WARNING] `panic` setting is ignored for `test` profile
 ",
         )
         .run();
