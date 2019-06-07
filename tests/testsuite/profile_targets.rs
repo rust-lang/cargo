@@ -68,7 +68,7 @@ fn all_target_project() -> Project {
         .build()
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_build() {
     let p = all_target_project();
 
@@ -102,7 +102,7 @@ fn profile_selection_build() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_build_release() {
     let p = all_target_project();
 
@@ -133,7 +133,7 @@ fn profile_selection_build_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_build_all_targets() {
     let p = all_target_project();
     // `build`
@@ -195,7 +195,7 @@ fn profile_selection_build_all_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_build_all_targets_release() {
     let p = all_target_project();
     // `build --all-targets --release`
@@ -260,7 +260,7 @@ fn profile_selection_build_all_targets_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_test() {
     let p = all_target_project();
     // `test`
@@ -325,7 +325,7 @@ fn profile_selection_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_test_release() {
     let p = all_target_project();
     // `test --release`
@@ -390,7 +390,7 @@ fn profile_selection_test_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_bench() {
     let p = all_target_project();
 
@@ -450,7 +450,7 @@ fn profile_selection_bench() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_check_all_targets() {
     let p = all_target_project();
     // `check`
@@ -515,7 +515,7 @@ fn profile_selection_check_all_targets() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_check_all_targets_release() {
     let p = all_target_project();
     // `check --release`
@@ -557,7 +557,7 @@ fn profile_selection_check_all_targets_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_check_all_targets_test() {
     let p = all_target_project();
     // `check --profile=test`
@@ -615,7 +615,7 @@ fn profile_selection_check_all_targets_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_selection_doc() {
     let p = all_target_project();
     // `doc`

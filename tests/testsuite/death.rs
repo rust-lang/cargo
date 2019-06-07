@@ -46,7 +46,7 @@ fn enabled() -> bool {
     }
 }
 
-#[test]
+#[cargo_test]
 fn ctrl_c_kills_everyone() {
     if !enabled() {
         return;

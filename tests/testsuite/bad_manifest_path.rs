@@ -37,287 +37,287 @@ fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("bench", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn bench_dir_plus_file() {
     assert_not_a_cargo_toml("bench", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn bench_dir_plus_path() {
     assert_not_a_cargo_toml("bench", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn bench_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("bench", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn build_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("build", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn build_dir_plus_file() {
     assert_not_a_cargo_toml("bench", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn build_dir_plus_path() {
     assert_not_a_cargo_toml("bench", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn build_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("build", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn clean_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("clean", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn clean_dir_plus_file() {
     assert_not_a_cargo_toml("clean", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn clean_dir_plus_path() {
     assert_not_a_cargo_toml("clean", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn clean_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("clean", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn doc_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("doc", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn doc_dir_plus_file() {
     assert_not_a_cargo_toml("doc", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn doc_dir_plus_path() {
     assert_not_a_cargo_toml("doc", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn doc_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("doc", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn fetch_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("fetch", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn fetch_dir_plus_file() {
     assert_not_a_cargo_toml("fetch", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn fetch_dir_plus_path() {
     assert_not_a_cargo_toml("fetch", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn fetch_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("fetch", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn generate_lockfile_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("generate-lockfile", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn generate_lockfile_dir_plus_file() {
     assert_not_a_cargo_toml("generate-lockfile", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn generate_lockfile_dir_plus_path() {
     assert_not_a_cargo_toml("generate-lockfile", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn generate_lockfile_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("generate-lockfile", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn package_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("package", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn package_dir_plus_file() {
     assert_not_a_cargo_toml("package", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn package_dir_plus_path() {
     assert_not_a_cargo_toml("package", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn package_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("package", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn pkgid_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("pkgid", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn pkgid_dir_plus_file() {
     assert_not_a_cargo_toml("pkgid", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn pkgid_dir_plus_path() {
     assert_not_a_cargo_toml("pkgid", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn pkgid_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("pkgid", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn publish_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("publish", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn publish_dir_plus_file() {
     assert_not_a_cargo_toml("publish", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn publish_dir_plus_path() {
     assert_not_a_cargo_toml("publish", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn publish_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("publish", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn read_manifest_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("read-manifest", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn read_manifest_dir_plus_file() {
     assert_not_a_cargo_toml("read-manifest", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn read_manifest_dir_plus_path() {
     assert_not_a_cargo_toml("read-manifest", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn read_manifest_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("read-manifest", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn run_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("run", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn run_dir_plus_file() {
     assert_not_a_cargo_toml("run", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn run_dir_plus_path() {
     assert_not_a_cargo_toml("run", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn run_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("run", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn rustc_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("rustc", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn rustc_dir_plus_file() {
     assert_not_a_cargo_toml("rustc", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn rustc_dir_plus_path() {
     assert_not_a_cargo_toml("rustc", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn rustc_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("rustc", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn test_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("test", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn test_dir_plus_file() {
     assert_not_a_cargo_toml("test", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn test_dir_plus_path() {
     assert_not_a_cargo_toml("test", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn test_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("test", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn update_dir_containing_cargo_toml() {
     assert_not_a_cargo_toml("update", "foo");
 }
 
-#[test]
+#[cargo_test]
 fn update_dir_plus_file() {
     assert_not_a_cargo_toml("update", "foo/bar");
 }
 
-#[test]
+#[cargo_test]
 fn update_dir_plus_path() {
     assert_not_a_cargo_toml("update", "foo/bar/baz");
 }
 
-#[test]
+#[cargo_test]
 fn update_dir_to_nonexistent_cargo_toml() {
     assert_cargo_toml_doesnt_exist("update", "foo/bar/baz/Cargo.toml");
 }
 
-#[test]
+#[cargo_test]
 fn verify_project_dir_containing_cargo_toml() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -334,7 +334,7 @@ fn verify_project_dir_containing_cargo_toml() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verify_project_dir_plus_file() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -351,7 +351,7 @@ fn verify_project_dir_plus_file() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verify_project_dir_plus_path() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -368,7 +368,7 @@ fn verify_project_dir_plus_path() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn verify_project_dir_to_nonexistent_cargo_toml() {
     let p = project().build();
     p.cargo("verify-project --manifest-path foo/bar/baz/Cargo.toml")

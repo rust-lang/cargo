@@ -61,7 +61,7 @@ fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
 }
 
-#[test]
+#[cargo_test]
 fn list_commands_with_descriptions() {
     let p = project().build();
     p.cargo("--list")
@@ -76,7 +76,7 @@ fn list_commands_with_descriptions() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn list_command_looks_at_path() {
     let proj = project().build();
     let proj = fake_file(
@@ -103,7 +103,7 @@ fn list_command_looks_at_path() {
 
 // Windows and symlinks don't currently mix well.
 #[cfg(unix)]
-#[test]
+#[cargo_test]
 fn list_command_resolves_symlinks() {
     let proj = project().build();
     let proj = fake_file(
@@ -130,7 +130,7 @@ fn list_command_resolves_symlinks() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn find_closest_biuld_to_build() {
     cargo_process("biuld")
         .with_status(101)
@@ -169,7 +169,7 @@ error: no such subcommand: `biuld`
 }
 
 // If a subcommand is more than an edit distance of 3 away, we don't make a suggestion.
-#[test]
+#[cargo_test]
 fn find_closest_dont_correct_nonsense() {
     cargo_process("there-is-no-way-that-there-is-a-command-close-to-this")
         .cwd(&paths::root())
@@ -182,7 +182,7 @@ fn find_closest_dont_correct_nonsense() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn displays_subcommand_on_error() {
     cargo_process("invalid-command")
         .with_status(101)
@@ -190,7 +190,7 @@ fn displays_subcommand_on_error() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_cargo_home() {
     let root = paths::root();
     let my_home = root.join("my_home");
@@ -221,7 +221,7 @@ fn override_cargo_home() {
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
 }
 
-#[test]
+#[cargo_test]
 fn cargo_subcommand_env() {
     let src = format!(
         r#"
@@ -256,7 +256,7 @@ fn cargo_subcommand_env() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_subcommand_args() {
     let p = project()
         .at("cargo-foo")
@@ -288,7 +288,7 @@ fn cargo_subcommand_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_help() {
     cargo_process("").run();
     cargo_process("help").run();
@@ -298,7 +298,7 @@ fn cargo_help() {
     cargo_process("help help").run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_help_external_subcommand() {
     Package::new("cargo-fake-help", "1.0.0")
         .file(
@@ -317,7 +317,7 @@ fn cargo_help_external_subcommand() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn explain() {
     cargo_process("--explain E0001")
         .with_stdout_contains(
@@ -328,7 +328,7 @@ fn explain() {
 
 // Test that the output of `cargo -Z help` shows a different help screen with
 // all the `-Z` flags.
-#[test]
+#[cargo_test]
 fn z_flags_help() {
     cargo_process("-Z help")
         .with_stdout_contains(

@@ -57,7 +57,7 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
     }
 }
 
-#[test]
+#[cargo_test]
 fn login_with_old_credentials() {
     registry::init();
 
@@ -70,7 +70,7 @@ fn login_with_old_credentials() {
     assert!(check_token(TOKEN, None));
 }
 
-#[test]
+#[cargo_test]
 fn login_with_new_credentials() {
     registry::init();
     setup_new_credentials();
@@ -84,13 +84,13 @@ fn login_with_new_credentials() {
     assert!(check_token(TOKEN, None));
 }
 
-#[test]
+#[cargo_test]
 fn login_with_old_and_new_credentials() {
     setup_new_credentials();
     login_with_old_credentials();
 }
 
-#[test]
+#[cargo_test]
 fn login_without_credentials() {
     registry::init();
     cargo_process("login --host")
@@ -102,7 +102,7 @@ fn login_without_credentials() {
     assert!(check_token(TOKEN, None));
 }
 
-#[test]
+#[cargo_test]
 fn new_credentials_is_used_instead_old() {
     registry::init();
     setup_new_credentials();
@@ -118,7 +118,7 @@ fn new_credentials_is_used_instead_old() {
     assert_eq!(token.unwrap(), TOKEN);
 }
 
-#[test]
+#[cargo_test]
 fn registry_credentials() {
     registry::init();
     setup_new_credentials();

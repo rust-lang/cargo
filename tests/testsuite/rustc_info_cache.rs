@@ -2,7 +2,7 @@ use crate::support::paths::CargoPathExt;
 use crate::support::{basic_manifest, project};
 use std::env;
 
-#[test]
+#[cargo_test]
 fn rustc_info_cache() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)

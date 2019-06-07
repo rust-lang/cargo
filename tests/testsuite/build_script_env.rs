@@ -3,7 +3,7 @@ use std::fs::File;
 use crate::support::project;
 use crate::support::sleep_ms;
 
-#[test]
+#[cargo_test]
 fn rerun_if_env_changes() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -57,7 +57,7 @@ fn rerun_if_env_changes() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rerun_if_env_or_file_changes() {
     let p = project()
         .file("src/main.rs", "fn main() {}")

@@ -4,7 +4,7 @@ fn verify_project_success_output() -> String {
     r#"{"success":"true"}"#.into()
 }
 
-#[test]
+#[cargo_test]
 fn cargo_verify_project_path_to_cargo_toml_relative() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -17,7 +17,7 @@ fn cargo_verify_project_path_to_cargo_toml_relative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_verify_project_path_to_cargo_toml_absolute() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -31,7 +31,7 @@ fn cargo_verify_project_path_to_cargo_toml_absolute() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_verify_project_cwd() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -43,7 +43,7 @@ fn cargo_verify_project_cwd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_verify_project_honours_unstable_features() {
     let p = project()
         .file(

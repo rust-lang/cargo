@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, paths, project, ProjectBuilder};
 
-#[test]
+#[cargo_test]
 fn adding_and_removing_packages() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -64,7 +64,7 @@ fn adding_and_removing_packages() {
     assert_eq!(lock1, lock4);
 }
 
-#[test]
+#[cargo_test]
 fn no_index_update() {
     Package::new("serde", "1.0.0").publish();
 
@@ -95,7 +95,7 @@ fn no_index_update() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn preserve_metadata() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -129,7 +129,7 @@ foo = "bar"
     assert!(lock.contains(metadata.trim()), "{}", lock);
 }
 
-#[test]
+#[cargo_test]
 fn preserve_line_endings_issue_2076() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -162,7 +162,7 @@ fn preserve_line_endings_issue_2076() {
     assert_eq!(lock1, lock2);
 }
 
-#[test]
+#[cargo_test]
 fn cargo_update_generate_lockfile() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -178,7 +178,7 @@ fn cargo_update_generate_lockfile() {
     assert!(lockfile.is_file());
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_entries_in_lockfile() {
     let _a = ProjectBuilder::new(paths::root().join("a"))
         .file(

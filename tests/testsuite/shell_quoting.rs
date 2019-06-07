@@ -4,7 +4,7 @@
 
 use crate::support::project;
 
-#[test]
+#[cargo_test]
 fn features_are_quoted() {
     let p = project()
         .file(

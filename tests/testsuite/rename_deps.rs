@@ -3,7 +3,7 @@ use crate::support::paths;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn rename_dependency() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
@@ -28,7 +28,7 @@ fn rename_dependency() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_different_names() {
     let p = project()
         .file(
@@ -62,7 +62,7 @@ fn rename_with_different_names() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn lots_of_names() {
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "pub fn foo1() {}")
@@ -125,7 +125,7 @@ fn lots_of_names() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_and_patch() {
     Package::new("foo", "0.1.0").publish();
 
@@ -156,7 +156,7 @@ fn rename_and_patch() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_twice() {
     Package::new("foo", "0.1.0").publish();
 
@@ -191,7 +191,7 @@ error: the crate `test v0.1.0 ([CWD])` depends on crate `foo v0.1.0` multiple ti
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_affects_fingerprint() {
     Package::new("foo", "0.1.0").publish();
 
@@ -232,7 +232,7 @@ fn rename_affects_fingerprint() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn can_run_doc_tests() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
@@ -273,7 +273,7 @@ fn can_run_doc_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn features_still_work() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
@@ -327,7 +327,7 @@ fn features_still_work() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn features_not_working() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
@@ -365,7 +365,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_dash() {
     let p = project()
         .file(

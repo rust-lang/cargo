@@ -1,6 +1,6 @@
 use crate::support::{project, registry};
 
-#[test]
+#[cargo_test]
 fn feature_required() {
     let p = project()
         .file(
@@ -53,7 +53,7 @@ switch to nightly channel you can add
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unknown_feature() {
     let p = project()
         .file(
@@ -82,7 +82,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn stable_feature_warns() {
     let p = project()
         .file(
@@ -110,7 +110,7 @@ necessary to be listed in the manifest
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn nightly_feature_requires_nightly() {
     let p = project()
         .file(
@@ -152,7 +152,7 @@ See [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn nightly_feature_requires_nightly_in_dep() {
     let p = project()
         .file(
@@ -214,7 +214,7 @@ See [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cant_publish() {
     let p = project()
         .file(
@@ -256,7 +256,7 @@ See [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn z_flags_rejected() {
     let p = project()
         .file(
@@ -300,7 +300,7 @@ fn z_flags_rejected() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_allowed() {
     registry::init();
 

@@ -238,7 +238,7 @@ proptest! {
     }
 }
 
-#[test]
+#[cargo_test]
 fn pub_fail() {
     let input = vec![
         pkg!(("a", "0.0.4")),
@@ -250,7 +250,7 @@ fn pub_fail() {
     assert!(resolve_and_validated(pkg_id("root"), vec![dep("kB")], &reg, None).is_err());
 }
 
-#[test]
+#[cargo_test]
 fn basic_public_dependency() {
     let reg = registry(vec![
         pkg!(("A", "0.1.0")),
@@ -271,7 +271,7 @@ fn basic_public_dependency() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn public_dependency_filling_in() {
     // The resolver has an optimization where if a candidate to resolve a dependency
     // has already bean activated then we skip looking at the candidates dependencies.
@@ -308,7 +308,7 @@ fn public_dependency_filling_in() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn public_dependency_filling_in_and_update() {
     // The resolver has an optimization where if a candidate to resolve a dependency
     // has already bean activated then we skip looking at the candidates dependencies.
@@ -343,7 +343,7 @@ fn public_dependency_filling_in_and_update() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn public_dependency_skipping() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -360,7 +360,7 @@ fn public_dependency_skipping() {
     resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn public_dependency_skipping_in_backtracking() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -380,7 +380,7 @@ fn public_dependency_skipping_in_backtracking() {
     resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg, None).unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn public_sat_topological_order() {
     let input = vec![
         pkg!(("a", "0.0.1")),
@@ -394,7 +394,7 @@ fn public_sat_topological_order() {
     assert!(resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).is_err());
 }
 
-#[test]
+#[cargo_test]
 fn public_sat_unused_makes_things_pub() {
     let input = vec![
         pkg!(("a", "0.0.1")),
@@ -408,7 +408,7 @@ fn public_sat_unused_makes_things_pub() {
     resolve_and_validated(pkg_id("root"), vec![dep("c")], &reg, None).unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn public_sat_unused_makes_things_pub_2() {
     let input = vec![
         pkg!(("c", "0.0.2")),
@@ -423,42 +423,42 @@ fn public_sat_unused_makes_things_pub_2() {
     resolve_and_validated(pkg_id("root"), vec![dep("A")], &reg, None).unwrap();
 }
 
-#[test]
+#[cargo_test]
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
     "".to_dep();
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_empty_dependency_list() {
     let res = resolve(pkg_id("root"), Vec::new(), &registry(vec![])).unwrap();
 
     assert_eq!(res, names(&["root"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_only_package() {
     let reg = registry(vec![pkg!("foo")]);
     let res = resolve(pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_one_dep() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar")]);
     let res = resolve(pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_multiple_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar"), pkg!("baz")]);
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo", "baz"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_transitive_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar" => ["foo"])]);
     let res = resolve(pkg_id("root"), vec![dep("bar")], &reg).unwrap();
@@ -466,7 +466,7 @@ fn test_resolving_transitive_deps() {
     assert_same(&res, &names(&["root", "foo", "bar"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_common_transitive_deps() {
     let reg = registry(vec![pkg!("foo" => ["bar"]), pkg!("bar")]);
     let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")], &reg).unwrap();
@@ -474,7 +474,7 @@ fn test_resolving_common_transitive_deps() {
     assert_same(&res, &names(&["root", "foo", "bar"]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_with_same_name() {
     let list = vec![
         pkg_loc("foo", "https://first.example.com"),
@@ -501,7 +501,7 @@ fn test_resolving_with_same_name() {
     assert_same(&res, &names);
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_with_dev_deps() {
     let reg = registry(vec![
         pkg!("foo" => ["bar", dep_kind("baz", Kind::Development)]),
@@ -520,7 +520,7 @@ fn test_resolving_with_dev_deps() {
     assert_same(&res, &names(&["root", "foo", "bar", "baz", "bat"]));
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_many_versions() {
     let reg = registry(vec![pkg!(("foo", "1.0.1")), pkg!(("foo", "1.0.2"))]);
 
@@ -529,7 +529,7 @@ fn resolving_with_many_versions() {
     assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.2")]));
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_specific_version() {
     let reg = registry(vec![pkg!(("foo", "1.0.1")), pkg!(("foo", "1.0.2"))]);
 
@@ -538,7 +538,7 @@ fn resolving_with_specific_version() {
     assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.1")]));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_maximum_version_with_transitive_deps() {
     let reg = registry(vec![
         pkg!(("util", "1.2.2")),
@@ -568,7 +568,7 @@ fn test_resolving_maximum_version_with_transitive_deps() {
     assert!(!res.contains(&("util", "1.1.1").to_pkgid()));
 }
 
-#[test]
+#[cargo_test]
 fn test_resolving_minimum_version_with_transitive_deps() {
     enable_nightly_features(); // -Z minimal-versions
                                // When the minimal-versions config option is specified then the lowest
@@ -620,7 +620,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
 
 // Ensure that the "-Z minimal-versions" CLI option works and the minimal
 // version of a dependency ends up in the lock file.
-#[test]
+#[cargo_test]
 fn minimal_version_cli() {
     Package::new("dep", "1.0.0").publish();
     Package::new("dep", "1.1.0").publish();
@@ -650,7 +650,7 @@ fn minimal_version_cli() {
     assert!(lock.contains("dep 1.0.0"));
 }
 
-#[test]
+#[cargo_test]
 fn resolving_incompat_versions() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.1")),
@@ -666,7 +666,7 @@ fn resolving_incompat_versions() {
     .is_err());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_wrong_case_from_registry() {
     // In the future we may #5678 allow this to happen.
     // For back compatibility reasons, we probably won't.
@@ -677,7 +677,7 @@ fn resolving_wrong_case_from_registry() {
     assert!(resolve(pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_mis_hyphenated_from_registry() {
     // In the future we may #2775 allow this to happen.
     // For back compatibility reasons, we probably won't.
@@ -688,7 +688,7 @@ fn resolving_mis_hyphenated_from_registry() {
     assert!(resolve(pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_backtrack() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.2") => [dep("bar")]),
@@ -705,7 +705,7 @@ fn resolving_backtrack() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_backtrack_features() {
     // test for cargo/issues/4347
     let mut bad = dep("bar");
@@ -725,7 +725,7 @@ fn resolving_backtrack_features() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_allows_multiple_compatible_versions() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.0")),
@@ -758,7 +758,7 @@ fn resolving_allows_multiple_compatible_versions() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_deep_backtracking() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
@@ -785,7 +785,7 @@ fn resolving_with_deep_backtracking() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_sys_crates() {
     // This is based on issues/4902
     // With `l` a normal library we get 2copies so everyone gets the newest compatible.
@@ -819,7 +819,7 @@ fn resolving_with_sys_crates() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_constrained_sibling_backtrack_parent() {
     // There is no point in considering all of the backtrack_trap{1,2}
     // candidates since they can't change the result of failing to
@@ -866,7 +866,7 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_many_equivalent_backtracking() {
     let mut reglist = Vec::new();
 
@@ -956,7 +956,7 @@ fn resolving_with_many_equivalent_backtracking() {
     assert!(res.is_err());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_deep_traps() {
     let mut reglist = Vec::new();
 
@@ -999,7 +999,7 @@ fn resolving_with_deep_traps() {
     assert!(res.is_err());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_constrained_cousins_backtrack() {
     let mut reglist = Vec::new();
 
@@ -1093,7 +1093,7 @@ fn resolving_with_constrained_cousins_backtrack() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_constrained_sibling_backtrack_activation() {
     // It makes sense to resolve most-constrained deps first, but
     // with that logic the backtrack traps here come between the two
@@ -1138,7 +1138,7 @@ fn resolving_with_constrained_sibling_backtrack_activation() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_with_constrained_sibling_transitive_dep_effects() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -1185,7 +1185,7 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn incomplete_information_skipping() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -1234,7 +1234,7 @@ fn incomplete_information_skipping() {
     assert!(resolve(pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
 }
 
-#[test]
+#[cargo_test]
 fn incomplete_information_skipping_2() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -1303,7 +1303,7 @@ fn incomplete_information_skipping_2() {
     assert!(resolve(pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
 }
 
-#[test]
+#[cargo_test]
 fn incomplete_information_skipping_3() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
@@ -1353,7 +1353,7 @@ fn incomplete_information_skipping_3() {
     assert!(resolve(pkg_id("root"), vec![dep("b")], &new_reg).is_ok());
 }
 
-#[test]
+#[cargo_test]
 fn resolving_but_no_exists() {
     let reg = registry(vec![]);
 
@@ -1370,14 +1370,14 @@ fn resolving_but_no_exists() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn resolving_cycle() {
     let reg = registry(vec![pkg!("foo" => ["foo"])]);
 
     let _ = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg);
 }
 
-#[test]
+#[cargo_test]
 fn hard_equality() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.1")),
@@ -1398,7 +1398,7 @@ fn hard_equality() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn large_conflict_cache() {
     let mut input = vec![
         pkg!(("last", "0.0.0") => [dep("bad")]), // just to make sure last is less constrained
@@ -1427,7 +1427,7 @@ fn large_conflict_cache() {
     let _ = resolve(pkg_id("root"), root_deps, &reg);
 }
 
-#[test]
+#[cargo_test]
 fn conflict_store_bug() {
     let input = vec![
         pkg!(("A", "0.0.3")),
@@ -1467,7 +1467,7 @@ fn conflict_store_bug() {
     let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg, None);
 }
 
-#[test]
+#[cargo_test]
 fn conflict_store_more_then_one_match() {
     let input = vec![
         pkg!(("A", "0.0.0")),

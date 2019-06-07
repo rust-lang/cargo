@@ -28,7 +28,7 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
     )
 }
 
-#[test]
+#[cargo_test]
 fn package_lockfile() {
     let p = project()
         .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
@@ -71,7 +71,7 @@ src/main.rs
     );
 }
 
-#[test]
+#[cargo_test]
 fn package_lockfile_git_repo() {
     // Create a Git repository containing a minimal Rust project.
     let g = git::repo(&paths::root().join("foo"))
@@ -109,7 +109,7 @@ src/main.rs
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_lock_file_with_library() {
     let p = project()
         .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
@@ -127,7 +127,7 @@ fn no_lock_file_with_library() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn lock_file_and_workspace() {
     let p = project()
         .file(
@@ -155,7 +155,7 @@ fn lock_file_and_workspace() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn note_resolve_changes() {
     // `multi` has multiple sources (path and registry).
     Package::new("mutli", "0.1.0").publish();
@@ -211,7 +211,7 @@ fn note_resolve_changes() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn outdated_lock_version_change_does_not_warn() {
     // If the version of the package being packaged changes, but Cargo.lock is
     // not updated, don't bother warning about it.
@@ -232,7 +232,7 @@ fn outdated_lock_version_change_does_not_warn() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warn_workspace_extras() {
     // Other entries in workspace lock file should be ignored.
     Package::new("dep1", "1.0.0").publish();
@@ -286,7 +286,7 @@ fn no_warn_workspace_extras() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warn_package_with_yanked() {
     Package::new("bar", "0.1.0").publish();
     let p = project()
@@ -322,7 +322,7 @@ fn warn_package_with_yanked() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warn_install_with_yanked() {
     Package::new("bar", "0.1.0").yanked(true).publish();
     Package::new("bar", "0.1.1").publish();
@@ -387,7 +387,7 @@ dependencies = [
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_lockfile_default() {
     let p = project()
         .file(
