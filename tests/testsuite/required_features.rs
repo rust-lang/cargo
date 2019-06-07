@@ -288,21 +288,21 @@ fn test_default_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --no-default-features")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] test [unoptimized + debuginfo] target(s) in [..]")
         .with_stdout("")
         .run();
 
     p.cargo("test --test=foo")
         .with_stderr(
             "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
@@ -345,7 +345,7 @@ fn test_arg_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
@@ -386,7 +386,7 @@ fn test_multiple_required_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
@@ -396,7 +396,7 @@ fn test_multiple_required_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_1-[..][EXE]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
         )
@@ -404,7 +404,7 @@ fn test_multiple_required_features() {
         .run();
 
     p.cargo("test --no-default-features")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] test [unoptimized + debuginfo] target(s) in [..]")
         .with_stdout("")
         .run();
 }
@@ -847,7 +847,7 @@ fn dep_feature_in_toml() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
@@ -964,7 +964,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
 
     // test
     p.cargo("test")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] test [unoptimized + debuginfo] target(s) in [..]")
         .with_stdout("")
         .run();
 
@@ -972,7 +972,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test test ... ok")
@@ -1044,7 +1044,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("running 0 tests")

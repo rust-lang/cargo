@@ -690,7 +690,7 @@ fn testing_and_such() {
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`",
@@ -1787,7 +1787,7 @@ fn cfg_test() {
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
@@ -1898,7 +1898,7 @@ fn cfg_override_test() {
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
@@ -2034,7 +2034,7 @@ fn env_test() {
 [RUNNING] [..] --crate-name foo[..]
 [RUNNING] [..] --crate-name foo[..]
 [RUNNING] [..] --crate-name test[..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
@@ -2135,7 +2135,7 @@ fn flags_go_into_tests() {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] src/lib.rs [..] -L test[..]`
 [RUNNING] `rustc [..] tests/foo.rs [..] -L test[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`",
         )
         .with_stdout_contains("running 0 tests")
@@ -2147,7 +2147,7 @@ fn flags_go_into_tests() {
 [FRESH] a v0.5.0 ([..]
 [COMPILING] b v0.5.0 ([..]
 [RUNNING] `rustc [..] b/src/lib.rs [..] -L test[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/b-[..][EXE]`",
         )
         .with_stdout_contains("running 0 tests")

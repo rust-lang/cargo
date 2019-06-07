@@ -314,7 +314,7 @@ fn profile_selection_test() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -441,7 +441,7 @@ fn profile_selection_bench() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] bench [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
@@ -609,7 +609,7 @@ fn profile_selection_check_all_targets_test() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
 ",
         )
         .run();
