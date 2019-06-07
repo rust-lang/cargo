@@ -106,7 +106,7 @@ https://github.com/rust-lang/cargo/issues/new
     let path = args
         .value_of_os("path")
         .map(|val| PathBuf::from(val.to_os_string()))
-        .unwrap_or(PathBuf::from("vendor"));
+        .unwrap_or_else(|| PathBuf::from("vendor"));
     ops::vendor(
         &ws,
         &ops::VendorOptions {

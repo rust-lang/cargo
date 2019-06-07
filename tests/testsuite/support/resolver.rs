@@ -428,7 +428,7 @@ impl SatResolve {
                 .unwrap_or(&empty_vec)
                 .iter()
                 .filter(|&p| dep.matches_id(*p))
-                .map(|p| self.var_for_is_packages_used[&p].positive())
+                .map(|p| self.var_for_is_packages_used[p].positive())
                 .collect();
             if matches.is_empty() {
                 return false;
