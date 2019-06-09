@@ -449,21 +449,21 @@ fn bench_default_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --no-default-features")
-        .with_stderr("[FINISHED] release [optimized] target(s) in [..]".to_string())
+        .with_stderr("[FINISHED] bench [optimized] target(s) in [..]".to_string())
         .with_stdout("")
         .run();
 
     p.cargo("bench --bench=foo")
         .with_stderr(
             "\
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test bench ... bench: [..]")
@@ -519,7 +519,7 @@ fn bench_arg_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
         )
         .with_stdout_contains("test bench ... bench: [..]")
@@ -582,7 +582,7 @@ fn bench_multiple_required_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
         )
         .with_stdout_contains("test bench ... bench: [..]")
@@ -592,7 +592,7 @@ fn bench_multiple_required_features() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_1-[..][EXE]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
         )
@@ -600,7 +600,7 @@ fn bench_multiple_required_features() {
         .run();
 
     p.cargo("bench --no-default-features")
-        .with_stderr("[FINISHED] release [optimized] target(s) in [..]")
+        .with_stderr("[FINISHED] bench [optimized] target(s) in [..]")
         .with_stdout("")
         .run();
 }
@@ -860,7 +860,7 @@ fn dep_feature_in_toml() {
                 "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("test bench ... bench: [..]")
@@ -981,7 +981,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     // bench
     if is_nightly() {
         p.cargo("bench")
-            .with_stderr("[FINISHED] release [optimized] target(s) in [..]")
+            .with_stderr("[FINISHED] bench [optimized] target(s) in [..]")
             .with_stdout("")
             .run();
 
@@ -990,7 +990,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
                 "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("test bench ... bench: [..]")
@@ -1064,7 +1064,7 @@ error[E0463]: can't find crate for `bar`",
             .with_stderr(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("running 0 tests")
