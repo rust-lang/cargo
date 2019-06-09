@@ -565,7 +565,7 @@ fn no_cross_doctests() {
 
     let host_output = "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ";
@@ -580,7 +580,7 @@ fn no_cross_doctests() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ",
