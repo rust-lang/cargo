@@ -1364,3 +1364,41 @@ fn short_message_format() {
         )
         .run();
 }
+
+#[cargo_test]
+fn doc_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[example]]
+            crate-type = ["lib"]
+            name = "ex1"
+            doc = true
+            "#,
+        )
+        .file("src/lib.rs", "pub fn f() {}")
+        .file(
+            "examples/ex1.rs",
+            r#"
+            use foo::f;
+
+            /// Example
+            pub fn x() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc").run();
+    assert!(p
+        .build_dir()
+        .join("doc")
+        .join("ex1")
+        .join("fn.x.html")
+        .exists());
+}
