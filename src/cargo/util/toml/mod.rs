@@ -1034,6 +1034,11 @@ impl TomlManifest {
         let publish_lockfile = match project.publish_lockfile {
             Some(b) => {
                 features.require(Feature::publish_lockfile())?;
+                warnings.push(
+                    "The `publish-lockfile` feature is deprecated and currently \
+                     has no effect. It may be removed in a future version."
+                        .to_string(),
+                );
                 b
             }
             None => features.is_enabled(Feature::publish_lockfile()),
