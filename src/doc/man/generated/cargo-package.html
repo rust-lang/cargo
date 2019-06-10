@@ -44,6 +44,11 @@ will ignore the path key for dependencies in published packages.</p>
 manifest.</p>
 </li>
 <li>
+<p><code>Cargo.lock</code> is automatically included if the package contains an
+executable binary or example target. <a href="commands/cargo-install.html">cargo-install(1)</a> will use the
+packaged lock file if the <code>--locked</code> flag is used.</p>
+</li>
+<li>
 <p>A <code>.cargo_vcs_info.json</code> file is included that contains information
 about the current VCS checkout hash if available (not included with
 <code>--allow-dirty</code>).</p>

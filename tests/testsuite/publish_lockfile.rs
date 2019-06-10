@@ -9,9 +9,7 @@ use crate::support::{
 fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
     format!(
         r#"
-        cargo-features = ["publish-lockfile"]
-
-        [project]
+        [package]
         name = "{}"
         version = "{}"
         authors = []
@@ -20,12 +18,46 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
         documentation = "foo"
         homepage = "foo"
         repository = "foo"
-        publish-lockfile = true
 
         {}
         "#,
         name, version, extra
     )
+}
+
+#[cargo_test]
+fn deprecated() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["publish-lockfile"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            publish-lockfile = true
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("package")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.1.0 ([..])
+[VERIFYING] foo v0.1.0 ([..])
+[WARNING] The `publish-lockfile` feature is deprecated and currently has no effect. \
+    It may be removed in a future version.
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] dev [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -36,7 +68,6 @@ fn package_lockfile() {
         .build();
 
     p.cargo("package")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
@@ -48,7 +79,6 @@ fn package_lockfile() {
         .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 Cargo.lock
@@ -57,10 +87,7 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("")
-        .run();
+    p.cargo("package").with_stdout("").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -80,7 +107,6 @@ fn package_lockfile_git_repo() {
         .build();
     cargo_process("package -l")
         .cwd(g.root())
-        .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
 .cargo_vcs_info.json
@@ -92,7 +118,6 @@ src/main.rs
         .run();
     cargo_process("package -v")
         .cwd(g.root())
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([..])
@@ -116,7 +141,7 @@ fn no_lock_file_with_library() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("package").masquerade_as_nightly_cargo().run();
+    p.cargo("package").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -141,10 +166,7 @@ fn lock_file_and_workspace() {
         .file("foo/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("package")
-        .cwd("foo")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("package").cwd("foo").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -188,15 +210,12 @@ fn note_resolve_changes() {
         .file("patched/src/lib.rs", "")
         .build();
 
-    p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("generate-lockfile").run();
 
     // Make sure this does not change or warn.
     Package::new("updated", "1.0.1").publish();
 
     p.cargo("package --no-verify -v --allow-dirty")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [PACKAGING] foo v0.0.1 ([..])
@@ -220,14 +239,11 @@ fn outdated_lock_version_change_does_not_warn() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("generate-lockfile").run();
 
     p.change_file("Cargo.toml", &pl_manifest("foo", "0.2.0", ""));
 
     p.cargo("package --no-verify")
-        .masquerade_as_nightly_cargo()
         .with_stderr("[PACKAGING] foo v0.2.0 ([..])")
         .run();
 }
@@ -271,12 +287,9 @@ fn no_warn_workspace_extras() {
         )
         .file("b/src/main.rs", "fn main() {}")
         .build();
-    p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("generate-lockfile").run();
     p.cargo("package --no-verify")
         .cwd("a")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [PACKAGING] a v0.1.0 ([..])
@@ -303,14 +316,11 @@ fn warn_package_with_yanked() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("generate-lockfile").run();
     Package::new("bar", "0.1.0").yanked(true).publish();
     // Make sure it sticks with the locked (yanked) version.
     Package::new("bar", "0.1.1").publish();
     p.cargo("package --no-verify")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([..])
@@ -382,69 +392,6 @@ dependencies = [
 [REPLACING] [..]/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v0.1.0` with `foo v0.1.0` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn publish_lockfile_default() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-            [package]
-            name = "foo"
-            version = "1.0.0"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("package -l")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-Cargo.lock
-Cargo.toml
-src/main.rs
-",
-        )
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-            [package]
-            name = "foo"
-            version = "1.0.0"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            publish-lockfile = false
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("package -l")
-        .masquerade_as_nightly_cargo()
-        .with_stdout(
-            "\
-Cargo.toml
-src/main.rs
 ",
         )
         .run();

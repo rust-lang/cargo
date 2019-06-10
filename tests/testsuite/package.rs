@@ -46,6 +46,7 @@ See [..]
     p.cargo("package -l")
         .with_stdout(
             "\
+Cargo.lock
 Cargo.toml
 src/main.rs
 ",
@@ -57,7 +58,7 @@ src/main.rs
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
 }
@@ -151,9 +152,10 @@ fn package_verbose() {
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 ",
         )
         .run();
@@ -172,6 +174,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         f,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -377,19 +380,20 @@ See [..]
 [WARNING] [..] file `some_dir/file_deep_1` is now excluded.
 See [..]
 [PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
+[ARCHIVING] Cargo.toml
+[ARCHIVING] file_root_3
+[ARCHIVING] file_root_4
+[ARCHIVING] file_root_5
+[ARCHIVING] some_dir/dir_deep_2/some_dir/file
+[ARCHIVING] some_dir/dir_deep_4/some_dir/file
+[ARCHIVING] some_dir/dir_deep_5/some_dir/file
+[ARCHIVING] some_dir/file_deep_2
+[ARCHIVING] some_dir/file_deep_3
+[ARCHIVING] some_dir/file_deep_4
+[ARCHIVING] some_dir/file_deep_5
+[ARCHIVING] src/main.rs
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 ",
         )
         .run();
@@ -401,6 +405,7 @@ See [..]
         .with_stdout(
             "\
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 file_root_3
 file_root_4
@@ -447,10 +452,11 @@ fn include() {
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
 [PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-[ARCHIVING] [..]
+[ARCHIVING] Cargo.toml
+[ARCHIVING] foo.txt
+[ARCHIVING] src/main.rs
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 ",
         )
         .run();
@@ -526,6 +532,7 @@ fn no_duplicates_from_modified_tracked_files() {
         .cwd(p.root())
         .with_stdout(
             "\
+Cargo.lock
 Cargo.toml
 src/main.rs
 ",
@@ -571,6 +578,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     p.cargo("package -l")
         .with_stdout(
             "\
+Cargo.lock
 Cargo.toml
 src[..]main.rs
 ",
@@ -582,7 +590,7 @@ src[..]main.rs
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
 }
@@ -652,7 +660,13 @@ See [..]
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "src/foo.rs"],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "src/foo.rs",
+        ],
         &[],
     );
 }
@@ -755,6 +769,7 @@ fn generated_manifest() {
     Package::new("abc", "1.0.0").publish();
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
     let p = project()
         .file(
@@ -830,7 +845,7 @@ version = "1.0"
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[("Cargo.toml", &rewritten_toml)],
     );
 }
