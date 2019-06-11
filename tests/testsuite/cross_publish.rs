@@ -53,7 +53,7 @@ fn simple_cross_package() {
     publish::validate_crate_contents(
         f,
         "foo-0.0.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
         &[],
     );
 }

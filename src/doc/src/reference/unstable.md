@@ -10,26 +10,6 @@ command-line flags. Options requiring this will be called out below.
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 
-### publish-lockfile
-* Original Issue: [#2263](https://github.com/rust-lang/cargo/issues/2263)
-* PR: [#5093](https://github.com/rust-lang/cargo/pull/5093)
-* Tracking Issue: [#5654](https://github.com/rust-lang/cargo/issues/5654)
-
-When creating a `.crate` file for distribution, Cargo has historically
-not included the `Cargo.lock` file. This can cause problems with
-using `cargo install` with a binary. You can specify that your package
-should include the `Cargo.lock` file when using `cargo package` or `cargo publish`
-by specifying the `publish-lockfile` key in `Cargo.toml`. This also requires the
-appropriate `cargo-features`:
-
-```toml
-cargo-features = ["publish-lockfile"]
-
-[package]
-...
-publish-lockfile = true
-```
-
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
 

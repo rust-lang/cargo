@@ -2,12 +2,12 @@
 .\"     Title: cargo-install
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-05-12
+.\"      Date: 2019-06-10
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INSTALL" "1" "2019-05-12" "\ \&" "\ \&"
+.TH "CARGO\-INSTALL" "1" "2019-06-10" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -40,9 +40,10 @@ cargo\-install \- Build and install a Rust binary
 \fBcargo install [\fIOPTIONS\fP] \-\-list\fP
 .SH "DESCRIPTION"
 .sp
-This command manages Cargo\(cqs local set of installed binary crates. Only packages
-which have \fB[[bin]]\fP targets can be installed, and all binaries are installed into
-the installation root\(cqs \fBbin\fP folder.
+This command manages Cargo\(cqs local set of installed binary crates. Only
+packages which have executable \fB[[bin]]\fP or \fB[[example]]\fP targets can be
+installed, and all executables are installed into the installation root\(cqs
+\fBbin\fP folder.
 .sp
 The installation root is determined, in order of precedence:
 .sp
@@ -103,7 +104,7 @@ The installation root is determined, in order of precedence:
 .RE
 .sp
 There are multiple sources from which a crate can be installed. The default
-location is crates.io but the \fB\-\-git\fP, \fB\-\-path\fP, and \fBregistry\fP flags can
+location is crates.io but the \fB\-\-git\fP, \fB\-\-path\fP, and \fB\-\-registry\fP flags can
 change this source. If the source contains more than one package (such as
 crates.io or a git repository with multiple crates) the \fICRATE\fP argument is
 required to indicate which crate should be installed.
@@ -120,6 +121,20 @@ in a temporary target directory. To avoid this, the target directory can be
 specified by setting the \fBCARGO_TARGET_DIR\fP environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
+.sp
+By default, the \fBCargo.lock\fP file that is included with the package will be
+ignored. This means that Cargo will recompute which versions of dependencies
+to use, possibly using newer versions that have been released since the
+package was published. The \fB\-\-locked\fP flag can be used to force Cargo to use
+the packaged \fBCargo.lock\fP file if it is available. This may be useful for
+ensuring reproducible builds, to use the exact same set of dependencies that
+were available when the package was published. It may also be useful if a
+newer version of a dependency is published that no longer builds on your
+system, or has other problems. The downside to using \fB\-\-locked\fP is that you
+will not receive any fixes or updates to any dependency. Note that Cargo did
+not start publishing \fBCargo.lock\fP files until version 1.37, which means
+packages published with prior versions will not have a \fBCargo.lock\fP file
+available.
 .SH "OPTIONS"
 .SS "Install Options"
 .sp

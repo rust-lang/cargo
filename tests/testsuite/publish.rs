@@ -52,7 +52,7 @@ fn validate_upload_foo() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
@@ -61,6 +61,7 @@ fn validate_upload_foo_clean() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -498,6 +499,7 @@ fn publish_when_ignored() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -539,7 +541,13 @@ fn ignore_when_crate_ignored() {
     publish::validate_upload(
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "baz"],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "baz",
+        ],
     );
 }
 
@@ -713,6 +721,7 @@ fn publish_allowed_registry() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -974,7 +983,7 @@ fn publish_with_patch() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 

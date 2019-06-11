@@ -2,12 +2,12 @@
 .\"     Title: cargo-package
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-05-20
+.\"      Date: 2019-06-10
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-PACKAGE" "1" "2019-05-20" "\ \&" "\ \&"
+.TH "CARGO\-PACKAGE" "1" "2019-06-10" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -93,6 +93,19 @@ The original \fBCargo.toml\fP file is rewritten and normalized.
 .\}
 \fB[patch]\fP, \fB[replace]\fP, and \fB[workspace]\fP sections are removed from the
 manifest.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCargo.lock\fP is automatically included if the package contains an
+executable binary or example target. \fBcargo\-install\fP(1) will use the
+packaged lock file if the \fB\-\-locked\fP flag is used.
 .RE
 .sp
 .RS 4
