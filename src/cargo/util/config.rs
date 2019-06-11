@@ -882,7 +882,7 @@ impl Config {
             }
             None => {
                 let path = ".package-cache";
-                let desc = "package cache lock";
+                let desc = "package cache";
 
                 // First, attempt to open an exclusive lock which is in general
                 // the purpose of this lock!
