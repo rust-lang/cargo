@@ -140,7 +140,16 @@ fn run_doc_tests(
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    let runtool = compilation.target_runner();
+    // The unstable doctest-xcompile feature enables both per-target-ignores and
+    // cross-compiling doctests. As a side effect, this feature also gates running
+    // doctests with runtools when target == host.
+    let doctest_xcompile = config.cli_unstable().doctest_xcompile;
+    let mut runtool: &Option<(std::path::PathBuf, Vec<String>)> = &None;
+    if doctest_xcompile {
+        runtool = compilation.target_runner();
+    } else if compilation.host != compilation.target {
+        return Ok((Test::Doc, errors));
+    }
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -155,9 +164,10 @@ fn run_doc_tests(
             .arg("--crate-name")
             .arg(&target.crate_name());
 
-        p.arg("-Z");
-        p.arg("unstable-options");
-        p.arg("--enable-per-target-ignores");
+        if doctest_xcompile {
+            p.arg("-Zunstable-options");
+            p.arg("--enable-per-target-ignores");
+        }
 
         runtool.as_ref().map(|(runtool, runtool_args)| {
             p.arg("--target").arg(&compilation.target);
