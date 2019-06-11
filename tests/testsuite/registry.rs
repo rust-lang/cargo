@@ -363,7 +363,7 @@ fn package_with_path_deps() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] failed to verify package tarball
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   no matching package named `notyet` found
@@ -379,8 +379,8 @@ required by package `foo v0.0.1 ([..])`
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
-[VERIFYING] foo v0.0.1 ([CWD])
 [UPDATING] `[..]` index
+[VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1

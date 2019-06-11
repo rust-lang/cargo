@@ -13,7 +13,7 @@ limit to the number of versions which can be published, however.
 First thing’s first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
 account (required for now). After this, visit your [Account
-Settings](https://crates.io/me) page and run the `cargo login` command
+Settings](https://crates.io/me) page and run the [`cargo login`] command
 specified.
 
 ```console
@@ -21,42 +21,71 @@ $ cargo login abcdefghijklmnopqrstuvwxyz012345
 ```
 
 This command will inform Cargo of your API token and store it locally in your
-`~/.cargo/credentials` (previously it was `~/.cargo/config`). Note that this
-token is a **secret** and should not be shared with anyone else. If it leaks for
-any reason, you should regenerate it immediately.
+`~/.cargo/credentials`. Note that this token is a **secret** and should not be
+shared with anyone else. If it leaks for any reason, you should regenerate it
+immediately.
 
 ### Before publishing a new crate
 
 Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
 serve basis. Once a crate name is taken, it cannot be used for another crate.
 
+Check out the [metadata you can
+specify](reference/manifest.html#package-metadata) in `Cargo.toml` to ensure
+your crate can be discovered more easily! Before publishing, make sure you have
+filled out the following fields:
+
+- `authors`
+- `license` or `license-file`
+- `description`
+- `homepage`
+- `documentation`
+- `repository`
+
+It would also be a good idea to include some `keywords` and `categories`,
+though they are not required.
+
+If you are publishing a library, you may also want to consult the [Rust API
+Guidelines].
+
 #### Packaging a crate
 
-The next step is to package up your crate into a format that can be uploaded to
-[crates.io]. For this we’ll use the `cargo package` subcommand. This will take
-our entire crate and package it all up into a `*.crate` file in the
-`target/package` directory.
+The next step is to package up your crate and upload it to [crates.io]. For
+this we’ll use the [`cargo publish`] subcommand. This command performs the following
+steps:
+
+1. Perform some verification checks on your package.
+2. Compress your source code into a `.crate` file.
+3. Extract the `.crate` file into a temporary directory and verify that it
+   compiles.
+4. Upload the `.crate` file to [crates.io].
+5. The registry will perform some additional checks on the uploaded package
+   before adding it.
+
+It is recommended that you first run `cargo publish --dry-run` (or [`cargo
+package`] which is equivalent) to ensure there aren't any warnings or errors
+before publishing. This will perform the first three steps listed above.
 
 ```console
-$ cargo package
+$ cargo publish --dry-run
 ```
 
-As an added bonus, the `*.crate` will be verified independently of the current
-source tree. After the `*.crate` is created, it’s unpacked into
-`target/package` and then built from scratch to ensure that all necessary files
-are there for the build to succeed. This behavior can be disabled with the
-`--no-verify` flag.
+You can inspect the generated `.crate` file in the `target/package` directory.
+[crates.io] currently has a 10MB size limit on the `.crate` file. You may want
+to check the size of the `.crate` file to ensure you didn't accidentally
+package up large assets that are not required to build your package, such as
+test data, website documentation, or code generation. You can check which
+files are included with the following command:
 
-Now’s a good time to take a look at the `*.crate` file to make sure you didn’t
-accidentally package up that 2GB video asset, or large data files used for code
-generation, integration tests, or benchmarking. There is currently a 10MB
-upload size limit on `*.crate` files. So, if the size of `tests` and `benches`
-directories and their dependencies are up to a couple of MBs, you can keep them
-in your package; otherwise, better to exclude them.
+```console
+$ cargo package --list
+```
 
 Cargo will automatically ignore files ignored by your version control system
 when packaging, but if you want to specify an extra set of files to ignore you
-can use the `exclude` key in the manifest:
+can use the [`exclude`
+key](reference/manifest.html#the-exclude-and-include-fields-optional) in the
+manifest:
 
 ```toml
 [package]
@@ -67,10 +96,8 @@ exclude = [
 ]
 ```
 
-The syntax of each element in this array is what
-[rust-lang/glob](https://github.com/rust-lang/glob) accepts. If you’d rather
-roll with a whitelist instead of a blacklist, Cargo also supports an `include`
-key, which if set, overrides the `exclude` key:
+If you’d rather explicitly list the files to include, Cargo also supports an
+`include` key, which if set, overrides the `exclude` key:
 
 ```toml
 [package]
@@ -83,28 +110,22 @@ include = [
 
 ### Uploading the crate
 
-Now that we’ve got a `*.crate` file ready to go, it can be uploaded to
-[crates.io] with the `cargo publish` command. And that’s it, you’ve now published
-your first crate!
+When you are ready to publish, use the [`cargo publish`] command
+to upload to [crates.io]:
 
 ```console
 $ cargo publish
 ```
 
-If you’d like to skip the `cargo package` step, the `cargo publish` subcommand
-will automatically package up the local crate if a copy isn’t found already.
-
-Be sure to check out the [metadata you can
-specify](reference/manifest.html#package-metadata) to ensure your crate can be
-discovered more easily!
+And that’s it, you’ve now published your first crate!
 
 ### Publishing a new version of an existing crate
 
-In order to release a new version, change the `version` value specified in your
-`Cargo.toml` manifest. Keep in mind [the semver
-rules](reference/manifest.html#the-version-field). Then optionally run `cargo package` if
-you want to inspect the `*.crate` file for the new version before publishing,
-and run `cargo publish` to upload the new version.
+In order to release a new version, change the `version` value specified in
+your `Cargo.toml` manifest. Keep in mind [the semver
+rules](reference/manifest.html#the-version-field), and consult [RFC 1105] for
+what constitutes a semver-breaking change. Then run [`cargo publish`] as
+described above to upload the new version.
 
 ### Managing a crates.io-based crate
 
@@ -176,7 +197,7 @@ is likely for you to encounter the following message when working with them:
 > It looks like you don’t have permission to query a necessary property from
 GitHub to complete this request. You may need to re-authenticate on [crates.io]
 to grant permission to read GitHub org memberships. Just go to
-https://crates.io/login
+<https://crates.io/login>.
 
 This is basically a catch-all for “you tried to query a team, and one of the
 five levels of membership access control denied this”. That is not an
@@ -195,7 +216,7 @@ you will get the error above. You may also see this error if you ever try to
 publish a crate that you don’t own at all, but otherwise happens to have a team.
 
 If you ever change your mind, or just aren’t sure if [crates.io] has sufficient
-permission, you can always go to https://crates.io/login, which will prompt you
+permission, you can always go to <https://crates.io/login>, which will prompt you
 for permission if [crates.io] doesn’t have all the scopes it would like to.
 
 An additional barrier to querying GitHub is that the organization may be
@@ -218,5 +239,11 @@ the “Grant Access” button next to its name:
 
 ![Authentication Access Control](images/auth-level-acl.png)
 
+[RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
+[Rust API Guidelines]: https://rust-lang-nursery.github.io/api-guidelines/
+[`cargo login`]: commands/cargo-login.html
+[`cargo package`]: commands/cargo-package.html
+[`cargo publish`]: commands/cargo-publish.html
 [crates.io]: https://crates.io/
 [oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
+

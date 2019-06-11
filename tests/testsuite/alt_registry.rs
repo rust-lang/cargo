@@ -361,7 +361,7 @@ fn publish_with_registry_dependency() {
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
@@ -460,7 +460,7 @@ fn publish_to_alt_registry() {
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
@@ -523,7 +523,7 @@ fn publish_with_crates_io_dep() {
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 

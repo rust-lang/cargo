@@ -478,9 +478,6 @@ impl Manifest {
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
     }
-    pub fn publish_lockfile(&self) -> bool {
-        self.publish_lockfile
-    }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
     }
