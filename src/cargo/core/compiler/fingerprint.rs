@@ -165,13 +165,10 @@
 //!
 //! ## Special considerations
 //!
-//! Registry dependencies do not track the mtime of files. This is because
-//! registry dependencies are not expected to change (if a new version is
-//! used, the Package ID will change, causing a rebuild). Cargo currently
-//! partially works with Docker caching. When a Docker image is built, it has
-//! normal mtime information. However, when a step is cached, the nanosecond
-//! portions of all files is zeroed out. Currently this works, but care must
-//! be taken for situations like these.
+//! Cargo currently partially works with Docker caching. When a Docker image is
+//! built, it has normal mtime information. However, when a step is cached, the
+//! nanosecond portions of all files is zeroed out. Currently this works, but
+//! care must be taken for situations like these.
 //!
 //! HFS on macOS only supports 1 second timestamps. This causes a significant
 //! number of problems, particularly with Cargo's testsuite which does rapid
@@ -1108,13 +1105,8 @@ fn calculate_normal<'a, 'cfg>(
     })
 }
 
-// We want to use the mtime for files if we're a path source, but if we're a
-// git/registry source, then the mtime of files may fluctuate, but they won't
-// change so long as the source itself remains constant (which is the
-// responsibility of the source)
 fn use_dep_info(unit: &Unit<'_>) -> bool {
-    let path = unit.pkg.summary().source_id().is_path();
-    !unit.mode.is_doc() && path
+    !unit.mode.is_doc()
 }
 
 /// Calculate a fingerprint for an "execute a build script" unit.  This is an
