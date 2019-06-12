@@ -2026,3 +2026,70 @@ fn rename_with_path_deps() {
         .with_stderr("[FINISHED] [..]")
         .run();
 }
+
+#[cargo_test]
+fn move_target_directory_with_path_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                a = { path = "a" }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "extern crate a; pub use a::print_msg;")
+        .file(
+            "a/build.rs",
+            r###"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                println!("cargo:rerun-if-changed=build.rs");
+                let out_dir = env::var("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("hello.rs");
+                fs::write(&dest_path, r#"
+                    pub fn message() -> &'static str {
+                        "Hello, World!"
+                    }
+                "#).unwrap();
+            }
+        "###,
+        )
+        .file(
+            "a/src/lib.rs",
+            r#"
+            include!(concat!(env!("OUT_DIR"), "/hello.rs"));
+            pub fn print_msg() { message(); }
+            "#,
+        );
+    let p = p.build();
+
+    let mut parent = p.root();
+    parent.pop();
+
+    p.cargo("build").run();
+
+    let new_target = p.root().join("target2");
+    fs::rename(p.root().join("target"), &new_target).unwrap();
+
+    p.cargo("build")
+        .env("CARGO_TARGET_DIR", &new_target)
+        .with_stderr("[FINISHED] [..]")
+        .run();
+}
