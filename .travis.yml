@@ -1,6 +1,5 @@
 language: rust
 rust: stable
-sudo: required
 dist: trusty
 
 git:
@@ -8,6 +7,14 @@ git:
 
 matrix:
   include:
+    - name: "rustfmt"
+      env: TARGET=x86_64-unknown-linux-gnu
+      rust: stable
+      before_script:
+        - rustup component add rustfmt
+      script:
+        - cargo fmt --all -- --check
+
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
       if: branch != master OR type = pull_request
