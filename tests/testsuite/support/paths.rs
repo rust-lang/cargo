@@ -51,18 +51,16 @@ thread_local! {
 }
 
 pub struct TestIdGuard {
-    _private: ()
+    _private: (),
 }
 
 pub fn init_root() -> TestIdGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    TEST_ID.with(|n| { *n.borrow_mut() = Some(id) } );
+    TEST_ID.with(|n| *n.borrow_mut() = Some(id));
 
-    let guard = TestIdGuard {
-        _private: ()
-    };
+    let guard = TestIdGuard { _private: () };
 
     root().mkdir_p();
 
@@ -71,15 +69,17 @@ pub fn init_root() -> TestIdGuard {
 
 impl Drop for TestIdGuard {
     fn drop(&mut self) {
-        TEST_ID.with(|n| { *n.borrow_mut() = None } );
+        TEST_ID.with(|n| *n.borrow_mut() = None);
     }
 }
 
 pub fn root() -> PathBuf {
     let id = TEST_ID.with(|n| {
-        n.borrow().expect("Tests must use the `#[cargo_test]` attribute in \
-                            order to be able to use the crate root.")
-    } );
+        n.borrow().expect(
+            "Tests must use the `#[cargo_test]` attribute in \
+             order to be able to use the crate root.",
+        )
+    });
     GLOBAL_ROOT.join(&format!("t{}", id))
 }
 
