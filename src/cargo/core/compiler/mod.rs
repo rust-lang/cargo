@@ -315,13 +315,19 @@ fn rustc<'a, 'cfg>(
         }
 
         if rustc_dep_info_loc.exists() {
-            fingerprint::translate_dep_info(&rustc_dep_info_loc, &dep_info_loc, &pkg_root, &cwd)
-                .chain_err(|| {
-                    internal(format!(
-                        "could not parse/generate dep info at: {}",
-                        rustc_dep_info_loc.display()
-                    ))
-                })?;
+            fingerprint::translate_dep_info(
+                &rustc_dep_info_loc,
+                &dep_info_loc,
+                &cwd,
+                &pkg_root,
+                &root_output,
+            )
+            .chain_err(|| {
+                internal(format!(
+                    "could not parse/generate dep info at: {}",
+                    rustc_dep_info_loc.display()
+                ))
+            })?;
             filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
         }
 
