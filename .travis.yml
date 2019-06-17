@@ -10,6 +10,7 @@ matrix:
     - name: "rustfmt"
       env: TARGET=x86_64-unknown-linux-gnu
       rust: stable
+      addons:
       before_script:
         - rustup component add rustfmt
       script:
