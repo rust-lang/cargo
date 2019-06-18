@@ -208,7 +208,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
+        let (mut parent, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -217,7 +217,7 @@ fn activate_deps_loop(
         trace!(
             "{}[{}]>{} {} candidates",
             parent.name(),
-            cur,
+            cx.age(),
             dep.package_name(),
             candidates.len()
         );
@@ -263,7 +263,7 @@ fn activate_deps_loop(
                 trace!(
                     "{}[{}]>{} -- no candidates",
                     parent.name(),
-                    cur,
+                    cx.age(),
                     dep.package_name()
                 );
 
@@ -308,7 +308,6 @@ fn activate_deps_loop(
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
-                        cur = frame.cur;
                         cx = frame.context;
                         remaining_deps = frame.remaining_deps;
                         remaining_candidates = frame.remaining_candidates;
@@ -353,7 +352,6 @@ fn activate_deps_loop(
             // if we can.
             let backtrack = if has_another {
                 Some(BacktrackFrame {
-                    cur,
                     context: Context::clone(&cx),
                     remaining_deps: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
@@ -376,7 +374,7 @@ fn activate_deps_loop(
             trace!(
                 "{}[{}]>{} trying {}",
                 parent.name(),
-                cur,
+                cx.age(),
                 dep.package_name(),
                 candidate.version()
             );
@@ -409,7 +407,7 @@ fn activate_deps_loop(
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (ref new_dep, _, _))| {
+                            .filter_map(|(ref new_dep, _, _)| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
                             })
                             .next()
@@ -526,7 +524,7 @@ fn activate_deps_loop(
                         trace!(
                             "{}[{}]>{} skipping {} ",
                             parent.name(),
-                            cur,
+                            cx.age(),
                             dep.package_name(),
                             pid.version()
                         );
@@ -700,7 +698,6 @@ fn activate(
 
 #[derive(Clone)]
 struct BacktrackFrame {
-    cur: usize,
     context: Context,
     remaining_deps: RemainingDeps,
     remaining_candidates: RemainingCandidates,
@@ -759,7 +756,7 @@ impl RemainingCandidates {
         dep: &Dependency,
         parent: PackageId,
     ) -> Option<(Summary, bool)> {
-        'main: for (_, b) in self.remaining.by_ref() {
+        'main: for b in self.remaining.by_ref() {
             let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
