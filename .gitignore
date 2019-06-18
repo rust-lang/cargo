@@ -1,5 +1,4 @@
-/target
-/tests/testsuite/support/cargo-test-macro/target
+target
 Cargo.lock
 .cargo
 /config.stamp
