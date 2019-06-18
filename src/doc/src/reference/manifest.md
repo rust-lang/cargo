@@ -193,7 +193,7 @@ private in a company.
 publish = false
 ```
 
-The value many also be an array of strings which are registry names that are
+The value may also be an array of strings which are registry names that are
 allowed to be published to.
 
 ```toml
