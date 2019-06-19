@@ -1334,6 +1334,25 @@ fn large_conflict_cache() {
 }
 
 #[test]
+fn off_by_one_bug() {
+    let input = vec![
+        pkg!(("A-sys", "0.0.1")),
+        pkg!(("A-sys", "0.0.4")),
+        pkg!(("A-sys", "0.0.6")),
+        pkg!(("A-sys", "0.0.7")),
+        pkg!(("NA", "0.0.0") => [dep_req("A-sys", "<= 0.0.5"),]),
+        pkg!(("NA", "0.0.1") => [dep_req("A-sys", ">= 0.0.6, <= 0.0.8"),]),
+        pkg!(("a", "0.0.1")),
+        pkg!(("a", "0.0.2")),
+        pkg!(("aa", "0.0.0") => [dep_req("A-sys", ">= 0.0.4, <= 0.0.6"),dep_req("NA", "<= 0.0.0"),]),
+        pkg!(("f", "0.0.3") => [dep("NA"),dep_req("a", "<= 0.0.2"),dep("aa"),]),
+    ];
+
+    let reg = registry(input);
+    let _ = resolve_and_validated(vec![dep("f")], &reg, None);
+}
+
+#[test]
 fn conflict_store_bug() {
     let input = vec![
         pkg!(("A", "0.0.3")),

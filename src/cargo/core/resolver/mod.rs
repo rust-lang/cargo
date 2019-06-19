@@ -902,12 +902,12 @@ fn generalize_conflicting(
                                     // we are imagining that we used other instead
                                     Some(backtrack_critical_age)
                                 } else {
-                                    cx.is_active(id).filter(|&age|
-                                        // we only care about things that are older then critical_age
-                                        age < backtrack_critical_age)
+                                    cx.is_active(id)
                                 }
                             },
                             Some(other.package_id()),
+                            // we only care about things that are newer then critical_age
+                            backtrack_critical_age,
                         )
                         .map(|con| (other.package_id(), con))
                 })
