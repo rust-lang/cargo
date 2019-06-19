@@ -39,7 +39,7 @@ proptest! {
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
-        let mut sat_resolve = SatResolve::new(&reg);
+        let sat_resolve = SatResolve::new(&reg);
         // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
@@ -47,7 +47,7 @@ proptest! {
             let _ = resolve_and_validated(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
-                Some(&mut sat_resolve),
+                Some(sat_resolve.clone()),
             );
         }
     }
