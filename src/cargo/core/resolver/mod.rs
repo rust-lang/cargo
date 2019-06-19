@@ -983,7 +983,12 @@ fn find_candidate(
             .any(|c| *c == ConflictReason::PublicDependency)
     {
         // we dont have abnormal situations. So we can ask `cx` for how far back we need to go.
-        cx.is_conflicting(Some(parent.package_id()), conflicting_activations)
+        let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
+        // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
+        // in building it. But we will just fall back to laboriously trying all possibilities witch
+        // will give us the correct answer so only `assert` if there is a developer to debug it.
+        debug_assert!(a.is_some());
+        a
     } else {
         None
     };
