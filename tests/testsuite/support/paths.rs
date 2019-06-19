@@ -28,10 +28,7 @@ lazy_static! {
         }
 
         path.push(CARGO_INTEGRATION_TEST_DIR);
-
-        path.rm_rf();
         path.mkdir_p();
-
         path
     };
 
@@ -62,7 +59,9 @@ pub fn init_root() -> TestIdGuard {
 
     let guard = TestIdGuard { _private: () };
 
-    root().mkdir_p();
+    let r = root();
+    r.rm_rf();
+    r.mkdir_p();
 
     guard
 }
