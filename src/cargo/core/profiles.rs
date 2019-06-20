@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::core::compiler::{ProfileKind, CompileMode};
 use crate::core::interning::InternedString;
-use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Features, Feature, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::lev_distance::lev_distance;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
@@ -54,6 +54,22 @@ impl Profiles {
         } else {
             BTreeMap::new()
         };
+
+        // Feature gating
+        for (profile_name, profile) in &profiles {
+            match profile_name.as_str() {
+                "dev" | "release" | "bench" | "test" | "doc" => {
+                    if profile.dir_name.is_some() {
+                        features.require(Feature::named_profiles())?;
+                        break;
+                    }
+                },
+                _ => {
+                    features.require(Feature::named_profiles())?;
+                    break;
+                }
+            }
+        }
 
         // Merge with predefined profiles
         use std::collections::btree_map::Entry;
