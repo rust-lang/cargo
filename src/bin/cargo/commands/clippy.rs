@@ -61,7 +61,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mode = CompileMode::Check { test: false };
-    let mut compile_opts = args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
+    let mut compile_opts =
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
 
     if !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(

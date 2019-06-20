@@ -15,7 +15,7 @@ use crate::util::{
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
-pub use crate::core::compiler::{ProfileKind, CompileMode};
+pub use crate::core::compiler::{CompileMode, ProfileKind};
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 
@@ -297,9 +297,12 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
-    fn get_profile_kind(&self, config: &Config, default: ProfileKind, profile_checking: ProfileChecking)
-        -> CargoResult<ProfileKind>
-    {
+    fn get_profile_kind(
+        &self,
+        config: &Config,
+        default: ProfileKind,
+        profile_checking: ProfileChecking,
+    ) -> CargoResult<ProfileKind> {
         let specified_profile = match self._value_of("profile") {
             None => None,
             Some("dev") => Some(ProfileKind::Dev),
@@ -308,7 +311,7 @@ pub trait ArgMatchesExt {
         };
 
         match profile_checking {
-            ProfileChecking::Unchecked => {},
+            ProfileChecking::Unchecked => {}
             ProfileChecking::Checked => {
                 if specified_profile.is_some() {
                     if !config.cli_unstable().unstable_options {
@@ -320,21 +323,13 @@ pub trait ArgMatchesExt {
 
         if self._is_present("release") {
             match specified_profile {
-                None | Some(ProfileKind::Release) => {
-                    Ok(ProfileKind::Release)
-                }
-                _ => {
-                    failure::bail!("Conflicting usage of --profile and --release")
-                }
+                None | Some(ProfileKind::Release) => Ok(ProfileKind::Release),
+                _ => failure::bail!("Conflicting usage of --profile and --release"),
             }
         } else if self._is_present("debug") {
             match specified_profile {
-                None | Some(ProfileKind::Dev) => {
-                    Ok(ProfileKind::Dev)
-                }
-                _ => {
-                    failure::bail!("Conflicting usage of --profile and --debug")
-                }
+                None | Some(ProfileKind::Dev) => Ok(ProfileKind::Dev),
+                _ => failure::bail!("Conflicting usage of --profile and --debug"),
             }
         } else {
             Ok(specified_profile.unwrap_or(default))
@@ -371,8 +366,8 @@ pub trait ArgMatchesExt {
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
-        build_config.profile_kind = self.get_profile_kind(config, ProfileKind::Dev,
-                                                          profile_checking)?;
+        build_config.profile_kind =
+            self.get_profile_kind(config, ProfileKind::Dev, profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
             config

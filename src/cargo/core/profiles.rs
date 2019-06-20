@@ -1,12 +1,12 @@
-use std::collections::HashSet;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::{cmp, env, fmt, hash};
 
 use serde::Deserialize;
 
-use crate::core::compiler::{ProfileKind, CompileMode};
+use crate::core::compiler::{CompileMode, ProfileKind};
 use crate::core::interning::InternedString;
-use crate::core::{Features, Feature, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::lev_distance::lev_distance;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
@@ -63,7 +63,7 @@ impl Profiles {
                         features.require(Feature::named_profiles())?;
                         break;
                     }
-                },
+                }
                 _ => {
                     features.require(Feature::named_profiles())?;
                     break;
@@ -75,13 +75,15 @@ impl Profiles {
         use std::collections::btree_map::Entry;
         for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
             match profiles.entry(predef_name.to_owned()) {
-                Entry::Vacant(vac) => { vac.insert(predef_prof); },
+                Entry::Vacant(vac) => {
+                    vac.insert(predef_prof);
+                }
                 Entry::Occupied(mut oc) => {
                     // Override predefined with the user-provided Toml.
                     let r = oc.get_mut();
                     predef_prof.merge(r);
                     *r = predef_prof;
-                },
+                }
             }
         }
 
@@ -99,53 +101,68 @@ impl Profiles {
         dir_names
     }
 
-    fn add_root_profiles(profile_makers: &mut Profiles,
-        profiles: Option<&TomlProfiles>, config_profiles: &ConfigProfiles)
-    {
+    fn add_root_profiles(
+        profile_makers: &mut Profiles,
+        profiles: Option<&TomlProfiles>,
+        config_profiles: &ConfigProfiles,
+    ) {
         let profile_name = "dev";
-        profile_makers.by_name.insert(profile_name.to_owned(), ProfileMaker {
-            default: Profile::default_dev(),
-            toml: profiles.and_then(|p| p.get(profile_name).cloned()),
-            config: config_profiles.dev.clone(),
-            inherits: vec![],
-        });
+        profile_makers.by_name.insert(
+            profile_name.to_owned(),
+            ProfileMaker {
+                default: Profile::default_dev(),
+                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
+                config: config_profiles.dev.clone(),
+                inherits: vec![],
+            },
+        );
 
         let profile_name = "release";
-        profile_makers.by_name.insert(profile_name.to_owned(), ProfileMaker {
-            default: Profile::default_release(),
-            toml: profiles.and_then(|p| p.get(profile_name).cloned()),
-            config: config_profiles.release.clone(),
-            inherits: vec![],
-        });
+        profile_makers.by_name.insert(
+            profile_name.to_owned(),
+            ProfileMaker {
+                default: Profile::default_release(),
+                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
+                config: config_profiles.release.clone(),
+                inherits: vec![],
+            },
+        );
     }
 
     fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
         vec![
-            ("bench", TomlProfile {
-                inherits: Some(String::from("release")),
-                ..TomlProfile::default()
-            }),
-            ("test", TomlProfile {
-                inherits: Some(String::from("dev")),
-                ..TomlProfile::default()
-            }),
-            ("check", TomlProfile {
-                inherits: Some(String::from("dev")),
-                ..TomlProfile::default()
-            }),
+            (
+                "bench",
+                TomlProfile {
+                    inherits: Some(String::from("release")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
+                "test",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
+                "check",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
         ]
     }
 
-    fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>)
-        -> CargoResult<()>
-    {
+    fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>) -> CargoResult<()> {
         for (name, profile) in profiles {
             let mut set = HashSet::new();
             let mut result = Vec::new();
 
             set.insert(name.as_str().to_owned());
             match &profile.dir_name {
-                None => {},
+                None => {}
                 Some(dir_name) => {
                     self.dir_names.insert(name.clone(), dir_name.to_owned());
                 }
@@ -157,9 +174,7 @@ impl Profiles {
                 _ => {}
             };
 
-            let mut maker = self.process_chain(name,
-                                               &profile, &mut set,
-                                               &mut result, profiles)?;
+            let mut maker = self.process_chain(name, &profile, &mut set, &mut result, profiles)?;
             result.reverse();
             maker.inherits = result;
 
@@ -169,17 +184,17 @@ impl Profiles {
         Ok(())
     }
 
-    fn process_chain(&mut self,
-                     name: &String,
-                     profile: &TomlProfile,
-                     set: &mut HashSet<String>,
-                     result: &mut Vec<TomlProfile>,
-                     profiles: &BTreeMap<String, TomlProfile>)
-        -> CargoResult<ProfileMaker>
-    {
+    fn process_chain(
+        &mut self,
+        name: &String,
+        profile: &TomlProfile,
+        set: &mut HashSet<String>,
+        result: &mut Vec<TomlProfile>,
+        profiles: &BTreeMap<String, TomlProfile>,
+    ) -> CargoResult<ProfileMaker> {
         result.push(profile.clone());
         match profile.inherits.as_ref().map(|x| x.as_str()) {
-            Some(name@"dev") | Some(name@"release") => {
+            Some(name @ "dev") | Some(name @ "release") => {
                 // These are the root profiles
                 return Ok(self.by_name.get(name).unwrap().clone());
             }
@@ -194,21 +209,19 @@ impl Profiles {
                     None => {
                         failure::bail!("Profile {} not found in Cargo.toml", name);
                     }
-                    Some(parent) => {
-                        self.process_chain(&name, parent, set, result, profiles)
-                    }
+                    Some(parent) => self.process_chain(&name, parent, set, result, profiles),
                 }
             }
             None => {
                 failure::bail!(
                     "An 'inherits' directive is needed for all \
-                    profiles that are not 'dev' or 'release. Here \
-                    it is missing from {}",
-                    name);
+                     profiles that are not 'dev' or 'release. Here \
+                     it is missing from {}",
+                    name
+                );
             }
         }
     }
-
 
     /// Retrieves the profile for a target.
     /// `is_member` is whether or not this package is a member of the
@@ -267,9 +280,7 @@ impl Profiles {
     pub fn base_profile(&self, profile_kind: &ProfileKind) -> CargoResult<Profile> {
         match self.by_name.get(profile_kind.name()) {
             None => failure::bail!("Profile {} undefined", profile_kind.name()),
-            Some(r) => {
-                Ok(r.get_profile(None, true, UnitFor::new_normal()))
-            }
+            Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
         }
     }
 

@@ -15,8 +15,8 @@ use super::job::{
     Job,
 };
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use crate::core::compiler::ProfileKind;
 use crate::core::{PackageId, TargetKind};
-use crate::core::compiler::{ProfileKind};
 use crate::handle_error;
 use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};

@@ -64,7 +64,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         }
     };
     let mut compile_opts = args.compile_options_for_single_package(
-        config, mode, Some(&ws), ProfileChecking::Unchecked)?;
+        config,
+        mode,
+        Some(&ws),
+        ProfileChecking::Unchecked,
+    )?;
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {
         None
