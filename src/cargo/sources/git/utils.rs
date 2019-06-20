@@ -16,7 +16,7 @@ use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
-use crate::util::{internal, network, Config, Progress, ToUrl};
+use crate::util::{internal, network, Config, IntoUrl, Progress};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -274,7 +274,7 @@ impl<'a> GitCheckout<'a> {
         //
         // Note that we still use the same fetch options because while we don't
         // need authentication information we may want progress bars and such.
-        let url = database.path.to_url()?;
+        let url = database.path.into_url()?;
         let mut repo = None;
         with_fetch_options(&git_config, &url, config, &mut |fopts| {
             let mut checkout = git2::build::CheckoutBuilder::new();
@@ -310,7 +310,7 @@ impl<'a> GitCheckout<'a> {
 
     fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
-        let url = self.database.path.to_url()?;
+        let url = self.database.path.into_url()?;
         let refspec = "refs/heads/*:refs/heads/*";
         fetch(&mut self.repo, &url, refspec, cargo_config)?;
         Ok(())
@@ -396,7 +396,7 @@ impl<'a> GitCheckout<'a> {
 
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
-            let url = url.to_url()?;
+            let url = url.into_url()?;
             fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
                 internal(format!(
                     "failed to fetch submodule `{}` from {}",

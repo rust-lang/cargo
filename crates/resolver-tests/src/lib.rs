@@ -9,7 +9,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, Graph, ToUrl};
+use cargo::util::{CargoResult, Config, Graph, IntoUrl};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -504,7 +504,7 @@ macro_rules! pkg {
 fn registry_loc() -> SourceId {
     lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"https://example.com".to_url().unwrap()).unwrap();
+            SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap();
     }
     *EXAMPLE_DOT_COM
 }
@@ -535,7 +535,7 @@ pub fn pkg_id(name: &str) -> PackageId {
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
-    let remote = loc.to_url();
+    let remote = loc.into_url();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
@@ -586,7 +586,7 @@ pub fn dep_req_kind(name: &str, req: &str, kind: Kind, public: bool) -> Dependen
 }
 
 pub fn dep_loc(name: &str, location: &str) -> Dependency {
-    let url = location.to_url().unwrap();
+    let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
     Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()

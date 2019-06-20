@@ -1,7 +1,7 @@
 use crate::support::publish::validate_alt_upload;
 use crate::support::registry::{self, Package};
 use crate::support::{basic_manifest, git, paths, project};
-use cargo::util::ToUrl;
+use cargo::util::IntoUrl;
 use std::fs::{self, File};
 use std::io::Write;
 
@@ -249,7 +249,7 @@ fn registry_incompatible_with_git() {
 #[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
     let fakeio_path = paths::root().join("fake.io");
-    let fakeio_url = fakeio_path.to_url().unwrap();
+    let fakeio_url = fakeio_path.into_url().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
