@@ -292,13 +292,19 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
-    fn get_profile_kind(&self, default: ProfileKind) -> CargoResult<ProfileKind> {
+    fn get_profile_kind(&self, config: &Config, default: ProfileKind) -> CargoResult<ProfileKind> {
         let specified_profile = match self._value_of("profile") {
             None => None,
             Some("dev") => Some(ProfileKind::Dev),
             Some("release") => Some(ProfileKind::Release),
             Some(name) => Some(ProfileKind::Custom(name.to_string())),
         };
+
+        if specified_profile.is_some() {
+            if !config.cli_unstable().unstable_options {
+                failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
+            }
+        }
 
         if self._is_present("release") {
             match specified_profile {
@@ -352,7 +358,7 @@ pub trait ArgMatchesExt {
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
-        build_config.profile_kind = self.get_profile_kind(ProfileKind::Dev)?;
+        build_config.profile_kind = self.get_profile_kind(config, ProfileKind::Dev)?;
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
             config
