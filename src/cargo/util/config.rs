@@ -872,7 +872,7 @@ impl Config {
     /// This lock is global per-process and can be acquired recursively. An RAII
     /// structure is returned to release the lock, and if this process
     /// abnormally terminates the lock is also released.
-    pub fn acquire_package_cache_lock<'a>(&'a self) -> CargoResult<PackageCacheLock<'a>> {
+    pub fn acquire_package_cache_lock(&self) -> CargoResult<PackageCacheLock<'_>> {
         let mut slot = self.package_cache_lock.borrow_mut();
         match *slot {
             // We've already acquired the lock in this process, so simply bump
