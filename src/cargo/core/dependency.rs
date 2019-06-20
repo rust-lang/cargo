@@ -328,6 +328,10 @@ impl Dependency {
     }
 
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+        if self.is_public() {
+            // Setting 'public' only makes sense for normal dependencies
+            assert_eq!(kind, Kind::Normal);
+        }
         Rc::make_mut(&mut self.inner).kind = kind;
         self
     }
