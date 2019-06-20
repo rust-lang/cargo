@@ -8,7 +8,7 @@ use url::Url;
 use crate::core::interning::InternedString;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{validate_package_name, ToSemver, IntoUrl};
+use crate::util::{validate_package_name, IntoUrl, ToSemver};
 
 /// Some or all of the data required to identify a package:
 ///
