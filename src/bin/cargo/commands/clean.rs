@@ -29,7 +29,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         spec: values(args, "package"),
         target: args.target(),
-        profile_kind: args.get_profile_kind(config, ProfileKind::Dev)?,
+        profile_kind: args.get_profile_kind(config, ProfileKind::Dev, ProfileChecking::Checked)?,
         release: args.is_present("release"),
         profile_specified: args.is_present("profile"),
         doc: args.is_present("doc"),

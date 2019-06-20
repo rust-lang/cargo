@@ -58,7 +58,7 @@ impl Profiles {
         // Feature gating
         for (profile_name, profile) in &profiles {
             match profile_name.as_str() {
-                "dev" | "release" | "bench" | "test" | "doc" => {
+                "dev" | "release" | "bench" | "test" | "doc" | "check" => {
                     if profile.dir_name.is_some() {
                         features.require(Feature::named_profiles())?;
                         break;

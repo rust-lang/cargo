@@ -240,6 +240,11 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
+pub enum ProfileChecking {
+    Checked,
+    Unchecked,
+}
+
 pub trait ArgMatchesExt {
     fn value_of_u32(&self, name: &str) -> CargoResult<Option<u32>> {
         let arg = match self._value_of(name) {
@@ -292,7 +297,9 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
-    fn get_profile_kind(&self, config: &Config, default: ProfileKind) -> CargoResult<ProfileKind> {
+    fn get_profile_kind(&self, config: &Config, default: ProfileKind, profile_checking: ProfileChecking)
+        -> CargoResult<ProfileKind>
+    {
         let specified_profile = match self._value_of("profile") {
             None => None,
             Some("dev") => Some(ProfileKind::Dev),
@@ -300,9 +307,14 @@ pub trait ArgMatchesExt {
             Some(name) => Some(ProfileKind::Custom(name.to_string())),
         };
 
-        if specified_profile.is_some() {
-            if !config.cli_unstable().unstable_options {
-                failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
+        match profile_checking {
+            ProfileChecking::Unchecked => {},
+            ProfileChecking::Checked => {
+                if specified_profile.is_some() {
+                    if !config.cli_unstable().unstable_options {
+                        failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
+                    }
+                }
             }
         }
 
@@ -334,6 +346,7 @@ pub trait ArgMatchesExt {
         config: &'a Config,
         mode: CompileMode,
         workspace: Option<&Workspace<'a>>,
+        profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
             self._is_present("all"),
@@ -358,7 +371,8 @@ pub trait ArgMatchesExt {
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
-        build_config.profile_kind = self.get_profile_kind(config, ProfileKind::Dev)?;
+        build_config.profile_kind = self.get_profile_kind(config, ProfileKind::Dev,
+                                                          profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
             config
@@ -403,8 +417,9 @@ pub trait ArgMatchesExt {
         config: &'a Config,
         mode: CompileMode,
         workspace: Option<&Workspace<'a>>,
+        profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode, workspace)?;
+        let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
         Ok(compile_opts)
     }

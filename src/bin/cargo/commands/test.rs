@@ -100,10 +100,12 @@ To get the list of all options available for the test binaries use this:
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws),
+        ProfileChecking::Checked)?;
 
     compile_opts.build_config.profile_kind =
-        args.get_profile_kind(config, ProfileKind::Custom("test".to_owned()))?;
+        args.get_profile_kind(config, ProfileKind::Custom("test".to_owned()),
+                              ProfileChecking::Checked)?;
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
