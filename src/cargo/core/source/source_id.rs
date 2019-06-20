@@ -18,7 +18,7 @@ use crate::ops;
 use crate::sources::git;
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
-use crate::util::{CargoResult, Config, ToUrl};
+use crate::util::{CargoResult, Config, IntoUrl};
 
 lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
@@ -117,7 +117,7 @@ impl SourceId {
 
         match kind {
             "git" => {
-                let mut url = url.to_url()?;
+                let mut url = url.into_url()?;
                 let mut reference = GitReference::Branch("master".to_string());
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
@@ -135,11 +135,11 @@ impl SourceId {
                 Ok(SourceId::for_git(&url, reference)?.with_precise(precise))
             }
             "registry" => {
-                let url = url.to_url()?;
+                let url = url.into_url()?;
                 Ok(SourceId::new(Kind::Registry, url)?.with_precise(Some("locked".to_string())))
             }
             "path" => {
-                let url = url.to_url()?;
+                let url = url.into_url()?;
                 SourceId::new(Kind::Path, url)
             }
             kind => Err(failure::format_err!(
@@ -150,8 +150,8 @@ impl SourceId {
     }
 
     /// A view of the `SourceId` that can be `Display`ed as a URL.
-    pub fn to_url(&self) -> SourceIdToUrl<'_> {
-        SourceIdToUrl {
+    pub fn into_url(&self) -> SourceIdIntoUrl<'_> {
+        SourceIdIntoUrl {
             inner: &*self.inner,
         }
     }
@@ -160,7 +160,7 @@ impl SourceId {
     ///
     /// `path`: an absolute path.
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::Path, url)
     }
 
@@ -176,13 +176,13 @@ impl SourceId {
 
     /// Creates a SourceId from a local registry path.
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::LocalRegistry, url)
     }
 
     /// Creates a `SourceId` from a directory path.
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::Directory, url)
     }
 
@@ -207,7 +207,7 @@ impl SourceId {
             } else {
                 CRATES_IO_INDEX
             };
-            let url = url.to_url()?;
+            let url = url.into_url()?;
             SourceId::for_registry(&url)
         })
     }
@@ -390,7 +390,7 @@ impl ser::Serialize for SourceId {
         if self.is_path() {
             None::<String>.serialize(s)
         } else {
-            s.collect_str(&self.to_url())
+            s.collect_str(&self.into_url())
         }
     }
 }
@@ -504,11 +504,11 @@ impl Hash for SourceId {
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url
-pub struct SourceIdToUrl<'a> {
+pub struct SourceIdIntoUrl<'a> {
     inner: &'a SourceIdInner,
 }
 
-impl<'a> fmt::Display for SourceIdToUrl<'a> {
+impl<'a> fmt::Display for SourceIdIntoUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
@@ -579,15 +579,15 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, Kind, SourceId};
-    use crate::util::ToUrl;
+    use crate::util::IntoUrl;
 
     #[test]
     fn github_sources_equal() {
-        let loc = "https://github.com/foo/bar".to_url().unwrap();
+        let loc = "https://github.com/foo/bar".into_url().unwrap();
         let master = Kind::Git(GitReference::Branch("master".to_string()));
         let s1 = SourceId::new(master.clone(), loc).unwrap();
 
-        let loc = "git://github.com/foo/bar".to_url().unwrap();
+        let loc = "git://github.com/foo/bar".into_url().unwrap();
         let s2 = SourceId::new(master, loc.clone()).unwrap();
 
         assert_eq!(s1, s2);

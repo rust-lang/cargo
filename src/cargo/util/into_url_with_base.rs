@@ -1,19 +1,19 @@
-use crate::util::{CargoResult, ToUrl};
+use crate::util::{CargoResult, IntoUrl};
 
 use url::Url;
 
 /// A type that can be interpreted as a relative Url and converted to
 /// a Url.
-pub trait ToUrlWithBase {
+pub trait IntoUrlWithBase {
     /// Performs the conversion
-    fn to_url_with_base<U: ToUrl>(self, base: Option<U>) -> CargoResult<Url>;
+    fn into_url_with_base<U: IntoUrl>(self, base: Option<U>) -> CargoResult<Url>;
 }
 
-impl<'a> ToUrlWithBase for &'a str {
-    fn to_url_with_base<U: ToUrl>(self, base: Option<U>) -> CargoResult<Url> {
+impl<'a> IntoUrlWithBase for &'a str {
+    fn into_url_with_base<U: IntoUrl>(self, base: Option<U>) -> CargoResult<Url> {
         let base_url = match base {
             Some(base) => Some(
-                base.to_url()
+                base.into_url()
                     .map_err(|s| failure::format_err!("invalid url `{}`: {}", self, s))?,
             ),
             None => None,
@@ -28,20 +28,20 @@ impl<'a> ToUrlWithBase for &'a str {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::ToUrlWithBase;
+    use crate::util::IntoUrlWithBase;
 
     #[test]
-    fn to_url_with_base() {
+    fn into_url_with_base() {
         assert_eq!(
             "rel/path"
-                .to_url_with_base(Some("file:///abs/path/"))
+                .into_url_with_base(Some("file:///abs/path/"))
                 .unwrap()
                 .to_string(),
             "file:///abs/path/rel/path"
         );
         assert_eq!(
             "rel/path"
-                .to_url_with_base(Some("file:///abs/path/popped-file"))
+                .into_url_with_base(Some("file:///abs/path/popped-file"))
                 .unwrap()
                 .to_string(),
             "file:///abs/path/rel/path"
