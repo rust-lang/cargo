@@ -22,7 +22,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, ToUrl};
+use crate::util::{self, validate_package_name, Config, IntoUrl};
 
 mod targets;
 use self::targets::targets;
@@ -1231,7 +1231,7 @@ impl TomlManifest {
                 _ => cx
                     .config
                     .get_registry_index(url)
-                    .or_else(|_| url.to_url())
+                    .or_else(|_| url.into_url())
                     .chain_err(|| {
                         format!("[patch] entry `{}` should be a URL or registry name", url)
                     })?,
@@ -1403,7 +1403,7 @@ impl DetailedTomlDependency {
                     .or_else(|| self.tag.clone().map(GitReference::Tag))
                     .or_else(|| self.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
-                let loc = git.to_url()?;
+                let loc = git.into_url()?;
                 SourceId::for_git(&loc, reference)?
             }
             (None, Some(path), _, _) => {
@@ -1426,7 +1426,7 @@ impl DetailedTomlDependency {
             }
             (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
             (None, None, None, Some(registry_index)) => {
-                let url = registry_index.to_url()?;
+                let url = registry_index.into_url()?;
                 SourceId::for_registry(&url)?
             }
             (None, None, None, None) => SourceId::crates_io(cx.config)?,
@@ -1455,7 +1455,7 @@ impl DetailedTomlDependency {
             dep.set_registry_id(registry_id);
         }
         if let Some(registry_index) = &self.registry_index {
-            let url = registry_index.to_url()?;
+            let url = registry_index.into_url()?;
             let registry_id = SourceId::for_registry(&url)?;
             dep.set_registry_id(registry_id);
         }

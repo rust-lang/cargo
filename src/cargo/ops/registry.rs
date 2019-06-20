@@ -21,7 +21,7 @@ use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::ToUrl;
+use crate::util::IntoUrl;
 use crate::util::{paths, validate_package_name};
 use crate::version;
 
@@ -696,7 +696,7 @@ fn get_source_id(
 ) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, &r),
-        (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
+        (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
             let src = map.load(SourceId::crates_io(config)?, &HashSet::new())?;

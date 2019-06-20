@@ -241,7 +241,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 #[cfg(test)]
 mod test {
     use super::ident;
-    use crate::util::ToUrl;
+    use crate::util::IntoUrl;
     use url::Url;
 
     #[test]
@@ -291,6 +291,6 @@ mod test {
     }
 
     fn url(s: &str) -> Url {
-        s.to_url().unwrap()
+        s.into_url().unwrap()
     }
 }

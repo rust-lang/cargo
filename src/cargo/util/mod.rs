@@ -20,8 +20,8 @@ pub use self::read2::read2;
 pub use self::rustc::Rustc;
 pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
-pub use self::to_url::ToUrl;
-pub use self::to_url_with_base::ToUrlWithBase;
+pub use self::into_url::IntoUrl;
+pub use self::into_url_with_base::IntoUrlWithBase;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
     print_available_benches, print_available_binaries, print_available_examples,
@@ -51,8 +51,8 @@ mod read2;
 pub mod rustc;
 mod sha256;
 pub mod to_semver;
-pub mod to_url;
-mod to_url_with_base;
+pub mod into_url;
+mod into_url_with_base;
 pub mod toml;
 mod vcs;
 mod workspace;
