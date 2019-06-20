@@ -1,7 +1,7 @@
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn bad1() {
     let p = project()
         .file("src/lib.rs", "")
@@ -24,7 +24,7 @@ but found string in [..]config
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad2() {
     let p = project()
         .file("src/lib.rs", "")
@@ -58,7 +58,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad3() {
     let p = project()
         .file("src/lib.rs", "")
@@ -85,7 +85,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad4() {
     let p = project()
         .file(
@@ -109,7 +109,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad6() {
     let p = project()
         .file("src/lib.rs", "")
@@ -136,7 +136,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -160,7 +160,7 @@ invalid value: integer `-1`, expected u32
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn default_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -175,7 +175,7 @@ fn default_cargo_config_jobs() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn good_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -190,7 +190,7 @@ fn good_cargo_config_jobs() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_global_config() {
     let p = project()
         .file(
@@ -228,7 +228,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_lock() {
     let p = project()
         .file("Cargo.lock", "[[package]]\nfoo = 92")
@@ -248,7 +248,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_packages_in_cargo_lock() {
     Package::new("bar", "0.1.0").publish();
 
@@ -302,7 +302,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_in_cargo_lock() {
     Package::new("bar", "0.1.0").publish();
 
@@ -351,7 +351,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_dependency_in_lockfile() {
     let p = project()
         .file("src/lib.rs", "")
@@ -371,7 +371,7 @@ fn bad_dependency_in_lockfile() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_git_dependency() {
     let p = project()
         .file(
@@ -409,7 +409,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_crate_type() {
     let p = project()
         .file(
@@ -435,7 +435,7 @@ fn bad_crate_type() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn malformed_override() {
     let p = project()
         .file(
@@ -471,7 +471,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_binary_names() {
     let p = project()
         .file(
@@ -508,7 +508,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_example_names() {
     let p = project()
         .file(
@@ -545,7 +545,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_bench_names() {
     let p = project()
         .file(
@@ -582,7 +582,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_deps() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -621,7 +621,7 @@ have a single canonical source path irrespective of build target.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_deps_diff_sources() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -660,7 +660,7 @@ have a single canonical source path irrespective of build target.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_keys() {
     let p = project()
         .file(
@@ -760,7 +760,7 @@ warning: unused manifest key: lib.build
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_keys_in_virtual_manifest() {
     let p = project()
         .file(
@@ -785,7 +785,7 @@ fn unused_keys_in_virtual_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn empty_dependencies() {
     let p = project()
         .file(
@@ -815,7 +815,7 @@ to use. This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_toml_historically_allowed_is_warned() {
     let p = project()
         .file(".cargo/config", "[bar] baz = 2")
@@ -839,7 +839,7 @@ in the future.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ambiguous_git_reference() {
     let p = project()
         .file(
@@ -871,7 +871,7 @@ This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config1() {
     let p = project()
         .file("src/lib.rs", "")
@@ -884,7 +884,7 @@ fn bad_source_config1() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config2() {
     let p = project()
         .file(
@@ -927,7 +927,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config3() {
     let p = project()
         .file(
@@ -969,7 +969,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config4() {
     let p = project()
         .file(
@@ -1016,7 +1016,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config5() {
     let p = project()
         .file(
@@ -1058,7 +1058,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn both_git_and_path_specified() {
     let foo = project()
         .file(
@@ -1089,7 +1089,7 @@ This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config6() {
     let p = project()
         .file(
@@ -1121,7 +1121,7 @@ fn bad_source_config6() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignored_git_revision() {
     let foo = project()
         .file(
@@ -1150,7 +1150,7 @@ fn ignored_git_revision() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config7() {
     let p = project()
         .file(
@@ -1184,7 +1184,7 @@ fn bad_source_config7() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_dependency() {
     let p = project()
         .file(
@@ -1215,7 +1215,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_debuginfo() {
     let p = project()
         .file(
@@ -1246,7 +1246,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_opt_level() {
     let p = project()
         .file(
@@ -1275,7 +1275,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warn_semver_metadata() {
     Package::new("bar", "1.0.0").publish();
     let p = project()

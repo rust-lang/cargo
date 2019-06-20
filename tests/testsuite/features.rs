@@ -5,7 +5,7 @@ use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn invalid1() {
     let p = project()
         .file(
@@ -36,7 +36,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid2() {
     let p = project()
         .file(
@@ -70,7 +70,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid3() {
     let p = project()
         .file(
@@ -105,7 +105,7 @@ Consider adding `optional = true` to the dependency
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid4() {
     let p = project()
         .file(
@@ -149,7 +149,7 @@ failed to select a version for `bar` which could resolve this conflict",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid5() {
     let p = project()
         .file(
@@ -181,7 +181,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid6() {
     let p = project()
         .file(
@@ -212,7 +212,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid7() {
     let p = project()
         .file(
@@ -244,7 +244,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid8() {
     let p = project()
         .file(
@@ -271,7 +271,7 @@ fn invalid8() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid9() {
     let p = project()
         .file(
@@ -299,7 +299,7 @@ error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a require
         ).with_status(101).run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid10() {
     let p = project()
         .file(
@@ -347,7 +347,7 @@ failed to select a version for `bar` which could resolve this conflict
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_transitive_dep_feature_requirement() {
     let p = project()
         .file(
@@ -411,7 +411,7 @@ fn no_transitive_dep_feature_requirement() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_feature_doesnt_build() {
     let p = project()
         .file(
@@ -464,7 +464,7 @@ fn no_feature_doesnt_build() {
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn default_feature_pulled_in() {
     let p = project()
         .file(
@@ -520,7 +520,7 @@ fn default_feature_pulled_in() {
     p.process(&p.bin("foo")).with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_feature() {
     let p = project()
         .file(
@@ -544,7 +544,7 @@ fn cyclic_feature() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_feature2() {
     let p = project()
         .file(
@@ -566,7 +566,7 @@ fn cyclic_feature2() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn groups_on_groups_on_groups() {
     let p = project()
         .file(
@@ -624,7 +624,7 @@ fn groups_on_groups_on_groups() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features() {
     let p = project()
         .file(
@@ -673,7 +673,7 @@ fn many_cli_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn union_features() {
     let p = project()
         .file(
@@ -756,7 +756,7 @@ fn union_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_features_no_rebuilds() {
     let p = project()
         .file(
@@ -813,7 +813,7 @@ fn many_features_no_rebuilds() {
 }
 
 // Tests that all cmd lines work with `--features ""`
-#[test]
+#[cargo_test]
 fn empty_features() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -821,7 +821,7 @@ fn empty_features() {
 }
 
 // Tests that all cmd lines work with `--features ""`
-#[test]
+#[cargo_test]
 fn transitive_features() {
     let p = project()
         .file(
@@ -861,7 +861,7 @@ fn transitive_features() {
     p.cargo("build --features foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn everything_in_the_lockfile() {
     let p = project()
         .file(
@@ -938,7 +938,7 @@ fn everything_in_the_lockfile() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_when_frobbing_default_feature() {
     let p = project()
         .file(
@@ -989,7 +989,7 @@ fn no_rebuild_when_frobbing_default_feature() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn unions_work_with_no_default_features() {
     let p = project()
         .file(
@@ -1040,7 +1040,7 @@ fn unions_work_with_no_default_features() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_and_dev_dep() {
     let p = project()
         .file(
@@ -1072,7 +1072,7 @@ fn optional_and_dev_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn activating_feature_activates_dep() {
     let p = project()
         .file(
@@ -1112,7 +1112,7 @@ fn activating_feature_activates_dep() {
     p.cargo("build --features a -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_feature_in_cmd_line() {
     let p = project()
         .file(
@@ -1196,7 +1196,7 @@ fn dep_feature_in_cmd_line() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn all_features_flag_enables_all_features() {
     let p = project()
         .file(
@@ -1241,7 +1241,7 @@ fn all_features_flag_enables_all_features() {
     p.cargo("build --all-features").run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features_comma_delimited() {
     let p = project()
         .file(
@@ -1289,7 +1289,7 @@ fn many_cli_features_comma_delimited() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features_comma_and_space_delimited() {
     let p = project()
         .file(
@@ -1356,7 +1356,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn combining_features_and_package() {
     Package::new("dep", "1.0.0").publish();
 
@@ -1439,7 +1439,7 @@ fn combining_features_and_package() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_invalid_feature() {
     let p = project()
         .file(
@@ -1474,7 +1474,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_invalid_dependency() {
     let p = project()
         .file(
@@ -1509,7 +1509,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_non_optional_dependency() {
     let p = project()
         .file(
@@ -1548,7 +1548,7 @@ Consider adding `optional = true` to the dependency
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_implicit_feature() {
     let p = project()
         .file(
@@ -1575,7 +1575,7 @@ fn namespaced_implicit_feature() {
     p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_shadowed_dep() {
     let p = project()
         .file(
@@ -1611,7 +1611,7 @@ Consider adding `crate:baz` to this feature's requirements.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_shadowed_non_optional() {
     let p = project()
         .file(
@@ -1648,7 +1648,7 @@ Consider adding `crate:baz` to this feature's requirements and marking the depen
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_implicit_non_optional() {
     let p = project()
         .file(
@@ -1684,7 +1684,7 @@ A non-optional dependency of the same name is defined; consider adding `optional
     );
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_same_name() {
     let p = project()
         .file(
@@ -1711,7 +1711,7 @@ fn namespaced_same_name() {
     p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn only_dep_is_optional() {
     Package::new("bar", "0.1.0").publish();
 
@@ -1740,7 +1740,7 @@ fn only_dep_is_optional() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn all_features_all_crates() {
     Package::new("bar", "0.1.0").publish();
 
@@ -1776,7 +1776,7 @@ fn all_features_all_crates() {
     p.cargo("build --all-features --all").run();
 }
 
-#[test]
+#[cargo_test]
 fn feature_off_dylib() {
     let p = project()
         .file(
@@ -1837,7 +1837,7 @@ fn feature_off_dylib() {
     p.cargo("run -p bar").run();
 }
 
-#[test]
+#[cargo_test]
 fn warn_if_default_features() {
     let p = project()
         .file(
@@ -1871,7 +1871,7 @@ fn warn_if_default_features() {
         ).run();
 }
 
-#[test]
+#[cargo_test]
 fn no_feature_for_non_optional_dep() {
     let p = project()
         .file(

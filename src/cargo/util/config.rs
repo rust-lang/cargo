@@ -10,7 +10,7 @@ use std::io::{self, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 use std::time::Instant;
 use std::vec;
 
@@ -89,7 +89,7 @@ pub struct Config {
 impl Config {
     pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
-        static INIT: Once = ONCE_INIT;
+        static INIT: Once = Once::new();
 
         // This should be called early on in the process, so in theory the
         // unsafety is ok here. (taken ownership of random fds)
@@ -882,7 +882,7 @@ impl Config {
             }
             None => {
                 let path = ".package-cache";
-                let desc = "package cache lock";
+                let desc = "package cache";
 
                 // First, attempt to open an exclusive lock which is in general
                 // the purpose of this lock!

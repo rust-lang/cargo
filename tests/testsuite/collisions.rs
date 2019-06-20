@@ -1,7 +1,7 @@
 use crate::support::{basic_manifest, project};
 use std::env;
 
-#[test]
+#[cargo_test]
 fn collision_dylib() {
     // Path dependencies don't include metadata hash in filename for dylibs.
     let p = project()
@@ -53,7 +53,7 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn collision_example() {
     // Examples in a workspace can easily collide.
     let p = project()
@@ -82,7 +82,7 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn collision_export() {
     // `--out-dir` combines some things which can cause conflicts.
     let p = project()
@@ -104,7 +104,7 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn collision_doc() {
     let p = project()
         .file(

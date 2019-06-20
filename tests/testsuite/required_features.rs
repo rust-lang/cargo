@@ -2,7 +2,7 @@ use crate::support::install::{assert_has_installed_exe, assert_has_not_installed
 use crate::support::is_nightly;
 use crate::support::project;
 
-#[test]
+#[cargo_test]
 fn build_bin_default_features() {
     let p = project()
         .file(
@@ -57,7 +57,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_bin_arg_features() {
     let p = project()
         .file(
@@ -83,7 +83,7 @@ fn build_bin_arg_features() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_bin_multiple_required_features() {
     let p = project()
         .file(
@@ -128,7 +128,7 @@ fn build_bin_multiple_required_features() {
     p.cargo("build --no-default-features").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_example_default_features() {
     let p = project()
         .file(
@@ -165,7 +165,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_example_arg_features() {
     let p = project()
         .file(
@@ -191,7 +191,7 @@ fn build_example_arg_features() {
     assert!(p.bin("examples/foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn build_example_multiple_required_features() {
     let p = project()
         .file(
@@ -261,7 +261,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_default_features() {
     let p = project()
         .file(
@@ -319,7 +319,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_arg_features() {
     let p = project()
         .file(
@@ -352,7 +352,7 @@ fn test_arg_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn test_multiple_required_features() {
     let p = project()
         .file(
@@ -409,7 +409,7 @@ fn test_multiple_required_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_default_features() {
     if !is_nightly() {
         return;
@@ -480,7 +480,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_arg_features() {
     if !is_nightly() {
         return;
@@ -526,7 +526,7 @@ fn bench_arg_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bench_multiple_required_features() {
     if !is_nightly() {
         return;
@@ -605,7 +605,7 @@ fn bench_multiple_required_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn install_default_features() {
     let p = project()
         .file(
@@ -690,7 +690,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
-#[test]
+#[cargo_test]
 fn install_arg_features() {
     let p = project()
         .file(
@@ -717,7 +717,7 @@ fn install_arg_features() {
     p.cargo("uninstall foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn install_multiple_required_features() {
     let p = project()
         .file(
@@ -773,7 +773,7 @@ fn install_multiple_required_features() {
     assert_has_not_installed_exe(cargo_home(), "foo_2");
 }
 
-#[test]
+#[cargo_test]
 fn dep_feature_in_toml() {
     let p = project()
         .file(
@@ -873,7 +873,7 @@ fn dep_feature_in_toml() {
     p.cargo("uninstall foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_feature_in_cmd_line() {
     let p = project()
         .file(
@@ -1015,7 +1015,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     p.cargo("uninstall foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_skips_compiling_bin_with_missing_required_features() {
     let p = project()
         .file(
@@ -1081,7 +1081,7 @@ error[E0463]: can't find crate for `bar`",
     }
 }
 
-#[test]
+#[cargo_test]
 fn run_default() {
     let p = project()
         .file(
@@ -1118,7 +1118,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
     p.cargo("run --features a").run();
 }
 
-#[test]
+#[cargo_test]
 fn run_default_multiple_required_features() {
     let p = project()
         .file(

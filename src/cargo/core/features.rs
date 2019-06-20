@@ -186,6 +186,7 @@ features! {
         [stable] rename_dependency: bool,
 
         // Whether a lock file is published with this crate
+        // This is deprecated, and will likely be removed in a future version.
         [unstable] publish_lockfile: bool,
 
         // Overriding profiles for dependencies.

@@ -1,6 +1,6 @@
 use crate::support::{basic_lib_manifest, is_nightly, paths, project};
 
-#[test]
+#[cargo_test]
 fn profile_config_gated() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -24,7 +24,7 @@ fn profile_config_gated() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_validate_warnings() {
     let p = project()
         .file(
@@ -75,7 +75,7 @@ fn profile_config_validate_warnings() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_error_paths() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -110,7 +110,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_validate_errors() {
     let p = project()
         .file(
@@ -147,7 +147,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_syntax_errors() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -175,7 +175,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_override_spec_multiple() {
     let p = project()
         .file(
@@ -228,7 +228,7 @@ found profile override specs: bar, bar:0.5.0",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_all_options() {
     if !is_nightly() {
         // May be removed once 1.34 is stable (added support for incremental-LTO).
@@ -277,7 +277,7 @@ fn profile_config_all_options() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_override_precedence() {
     // Config values take precedence over manifest values.
     let p = project()
@@ -334,7 +334,7 @@ fn profile_config_override_precedence() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_no_warn_unknown_override() {
     let p = project()
         .file(
@@ -363,7 +363,7 @@ fn profile_config_no_warn_unknown_override() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_mixed_types() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))

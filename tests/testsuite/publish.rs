@@ -52,7 +52,7 @@ fn validate_upload_foo() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
@@ -61,6 +61,7 @@ fn validate_upload_foo_clean() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -69,7 +70,7 @@ fn validate_upload_foo_clean() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     registry::init();
 
@@ -105,7 +106,7 @@ See [..]
     validate_upload_foo();
 }
 
-#[test]
+#[cargo_test]
 fn old_token_location() {
     // Check that the `token` key works at the root instead of under a
     // `[registry]` table.
@@ -160,7 +161,7 @@ See [..]
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
-#[test]
+#[cargo_test]
 fn simple_with_host() {
     registry::init();
 
@@ -207,7 +208,7 @@ See [..]
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
-#[test]
+#[cargo_test]
 fn simple_with_index_and_host() {
     registry::init();
 
@@ -254,7 +255,7 @@ See [..]
     validate_upload_foo();
 }
 
-#[test]
+#[cargo_test]
 fn git_deps() {
     registry::init();
 
@@ -292,7 +293,7 @@ repository and specify it with a path and version\n\
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dependency_no_version() {
     registry::init();
 
@@ -329,7 +330,7 @@ dependency `bar` does not specify a version
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unpublishable_crate() {
     registry::init();
 
@@ -361,7 +362,7 @@ The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_publish_dirty() {
     registry::init();
     let p = project().file("bar", "").build();
@@ -401,7 +402,7 @@ to proceed despite this, pass the `--allow-dirty` flag
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_clean() {
     registry::init();
 
@@ -432,7 +433,7 @@ fn publish_clean() {
     validate_upload_foo_clean();
 }
 
-#[test]
+#[cargo_test]
 fn publish_in_sub_repo() {
     registry::init();
 
@@ -465,7 +466,7 @@ fn publish_in_sub_repo() {
     validate_upload_foo_clean();
 }
 
-#[test]
+#[cargo_test]
 fn publish_when_ignored() {
     registry::init();
 
@@ -498,6 +499,7 @@ fn publish_when_ignored() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -507,7 +509,7 @@ fn publish_when_ignored() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn ignore_when_crate_ignored() {
     registry::init();
 
@@ -539,11 +541,17 @@ fn ignore_when_crate_ignored() {
     publish::validate_upload(
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "baz"],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "baz",
+        ],
     );
 }
 
-#[test]
+#[cargo_test]
 fn new_crate_rejected() {
     registry::init();
 
@@ -575,7 +583,7 @@ fn new_crate_rejected() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dry_run() {
     registry::init();
 
@@ -616,7 +624,7 @@ See [..]
     assert!(!registry::api_path().join("api/v1/crates/new").exists());
 }
 
-#[test]
+#[cargo_test]
 fn registry_not_in_publish_list() {
     registry::init();
 
@@ -651,7 +659,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_empty_list() {
     registry::init();
 
@@ -682,7 +690,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_allowed_registry() {
     registry::init();
 
@@ -713,6 +721,7 @@ fn publish_allowed_registry() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -721,7 +730,7 @@ fn publish_allowed_registry() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn block_publish_no_registry() {
     registry::init();
 
@@ -752,7 +761,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_crates_io_explicit() {
     // Explicitly setting `crates-io` in the publish list.
     registry::init();
@@ -786,7 +795,7 @@ The registry `alternative` is not listed in the `publish` value in Cargo.toml.
     p.cargo("publish").run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_select_features() {
     registry::init();
 
@@ -820,7 +829,7 @@ fn publish_with_select_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_all_features() {
     registry::init();
 
@@ -854,7 +863,7 @@ fn publish_with_all_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_no_default_features() {
     registry::init();
 
@@ -889,7 +898,7 @@ fn publish_with_no_default_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_patch() {
     Package::new("bar", "1.0.0").publish();
 
@@ -974,11 +983,11 @@ fn publish_with_patch() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
-#[test]
+#[cargo_test]
 fn publish_checks_for_token_before_verify() {
     registry::init();
 

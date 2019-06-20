@@ -17,9 +17,10 @@
 <h2 id="cargo_install_description">DESCRIPTION</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This command manages Cargo&#8217;s local set of installed binary crates. Only packages
-which have <code>[[bin]]</code> targets can be installed, and all binaries are installed into
-the installation root&#8217;s <code>bin</code> folder.</p>
+<p>This command manages Cargo&#8217;s local set of installed binary crates. Only
+packages which have executable <code>[[bin]]</code> or <code>[[example]]</code> targets can be
+installed, and all executables are installed into the installation root&#8217;s
+<code>bin</code> folder.</p>
 </div>
 <div class="paragraph">
 <p>The installation root is determined, in order of precedence:</p>
@@ -45,7 +46,7 @@ the installation root&#8217;s <code>bin</code> folder.</p>
 </div>
 <div class="paragraph">
 <p>There are multiple sources from which a crate can be installed. The default
-location is crates.io but the <code>--git</code>, <code>--path</code>, and <code>registry</code> flags can
+location is crates.io but the <code>--git</code>, <code>--path</code>, and <code>--registry</code> flags can
 change this source. If the source contains more than one package (such as
 crates.io or a git repository with multiple crates) the <em>CRATE</em> argument is
 required to indicate which crate should be installed.</p>
@@ -64,6 +65,21 @@ in a temporary target directory. To avoid this, the target directory can be
 specified by setting the <code>CARGO_TARGET_DIR</code> environment variable to a relative
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.</p>
+</div>
+<div class="paragraph">
+<p>By default, the <code>Cargo.lock</code> file that is included with the package will be
+ignored. This means that Cargo will recompute which versions of dependencies
+to use, possibly using newer versions that have been released since the
+package was published. The <code>--locked</code> flag can be used to force Cargo to use
+the packaged <code>Cargo.lock</code> file if it is available. This may be useful for
+ensuring reproducible builds, to use the exact same set of dependencies that
+were available when the package was published. It may also be useful if a
+newer version of a dependency is published that no longer builds on your
+system, or has other problems. The downside to using <code>--locked</code> is that you
+will not receive any fixes or updates to any dependency. Note that Cargo did
+not start publishing <code>Cargo.lock</code> files until version 1.37, which means
+packages published with prior versions will not have a <code>Cargo.lock</code> file
+available.</p>
 </div>
 </div>
 </div>

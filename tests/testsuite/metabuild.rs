@@ -5,7 +5,7 @@ use crate::support::{
 use serde_json;
 use std::str;
 
-#[test]
+#[cargo_test]
 fn metabuild_gated() {
     let p = project()
         .file(
@@ -73,7 +73,7 @@ fn basic_project() -> Project {
         .build()
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_basic() {
     let p = basic_project();
     p.cargo("build -vv")
@@ -83,7 +83,7 @@ fn metabuild_basic() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_error_both() {
     let p = project()
         .file(
@@ -122,7 +122,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_missing_dep() {
     let p = project()
         .file(
@@ -151,7 +151,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_optional_dep() {
     let p = project()
         .file(
@@ -186,7 +186,7 @@ fn metabuild_optional_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_lib_name() {
     // Test when setting `name` on [lib].
     let p = project()
@@ -226,7 +226,7 @@ fn metabuild_lib_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_fresh() {
     if is_coarse_mtime() {
         // This test doesn't work on coarse mtimes very well. Because the
@@ -277,7 +277,7 @@ fn metabuild_fresh() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_links() {
     let p = project()
         .file(
@@ -312,7 +312,7 @@ fn metabuild_links() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_override() {
     let p = project()
         .file(
@@ -350,7 +350,7 @@ fn metabuild_override() {
     p.cargo("build -vv").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_workspace() {
     let p = project()
         .file(
@@ -418,7 +418,7 @@ fn metabuild_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_metadata() {
     // The metabuild Target is filtered out of the `metadata` results.
     let p = basic_project();
@@ -444,7 +444,7 @@ fn metabuild_metadata() {
     assert_eq!(mb_info, ["mb", "mb-other"]);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_build_plan() {
     let p = basic_project();
 
@@ -547,7 +547,7 @@ fn metabuild_build_plan() {
     assert_eq!(p.glob("target/.metabuild/metabuild-foo-*.rs").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_two_versions() {
     // Two versions of a metabuild dep with the same name.
     let p = project()
@@ -625,7 +625,7 @@ fn metabuild_two_versions() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_external_dependency() {
     Package::new("mb", "1.0.0")
         .file("Cargo.toml", &basic_manifest("mb", "1.0.0"))
@@ -674,7 +674,7 @@ fn metabuild_external_dependency() {
     assert_eq!(p.glob("target/.metabuild/metabuild-dep-*.rs").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_json_artifact() {
     let p = basic_project();
     p.cargo("build --message-format=json")
@@ -718,7 +718,7 @@ fn metabuild_json_artifact() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_failed_build_json() {
     let p = basic_project();
     // Modify the metabuild dep so that it fails to compile.

@@ -2,7 +2,7 @@ use std::env;
 
 use crate::support::project;
 
-#[test]
+#[cargo_test]
 fn profile_overrides() {
     let p = project()
         .file(
@@ -40,7 +40,7 @@ fn profile_overrides() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn opt_level_override_0() {
     let p = project()
         .file(
@@ -74,7 +74,7 @@ fn opt_level_override_0() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn debug_override_1() {
     let p = project()
         .file(
@@ -146,7 +146,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn opt_level_overrides() {
     for &(profile_level, rustc_level) in &[
         ("1", "1"),
@@ -159,7 +159,7 @@ fn opt_level_overrides() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn top_level_overrides_deps() {
     let p = project()
         .file(
@@ -232,7 +232,7 @@ fn top_level_overrides_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_in_non_root_manifest_triggers_a_warning() {
     let p = project()
         .file(
@@ -281,7 +281,7 @@ workspace: [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_in_virtual_manifest_works() {
     let p = project()
         .file(
@@ -320,7 +320,7 @@ fn profile_in_virtual_manifest_works() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_panic_test_bench() {
     let p = project()
         .file(
@@ -350,7 +350,7 @@ fn profile_panic_test_bench() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_doc_deprecated() {
     let p = project()
         .file(
@@ -373,7 +373,7 @@ fn profile_doc_deprecated() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_unwind_does_not_build_twice() {
     // Check for a bug where `lib` was built twice, once with panic set and
     // once without. Since "unwind" is the default, they are the same and
@@ -410,7 +410,7 @@ fn panic_unwind_does_not_build_twice() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn debug_0_report() {
     // The finished line handles 0 correctly.
     let p = project()

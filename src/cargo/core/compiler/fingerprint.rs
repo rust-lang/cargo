@@ -549,7 +549,7 @@ impl LocalFingerprint {
             // unit has never been compiled!
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                if let Some(paths) = parse_dep_info(pkg_root, &dep_info)? {
+                if let Some(paths) = parse_dep_info(pkg_root, target_root, &dep_info)? {
                     Ok(find_stale_file(&dep_info, paths.iter()))
                 } else {
                     Ok(Some(StaleFile::Missing(dep_info)))
@@ -1408,7 +1408,11 @@ fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
 }
 
 // Parse the dep-info into a list of paths
-pub fn parse_dep_info(pkg_root: &Path, dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
+pub fn parse_dep_info(
+    pkg_root: &Path,
+    target_root: &Path,
+    dep_info: &Path,
+) -> CargoResult<Option<Vec<PathBuf>>> {
     let data = match paths::read_bytes(dep_info) {
         Ok(data) => data,
         Err(_) => return Ok(None),
@@ -1416,7 +1420,18 @@ pub fn parse_dep_info(pkg_root: &Path, dep_info: &Path) -> CargoResult<Option<Ve
     let paths = data
         .split(|&x| x == 0)
         .filter(|x| !x.is_empty())
-        .map(|p| util::bytes2path(p).map(|p| pkg_root.join(p)))
+        .map(|p| {
+            let ty = match DepInfoPathType::from_byte(p[0]) {
+                Some(ty) => ty,
+                None => return Err(internal("dep-info invalid")),
+            };
+            let path = util::bytes2path(&p[1..])?;
+            match ty {
+                DepInfoPathType::PackageRootRelative => Ok(pkg_root.join(path)),
+                // N.B. path might be absolute here in which case the join will have no effect
+                DepInfoPathType::TargetRootRelative => Ok(target_root.join(path)),
+            }
+        })
         .collect::<Result<Vec<_>, _>>()?;
     if paths.is_empty() {
         Ok(None)
@@ -1503,6 +1518,25 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     format!("{}{}-{}", flavor, kind, file_stem)
 }
 
+#[repr(u8)]
+enum DepInfoPathType {
+    // src/, e.g. src/lib.rs
+    PackageRootRelative = 1,
+    // target/debug/deps/lib...
+    // or an absolute path /.../sysroot/...
+    TargetRootRelative = 2,
+}
+
+impl DepInfoPathType {
+    fn from_byte(b: u8) -> Option<DepInfoPathType> {
+        match b {
+            1 => Some(DepInfoPathType::PackageRootRelative),
+            2 => Some(DepInfoPathType::TargetRootRelative),
+            _ => None,
+        }
+    }
+}
+
 /// Parses the dep-info file coming out of rustc into a Cargo-specific format.
 ///
 /// This function will parse `rustc_dep_info` as a makefile-style dep info to
@@ -1522,8 +1556,9 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
 pub fn translate_dep_info(
     rustc_dep_info: &Path,
     cargo_dep_info: &Path,
-    pkg_root: &Path,
     rustc_cwd: &Path,
+    pkg_root: &Path,
+    target_root: &Path,
 ) -> CargoResult<()> {
     let target = parse_rustc_dep_info(rustc_dep_info)?;
     let deps = &target
@@ -1533,9 +1568,20 @@ pub fn translate_dep_info(
 
     let mut new_contents = Vec::new();
     for file in deps {
-        let absolute = rustc_cwd.join(file);
-        let path = absolute.strip_prefix(pkg_root).unwrap_or(&absolute);
-        new_contents.extend(util::path2bytes(path)?);
+        let file = rustc_cwd.join(file);
+        let (ty, path) = if let Ok(stripped) = file.strip_prefix(pkg_root) {
+            (DepInfoPathType::PackageRootRelative, stripped)
+        } else if let Ok(stripped) = file.strip_prefix(target_root) {
+            (DepInfoPathType::TargetRootRelative, stripped)
+        } else {
+            // It's definitely not target root relative, but this is an absolute path (since it was
+            // joined to rustc_cwd) and as such re-joining it later to the target root will have no
+            // effect.
+            assert!(file.is_absolute(), "{:?} is absolute", file);
+            (DepInfoPathType::TargetRootRelative, &*file)
+        };
+        new_contents.push(ty as u8);
+        new_contents.extend(util::path2bytes(&path)?);
         new_contents.push(0);
     }
     paths::write(cargo_dep_info, &new_contents)?;

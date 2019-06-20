@@ -339,8 +339,8 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
     // Be sure to build/run the build script for documented libraries.
     ret.extend(dep_build_script(unit, bcx));
 
-    // If we document a binary, we need the library available.
-    if unit.target.is_bin() {
+    // If we document a binary/example, we need the library available.
+    if unit.target.is_bin() || unit.target.is_example() {
         ret.extend(maybe_lib(unit, bcx, UnitFor::new_normal()));
     }
     Ok(ret)

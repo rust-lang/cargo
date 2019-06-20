@@ -8,7 +8,7 @@ use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use serde::Deserialize;
 
-#[test]
+#[cargo_test]
 fn read_env_vars_for_config() {
     let p = project()
         .file(
@@ -84,7 +84,7 @@ fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     }
 }
 
-#[test]
+#[cargo_test]
 fn get_config() {
     write_config(
         "\
@@ -106,7 +106,7 @@ f1 = 123
     assert_eq!(s, S { f1: Some(456) });
 }
 
-#[test]
+#[cargo_test]
 fn config_unused_fields() {
     write_config(
         "\
@@ -144,7 +144,7 @@ warning: unused key `S.unused` in config file `[..]/.cargo/config`
     }
 }
 
-#[test]
+#[cargo_test]
 fn config_load_toml_profile() {
     write_config(
         "\
@@ -230,7 +230,7 @@ lto = false
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_deserialize_any() {
     // Some tests to exercise deserialize_any for deserializers that need to
     // be told the format.
@@ -275,7 +275,7 @@ c = ['c']
     }
 }
 
-#[test]
+#[cargo_test]
 fn config_toml_errors() {
     write_config(
         "\
@@ -303,7 +303,7 @@ opt-level = 'foo'
     );
 }
 
-#[test]
+#[cargo_test]
 fn load_nested() {
     write_config(
         "\
@@ -339,7 +339,7 @@ asdf = 3
     assert_eq!(n, expected);
 }
 
-#[test]
+#[cargo_test]
 fn get_errors() {
     write_config(
         "\
@@ -394,7 +394,7 @@ big = 123456789
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_option() {
     write_config(
         "\
@@ -412,7 +412,7 @@ f1 = 1
     assert_eq!(config.get::<Option<i32>>("bar.zzzz").unwrap(), None);
 }
 
-#[test]
+#[cargo_test]
 fn config_bad_toml() {
     write_config("asdf");
     let config = new_config(&[]);
@@ -429,7 +429,7 @@ Caused by:
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_list() {
     write_config(
         "\
@@ -554,7 +554,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_other_types() {
     write_config(
         "\
@@ -576,7 +576,7 @@ ns2 = 456
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_relative_path() {
     write_config(&format!(
         "\
@@ -627,7 +627,7 @@ abs = '{}'
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_integers() {
     write_config(
         "\

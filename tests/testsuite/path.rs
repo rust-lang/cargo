@@ -6,7 +6,7 @@ use crate::support::registry::Package;
 use crate::support::sleep_ms;
 use crate::support::{basic_lib_manifest, basic_manifest, main_file, project};
 
-#[test]
+#[cargo_test]
 // I have no idea why this is failing spuriously on Windows;
 // for more info, see #3466.
 #[cfg(not(windows))]
@@ -103,7 +103,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_root_dev_deps() {
     let p = project()
         .file(
@@ -145,7 +145,7 @@ fn cargo_compile_with_root_dev_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_root_dev_deps_with_testing() {
     let p = project()
         .file(
@@ -193,7 +193,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_compile_with_transitive_dev_deps() {
     let p = project()
         .file(
@@ -254,7 +254,7 @@ fn cargo_compile_with_transitive_dev_deps() {
     p.process(&p.bin("foo")).with_stdout("zoidberg\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_dependency() {
     let p = project()
         .file(
@@ -303,7 +303,7 @@ fn no_rebuild_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn deep_dependencies_trigger_rebuild() {
     let p = project()
         .file(
@@ -395,7 +395,7 @@ fn deep_dependencies_trigger_rebuild() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_two_deps() {
     let p = project()
         .file(
@@ -447,7 +447,7 @@ fn no_rebuild_two_deps() {
     assert!(p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn nested_deps_recompile() {
     let p = project()
         .file(
@@ -495,7 +495,7 @@ fn nested_deps_recompile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn error_message_for_missing_manifest() {
     let p = project()
         .file(
@@ -535,7 +535,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_relative() {
     let bar = project()
         .at("bar")
@@ -571,7 +571,7 @@ fn override_relative() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn override_self() {
     let bar = project()
         .at("bar")
@@ -607,7 +607,7 @@ fn override_self() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn override_path_dep() {
     let bar = project()
         .at("bar")
@@ -660,7 +660,7 @@ fn override_path_dep() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dep_build_cmd() {
     let p = project()
         .file(
@@ -740,7 +740,7 @@ fn path_dep_build_cmd() {
     p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn dev_deps_no_rebuild_lib() {
     let p = project()
         .file(
@@ -790,7 +790,7 @@ fn dev_deps_no_rebuild_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_no_rebuild() {
     let p = project()
         .file(
@@ -847,7 +847,7 @@ fn custom_target_no_rebuild() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn override_and_depend() {
     let p = project()
         .no_manifest()
@@ -893,7 +893,7 @@ fn override_and_depend() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn missing_path_dependency() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("a", "0.5.0"))
@@ -920,7 +920,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_path_dep_in_workspace_with_lockfile() {
     Package::new("bar", "1.0.0").publish();
 
@@ -989,7 +989,7 @@ required by package `foo v0.5.0 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_produces_rlib() {
     let p = project()
         .file(
@@ -1017,7 +1017,7 @@ fn workspace_produces_rlib() {
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn thin_lto_works() {
     let p = project()
         .file(

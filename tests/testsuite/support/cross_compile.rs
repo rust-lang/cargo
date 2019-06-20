@@ -1,7 +1,7 @@
 use std::env;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 
 use crate::support::{basic_bin_manifest, main_file, project};
 
@@ -23,7 +23,7 @@ pub fn disabled() -> bool {
     // try to detect that before we fail a bunch of tests through no fault
     // of the user.
     static CAN_RUN_CROSS_TESTS: AtomicBool = AtomicBool::new(false);
-    static CHECK: Once = ONCE_INIT;
+    static CHECK: Once = Once::new();
 
     let cross_target = alternate();
 

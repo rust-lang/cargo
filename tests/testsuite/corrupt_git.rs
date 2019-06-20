@@ -5,7 +5,7 @@ use crate::support::paths;
 use crate::support::{basic_manifest, git, project};
 use cargo::util::paths as cargopaths;
 
-#[test]
+#[cargo_test]
 fn deleting_database_files() {
     let project = project();
     let git_project = git::new("bar", |project| {
@@ -64,7 +64,7 @@ fn deleting_database_files() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn deleting_checkout_files() {
     let project = project();
     let git_project = git::new("bar", |project| {

@@ -1,58 +1,92 @@
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Mutex;
 
 use filetime::{self, FileTime};
+use lazy_static::lazy_static;
 
 static CARGO_INTEGRATION_TEST_DIR: &'static str = "cit";
-static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
-thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
+lazy_static! {
+    static ref GLOBAL_ROOT: PathBuf = {
+        let mut path = t!(env::current_exe());
+        path.pop(); // chop off exe name
+        path.pop(); // chop off 'debug'
 
-fn init() {
-    static GLOBAL_INIT: Once = ONCE_INIT;
-    thread_local!(static LOCAL_INIT: Cell<bool> = Cell::new(false));
-    GLOBAL_INIT.call_once(|| {
-        global_root().mkdir_p();
-    });
-    LOCAL_INIT.with(|i| {
-        if i.get() {
-            return;
+        // If `cargo test` is run manually then our path looks like
+        // `target/debug/foo`, in which case our `path` is already pointing at
+        // `target`. If, however, `cargo test --target $target` is used then the
+        // output is `target/$target/debug/foo`, so our path is pointing at
+        // `target/$target`. Here we conditionally pop the `$target` name.
+        if path.file_name().and_then(|s| s.to_str()) != Some("target") {
+            path.pop();
         }
-        i.set(true);
-        root().rm_rf();
-        home().mkdir_p();
-    })
+
+        path.push(CARGO_INTEGRATION_TEST_DIR);
+        path.mkdir_p();
+        path
+    };
+
+    static ref TEST_ROOTS: Mutex<HashMap<String, PathBuf>> = Default::default();
 }
 
-fn global_root() -> PathBuf {
-    let mut path = t!(env::current_exe());
-    path.pop(); // chop off exe name
-    path.pop(); // chop off 'debug'
+// We need to give each test a unique id. The test name could serve this
+// purpose, but the `test` crate doesn't have a way to obtain the current test
+// name.[*] Instead, we used the `cargo-test-macro` crate to automatically
+// insert an init function for each test that sets the test name in a thread
+// local variable.
+//
+// [*] It does set the thread name, but only when running concurrently. If not
+// running concurrently, all tests are run on the main thread.
+thread_local! {
+    static TEST_ID: RefCell<Option<usize>> = RefCell::new(None);
+}
 
-    // If `cargo test` is run manually then our path looks like
-    // `target/debug/foo`, in which case our `path` is already pointing at
-    // `target`. If, however, `cargo test --target $target` is used then the
-    // output is `target/$target/debug/foo`, so our path is pointing at
-    // `target/$target`. Here we conditionally pop the `$target` name.
-    if path.file_name().and_then(|s| s.to_str()) != Some("target") {
-        path.pop();
+pub struct TestIdGuard {
+    _private: (),
+}
+
+pub fn init_root() -> TestIdGuard {
+    static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    TEST_ID.with(|n| *n.borrow_mut() = Some(id));
+
+    let guard = TestIdGuard { _private: () };
+
+    let r = root();
+    r.rm_rf();
+    r.mkdir_p();
+
+    guard
+}
+
+impl Drop for TestIdGuard {
+    fn drop(&mut self) {
+        TEST_ID.with(|n| *n.borrow_mut() = None);
     }
-
-    path.join(CARGO_INTEGRATION_TEST_DIR)
 }
 
 pub fn root() -> PathBuf {
-    init();
-    global_root().join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
+    let id = TEST_ID.with(|n| {
+        n.borrow().expect(
+            "Tests must use the `#[cargo_test]` attribute in \
+             order to be able to use the crate root.",
+        )
+    });
+    GLOBAL_ROOT.join(&format!("t{}", id))
 }
 
 pub fn home() -> PathBuf {
-    root().join("home")
+    let mut path = root();
+    path.push("home");
+    path.mkdir_p();
+    path
 }
 
 pub trait CargoPathExt {

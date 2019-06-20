@@ -104,7 +104,7 @@ impl PartialEq for PackageId {
     }
 }
 
-impl<'a> Hash for PackageId {
+impl Hash for PackageId {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
         self.inner.name.hash(state);
         self.inner.version.hash(state);

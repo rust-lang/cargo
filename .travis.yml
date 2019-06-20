@@ -1,6 +1,5 @@
 language: rust
 rust: stable
-sudo: required
 dist: trusty
 
 git:
@@ -8,6 +7,15 @@ git:
 
 matrix:
   include:
+    - name: "rustfmt"
+      env: TARGET=x86_64-unknown-linux-gnu
+      rust: stable
+      addons:
+      before_script:
+        - rustup component add rustfmt
+      script:
+        - cargo fmt --all -- --check
+
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
       if: branch != master OR type = pull_request
@@ -32,6 +40,13 @@ matrix:
         - cargo test --features=deny-warnings || travis_terminate 1
         - cargo doc --no-deps || travis_terminate 1
         - (cd src/doc && mdbook build --dest-dir ../../target/doc) || travis_terminate 1
+      if: branch != master OR type = pull_request
+
+    - name: resolver tests
+      rust: stable
+      before_script: true
+      script:
+        - cargo test --manifest-path crates/resolver-tests/Cargo.toml
       if: branch != master OR type = pull_request
 
   exclude:

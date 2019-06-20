@@ -1,6 +1,6 @@
 use crate::support::{basic_lib_manifest, project};
 
-#[test]
+#[cargo_test]
 fn edition_works_for_build_script() {
     let p = project()
         .file(

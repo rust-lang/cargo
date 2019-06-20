@@ -240,8 +240,7 @@ impl Package {
 
     /// Returns if package should include `Cargo.lock`.
     pub fn include_lockfile(&self) -> bool {
-        self.manifest().publish_lockfile()
-            && self.targets().iter().any(|t| t.is_example() || t.is_bin())
+        self.targets().iter().any(|t| t.is_example() || t.is_bin())
     }
 }
 

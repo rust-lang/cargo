@@ -7,7 +7,7 @@ use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, git, project};
 use crate::support::{is_nightly, rustc_host};
 
-#[test]
+#[cargo_test]
 fn simple() {
     let p = project()
         .file(
@@ -37,7 +37,7 @@ fn simple() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_no_libs() {
     let p = project()
         .file(
@@ -59,7 +59,7 @@ fn doc_no_libs() {
     p.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_twice() {
     let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
@@ -75,7 +75,7 @@ fn doc_twice() {
     p.cargo("doc").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_deps() {
     let p = project()
         .file(
@@ -124,7 +124,7 @@ fn doc_deps() {
     assert!(p.root().join("target/doc/bar/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_no_deps() {
     let p = project()
         .file(
@@ -159,7 +159,7 @@ fn doc_no_deps() {
     assert!(!p.root().join("target/doc/bar/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_only_bin() {
     let p = project()
         .file(
@@ -186,7 +186,7 @@ fn doc_only_bin() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_multiple_targets_same_name_lib() {
     let p = project()
         .file(
@@ -228,7 +228,7 @@ fn doc_multiple_targets_same_name_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_multiple_targets_same_name() {
     let p = project()
         .file(
@@ -273,7 +273,7 @@ fn doc_multiple_targets_same_name() {
     assert!(doc_file.is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_multiple_targets_same_name_bin() {
     let p = project()
         .file(
@@ -315,7 +315,7 @@ fn doc_multiple_targets_same_name_bin() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_multiple_targets_same_name_undoced() {
     let p = project()
         .file(
@@ -353,7 +353,7 @@ fn doc_multiple_targets_same_name_undoced() {
     p.cargo("doc --all").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_lib() {
     let p = project()
         .file(
@@ -395,7 +395,7 @@ fn doc_lib_bin_same_name_documents_lib() {
     assert!(!doc_html.contains("Binary"));
 }
 
-#[test]
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_lib_when_requested() {
     let p = project()
         .file(
@@ -437,7 +437,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
     assert!(!doc_html.contains("Binary"));
 }
 
-#[test]
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     let p = project()
         .file(
@@ -480,7 +480,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     assert!(doc_html.contains("Binary"));
 }
 
-#[test]
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_bins_when_requested() {
     let p = project()
         .file(
@@ -523,7 +523,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
     assert!(doc_html.contains("Binary"));
 }
 
-#[test]
+#[cargo_test]
 fn doc_dash_p() {
     let p = project()
         .file(
@@ -568,7 +568,7 @@ fn doc_dash_p() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_same_name() {
     let p = project()
         .file("src/lib.rs", "")
@@ -580,7 +580,7 @@ fn doc_same_name() {
     p.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_target() {
     const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
@@ -609,7 +609,7 @@ fn doc_target() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn target_specific_not_documented() {
     let p = project()
         .file(
@@ -632,7 +632,7 @@ fn target_specific_not_documented() {
     p.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn output_not_captured() {
     let p = project()
         .file(
@@ -667,7 +667,7 @@ fn output_not_captured() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_specific_documented() {
     let p = project()
         .file(
@@ -709,7 +709,7 @@ fn target_specific_documented() {
     p.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn no_document_build_deps() {
     let p = project()
         .file(
@@ -740,7 +740,7 @@ fn no_document_build_deps() {
     p.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_release() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -756,7 +756,7 @@ fn doc_release() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_multiple_deps() {
     let p = project()
         .file(
@@ -788,7 +788,7 @@ fn doc_multiple_deps() {
     assert!(p.root().join("target/doc/baz/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn features() {
     let p = project()
         .file(
@@ -838,7 +838,7 @@ fn features() {
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn rerun_when_dir_removed() {
     let p = project()
         .file(
@@ -859,7 +859,7 @@ fn rerun_when_dir_removed() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn document_only_lib() {
     let p = project()
         .file(
@@ -884,7 +884,7 @@ fn document_only_lib() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn plugins_no_use_target() {
     let p = project()
         .file(
@@ -904,7 +904,7 @@ fn plugins_no_use_target() {
     p.cargo("doc --target=x86_64-unknown-openbsd -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_all_workspace() {
     let p = project()
         .file(
@@ -933,7 +933,7 @@ fn doc_all_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_all_virtual_manifest() {
     let p = project()
         .file(
@@ -956,7 +956,7 @@ fn doc_all_virtual_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_virtual_manifest_all_implied() {
     let p = project()
         .file(
@@ -979,7 +979,7 @@ fn doc_virtual_manifest_all_implied() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_all_member_dependency_same_name() {
     let p = project()
         .file(
@@ -1011,7 +1011,7 @@ fn doc_all_member_dependency_same_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_help_message() {
     let p = project()
@@ -1037,7 +1037,7 @@ fn doc_workspace_open_help_message() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
@@ -1068,7 +1068,7 @@ fn doc_workspace_open_different_library_and_package_names() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary() {
     let p = project()
@@ -1100,7 +1100,7 @@ fn doc_workspace_open_binary() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary_and_library() {
     let p = project()
@@ -1135,7 +1135,7 @@ fn doc_workspace_open_binary_and_library() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_edition() {
     let p = project()
         .file(
@@ -1160,7 +1160,7 @@ fn doc_edition() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_target_edition() {
     let p = project()
         .file(
@@ -1189,7 +1189,7 @@ fn doc_target_edition() {
 
 // Tests an issue where depending on different versions of the same crate depending on `cfg`s
 // caused `cargo doc` to fail.
-#[test]
+#[cargo_test]
 fn issue_5345() {
     let foo = project()
         .file(
@@ -1216,7 +1216,7 @@ fn issue_5345() {
     foo.cargo("doc").run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_private_items() {
     let foo = project()
         .file("src/lib.rs", "mod private { fn private_item() {} }")
@@ -1230,7 +1230,7 @@ fn doc_private_items() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn doc_private_ws() {
     let p = project()
         .file(
@@ -1266,7 +1266,7 @@ const BAD_INTRA_LINK_LIB: &str = r#"
 pub fn foo() {}
 "#;
 
-#[test]
+#[cargo_test]
 fn doc_cap_lints() {
     if !is_nightly() {
         // This can be removed once intra_doc_link_resolution_failure fails on stable.
@@ -1320,7 +1320,7 @@ fn doc_cap_lints() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doc_message_format() {
     if !is_nightly() {
         // This can be removed once intra_doc_link_resolution_failure fails on stable.
@@ -1350,7 +1350,7 @@ fn doc_message_format() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn short_message_format() {
     if !is_nightly() {
         // This can be removed once intra_doc_link_resolution_failure fails on stable.
@@ -1363,4 +1363,42 @@ fn short_message_format() {
             "src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...",
         )
         .run();
+}
+
+#[cargo_test]
+fn doc_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[example]]
+            crate-type = ["lib"]
+            name = "ex1"
+            doc = true
+            "#,
+        )
+        .file("src/lib.rs", "pub fn f() {}")
+        .file(
+            "examples/ex1.rs",
+            r#"
+            use foo::f;
+
+            /// Example
+            pub fn x() { f(); }
+            "#,
+        )
+        .build();
+
+    p.cargo("doc").run();
+    assert!(p
+        .build_dir()
+        .join("doc")
+        .join("ex1")
+        .join("fn.x.html")
+        .exists());
 }

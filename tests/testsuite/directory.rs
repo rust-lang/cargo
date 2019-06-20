@@ -73,7 +73,7 @@ impl VendorPackage {
     }
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     setup();
 
@@ -112,7 +112,7 @@ fn simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_install() {
     setup();
 
@@ -154,7 +154,7 @@ fn simple_install() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple_install_fail() {
     setup();
 
@@ -198,7 +198,7 @@ required by package `bar v0.1.0`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn install_without_feature_dep() {
     setup();
 
@@ -244,7 +244,7 @@ fn install_without_feature_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn not_there() {
     setup();
 
@@ -281,7 +281,7 @@ required by package `foo v0.1.0 ([..])`
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple() {
     setup();
 
@@ -327,7 +327,7 @@ fn multiple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn crates_io_then_directory() {
     let p = project()
         .file(
@@ -384,7 +384,7 @@ fn crates_io_then_directory() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn crates_io_then_bad_checksum() {
     let p = project()
         .file(
@@ -431,7 +431,7 @@ unable to verify that `bar v0.1.0` is the same as when the lockfile was generate
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_file_checksum() {
     setup();
 
@@ -475,7 +475,7 @@ the source
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn only_dot_files_ok() {
     setup();
 
@@ -507,7 +507,7 @@ fn only_dot_files_ok() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn random_files_ok() {
     setup();
 
@@ -540,7 +540,7 @@ fn random_files_ok() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn git_lock_file_doesnt_change() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
@@ -610,7 +610,7 @@ fn git_lock_file_doesnt_change() {
     assert_eq!(lock1, lock2, "lock files changed");
 }
 
-#[test]
+#[cargo_test]
 fn git_override_requires_lockfile() {
     VendorPackage::new("git")
         .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
@@ -668,7 +668,7 @@ restore the source replacement configuration to continue the build
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_different_locations() {
     let p = project()
         .no_manifest()
@@ -726,7 +726,7 @@ fn workspace_different_locations() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn version_missing() {
     setup();
 

@@ -53,7 +53,7 @@ fn make_upstream(main_src: &str) -> Project {
         .build()
 }
 
-#[test]
+#[cargo_test]
 fn no_warning_on_success() {
     make_lib("");
     let upstream = make_upstream("");
@@ -72,7 +72,7 @@ fn no_warning_on_success() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warning_on_bin_failure() {
     make_lib("");
     let upstream = make_upstream("hi()");
@@ -90,7 +90,7 @@ fn no_warning_on_bin_failure() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warning_on_lib_failure() {
     make_lib("err()");
     let upstream = make_upstream("");

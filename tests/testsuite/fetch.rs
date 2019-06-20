@@ -2,7 +2,7 @@ use crate::support::registry::Package;
 use crate::support::rustc_host;
 use crate::support::{basic_manifest, cross_compile, project};
 
-#[test]
+#[cargo_test]
 fn no_deps() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
@@ -12,7 +12,7 @@ fn no_deps() {
     p.cargo("fetch").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn fetch_all_platform_dependencies_when_no_target_is_given() {
     if cross_compile::disabled() {
         return;
@@ -59,7 +59,7 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fetch_platform_specific_dependencies() {
     if cross_compile::disabled() {
         return;

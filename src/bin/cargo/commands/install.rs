@@ -69,15 +69,16 @@ pub fn cli() -> App {
         )
         .after_help(
             "\
-This command manages Cargo's local set of installed binary crates. Only packages
-which have [[bin]] targets can be installed, and all binaries are installed into
-the installation root's `bin` folder. The installation root is determined, in
-order of precedence, by `--root`, `$CARGO_INSTALL_ROOT`, the `install.root`
-configuration key, and finally the home directory (which is either
-`$CARGO_HOME` if set or `$HOME/.cargo` by default).
+This command manages Cargo's local set of installed binary crates. Only
+packages which have executable [[bin]] or [[example]] targets can be
+installed, and all executables are installed into the installation root's
+`bin` folder. The installation root is determined, in order of precedence, by
+`--root`, `$CARGO_INSTALL_ROOT`, the `install.root` configuration key, and
+finally the home directory (which is either `$CARGO_HOME` if set or
+`$HOME/.cargo` by default).
 
 There are multiple sources from which a crate can be installed. The default
-location is crates.io but the `--git`, `--path`, and `registry` flags can
+location is crates.io but the `--git`, `--path`, and `--registry` flags can
 change this source. If the source contains more than one package (such as
 crates.io or a git repository with multiple crates) the `<crate>` argument is
 required to indicate which crate should be installed.

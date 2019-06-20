@@ -4,7 +4,7 @@ use std::io::Write;
 use crate::support::rustc_host;
 use crate::support::{basic_lib_manifest, basic_manifest, paths, project, project_in_home};
 
-#[test]
+#[cargo_test]
 fn env_rustflags_normal_source() {
     let p = project()
         .file("src/lib.rs", "")
@@ -48,7 +48,7 @@ fn env_rustflags_normal_source() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
@@ -77,7 +77,7 @@ fn env_rustflags_build_script() {
     p.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
@@ -114,7 +114,7 @@ fn env_rustflags_build_script_dep() {
     foo.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
@@ -145,7 +145,7 @@ fn env_rustflags_plugin() {
     p.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
@@ -184,7 +184,7 @@ fn env_rustflags_plugin_dep() {
     foo.cargo("build").env("RUSTFLAGS", "--cfg foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_normal_source_with_target() {
     let p = project()
         .file("src/lib.rs", "")
@@ -235,7 +235,7 @@ fn env_rustflags_normal_source_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
@@ -268,7 +268,7 @@ fn env_rustflags_build_script_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
@@ -309,7 +309,7 @@ fn env_rustflags_build_script_dep_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
@@ -344,7 +344,7 @@ fn env_rustflags_plugin_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
@@ -387,7 +387,7 @@ fn env_rustflags_plugin_dep_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_recompile() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -400,7 +400,7 @@ fn env_rustflags_recompile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_recompile2() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -413,7 +413,7 @@ fn env_rustflags_recompile2() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_no_recompile() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -424,7 +424,7 @@ fn env_rustflags_no_recompile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_normal_source() {
     let p = project()
         .file("src/lib.rs", "")
@@ -469,7 +469,7 @@ fn build_rustflags_normal_source() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
@@ -505,7 +505,7 @@ fn build_rustflags_build_script() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
@@ -549,7 +549,7 @@ fn build_rustflags_build_script_dep() {
     foo.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
@@ -587,7 +587,7 @@ fn build_rustflags_plugin() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
@@ -633,7 +633,7 @@ fn build_rustflags_plugin_dep() {
     foo.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_normal_source_with_target() {
     let p = project()
         .file("src/lib.rs", "")
@@ -686,7 +686,7 @@ fn build_rustflags_normal_source_with_target() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
@@ -723,7 +723,7 @@ fn build_rustflags_build_script_with_target() {
     p.cargo("build --target").arg(host).run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
@@ -768,7 +768,7 @@ fn build_rustflags_build_script_dep_with_target() {
     foo.cargo("build --target").arg(host).run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
@@ -807,7 +807,7 @@ fn build_rustflags_plugin_with_target() {
     p.cargo("build --target").arg(host).run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
@@ -854,7 +854,7 @@ fn build_rustflags_plugin_dep_with_target() {
     foo.cargo("build --target").arg(host).run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_recompile() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -876,7 +876,7 @@ fn build_rustflags_recompile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_recompile2() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -898,7 +898,7 @@ fn build_rustflags_recompile2() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_no_recompile() {
     let p = project()
         .file("src/lib.rs", "")
@@ -918,7 +918,7 @@ fn build_rustflags_no_recompile() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_rustflags_with_home_config() {
     // We need a config file inside the home directory
     let home = paths::home();
@@ -941,7 +941,7 @@ fn build_rustflags_with_home_config() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn target_rustflags_normal_source() {
     let p = project()
         .file("src/lib.rs", "")
@@ -990,7 +990,7 @@ fn target_rustflags_normal_source() {
 }
 
 // target.{}.rustflags takes precedence over build.rustflags
-#[test]
+#[cargo_test]
 fn target_rustflags_precedence() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1034,7 +1034,7 @@ fn target_rustflags_precedence() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_rustflags_normal_source() {
     let p = project()
         .file("src/lib.rs", "pub fn t() {}")
@@ -1113,7 +1113,7 @@ fn cfg_rustflags_normal_source() {
 }
 
 // target.'cfg(...)'.rustflags takes precedence over build.rustflags
-#[test]
+#[cargo_test]
 fn cfg_rustflags_precedence() {
     let p = project()
         .file("src/lib.rs", "pub fn t() {}")
@@ -1194,7 +1194,7 @@ fn cfg_rustflags_precedence() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_rustflags_string_and_array_form1() {
     let p1 = project()
         .file("src/lib.rs", "")
@@ -1239,7 +1239,7 @@ fn target_rustflags_string_and_array_form1() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_rustflags_string_and_array_form2() {
     let p1 = project()
         .file(
@@ -1290,7 +1290,7 @@ fn target_rustflags_string_and_array_form2() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn two_matching_in_config() {
     let p1 = project()
         .file(
@@ -1326,7 +1326,7 @@ fn two_matching_in_config() {
     p1.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_misspelled() {
     let p = project().file("src/main.rs", "fn main() { }").build();
 
@@ -1338,7 +1338,7 @@ fn env_rustflags_misspelled() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn env_rustflags_misspelled_build_script() {
     let p = project()
         .file(
@@ -1360,7 +1360,7 @@ fn env_rustflags_misspelled_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn reamp_path_prefix_ignored() {
     // Ensure that --remap-path-prefix does not affect metadata hash.
     let p = project().file("src/lib.rs", "").build();
