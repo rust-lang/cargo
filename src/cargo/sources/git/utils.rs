@@ -16,7 +16,7 @@ use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
-use crate::util::{internal, network, Config, Progress, IntoUrl};
+use crate::util::{internal, network, Config, IntoUrl, Progress};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
