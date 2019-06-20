@@ -136,7 +136,7 @@ impl Profiles {
         ]
     }
 
-    pub fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>)
+    fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>)
         -> CargoResult<()>
     {
         for (name, profile) in profiles {
