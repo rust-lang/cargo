@@ -49,19 +49,11 @@ impl Resolve {
             .map(|p| {
                 let public_deps = graph
                     .edges(p)
-                    .flat_map(|(dep_package, deps)| {
-                        let id_opt: Option<PackageId> = deps
-                            .iter()
-                            .find(|d| d.kind() == Kind::Normal)
-                            .and_then(|d| {
-                                if d.is_public() {
-                                    Some(*dep_package)
-                                } else {
-                                    None
-                                }
-                            });
-                        id_opt
+                    .filter(|(_, deps)| {
+                        deps.iter()
+                            .any(|d| d.kind() == Kind::Normal && d.is_public())
                     })
+                    .map(|(dep_package, _)| *dep_package)
                     .collect::<HashSet<PackageId>>();
 
                 (*p, public_deps)
