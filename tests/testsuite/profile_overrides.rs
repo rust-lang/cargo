@@ -141,7 +141,7 @@ fn profile_override_warnings() {
 [WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
 [WARNING] profile override spec `bart` did not match any packages
 
-Did you mean `bar`?
+<tab>Did you mean `bar`?
 [WARNING] profile override spec `no-suggestion` did not match any packages
 [COMPILING] [..]
 ",

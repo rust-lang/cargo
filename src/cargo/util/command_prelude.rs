@@ -514,10 +514,10 @@ pub enum CommandInfo {
 }
 
 impl CommandInfo {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            CommandInfo::BuiltIn { name, .. } => name.to_string(),
-            CommandInfo::External { name, .. } => name.to_string(),
+            CommandInfo::BuiltIn { name, .. } => &name,
+            CommandInfo::External { name, .. } => &name,
         }
     }
 }

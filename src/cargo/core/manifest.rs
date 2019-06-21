@@ -518,12 +518,6 @@ impl Manifest {
                 })?;
         }
 
-        if self.default_run.is_some() {
-            self.features
-                .require(Feature::default_run())
-                .chain_err(|| failure::format_err!("the `default-run` manifest key is unstable"))?;
-        }
-
         Ok(())
     }
 
