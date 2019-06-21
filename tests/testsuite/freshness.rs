@@ -1257,6 +1257,49 @@ fn simple_deps_cleaner_does_not_rebuild() {
         .run();
 }
 
+#[cargo_test]
+fn update_dependency_mtime_does_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    // This does not make new files, but it does update the mtime of the dependency.
+    p.cargo("build -p bar -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    // This should not recompile!
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+}
+
 fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // Cargo is experimenting with letting outside projects develop some
     // limited forms of GC for target_dir. This is one of the forms.
