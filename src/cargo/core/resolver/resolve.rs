@@ -95,7 +95,7 @@ impl Resolve {
         //
         // * Something got seriously corrupted
         // * A "mirror" isn't actually a mirror as some changes were made
-        // * A replacement source wasn't actually a replacment, some changes
+        // * A replacement source wasn't actually a replacement, some changes
         //   were made
         //
         // In all of these cases, we want to report an error to indicate that
