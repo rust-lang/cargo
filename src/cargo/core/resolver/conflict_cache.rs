@@ -25,6 +25,7 @@ impl ConflictStoreTrie {
         &self,
         is_active: &impl Fn(PackageId) -> Option<usize>,
         must_contain: Option<PackageId>,
+        mut max_age: usize,
     ) -> Option<(&ConflictMap, usize)> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
@@ -43,8 +44,12 @@ impl ConflictStoreTrie {
                 {
                     // If the key is active, then we need to check all of the corresponding subtrie.
                     if let Some(age_this) = is_active(pid) {
+                        if age_this >= max_age && must_contain != Some(pid) {
+                            // not worth looking at, it is to old.
+                            continue;
+                        }
                         if let Some((o, age_o)) =
-                            store.find(is_active, must_contain.filter(|&f| f != pid))
+                            store.find(is_active, must_contain.filter(|&f| f != pid), max_age)
                         {
                             let age = if must_contain == Some(pid) {
                                 // all the results will include `must_contain`
@@ -53,10 +58,11 @@ impl ConflictStoreTrie {
                             } else {
                                 std::cmp::max(age_this, age_o)
                             };
-                            let out_age = out.get_or_insert((o, age)).1;
-                            if out_age > age {
+                            if max_age > age {
                                 // we found one that can jump-back further so replace the out.
                                 out = Some((o, age));
+                                // and dont look at anything older
+                                max_age = age
                             }
                         }
                     }
@@ -152,10 +158,11 @@ impl ConflictCache {
         dep: &Dependency,
         is_active: &impl Fn(PackageId) -> Option<usize>,
         must_contain: Option<PackageId>,
+        max_age: usize,
     ) -> Option<&ConflictMap> {
         self.con_from_dep
             .get(dep)?
-            .find(is_active, must_contain)
+            .find(is_active, must_contain, max_age)
             .map(|(c, _)| c)
     }
     /// Finds any known set of conflicts, if any,
@@ -168,7 +175,7 @@ impl ConflictCache {
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
-        let out = self.find(dep, &|id| cx.is_active(id), must_contain);
+        let out = self.find(dep, &|id| cx.is_active(id), must_contain, std::usize::MAX);
         if cfg!(debug_assertions) {
             if let Some(c) = &out {
                 assert!(cx.is_conflicting(None, c).is_some());
