@@ -936,7 +936,7 @@ fn cargo_compile_with_filename() {
             "\
 [ERROR] no bin target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 
@@ -951,7 +951,7 @@ Did you mean `a`?",
             "\
 [ERROR] no example target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 }
@@ -4417,7 +4417,7 @@ fn target_filters_workspace() {
             "\
 [ERROR] no example target named `ex`
 
-Did you mean `ex1`?",
+<tab>Did you mean `ex1`?",
         )
         .run();
 

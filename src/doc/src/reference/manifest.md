@@ -21,7 +21,7 @@ when listed as a dependency in another package, and as the default name of
 inferred lib and bin targets.
 
 The name must not be empty, use only [alphanumeric] characters or `-` or `_`.
-Note that `cargo new` and `cargo init` impose some additional restrictions on
+Note that [`cargo new`] and [`cargo init`] impose some additional restrictions on
 the package name, such as enforcing that it is a valid Rust identifier and not
 a keyword. [crates.io][cratesio] imposes even more restrictions, such as
 enforcing only ASCII characters, not a reserved name, not a special Windows
@@ -66,7 +66,7 @@ edition = '2018'
 ```
 
 The `edition` key affects which edition your package is compiled with. Cargo
-will always generate packages via `cargo new` with the `edition` key set to the
+will always generate packages via [`cargo new`] with the `edition` key set to the
 latest edition. Setting the `edition` key in `[package]` will affect all
 targets/crates in the package, including test suites, benchmarks, binaries,
 examples, etc.
@@ -364,6 +364,17 @@ package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
 
+#### The `default-run` field
+
+The `default-run` field in the `[package]` section of the manifest can be used
+to specify a default binary picked by [`cargo run`]. For example, when there is
+both `src/bin/a.rs` and `src/bin/b.rs`:
+
+```toml
+[package]
+default-run = "a"
+```
+
 ### Dependency sections
 
 See the [specifying dependencies page](reference/specifying-dependencies.html) for
@@ -629,8 +640,8 @@ A crate may either specify `package.workspace` or specify `[workspace]`. That
 is, a crate cannot both be a root crate in a workspace (contain `[workspace]`)
 and also be a member crate of another workspace (contain `package.workspace`).
 
-Most of the time workspaces will not need to be dealt with as `cargo new` and
-`cargo init` will handle workspace configuration automatically.
+Most of the time workspaces will not need to be dealt with as [`cargo new`] and
+[`cargo init`] will handle workspace configuration automatically.
 
 [globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
@@ -643,7 +654,7 @@ manifest*.
 
 #### Package selection
 
-In a workspace, package-related cargo commands like `cargo build` apply to
+In a workspace, package-related cargo commands like [`cargo build`] apply to
 packages selected by `-p` / `--package` or `--all` command-line parameters.
 When neither is specified, the optional `default-members` configuration is used:
 
@@ -733,7 +744,7 @@ You can build individual library examples with the command `cargo build
 
 ### Tests
 
-When you run `cargo test`, Cargo will:
+When you run [`cargo test`], Cargo will:
 
 * compile and run your library’s unit tests, which are in the files reachable
   from `lib.rs` (naturally, any sections marked with `#[cfg(test)]` will be
@@ -745,7 +756,7 @@ When you run `cargo test`, Cargo will:
 
 #### Integration tests
 
-Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
+Each file in `tests/*.rs` is an integration test. When you run [`cargo test`],
 Cargo will compile each of these files as a separate crate. The crate can link
 to your library by using `extern crate <library-name>`, like any other code that
 depends on it.
@@ -966,6 +977,11 @@ source (e.g., git or a local path).
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
 
+[`cargo build`]: commands/cargo-build.html
+[`cargo init`]: commands/cargo-init.html
+[`cargo new`]: commands/cargo-new.html
+[`cargo run`]: commands/cargo-run.html
+[`cargo test`]: commands/cargo-test.html
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
-[spdx-license-list]: https://spdx.org/licenses/
 [spdx-license-list-2.4]: https://github.com/spdx/license-list-data/tree/v2.4
+[spdx-license-list]: https://spdx.org/licenses/

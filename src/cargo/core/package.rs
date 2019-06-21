@@ -25,7 +25,7 @@ use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
-use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
+use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -191,21 +191,6 @@ impl Package {
     /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
-    }
-
-    pub fn find_closest_target(
-        &self,
-        target: &str,
-        is_expected_kind: fn(&Target) -> bool,
-    ) -> Option<&Target> {
-        let targets = self.targets();
-
-        let matches = targets
-            .iter()
-            .filter(|t| is_expected_kind(t))
-            .map(|t| (lev_distance(target, t.name()), t))
-            .filter(|&(d, _)| d < 4);
-        matches.min_by_key(|t| t.0).map(|t| t.1)
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Package {

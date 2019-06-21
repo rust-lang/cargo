@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::iter;
 use std::path::Path;
 
-use crate::core::{nightly_features_allowed, TargetKind, Workspace};
+use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::{CargoResult, ProcessError};
 
@@ -55,22 +55,13 @@ pub fn run(
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
-            if nightly_features_allowed() {
-                failure::bail!(
-                    "`cargo run` could not determine which binary to run. \
-                     Use the `--bin` option to specify a binary, \
-                     or (on nightly) the `default-run` manifest key.\n\
-                     available binaries: {}",
-                    names.join(", ")
-                )
-            } else {
-                failure::bail!(
-                    "`cargo run` requires that a package only have one \
-                     executable; use the `--bin` option to specify which one \
-                     to run\navailable binaries: {}",
-                    names.join(", ")
-                )
-            }
+            failure::bail!(
+                "`cargo run` could not determine which binary to run. \
+                 Use the `--bin` option to specify a binary, \
+                 or the `default-run` manifest key.\n\
+                 available binaries: {}",
+                names.join(", ")
+            )
         } else {
             failure::bail!(
                 "`cargo run` can run at most one executable, but \
