@@ -196,7 +196,7 @@ features! {
         [unstable] namespaced_features: bool,
 
         // "default-run" manifest option,
-        [unstable] default_run: bool,
+        [stable] default_run: bool,
 
         // Declarative build scripts.
         [unstable] metabuild: bool,

@@ -155,18 +155,6 @@ Example:
 cargo +nightly build --build-plan -Z unstable-options
 ```
 
-### default-run
-* Original issue: [#2200](https://github.com/rust-lang/cargo/issues/2200)
-
-The `default-run` option in the `[package]` section of the manifest can be used
-to specify a default binary picked by `cargo run`. For example, when there is
-both `src/bin/a.rs` and `src/bin/b.rs`:
-
-```toml
-[package]
-default-run = "a"
-```
-
 ### Metabuild
 * Tracking Issue: [rust-lang/rust#49803](https://github.com/rust-lang/rust/issues/49803)
 * RFC: [#2196](https://github.com/rust-lang/rfcs/blob/master/text/2196-metabuild.md)
