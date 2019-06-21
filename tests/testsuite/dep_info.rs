@@ -13,6 +13,13 @@ fn build_dep_info() {
     let depinfo_bin_path = &p.bin("foo").with_extension("d");
 
     assert!(depinfo_bin_path.is_file());
+
+    let depinfo = p.read_file(depinfo_bin_path.to_str().unwrap());
+
+    let bin_path = p.bin("foo");
+    let src_path = p.root().join("src").join("foo.rs");
+    let expected_depinfo = format!("{}: {}\n", bin_path.display(), src_path.display());
+    assert_eq!(depinfo, expected_depinfo);
 }
 
 #[cargo_test]
