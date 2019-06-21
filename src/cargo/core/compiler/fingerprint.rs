@@ -756,11 +756,7 @@ impl Fingerprint {
     /// dependencies up to this unit as well. This function assumes that the
     /// unit starts out as `FsStatus::Stale` and then it will optionally switch
     /// it to `UpToDate` if it can.
-    fn check_filesystem(
-        &mut self,
-        pkg_root: &Path,
-        target_root: &Path,
-    ) -> CargoResult<()> {
+    fn check_filesystem(&mut self, pkg_root: &Path, target_root: &Path) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
         let mut mtimes = HashMap::new();
