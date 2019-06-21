@@ -21,8 +21,7 @@ use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
-use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, IntoUrl};
+use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
 
 mod targets;
 use self::targets::targets;
@@ -1050,6 +1049,18 @@ impl TomlManifest {
                  Did you mean to use `default = [\"..\"]`?"
                     .to_string(),
             )
+        }
+
+        if let Some(run) = &project.default_run {
+            if !targets
+                .iter()
+                .filter(|t| t.is_bin())
+                .any(|t| t.name() == run)
+            {
+                let suggestion =
+                    util::closest_msg(&run, targets.iter().filter(|t| t.is_bin()), |t| t.name());
+                bail!("default-run target `{}` not found{}", run, suggestion);
+            }
         }
 
         let custom_metadata = project.metadata.clone();

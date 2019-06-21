@@ -2,12 +2,12 @@
 .\"     Title: cargo-run
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-05-08
+.\"      Date: 2019-06-21
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-RUN" "1" "2019-05-08" "\ \&" "\ \&"
+.TH "CARGO\-RUN" "1" "2019-06-21" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -54,7 +54,8 @@ the SPEC format.
 .sp
 When no target selection options are given, \fBcargo run\fP will run the binary
 target. If there are multiple binary targets, you must pass a target flag to
-choose one.
+choose one. Or, the \fBdefault\-run\fP field may be specified in the \fB[package]\fP
+section of \fBCargo.toml\fP to choose the name of the binary to run by default.
 .sp
 \fB\-\-bin\fP \fINAME\fP
 .RS 4

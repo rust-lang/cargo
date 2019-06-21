@@ -29,7 +29,8 @@ include::options-package.adoc[]
 
 When no target selection options are given, `cargo run` will run the binary
 target. If there are multiple binary targets, you must pass a target flag to
-choose one.
+choose one. Or, the `default-run` field may be specified in the `[package]`
+section of `Cargo.toml` to choose the name of the binary to run by default.
 
 *--bin* _NAME_::
     Run the specified binary.

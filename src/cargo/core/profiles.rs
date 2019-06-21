@@ -7,9 +7,8 @@ use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
 use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
-use crate::util::lev_distance::lev_distance;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use crate::util::{CargoResult, Config};
+use crate::util::{closest_msg, CargoResult, Config};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
@@ -290,23 +289,12 @@ impl ProfileMaker {
                 })
                 .collect();
             if name_matches.is_empty() {
-                let suggestion = packages
-                    .package_ids()
-                    .map(|p| (lev_distance(&*spec.name(), &p.name()), p.name()))
-                    .filter(|&(d, _)| d < 4)
-                    .min_by_key(|p| p.0)
-                    .map(|p| p.1);
-                match suggestion {
-                    Some(p) => shell.warn(format!(
-                        "profile override spec `{}` did not match any packages\n\n\
-                         Did you mean `{}`?",
-                        spec, p
-                    ))?,
-                    None => shell.warn(format!(
-                        "profile override spec `{}` did not match any packages",
-                        spec
-                    ))?,
-                }
+                let suggestion =
+                    closest_msg(&spec.name(), packages.package_ids(), |p| p.name().as_str());
+                shell.warn(format!(
+                    "profile override spec `{}` did not match any packages{}",
+                    spec, suggestion
+                ))?;
             } else {
                 shell.warn(format!(
                     "version or URL in profile override spec `{}` does not \
