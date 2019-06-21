@@ -756,12 +756,7 @@ impl Fingerprint {
     /// dependencies up to this unit as well. This function assumes that the
     /// unit starts out as `FsStatus::Stale` and then it will optionally switch
     /// it to `UpToDate` if it can.
-    fn check_filesystem(
-        &mut self,
-        pkg_root: &Path,
-        target_root: &Path,
-        mtime_on_use: bool,
-    ) -> CargoResult<()> {
+    fn check_filesystem(&mut self, pkg_root: &Path, target_root: &Path) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
         let mut mtimes = HashMap::new();
@@ -781,10 +776,6 @@ impl Fingerprint {
                     return Ok(());
                 }
             };
-            if mtime_on_use {
-                let t = FileTime::from_system_time(SystemTime::now());
-                filetime::set_file_times(output, t, t)?;
-            }
             assert!(mtimes.insert(output.clone(), mtime).is_none());
         }
 
@@ -1024,8 +1015,7 @@ fn calculate<'a, 'cfg>(
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx, unit);
-    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
-    fingerprint.check_filesystem(unit.pkg.root(), &target_root, mtime_on_use)?;
+    fingerprint.check_filesystem(unit.pkg.root(), &target_root)?;
 
     let fingerprint = Arc::new(fingerprint);
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
