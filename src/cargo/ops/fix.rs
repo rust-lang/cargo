@@ -15,11 +15,10 @@
 //! to print at the same time).
 //!
 //! Cargo begins a normal `cargo check` operation with itself set as a proxy
-//! for rustc by setting `cargo_as_rustc_wrapper` in the build config. When
+//! for rustc by setting `rustc_wrapper` in the build config. When
 //! cargo launches rustc to check a crate, it is actually launching itself.
 //! The `FIX_ENV` environment variable is set so that cargo knows it is in
-//! fix-proxy-mode. It also sets the `RUSTC` environment variable to the
-//! actual rustc so Cargo knows what to execute.
+//! fix-proxy-mode.
 //!
 //! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV`
 //! environment variable in `main`) and does the following:
@@ -198,9 +197,8 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // That's very likely to only mean the crates in the workspace the user is
     // working on, not random crates.io crates.
     //
-    // To that end we only actually try to fix things if it looks like we're
-    // compiling a Rust file and it *doesn't* have an absolute filename. That's
-    // not the best heuristic but matches what Cargo does today at least.
+    // The master cargo process tells us whether or not this is a "primary"
+    // crate via the CARGO_PRIMARY_PACKAGE environment variable.
     let mut fixes = FixedCrate::default();
     if let Some(path) = &args.file {
         if args.primary_package {
@@ -254,6 +252,11 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         }
     }
 
+    // This final fall-through handles multiple cases;
+    // - Non-primary crates, which need to be built.
+    // - If the fix failed, show the original warnings and suggestions.
+    // - If `--broken-code`, show the error messages.
+    // - If the fix succeeded, show any remaining warnings.
     let mut cmd = Command::new(&rustc);
     args.apply(&mut cmd);
     exit_with(cmd.status().context("failed to spawn rustc")?);
