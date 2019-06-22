@@ -450,17 +450,13 @@ _get_names_from_array() {
     while read -r line; do
         if [[ $last_line == "[[$block_name]]" ]]; then
             in_block=true
-        else
-            if [[ $last_line =~ '\s*\[\[.*' ]]; then
-                in_block=false
-            fi
+        elif [[ $last_line =~ '\s*\[\[.*' ]]; then
+            in_block=false
         fi
 
-        if [[ $in_block == true ]]; then
-            if [[ $line =~ '\s*name\s*=' ]]; then
-                regexp-replace line '^\s*name\s*=\s*|"' ''
-                names+=( "$line" )
-            fi
+        if [[ $in_block == true ]] && [[ $line =~ '\s*name\s*=' ]]; then
+            regexp-replace line '^\s*name\s*=\s*|"' ''
+            names+=( "$line" )
         fi
 
         last_line=$line
