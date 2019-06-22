@@ -422,7 +422,18 @@ _cargo() {
 
 _cargo_cmds() {
     local -a commands
-    commands=( ${${${(M)"${(f)$(cargo --list)}":#  *}/ ##/}/ ##/:} )
+    # This uses Parameter Expansion Flags, which is an Zsh built-in features.
+    # See more: http://zsh.sourceforge.net/Doc/Release/Expansion.html#Parameter-Expansion-Flags
+    # and       http://zsh.sourceforge.net/Doc/Release/Expansion.html#Parameter-Expansion
+    #
+    # # How this work?
+    #
+    # First it splits the result of `cargo --list` at newline, then it removes the first line.
+    # Then it removes indentation (4 whitespaces) before each items. (Note the x## pattern [1]).
+    # Then it replaces those spaces between item and description with a `:`
+    #
+    # [1]: https://github.com/zsh-users/zsh-completions/blob/master/zsh-completions-howto.org#patterns
+    commands=( ${${${(M)"${(f)$(cargo --list)}":#    *}/ ##/}/ ##/:} )
     _describe 'command' commands
 }
 
