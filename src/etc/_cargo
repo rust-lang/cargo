@@ -3,7 +3,7 @@
 autoload -U regexp-replace
 
 _cargo() {
-    local context state state_descr line
+    local state
     typeset -A opt_args
 
     # leading items in parentheses are an exclusion list for the arguments following that arg
@@ -26,7 +26,7 @@ _cargo() {
 
     case $state in
         args)
-            case $words[1] in
+            case ${words[1]} in
                 bench)
                     _arguments \
                         '--features=[space separated feature list]' \
@@ -430,6 +430,7 @@ _cargo_cmds() {
 #FIXME: Disabled until fixed
 #gets package names from the manifest file
 _get_package_names() {
+    :
 }
 
 #TODO:see if it makes sense to have 'locate-project' to have non-json output.
@@ -437,13 +438,12 @@ _get_package_names() {
 _locate_manifest() {
     local manifest=$(cargo locate-project 2>/dev/null)
     regexp-replace manifest '\{"root":"|"\}' ''
-    echo $manifest
+    echo "$manifest"
 }
 
 # Extracts the values of "name" from the array given in $1 and shows them as
 # command line options for completion
 _get_names_from_array() {
-    local -a filelist;
     local manifest=$(_locate_manifest)
     if [[ -z $manifest ]]; then
         return 0
@@ -454,26 +454,25 @@ _get_names_from_array() {
     local in_block=false
     local block_name=$1
     names=()
-    while read line
-    do
+    while read -r line; do
         if [[ $last_line == "[[$block_name]]" ]]; then
             in_block=true
         else
-            if [[ $last_line =~ '.*\[\[.*' ]]; then
+            if [[ $last_line =~ '\s*\[\[.*' ]]; then
                 in_block=false
             fi
         fi
 
         if [[ $in_block == true ]]; then
-            if [[ $line =~ '.*name.*=' ]]; then
-                regexp-replace line '^.*name *= *|"' ""
-                names+=$line
+            if [[ $line =~ '\s*name\s*=' ]]; then
+                regexp-replace line '^\s*name\s*=\s*|"' ''
+                names+=( "$line" )
             fi
         fi
 
         last_line=$line
-    done < $manifest
-    _describe $block_name names
+    done < "$manifest"
+    _describe "$block_name" names
 
 }
 
