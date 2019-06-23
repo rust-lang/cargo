@@ -185,7 +185,9 @@ impl Registry {
                     (json.len() >> 8) as u8,
                     (json.len() >> 16) as u8,
                     (json.len() >> 24) as u8,
-                ].iter().cloned(),
+                ]
+                .iter()
+                .cloned(),
             );
             w.extend(json.as_bytes().iter().cloned());
             w.extend(
@@ -194,7 +196,9 @@ impl Registry {
                     (stat.len() >> 8) as u8,
                     (stat.len() >> 16) as u8,
                     (stat.len() >> 24) as u8,
-                ].iter().cloned(),
+                ]
+                .iter()
+                .cloned(),
             );
             w
         };
@@ -337,17 +341,17 @@ impl Registry {
             Ok(body) => body,
             Err(..) => bail!("response body was not valid utf-8"),
         };
-        let errors = serde_json::from_str::<ApiErrorList>(&body).ok().map(|s| {
-            s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>()
-        });
+        let errors = serde_json::from_str::<ApiErrorList>(&body)
+            .ok()
+            .map(|s| s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>());
 
         match (self.handle.response_code()?, errors) {
-            (0, None) | (200, None) => {},
-            (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => {
-                bail!("Request timed out after 30 seconds. If you're trying to \
-                       upload a crate it may be too large. If the crate is under \
-                       10MB in size, you can email help@crates.io for assistance.")
-            }
+            (0, None) | (200, None) => {}
+            (503, None) if started.elapsed().as_secs() >= 29 && self.host_is_crates_io() => bail!(
+                "Request timed out after 30 seconds. If you're trying to \
+                 upload a crate it may be too large. If the crate is under \
+                 10MB in size, you can email help@crates.io for assistance."
+            ),
             (code, Some(errors)) => {
                 let code = StatusCode::from_u16(code as _)?;
                 bail!("api errors (status {}): {}", code, errors.join(", "))
@@ -358,9 +362,9 @@ impl Registry {
                  \t{}\n\
                  body:\n\
                  {}",
-                 code,
-                 headers.join("\n\t"),
-                 body,
+                code,
+                headers.join("\n\t"),
+                body,
             ),
         }
 
