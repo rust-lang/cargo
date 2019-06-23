@@ -420,10 +420,43 @@ _cargo() {
     esac
 }
 
-#FIXME: Disabled until fixed
 #gets package names from the manifest file
 _get_package_names() {
-    :
+    local manifest=$(_locate_manifest)
+    if [[ -z $manifest ]]; then
+        return 0
+    fi
+
+    local last_line=''
+    local -a names
+    local in_block=false
+    names=()
+    while read -r line; do
+        if [[ $line =~ '^\s*\[.*' ]]; then
+            in_block=false
+            if [[ $line =~ '.*dependencies\..+\]$' ]]; then
+                regexp-replace line '^\[.*dependencies\.|\]$' ''
+                names+=( "$line" )
+            fi
+        fi
+
+        if [[ $last_line =~ '^\s*\[.*dependencies]$' ]]; then
+            in_block=true
+        fi
+
+        if [[ $in_block == true ]]; then
+            line=${line## }
+            if [[ -n $line ]]; then
+                if [[ ! $line =~ '\s*#.*' ]]; then
+                    regexp-replace line '\s*=\s*.*["}]$' ''
+                    names+=( "$line" )
+                fi
+            fi
+        fi
+
+        last_line=$line
+    done < "$manifest"
+    _describe 'packages' names
 }
 
 #TODO:see if it makes sense to have 'locate-project' to have non-json output.
