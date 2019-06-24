@@ -517,7 +517,7 @@ impl<'cfg> RegistrySource<'cfg> {
             MaybePackage::Download { .. } => unreachable!(),
         };
 
-        // After we've loaded the package configure it's summary's `checksum`
+        // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
         let req = VersionReq::exact(package.version());
         let summary_with_cksum = self
