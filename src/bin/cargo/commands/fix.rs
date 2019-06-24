@@ -72,6 +72,11 @@ pub fn cli() -> App {
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )
+        .arg(
+            Arg::with_name("clippy")
+                .long("clippy")
+                .help("(unstable) get fix suggestions from clippy instead of check"),
+        )
         .after_help(
             "\
 This Cargo subcommand will automatically take rustc's suggestions from
@@ -125,6 +130,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // code as we can.
     let mut opts = args.compile_options(config, mode, Some(&ws))?;
 
+    let use_clippy = args.is_present("clippy");
+
+    if use_clippy && !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`cargo fix --clippy` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
+
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
             all_targets: true,
@@ -146,6 +160,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             allow_no_vcs: args.is_present("allow-no-vcs"),
             allow_staged: args.is_present("allow-staged"),
             broken_code: args.is_present("broken-code"),
+            use_clippy
         },
     )?;
     Ok(())
