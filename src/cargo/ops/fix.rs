@@ -63,6 +63,7 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_PLZ";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
@@ -73,6 +74,7 @@ pub struct FixOptions<'a> {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
+    pub use_clippy: bool,
 }
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
@@ -97,6 +99,10 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     }
     if opts.idioms {
         wrapper.env(IDIOMS_ENV, "1");
+    }
+
+    if opts.use_clippy {
+        wrapper.env(CLIPPY_FIX_ENV, "1");
     }
 
     *opts
@@ -582,7 +588,11 @@ impl Default for PrepareFor {
 impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
-        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
+        if env::var(CLIPPY_FIX_ENV).is_ok() {
+            ret.rustc = Some(PathBuf::from("clippy-driver"));
+        } else {
+            ret.rustc = env::args_os().nth(1).map(PathBuf::from);
+        }
         for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
