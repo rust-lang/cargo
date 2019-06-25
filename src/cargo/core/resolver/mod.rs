@@ -763,10 +763,14 @@ impl RemainingCandidates {
             // activated and have public dependants of its own,
             // all of witch also need to be checked the same way.
             if let Some(public_dependency) = cx.public_dependency.as_ref() {
-                if let Err((p, c)) =
+                if let Err(((c1, c2), c3)) =
                     public_dependency.can_add_edge(b_id, parent, dep.is_public(), &cx.parents)
                 {
-                    conflicting_prev_active.insert(p, c);
+                    conflicting_prev_active.insert(c1.0, c1.1);
+                    conflicting_prev_active.insert(c2.0, c2.1);
+                    if let Some(c3) = c3 {
+                        conflicting_prev_active.insert(c3.0, c3.1);
+                    }
                     continue;
                 }
             }
@@ -811,6 +815,10 @@ fn generalize_conflicting(
         .unwrap();
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
+
+    if backtrack_critical_reason.is_public_dependency() {
+        return None;
+    }
 
     if cx
         .parents
@@ -919,13 +927,7 @@ fn find_candidate(
     // The abnormal situations are things that do not put all of the reasons in `conflicting_activations`:
     // If we backtracked we do not know how our `conflicting_activations` related to
     // the cause of that backtrack, so we do not update it.
-    // If we had a PublicDependency conflict, then we do not yet have a compact way to
-    // represent all the parts of the problem, so `conflicting_activations` is incomplete.
-    let age = if !backtracked
-        && !conflicting_activations
-            .values()
-            .any(|c| *c == ConflictReason::PublicDependency)
-    {
+    let age = if !backtracked {
         // we dont have abnormal situations. So we can ask `cx` for how far back we need to go.
         let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
         // If the `conflicting_activations` does not apply to `cx`, then something went very wrong

@@ -49,13 +49,13 @@ pub type ContextAge = usize;
 /// By storing this in a hash map we ensure that there is only one
 /// semver compatible version of each crate.
 /// This all so stores the `ContextAge`.
-pub type Activations =
-    im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, ContextAge)>;
+pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
+pub type Activations = im_rc::HashMap<ActivationsKey, (Summary, ContextAge)>;
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
 /// same.
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
 pub enum SemverCompatibility {
     Major(NonZeroU64),
     Minor(NonZeroU64),
@@ -75,7 +75,7 @@ impl From<&semver::Version> for SemverCompatibility {
 }
 
 impl PackageId {
-    pub fn as_activations_key(self) -> (InternedString, SourceId, SemverCompatibility) {
+    pub fn as_activations_key(self) -> ActivationsKey {
         (self.name(), self.source_id(), self.version().into())
     }
 }
@@ -189,6 +189,42 @@ impl Context {
             .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
+    /// If the conflict reason on the package still applies returns the `ContextAge` when it was added
+    pub fn still_applies(&self, id: PackageId, reason: &ConflictReason) -> Option<ContextAge> {
+        self.is_active(id).and_then(|mut max| {
+            match reason {
+                ConflictReason::PublicDependency(name) => {
+                    if &id == name {
+                        return Some(max);
+                    }
+                    max = std::cmp::max(max, self.is_active(*name)?);
+                    max = std::cmp::max(
+                        max,
+                        self.public_dependency
+                            .as_ref()
+                            .unwrap()
+                            .can_see_item(*name, id)?,
+                    );
+                }
+                ConflictReason::PubliclyExports(name) => {
+                    if &id == name {
+                        return Some(max);
+                    }
+                    max = std::cmp::max(max, self.is_active(*name)?);
+                    max = std::cmp::max(
+                        max,
+                        self.public_dependency
+                            .as_ref()
+                            .unwrap()
+                            .publicly_exports_item(*name, id)?,
+                    );
+                }
+                _ => {}
+            }
+            Some(max)
+        })
+    }
+
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
     /// If so returns the `ContextAge` when the newest one was added.
@@ -198,12 +234,12 @@ impl Context {
         conflicting_activations: &ConflictMap,
     ) -> Option<usize> {
         let mut max = 0;
-        for &id in conflicting_activations.keys().chain(parent.as_ref()) {
-            if let Some(age) = self.is_active(id) {
-                max = std::cmp::max(max, age);
-            } else {
-                return None;
-            }
+        if let Some(parent) = parent {
+            max = std::cmp::max(max, self.is_active(parent)?);
+        }
+
+        for (id, reason) in conflicting_activations.iter() {
+            max = std::cmp::max(max, self.still_applies(*id, reason)?);
         }
         Some(max)
     }
@@ -270,6 +306,31 @@ impl PublicDependency {
             .chain(Some(candidate_pid)) // but even if not we know that everything exports itself
             .collect()
     }
+    fn publicly_exports_item(
+        &self,
+        candidate_pid: PackageId,
+        target: PackageId,
+    ) -> Option<ContextAge> {
+        debug_assert_ne!(candidate_pid, target);
+        let out = self
+            .inner
+            .get(&candidate_pid)
+            .and_then(|names| names.get(&target.name()))
+            .filter(|(p, _, _)| *p == target)
+            .and_then(|(_, _, age)| *age);
+        debug_assert_eq!(
+            out.is_some(),
+            self.publicly_exports(candidate_pid).contains(&target)
+        );
+        out
+    }
+    pub fn can_see_item(&self, candidate_pid: PackageId, target: PackageId) -> Option<ContextAge> {
+        self.inner
+            .get(&candidate_pid)
+            .and_then(|names| names.get(&target.name()))
+            .filter(|(p, _, _)| *p == target)
+            .map(|(_, age, _)| *age)
+    }
     pub fn add_edge(
         &mut self,
         candidate_pid: PackageId,
@@ -322,7 +383,13 @@ impl PublicDependency {
         parent: PackageId,
         is_public: bool,
         parents: &Graph<PackageId, Rc<Vec<Dependency>>>,
-    ) -> Result<(), (PackageId, ConflictReason)> {
+    ) -> Result<
+        (),
+        (
+            ((PackageId, ConflictReason), (PackageId, ConflictReason)),
+            Option<(PackageId, ConflictReason)>,
+        ),
+    > {
         // one tricky part is that `candidate_pid` may already be active and
         // have public dependencies of its own. So we not only need to check
         // `b_id` as visible to its parents but also all of its existing
@@ -336,7 +403,17 @@ impl PublicDependency {
                     if o.0 != t {
                         // the (transitive) parent can already see a different version by `t`s name.
                         // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
-                        return Err((p, ConflictReason::PublicDependency));
+                        return Err((
+                            (o.0, ConflictReason::PublicDependency(p)), // p can see the other version and
+                            (parent, ConflictReason::PublicDependency(p)), // p can see us
+                        ))
+                        .map_err(|e| {
+                            if t == b_id {
+                                (e, None)
+                            } else {
+                                (e, Some((t, ConflictReason::PubliclyExports(b_id))))
+                            }
+                        });
                     }
                     if o.2.is_some() {
                         // The previous time the parent saw `t`, it was a public dependency.
