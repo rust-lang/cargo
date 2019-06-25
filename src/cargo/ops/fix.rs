@@ -601,7 +601,7 @@ impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
         if env::var(CLIPPY_FIX_ENV).is_ok() {
-            ret.rustc = Some(PathBuf::from("clippy-driver"));
+            ret.rustc = Some(util::config::clippy_driver());
         } else {
             ret.rustc = env::args_os().nth(1).map(PathBuf::from);
         }

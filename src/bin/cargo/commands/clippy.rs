@@ -69,7 +69,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .into());
     }
 
-    let wrapper = util::process("clippy-driver");
+    let wrapper = util::process(util::config::clippy_driver());
     compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(&ws, &compile_opts)?;
