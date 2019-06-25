@@ -159,6 +159,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             tests: FilterRule::All,
         }
     }
+
     ops::fix(
         &ws,
         &mut ops::FixOptions {

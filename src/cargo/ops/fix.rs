@@ -104,6 +104,9 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     }
 
     if opts.use_clippy {
+        if let Err(e) = util::process("clippy-driver").arg("-V").exec_with_output() {
+            eprintln!("Warning: clippy-driver not found: {:?}", e);
+        }
         wrapper.env(CLIPPY_FIX_ENV, "1");
     }
 
