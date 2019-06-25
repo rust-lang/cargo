@@ -76,7 +76,7 @@ pub fn cli() -> App {
             Arg::with_name("clippy")
                 .long("clippy")
                 .help("Get fix suggestions from clippy instead of check")
-                .hidden(true)
+                .hidden(true),
         )
         .arg(
             Arg::with_name("clippy-args")
@@ -84,7 +84,7 @@ pub fn cli() -> App {
                 .help("Args to pass through to clippy, implies --clippy")
                 .hidden(true)
                 .multiple(true)
-                .number_of_values(1)
+                .number_of_values(1),
         )
         .after_help(
             "\
