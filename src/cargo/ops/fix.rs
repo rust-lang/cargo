@@ -65,7 +65,6 @@ const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_PLZ";
 const CLIPPY_FIX_ARGS: &str = "__CARGO_FIX_CLIPPY_ARGS";
-const CLIPPY_PASSHTHROUGH_SEP: &str = "__CLIPPYSEP__";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
@@ -109,7 +108,8 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     }
 
     if let Some(clippy_args) = &opts.clippy_args {
-        wrapper.env(CLIPPY_FIX_ARGS, clippy_args.join(CLIPPY_PASSHTHROUGH_SEP));
+        let clippy_args = serde_json::to_string(&clippy_args).unwrap();
+        wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
     }
 
     *opts
@@ -604,10 +604,7 @@ impl FixArgs {
         }
 
         if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
-            ret.clippy_args = clippy_args
-                .split(CLIPPY_PASSHTHROUGH_SEP)
-                .map(ToString::to_string)
-                .collect();
+            ret.clippy_args = serde_json::from_str(&clippy_args).unwrap();
         }
 
         for arg in env::args_os().skip(2) {
