@@ -75,7 +75,16 @@ pub fn cli() -> App {
         .arg(
             Arg::with_name("clippy")
                 .long("clippy")
-                .help("(unstable) get fix suggestions from clippy instead of check"),
+                .help("Get fix suggestions from clippy instead of check")
+                .hidden(true)
+        )
+        .arg(
+            Arg::with_name("clippy-args")
+                .long("clippy-args")
+                .help("Args to pass through to clippy, implies --clippy")
+                .hidden(true)
+                .multiple(true)
+                .number_of_values(1)
         )
         .after_help(
             "\
@@ -130,7 +139,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // code as we can.
     let mut opts = args.compile_options(config, mode, Some(&ws))?;
 
-    let use_clippy = args.is_present("clippy");
+    let clippy_args = args.values_of_lossy("clippy-args");
+    let use_clippy = args.is_present("clippy") || clippy_args.is_some();
 
     if use_clippy && !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
@@ -160,7 +170,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             allow_no_vcs: args.is_present("allow-no-vcs"),
             allow_staged: args.is_present("allow-staged"),
             broken_code: args.is_present("broken-code"),
-            use_clippy
+            use_clippy,
+            clippy_args,
         },
     )?;
     Ok(())
