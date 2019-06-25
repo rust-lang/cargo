@@ -4584,6 +4584,67 @@ fn pipelining_works() {
 }
 
 #[cargo_test]
+fn pipelining_big_graph() {
+    if !crate::support::is_nightly() {
+        return;
+    }
+
+    // Create a crate graph of the form {a,b}{0..19}, where {a,b}(n) depend on {a,b}(n+1)
+    // Then have `foo`, a binary crate, depend on the whole thing.
+    let mut project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                a1 = { path = "a1" }
+                b1 = { path = "b1" }
+            "#,
+        )
+        .file("src/main.rs", "fn main(){}");
+
+    for n in 0..30 {
+        for x in &["a", "b"] {
+            project = project
+                .file(
+                    &format!("{x}{n}/Cargo.toml", x = x, n = n),
+                    &format!(
+                        r#"
+                            [package]
+                            name = "{x}{n}"
+                            version = "0.1.0"
+                            [dependencies]
+                            a{np1} = {{ path = "../a{np1}" }}
+                            b{np1} = {{ path = "../b{np1}" }}
+                        "#,
+                        x = x,
+                        n = n,
+                        np1 = n + 1
+                    ),
+                )
+                .file(&format!("{x}{n}/src/lib.rs", x = x, n = n), "");
+        }
+    }
+
+    let foo = project
+        .file("a30/Cargo.toml", &basic_lib_manifest("a30"))
+        .file(
+            "a30/src/lib.rs",
+            r#"compile_error!("don't actually build me");"#,
+        )
+        .file("b30/Cargo.toml", &basic_lib_manifest("b30"))
+        .file("b30/src/lib.rs", "")
+        .build();
+    foo.cargo("build -p foo")
+        .env("CARGO_BUILD_PIPELINING", "true")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] Could not compile `a30`[..]")
+        .run();
+}
+
+#[cargo_test]
 fn forward_rustc_output() {
     let foo = project()
         .file(
