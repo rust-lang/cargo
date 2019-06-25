@@ -399,10 +399,6 @@ fn rustfix_and_fix(
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
 
-    if !args.clippy_args.is_empty() {
-        cmd.args(&args.clippy_args);
-    }
-
     args.apply(&mut cmd);
     let output = cmd
         .output()
@@ -649,6 +645,11 @@ impl FixArgs {
         if let Some(path) = &self.file {
             cmd.arg(path);
         }
+
+        if !self.clippy_args.is_empty() {
+            cmd.args(&self.clippy_args);
+        }
+
         cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
