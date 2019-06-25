@@ -79,8 +79,8 @@ pub fn cli() -> App {
                 .hidden(true),
         )
         .arg(
-            Arg::with_name("clippy-args")
-                .long("clippy-args")
+            Arg::with_name("clippy-arg")
+                .long("clippy-arg")
                 .help("Args to pass through to clippy, implies --clippy")
                 .hidden(true)
                 .multiple(true)
