@@ -64,6 +64,8 @@ const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_PLZ";
+const CLIPPY_FIX_ARGS: &str = "__CARGO_FIX_CLIPPY_ARGS";
+const CLIPPY_PASSHTHROUGH_SEP: &str = "__CLIPPYSEP__";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
@@ -75,6 +77,7 @@ pub struct FixOptions<'a> {
     pub allow_staged: bool,
     pub broken_code: bool,
     pub use_clippy: bool,
+    pub clippy_args: Option<Vec<String>>,
 }
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
@@ -103,6 +106,10 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     if opts.use_clippy {
         wrapper.env(CLIPPY_FIX_ENV, "1");
+    }
+
+    if let Some(clippy_args) = &opts.clippy_args {
+        wrapper.env(CLIPPY_FIX_ARGS, clippy_args.join(CLIPPY_PASSHTHROUGH_SEP));
     }
 
     *opts
@@ -391,6 +398,11 @@ fn rustfix_and_fix(
 
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
+
+    if !args.clippy_args.is_empty() {
+        cmd.args(&args.clippy_args);
+    }
+
     args.apply(&mut cmd);
     let output = cmd
         .output()
@@ -571,6 +583,7 @@ struct FixArgs {
     other: Vec<OsString>,
     primary_package: bool,
     rustc: Option<PathBuf>,
+    clippy_args: Vec<String>,
 }
 
 enum PrepareFor {
@@ -593,6 +606,14 @@ impl FixArgs {
         } else {
             ret.rustc = env::args_os().nth(1).map(PathBuf::from);
         }
+
+        if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
+            ret.clippy_args = clippy_args
+                .split(CLIPPY_PASSHTHROUGH_SEP)
+                .map(ToString::to_string)
+                .collect();
+        }
+
         for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
@@ -618,6 +639,7 @@ impl FixArgs {
         } else if env::var(EDITION_ENV).is_ok() {
             ret.prepare_for_edition = PrepareFor::Next;
         }
+
         ret.idioms = env::var(IDIOMS_ENV).is_ok();
         ret.primary_package = env::var("CARGO_PRIMARY_PACKAGE").is_ok();
         ret
