@@ -614,8 +614,8 @@ fn add_sysroot_doc_args(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     }
 
     let sysroot_docdir = sysroot_docdir.to_string_lossy();
-    cmd.arg("-Z unstable-options");
-    for crate_name in ["std", "core"].iter() {
+    cmd.arg("-Zunstable-options");
+    for crate_name in ["std", "core", "proc_macro", "alloc", "test"].iter() {
         cmd.arg("--extern-html-root-url")
             .arg(format!("{}={}", crate_name, sysroot_docdir));
     }

@@ -14,8 +14,6 @@ use crate::util::CargoResult;
 pub struct DocOptions<'a> {
     /// Whether to attempt to open the browser after compiling the docs
     pub open_result: bool,
-    /// Whether to attempt to link to local copies of std, core, etc
-    pub use_local_sysroot_docs: bool,
     /// Options to pass through to the compiler
     pub compile_opts: ops::CompileOptions<'a>,
 }

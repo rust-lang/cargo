@@ -74,9 +74,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .into());
     }
 
+    compile_opts.build_config.use_local_sysroot_docs = use_local_sysroot_docs;
+
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
-        use_local_sysroot_docs,
         compile_opts,
     };
 
