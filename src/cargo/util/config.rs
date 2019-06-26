@@ -1791,6 +1791,6 @@ impl Drop for PackageCacheLock<'_> {
 pub fn clippy_driver() -> PathBuf {
     env::var("CARGO_CLIPPY_DRIVER")
         .ok()
-        .unwrap_or_else(|| "clippy_driver".into())
+        .unwrap_or_else(|| "clippy-driver".into())
         .into()
 }
