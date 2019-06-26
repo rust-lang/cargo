@@ -3,7 +3,7 @@ use std::fs::File;
 use git2;
 
 use crate::support::git;
-use crate::support::{basic_manifest, project};
+use crate::support::{basic_manifest, clippy_is_available, is_nightly, project};
 
 use std::io::Write;
 
@@ -1318,8 +1318,17 @@ fn fix_with_clippy() {
 
     p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
         .masquerade_as_nightly_cargo()
-        .diff_lines("", "", false)
         .with_stderr(stderr)
         .with_stdout("")
         .run();
+
+    assert_eq!(
+        p.read_file("src/lib.rs"),
+        "
+                pub fn foo() {
+                    let mut v = Vec::<String>::new();
+                    let _ = v.iter_mut().filter(|a| a.is_empty());
+                }
+    "
+    );
 }

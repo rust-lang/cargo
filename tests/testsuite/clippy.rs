@@ -1,4 +1,4 @@
-use crate::support::{clippy_is_available, is_nightly, process, project};
+use crate::support::{clippy_is_available, is_nightly, project};
 
 #[cargo_test]
 fn clippy() {
