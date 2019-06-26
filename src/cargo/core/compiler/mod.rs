@@ -600,9 +600,35 @@ fn prepare_rustc<'a, 'cfg>(
     Ok(base)
 }
 
+fn add_sysroot_doc_args(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
+    let sysroot_dir = bcx.target_info.sysroot_dir.as_ref();
+
+    if sysroot_dir.is_none() {
+        return;
+    }
+
+    let sysroot_docdir = sysroot_dir.unwrap().join("share/doc/rust/html");
+
+    if !sysroot_docdir.is_dir() || !sysroot_docdir.join("index.html").is_file() {
+        return;
+    }
+
+    let sysroot_docdir = sysroot_docdir.to_string_lossy();
+    cmd.arg("-Z unstable-options");
+    for crate_name in ["std", "core"].iter() {
+        cmd.arg("--extern-html-root-url")
+            .arg(format!("{}={}", crate_name, sysroot_docdir));
+    }
+}
+
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
     let bcx = cx.bcx;
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
+
+    if bcx.build_config.use_local_sysroot_docs {
+        add_sysroot_doc_args(bcx, &mut rustdoc);
+    }
+
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);

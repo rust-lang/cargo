@@ -15,6 +15,7 @@ pub struct TargetInfo {
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
     cfg: Option<Vec<Cfg>>,
     pub sysroot_libdir: Option<PathBuf>,
+    pub sysroot_dir: Option<PathBuf>,
     pub rustflags: Vec<String>,
     pub rustdocflags: Vec<String>,
 }
@@ -113,6 +114,7 @@ impl TargetInfo {
         }
 
         let mut sysroot_libdir = None;
+        let mut sysroot_dir = None;
         if has_cfg_and_sysroot {
             let line = match lines.next() {
                 Some(line) => line,
@@ -122,6 +124,7 @@ impl TargetInfo {
                 ),
             };
             let mut rustlib = PathBuf::from(line);
+            sysroot_dir = Some(rustlib.clone());
             if kind == Kind::Host {
                 if cfg!(windows) {
                     rustlib.push("bin");
@@ -148,6 +151,7 @@ impl TargetInfo {
             crate_type_process: Some(crate_type_process),
             crate_types: RefCell::new(map),
             sysroot_libdir,
+            sysroot_dir,
             // recalculate `rustflags` from above now that we have `cfg`
             // information
             rustflags: env_args(

@@ -29,6 +29,8 @@ pub struct BuildConfig {
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
     /// Whether or not Cargo should cache compiler output on disk.
     cache_messages: bool,
+    /// Whether rustdoc should attempt to get local std docs
+    pub use_local_sysroot_docs: bool,
 }
 
 impl BuildConfig {
@@ -101,6 +103,7 @@ impl BuildConfig {
             rustc_wrapper: None,
             rustfix_diagnostic_server: RefCell::new(None),
             cache_messages: config.cli_unstable().cache_messages,
+            use_local_sysroot_docs: false,
         })
     }
 

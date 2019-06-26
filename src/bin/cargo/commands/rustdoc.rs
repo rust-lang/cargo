@@ -30,6 +30,12 @@ pub fn cli() -> App {
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
+        .arg(
+            Arg::with_name("use-local-sysroot-docs")
+                .long("use-local-sysroot-docs")
+                .help("Attempt to use local sysroot file:// links if available")
+                .hidden(true),
+        )
         .arg_manifest_path()
         .arg_message_format()
         .after_help(
@@ -51,21 +57,37 @@ the `cargo help pkgid` command.
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
+
     let mut compile_opts = args.compile_options_for_single_package(
         config,
         CompileMode::Doc { deps: false },
         Some(&ws),
     )?;
+
     let target_args = values(args, "args");
     compile_opts.target_rustdoc_args = if target_args.is_empty() {
         None
     } else {
         Some(target_args)
     };
+
+    let use_local_sysroot_docs = args.is_present("use-local-sysroot-docs");
+    if use_local_sysroot_docs && !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`cargo doc --use-local-sysroot-docs` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
+
+    compile_opts.build_config.use_local_sysroot_docs = use_local_sysroot_docs;
+
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
+        use_local_sysroot_docs,
         compile_opts,
     };
+
     ops::doc(&ws, &doc_opts)?;
+
     Ok(())
 }
