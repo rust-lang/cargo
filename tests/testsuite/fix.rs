@@ -1285,3 +1285,41 @@ fn fix_in_existing_repo_weird_ignore() {
         .run();
     p.cargo("fix").cwd("src").run();
 }
+
+#[cargo_test]
+fn fix_with_clippy() {
+    if !is_nightly() {
+        // fix --clippy is unstable
+        eprintln!("skipping test: requires nightly");
+        return;
+    }
+
+    if !clippy_is_available() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                pub fn foo() {
+                    let mut v = Vec::<String>::new();
+                    let _ = v.iter_mut().filter(|&ref a| a.is_empty());
+                }
+    ",
+        )
+        .build();
+
+    let stderr = "\
+[CHECKING] foo v0.0.1 ([..])
+[FIXING] src/lib.rs (1 fix)
+[FINISHED] [..]
+";
+
+    p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .diff_lines("", "", false)
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
+}
