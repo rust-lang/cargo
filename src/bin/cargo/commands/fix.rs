@@ -131,12 +131,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // code as we can.
     let mut opts = args.compile_options(config, mode, Some(&ws))?;
 
+    let use_clippy = args.is_present("clippy");
+
     let clippy_args = args
         .value_of("clippy") // always yields None
         .map(|s| s.split(' ').map(|s| s.to_string()).collect())
-        .or_else(|| Some(vec![]));
-
-    let use_clippy = args.is_present("clippy") || clippy_args.is_some();
+        .or_else(|| Some(vec![]))
+        .filter(|_| use_clippy);
 
     if use_clippy && !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
