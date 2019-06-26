@@ -1,4 +1,4 @@
-use crate::support::{is_nightly, process, project};
+use crate::support::{clippy_is_available, is_nightly, process, project};
 
 #[cargo_test]
 fn clippy() {
@@ -7,9 +7,8 @@ fn clippy() {
         eprintln!("skipping test: requires nightly");
         return;
     }
-    if let Err(e) = process("clippy-driver").arg("-V").exec_with_output() {
-        eprintln!("clippy-driver not available, skipping clippy test");
-        eprintln!("{:?}", e);
+
+    if !clippy_is_available() {
         return;
     }
 
@@ -36,44 +35,5 @@ fn clippy() {
     p.cargo("check -Zcache-messages")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]") // This should not be here.
-        .run();
-}
-
-#[cargo_test]
-fn fix_with_clippy() {
-    if !is_nightly() {
-        // fix --clippy is unstable
-        eprintln!("skipping test: requires nightly");
-        return;
-    }
-
-    if let Err(e) = process("clippy-driver").arg("-V").exec_with_output() {
-        eprintln!("clippy-driver not available, skipping clippy test");
-        eprintln!("{:?}", e);
-        return;
-    }
-
-    let p = project()
-        .file(
-            "src/lib.rs",
-            "
-                pub fn foo() {
-                    let mut v = Vec::<String>::new();
-                    let _ = v.iter_mut().filter(|&ref a| a.is_empty());
-                }
-    ",
-        )
-        .build();
-
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
-
-    p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(stderr)
-        .with_stdout("")
         .run();
 }

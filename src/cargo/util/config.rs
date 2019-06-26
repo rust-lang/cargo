@@ -1790,7 +1790,6 @@ impl Drop for PackageCacheLock<'_> {
 /// Allows override of the path via `CARGO_CLIPPY_DRIVER` env variable
 pub fn clippy_driver() -> PathBuf {
     env::var("CARGO_CLIPPY_DRIVER")
-        .ok()
-        .unwrap_or_else(|| "clippy-driver".into())
+        .unwrap_or_else(|_| "clippy_driver".into())
         .into()
 }

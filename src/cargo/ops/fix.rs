@@ -75,7 +75,6 @@ pub struct FixOptions<'a> {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
-    pub use_clippy: bool,
     pub clippy_args: Option<Vec<String>>,
 }
 
@@ -103,7 +102,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         wrapper.env(IDIOMS_ENV, "1");
     }
 
-    if opts.use_clippy {
+    if opts.clippy_args.is_some() {
         if let Err(e) = util::process("clippy-driver").arg("-V").exec_with_output() {
             eprintln!("Warning: clippy-driver not found: {:?}", e);
         }
@@ -401,7 +400,6 @@ fn rustfix_and_fix(
 
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
-
     args.apply(&mut cmd);
     let output = cmd
         .output()
