@@ -75,7 +75,7 @@ pub fn cli() -> App {
         .arg(
             Arg::with_name("clippy")
                 .long("clippy")
-                .help("Get fix suggestions from clippy instead of check")
+                .help("Get fix suggestions from clippy instead of rustc")
                 .hidden(true),
         )
         .arg(
