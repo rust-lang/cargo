@@ -688,12 +688,26 @@ fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) 
         TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(bcx.ws.target_dir()),
     };
     assert!(src.is_absolute());
+    let src = canonicalize_path_arg(&src).unwrap_or(src);
     if unit.pkg.package_id().source_id().is_path() {
         if let Ok(path) = src.strip_prefix(ws_root) {
             return (path.to_path_buf(), ws_root.to_path_buf());
         }
     }
     (src, unit.pkg.root().to_path_buf())
+}
+
+#[cfg(windows)]
+// On Windows cargo cannot read back the canonicalized paths. The paths are
+// canonicalized to resolve symlinks, which aren't as ordinary on Windows as
+// they are on other platforms, so we simply skip this.
+pub fn canonicalize_path_arg<P: AsRef<Path>>(path: P) -> CargoResult<PathBuf> {
+    Ok(path.as_ref().to_path_buf())
+}
+
+#[cfg(not(windows))]
+pub fn canonicalize_path_arg<P: AsRef<Path>>(path: P) -> CargoResult<PathBuf> {
+    Ok(fs::canonicalize(path)?)
 }
 
 fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
