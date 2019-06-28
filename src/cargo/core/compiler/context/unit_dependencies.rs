@@ -299,6 +299,9 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
                 DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
+                DepKind::Development if bcx.build_config.document_dev_dependencies => {
+                    bcx.dep_platform_activated(dep, unit.kind)
+                }
                 _ => false,
             })
         });

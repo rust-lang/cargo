@@ -29,6 +29,11 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg(
+            Arg::with_name("dev")
+                .long("dev")
+                .help("Include dev dependencies in documentation"),
+        )
         .after_help(
             "\
 By default the documentation for the local package and all dependencies is
@@ -52,6 +57,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         deps: !args.is_present("no-deps"),
     };
     let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    let document_devdeps = args.is_present("dev");
+    if document_devdeps && !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`cargo doc --dev` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
+    compile_opts.build_config.document_dev_dependencies = document_devdeps;
     compile_opts.local_rustdoc_args = if args.is_present("document-private-items") {
         Some(vec!["--document-private-items".to_string()])
     } else {

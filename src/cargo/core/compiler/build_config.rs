@@ -27,6 +27,8 @@ pub struct BuildConfig {
     /// An optional wrapper, if any, used to wrap rustc invocations
     pub rustc_wrapper: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
+    /// Wheather or not to document development dependencies
+    pub document_dev_dependencies: bool,
     /// Whether or not Cargo should cache compiler output on disk.
     cache_messages: bool,
 }
@@ -100,6 +102,7 @@ impl BuildConfig {
             build_plan: false,
             rustc_wrapper: None,
             rustfix_diagnostic_server: RefCell::new(None),
+            document_dev_dependencies: false,
             cache_messages: config.cli_unstable().cache_messages,
         })
     }
