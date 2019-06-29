@@ -2694,3 +2694,52 @@ fn git_with_cli_force() {
     p.cargo("build").run();
     p.rename_run("foo", "foo2").with_stdout("two").run();
 }
+
+#[cargo_test]
+fn git_fetch_cli_env_clean() {
+    if disable_git_cli() {
+        return;
+    }
+    // This tests that git-fetch-with-cli works when GIT_DIR environment
+    // variable is set (for whatever reason).
+    let git_dep = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
+
+    let git_proj = git::new("foo", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                    "#,
+                    git_dep.url()
+                ),
+            )
+            .file("src/lib.rs", "pub extern crate dep1;")
+            .file(
+                ".cargo/config",
+                "
+                [net]
+                git-fetch-with-cli = true
+                ",
+            )
+    })
+    .unwrap();
+
+    // The directory set here isn't too important. Pointing to our own git
+    // directory causes git to be confused and fail. Can also point to an
+    // empty directory, or a nonexistent one.
+    git_proj
+        .cargo("fetch")
+        .env("GIT_DIR", git_proj.root().join(".git"))
+        .run();
+}
