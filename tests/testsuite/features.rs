@@ -1911,3 +1911,60 @@ fn no_feature_for_non_optional_dep() {
 
     p.cargo("build --features bar/a").run();
 }
+
+#[cargo_test]
+fn features_option_given_twice() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+             "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(all(feature = "a", feature = "b"))]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features b").run();
+}
+
+#[cargo_test]
+fn multi_multi_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+                c = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+               #[cfg(all(feature = "a", feature = "b", feature = "c"))]
+               fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features").arg("b c").run();
+}
