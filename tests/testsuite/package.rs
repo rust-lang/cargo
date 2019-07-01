@@ -758,7 +758,7 @@ committed into git:
 
 Cargo.toml
 
-to proceed despite this, pass the `--allow-dirty` flag
+to proceed despite this and include the uncommited changes, pass the `--allow-dirty` flag
 ",
         )
         .run();
