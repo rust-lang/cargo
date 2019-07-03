@@ -4589,7 +4589,7 @@ fn pipelining_big_graph() {
         return;
     }
 
-    // Create a crate graph of the form {a,b}{0..19}, where {a,b}(n) depend on {a,b}(n+1)
+    // Create a crate graph of the form {a,b}{0..29}, where {a,b}(n) depend on {a,b}(n+1)
     // Then have `foo`, a binary crate, depend on the whole thing.
     let mut project = project()
         .file(
