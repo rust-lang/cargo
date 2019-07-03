@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target};
+use crate::core::{Edition, Package, PackageId, Target, Workspace};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -201,6 +201,8 @@ impl<'cfg> Compilation<'cfg> {
         }
 
         let metadata = pkg.manifest().metadata();
+        let manifest_path = pkg.manifest_path();
+        let workspace = Workspace::new(manifest_path, self.config)?;
 
         let cargo_exe = self.config.cargo_exe()?;
         cmd.env(crate::CARGO_ENV, cargo_exe);
@@ -209,7 +211,8 @@ impl<'cfg> Compilation<'cfg> {
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
-        cmd.env("CARGO_MANIFEST_DIR", pkg.root())
+        cmd.env("CARGO_WORKSPACE_MANIFEST_DIR", workspace.root())
+            .env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())

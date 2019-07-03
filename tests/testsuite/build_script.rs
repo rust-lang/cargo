@@ -89,6 +89,7 @@ fn custom_build_env_vars() {
                 let _target = env::var("TARGET").unwrap();
                 let _ncpus = env::var("NUM_JOBS").unwrap();
                 let _dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+                let _ws_root = env::var("CARGO_WORKSPACE_MANIFEST_DIR").unwrap();
 
                 let opt = env::var("OPT_LEVEL").unwrap();
                 assert_eq!(opt, "0");
