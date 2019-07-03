@@ -4703,3 +4703,58 @@ d
         )
         .run();
 }
+
+#[cargo_test]
+#[cfg(not(target_os = "windows"))]
+fn symlink_rebuild() {
+
+    // Create a crate foo that depends on one crate: a.
+    // After the initial build we swap the 'a' directory for a symlink to 'b'.
+    // Since the underlying crate changed, cargo should perform a rebuild.
+    let project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                a = { path = "a" }
+            "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .file("a/Cargo.toml",
+              r#"
+                  [package]
+                  name = "a"
+                  version = "0.1.0"
+              "#,
+            )
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml",
+              r#"
+                  [package]
+                  name = "a"
+                  version = "0.1.0"
+              "#,
+            )
+        .file("b/src/lib.rs", "pub fn not_a(){}");
+
+    let foo = project
+        .build();
+
+    foo.cargo("build -p foo")
+        .with_status(0)
+        .with_stderr_contains("[..] Compiling a v0.1.0 [..]")
+        .run();
+
+    let root = foo.root();
+
+    fs::remove_dir_all(root.join("a")).unwrap();
+    std::os::unix::fs::symlink(root.join("b"), root.join("a")).unwrap();
+
+    foo.cargo("build -p foo")
+        .with_status(0)
+        .with_stderr_contains("[..] Compiling a v0.1.0 [..]")
+        .run();
+}
