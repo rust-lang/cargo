@@ -4707,7 +4707,6 @@ d
 #[cargo_test]
 #[cfg(not(target_os = "windows"))]
 fn symlink_rebuild() {
-
     // Create a crate foo that depends on one crate: a.
     // After the initial build we swap the 'a' directory for a symlink to 'b'.
     // Since the underlying crate changed, cargo should perform a rebuild.
@@ -4723,25 +4722,26 @@ fn symlink_rebuild() {
             "#,
         )
         .file("src/main.rs", "fn main(){}")
-        .file("a/Cargo.toml",
-              r#"
-                  [package]
-                  name = "a"
-                  version = "0.1.0"
-              "#,
-            )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
         .file("a/src/lib.rs", "")
-        .file("b/Cargo.toml",
-              r#"
-                  [package]
-                  name = "a"
-                  version = "0.1.0"
-              "#,
-            )
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
         .file("b/src/lib.rs", "pub fn not_a(){}");
 
-    let foo = project
-        .build();
+    let foo = project.build();
 
     foo.cargo("build -p foo")
         .with_status(0)
