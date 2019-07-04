@@ -7,7 +7,9 @@ $ cargo new hello_world --bin
 ```
 
 We’re passing `--bin` because we’re making a binary program: if we
-were making a library, we’d pass `--lib`.
+were making a library, we’d pass `--lib`. This also initializes a new `git`
+repository by default (unless the current directory is already under version
+control). If you don't want it to do that, pass `--vcs none`.
 
 Let’s check out what Cargo has generated for us:
 
