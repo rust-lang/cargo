@@ -505,25 +505,39 @@ fn package_git_submodule() {
 }
 
 #[cargo_test]
+#[cfg_attr(windows, ignore)]
+/// Tests if a symlink to a git submodule is properly handled.
+///
+/// This test is ignored on Windows, because it needs Administrator
+/// permissions to run. If you do want to run this test, please
+/// run the tests with ``--ignored``, e.g.
+///
+/// ```text
+/// cargo test -- --ignored
+/// ```
 fn package_symlink_to_submodule() {
     #[cfg(unix)]
-    use std::os::unix::fs::symlink as symlink;
+    use std::os::unix::fs::symlink;
     #[cfg(windows)]
     use std::os::windows::fs::symlink_dir as symlink;
 
     let project = git::new("foo", |project| {
-        project
-            .file("src/lib.rs", "pub fn foo() {}")
-        }).unwrap();
+        project.file("src/lib.rs", "pub fn foo() {}")
+    })
+    .unwrap();
 
     let library = git::new("submodule", |library| {
         library.no_manifest().file("Makefile", "all:")
-    }).unwrap();
+    })
+    .unwrap();
 
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();
     git::add_submodule(&repository, &url, Path::new("submodule"));
-    t!(symlink(&project.root().join("submodule"), &project.root().join("submodule-link")));
+    t!(symlink(
+        &project.root().join("submodule"),
+        &project.root().join("submodule-link")
+    ));
     git::add(&repository);
     git::commit(&repository);
 
@@ -532,8 +546,9 @@ fn package_symlink_to_submodule() {
         .reset(
             &repository.revparse_single("HEAD").unwrap(),
             git2::ResetType::Hard,
-            None
-        ).unwrap();
+            None,
+        )
+        .unwrap();
 
     project
         .cargo("package --no-verify -v")
@@ -697,9 +712,19 @@ See [..]
 }
 
 #[cargo_test]
+#[cfg_attr(windows, ignore)]
+/// Tests if a broken symlink is properly handled when packaging.
+///
+/// This test is ignored on Windows, because it needs Administrator
+/// permissions to run. If you do want to run this test, please
+/// run the tests with ``--ignored``, e.g.
+///
+/// ```text
+/// cargo test -- --ignored
+/// ```
 fn broken_symlink() {
     #[cfg(unix)]
-    use std::os::unix::fs::symlink as symlink;
+    use std::os::unix::fs::symlink;
     #[cfg(windows)]
     use std::os::windows::fs::symlink_dir as symlink;
 
@@ -739,6 +764,16 @@ Caused by:
 }
 
 #[cargo_test]
+#[cfg_attr(windows, ignore)]
+/// Tests if a symlink to a directory is proberly included.
+///
+/// This test is ignored on Windows, because it needs Administrator
+/// permissions to run. If you do want to run this test, please
+/// run the tests with ``--ignored``, e.g.
+///
+/// ```text
+/// cargo test -- --ignored
+/// ```
 fn package_symlink_to_dir() {
     project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)

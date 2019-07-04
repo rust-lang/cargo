@@ -1495,12 +1495,12 @@ package `test v0.0.0 ([CWD])`",
 }
 
 #[cargo_test]
+#[cfg_attr(windows, ignore)]
+/// Make sure ignored symlinks don't break the build
+///
+/// This test is marked ``ignore`` on Windows because it needs admin permissions.
+/// Run it with ``--ignored``.
 fn ignore_broken_symlinks() {
-    // windows and symlinks don't currently agree that well
-    if cfg!(windows) {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))

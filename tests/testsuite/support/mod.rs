@@ -183,11 +183,19 @@ struct SymlinkBuilder {
 
 impl SymlinkBuilder {
     pub fn new(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
-        SymlinkBuilder { dst, src, src_is_dir: false }
+        SymlinkBuilder {
+            dst,
+            src,
+            src_is_dir: false,
+        }
     }
 
     pub fn new_dir(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
-        SymlinkBuilder { dst, src, src_is_dir: true }
+        SymlinkBuilder {
+            dst,
+            src,
+            src_is_dir: true,
+        }
     }
 
     #[cfg(unix)]
@@ -273,9 +281,9 @@ impl ProjectBuilder {
     /// Create a symlink to a directory
     pub fn symlink_dir<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new_dir(
-                self.root.root().join(dst),
-                self.root.root().join(src),
-            ));
+            self.root.root().join(dst),
+            self.root.root().join(src),
+        ));
         self
     }
 
