@@ -152,6 +152,13 @@ impl Profiles {
                     ..TomlProfile::default()
                 },
             ),
+            (
+                "doc",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
         ]
     }
 
