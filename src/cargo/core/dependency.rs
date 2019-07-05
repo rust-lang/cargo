@@ -437,7 +437,7 @@ impl Dependency {
         self.matches_id(sum.package_id())
     }
 
-    /// Returns `true` if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
