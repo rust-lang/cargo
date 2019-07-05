@@ -860,7 +860,7 @@ impl Config {
         let ret = f.as_path_unlocked();
         assert!(
             self.package_cache_lock.borrow().is_some(),
-            "pacakge cache lock is not currently held, Cargo forgot to call \
+            "package cache lock is not currently held, Cargo forgot to call \
              `acquire_package_cache_lock` before we got to this stack frame",
         );
         assert!(ret.starts_with(self.home_path.as_path_unlocked()));
