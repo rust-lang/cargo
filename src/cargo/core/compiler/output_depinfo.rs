@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use log::debug;
 
-use super::{fingerprint, Context, Unit};
+use super::{fingerprint, Context, FileFlavor, Unit};
 use crate::util::paths;
 use crate::util::{internal, CargoResult};
 
@@ -98,7 +98,11 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for output in cx.outputs(unit)?.iter() {
+    for output in cx
+        .outputs(unit)?
+        .iter()
+        .filter(|o| o.flavor != FileFlavor::DebugInfo)
+    {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {
