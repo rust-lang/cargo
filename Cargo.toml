@@ -19,7 +19,6 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
-byteorder = "1.2"
 bytesize = "1.0"
 crates-io = { path = "crates/crates-io", version = "0.27" }
 crossbeam-utils = "0.6"
