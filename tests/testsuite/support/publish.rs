@@ -1,14 +1,22 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{prelude::*, SeekFrom};
+use std::io::{self, prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use crate::support::find_json_mismatch;
 use crate::support::registry::{self, alt_api_path};
 
-use byteorder::{LittleEndian, ReadBytesExt};
 use flate2::read::GzDecoder;
 use tar::Archive;
+
+fn read_le_u32<R>(mut reader: R) -> io::Result<u32>
+where
+    R: Read,
+{
+    let mut buf = [0; 4];
+    reader.read_exact(&mut buf)?;
+    Ok(u32::from_le_bytes(buf))
+}
 
 /// Checks the result of a crate publish.
 pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_files: &[&str]) {
@@ -44,7 +52,7 @@ fn _validate_upload(
 ) {
     let mut f = File::open(new_path).unwrap();
     // 32-bit little-endian integer of length of JSON data.
-    let json_sz = f.read_u32::<LittleEndian>().expect("read json length");
+    let json_sz = read_le_u32(&mut f).expect("read json length");
     let mut json_bytes = vec![0; json_sz as usize];
     f.read_exact(&mut json_bytes).expect("read JSON data");
     let actual_json = serde_json::from_slice(&json_bytes).expect("uploaded JSON should be valid");
@@ -53,7 +61,7 @@ fn _validate_upload(
         .expect("uploaded JSON did not match expected JSON");
 
     // 32-bit little-endian integer of length of crate file.
-    let crate_sz = f.read_u32::<LittleEndian>().expect("read crate length");
+    let crate_sz = read_le_u32(&mut f).expect("read crate length");
     let mut krate_bytes = vec![0; crate_sz as usize];
     f.read_exact(&mut krate_bytes).expect("read crate data");
     // Check at end.
