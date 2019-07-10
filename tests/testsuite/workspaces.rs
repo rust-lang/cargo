@@ -2137,3 +2137,39 @@ fn ws_warn_path() {
         .with_stderr_contains("[WARNING] [..]/foo/a/Cargo.toml: the cargo feature `edition`[..]")
         .run();
 }
+
+#[cargo_test]
+fn invalid_missing() {
+    // Warnings include path to manifest.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                x = { path = 'x' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -q")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: [..]
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]",
+        )
+        .run();
+}
