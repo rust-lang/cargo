@@ -76,7 +76,10 @@ pub fn cli() -> App {
             Arg::with_name("clippy")
                 .long("clippy")
                 .help("Get fix suggestions from clippy instead of rustc")
-                .hidden(true),
+                .hidden(true)
+                .multiple(true)
+                .min_values(0)
+                .number_of_values(1),
         )
         .after_help(
             "\
@@ -134,10 +137,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let use_clippy = args.is_present("clippy");
 
     let clippy_args = args
-        .value_of("clippy") // always yields None
+        .value_of("clippy")
         .map(|s| s.split(' ').map(|s| s.to_string()).collect())
         .or_else(|| Some(vec![]))
         .filter(|_| use_clippy);
+
+    // dbg!(&clippy_args, use_clippy);
 
     if use_clippy && !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
