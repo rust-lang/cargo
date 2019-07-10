@@ -651,11 +651,16 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &method)?;
+    let activated = cx.flag_activated(&candidate, &method, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
-            if cx.flag_activated(replace, &method)? && activated {
+            // Note the `None` for parent here since `[replace]` is a bit wonky
+            // and doesn't activate the same things that `[patch]` typically
+            // does. TBH it basically cause panics in the test suite if
+            // `parent` is passed through here and `[replace]` is otherwise
+            // on life support so it's not critical to fix bugs anyway per se.
+            if cx.flag_activated(replace, &method, None)? && activated {
                 return Ok(None);
             }
             trace!(
