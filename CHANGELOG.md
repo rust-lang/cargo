@@ -1,6 +1,6 @@
 # Changelog
 
-## Cargo 1.38 (2019-11-26)
+## Cargo 1.38 (2019-09-26)
 [4c1fa54d...HEAD](https://github.com/rust-lang/cargo/compare/4c1fa54d...HEAD)
 
 ### Added
