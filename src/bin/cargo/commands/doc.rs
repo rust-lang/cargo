@@ -30,9 +30,12 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg(
-            Arg::with_name("dev")
-                .long("dev")
-                .help("Include dev dependencies in documentation"),
+            Arg::with_name("dep-mode")
+                .long("dep-mode")
+                .help("Configure the set of dependencies to document")
+                .takes_value(true)
+                .possible_values(&["dev", "normal", "all", "build"])
+                .default_value("normal"),
         )
         .after_help(
             "\
@@ -53,18 +56,29 @@ the `cargo help pkgid` command.
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let mode = CompileMode::Doc {
-        deps: !args.is_present("no-deps"),
+    let dep_mode = if args.is_present("no-deps") {
+        DepDocMode::NoDeps
+    } else {
+        match args.value_of("dev") {
+            Some("dev") => DepDocMode::Development,
+            Some("all") => DepDocMode::All,
+            Some("build") => DepDocMode::Build,
+            _ => DepDocMode::Normal,
+        }
     };
+    let mode = CompileMode::Doc { dep_mode };
     let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
-    let document_devdeps = args.is_present("dev");
-    if document_devdeps && !config.cli_unstable().unstable_options {
+
+    if !config.cli_unstable().unstable_options
+        && dep_mode != DepDocMode::Normal
+        && dep_mode != DepDocMode::NoDeps
+    {
         return Err(failure::format_err!(
-            "`cargo doc --dev` is unstable, pass `-Z unstable-options` to enable it"
+            "`cargo doc --dep-mode` is unstable, pass `-Z unstable-options` to enable it"
         )
         .into());
     }
-    compile_opts.build_config.document_dev_dependencies = document_devdeps;
+
     compile_opts.local_rustdoc_args = if args.is_present("document-private-items") {
         Some(vec!["--document-private-items".to_string()])
     } else {

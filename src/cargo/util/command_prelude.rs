@@ -15,7 +15,7 @@ use crate::util::{
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
-pub use crate::core::compiler::CompileMode;
+pub use crate::core::compiler::{CompileMode, DepDocMode};
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 

@@ -61,7 +61,11 @@ fn rustdoc_foo_with_bar_dependency() {
     foo.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr(
             "\
+[DOCUMENTING] bar v0.0.1 ([..])
 [CHECKING] bar v0.0.1 ([..])
+[RUNNING] `rustdoc --crate-name bar [..]\
+        -o [CWD]/target/doc \
+        -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\

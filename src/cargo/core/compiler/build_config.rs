@@ -27,8 +27,6 @@ pub struct BuildConfig {
     /// An optional wrapper, if any, used to wrap rustc invocations
     pub rustc_wrapper: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
-    /// Wheather or not to document development dependencies
-    pub document_dev_dependencies: bool,
     /// Whether or not Cargo should cache compiler output on disk.
     cache_messages: bool,
 }
@@ -102,7 +100,6 @@ impl BuildConfig {
             build_plan: false,
             rustc_wrapper: None,
             rustfix_diagnostic_server: RefCell::new(None),
-            document_dev_dependencies: false,
             cache_messages: config.cli_unstable().cache_messages,
         })
     }
@@ -151,12 +148,22 @@ pub enum CompileMode {
     /// allows some de-duping of Units to occur.
     Bench,
     /// A target that will be documented with `rustdoc`.
-    /// If `deps` is true, then it will also document all dependencies.
-    Doc { deps: bool },
+    /// `dep_mode` determines what set of packages will be documented.
+    Doc { dep_mode: DepDocMode },
     /// A target that will be tested with `rustdoc`.
     Doctest,
     /// A marker for Units that represent the execution of a `build.rs` script.
     RunCustomBuild,
+}
+
+/// Specific mode for rustdoc to use when documenting dependencies
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
+pub enum DepDocMode {
+    Normal,
+    Development,
+    Build,
+    NoDeps,
+    All,
 }
 
 impl ser::Serialize for CompileMode {
@@ -219,14 +226,27 @@ impl CompileMode {
     /// List of all modes (currently used by `cargo clean -p` for computing
     /// all possible outputs).
     pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 9] = [
+        static ALL: [CompileMode; 12] = [
             CompileMode::Test,
             CompileMode::Build,
             CompileMode::Check { test: true },
             CompileMode::Check { test: false },
             CompileMode::Bench,
-            CompileMode::Doc { deps: true },
-            CompileMode::Doc { deps: false },
+            CompileMode::Doc {
+                dep_mode: DepDocMode::Build,
+            },
+            CompileMode::Doc {
+                dep_mode: DepDocMode::All,
+            },
+            CompileMode::Doc {
+                dep_mode: DepDocMode::NoDeps,
+            },
+            CompileMode::Doc {
+                dep_mode: DepDocMode::Normal,
+            },
+            CompileMode::Doc {
+                dep_mode: DepDocMode::Development,
+            },
             CompileMode::Doctest,
             CompileMode::RunCustomBuild,
         ];

@@ -53,7 +53,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options_for_single_package(
         config,
-        CompileMode::Doc { deps: false },
+        CompileMode::Doc {
+            dep_mode: DepDocMode::Normal,
+        },
         Some(&ws),
     )?;
     let target_args = values(args, "args");

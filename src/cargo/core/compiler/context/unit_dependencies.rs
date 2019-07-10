@@ -16,7 +16,7 @@
 //! graph of `Unit`s, which capture these properties.
 
 use crate::core::compiler::Unit;
-use crate::core::compiler::{BuildContext, CompileMode, Context, Kind};
+use crate::core::compiler::{BuildContext, CompileMode, Context, DepDocMode, Kind};
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::UnitFor;
@@ -293,13 +293,24 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
     state: &mut State<'a, 'cfg, 'tmp>,
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     let bcx = state.cx.bcx;
+
+    let dep_mode = match bcx.build_config.mode {
+        CompileMode::Doc { dep_mode } => dep_mode,
+        _ => unreachable!(),
+    };
+
     let deps = bcx
         .resolve
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
                 DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
-                DepKind::Development if bcx.build_config.document_dev_dependencies => {
+                DepKind::Development
+                    if dep_mode == DepDocMode::Development || dep_mode == DepDocMode::All =>
+                {
+                    bcx.dep_platform_activated(dep, unit.kind)
+                }
+                DepKind::Build if dep_mode == DepDocMode::Build || dep_mode == DepDocMode::All => {
                     bcx.dep_platform_activated(dep, unit.kind)
                 }
                 _ => false,
@@ -325,7 +336,10 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
         let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
         let lib_unit = new_unit(bcx, dep, lib, dep_unit_for, unit.kind.for_target(lib), mode);
         ret.push((lib_unit, dep_unit_for));
-        if let CompileMode::Doc { deps: true } = unit.mode {
+        if (CompileMode::Doc {
+            dep_mode: DepDocMode::NoDeps,
+        }) != unit.mode
+        {
             // Document this lib as well.
             let doc_unit = new_unit(
                 bcx,
