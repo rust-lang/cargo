@@ -207,7 +207,10 @@ impl Shell {
 
     /// Prints a red 'error' message.
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"error:", Some(&message), Red, false)
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+        self.err.print(&"error:", Some(&message), Red, false)
     }
 
     /// Prints an amber 'warning' message.
