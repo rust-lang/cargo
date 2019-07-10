@@ -2,7 +2,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::compiler::{BuildConfig, BuildPlanConfig, BuildPlanStage, MessageFormat};
 use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
@@ -142,10 +142,21 @@ pub trait AppExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(opt(
-            "build-plan",
-            "Output the build plan in JSON (unstable)",
-        ))
+        self._arg(
+            opt("build-plan", "Output the build plan in JSON (unstable)")
+                .long_help(
+                    "\
+                     Output the build plan in JSON (unstable) at a STAGE in the build \
+                     process: `init`, before compiling/running anything (default) or \
+                     `post-build-scripts`, after *all* the build scripts have been run \
+                     (and their dependencies compiled).",
+                )
+                .value_name("STAGE")
+                .possible_values(&["init", "post-build-scripts"])
+                .default_value("init")
+                .hide_default_value(true)
+                .hide_possible_values(true),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -318,8 +329,28 @@ pub trait ArgMatchesExt {
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
-        build_config.build_plan = self._is_present("build-plan");
-        if build_config.build_plan {
+
+        if self._occurrences_of("build-plan") > 0 {
+            build_config.build_plan = BuildPlanConfig(self._value_of("build-plan").map(|t| {
+                if t.eq_ignore_ascii_case("init") {
+                    BuildPlanStage::Init
+                } else if t.eq_ignore_ascii_case("post-build-scripts") {
+                    BuildPlanStage::PostBuildScripts
+                } else {
+                    panic!("Impossible build plan type: {:?}", t)
+                }
+            }))
+        };
+        // We need to check if the `--build-plan` option was actually specified
+        // because we're allowing its use without the user indicating a value
+        // (by setting `init` as the default value), to be backwards compatible
+        // with the previous implementation (this no-value case is now
+        // superseded by explicitly setting the `init` value of this option).
+        // (This is not ideal but the "option with empty named value" use case
+        // doesn't seem to be supported by `clap`, which would otherwise
+        // trigger the "requires a value but none was supplied" error.)
+
+        if build_config.build_plan.requested() {
             config
                 .cli_unstable()
                 .fail_if_stable_opt("--build-plan", 5579)?;
@@ -469,6 +500,8 @@ about this warning.";
     fn _values_of_os(&self, name: &str) -> Vec<OsString>;
 
     fn _is_present(&self, name: &str) -> bool;
+
+    fn _occurrences_of(&self, name: &str) -> u64;
 }
 
 impl<'a> ArgMatchesExt for ArgMatches<'a> {
@@ -496,6 +529,10 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
 
     fn _is_present(&self, name: &str) -> bool {
         self.is_present(name)
+    }
+
+    fn _occurrences_of(&self, name: &str) -> u64 {
+        self.occurrences_of(name)
     }
 }
 

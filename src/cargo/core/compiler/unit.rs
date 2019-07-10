@@ -48,6 +48,19 @@ pub struct UnitInner<'a> {
     pub kind: Kind,
     /// The "mode" this unit is being compiled for. See [`CompileMode`] for more details.
     pub mode: CompileMode,
+    /// Used only for the `--build-plan` option, this flag indicates whether this unit is intended
+    /// to be passed to a `rustc` call (roughly speaking, to be "compiled"), the usual case, or if
+    /// instead such invocation will be registered in a build plan (`false`).
+    pub to_be_compiled: bool,
+    // This flag adds a new dimension to allow for the (otherwise) same unit to exist as both, a
+    // compiled build script dependency and a "normal" dependency that will be outputted to the
+    // build plan when requesting the `post-build-scripts` stage, which departs from the basic
+    // all/none scenario of routing all units either to `rustc` or to the build plan.
+    // Without this flag our internal bookkeeping  structures like `Context::unit_dependencies`
+    // and `Context::compiled` would confuse the two and ignore one of them. However, we do *not*
+    // want to add this attribute to the metadata or fingerprint (hence it exists as standalone
+    // here and not inside other structures like `CompileMode` or `Profile`), since even if they
+    // may have different purposes they should be able to be reused.
 }
 
 impl UnitInner<'_> {
@@ -94,13 +107,18 @@ impl<'a> Deref for Unit<'a> {
 
 impl<'a> fmt::Debug for Unit<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Unit")
+        let mut debug_struct = f.debug_struct("Unit");
+        debug_struct
             .field("pkg", &self.pkg)
             .field("target", &self.target)
             .field("profile", &self.profile)
             .field("kind", &self.kind)
-            .field("mode", &self.mode)
-            .finish()
+            .field("mode", &self.mode);
+        if !self.to_be_compiled {
+            // Only print in the (rare) case of use of using `--build-plan`.
+            debug_struct.field("to_be_compiled", &false);
+        }
+        debug_struct.finish()
     }
 }
 
@@ -139,6 +157,7 @@ impl<'a> UnitInterner<'a> {
         profile: Profile,
         kind: Kind,
         mode: CompileMode,
+        to_be_compiled: bool,
     ) -> Unit<'a> {
         let inner = self.intern_inner(&UnitInner {
             pkg,
@@ -146,6 +165,7 @@ impl<'a> UnitInterner<'a> {
             profile,
             kind,
             mode,
+            to_be_compiled,
         });
         Unit { inner }
     }

@@ -653,7 +653,9 @@ fn generate_targets<'a>(
             target_mode,
             bcx.build_config.release,
         );
-        bcx.units.intern(pkg, target, profile, kind, target_mode)
+        let to_be_compiled = bcx.build_config.build_plan.should_compile_unit(false);
+        bcx.units
+            .intern(pkg, target, profile, kind, target_mode, to_be_compiled)
     };
 
     // Create a list of proposed targets.

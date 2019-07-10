@@ -382,6 +382,7 @@ fn dep_build_script<'a>(
                 bcx.profiles.get_profile_run_custom_build(&unit.profile),
                 unit.kind,
                 CompileMode::RunCustomBuild,
+                bcx.build_config.build_plan.should_compile_unit(true),
             );
 
             (unit, UnitFor::new_build())
@@ -421,8 +422,12 @@ fn new_unit<'a>(
         mode,
         bcx.build_config.release,
     );
-
-    bcx.units.intern(pkg, target, profile, kind, mode)
+    let to_be_compiled = bcx
+        .build_config
+        .build_plan
+        .should_compile_unit(unit_for.is_build());
+    bcx.units
+        .intern(pkg, target, profile, kind, mode, to_be_compiled)
 }
 
 /// Fill in missing dependencies for units of the `RunCustomBuild`

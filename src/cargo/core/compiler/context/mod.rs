@@ -108,7 +108,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
-        let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         custom_build::build_map(&mut self, units)?;
@@ -127,7 +126,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Now that we've figured out everything that we're going to do, do it!
         queue.execute(&mut self, &mut plan)?;
 
-        if build_plan {
+        if self.bcx.build_config.build_plan.requested() {
             plan.set_inputs(self.build_plan_inputs()?);
             plan.output_plan();
         }
@@ -437,7 +436,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut keys = self
             .unit_dependencies
             .keys()
-            .filter(|unit| !unit.mode.is_run_custom_build())
+            .filter(|unit| !unit.mode.is_run_custom_build() && unit.to_be_compiled)
             .collect::<Vec<_>>();
         // Sort for consistent error messages.
         keys.sort_unstable();

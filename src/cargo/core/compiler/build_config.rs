@@ -23,7 +23,7 @@ pub struct BuildConfig {
     /// Force Cargo to do a full rebuild and treat each target as changed.
     pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
-    pub build_plan: bool,
+    pub build_plan: BuildPlanConfig,
     /// An optional wrapper, if any, used to wrap rustc invocations
     pub rustc_wrapper: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
@@ -97,7 +97,7 @@ impl BuildConfig {
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
-            build_plan: false,
+            build_plan: BuildPlanConfig(None),
             rustc_wrapper: None,
             rustfix_diagnostic_server: RefCell::new(None),
             cache_messages: config.cli_unstable().cache_messages,
@@ -125,6 +125,73 @@ pub enum MessageFormat {
     Human,
     Json,
     Short,
+}
+
+/// Configuration structure for the `--build-plan` option, mainly a wrapper
+/// for the `BuildPlanStage` selected (`None` if we're not generating a build
+/// plan, then compile all units as usual).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BuildPlanConfig(pub Option<BuildPlanStage>);
+
+/// Stage in the build process at which to generate the build plan. At later
+/// stages more units will be compiled and less will be outputted to the build
+/// plan. In one extreme, `Init` is the earliest possible stage where all units
+/// are routed to the build plan; the `None` of this `Option` in
+/// `BuildPlanConfig` can be thought of as the other extreme at the end, where
+/// all units are already compiled so the build plan is empty (not even
+/// generated).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuildPlanStage {
+    /// Initial stage before anything is compiled (default option), all units
+    /// will be outputted as `Invocation`s in the build plan instead of calling
+    /// `rustc` for them (actually compiling). Ideally (but this is not
+    /// guaranteed), generating a build plan at the `Init` stage shouldn't
+    /// change anything in the working environment (e.g., it shouldn't compile,
+    /// update fingerprints, remove an old `rlib` file).
+    Init,
+    /// In contrast to `Init`, this stage signals to output the build plan after
+    /// *all* custom build scripts (and their dependencies) have been compiled
+    /// and executed.
+    ///
+    /// At this stage in the build process, the remaining units (which will be
+    /// outputted to the build plan instead of being compiled) are the ones
+    /// actually linked inside the final binary/library target, whereas the
+    /// compiled build scripts (and their dependencies) were used only for
+    /// their side effects to modify the `rustc` invocations (which will be
+    /// reflected in the build plan, something that doesn't happen at the
+    /// `Init` stage when the build script haven't been executed yet).
+    PostBuildScripts,
+}
+
+impl BuildPlanConfig {
+    /// Signal if the `--build-plan` option was requested (independent of the
+    /// particular stage selected).
+    pub fn requested(&self) -> bool {
+        self.0.is_some()
+    }
+
+    /// Signal if the `PostBuildScripts` stage was selected for the build plan
+    /// (implies `requested`).
+    pub fn post_build_scripts(&self) -> bool {
+        self.0 == Some(BuildPlanStage::PostBuildScripts)
+    }
+
+    /// Determine (based on the build plan stage selected, if any) whether the
+    /// current unit should be compiled, or included in the build plan instead
+    /// (returning `false`, we use a `bool` because there's no other
+    /// alternative of what can happen to a unit). The result is usually stored
+    /// in `Unit::to_be_compiled`. Based on these rules:
+    /// 1. If we didn't request a build plan, compile *any* unit.
+    /// 2. If we requested it at the `Init` stage, compile *nothing*.
+    /// 3. If we requested it at the `PostBuildScripts` stage, compile *only* a
+    ///    `unit_used_for_build_script` (usually determined by `UnitFor::build`).
+    pub fn should_compile_unit(&self, unit_used_for_build_script: bool) -> bool {
+        match self.0 {
+            None => true,
+            Some(BuildPlanStage::Init) => false,
+            Some(BuildPlanStage::PostBuildScripts) => unit_used_for_build_script,
+        }
+    }
 }
 
 /// The general "mode" for what to do.

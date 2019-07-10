@@ -115,7 +115,12 @@ impl BuildPlan {
         let deps = cx
             .dep_targets(unit)
             .iter()
-            .map(|dep| self.invocation_map[&dep.buildkey()])
+            .filter_map(|&dep| {
+                self.invocation_map.get(&dep.buildkey()).copied()
+                // In case `BuildPlanStage::PostBuildScripts` was selected some
+                // dependencies (custom build scripts and related) will be
+                // compiled and won't be present in the `invocation_map`.
+            })
             .collect();
         let invocation = Invocation::new(unit, deps);
         self.plan.invocations.push(invocation);

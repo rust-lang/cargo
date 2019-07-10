@@ -126,7 +126,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let script_dir = cx.files().build_script_dir(build_script_unit);
     let script_out_dir = cx.files().build_script_out_dir(unit);
     let script_run_dir = cx.files().build_script_run_dir(unit);
-    let build_plan = bcx.build_config.build_plan;
+    let unit_is_to_be_compiled = unit.to_be_compiled;
     let invocation_name = unit.buildkey();
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
@@ -278,7 +278,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if !build_plan {
+        if unit_is_to_be_compiled {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id, kind);
@@ -300,9 +300,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             if let Some(build_scripts) = build_scripts {
                 super::add_plugin_deps(&mut cmd, &build_state, &build_scripts, &host_target_root)?;
             }
+            // Release `build_state.outputs` lock in this inner scope, otherwise
+            // it will deadlock with the `build_state.insert` call below.
         }
 
-        if build_plan {
+        if !unit_is_to_be_compiled {
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
             return Ok(());
         }
@@ -373,7 +375,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         Ok(())
     });
 
-    let mut job = if cx.bcx.build_config.build_plan {
+    let mut job = if !unit.to_be_compiled {
         Job::new(Work::noop(), Freshness::Dirty)
     } else {
         fingerprint::prepare_target(cx, unit, false)?

@@ -422,7 +422,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            if !cx.bcx.build_config.build_plan {
+            if !cx.bcx.build_config.build_plan.requested() {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
             Ok(())
@@ -513,7 +513,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             my_tx.send(Message::Finish(id, Artifact::All, res)).unwrap();
         };
 
-        if !cx.bcx.build_config.build_plan {
+        if !cx.bcx.build_config.build_plan.requested() {
             // Print out some nice progress information.
             self.note_working_on(cx.bcx.config, unit, fresh)?;
         }

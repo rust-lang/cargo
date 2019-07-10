@@ -93,7 +93,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 opts.release,
                             )
                         };
-                        units.push(bcx.units.intern(pkg, target, profile, *kind, *mode));
+                        units.push(bcx.units.intern(pkg, target, profile, *kind, *mode, true));
                     }
                 }
             }
