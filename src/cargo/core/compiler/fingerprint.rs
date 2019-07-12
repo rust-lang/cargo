@@ -299,7 +299,7 @@ pub fn prepare_target<'a, 'cfg>(
             // here. See documentation on `build_script_local_fingerprints`
             // below for more information. Despite this just try to proceed and
             // hobble along if it happens to return `Some`.
-            if let Some(new_local) = gen_local.call_box(&deps, None)? {
+            if let Some(new_local) = (gen_local)(&deps, None)? {
                 *fingerprint.local.lock().unwrap() = new_local;
                 *fingerprint.memoized_hash.lock().unwrap() = None;
             }
@@ -1121,9 +1121,7 @@ fn calculate_run_custom_build<'a, 'cfg>(
     // the whole crate.
     let (gen_local, overridden) = build_script_local_fingerprints(cx, unit);
     let deps = &cx.build_explicit_deps[unit];
-    let local = gen_local
-        .call_box(deps, Some(&|| pkg_fingerprint(cx.bcx, unit.pkg)))?
-        .unwrap();
+    let local = (gen_local)(deps, Some(&|| pkg_fingerprint(cx.bcx, unit.pkg)))?.unwrap();
     let output = deps.build_script_output.clone();
 
     // Include any dependencies of our execution, which is typically just the
@@ -1167,11 +1165,10 @@ fn calculate_run_custom_build<'a, 'cfg>(
 /// scripts). That deduplication is the rationale for the closure at least.
 ///
 /// The arguments to the closure are a bit weirder, though, and I'll apologize
-/// in advance for the weirdness too. The first argument to the closure (see
-/// `MyFnOnce` below) is a `&BuildDeps`. This is the parsed version of a build
-/// script, and when Cargo starts up this is cached from previous runs of a
-/// build script. After a build script executes the output file is reparsed and
-/// passed in here.
+/// in advance for the weirdness too. The first argument to the closure is a
+/// `&BuildDeps`. This is the parsed version of a build script, and when Cargo
+/// starts up this is cached from previous runs of a build script.  After a
+/// build script executes the output file is reparsed and passed in here.
 ///
 /// The second argument is the weirdest, it's *optionally* a closure to
 /// call `pkg_fingerprint` below. The `pkg_fingerprint` below requires access
@@ -1191,7 +1188,16 @@ fn calculate_run_custom_build<'a, 'cfg>(
 fn build_script_local_fingerprints<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
-) -> (Box<dyn MyFnOnce + Send>, bool) {
+) -> (
+    Box<
+        dyn FnOnce(
+                &BuildDeps,
+                Option<&dyn Fn() -> CargoResult<String>>,
+            ) -> CargoResult<Option<Vec<LocalFingerprint>>>
+            + Send,
+    >,
+    bool,
+) {
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(cx, unit) {
@@ -1602,31 +1608,4 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<Vec<(String, V
             Ok((target.to_string(), ret))
         })
         .collect()
-}
-
-// This trait solely exists for the `build_script_local_fingerprints` function
-// above, see documentation there for more information. If we had `Box<dyn
-// FnOnce>` we wouldn't need this.
-trait MyFnOnce {
-    fn call_box(
-        self: Box<Self>,
-        f: &BuildDeps,
-        pkg_fingerprint: Option<&dyn Fn() -> CargoResult<String>>,
-    ) -> CargoResult<Option<Vec<LocalFingerprint>>>;
-}
-
-impl<F> MyFnOnce for F
-where
-    F: FnOnce(
-        &BuildDeps,
-        Option<&dyn Fn() -> CargoResult<String>>,
-    ) -> CargoResult<Option<Vec<LocalFingerprint>>>,
-{
-    fn call_box(
-        self: Box<Self>,
-        f: &BuildDeps,
-        pkg_fingerprint: Option<&dyn Fn() -> CargoResult<String>>,
-    ) -> CargoResult<Option<Vec<LocalFingerprint>>> {
-        (*self)(f, pkg_fingerprint)
-    }
 }
