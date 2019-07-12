@@ -2,7 +2,6 @@ use std::io::prelude::*;
 
 use toml;
 
-use crate::core::resolver::WorkspaceResolve;
 use crate::core::{resolver, Resolve, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
@@ -89,7 +88,7 @@ fn resolve_to_string_orig(
         Ok(s)
     });
 
-    let toml = toml::Value::try_from(WorkspaceResolve { ws, resolve }).unwrap();
+    let toml = toml::Value::try_from(resolve).unwrap();
 
     let mut out = String::new();
 

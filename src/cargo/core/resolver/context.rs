@@ -15,8 +15,8 @@ use crate::util::Graph;
 use super::dep_cache::RegistryQueryer;
 use super::types::{ConflictMap, FeaturesSet, Method};
 
+pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
-pub use super::encode::{Metadata, WorkspaceResolve};
 pub use super::resolve::Resolve;
 
 // A `Context` is basically a bunch of local resolution information which is
