@@ -176,8 +176,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 .finish_hex();
             if &*actual != cksum {
                 failure::bail!(
-                    "\
-                     the listed checksum of `{}` has changed:\n\
+                    "the listed checksum of `{}` has changed:\n\
                      expected: {}\n\
                      actual:   {}\n\
                      \n\
