@@ -141,8 +141,7 @@ fn broken_fixes_backed_out() {
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_stderr_contains(
-            "\
-             warning: failed to automatically apply fixes suggested by rustc \
+            "warning: failed to automatically apply fixes suggested by rustc \
              to crate `bar`\n\
              \n\
              after fixes were automatically applied the compiler reported \
@@ -517,8 +516,7 @@ fn preserve_line_endings() {
     let p = project()
         .file(
             "src/lib.rs",
-            "\
-             fn add(a: &u32) -> u32 { a + 1 }\r\n\
+            "fn add(a: &u32) -> u32 { a + 1 }\r\n\
              pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
              ",
         )
@@ -535,9 +533,8 @@ fn fix_deny_warnings() {
     let p = project()
         .file(
             "src/lib.rs",
-            "\
-                #![deny(warnings)]
-                pub fn foo() { let mut x = 3; drop(x); }
+            "#![deny(warnings)]
+             pub fn foo() { let mut x = 3; drop(x); }
             ",
         )
         .build();
@@ -703,8 +700,7 @@ fn warns_if_no_vcs_detected() {
     p.cargo("fix")
         .with_status(101)
         .with_stderr(
-            "\
-             error: no VCS found for this package and `cargo fix` can potentially perform \
+            "error: no VCS found for this package and `cargo fix` can potentially perform \
              destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
              ",
         )

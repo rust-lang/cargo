@@ -204,10 +204,9 @@ fn install_location_precedence() {
         .unwrap()
         .write_all(
             format!(
-                "\
-        [install]
-        root = '{}'
-    ",
+                "[install]
+                 root = '{}'
+                ",
                 t3.display()
             )
             .as_bytes(),
@@ -822,8 +821,7 @@ fn uninstall_cwd() {
     p.cargo("uninstall")
         .with_stdout("")
         .with_stderr(&format!(
-            "\
-             [REMOVING] {home}/bin/foo[EXE]",
+            "[REMOVING] {home}/bin/foo[EXE]",
             home = cargo_home().display()
         ))
         .run();
@@ -836,10 +834,7 @@ fn uninstall_cwd_not_installed() {
     p.cargo("uninstall")
         .with_status(101)
         .with_stdout("")
-        .with_stderr(
-            "\
-             error: package `foo v0.0.1 ([CWD])` is not installed",
-        )
+        .with_stderr("error: package `foo v0.0.1 ([CWD])` is not installed")
         .run();
 }
 

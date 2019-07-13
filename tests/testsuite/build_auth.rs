@@ -29,11 +29,9 @@ fn http_auth_offered() {
         let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
         conn.write_all(
-            b"\
-            HTTP/1.1 401 Unauthorized\r\n\
-            WWW-Authenticate: Basic realm=\"wheee\"\r\n
-            \r\n\
-        ",
+            b"HTTP/1.1 401 Unauthorized\r\n\
+              WWW-Authenticate: Basic realm=\"wheee\"\r\n\
+              \r\n",
         )
         .unwrap();
         assert_eq!(
@@ -51,11 +49,9 @@ fn http_auth_offered() {
         let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
         conn.write_all(
-            b"\
-            HTTP/1.1 401 Unauthorized\r\n\
-            WWW-Authenticate: Basic realm=\"wheee\"\r\n
-            \r\n\
-        ",
+            b"HTTP/1.1 401 Unauthorized\r\n\
+              WWW-Authenticate: Basic realm=\"wheee\"\r\n\
+              \r\n",
         )
         .unwrap();
         assert_eq!(
@@ -117,10 +113,9 @@ fn http_auth_offered() {
         .file("src/main.rs", "")
         .file(
             ".cargo/config",
-            "\
-        [net]
-        retry = 0
-        ",
+            "[net]
+             retry = 0
+            ",
         )
         .build();
 
@@ -183,10 +178,9 @@ fn https_something_happens() {
         .file("src/main.rs", "")
         .file(
             ".cargo/config",
-            "\
-        [net]
-        retry = 0
-        ",
+            "[net]
+             retry = 0
+            ",
         )
         .build();
 

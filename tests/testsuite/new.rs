@@ -137,8 +137,7 @@ fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
         .with_stderr(
-            "\
-             [ERROR] The name `test` cannot be used as a crate name\n\
+            "[ERROR] The name `test` cannot be used as a crate name\n\
              use --name to override crate name",
         )
         .run();
@@ -149,8 +148,7 @@ fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
         .with_stderr(
-            "\
-             [ERROR] The name `incremental` cannot be used as a crate name\n\
+            "[ERROR] The name `incremental` cannot be used as a crate name\n\
              use --name to override crate name",
         )
         .run();
@@ -161,8 +159,7 @@ fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
         .with_stderr(
-            "\
-             [ERROR] The name `pub` cannot be used as a crate name\n\
+            "[ERROR] The name `pub` cannot be used as a crate name\n\
              use --name to override crate name",
         )
         .run();

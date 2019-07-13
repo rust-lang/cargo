@@ -387,8 +387,7 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
                 continue;
             }
             let msg = format!(
-                "\
-                 path override for crate `{}` has altered the original list of\n\
+                "path override for crate `{}` has altered the original list of\n\
                  dependencies; the dependency on `{}` was either added or\n\
                  modified to not match the previously resolved version\n\n\
                  {}",
@@ -402,10 +401,9 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
 
         if let Some(dep) = real_deps.get(0) {
             let msg = format!(
-                "\
-                path override for crate `{}` has altered the original list of
-                dependencies; the dependency on `{}` was removed\n\n
-                {}",
+                "path override for crate `{}` has altered the original list of\n\
+                 dependencies; the dependency on `{}` was removed\n\n\
+                 {}",
                 override_summary.package_id().name(),
                 dep.package_name(),
                 boilerplate

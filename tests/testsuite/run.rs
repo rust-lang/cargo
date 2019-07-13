@@ -797,8 +797,7 @@ fn run_from_executable_folder() {
     p.cargo("run")
         .cwd(cwd)
         .with_stderr(
-            "\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
+            "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
              [RUNNING] `./foo[EXE]`",
         )
         .with_stdout("hello")

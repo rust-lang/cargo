@@ -152,8 +152,7 @@ pub trait AppExt: Sized {
         self._arg(
             opt(
                 "vcs",
-                "\
-                 Initialize a new repository for the given version \
+                "Initialize a new repository for the given version \
                  control system (git, hg, pijul, or fossil) or do not \
                  initialize any version control at all (none), overriding \
                  a global configuration.",
