@@ -223,6 +223,7 @@ fn rustc<'a, 'cfg>(
     let exec = exec.clone();
 
     let root_output = cx.files().host_root().to_path_buf();
+    let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -317,7 +318,7 @@ fn rustc<'a, 'cfg>(
                 &dep_info_loc,
                 &cwd,
                 &pkg_root,
-                &root_output,
+                &target_dir,
             )
             .chain_err(|| {
                 internal(format!(

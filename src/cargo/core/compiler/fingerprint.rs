@@ -213,7 +213,7 @@ use super::job::{
     Freshness::{Dirty, Fresh},
     Job, Work,
 };
-use super::{BuildContext, Context, FileFlavor, Kind, Unit};
+use super::{BuildContext, Context, FileFlavor, Unit};
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
@@ -1014,7 +1014,7 @@ fn calculate<'a, 'cfg>(
 
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
-    let target_root = target_root(cx, unit);
+    let target_root = target_root(cx);
     fingerprint.check_filesystem(unit.pkg.root(), &target_root)?;
 
     let fingerprint = Arc::new(fingerprint);
@@ -1046,7 +1046,7 @@ fn calculate_normal<'a, 'cfg>(
     // correctly, but otherwise upstream packages like from crates.io or git
     // get bland fingerprints because they don't change without their
     // `PackageId` changing.
-    let target_root = target_root(cx, unit);
+    let target_root = target_root(cx);
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let dep_info = dep_info.strip_prefix(&target_root).unwrap().to_path_buf();
@@ -1219,8 +1219,8 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     // package. Remember that the fact that this is an `Option` is a bug, but a
     // longstanding bug, in Cargo. Recent refactorings just made it painfully
     // obvious.
-    let script_root = cx.files().build_script_run_dir(unit);
     let pkg_root = unit.pkg.root().to_path_buf();
+    let target_dir = target_root(cx);
     let calculate =
         move |deps: &BuildDeps, pkg_fingerprint: Option<&dyn Fn() -> CargoResult<String>>| {
             if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
@@ -1247,7 +1247,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
             // Ok so now we're in "new mode" where we can have files listed as
             // dependencies as well as env vars listed as dependencies. Process
             // them all here.
-            Ok(Some(local_fingerprints_deps(deps, &script_root, &pkg_root)))
+            Ok(Some(local_fingerprints_deps(deps, &target_dir, &pkg_root)))
         };
 
     // Note that `false` == "not overridden"
@@ -1346,17 +1346,10 @@ pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Pa
         .join(&format!("dep-{}", filename(cx, unit)))
 }
 
-/// Returns an absolute path that the `unit`'s outputs should always be relative
-/// to. This `target_root` variable is used to store relative path names in
-/// `Fingerprint` instead of absolute pathnames (see module comment).
-fn target_root<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
-    if unit.mode.is_run_custom_build() {
-        cx.files().build_script_run_dir(unit)
-    } else if unit.kind == Kind::Host {
-        cx.files().host_root().to_path_buf()
-    } else {
-        cx.files().target_root().to_path_buf()
-    }
+/// Returns an absolute path that target directory.
+/// All paths are rewritten to be relative to this.
+fn target_root(cx: &Context<'_, '_>) -> PathBuf {
+    cx.bcx.ws.target_dir().into_path_unlocked()
 }
 
 fn compare_old_fingerprint(
@@ -1565,10 +1558,10 @@ pub fn translate_dep_info(
     let mut new_contents = Vec::new();
     for file in deps {
         let file = rustc_cwd.join(file);
-        let (ty, path) = if let Ok(stripped) = file.strip_prefix(pkg_root) {
-            (DepInfoPathType::PackageRootRelative, stripped)
-        } else if let Ok(stripped) = file.strip_prefix(target_root) {
+        let (ty, path) = if let Ok(stripped) = file.strip_prefix(target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
+        } else if let Ok(stripped) = file.strip_prefix(pkg_root) {
+            (DepInfoPathType::PackageRootRelative, stripped)
         } else {
             // It's definitely not target root relative, but this is an absolute path (since it was
             // joined to rustc_cwd) and as such re-joining it later to the target root will have no
