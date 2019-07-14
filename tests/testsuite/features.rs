@@ -1400,35 +1400,23 @@ fn combining_features_and_package() {
     p.cargo("build -Z package-features --all --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for more than one package",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for more than one package")
         .run();
 
     p.cargo("build -Z package-features --package dep --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --all-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --no-default-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
     p.cargo("build -Z package-features --all --all-features")

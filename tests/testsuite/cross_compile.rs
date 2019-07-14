@@ -793,8 +793,7 @@ fn build_script_needed_for_host_and_target() {
             host = host
         ))
         .with_stderr_contains(&format!(
-            "\
-             [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..] \
+            "[RUNNING] `rustc [..] src/main.rs [..] --target {target} [..] \
              -L /path/to/{target}`",
             target = target
         ))

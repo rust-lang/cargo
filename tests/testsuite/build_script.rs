@@ -189,8 +189,7 @@ fn custom_build_script_wrong_rustc_flags() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
-            "\
-             [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([CWD])`: \
+            "[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([CWD])`: \
              `-aaa -bbb`",
         )
         .run();
