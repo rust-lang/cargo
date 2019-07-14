@@ -1,8 +1,8 @@
 use crate::support::registry::Package;
 use crate::support::{project, Project};
 
-static WARNING1: &'static str = "Hello! I'm a warning. :)";
-static WARNING2: &'static str = "And one more!";
+static WARNING1: &str = "Hello! I'm a warning. :)";
+static WARNING2: &str = "And one more!";
 
 fn make_lib(lib_src: &str) {
     Package::new("bar", "0.0.1")

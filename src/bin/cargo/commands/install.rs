@@ -153,9 +153,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let root = args.value_of("root");
 
     if args.is_present("no-track") && !config.cli_unstable().install_upgrade {
-        Err(failure::format_err!(
+        return Err(failure::format_err!(
             "`--no-track` flag is unstable, pass `-Z install-upgrade` to enable it"
-        ))?;
+        )
+        .into());
     };
 
     if args.is_present("list") {

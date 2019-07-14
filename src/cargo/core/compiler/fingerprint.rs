@@ -1577,7 +1577,7 @@ pub fn translate_dep_info(
             (DepInfoPathType::TargetRootRelative, &*file)
         };
         new_contents.push(ty as u8);
-        new_contents.extend(util::path2bytes(&path)?);
+        new_contents.extend(util::path2bytes(path)?);
         new_contents.push(0);
     }
     paths::write(cargo_dep_info, &new_contents)?;

@@ -19,7 +19,7 @@ pub fn main(config: &mut Config) -> CliResult {
                 return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
                     .map_err(|_| e.into());
             } else {
-                return Err(e)?;
+                return Err(e.into());
             }
         }
     };
