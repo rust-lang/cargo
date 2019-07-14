@@ -525,6 +525,12 @@ fn update_precise_first_run() {
         ],
         "deps": [
           {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ],
             "name": "serde",
             "pkg": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
           }
