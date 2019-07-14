@@ -332,15 +332,9 @@ impl Project {
     /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
     /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
-        let prefix = Project::get_lib_prefix(kind);
-
-        let extension = Project::get_lib_extension(kind);
-
-        let lib_file_name = format!("{}{}.{}", prefix, name, extension);
-
         self.target_debug_dir()
             .join("examples")
-            .join(&lib_file_name)
+            .join(paths::get_lib_filename(name, kind))
     }
 
     /// Path to a debug binary.
@@ -453,43 +447,6 @@ impl Project {
             .unwrap()
             .write_all(contents.replace("#", "").as_bytes())
             .unwrap();
-    }
-
-    fn get_lib_prefix(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "lib",
-            "staticlib" | "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    ""
-                } else {
-                    "lib"
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn get_lib_extension(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "rlib",
-            "staticlib" => {
-                if cfg!(windows) {
-                    "lib"
-                } else {
-                    "a"
-                }
-            }
-            "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    "dll"
-                } else if cfg!(target_os = "macos") {
-                    "dylib"
-                } else {
-                    "so"
-                }
-            }
-            _ => unreachable!(),
-        }
     }
 }
 

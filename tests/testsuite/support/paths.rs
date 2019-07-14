@@ -213,3 +213,54 @@ where
         }
     }
 }
+
+/// Get the filename for a library.
+///
+/// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+///
+/// For example, dynamic library named "foo" would return:
+/// - macOS: "libfoo.dylib"
+/// - Windows: "foo.dll"
+/// - Unix: "libfoo.so"
+pub fn get_lib_filename(name: &str, kind: &str) -> String {
+    let prefix = get_lib_prefix(kind);
+    let extension = get_lib_extension(kind);
+    format!("{}{}.{}", prefix, name, extension)
+}
+
+pub fn get_lib_prefix(kind: &str) -> &str {
+    match kind {
+        "lib" | "rlib" => "lib",
+        "staticlib" | "dylib" | "proc-macro" => {
+            if cfg!(windows) {
+                ""
+            } else {
+                "lib"
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+pub fn get_lib_extension(kind: &str) -> &str {
+    match kind {
+        "lib" | "rlib" => "rlib",
+        "staticlib" => {
+            if cfg!(windows) {
+                "lib"
+            } else {
+                "a"
+            }
+        }
+        "dylib" | "proc-macro" => {
+            if cfg!(windows) {
+                "dll"
+            } else if cfg!(target_os = "macos") {
+                "dylib"
+            } else {
+                "so"
+            }
+        }
+        _ => unreachable!(),
+    }
+}
