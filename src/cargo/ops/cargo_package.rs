@@ -39,7 +39,7 @@ pub struct PackageOpts<'cfg> {
     pub no_default_features: bool,
 }
 
-static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
+static VCS_INFO_FILE: &str = ".cargo_vcs_info.json";
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
     if ws.root().join("Cargo.lock").exists() {
