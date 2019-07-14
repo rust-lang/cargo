@@ -1273,8 +1273,7 @@ fn resolving_but_no_exists() {
 
     assert_eq!(
         res.err().unwrap().to_string(),
-        "\
-         no matching package named `foo` found\n\
+        "no matching package named `foo` found\n\
          location searched: registry `https://example.com/`\n\
          required by package `root v1.0.0 (registry `https://example.com/`)`\
          "

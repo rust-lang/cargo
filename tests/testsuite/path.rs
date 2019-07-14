@@ -295,8 +295,7 @@ fn no_rebuild_dependency() {
     // Don't compile bar, but do recompile foo.
     p.cargo("build")
         .with_stderr(
-            "\
-             [COMPILING] foo v0.5.0 ([..])\n\
+            "[COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
         )

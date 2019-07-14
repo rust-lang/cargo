@@ -269,8 +269,7 @@ fn transmit(
         Ok(warnings) => {
             if !warnings.invalid_categories.is_empty() {
                 let msg = format!(
-                    "\
-                     the following are not valid category slugs and were \
+                    "the following are not valid category slugs and were \
                      ignored: {}. Please see https://crates.io/category_slugs \
                      for the list of all category slugs. \
                      ",
@@ -281,8 +280,7 @@ fn transmit(
 
             if !warnings.invalid_badges.is_empty() {
                 let msg = format!(
-                    "\
-                     the following are not valid badges and were ignored: {}. \
+                    "the following are not valid badges and were ignored: {}. \
                      Either the badge type specified is unknown or a required \
                      attribute is missing. Please see \
                      https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
