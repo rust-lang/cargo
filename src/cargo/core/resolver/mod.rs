@@ -65,8 +65,8 @@ use self::dep_cache::RegistryQueryer;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
+pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
-pub use self::encode::{Metadata, WorkspaceResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::resolve::Resolve;
 pub use self::types::Method;
