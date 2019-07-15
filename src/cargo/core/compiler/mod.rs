@@ -319,6 +319,8 @@ fn rustc<'a, 'cfg>(
                 &cwd,
                 &pkg_root,
                 &target_dir,
+                // Do not track source files in the fingerprint for registry dependencies.
+                current_id.source_id().is_path(),
             )
             .chain_err(|| {
                 internal(format!(
