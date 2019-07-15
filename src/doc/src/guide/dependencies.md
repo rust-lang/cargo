@@ -19,10 +19,10 @@ adds a dependency of the `time` crate:
 time = "0.1.12"
 ```
 
-The version string is a [semver] version requirement. The [specifying
-dependencies](reference/specifying-dependencies.html) docs have more information about
-the options you have here.
+The version string is a [semver] version requirement. The [specifying dependencies]
+docs have more information about the options you have here.
 
+[specifying dependencies]: ../reference/specifying-dependencies.md
 [semver]: https://github.com/steveklabnik/semver#requirements
 
 If we also wanted to add a dependency on the `regex` crate, we would not need

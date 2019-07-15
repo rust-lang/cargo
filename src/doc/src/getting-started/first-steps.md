@@ -70,4 +70,4 @@ Hello, world!
 
 ### Going further
 
-For more details on using Cargo, check out the [Cargo Guide](guide/index.html)
+For more details on using Cargo, check out the [Cargo Guide](../guide/index.md)

@@ -50,7 +50,7 @@ Cargo handles compiling Rust code, but we know that many Rust packages
 link against C code. We also know that there are decades of tooling
 built up around compiling languages other than Rust.
 
-Our solution: Cargo allows a package to [specify a script](reference/build-scripts.html)
+Our solution: Cargo allows a package to [specify a script](reference/build-scripts.md)
 (written in Rust) to run before invoking `rustc`. Rust is leveraged to
 implement platform-specific configuration and refactor out common build
 functionality among packages.
@@ -74,7 +74,7 @@ on the platform. Cargo also supports [platform-specific
 dependencies][target-deps], and we plan to support more per-platform
 configuration in `Cargo.toml` in the future.
 
-[target-deps]: reference/specifying-dependencies.html#platform-specific-dependencies
+[target-deps]: reference/specifying-dependencies.md#platform-specific-dependencies
 
 In the longer-term, we’re looking at ways to conveniently cross-compile
 packages using Cargo.
@@ -83,7 +83,7 @@ packages using Cargo.
 
 We support environments through the use of [profiles][profile] to support:
 
-[profile]: reference/manifest.html#the-profile-sections
+[profile]: reference/manifest.md#the-profile-sections
 
 * environment-specific flags (like `-g --opt-level=0` for development
   and `--opt-level=3` for production).
@@ -190,4 +190,4 @@ shouldn't be necessary.
 For more information about vendoring, see documentation on [source
 replacement][replace].
 
-[replace]: reference/source-replacement.html
+[replace]: reference/source-replacement.md

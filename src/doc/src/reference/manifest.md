@@ -77,7 +77,7 @@ This field specifies a file in the package root which is a [build script] for
 building native code. More information can be found in the [build script
 guide][build script].
 
-[build script]: reference/build-scripts.html
+[build script]: build-scripts.md
 
 ```toml
 [package]
@@ -91,7 +91,7 @@ This field specifies the name of a native library that is being linked to.
 More information can be found in the [`links`][links] section of the build
 script guide.
 
-[links]: reference/build-scripts.html#the-links-manifest-key
+[links]: build-scripts.md#the-links-manifest-key
 
 ```toml
 [package]
@@ -377,7 +377,7 @@ default-run = "a"
 
 ### Dependency sections
 
-See the [specifying dependencies page](reference/specifying-dependencies.html) for
+See the [specifying dependencies page](specifying-dependencies.md) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
@@ -953,7 +953,7 @@ technical specification of this feature.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
 [crates.io]: https://crates.io/
-[replace]: reference/specifying-dependencies.html#overriding-dependencies
+[replace]: specifying-dependencies.md#overriding-dependencies
 
 ### The `[replace]` Section
 
@@ -966,22 +966,21 @@ other copies. The syntax is similar to the `[dependencies]` section:
 "bar:1.0.2" = { path = 'my/local/bar' }
 ```
 
-Each key in the `[replace]` table is a [package ID
-specification](reference/pkgid-spec.html), which allows arbitrarily choosing a node in the
-dependency graph to override. The value of each key is the same as the
-`[dependencies]` syntax for specifying dependencies, except that you can't
-specify features. Note that when a crate is overridden the copy it's overridden
-with must have both the same name and version, but it can come from a different
-source (e.g., git or a local path).
+Each key in the `[replace]` table is a [package ID specification](pkgid-spec.md),
+which allows arbitrarily choosing a node in the dependency graph to override.
+The value of each key is the same as the `[dependencies]` syntax for specifying
+dependencies, except that you can't specify features. Note that when a crate is
+overridden the copy it's overridden with must have both the same name and version,
+but it can come from a different source (e.g., git or a local path).
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
 
-[`cargo build`]: commands/cargo-build.html
-[`cargo init`]: commands/cargo-init.html
-[`cargo new`]: commands/cargo-new.html
-[`cargo run`]: commands/cargo-run.html
-[`cargo test`]: commands/cargo-test.html
+[`cargo build`]: ../commands/cargo-build.md
+[`cargo init`]: ../commands/cargo-init.md
+[`cargo new`]: ../commands/cargo-new.md
+[`cargo run`]: ../commands/cargo-run.md
+[`cargo test`]: ../commands/cargo-test.md
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-2.4]: https://github.com/spdx/license-list-data/tree/v2.4
 [spdx-license-list]: https://spdx.org/licenses/
