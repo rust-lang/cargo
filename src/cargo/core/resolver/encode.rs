@@ -325,28 +325,23 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
     }
 }
 
-pub struct WorkspaceResolve<'a, 'cfg> {
-    pub ws: &'a Workspace<'cfg>,
-    pub resolve: &'a Resolve,
-}
-
-impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
+impl<'a> ser::Serialize for Resolve {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
-        let mut ids: Vec<_> = self.resolve.iter().collect();
+        let mut ids: Vec<_> = self.iter().collect();
         ids.sort();
 
         let encodable = ids
             .iter()
-            .map(|&id| encodable_resolve_node(id, self.resolve))
+            .map(|&id| encodable_resolve_node(id, self))
             .collect::<Vec<_>>();
 
-        let mut metadata = self.resolve.metadata().clone();
+        let mut metadata = self.metadata().clone();
 
         for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
-            let checksum = match self.resolve.checksums()[&id] {
+            let checksum = match self.checksums()[&id] {
                 Some(ref s) => &s[..],
                 None => "<none>",
             };
@@ -362,7 +357,6 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
 
         let patch = Patch {
             unused: self
-                .resolve
                 .unused_patches()
                 .iter()
                 .map(|id| EncodableDependency {
