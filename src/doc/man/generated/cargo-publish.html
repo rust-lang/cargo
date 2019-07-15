@@ -33,7 +33,7 @@ registries you are allowed to publish to.</p>
 </div>
 </li>
 <li>
-<p>Create a <code>.crate</code> file by following the steps in <a href="commands/cargo-package.html">cargo-package(1)</a>.</p>
+<p>Create a <code>.crate</code> file by following the steps in <a href="cargo-package.html">cargo-package(1)</a>.</p>
 </li>
 <li>
 <p>Upload the crate to the registry. Note that the server will perform
@@ -43,10 +43,10 @@ additional checks on the crate.</p>
 </div>
 <div class="paragraph">
 <p>This command requires you to be authenticated with either the <code>--token</code> option
-or using <a href="commands/cargo-login.html">cargo-login(1)</a>.</p>
+or using <a href="cargo-login.html">cargo-login(1)</a>.</p>
 </div>
 <div class="paragraph">
-<p>See <a href="reference/publishing.html">the reference</a> for more details about
+<p>See <a href="../reference/publishing.html">the reference</a> for more details about
 packaging and publishing.</p>
 </div>
 </div>
@@ -65,9 +65,9 @@ packaging and publishing.</p>
 <dt class="hdlist1"><strong>--token</strong> <em>TOKEN</em></dt>
 <dd>
 <p>API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by <a href="commands/cargo-login.html">cargo-login(1)</a>).</p>
+the credentials file (which is created by <a href="cargo-login.html">cargo-login(1)</a>).</p>
 <div class="paragraph">
-<p><a href="reference/config.html">Cargo config</a> environment variables can be
+<p><a href="../reference/config.html">Cargo config</a> environment variables can be
 used to override the tokens stored in the credentials file. The token for
 crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
 variable. Tokens for other registries may be specified with environment
@@ -89,7 +89,7 @@ of the registry in all capital letters.</p>
 </dd>
 <dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
 <dd>
-<p>Name of the registry to use. Registry names are defined in <a href="reference/config.html">Cargo config files</a>.
+<p>Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config files</a>.
 If not specified, the default registry is used, which is defined by the
 <code>registry.default</code> config key which defaults to <code>crates-io</code>.</p>
 </dd>
@@ -108,14 +108,14 @@ architecture. The general format of the triple is
 list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
 <dd>
 <p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</p>
 </dd>
 </dl>
@@ -179,11 +179,11 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="commands/cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 </div>
 <div class="paragraph">
-<p>May also be specified with the <code>net.offline</code> <a href="reference/config.html">config value</a>.</p>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -197,7 +197,7 @@ offline.</p>
 <dt class="hdlist1"><strong>--jobs</strong> <em>N</em></dt>
 <dd>
 <p>Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</p>
 </dd>
 </dl>
@@ -213,7 +213,7 @@ the number of CPUs.</p>
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -239,7 +239,7 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -268,7 +268,7 @@ details.</p>
 <h2 id="cargo_publish_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -311,7 +311,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_publish_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-package.html">cargo-package(1)</a>, <a href="commands/cargo-login.html">cargo-login(1)</a></p>
+<p><a href="index.html">cargo(1)</a>, <a href="cargo-package.html">cargo-package(1)</a>, <a href="cargo-login.html">cargo-login(1)</a></p>
 </div>
 </div>
 </div>

@@ -36,4 +36,4 @@ examples you’ve included and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
 
-[testing]: ../book/ch11-00-testing.html
+[testing]: ../../book/ch11-00-testing.html

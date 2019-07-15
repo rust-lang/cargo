@@ -2,13 +2,13 @@
 
 The reference covers the details of various areas of Cargo.
 
-* [Specifying Dependencies](reference/specifying-dependencies.html)
-* [The Manifest Format](reference/manifest.html)
-* [Configuration](reference/config.html)
-* [Environment Variables](reference/environment-variables.html)
-* [Build Scripts](reference/build-scripts.html)
-* [Publishing on crates.io](reference/publishing.html)
-* [Package ID Specifications](reference/pkgid-spec.html)
-* [Source Replacement](reference/source-replacement.html)
-* [External Tools](reference/external-tools.html)
-* [Unstable Features](reference/unstable.html)
+* [Specifying Dependencies](specifying-dependencies.md)
+* [The Manifest Format](manifest.md)
+* [Configuration](config.md)
+* [Environment Variables](environment-variables.md)
+* [Build Scripts](build-scripts.md)
+* [Publishing on crates.io](publishing.md)
+* [Package ID Specifications](pkgid-spec.md)
+* [Source Replacement](source-replacement.md)
+* [External Tools](external-tools.md)
+* [Unstable Features](unstable.md)
