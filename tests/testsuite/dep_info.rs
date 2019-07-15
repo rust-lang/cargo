@@ -420,3 +420,43 @@ fn relative_depinfo_paths_no_ws() {
     // Make sure it stays fresh.
     p.cargo("build").with_stderr("[FINISHED] dev [..]").run();
 }
+
+#[cargo_test]
+fn reg_dep_source_not_tracked() {
+    // Make sure source files in dep-info file are not tracked for registry dependencies.
+    Package::new("regdep", "0.1.0")
+        .file("src/lib.rs", "pub fn f() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            regdep = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn f() { regdep::f(); }")
+        .build();
+
+    p.cargo("build").run();
+
+    assert_deps(
+        &p,
+        "target/debug/.fingerprint/regdep-*/dep-lib-regdep-*",
+        |info_path, entries| {
+            for (kind, path) in entries {
+                if *kind == 1 {
+                    panic!(
+                        "Did not expect package root relative path type: {:?} in {:?}",
+                        path, info_path
+                    );
+                }
+            }
+        },
+    );
+}

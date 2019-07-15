@@ -187,7 +187,7 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
-use std::collections::HashMap;
+use std::collections::hash_map::{Entry, HashMap};
 use std::env;
 use std::fs;
 use std::hash::{self, Hasher};
@@ -539,6 +539,7 @@ impl LocalFingerprint {
     /// file accesses.
     fn find_stale_file(
         &self,
+        mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<Option<StaleFile>> {
@@ -550,7 +551,7 @@ impl LocalFingerprint {
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
                 if let Some(paths) = parse_dep_info(pkg_root, target_root, &dep_info)? {
-                    Ok(find_stale_file(&dep_info, paths.iter()))
+                    Ok(find_stale_file(mtime_cache, &dep_info, paths.iter()))
                 } else {
                     Ok(Some(StaleFile::Missing(dep_info)))
                 }
@@ -559,6 +560,7 @@ impl LocalFingerprint {
             // We need to verify that no paths listed in `paths` are newer than
             // the `output` path itself, or the last time the build script ran.
             LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
+                mtime_cache,
                 &target_root.join(output),
                 paths.iter().map(|p| pkg_root.join(p)),
             )),
@@ -756,7 +758,12 @@ impl Fingerprint {
     /// dependencies up to this unit as well. This function assumes that the
     /// unit starts out as `FsStatus::Stale` and then it will optionally switch
     /// it to `UpToDate` if it can.
-    fn check_filesystem(&mut self, pkg_root: &Path, target_root: &Path) -> CargoResult<()> {
+    fn check_filesystem(
+        &mut self,
+        mtime_cache: &mut HashMap<PathBuf, FileTime>,
+        pkg_root: &Path,
+        target_root: &Path,
+    ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
         let mut mtimes = HashMap::new();
@@ -840,7 +847,7 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(file) = local.find_stale_file(pkg_root, target_root)? {
+            if let Some(file) = local.find_stale_file(mtime_cache, pkg_root, target_root)? {
                 file.log();
                 return Ok(());
             }
@@ -1015,7 +1022,7 @@ fn calculate<'a, 'cfg>(
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx);
-    fingerprint.check_filesystem(unit.pkg.root(), &target_root)?;
+    fingerprint.check_filesystem(&mut cx.mtime_cache, unit.pkg.root(), &target_root)?;
 
     let fingerprint = Arc::new(fingerprint);
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
@@ -1098,13 +1105,10 @@ fn calculate_normal<'a, 'cfg>(
     })
 }
 
-// We want to use the mtime for files if we're a path source, but if we're a
-// git/registry source, then the mtime of files may fluctuate, but they won't
-// change so long as the source itself remains constant (which is the
-// responsibility of the source)
+/// Whether or not the fingerprint should track the dependencies from the
+/// dep-info file for this unit.
 fn use_dep_info(unit: &Unit<'_>) -> bool {
-    let path = unit.pkg.summary().source_id().is_path();
-    !unit.mode.is_doc() && path
+    !unit.mode.is_doc()
 }
 
 /// Calculate a fingerprint for an "execute a build script" unit.  This is an
@@ -1422,11 +1426,7 @@ pub fn parse_dep_info(
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
-    if paths.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(paths))
-    }
+    Ok(Some(paths))
 }
 
 fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
@@ -1439,7 +1439,11 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
     source.fingerprint(pkg)
 }
 
-fn find_stale_file<I>(reference: &Path, paths: I) -> Option<StaleFile>
+fn find_stale_file<I>(
+    mtime_cache: &mut HashMap<PathBuf, FileTime>,
+    reference: &Path,
+    paths: I,
+) -> Option<StaleFile>
 where
     I: IntoIterator,
     I::Item: AsRef<Path>,
@@ -1451,9 +1455,15 @@ where
 
     for path in paths {
         let path = path.as_ref();
-        let path_mtime = match paths::mtime(path) {
-            Ok(mtime) => mtime,
-            Err(..) => return Some(StaleFile::Missing(path.to_path_buf())),
+        let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
+            Entry::Occupied(o) => *o.get(),
+            Entry::Vacant(v) => {
+                let mtime = match paths::mtime(path) {
+                    Ok(mtime) => mtime,
+                    Err(..) => return Some(StaleFile::Missing(path.to_path_buf())),
+                };
+                *v.insert(mtime)
+            }
         };
 
         // TODO: fix #5918.
@@ -1540,6 +1550,9 @@ impl DepInfoPathType {
 /// The `rustc_cwd` argument is the absolute path to the cwd of the compiler
 /// when it was invoked.
 ///
+/// If the `allow_package` argument is false, then package-relative paths are
+/// skipped and ignored.
+///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
 pub fn translate_dep_info(
@@ -1548,6 +1561,7 @@ pub fn translate_dep_info(
     rustc_cwd: &Path,
     pkg_root: &Path,
     target_root: &Path,
+    allow_package: bool,
 ) -> CargoResult<()> {
     let target = parse_rustc_dep_info(rustc_dep_info)?;
     let deps = &target
@@ -1561,6 +1575,9 @@ pub fn translate_dep_info(
         let (ty, path) = if let Ok(stripped) = file.strip_prefix(target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
         } else if let Ok(stripped) = file.strip_prefix(pkg_root) {
+            if !allow_package {
+                continue;
+            }
             (DepInfoPathType::PackageRootRelative, stripped)
         } else {
             // It's definitely not target root relative, but this is an absolute path (since it was
