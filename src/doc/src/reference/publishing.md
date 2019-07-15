@@ -31,7 +31,7 @@ Keep in mind that crate names on [crates.io] are allocated on a first-come-first
 serve basis. Once a crate name is taken, it cannot be used for another crate.
 
 Check out the [metadata you can
-specify](reference/manifest.html#package-metadata) in `Cargo.toml` to ensure
+specify](manifest.md#package-metadata) in `Cargo.toml` to ensure
 your crate can be discovered more easily! Before publishing, make sure you have
 filled out the following fields:
 
@@ -84,7 +84,7 @@ $ cargo package --list
 Cargo will automatically ignore files ignored by your version control system
 when packaging, but if you want to specify an extra set of files to ignore you
 can use the [`exclude`
-key](reference/manifest.html#the-exclude-and-include-fields-optional) in the
+key](manifest.md#the-exclude-and-include-fields-optional) in the
 manifest:
 
 ```toml
@@ -123,7 +123,7 @@ And that’s it, you’ve now published your first crate!
 
 In order to release a new version, change the `version` value specified in
 your `Cargo.toml` manifest. Keep in mind [the semver
-rules](reference/manifest.html#the-version-field), and consult [RFC 1105] for
+rules](manifest.md#the-version-field), and consult [RFC 1105] for
 what constitutes a semver-breaking change. Then run [`cargo publish`] as
 described above to upload the new version.
 
@@ -227,7 +227,7 @@ actively denying third party access. To check this, you can go to:
 where `:org` is the name of the organization (e.g., `rust-lang`). You may see
 something like:
 
-![Organization Access Control](images/org-level-acl.png)
+![Organization Access Control](../images/org-level-acl.png)
 
 Where you may choose to explicitly remove [crates.io] from your organization’s
 blacklist, or simply press the “Remove Restrictions” button to allow all third
@@ -237,13 +237,13 @@ Alternatively, when [crates.io] requested the `read:org` scope, you could have
 explicitly whitelisted [crates.io] querying the org in question by pressing
 the “Grant Access” button next to its name:
 
-![Authentication Access Control](images/auth-level-acl.png)
+![Authentication Access Control](../images/auth-level-acl.png)
 
 [RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
 [Rust API Guidelines]: https://rust-lang-nursery.github.io/api-guidelines/
-[`cargo login`]: commands/cargo-login.html
-[`cargo package`]: commands/cargo-package.html
-[`cargo publish`]: commands/cargo-publish.html
+[`cargo login`]: ../commands/cargo-login.md
+[`cargo package`]: ../commands/cargo-package.md
+[`cargo publish`]: ../commands/cargo-publish.md
 [crates.io]: https://crates.io/
 [oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
 

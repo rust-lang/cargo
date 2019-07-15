@@ -13,7 +13,7 @@ If you’re building a non-end product, such as a rust library that other rust p
 like command-line tool or an application, or a system library with crate-type of `staticlib` or `cdylib`,
 check `Cargo.lock` into `git`. If you're curious about why that is, see
 ["Why do binaries have `Cargo.lock` in version control, but not libraries?" in the
-FAQ](faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries).
+FAQ](../faq.md#why-do-binaries-have-cargolock-in-version-control-but-not-libraries).
 
 Let’s dig in a little bit more.
 
@@ -99,5 +99,5 @@ $ cargo update -p rand   # updates just “rand”
 
 This will write out a new `Cargo.lock` with the new version information. Note
 that the argument to `cargo update` is actually a
-[Package ID Specification](reference/pkgid-spec.html) and `rand` is just a short
+[Package ID Specification](../reference/pkgid-spec.md) and `rand` is just a short
 specification.

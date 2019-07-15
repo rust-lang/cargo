@@ -16,7 +16,7 @@
 <div class="paragraph">
 <p>This command will update dependencies in the <code>Cargo.lock</code> file to the latest
 version. It requires that the <code>Cargo.lock</code> file already exists as generated
-by commands such as <a href="commands/cargo-build.html">cargo-build(1)</a> or <a href="commands/cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a>.</p>
+by commands such as <a href="cargo-build.html">cargo-build(1)</a> or <a href="cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a>.</p>
 </div>
 </div>
 </div>
@@ -31,7 +31,7 @@ by commands such as <a href="commands/cargo-build.html">cargo-build(1)</a> or <a
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
 <p>Update only the specified packages. This flag may be specified
-multiple times. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
+multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
 <div class="paragraph">
 <p>If packages are specified with the <code>-p</code> flag, then a conservative update of
 the lockfile will be performed. This means that only the dependency specified
@@ -71,7 +71,7 @@ be a git revision (such as a SHA hash or tag).</p>
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -97,7 +97,7 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -135,11 +135,11 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="commands/cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 </div>
 <div class="paragraph">
-<p>May also be specified with the <code>net.offline</code> <a href="reference/config.html">config value</a>.</p>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -168,7 +168,7 @@ details.</p>
 <h2 id="cargo_update_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -227,7 +227,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_update_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a></p>
+<p><a href="index.html">cargo(1)</a>, <a href="cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a></p>
 </div>
 </div>
 </div>
