@@ -1033,12 +1033,12 @@ impl Execs {
             );
 
             if let (Err(_), Err(_)) = (match_std, match_err) {
-                Err(format!(
+                return Err(format!(
                     "expected to find:\n\
                      {}\n\n\
                      did not find in either output.",
                     expect
-                ))?;
+                ));
             }
         }
 

@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use filetime::{self, FileTime};
 use lazy_static::lazy_static;
 
-static CARGO_INTEGRATION_TEST_DIR: &'static str = "cit";
+static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 lazy_static! {
     static ref GLOBAL_ROOT: PathBuf = {

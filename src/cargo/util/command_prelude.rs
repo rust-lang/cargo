@@ -515,8 +515,8 @@ pub enum CommandInfo {
 impl CommandInfo {
     pub fn name(&self) -> &str {
         match self {
-            CommandInfo::BuiltIn { name, .. } => &name,
-            CommandInfo::External { name, .. } => &name,
+            CommandInfo::BuiltIn { name, .. } => name,
+            CommandInfo::External { name, .. } => name,
         }
     }
 }
