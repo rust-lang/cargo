@@ -10,7 +10,7 @@ repository = "https://github.com/rust-lang-nursery/rustfix"
 documentation = "https://docs.rs/rustfix"
 edition = "2018"
 readme = "Readme.md"
-version = "0.4.4"
+version = "0.4.6"
 exclude = [
     "etc/*",
     "examples/*",
