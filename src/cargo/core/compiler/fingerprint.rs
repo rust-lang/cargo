@@ -1571,7 +1571,13 @@ pub fn translate_dep_info(
 
     let mut new_contents = Vec::new();
     for file in deps {
-        let file = rustc_cwd.join(file);
+        let file = if cfg!(windows) && file.starts_with("\\\\?\\") {
+            // Remove Windows extended-length prefix, since functions like
+            // strip_prefix won't work if you mix with traditional dos paths.
+            PathBuf::from(&file[4..])
+        } else {
+            rustc_cwd.join(file)
+        };
         let (ty, path) = if let Ok(stripped) = file.strip_prefix(target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
         } else if let Ok(stripped) = file.strip_prefix(pkg_root) {
