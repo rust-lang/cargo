@@ -2,7 +2,7 @@
 
 This document will explain how Cargo’s configuration system works, as well as
 available keys or configuration. For configuration of a package through its
-manifest, see the [manifest format](reference/manifest.html).
+manifest, see the [manifest format](manifest.md).
 
 ### Hierarchical structure
 
@@ -196,7 +196,7 @@ be specified with environment variables of the form
 `CARGO_REGISTRIES_NAME_TOKEN` where `NAME` is the name of the registry in all
 capital letters.
 
-[`cargo login`]: commands/cargo-login.html
-[`cargo publish`]: commands/cargo-publish.html
-[env]: reference/environment-variables.html
-[source]: reference/source-replacement.html
+[`cargo login`]: ../commands/cargo-login.md
+[`cargo publish`]: ../commands/cargo-publish.md
+[env]: environment-variables.md
+[source]: source-replacement.md

@@ -41,7 +41,7 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: reference/environment-variables.html
+[env]: environment-variables.md
 
 ### Outputs of the Build Script
 
@@ -174,7 +174,7 @@ In other words, it’s forbidden to have two packages link to the same native
 library. Note, however, that there are [conventions in place][star-sys] to
 alleviate this.
 
-[star-sys]: #a-sys-packages
+[star-sys]: #-sys-packages
 
 As mentioned above in the output format, each build script can generate an
 arbitrary set of metadata in the form of key-value pairs. This metadata is
@@ -195,7 +195,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](reference/config.html).
+Cargo [configuration location](config.md).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]

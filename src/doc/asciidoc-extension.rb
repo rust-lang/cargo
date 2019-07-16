@@ -29,9 +29,9 @@ class ManInlineMacro < Extensions::InlineMacroProcessor
       elsif manname == 'rustdoc'
         html_target = 'https://doc.rust-lang.org/rustdoc/index.html'
       elsif manname == 'cargo'
-        html_target = 'commands/index.html'
+        html_target = 'index.html'
       else
-        html_target = %(commands/#{manname}.html)
+        html_target = %(#{manname}.html)
       end
       %(#{(create_anchor parent, text, type: :link, target: html_target).render})
     elsif parent.document.backend == 'manpage'
@@ -44,8 +44,8 @@ end
 
 # Creates a link to something in the cargo documentation.
 #
-# For HTML this creates a relative link (using mdbook's 0.1's base-style
-# links). For the man page it gives a direct link to doc.rust-lang.org.
+# For HTML this creates a relative link. For the man page it gives a direct
+# link to doc.rust-lang.org.
 #
 # Usage
 #
@@ -60,6 +60,7 @@ class LinkCargoInlineMacro < Extensions::InlineMacroProcessor
   def process parent, target, attrs
     text = attrs['text']
     if parent.document.basebackend? 'html'
+      target = %(../#{target})
       parent.document.register :links, target
       %(#{(create_anchor parent, text, type: :link, target: target).render})
     elsif parent.document.backend == 'manpage'

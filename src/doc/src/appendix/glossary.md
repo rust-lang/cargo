@@ -172,27 +172,27 @@ The *workspace root* is the directory where the workspace's `Cargo.toml`
 manifest is located.
 
 
-[Cargo.toml vs Cargo.lock]: guide/cargo-toml-vs-cargo-lock.html
-[Directory Sources]: reference/source-replacement.html#directory-sources
-[Local Registry Sources]: reference/source-replacement.html#local-registry-sources
-[Source Replacement]: reference/source-replacement.html
-[cargo-unstable]: reference/unstable.html
-[config option]: reference/config.html
-[directory layout]: reference/manifest.html#the-project-layout
-[edition guide]: ../edition-guide/index.html
-[edition-field]: reference/manifest.html#the-edition-field-optional
-[environment variable]: reference/environment-variables.html
-[feature]: reference/manifest.html#the-features-section
-[git dependency]: reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
-[git source]: reference/source-replacement.html
-[integration-tests]: reference/manifest.html#integration-tests
-[manifest]: reference/manifest.html
-[path dependency]: reference/specifying-dependencies.html#specifying-path-dependencies
-[path overrides]: reference/specifying-dependencies.html#overriding-with-local-dependencies
-[pkgid-spec]: reference/pkgid-spec.html
+[Cargo.toml vs Cargo.lock]: ../guide/cargo-toml-vs-cargo-lock.md
+[Directory Sources]: ../reference/source-replacement.md#directory-sources
+[Local Registry Sources]: ../reference/source-replacement.md#local-registry-sources
+[Source Replacement]: ../reference/source-replacement.md
+[cargo-unstable]: ../reference/unstable.md
+[config option]: ../reference/config.md
+[directory layout]: ../reference/manifest.md#the-project-layout
+[edition guide]: ../../edition-guide/index.html
+[edition-field]: ../reference/manifest.md#the-edition-field-optional
+[environment variable]: ../reference/environment-variables.md
+[feature]: ../reference/manifest.md#the-features-section
+[git dependency]: ../reference/specifying-dependencies.md#specifying-dependencies-from-git-repositories
+[git source]: ../reference/source-replacement.md
+[integration-tests]: ../reference/manifest.md#integration-tests
+[manifest]: ../reference/manifest.md
+[path dependency]: ../reference/specifying-dependencies.md#specifying-path-dependencies
+[path overrides]: ../reference/specifying-dependencies.md#overriding-with-local-dependencies
+[pkgid-spec]: ../reference/pkgid-spec.md
 [rustdoc-unstable]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html
-[target-feature]: ../reference/attributes/codegen.html#the-target_feature-attribute
-[targets]: reference/manifest.html#configuring-a-target
+[target-feature]: ../../reference/attributes/codegen.html#the-target_feature-attribute
+[targets]: ../reference/manifest.md#configuring-a-target
 [unstable-book]: https://doc.rust-lang.org/nightly/unstable-book/index.html
-[virtual]: reference/manifest.html#virtual-manifest
-[workspace]: reference/manifest.html#the-workspace-section
+[virtual]: ../reference/manifest.md#virtual-manifest
+[workspace]: ../reference/manifest.md#the-workspace-section

@@ -38,7 +38,7 @@ system:
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
 
-[config-env]: reference/config.html#environment-variables
+[config-env]: config.md#environment-variables
 
 ### Environment variables Cargo sets for crates
 
@@ -130,11 +130,11 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    about [cargo configuration][cargo-config] for more
                    information.
 
-[links]: reference/build-scripts.html#the-links-manifest-key
-[configuration]: ../reference/conditional-compilation.html
+[links]: build-scripts.md#the-links-manifest-key
+[configuration]: ../../reference/conditional-compilation.html
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
-[cargo-config]: reference/config.html
-[Target Triple]: appendix/glossary.html#target
+[cargo-config]: config.md
+[Target Triple]: ../appendix/glossary.md#target
 
 ### Environment variables Cargo sets for 3rd party subcommands
 
