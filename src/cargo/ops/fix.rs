@@ -119,6 +119,17 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         .build_config
         .rustfix_diagnostic_server
         .borrow_mut() = Some(RustfixDiagnosticServer::new()?);
+
+    if let Some(server) = opts
+        .compile_opts
+        .build_config
+        .rustfix_diagnostic_server
+        .borrow()
+        .as_ref()
+    {
+        server.configure(&mut wrapper);
+    }
+
     opts.compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(ws, &opts.compile_opts)?;
