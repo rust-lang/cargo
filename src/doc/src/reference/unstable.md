@@ -102,7 +102,7 @@ Overrides can only be specified for dev and release profiles.
 Profiles can be specified in `.cargo/config` files. The `-Z config-profile`
 command-line flag is required to use this feature. The format is the same as
 in a `Cargo.toml` manifest. If found in multiple config files, settings will
-be merged using the regular [config hierarchy](reference/config.html#hierarchical-structure).
+be merged using the regular [config hierarchy](config.md#hierarchical-structure).
 Config settings take precedence over manifest settings.
 
 ```toml

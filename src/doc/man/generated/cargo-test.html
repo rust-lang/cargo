@@ -86,7 +86,7 @@ manifest.</p>
 <dt class="hdlist1"><strong>-p</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
-<p>Test only the specified packages. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the
+<p>Test only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times.</p>
 </dd>
 <dt class="hdlist1"><strong>--all</strong></dt>
@@ -250,7 +250,7 @@ architecture. The general format of the triple is
 list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>
@@ -269,7 +269,7 @@ list of supported targets.</p>
 <dd>
 <p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</p>
 </dd>
 </dl>
@@ -295,7 +295,7 @@ results readable. Test output can be recovered (e.g., for debugging) by passing
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -321,7 +321,7 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--message-format</strong> <em>FMT</em></dt>
@@ -376,11 +376,11 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="commands/cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 </div>
 <div class="paragraph">
-<p>May also be specified with the <code>net.offline</code> <a href="reference/config.html">config value</a>.</p>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -421,7 +421,7 @@ includes an option to control the number of threads used:</p>
 <dt class="hdlist1"><strong>--jobs</strong> <em>N</em></dt>
 <dd>
 <p>Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</p>
 </dd>
 </dl>
@@ -435,7 +435,7 @@ the number of CPUs.</p>
 <div class="paragraph">
 <p>Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-<a href="reference/manifest.html#the-profile-sections">the reference</a>
+<a href="../reference/manifest.html#the-profile-sections">the reference</a>
 for more details.</p>
 </div>
 <div class="paragraph">
@@ -488,7 +488,7 @@ or doctest.</p>
 <h2 id="cargo_test_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -539,7 +539,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_test_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-bench.html">cargo-bench(1)</a></p>
+<p><a href="index.html">cargo(1)</a>, <a href="cargo-bench.html">cargo-bench(1)</a></p>
 </div>
 </div>
 </div>
