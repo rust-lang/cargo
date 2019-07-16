@@ -107,6 +107,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
             eprintln!("Warning: clippy-driver not found: {:?}", e);
         }
         wrapper.env(CLIPPY_FIX_ENV, "1");
+        opts.compile_opts.build_config.primary_unit_rustc = Some(util::config::clippy_driver());
     }
 
     if let Some(clippy_args) = &opts.clippy_args {
@@ -609,11 +610,7 @@ impl Default for PrepareFor {
 impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
-        if env::var(CLIPPY_FIX_ENV).is_ok() {
-            ret.rustc = Some(util::config::clippy_driver());
-        } else {
-            ret.rustc = env::args_os().nth(1).map(PathBuf::from);
-        }
+        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
 
         if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
             ret.clippy_args = serde_json::from_str(&clippy_args).unwrap();
