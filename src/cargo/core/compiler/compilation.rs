@@ -80,10 +80,7 @@ impl<'cfg> Compilation<'cfg> {
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
         }
-        let srv = bcx.build_config.rustfix_diagnostic_server.borrow();
-        if let Some(server) = &*srv {
-            server.configure(&mut rustc);
-        }
+
         Ok(Compilation {
             // TODO: deprecated; remove.
             native_dirs: BTreeSet::new(),
