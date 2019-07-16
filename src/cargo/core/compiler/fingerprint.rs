@@ -1550,8 +1550,11 @@ impl DepInfoPathType {
 /// The `rustc_cwd` argument is the absolute path to the cwd of the compiler
 /// when it was invoked.
 ///
-/// If the `allow_package` argument is false, then package-relative paths are
-/// skipped and ignored.
+/// If the `allow_package` argument is true, then package-relative paths are
+/// included. If it is false, then package-relative paths are skipped and
+/// ignored (typically used for registry or git dependencies where we assume
+/// the source never changes, and we don't want the cost of running `stat` on
+/// all those files).
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
