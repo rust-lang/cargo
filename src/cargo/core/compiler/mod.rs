@@ -18,7 +18,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use failure::{bail, Error};
+use failure::Error;
 use lazycell::LazyCell;
 use log::debug;
 use same_file::is_same_file;
@@ -614,7 +614,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
-    add_color(bcx, &mut rustdoc);
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
@@ -635,7 +634,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format(cx, &mut rustdoc, false, false)?;
+    add_error_format_and_color(cx, &mut rustdoc, false)?;
 
     if let Some(args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -722,39 +721,20 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessB
     }
 }
 
-fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
-    let shell = bcx.config.shell();
-    let color = if shell.supports_color() {
-        "always"
-    } else {
-        "never"
-    };
-    cmd.args(&["--color", color]);
-}
-
 /// Add error-format flags to the command.
 ///
-/// This is rather convoluted right now. The general overview is:
-/// - If -Zcache-messages or `build.pipelining` is enabled, Cargo always uses
-///   JSON output. This has several benefits, such as being easier to parse,
-///   handles changing formats (for replaying cached messages), ensures
-///   atomic output (so messages aren't interleaved), etc.
-/// - `supports_termcolor` is a temporary flag. rustdoc does not yet support
-///   the `--json-rendered` flag, but it is intended to fix that soon.
-/// - `short` output is not yet supported for JSON output. We haven't yet
-///   decided how this problem will be resolved. Probably either adding
-///   "short" to the JSON output, or more ambitiously moving diagnostic
-///   rendering to an external library that Cargo can share with rustc.
+/// This is somewhat odd right now, but the general overview is that if
+/// `-Zcache-messages` or `pipelined` is enabled then Cargo always uses JSON
+/// output. This has several benefits, such as being easier to parse, handles
+/// changing formats (for replaying cached messages), ensures atomic output (so
+/// messages aren't interleaved), etc.
 ///
-/// It is intended in the future that Cargo *always* uses the JSON output, and
-/// this function can be simplified. The above issues need to be resolved, the
-/// flags need to be stabilized, and we need more testing to ensure there
-/// aren't any regressions.
-fn add_error_format(
+/// It is intended in the future that Cargo *always* uses the JSON output (by
+/// turning on cache-messages by default), and this function can be simplified.
+fn add_error_format_and_color(
     cx: &Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     pipelined: bool,
-    supports_termcolor: bool,
 ) -> CargoResult<()> {
     // If this unit is producing a required rmeta file then we need to know
     // when the rmeta file is ready so we can signal to the rest of Cargo that
@@ -769,26 +749,15 @@ fn add_error_format(
     // internally understand that we should extract the `rendered` field and
     // present it if we can.
     if cx.bcx.build_config.cache_messages() || pipelined {
-        cmd.arg("--error-format=json").arg("-Zunstable-options");
-        if supports_termcolor {
-            cmd.arg("--json-rendered=termcolor");
+        cmd.arg("--error-format=json");
+        let mut json = String::from("--json=diagnostic-rendered-ansi");
+        if pipelined {
+            json.push_str(",artifacts");
         }
         if cx.bcx.build_config.message_format == MessageFormat::Short {
-            // FIXME(rust-lang/rust#60419): right now we have no way of
-            // turning on JSON messages from the compiler and also asking
-            // the rendered field to be in the `short` format.
-            bail!(
-                "currently `--message-format short` is incompatible with {}",
-                if pipelined {
-                    "pipelined compilation"
-                } else {
-                    "cached output"
-                }
-            );
+            json.push_str(",diagnostic-short");
         }
-        if pipelined {
-            cmd.arg("-Zemit-artifact-notifications");
-        }
+        cmd.arg(json);
     } else {
         match cx.bcx.build_config.message_format {
             MessageFormat::Human => (),
@@ -799,6 +768,13 @@ fn add_error_format(
                 cmd.arg("--error-format").arg("short");
             }
         }
+
+        let color = if cx.bcx.config.shell().supports_color() {
+            "always"
+        } else {
+            "never"
+        };
+        cmd.args(&["--color", color]);
     }
     Ok(())
 }
@@ -829,8 +805,7 @@ fn build_base_args<'a, 'cfg>(
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     add_path_args(bcx, unit, cmd);
-    add_color(bcx, cmd);
-    add_error_format(cx, cmd, cx.rmeta_required(unit), true)?;
+    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
 
     if !test {
         for crate_type in crate_types.iter() {
@@ -1234,11 +1209,11 @@ fn on_stderr_line(
     } else {
         // Remove color information from the rendered string. rustc has not
         // included color in the past, so to avoid breaking anything, strip it
-        // out when --json-rendered=termcolor is used. This runs
+        // out when --json=diagnostic-rendered-ansi is used. This runs
         // unconditionally under the assumption that Cargo will eventually
         // move to this as the default mode. Perhaps in the future, cargo
         // could allow the user to enable/disable color (such as with a
-        // `--json-rendered` or `--color` or `--message-format` flag).
+        // `--json` or `--color` or `--message-format` flag).
         #[derive(serde::Deserialize, serde::Serialize)]
         struct CompilerMessage {
             rendered: String,
@@ -1304,10 +1279,8 @@ fn replay_output_cache(
 ) -> Work {
     let target = target.clone();
     let extract_rendered_messages = match format {
-        MessageFormat::Human => true,
+        MessageFormat::Human | MessageFormat::Short => true,
         MessageFormat::Json => false,
-        // FIXME: short not supported.
-        MessageFormat::Short => false,
     };
     let mut options = OutputOptions {
         extract_rendered_messages,
