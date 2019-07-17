@@ -621,7 +621,7 @@ impl FixArgs {
                     ret.enabled_edition = Some(s[prefix.len()..].to_string());
                     continue;
                 }
-                if s.starts_with("--error-format=") || s.starts_with("--json-rendered=") {
+                if s.starts_with("--error-format=") || s.starts_with("--json=") {
                     // Cargo may add error-format in some cases, but `cargo
                     // fix` wants to add its own.
                     continue;

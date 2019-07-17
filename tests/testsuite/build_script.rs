@@ -2155,6 +2155,11 @@ fn flags_go_into_tests() {
 
 #[cargo_test]
 fn diamond_passes_args_only_once() {
+    // FIXME: when pipelining rides to stable, enable this test on all channels.
+    if !crate::support::is_nightly() {
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -2229,7 +2234,7 @@ fn diamond_passes_args_only_once() {
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..]
-[RUNNING] `[..]rlib -L native=test`
+[RUNNING] `[..]rmeta -L native=test`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

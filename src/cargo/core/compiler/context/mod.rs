@@ -77,7 +77,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             .config
             .get_bool("build.pipelining")?
             .map(|t| t.val)
-            .unwrap_or(false);
+            .unwrap_or(bcx.host_info.supports_pipelining.unwrap());
 
         Ok(Self {
             bcx,
