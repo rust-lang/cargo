@@ -1650,7 +1650,9 @@ pub fn rustc_host() -> String {
 }
 
 pub fn is_nightly() -> bool {
-    RUSTC.with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
+    env::var("CARGO_TEST_DIABLE_NIGHTLY").is_err()
+        && RUSTC
+            .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
 }
 
 pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
