@@ -6,7 +6,7 @@ use log::debug;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
-use crate::util::Graph;
+use crate::util::{Graph, StackGraph};
 
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
@@ -34,7 +34,7 @@ pub struct Context {
 
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
-    pub parents: Graph<PackageId, Dependency>,
+    pub parents: StackGraph<PackageId, Dependency>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -89,7 +89,7 @@ impl Context {
             } else {
                 None
             },
-            parents: Graph::new(),
+            parents: StackGraph::new(),
             activations: im_rc::HashMap::new(),
         }
     }

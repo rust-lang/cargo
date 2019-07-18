@@ -8,7 +8,7 @@ pub use self::errors::{internal, process_error};
 pub use self::errors::{CargoResult, CargoResultExt, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError, ProcessError};
 pub use self::flock::{FileLock, Filesystem};
-pub use self::graph::Graph;
+pub use self::graph::{Graph, StackGraph};
 pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::into_url::IntoUrl;
 pub use self::into_url_with_base::IntoUrlWithBase;
