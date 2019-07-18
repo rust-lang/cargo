@@ -41,8 +41,8 @@ pub fn fetch<'a>(
         to_download.push(id);
         let deps = resolve
             .deps(id)
-            .filter(|&(_id, deps)| {
-                deps.iter().any(|d| {
+            .filter(|(_id, deps)| {
+                (*deps).clone().any(|d| {
                     // If no target was specified then all dependencies can
                     // be fetched.
                     let target = match options.target {

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::num::NonZeroU64;
-use std::rc::Rc;
 
 use failure::format_err;
 use log::debug;
@@ -35,7 +34,7 @@ pub struct Context {
 
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
-    pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
+    pub parents: Graph<PackageId, Dependency>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -224,17 +223,17 @@ impl Context {
             .collect()
     }
 
-    pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
-        let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
+    pub fn graph(&self) -> Graph<PackageId, Dependency> {
+        let mut graph: Graph<PackageId, Dependency> = Graph::new();
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));
         for i in self.parents.iter() {
             graph.add(*i);
-            for (o, e) in self.parents.edges(i) {
-                let old_link = graph.link(*o, *i);
-                assert!(old_link.is_empty());
-                *old_link = e.to_vec();
+            for (o, edges) in self.parents.edges(i) {
+                for e in edges {
+                    graph.add_edge(*o, *i, e.clone())
+                }
             }
         }
         graph

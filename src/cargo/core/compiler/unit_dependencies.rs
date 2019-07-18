@@ -225,9 +225,9 @@ fn compute_deps<'a, 'cfg>(
 
     let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = state.resolve().deps(id).filter(|&(_id, deps)| {
+    let deps = state.resolve().deps(id).filter(|(_id, deps)| {
         assert!(!deps.is_empty());
-        deps.iter().any(|dep| {
+        (*deps).clone().any(|dep| {
             // If this target is a build command, then we only want build
             // dependencies, otherwise we want everything *other than* build
             // dependencies.
@@ -391,8 +391,8 @@ fn compute_deps_doc<'a, 'cfg>(
     let deps = state
         .resolve()
         .deps(unit.pkg.package_id())
-        .filter(|&(_id, deps)| {
-            deps.iter().any(|dep| match dep.kind() {
+        .filter(|(_id, deps)| {
+            (*deps).clone().any(|dep| match dep.kind() {
                 DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
                 _ => false,
             })

@@ -1,12 +1,13 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::hash::Hash;
 use std::iter::FromIterator;
 
 use crate::core::dependency::Kind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
-use crate::util::Graph;
+use crate::util::graph::{self, Graph};
 
 use super::encode::Metadata;
 
@@ -18,9 +19,9 @@ use super::encode::Metadata;
 #[derive(PartialEq)]
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
-    /// from `Cargo.toml`. We need a `Vec` here because the same package
+    /// from `Cargo.toml`. We may have more then one here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
-    graph: Graph<PackageId, Vec<Dependency>>,
+    graph: Graph<PackageId, Dependency>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
@@ -67,7 +68,7 @@ pub enum ResolveVersion {
 
 impl Resolve {
     pub fn new(
-        graph: Graph<PackageId, Vec<Dependency>>,
+        graph: Graph<PackageId, Dependency>,
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, HashSet<String>>,
         checksums: HashMap<PackageId, Option<String>>,
@@ -82,7 +83,8 @@ impl Resolve {
                 let public_deps = graph
                     .edges(p)
                     .filter(|(_, deps)| {
-                        deps.iter()
+                        (*deps)
+                            .clone()
                             .any(|d| d.kind() == Kind::Normal && d.is_public())
                     })
                     .map(|(dep_package, _)| *dep_package)
@@ -232,7 +234,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
     where
         PackageId: Borrow<Q>,
-        Q: Ord + Eq,
+        Q: Hash + Eq,
     {
         self.graph.contains(k)
     }
@@ -245,7 +247,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter().cloned()
     }
 
-    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
+    pub fn deps(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, graph::Edges<'_, Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
@@ -253,10 +258,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &[Dependency])> {
-        self.graph
-            .edges(&pkg)
-            .map(|(id, deps)| (*id, deps.as_slice()))
+    ) -> impl Iterator<Item = (PackageId, graph::Edges<'_, Dependency>)> {
+        self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
@@ -306,14 +309,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<String> {
-        let deps = if from == to {
-            &[]
-        } else {
-            self.dependencies_listed(from, to)
-        };
+        let deps = self.dependencies_listed(from, to);
 
         let crate_name = to_target.crate_name();
-        let mut names = deps.iter().map(|d| {
+        let mut names = deps.map(|d| {
             d.explicit_name_in_toml()
                 .map(|s| s.as_str().replace("-", "_"))
                 .unwrap_or_else(|| crate_name.clone())
@@ -330,7 +329,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok(name)
     }
 
-    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &[Dependency] {
+    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> graph::Edges<'_, Dependency> {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)
@@ -341,14 +340,16 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         // that's where the dependency originates from, and we only replace
         // targets of dependencies not the originator.
         if let Some(replace) = self.reverse_replacements.get(&to) {
-            if let Some(deps) = self.graph.edge(&from, replace) {
+            let deps = self.graph.edge(&from, replace);
+            if !deps.is_empty() {
                 return deps;
             }
         }
-        match self.graph.edge(&from, &to) {
-            Some(ret) => ret,
-            None => panic!("no Dependency listed for `{}` => `{}`", from, to),
+        let deps = self.graph.edge(&from, &to);
+        if deps.is_empty() {
+            panic!("no Dependency listed for `{}` => `{}`", from, to);
         }
+        deps
     }
 
     /// Returns the version of the encoding that's being used for this lock

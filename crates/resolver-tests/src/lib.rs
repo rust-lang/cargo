@@ -70,7 +70,7 @@ pub fn resolve_and_validated(
                 let mut self_pub_dep = HashSet::new();
                 self_pub_dep.insert(p);
                 for (dp, deps) in resolve.deps(p) {
-                    if deps.iter().any(|d| d.is_public()) {
+                    if deps.clone().any(|d| d.is_public()) {
                         self_pub_dep.extend(pub_deps[&dp].iter().cloned())
                     }
                 }

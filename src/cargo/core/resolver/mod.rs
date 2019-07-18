@@ -596,12 +596,8 @@ fn activate(
     let candidate_pid = candidate.package_id();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
-        Rc::make_mut(
-            // add a edge from candidate to parent in the parents graph
-            cx.parents.link(candidate_pid, parent_pid),
-        )
-        // and associate dep with that edge
-        .push(dep.clone());
+        // add a edge from candidate to parent in the parents graph and associate dep with that edge
+        cx.parents.add_edge(candidate_pid, parent_pid, dep.clone());
         if let Some(public_dependency) = cx.public_dependency.as_mut() {
             // one tricky part is that `candidate_pid` may already be active and
             // have public dependencies of its own. So we not only need to mark
@@ -643,8 +639,8 @@ fn activate(
                     // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
                     if public {
                         // if it was public, then we add all of `p`s parents to be checked
-                        for &(grand, ref d) in cx.parents.edges(&p) {
-                            stack.push((grand, d.iter().any(|x| x.is_public())));
+                        for (&grand, mut d) in cx.parents.edges(&p) {
+                            stack.push((grand, d.any(|x| x.is_public())));
                         }
                     }
                 }
@@ -825,8 +821,8 @@ impl RemainingCandidates {
                         // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
                         if public {
                             // if it was public, then we add all of `p`s parents to be checked
-                            for &(grand, ref d) in cx.parents.edges(&p) {
-                                stack.push((grand, d.iter().any(|x| x.is_public())));
+                            for (&grand, mut d) in cx.parents.edges(&p) {
+                                stack.push((grand, d.any(|x| x.is_public())));
                             }
                         }
                     }
@@ -885,12 +881,12 @@ fn generalize_conflicting(
     }
     // What parents does that critical activation have
     for (critical_parent, critical_parents_deps) in
-        cx.parents.edges(&backtrack_critical_id).filter(|(p, _)| {
+        cx.parents.edges(&backtrack_critical_id).filter(|(&p, _)| {
             // it will only help backjump further if it is older then the critical_age
-            cx.is_active(*p).expect("parent not currently active!?") < backtrack_critical_age
+            cx.is_active(p).expect("parent not currently active!?") < backtrack_critical_age
         })
     {
-        for critical_parents_dep in critical_parents_deps.iter() {
+        for critical_parents_dep in critical_parents_deps {
             // A dep is equivalent to one of the things it can resolve to.
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
@@ -1083,8 +1079,8 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
         // visitation list as we can't induce a cycle through transitive
         // dependencies.
         if checked.insert(id) {
-            for (dep, listings) in resolve.deps_not_replaced(id) {
-                let is_transitive = listings.iter().any(|d| d.is_transitive());
+            for (dep, mut listings) in resolve.deps_not_replaced(id) {
+                let is_transitive = listings.any(|d| d.is_transitive());
                 let mut empty = HashSet::new();
                 let visited = if is_transitive {
                     &mut *visited
