@@ -142,8 +142,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .or_else(|| Some(vec![]))
         .filter(|_| use_clippy);
 
-    // dbg!(&clippy_args, use_clippy);
-
     if use_clippy && !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
             "`cargo fix --clippy` is unstable, pass `-Z unstable-options` to enable it"
