@@ -639,7 +639,7 @@ fn activate(
                     // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
                     if public {
                         // if it was public, then we add all of `p`s parents to be checked
-                        for (&grand, mut d) in cx.parents.edges(&p) {
+                        for (&grand, mut d) in cx.parents.borrow().edges(&p) {
                             stack.push((grand, d.any(|x| x.is_public())));
                         }
                     }
@@ -821,7 +821,7 @@ impl RemainingCandidates {
                         // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
                         if public {
                             // if it was public, then we add all of `p`s parents to be checked
-                            for (&grand, mut d) in cx.parents.edges(&p) {
+                            for (&grand, mut d) in cx.parents.borrow().edges(&p) {
                                 stack.push((grand, d.any(|x| x.is_public())));
                             }
                         }
@@ -880,8 +880,11 @@ fn generalize_conflicting(
         return None;
     }
     // What parents does that critical activation have
-    for (critical_parent, critical_parents_deps) in
-        cx.parents.edges(&backtrack_critical_id).filter(|(&p, _)| {
+    for (critical_parent, critical_parents_deps) in cx
+        .parents
+        .borrow()
+        .edges(&backtrack_critical_id)
+        .filter(|(&p, _)| {
             // it will only help backjump further if it is older then the critical_age
             cx.is_active(p).expect("parent not currently active!?") < backtrack_critical_age
         })

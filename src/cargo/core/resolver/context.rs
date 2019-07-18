@@ -228,9 +228,9 @@ impl Context {
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));
-        for i in self.parents.iter() {
+        for i in self.parents.borrow().iter() {
             graph.add(*i);
-            for (o, edges) in self.parents.edges(i) {
+            for (o, edges) in self.parents.borrow().edges(i) {
                 for e in edges {
                     graph.add_edge(*o, *i, e.clone())
                 }

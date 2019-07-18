@@ -1,12 +1,13 @@
 use indexmap::IndexMap;
 use std::borrow::Borrow;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct EdgeLink<E: Clone> {
     value: E,
     next: Option<NonZeroUsize>,
@@ -59,6 +60,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                 idx.0 <= age.link_count
             });
         }
+        self.link_count = age.link_count;
         while self
             .back_refs
             .last()
@@ -69,6 +71,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             self.edges[idx].next = None;
         }
         self.edges.truncate(age.len_edges);
+        assert_eq!(self.len(), age);
     }
 
     pub fn add(&mut self, node: N) {
@@ -299,7 +302,7 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone + PartialEq> PartialEq for Graph<N, E> 
 }
 impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Edges<'a, E: Clone> {
     graph: &'a [EdgeLink<E>],
     index: Option<usize>,
@@ -307,7 +310,7 @@ pub struct Edges<'a, E: Clone> {
 
 impl<'a, E: Clone> Edges<'a, E> {
     pub fn is_empty(&self) -> bool {
-        self.index.is_none()
+        self.index.filter(|&idx| idx < self.graph.len()).is_none()
     }
 }
 
@@ -327,7 +330,7 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
 
 #[derive(Clone)]
 pub struct StackGraph<N: Clone, E: Clone> {
-    inner: Rc<Graph<N, E>>,
+    inner: Rc<RefCell<Graph<N, E>>>,
     age: GraphAge,
 }
 
@@ -336,32 +339,32 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         let inner = Graph::new();
         let age = inner.len();
         StackGraph {
-            inner: Rc::new(inner),
+            inner: Rc::new(RefCell::new(inner)),
             age,
         }
     }
 
-    fn borrow(&self) -> &Graph<N, E> {
-        let inner = &self.inner;
+    pub fn borrow(&self) -> StackGraphView<'_, N, E> {
+        let inner = RefCell::borrow(&self.inner);
         assert!(self.age.len_edges <= inner.len().len_edges);
         assert!(self.age.len_nodes <= inner.len().len_nodes);
-        inner
+        StackGraphView {
+            inner,
+            age: self.age,
+        }
     }
 
-    fn activate(&mut self) -> &mut Graph<N, E> {
-        // if {
-        //     let inner = &self.inner;
-        //     self.age.len_edges >= inner.len().len_edges
-        //         || self.age.len_nodes >= inner.len().len_nodes
-        // } {
-        let inner = Rc::make_mut(&mut self.inner);
-        inner.reset_to(self.age);
+    fn activate(&mut self) -> RefMut<'_, Graph<N, E>> {
+        let mut inner = RefCell::borrow_mut(&mut self.inner);
+        if self.age != inner.len() {
+            inner.reset_to(self.age);
+        }
         inner
     }
 
     pub fn add(&mut self, node: N) {
         self.age = {
-            let g = self.activate();
+            let mut g = self.activate();
             g.add(node);
             g.len()
         };
@@ -369,7 +372,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
 
     pub fn link(&mut self, node: N, child: N) {
         self.age = {
-            let g = self.activate();
+            let mut g = self.activate();
             g.link(node, child);
             g.len()
         };
@@ -377,8 +380,8 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
 
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         self.age = {
-            let g = self.activate();
-            g.add_edge(node, child, edge);;
+            let mut g = self.activate();
+            g.add_edge(node, child, edge);
             g.len()
         };
     }
@@ -389,21 +392,86 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         Q: Hash + Eq,
     {
         self.borrow()
+            .inner
             .nodes
             .get_full(k)
             .filter(|(i, _, _)| *i < self.age.len_nodes)
             .is_some()
     }
 
+    /// Checks if there is a path from `from` to `to`.
+    pub fn is_path_from_to<'a>(&'a self, from: &'a N, to: &'a N) -> bool {
+        let mut stack = vec![from];
+        let mut seen = HashSet::new();
+        let inner = &self.borrow().inner;
+        seen.insert(from);
+        while let Some((_, _, iter)) = stack.pop().and_then(|p| {
+            inner
+                .nodes
+                .get_full(p)
+                .filter(|(i, _, _)| *i < self.age.len_nodes)
+        }) {
+            for (p, (c, _)) in iter.iter() {
+                if *c <= self.age.link_count {
+                    if p == to {
+                        return true;
+                    }
+                    if seen.insert(p) {
+                        stack.push(p);
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+
+impl<N: Eq + Hash + Clone, E: Clone + PartialEq> Default for StackGraph<N, E> {
+    fn default() -> StackGraph<N, E> {
+        StackGraph::new()
+    }
+}
+
+impl<N: fmt::Display + Eq + Hash + Clone, E: Clone + fmt::Debug + PartialEq> fmt::Debug
+    for StackGraph<N, E>
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(fmt, "Graph {{")?;
+
+        for (from, e) in self.borrow().inner.nodes.iter().take(self.age.len_nodes) {
+            writeln!(fmt, "  - {}", from)?;
+
+            for (to, (c, _)) in e.iter() {
+                if *c <= self.age.link_count {
+                    writeln!(fmt, "    - {}", to)?;
+                    for edge in self.borrow().edge(from, to) {
+                        writeln!(fmt, "      - {:?}", edge)?;
+                    }
+                }
+            }
+        }
+
+        write!(fmt, "}}")?;
+
+        Ok(())
+    }
+}
+
+pub struct StackGraphView<'a, N: Clone, E: Clone> {
+    inner: Ref<'a, Graph<N, E>>,
+    age: GraphAge,
+}
+
+impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
     pub fn iter(&self) -> impl Iterator<Item = &N> {
-        self.borrow().nodes.keys().take(self.age.len_nodes)
+        self.inner.nodes.keys().take(self.age.len_nodes)
     }
 
     pub fn edge(&self, from: &N, to: &N) -> Edges<'_, E> {
         Edges {
-            graph: &self.borrow().edges[..self.age.len_edges],
+            graph: &self.inner.edges[..self.age.len_edges],
             index: self
-                .borrow()
+                .inner
                 .nodes
                 .get(from)
                 .and_then(|x| x.get(to).copied())
@@ -413,8 +481,8 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     }
 
     pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, Edges<'_, E>)> {
-        let edges = &self.borrow().edges[..self.age.len_edges];
-        self.borrow()
+        let edges = &self.inner.edges[..self.age.len_edges];
+        self.inner
             .nodes
             .get_full(from)
             .filter(|(i, _, _)| *i < self.age.len_nodes)
@@ -434,37 +502,12 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             })
     }
 
-    /// Checks if there is a path from `from` to `to`.
-    pub fn is_path_from_to<'a>(&'a self, from: &'a N, to: &'a N) -> bool {
-        let mut stack = vec![from];
-        let mut seen = HashSet::new();
-        seen.insert(from);
-        while let Some((_, _, iter)) = stack.pop().and_then(|p| {
-            self.borrow()
-                .nodes
-                .get_full(p)
-                .filter(|(i, _, _)| *i < self.age.len_nodes)
-        }) {
-            for (p, (c, _)) in iter.iter() {
-                if *c <= self.age.link_count {
-                    if p == to {
-                        return true;
-                    }
-                    if seen.insert(p) {
-                        stack.push(p);
-                    }
-                }
-            }
-        }
-        false
-    }
-
     /// Resolves one of the paths from the given dependent package down to
     /// a leaf.
-    pub fn path_to_bottom<'a>(&'a self, mut pkg: &'a N) -> Vec<&'a N> {
+    pub fn path_to_bottom<'s>(&'s self, mut pkg: &'s N) -> Vec<&'s N> {
         let mut result = vec![pkg];
         while let Some(p) = self
-            .borrow()
+            .inner
             .nodes
             .get_full(pkg)
             .filter(|(i, _, _)| *i < self.age.len_nodes)
@@ -481,36 +524,5 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             pkg = p;
         }
         result
-    }
-}
-
-impl<N: Eq + Hash + Clone, E: Clone + PartialEq> Default for StackGraph<N, E> {
-    fn default() -> StackGraph<N, E> {
-        StackGraph::new()
-    }
-}
-
-impl<N: fmt::Display + Eq + Hash + Clone, E: Clone + fmt::Debug + PartialEq> fmt::Debug
-    for StackGraph<N, E>
-{
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(fmt, "Graph {{")?;
-
-        for (from, e) in self.borrow().nodes.iter().take(self.age.len_nodes) {
-            writeln!(fmt, "  - {}", from)?;
-
-            for (to, (c, _)) in e.iter() {
-                if *c <= self.age.link_count {
-                    writeln!(fmt, "    - {}", to)?;
-                    for edge in self.edge(from, to) {
-                        writeln!(fmt, "      - {:?}", edge)?;
-                    }
-                }
-            }
-        }
-
-        write!(fmt, "}}")?;
-
-        Ok(())
     }
 }

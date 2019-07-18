@@ -81,6 +81,7 @@ pub(super) fn activation_error(
         ResolveError::new(
             err,
             cx.parents
+                .borrow()
                 .path_to_bottom(&parent.package_id())
                 .into_iter()
                 .cloned()
@@ -92,7 +93,7 @@ pub(super) fn activation_error(
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path(
-            &cx.parents.path_to_bottom(&parent.package_id()),
+            &cx.parents.borrow().path_to_bottom(&parent.package_id()),
         ));
 
         msg.push_str("\nversions that meet the requirements `");
@@ -124,7 +125,7 @@ pub(super) fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+            msg.push_str(&describe_path(&cx.parents.borrow().path_to_bottom(p)));
         }
 
         let (features_errors, mut other_errors): (Vec<_>, Vec<_>) = other_errors
@@ -178,7 +179,7 @@ pub(super) fn activation_error(
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+            msg.push_str(&describe_path(&cx.parents.borrow().path_to_bottom(p)));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -230,7 +231,7 @@ pub(super) fn activation_error(
             );
             msg.push_str("required by ");
             msg.push_str(&describe_path(
-                &cx.parents.path_to_bottom(&parent.package_id()),
+                &cx.parents.borrow().path_to_bottom(&parent.package_id()),
             ));
 
             // If we have a path dependency with a locked version, then this may
@@ -307,7 +308,7 @@ pub(super) fn activation_error(
             }
             msg.push_str("required by ");
             msg.push_str(&describe_path(
-                &cx.parents.path_to_bottom(&parent.package_id()),
+                &cx.parents.borrow().path_to_bottom(&parent.package_id()),
             ));
 
             msg

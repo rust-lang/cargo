@@ -346,7 +346,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             }
         }
         let deps = self.graph.edge(&from, &to);
-        if deps.is_empty() {
+        if deps.is_empty() && from != to {
             panic!("no Dependency listed for `{}` => `{}`", from, to);
         }
         deps
