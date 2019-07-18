@@ -29,7 +29,6 @@ mod cargo_features;
 mod cfg;
 mod check;
 mod clean;
-mod clippy;
 mod collisions;
 mod concurrent;
 mod config;

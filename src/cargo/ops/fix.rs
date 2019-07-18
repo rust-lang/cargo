@@ -63,7 +63,6 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_PLZ";
 const CLIPPY_FIX_ARGS: &str = "__CARGO_FIX_CLIPPY_ARGS";
 
 pub struct FixOptions<'a> {
@@ -106,13 +105,13 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         if let Err(e) = util::process("clippy-driver").arg("-V").exec_with_output() {
             eprintln!("Warning: clippy-driver not found: {:?}", e);
         }
-        wrapper.env(CLIPPY_FIX_ENV, "1");
-        opts.compile_opts.build_config.primary_unit_rustc = Some(util::config::clippy_driver());
-    }
 
-    if let Some(clippy_args) = &opts.clippy_args {
-        let clippy_args = serde_json::to_string(&clippy_args).unwrap();
-        wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
+        opts.compile_opts.build_config.primary_unit_rustc = Some(util::config::clippy_driver());
+
+        if let Some(clippy_args) = &opts.clippy_args {
+            let clippy_args = serde_json::to_string(&clippy_args).unwrap();
+            wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
+        }
     }
 
     *opts
