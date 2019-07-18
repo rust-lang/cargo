@@ -591,14 +591,10 @@ fn prepare_rustc<'a, 'cfg>(
     unit: &Unit<'a>,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
+
     let mut base = cx
         .compilation
         .rustc_process(unit.pkg, unit.target, is_primary)?;
-
-    if is_primary {
-        base.env("CARGO_PRIMARY_PACKAGE", "1");
-    }
-
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;

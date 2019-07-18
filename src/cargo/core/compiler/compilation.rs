@@ -78,17 +78,18 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
-        let mut primary_unit_rustc_process = bcx
-            .build_config
-            .primary_unit_rustc
-            .as_ref()
-            .map(|primary_unit_rustc| bcx.rustc.process_with(primary_unit_rustc));
+        let mut primary_unit_rustc_process =
+            bcx.build_config.primary_unit_rustc.clone().map(|mut r| {
+                r.arg(&bcx.rustc.path);
+                r
+            });
 
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
-            primary_unit_rustc_process.as_mut().map(|rustc| {
+
+            if let Some(rustc) = primary_unit_rustc_process.as_mut() {
                 rustc.display_env_vars();
-            });
+            }
         }
 
         Ok(Compilation {

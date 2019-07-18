@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::ser;
 
@@ -24,10 +24,8 @@ pub struct BuildConfig {
     pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
-    /// An optional wrapper, if any, used to wrap rustc invocations
-    pub rustc_wrapper: Option<ProcessBuilder>,
     /// An optional override of the rustc path for primary units only
-    pub primary_unit_rustc: Option<PathBuf>,
+    pub primary_unit_rustc: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
     /// Whether or not Cargo should cache compiler output on disk.
     cache_messages: bool,
@@ -100,7 +98,6 @@ impl BuildConfig {
             message_format: MessageFormat::Human,
             force_rebuild: false,
             build_plan: false,
-            rustc_wrapper: None,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             cache_messages: config.cli_unstable().cache_messages,

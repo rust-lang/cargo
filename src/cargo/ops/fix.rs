@@ -106,12 +106,12 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
             eprintln!("Warning: clippy-driver not found: {:?}", e);
         }
 
-        opts.compile_opts.build_config.primary_unit_rustc = Some(util::config::clippy_driver());
+        let clippy_args = opts
+            .clippy_args
+            .as_ref()
+            .map_or_else(String::new, |args| serde_json::to_string(&args).unwrap());
 
-        if let Some(clippy_args) = &opts.clippy_args {
-            let clippy_args = serde_json::to_string(&clippy_args).unwrap();
-            wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
-        }
+        wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
     }
 
     *opts
@@ -130,7 +130,9 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         server.configure(&mut wrapper);
     }
 
-    opts.compile_opts.build_config.rustc_wrapper = Some(wrapper);
+    // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
+    // repeating build until there are no more changes to be applied
+    opts.compile_opts.build_config.primary_unit_rustc = Some(wrapper);
 
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())
@@ -219,18 +221,10 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     trace!("cargo-fix as rustc got file {:?}", args.file);
     let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
 
-    // Our goal is to fix only the crates that the end user is interested in.
-    // That's very likely to only mean the crates in the workspace the user is
-    // working on, not random crates.io crates.
-    //
-    // The master cargo process tells us whether or not this is a "primary"
-    // crate via the CARGO_PRIMARY_PACKAGE environment variable.
     let mut fixes = FixedCrate::default();
     if let Some(path) = &args.file {
-        if args.primary_package {
-            trace!("start rustfixing {:?}", path);
-            fixes = rustfix_crate(&lock_addr, rustc.as_ref(), path, &args)?;
-        }
+        trace!("start rustfixing {:?}", path);
+        fixes = rustfix_crate(&lock_addr, rustc.as_ref(), path, &args)?;
     }
 
     // Ok now we have our final goal of testing out the changes that we applied.
@@ -279,7 +273,6 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     }
 
     // This final fall-through handles multiple cases;
-    // - Non-primary crates, which need to be built.
     // - If the fix failed, show the original warnings and suggestions.
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
@@ -589,7 +582,6 @@ struct FixArgs {
     idioms: bool,
     enabled_edition: Option<String>,
     other: Vec<OsString>,
-    primary_package: bool,
     rustc: Option<PathBuf>,
     clippy_args: Vec<String>,
 }
@@ -609,10 +601,12 @@ impl Default for PrepareFor {
 impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
-        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
 
         if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
             ret.clippy_args = serde_json::from_str(&clippy_args).unwrap();
+            ret.rustc = Some(util::config::clippy_driver());
+        } else {
+            ret.rustc = env::args_os().nth(1).map(PathBuf::from);
         }
 
         for arg in env::args_os().skip(2) {
@@ -642,7 +636,6 @@ impl FixArgs {
         }
 
         ret.idioms = env::var(IDIOMS_ENV).is_ok();
-        ret.primary_package = env::var("CARGO_PRIMARY_PACKAGE").is_ok();
         ret
     }
 
@@ -658,14 +651,13 @@ impl FixArgs {
         cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
-            if self.idioms && self.primary_package && edition == "2018" {
+            if self.idioms && edition == "2018" {
                 cmd.arg("-Wrust-2018-idioms");
             }
         }
-        if self.primary_package {
-            if let Some(edition) = self.prepare_for_edition_resolve() {
-                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
-            }
+
+        if let Some(edition) = self.prepare_for_edition_resolve() {
+            cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
         }
     }
 

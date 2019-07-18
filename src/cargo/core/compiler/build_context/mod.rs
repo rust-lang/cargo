@@ -52,7 +52,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let mut rustc = config.load_global_rustc(Some(ws))?;
-        if let Some(wrapper) = &build_config.rustc_wrapper {
+        if let Some(wrapper) = &build_config.primary_unit_rustc {
             rustc.set_wrapper(wrapper.clone());
         }
 
