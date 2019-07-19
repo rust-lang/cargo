@@ -1,26 +1,59 @@
 extern crate proc_macro;
 
-use quote::{quote, ToTokens};
-use syn::{parse::Parser, *};
+use proc_macro::*;
 
 #[proc_macro_attribute]
-pub fn cargo_test(
-    _attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let mut fn_def = parse_macro_input!(item as ItemFn);
+pub fn cargo_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let span = Span::call_site();
+    let mut ret = TokenStream::new();
+    ret.extend(Some(TokenTree::from(Punct::new('#', Spacing::Alone))));
+    let test = TokenTree::from(Ident::new("test", span));
+    ret.extend(Some(TokenTree::from(Group::new(
+        Delimiter::Bracket,
+        test.into(),
+    ))));
 
-    let attr = quote! {
-        #[test]
-    };
-    fn_def
-        .attrs
-        .extend(Attribute::parse_outer.parse2(attr).unwrap());
+    for token in item {
+        let group = match token {
+            TokenTree::Group(g) => {
+                if g.delimiter() == Delimiter::Brace {
+                    g
+                } else {
+                    ret.extend(Some(TokenTree::Group(g)));
+                    continue;
+                }
+            }
+            other => {
+                ret.extend(Some(other));
+                continue;
+            }
+        };
 
-    let stmt = quote! {
-        let _test_guard = crate::support::paths::init_root();
-    };
-    fn_def.block.stmts.insert(0, parse2(stmt).unwrap());
+        let mut new_body = vec![
+            TokenTree::from(Ident::new("let", span)),
+            TokenTree::from(Ident::new("_test_guard", span)),
+            TokenTree::from(Punct::new('=', Spacing::Alone)),
+            TokenTree::from(Ident::new("crate", span)),
+            TokenTree::from(Punct::new(':', Spacing::Joint)),
+            TokenTree::from(Punct::new(':', Spacing::Alone)),
+            TokenTree::from(Ident::new("support", span)),
+            TokenTree::from(Punct::new(':', Spacing::Joint)),
+            TokenTree::from(Punct::new(':', Spacing::Alone)),
+            TokenTree::from(Ident::new("paths", span)),
+            TokenTree::from(Punct::new(':', Spacing::Joint)),
+            TokenTree::from(Punct::new(':', Spacing::Alone)),
+            TokenTree::from(Ident::new("init_root", span)),
+            TokenTree::from(Group::new(Delimiter::Parenthesis, TokenStream::new())),
+            TokenTree::from(Punct::new(';', Spacing::Alone)),
+        ]
+        .into_iter()
+        .collect::<TokenStream>();
+        new_body.extend(group.stream());
+        ret.extend(Some(TokenTree::from(Group::new(
+            group.delimiter(),
+            new_body,
+        ))));
+    }
 
-    fn_def.into_token_stream().into()
+    return ret;
 }
