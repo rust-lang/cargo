@@ -69,6 +69,7 @@ pub struct Compilation<'cfg> {
 
     config: &'cfg Config,
     rustc_process: ProcessBuilder,
+    primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
 }
@@ -77,13 +78,20 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
+        let mut primary_unit_rustc_process =
+            bcx.build_config.primary_unit_rustc.clone().map(|mut r| {
+                r.arg(&bcx.rustc.path);
+                r
+            });
+
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
+
+            if let Some(rustc) = primary_unit_rustc_process.as_mut() {
+                rustc.display_env_vars();
+            }
         }
-        let srv = bcx.build_config.rustfix_diagnostic_server.borrow();
-        if let Some(server) = &*srv {
-            server.configure(&mut rustc);
-        }
+
         Ok(Compilation {
             // TODO: deprecated; remove.
             native_dirs: BTreeSet::new(),
@@ -100,6 +108,7 @@ impl<'cfg> Compilation<'cfg> {
             rustdocflags: HashMap::new(),
             config: bcx.config,
             rustc_process: rustc,
+            primary_unit_rustc_process,
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: target_runner(bcx)?,
@@ -107,8 +116,21 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
-        let mut p = self.fill_env(self.rustc_process.clone(), pkg, true)?;
+    pub fn rustc_process(
+        &self,
+        pkg: &Package,
+        target: &Target,
+        is_primary: bool,
+    ) -> CargoResult<ProcessBuilder> {
+        let rustc = if is_primary {
+            self.primary_unit_rustc_process
+                .clone()
+                .unwrap_or_else(|| self.rustc_process.clone())
+        } else {
+            self.rustc_process.clone()
+        };
+
+        let mut p = self.fill_env(rustc, pkg, true)?;
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }

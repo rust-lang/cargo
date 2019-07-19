@@ -1,4 +1,4 @@
-use crate::support::{is_nightly, process, project, registry::Package};
+use crate::support::{clippy_is_available, is_nightly, process, project, registry::Package};
 use std::path::Path;
 
 fn as_str(bytes: &[u8]) -> &str {
@@ -240,14 +240,30 @@ fn rustdoc() {
 }
 
 #[cargo_test]
-fn clippy() {
+fn fix() {
     if !is_nightly() {
         // --json-rendered is unstable
         return;
     }
-    if let Err(e) = process("clippy-driver").arg("-V").exec_with_output() {
-        eprintln!("clippy-driver not available, skipping clippy test");
-        eprintln!("{:?}", e);
+    // Make sure `fix` is not broken by caching.
+    let p = project().file("src/lib.rs", "pub fn try() {}").build();
+
+    p.cargo("fix --edition --allow-no-vcs -Zcache-messages")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    assert_eq!(p.read_file("src/lib.rs"), "pub fn r#try() {}");
+}
+
+#[cargo_test]
+fn clippy() {
+    if !is_nightly() {
+        // --json-rendered is unstable
+        eprintln!("skipping test: requires nightly");
+        return;
+    }
+
+    if !clippy_is_available() {
         return;
     }
 
@@ -275,22 +291,6 @@ fn clippy() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]") // This should not be here.
         .run();
-}
-
-#[cargo_test]
-fn fix() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
-    // Make sure `fix` is not broken by caching.
-    let p = project().file("src/lib.rs", "pub fn try() {}").build();
-
-    p.cargo("fix --edition --allow-no-vcs -Zcache-messages")
-        .masquerade_as_nightly_cargo()
-        .run();
-
-    assert_eq!(p.read_file("src/lib.rs"), "pub fn r#try() {}");
 }
 
 #[cargo_test]

@@ -51,10 +51,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         units: &'a UnitInterner<'a>,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
-        let mut rustc = config.load_global_rustc(Some(ws))?;
-        if let Some(wrapper) = &build_config.rustc_wrapper {
-            rustc.set_wrapper(wrapper.clone());
-        }
+        let rustc = config.load_global_rustc(Some(ws))?;
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match build_config.requested_target.as_ref() {
