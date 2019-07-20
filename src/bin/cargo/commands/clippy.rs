@@ -71,6 +71,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let wrapper = util::process(util::config::clippy_driver());
     compile_opts.build_config.primary_unit_rustc = Some(wrapper);
+    compile_opts.build_config.force_rebuild = true;
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())
