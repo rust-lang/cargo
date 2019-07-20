@@ -318,3 +318,51 @@ fn clean_remove_rlib_rmeta() {
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
     assert!(!rmeta.exists());
 }
+
+#[cargo_test]
+fn clean_no_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.d1]
+                path = "d1"
+            [dependencies.d2]
+                path = "d2"
+
+            [[bin]]
+                name = "foo"
+        "#,
+        )
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("d1/Cargo.toml", &basic_bin_manifest("d1"))
+        .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
+        .file("d2/Cargo.toml", &basic_bin_manifest("d2"))
+        .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
+        .build();
+
+    p.cargo("build -p d1 -p d2 -p foo").run();
+
+    let d1_path = &p
+        .build_dir()
+        .join("debug")
+        .join(format!("d1{}", env::consts::EXE_SUFFIX));
+    let d2_path = &p
+        .build_dir()
+        .join("debug")
+        .join(format!("d2{}", env::consts::EXE_SUFFIX));
+
+    assert!(p.bin("foo").is_file());
+    assert!(d1_path.is_file(), "{:?}", d1_path);
+    assert!(d2_path.is_file());
+
+    p.cargo("clean --no-deps").cwd("src").with_stdout("").run();
+    assert!(!p.bin("foo").is_file());
+    assert!(d1_path.is_file());
+    assert!(d2_path.is_file());
+}

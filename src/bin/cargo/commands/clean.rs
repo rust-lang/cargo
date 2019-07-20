@@ -12,6 +12,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
         .arg_doc("Whether or not to clean just the documentation directory")
+        .arg(opt("no-deps", "Don't clean dependency artifacts"))
         .after_help(
             "\
 If the `--package` argument is given, then SPEC is a package ID specification
@@ -30,6 +31,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         target: args.target(),
         release: args.is_present("release"),
         doc: args.is_present("doc"),
+        no_deps: args.is_present("no-deps"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())

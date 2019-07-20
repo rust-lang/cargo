@@ -21,6 +21,8 @@ pub struct CleanOptions<'a> {
     pub release: bool,
     /// Whether to just clean the doc directory
     pub doc: bool,
+    /// Don't clean dependency artifacts
+    pub no_deps: bool,
 }
 
 /// Cleans the package's build artifacts.
@@ -39,14 +41,24 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         target_dir = target_dir.join("release");
     }
 
-    // If we have a spec, then we need to delete some packages, otherwise, just
-    // remove the whole target directory and be done with it!
-    //
-    // Note that we don't bother grabbing a lock here as we're just going to
-    // blow it all away anyway.
-    if opts.spec.is_empty() {
-        return rm_rf(&target_dir.into_path_unlocked(), config);
-    }
+    let package_names = match (opts.spec.is_empty(), opts.no_deps) {
+        (true, false) => {
+            // If we have a spec, then we need to delete some packages, but in this
+            // case we remove the whole target directory and be done with it!
+            //
+            // Note that we don't bother grabbing a lock here as we're just going to
+            // blow it all away anyway.
+            return rm_rf(&target_dir.into_path_unlocked(), config);
+        }
+        (true, true) => {
+            // Only clean workspace members when `no_deps` is specified.
+            ws.members().map(|pkg| pkg.name().to_string()).collect()
+        }
+        (false, _) => {
+            // Otherwise, `no_deps` doesn't apply when package names are explicitly defined.
+            opts.spec.clone()
+        }
+    };
 
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
@@ -66,7 +78,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     )?;
     let mut units = Vec::new();
 
-    for spec in opts.spec.iter() {
+    for spec in package_names.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
         let pkg = packages.get_one(pkgid)?;
