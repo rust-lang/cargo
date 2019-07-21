@@ -140,6 +140,10 @@ impl<'cfg> Compilation<'cfg> {
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
+        for crate_type in target.rustc_crate_types() {
+            p.arg("--crate-type").arg(crate_type);
+        }
+
         Ok(p)
     }
 
