@@ -72,11 +72,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut wrapper = util::process(util::config::clippy_driver());
 
-    if let Some(old_args) = args.values_of("args") {
-        let clippy_args: String = old_args
-            .map(|arg| format!("{}__CLIPPY_HACKERY__", arg))
-            .collect();
-        wrapper.env("CLIPPY_ARGS", clippy_args);
+    if let Some(clippy_args) = args.values_of("args") {
+        wrapper.args(&clippy_args.collect::<Vec<_>>());
     }
 
     compile_opts.build_config.primary_unit_rustc = Some(wrapper);

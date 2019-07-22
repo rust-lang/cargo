@@ -80,8 +80,10 @@ impl<'cfg> Compilation<'cfg> {
 
         let mut primary_unit_rustc_process =
             bcx.build_config.primary_unit_rustc.clone().map(|mut r| {
-                r.arg(&bcx.rustc.path);
-                r
+                if r.is_wrapper {
+                    r.proc.arg(&bcx.rustc.path);
+                }
+                r.proc
             });
 
         if bcx.config.extra_verbose() {

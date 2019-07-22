@@ -51,6 +51,7 @@ use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
+use crate::core::compiler::PrimaryUnitRustc;
 use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -132,7 +133,10 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
-    opts.compile_opts.build_config.primary_unit_rustc = Some(wrapper);
+    opts.compile_opts.build_config.primary_unit_rustc = Some(PrimaryUnitRustc {
+        proc: wrapper,
+        is_wrapper: true,
+    });
 
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())

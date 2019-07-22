@@ -25,10 +25,19 @@ pub struct BuildConfig {
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
     /// An optional override of the rustc path for primary units only
-    pub primary_unit_rustc: Option<ProcessBuilder>,
+    pub primary_unit_rustc: Option<PrimaryUnitRustc>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
     /// Whether or not Cargo should cache compiler output on disk.
     cache_messages: bool,
+}
+
+/// Configuration for subcommand specific rustc override
+#[derive(Debug, Clone)]
+pub struct PrimaryUnitRustc {
+    /// ProcessBuilder to use instead of the default provided by `Rustc`
+    pub proc: ProcessBuilder,
+    /// Configure whether or not to use this as a wrapper around the original rustc process
+    pub is_wrapper: bool,
 }
 
 impl BuildConfig {
