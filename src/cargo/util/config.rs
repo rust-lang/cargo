@@ -83,7 +83,7 @@ pub struct Config {
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
-    package_cache_lock: RefCell<Option<(FileLock, usize)>>,
+    package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
 }
 
 impl Config {
@@ -887,28 +887,26 @@ impl Config {
                 // First, attempt to open an exclusive lock which is in general
                 // the purpose of this lock!
                 //
-                // If that fails because of a readonly filesystem, though, then
-                // we don't want to fail because it's a readonly filesystem. In
-                // some situations Cargo is prepared to have a readonly
-                // filesystem yet still work since it's all been pre-downloaded
-                // and/or pre-unpacked. In these situations we want to keep
-                // Cargo running if possible, so if it's a readonly filesystem
-                // switch to a shared lock which should hopefully succeed so we
-                // can continue.
+                // If that fails because of a readonly filesystem or a
+                // permission error, though, then we don't really want to fail
+                // just because of this. All files that this lock protects are
+                // in subfolders, so they're assumed by Cargo to also be
+                // readonly or have invalid permissions for us to write to. If
+                // that's the case, then we don't really need to grab a lock in
+                // the first place here.
                 //
-                // Note that the package cache lock protects files in the same
-                // directory, so if it's a readonly filesystem we assume that
-                // the entire package cache is readonly, so we're just acquiring
-                // something to prove it works, we're not actually doing any
-                // synchronization at that point.
+                // Despite this we attempt to grab a readonly lock. This means
+                // that if our read-only folder is shared read-write with
+                // someone else on the system we should synchronize with them,
+                // but if we can't even do that then we did our best and we just
+                // keep on chugging elsewhere.
                 match self.home_path.open_rw(path, self, desc) {
-                    Ok(lock) => *slot = Some((lock, 1)),
+                    Ok(lock) => *slot = Some((Some(lock), 1)),
                     Err(e) => {
                         if maybe_readonly(&e) {
-                            if let Ok(lock) = self.home_path.open_ro(path, self, desc) {
-                                *slot = Some((lock, 1));
-                                return Ok(PackageCacheLock(self));
-                            }
+                            let lock = self.home_path.open_ro(path, self, desc).ok();
+                            *slot = Some((lock, 1));
+                            return Ok(PackageCacheLock(self));
                         }
 
                         Err(e).chain_err(|| "failed to acquire package cache lock")?;
