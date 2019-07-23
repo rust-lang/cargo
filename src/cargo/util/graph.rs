@@ -13,14 +13,26 @@ struct EdgeLink<E: Clone> {
     next: Option<NonZeroUsize>,
 }
 
+/// This is a directed Graph structure. Each edge can have an `E` associated with it,
+/// but may have more then one or none. Furthermore, it is designed to be "append only" so that
+/// it can be queried as it would have bean when it was smaller. This allows a `reset_to` method
+/// that efficiently undoes the most reason modifications.
 #[derive(Clone)]
 pub struct Graph<N: Clone, E: Clone> {
+    /// an index based linked list of the edge data for links. This maintains insertion order.
     edges: Vec<EdgeLink<E>>,
+    /// every forward link in `edges` is recorded in `back_refs` so it can efficiently be undone.
     back_refs: Vec<(NonZeroUsize, usize)>,
+    /// The total number of links in the `Graph`. This needs to be kept separately as a link may
+    /// not have any edge data associated with it.
     link_count: usize,
+    /// a hashmap that stores the set of nodes. This is an `IndexMap` so it maintains insertion order.
+    /// For etch node it stores all the other nodes that it links to.
+    /// For etch link it stores the link number when it was inserted and optionally a first index into `edges`.   
     nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, (usize, Option<usize>)>>,
 }
 
+/// All the data needed to query the prefix of a `Graph`
 #[derive(Copy, Clone, PartialEq, Debug)]
 struct GraphAge {
     link_count: usize,
@@ -49,10 +61,18 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
     }
 
     fn reset_to(&mut self, age: GraphAge) {
+        // the prefix we are resetting to had `age.len_nodes`, so remove all newer nodes
+        assert!(self.nodes.len() >= age.len_nodes);
         while self.nodes.len() > age.len_nodes {
             self.nodes.pop();
         }
+
+        // the prefix we are resetting to had `age.link_count`, so remove all newer links
+        assert!(self.link_count >= age.link_count);
         for (_, lookup) in self.nodes.iter_mut() {
+            // todo: this dose not need to look at every link to remove edges
+            //       but this is only called when a lockfile is not being used
+            //       so it dose not need to be the fastest
             lookup.retain(|_, idx| {
                 if idx.1 >= Some(age.len_edges) {
                     idx.1 = None;
@@ -61,6 +81,10 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             });
         }
         self.link_count = age.link_count;
+
+        // the prefix we are resetting to had `age.len_edges`, so
+        assert!(self.edges.len() >= age.len_edges);
+        // fix references into the newer edges we are about to remove
         while self
             .back_refs
             .last()
@@ -70,16 +94,19 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             let (_, idx) = self.back_refs.pop().unwrap();
             self.edges[idx].next = None;
         }
+        // and remove all newer edges
         self.edges.truncate(age.len_edges);
         assert_eq!(self.len(), age);
     }
 
     pub fn add(&mut self, node: N) {
+        // IndexMap happens to do exactly what we need to keep the ordering correct.
         self.nodes.entry(node).or_insert_with(IndexMap::new);
     }
 
     pub fn link(&mut self, node: N, child: N) {
         use indexmap::map::Entry;
+        // IndexMap happens to do exactly what we need to keep the ordering correct.
         match self
             .nodes
             .entry(node.clone())
@@ -87,15 +114,19 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             .entry(child.clone())
         {
             Entry::Vacant(entry) => {
+                // add the new link at the end and record the new link count
                 self.link_count += 1;
                 entry.insert((self.link_count, None));
             }
-            Entry::Occupied(_) => {}
+            Entry::Occupied(_) => {
+                // this pare is already linked
+            }
         };
     }
 
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         use indexmap::map::Entry;
+        // IndexMap happens to do exactly what we need to keep the ordering correct.
         match self
             .nodes
             .entry(node.clone())
@@ -103,6 +134,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             .entry(child.clone())
         {
             Entry::Vacant(entry) => {
+                // add the new edge, and link and fix the new link count
                 self.edges.push(EdgeLink {
                     value: edge,
                     next: None,
@@ -112,9 +144,11 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                 entry.insert((self.link_count, Some(edge_index)));
             }
             Entry::Occupied(mut entry) => {
+                // this pare is already linked
                 let edge_index = *entry.get();
                 match edge_index {
                     (link_count, None) => {
+                        // but when it was linked before it did not have edge data, so add it.
                         self.edges.push(EdgeLink {
                             value: edge,
                             next: None,
@@ -123,15 +157,18 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                         entry.insert((link_count, Some(edge_index)));
                     }
                     (_, Some(mut edge_index)) => loop {
+                        // follow the linked list
                         if self.edges[edge_index].value == edge {
                             return;
                         }
                         if self.edges[edge_index].next.is_none() {
+                            // we found the end, add the new edge
                             self.edges.push(EdgeLink {
                                 value: edge,
                                 next: None,
                             });
                             let new_index = NonZeroUsize::new(self.edges.len() - 1).unwrap();
+                            // make the list point to the new edge
                             self.edges[edge_index].next = Some(new_index);
                             self.back_refs.push((new_index, edge_index));
                             return;
@@ -328,6 +365,16 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
     }
 }
 
+/// This is a directed Graph structure, that builds on the `Graph`'s "append only" internals
+/// to provide:
+///  - `O(1)` clone
+///  - the clone has no overhead to read the `Graph` as it was
+///  - no overhead over using the `Graph` directly when modifying
+/// Is this too good to be true? There are two caveats:
+///  - It can only be modified using a strict "Stack Discipline", only modifying the biggest clone
+///    of the graph.
+///  - You can drop bigger modified clones, to allow a smaller clone to be activated for modifying.
+///    this "backtracking" operation can be `O(n)`
 #[derive(Clone)]
 pub struct StackGraph<N: Clone, E: Clone> {
     inner: Rc<RefCell<Graph<N, E>>>,
@@ -348,6 +395,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         let inner = RefCell::borrow(&self.inner);
         assert!(self.age.len_edges <= inner.len().len_edges);
         assert!(self.age.len_nodes <= inner.len().len_nodes);
+        assert!(self.age.link_count <= inner.link_count);
         StackGraphView {
             inner,
             age: self.age,
@@ -513,9 +561,9 @@ impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
             .filter(|(i, _, _)| *i < self.age.len_nodes)
             .and_then(|(_, _, p)| {
                 p.iter()
+                    .filter(|(_, (c, _))| c <= &self.age.link_count)
                     // Note that we can have "cycles" introduced through dev-dependency
                     // edges, so make sure we don't loop infinitely.
-                    .filter(|(_, (c, _))| c <= &self.age.link_count)
                     .find(|&(node, _)| !result.contains(&node))
                     .map(|(p, _)| p)
             })
