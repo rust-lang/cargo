@@ -68,7 +68,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::resolve::Resolve;
+pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::Method;
 
 mod conflict_cache;
@@ -151,6 +151,7 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
+        ResolveVersion::default(),
     );
 
     check_cycles(&resolve, &cx.activations)?;
@@ -1121,8 +1122,9 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
 /// *different* packages may collide in the lock file, hence this check.
 fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
+    let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
-        let encodable_pkd_id = encode::encodable_package_id(pkg_id);
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             failure::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \

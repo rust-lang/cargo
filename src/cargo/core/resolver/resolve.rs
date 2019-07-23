@@ -32,6 +32,20 @@ pub struct Resolve {
     unused_patches: Vec<PackageId>,
     // A map from packages to a set of their public dependencies
     public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
+    version: ResolveVersion,
+}
+
+/// A version to indicate how a `Cargo.lock` should be serialized. Currently V1
+/// is the default and dates back to the origins of Cargo. A V2 is currently
+/// being proposed which provides a much more compact representation of
+/// dependency edges and also moves checksums out of `[metadata]`.
+///
+/// It's theorized that we can add more here over time to track larger changes
+/// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
+#[derive(PartialEq, Clone, Debug)]
+pub enum ResolveVersion {
+    V1,
+    V2,
 }
 
 impl Resolve {
@@ -42,6 +56,7 @@ impl Resolve {
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
+        version: ResolveVersion,
     ) -> Resolve {
         let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
         let public_dependencies = graph
@@ -70,6 +85,7 @@ impl Resolve {
             empty_features: HashSet::new(),
             reverse_replacements,
             public_dependencies,
+            version,
         }
     }
 
@@ -176,6 +192,23 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
         // Be sure to just copy over any unknown metadata.
         self.metadata = previous.metadata.clone();
+
+        // The goal of Cargo is largely to preserve the encoding of
+        // `Cargo.lock` that it finds on the filesystem. Sometimes `Cargo.lock`
+        // changes are in the works where they haven't been set as the default
+        // yet but will become the default soon. We want to preserve those
+        // features if we find them.
+        //
+        // For this reason if the previous `Cargo.lock` is from the future, or
+        // otherwise it looks like it's produced with future features we
+        // understand, then the new resolve will be encoded with the same
+        // version. Note that new instances of `Resolve` always use the default
+        // encoding, and this is where we switch it to a future encoding if the
+        // future encoding isn't yet the default.
+        if previous.version.from_the_future() {
+            self.version = previous.version.clone();
+        }
+
         Ok(())
     }
 
@@ -296,6 +329,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             None => panic!("no Dependency listed for `{}` => `{}`", from, to),
         }
     }
+
+    /// Returns the version of the encoding that's being used for this lock
+    /// file.
+    pub fn version(&self) -> &ResolveVersion {
+        &self.version
+    }
 }
 
 impl fmt::Debug for Resolve {
@@ -306,5 +345,27 @@ impl fmt::Debug for Resolve {
             writeln!(fmt, "  {}: {:?}", pkg, features)?;
         }
         write!(fmt, "}}")
+    }
+}
+
+impl ResolveVersion {
+    /// The default way to encode `Cargo.lock`.
+    ///
+    /// This is used for new `Cargo.lock` files that are generated without a
+    /// previous `Cargo.lock` files, and generally matches with what we want to
+    /// encode.
+    pub fn default() -> ResolveVersion {
+        ResolveVersion::V1
+    }
+
+    /// Returns whether this encoding version is "from the future".
+    ///
+    /// This means that this encoding version is not currently the default but
+    /// intended to become the default "soon".
+    pub fn from_the_future(&self) -> bool {
+        match self {
+            ResolveVersion::V2 => true,
+            ResolveVersion::V1 => false,
+        }
     }
 }
