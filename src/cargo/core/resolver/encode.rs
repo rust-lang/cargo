@@ -1,3 +1,94 @@
+//! Definition of how to encode a `Resolve` into a TOML `Cargo.lock` file
+//!
+//! This module contains all machinery necessary to parse a `Resolve` from a
+//! `Cargo.lock` as well as serialize a `Resolve` to a `Cargo.lock`.
+//!
+//! ## Changing `Cargo.lock`
+//!
+//! In general Cargo is quite conservative about changing the format of
+//! `Cargo.lock`. Usage of new features in Cargo can change `Cargo.lock` at any
+//! time, but otherwise changing the serialization of `Cargo.lock` is a
+//! difficult operation to do that we typically avoid.
+//!
+//! The main problem with changing the format of `Cargo.lock` is that it can
+//! cause quite a bad experience for end users who use different versions of
+//! Cargo. If every PR to a project oscillates between the stable channel's
+//! encoding of Cargo.lock and the nightly channel's encoding then that's a
+//! pretty bad experience.
+//!
+//! We do, however, want to change `Cargo.lock` over time. (and we have!). To do
+//! this the rules that we currently have are:
+//!
+//! * Add support for the new format to Cargo
+//! * Continue to, by default, generate the old format
+//! * Preserve the new format if found
+//! * Wait a "long time" (e.g. 6 months or so)
+//! * Change Cargo to by default emit the new format
+//!
+//! This migration scheme in general means that Cargo we'll get *support* for a
+//! new format into Cargo ASAP, but it won't really be exercised yet (except in
+//! Cargo's own tests really). Eventually when stable/beta/nightly all have
+//! support for the new format (and maybe a few previous stable versions) we
+//! flip the switch. Projects on nightly will quickly start seeing changes, but
+//! stable/beta/nightly will all understand this new format and will preserve
+//! it.
+//!
+//! While this does mean that projects' `Cargo.lock` changes over time, it's
+//! typically a pretty minimal effort change that's just "check in what's
+//! there".
+//!
+//! ## Historical changes to `Cargo.lock`
+//!
+//! Listed from most recent to oldest, these are some of the changes we've made
+//! to `Cargo.lock`'s serialization format:
+//!
+//! * The entries in `dependencies` arrays have been shortened and the
+//!   `checksum` field now shows up directly in `[[package]]` instead of always
+//!   at the end of the file. The goal of this change was to ideally reduce
+//!   merge conflicts being generated on `Cargo.lock`. Updating a version of a
+//!   package now only updates two lines in the file, the checksum and the
+//!   version number, most of the time. Dependency edges are specified in a
+//!   compact form where possible where just the name is listed. The
+//!   version/source on dependency edges are only listed if necessary to
+//!   disambiguate which version or which source is in use.
+//!
+//! * A comment at the top of the file indicates that the file is a generated
+//!   file and contains the special symbol `@generated` to indicate to common
+//!   review tools that it's a generated file.
+//!
+//! * A `[root]` entry for the "root crate" has been removed and instead now
+//!   included in `[[package]]` like everything else.
+//!
+//! * All packages from registries contain a `checksum` which is a sha256
+//!   checksum of the tarball the package is associated with. This is all stored
+//!   in the `[metadata]` table of `Cargo.lock` which all versions of Cargo
+//!   since 1.0 have preserved. The goal of this was to start recording
+//!   checksums so mirror sources can be verified.
+//!
+//! ## Other oddities about `Cargo.lock`
+//!
+//! There's a few other miscellaneous weird things about `Cargo.lock` that you
+//! may want to be aware of when reading this file:
+//!
+//! * All packages have a `source` listed to indicate where they come from. For
+//!   `path` dependencies, however, no `source` is listed. There's no way we
+//!   could emit a filesystem path name and have that be portable across
+//!   systems, so all packages from a `path` are not listed with a `source`.
+//!   Note that this also means that all packages with `path` sources must have
+//!   unique names.
+//!
+//! * The `[metadata]` table in `Cargo.lock` is intended to be a generic mapping
+//!   of strings to strings that's simply preserved by Cargo. This was a very
+//!   early effort to be forward compatible against changes to `Cargo.lock`'s
+//!   format. This is nowadays sort of deemed a bad idea though and we don't
+//!   really use it that much except for `checksum`s historically. It's not
+//!   really recommended to use this.
+//!
+//! * The actual literal on-disk serialiation is found in
+//!   `src/cargo/ops/lockfile.rs` which basically renders a `toml::Value` in a
+//!   special fashion to make sure we have strict control over the on-disk
+//!   format.
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
@@ -7,11 +98,12 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
+use crate::core::InternedString;
 use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{internal, Graph};
 
-use super::Resolve;
+use super::{Resolve, ResolveVersion};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
@@ -19,7 +111,6 @@ pub struct EncodableResolve {
     /// `root` is optional to allow backward compatibility.
     root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
-
     #[serde(default, skip_serializing_if = "Patch::is_empty")]
     patch: Patch,
 }
@@ -34,6 +125,10 @@ pub type Metadata = BTreeMap<String, String>;
 impl EncodableResolve {
     pub fn into_resolve(self, ws: &Workspace<'_>) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
+        let mut checksums = HashMap::new();
+
+        // We assume an older format is being parsed until we see so otherwise.
+        let mut version = ResolveVersion::V1;
 
         let packages = {
             let mut packages = self.package.unwrap_or_default();
@@ -51,7 +146,7 @@ impl EncodableResolve {
             for pkg in packages.iter() {
                 let enc_id = EncodablePackageId {
                     name: pkg.name.clone(),
-                    version: pkg.version.clone(),
+                    version: Some(pkg.version.clone()),
                     source: pkg.source,
                 };
 
@@ -68,36 +163,109 @@ impl EncodableResolve {
                     Some(&source) => PackageId::new(&pkg.name, &pkg.version, source)?,
                 };
 
+                // If a package has a checksum listed directly on it then record
+                // that here, and we also bump our version up to 2 since V1
+                // didn't ever encode this field.
+                if let Some(cksum) = &pkg.checksum {
+                    version = ResolveVersion::V2;
+                    checksums.insert(id, Some(cksum.clone()));
+                }
+
                 assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
             }
             live_pkgs
         };
 
-        let lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
-            live_pkgs.get(enc_id).map(|&(id, _)| id)
-        };
+        // When decoding a V2 version the edges in `dependencies` aren't
+        // guaranteed to have either version or source information. This `map`
+        // is used to find package ids even if dependencies have missing
+        // information. This map is from name to version to source to actual
+        // package ID. (various levels to drill down step by step)
+        let mut map = HashMap::new();
+        for (id, _) in live_pkgs.values() {
+            map.entry(id.name().as_str())
+                .or_insert(HashMap::new())
+                .entry(id.version().to_string())
+                .or_insert(HashMap::new())
+                .insert(id.source_id(), *id);
+        }
 
-        let g = {
-            let mut g = Graph::new();
+        let mut lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
+            // The name of this package should always be in the larger list of
+            // all packages.
+            let by_version = map.get(enc_id.name.as_str())?;
 
-            for &(ref id, _) in live_pkgs.values() {
-                g.add(id.clone());
-            }
+            // If the version is provided, look that up. Otherwise if the
+            // version isn't provided this is a V2 manifest and we should only
+            // have one version for this name. If we have more than one version
+            // for the name then it's ambiguous which one we'd use. That
+            // shouldn't ever actually happen but in theory bad git merges could
+            // produce invalid lock files, so silently ignore these cases.
+            let by_source = match &enc_id.version {
+                Some(version) => by_version.get(version)?,
+                None => {
+                    version = ResolveVersion::V2;
+                    if by_version.len() == 1 {
+                        by_version.values().next().unwrap()
+                    } else {
+                        return None;
+                    }
+                }
+            };
 
-            for &(ref id, pkg) in live_pkgs.values() {
-                let deps = match pkg.dependencies {
-                    Some(ref deps) => deps,
-                    None => continue,
-                };
+            // This is basically the same as above. Note though that `source` is
+            // always missing for path dependencies regardless of serialization
+            // format. That means we have to handle the `None` case a bit more
+            // carefully.
+            match &enc_id.source {
+                Some(source) => by_source.get(source).cloned(),
+                None => {
+                    // Look through all possible packages ids for this
+                    // name/version. If there's only one `path` dependency then
+                    // we are hardcoded to use that since `path` dependencies
+                    // can't have a source listed.
+                    let mut path_packages = by_source.values().filter(|p| p.source_id().is_path());
+                    if let Some(path) = path_packages.next() {
+                        if path_packages.next().is_some() {
+                            return None;
+                        }
+                        Some(*path)
 
-                for edge in deps.iter() {
-                    if let Some(to_depend_on) = lookup_id(edge) {
-                        g.link(id.clone(), to_depend_on);
+                    // ... otherwise if there's only one then we must be
+                    // implicitly using that one due to a V2 serialization of
+                    // the lock file
+                    } else if by_source.len() == 1 {
+                        let id = by_source.values().next().unwrap();
+                        version = ResolveVersion::V2;
+                        Some(*id)
+
+                    // ... and failing that we probably had a bad git merge of
+                    // `Cargo.lock` or something like that, so just ignore this.
+                    } else {
+                        None
                     }
                 }
             }
-            g
         };
+
+        let mut g = Graph::new();
+
+        for &(ref id, _) in live_pkgs.values() {
+            g.add(id.clone());
+        }
+
+        for &(ref id, pkg) in live_pkgs.values() {
+            let deps = match pkg.dependencies {
+                Some(ref deps) => deps,
+                None => continue,
+            };
+
+            for edge in deps.iter() {
+                if let Some(to_depend_on) = lookup_id(edge) {
+                    g.link(id.clone(), to_depend_on);
+                }
+            }
+        }
 
         let replacements = {
             let mut replacements = HashMap::new();
@@ -114,22 +282,9 @@ impl EncodableResolve {
 
         let mut metadata = self.metadata.unwrap_or_default();
 
-        // Parse out all package checksums. After we do this we can be in a few
-        // situations:
-        //
-        // * We parsed no checksums. In this situation we're dealing with an old
-        //   lock file and we're gonna fill them all in.
-        // * We parsed some checksums, but not one for all packages listed. It
-        //   could have been the case that some were listed, then an older Cargo
-        //   client added more dependencies, and now we're going to fill in the
-        //   missing ones.
-        // * There are too many checksums listed, indicative of an older Cargo
-        //   client removing a package but not updating the checksums listed.
-        //
-        // In all of these situations they're part of normal usage, so we don't
-        // really worry about it. We just try to slurp up as many checksums as
-        // possible.
-        let mut checksums = HashMap::new();
+        // In the V1 serialization formats all checksums were listed in the lock
+        // file in the `[metadata]` section, so if we're still V1 then look for
+        // that here.
         let prefix = "checksum ";
         let mut to_remove = Vec::new();
         for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
@@ -150,7 +305,12 @@ impl EncodableResolve {
             };
             checksums.insert(id, v);
         }
-
+        // If `checksum` was listed in `[metadata]` but we were previously
+        // listed as `V2` then assume some sort of bad git merge happened, so
+        // discard all checksums and let's regenerate them later.
+        if to_remove.len() > 0 && version == ResolveVersion::V2 {
+            checksums.drain();
+        }
         for k in to_remove {
             metadata.remove(&k);
         }
@@ -171,6 +331,7 @@ impl EncodableResolve {
             checksums,
             metadata,
             unused_patches,
+            version,
         ))
     }
 }
@@ -254,6 +415,7 @@ pub struct EncodableDependency {
     name: String,
     version: String,
     source: Option<SourceId>,
+    checksum: Option<String>,
     dependencies: Option<Vec<EncodablePackageId>>,
     replace: Option<EncodablePackageId>,
 }
@@ -261,14 +423,17 @@ pub struct EncodableDependency {
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 pub struct EncodablePackageId {
     name: String,
-    version: String,
+    version: Option<String>,
     source: Option<SourceId>,
 }
 
 impl fmt::Display for EncodablePackageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.name, self.version)?;
-        if let Some(ref s) = self.source {
+        write!(f, "{}", self.name)?;
+        if let Some(s) = &self.version {
+            write!(f, " {}", s)?;
+        }
+        if let Some(s) = &self.source {
             write!(f, " ({})", s.into_url())?;
         }
         Ok(())
@@ -281,9 +446,7 @@ impl FromStr for EncodablePackageId {
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let mut s = s.splitn(3, ' ');
         let name = s.next().unwrap();
-        let version = s
-            .next()
-            .ok_or_else(|| internal("invalid serialized PackageId"))?;
+        let version = s.next();
         let source_id = match s.next() {
             Some(s) => {
                 if s.starts_with('(') && s.ends_with(')') {
@@ -297,7 +460,7 @@ impl FromStr for EncodablePackageId {
 
         Ok(EncodablePackageId {
             name: name.to_string(),
-            version: version.to_string(),
+            version: version.map(|v| v.to_string()),
             source: source_id,
         })
     }
@@ -333,20 +496,24 @@ impl<'a> ser::Serialize for Resolve {
         let mut ids: Vec<_> = self.iter().collect();
         ids.sort();
 
+        let state = EncodeState::new(self);
+
         let encodable = ids
             .iter()
-            .map(|&id| encodable_resolve_node(id, self))
+            .map(|&id| encodable_resolve_node(id, self, &state))
             .collect::<Vec<_>>();
 
         let mut metadata = self.metadata().clone();
 
-        for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
-            let checksum = match self.checksums()[&id] {
-                Some(ref s) => &s[..],
-                None => "<none>",
-            };
-            let id = encodable_package_id(id);
-            metadata.insert(format!("checksum {}", id.to_string()), checksum.to_string());
+        if *self.version() == ResolveVersion::V1 {
+            for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
+                let checksum = match self.checksums()[&id] {
+                    Some(ref s) => &s[..],
+                    None => "<none>",
+                };
+                let id = encodable_package_id(id, &state);
+                metadata.insert(format!("checksum {}", id.to_string()), checksum.to_string());
+            }
         }
 
         let metadata = if metadata.is_empty() {
@@ -365,6 +532,10 @@ impl<'a> ser::Serialize for Resolve {
                     source: encode_source(id.source_id()),
                     dependencies: None,
                     replace: None,
+                    checksum: match self.version() {
+                        ResolveVersion::V2 => self.checksums().get(&id).and_then(|x| x.clone()),
+                        ResolveVersion::V1 => None,
+                    },
                 })
                 .collect(),
         };
@@ -378,13 +549,40 @@ impl<'a> ser::Serialize for Resolve {
     }
 }
 
-fn encodable_resolve_node(id: PackageId, resolve: &Resolve) -> EncodableDependency {
+pub struct EncodeState<'a> {
+    counts: Option<HashMap<InternedString, HashMap<&'a semver::Version, usize>>>,
+}
+
+impl<'a> EncodeState<'a> {
+    pub fn new(resolve: &'a Resolve) -> EncodeState<'a> {
+        let mut counts = None;
+        if *resolve.version() == ResolveVersion::V2 {
+            let mut map = HashMap::new();
+            for id in resolve.iter() {
+                let slot = map
+                    .entry(id.name())
+                    .or_insert(HashMap::new())
+                    .entry(id.version())
+                    .or_insert(0);
+                *slot += 1;
+            }
+            counts = Some(map);
+        }
+        EncodeState { counts }
+    }
+}
+
+fn encodable_resolve_node(
+    id: PackageId,
+    resolve: &Resolve,
+    state: &EncodeState<'_>,
+) -> EncodableDependency {
     let (replace, deps) = match resolve.replacement(id) {
-        Some(id) => (Some(encodable_package_id(id)), None),
+        Some(id) => (Some(encodable_package_id(id, state)), None),
         None => {
             let mut deps = resolve
                 .deps_not_replaced(id)
-                .map(encodable_package_id)
+                .map(|id| encodable_package_id(id, state))
                 .collect::<Vec<_>>();
             deps.sort();
             (None, Some(deps))
@@ -397,14 +595,29 @@ fn encodable_resolve_node(id: PackageId, resolve: &Resolve) -> EncodableDependen
         source: encode_source(id.source_id()),
         dependencies: deps,
         replace,
+        checksum: match resolve.version() {
+            ResolveVersion::V2 => resolve.checksums().get(&id).and_then(|s| s.clone()),
+            ResolveVersion::V1 => None,
+        },
     }
 }
 
-pub fn encodable_package_id(id: PackageId) -> EncodablePackageId {
+pub fn encodable_package_id(id: PackageId, state: &EncodeState<'_>) -> EncodablePackageId {
+    let mut version = Some(id.version().to_string());
+    let mut source = encode_source(id.source_id()).map(|s| s.with_precise(None));
+    if let Some(counts) = &state.counts {
+        let version_counts = &counts[&id.name()];
+        if version_counts[&id.version()] == 1 {
+            source = None;
+            if version_counts.len() == 1 {
+                version = None;
+            }
+        }
+    }
     EncodablePackageId {
         name: id.name().to_string(),
-        version: id.version().to_string(),
-        source: encode_source(id.source_id()).map(|s| s.with_precise(None)),
+        version,
+        source,
     }
 }
 

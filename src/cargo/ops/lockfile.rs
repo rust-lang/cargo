@@ -122,7 +122,10 @@ fn resolve_to_string_orig(
     }
 
     let deps = toml["package"].as_array().unwrap();
-    for dep in deps.iter() {
+    for (i, dep) in deps.iter().enumerate() {
+        if i > 0 {
+            out.push_str("\n");
+        }
         let dep = dep.as_table().unwrap();
 
         out.push_str("[[package]]\n");
@@ -132,13 +135,13 @@ fn resolve_to_string_orig(
     if let Some(patch) = toml.get("patch") {
         let list = patch["unused"].as_array().unwrap();
         for entry in list {
-            out.push_str("[[patch.unused]]\n");
+            out.push_str("\n[[patch.unused]]\n");
             emit_package(entry.as_table().unwrap(), &mut out);
-            out.push_str("\n");
         }
     }
 
     if let Some(meta) = toml.get("metadata") {
+        out.push_str("\n");
         out.push_str("[metadata]\n");
         out.push_str(&meta.to_string());
     }
@@ -184,6 +187,9 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
     if dep.contains_key("source") {
         out.push_str(&format!("source = {}\n", &dep["source"]));
     }
+    if dep.contains_key("checksum") {
+        out.push_str(&format!("checksum = {}\n", &dep["checksum"]));
+    }
 
     if let Some(s) = dep.get("dependencies") {
         let slice = s.as_array().unwrap();
@@ -197,8 +203,7 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
 
             out.push_str("]\n");
         }
-        out.push_str("\n");
     } else if dep.contains_key("replace") {
-        out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
+        out.push_str(&format!("replace = {}\n", &dep["replace"]));
     }
 }
