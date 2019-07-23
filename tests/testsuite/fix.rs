@@ -412,7 +412,7 @@ fn specify_rustflags() {
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(stderr)
         .with_stdout("")
         .run();
