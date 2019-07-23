@@ -6,8 +6,7 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
-[![Build Status](https://travis-ci.com/rust-lang/cargo.svg?branch=master)](https://travis-ci.com/rust-lang/cargo)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
+[![Build Status](https://dev.azure.com/rust-lang/cargo/_apis/build/status/rust-lang.cargo?branchName=master)](https://dev.azure.com/rust-lang/cargo/_build/latest?definitionId=18&branchName=master)
 
 Code documentation: https://docs.rs/cargo/
 

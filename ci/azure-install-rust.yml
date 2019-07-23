@@ -1,0 +1,28 @@
+steps:
+  - bash: |
+      set -e
+      if command -v rustup; then
+        echo `command -v rustup` `rustup -V` already installed
+        rustup self update
+      elif [ "$AGENT_OS" = "Windows_NT" ]; then
+        curl -sSf -o rustup-init.exe https://win.rustup.rs
+        rustup-init.exe -y --default-toolchain $TOOLCHAIN
+        echo "##vso[task.prependpath]$USERPROFILE/.cargo/bin"
+      else
+        curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $TOOLCHAIN
+        echo "##vso[task.prependpath]$HOME/.cargo/bin"
+      fi
+    displayName: Install rustup
+
+  - bash: |
+      set -e
+      rustup update $TOOLCHAIN
+      rustup default $TOOLCHAIN
+    displayName: Install rust
+
+  - bash: |
+      set -ex
+      rustup -V
+      rustc -Vv
+      cargo -V
+    displayName: Query rust and cargo versions
