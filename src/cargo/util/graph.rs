@@ -11,6 +11,7 @@ use std::rc::Rc;
 struct EdgeLink<E: Clone> {
     value: E,
     next: Option<NonZeroUsize>,
+    previous: Option<usize>,
 }
 
 /// This is a directed Graph structure. Each edge can have an `E` associated with it,
@@ -21,8 +22,6 @@ struct EdgeLink<E: Clone> {
 pub struct Graph<N: Clone, E: Clone> {
     /// an index based linked list of the edge data for links. This maintains insertion order.
     edges: Vec<EdgeLink<E>>,
-    /// every forward link in `edges` is recorded in `back_refs` so it can efficiently be undone.
-    back_refs: Vec<(NonZeroUsize, usize)>,
     /// The total number of links in the `Graph`. This needs to be kept separately as a link may
     /// not have any edge data associated with it.
     link_count: usize,
@@ -54,7 +53,6 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
         Graph {
             edges: vec![],
-            back_refs: vec![],
             link_count: 0,
             nodes: Default::default(),
         }
@@ -84,18 +82,18 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
 
         // the prefix we are resetting to had `age.len_edges`, so
         assert!(self.edges.len() >= age.len_edges);
+        // remove all newer edges
+        let to_fix: Vec<usize> = self
+            .edges
+            .drain(age.len_edges..)
+            .filter_map(|e| e.previous)
+            .filter(|idx| idx <= &age.len_edges)
+            .collect();
+
         // fix references into the newer edges we are about to remove
-        while self
-            .back_refs
-            .last()
-            .filter(|(idx, _)| idx.get() >= age.len_edges)
-            .is_some()
-        {
-            let (_, idx) = self.back_refs.pop().unwrap();
+        for idx in to_fix {
             self.edges[idx].next = None;
         }
-        // and remove all newer edges
-        self.edges.truncate(age.len_edges);
         assert_eq!(self.len(), age);
     }
 
@@ -138,6 +136,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                 self.edges.push(EdgeLink {
                     value: edge,
                     next: None,
+                    previous: None,
                 });
                 let edge_index = self.edges.len() - 1;
                 self.link_count += 1;
@@ -152,6 +151,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                         self.edges.push(EdgeLink {
                             value: edge,
                             next: None,
+                            previous: None,
                         });
                         let edge_index = self.edges.len() - 1;
                         entry.insert((link_count, Some(edge_index)));
@@ -166,11 +166,11 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                             self.edges.push(EdgeLink {
                                 value: edge,
                                 next: None,
+                                previous: Some(edge_index),
                             });
                             let new_index = NonZeroUsize::new(self.edges.len() - 1).unwrap();
                             // make the list point to the new edge
                             self.edges[edge_index].next = Some(new_index);
-                            self.back_refs.push((new_index, edge_index));
                             return;
                         }
                         edge_index = self.edges[edge_index].next.unwrap().get();
