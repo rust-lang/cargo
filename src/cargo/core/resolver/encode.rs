@@ -582,7 +582,7 @@ fn encodable_resolve_node(
         None => {
             let mut deps = resolve
                 .deps_not_replaced(id)
-                .map(|id| encodable_package_id(id, state))
+                .map(|(id, _)| encodable_package_id(id, state))
                 .collect::<Vec<_>>();
             deps.sort();
             (None, Some(deps))
