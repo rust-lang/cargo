@@ -229,13 +229,17 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
-        self.graph
-            .edges(&pkg)
-            .map(move |&(id, ref deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
+        self.deps_not_replaced(pkg)
+            .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
 
-    pub fn deps_not_replaced<'a>(&'a self, pkg: PackageId) -> impl Iterator<Item = PackageId> + 'a {
-        self.graph.edges(&pkg).map(|&(id, _)| id)
+    pub fn deps_not_replaced(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, &[Dependency])> {
+        self.graph
+            .edges(&pkg)
+            .map(|(id, deps)| (*id, deps.as_slice()))
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
