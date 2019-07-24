@@ -572,7 +572,11 @@ fn register_previous_locks(
     let keep = |id: &PackageId| keep(id) && !avoid_locking.contains(id);
 
     for node in resolve.iter().filter(keep) {
-        let deps = resolve.deps_not_replaced(node).filter(keep).collect();
+        let deps = resolve
+            .deps_not_replaced(node)
+            .map(|p| p.0)
+            .filter(keep)
+            .collect();
         registry.register_lock(node, deps);
     }
 
@@ -582,7 +586,7 @@ fn register_previous_locks(
             return;
         }
         debug!("ignoring any lock pointing directly at {}", node);
-        for dep in resolve.deps_not_replaced(node) {
+        for (dep, _) in resolve.deps_not_replaced(node) {
             add_deps(resolve, dep, set);
         }
     }

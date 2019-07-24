@@ -1079,3 +1079,58 @@ fn patch_older() {
         )
         .run();
 }
+
+#[cargo_test]
+fn cycle() {
+    Package::new("a", "1.0.0").publish();
+    Package::new("b", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+
+                [patch.crates-io]
+                a = {path="a"}
+                b = {path="b"}
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "1.0.0"
+
+                [dependencies]
+                b = "1.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "1.0.0"
+
+                [dependencies]
+                a = "1.0"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: cyclic package dependency: [..]
+package `[..]`
+    ... which is depended on by `[..]`
+",
+        )
+        .run();
+}
