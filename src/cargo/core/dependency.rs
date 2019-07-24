@@ -69,7 +69,6 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    #[serde(with = "url_serde")]
     registry: Option<Url>,
 }
 

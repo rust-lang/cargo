@@ -10,7 +10,7 @@ use crates_io::{NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt};
 use failure::{bail, format_err};
 use log::{log, Level};
-use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
+use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 
 use crate::core::dependency::Kind;
 use crate::core::manifest::ManifestMetadata;
@@ -766,7 +766,7 @@ pub fn search(
         let extra = if source_id.is_default_registry() {
             format!(
                 " (go to https://crates.io/search?q={} to see more)",
-                percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
+                percent_encode(query.as_bytes(), NON_ALPHANUMERIC)
             )
         } else {
             String::new()
