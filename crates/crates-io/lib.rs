@@ -10,9 +10,9 @@ use std::time::Instant;
 use curl::easy::{Easy, List};
 use failure::bail;
 use http::status::StatusCode;
+use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 use url::Url;
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
@@ -256,7 +256,7 @@ impl Registry {
     }
 
     pub fn search(&mut self, query: &str, limit: u32) -> Result<(Vec<Crate>, u32)> {
-        let formatted_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
+        let formatted_query = percent_encode(query.as_bytes(), NON_ALPHANUMERIC);
         let body = self.req(
             &format!("/crates?q={}&per_page={}", formatted_query, limit),
             None,
