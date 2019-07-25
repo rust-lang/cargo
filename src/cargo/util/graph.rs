@@ -7,11 +7,17 @@ use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::rc::Rc;
 
+type EdgeIndex = usize;
+type NonZeroEdgeIndex = NonZeroUsize;
+type NodesIndex = usize;
+
 #[derive(Clone, Debug)]
 struct EdgeLink<E: Clone> {
     value: E,
-    next: Option<NonZeroUsize>,
-    previous: Option<usize>,
+    /// the index into the edge list of the next edge related to the same (from, to) nodes
+    next: Option<NonZeroEdgeIndex>,
+    /// the index into the edge list of the previous edge related to the same (from, to) nodes
+    previous: Option<EdgeIndex>,
 }
 
 /// This is a directed Graph structure. Each edge can have an `E` associated with it,
@@ -24,11 +30,11 @@ pub struct Graph<N: Clone, E: Clone> {
     edges: Vec<EdgeLink<E>>,
     /// The total number of links in the `Graph`. This needs to be kept separately as a link may
     /// not have any edge data associated with it.
-    link_count: usize,
+    link_count: NodesIndex,
     /// a hashmap that stores the set of nodes. This is an `IndexMap` so it maintains insertion order.
     /// For etch node it stores all the other nodes that it links to.
     /// For etch link it stores the link number when it was inserted and optionally a first index into `edges`.   
-    nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, (usize, Option<usize>)>>,
+    nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, (NodesIndex, Option<EdgeIndex>)>>,
 }
 
 /// All the data needed to query the prefix of a `Graph`
@@ -71,11 +77,11 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             // todo: this dose not need to look at every link to remove edges
             //       but this is only called when a lockfile is not being used
             //       so it dose not need to be the fastest
-            lookup.retain(|_, idx| {
-                if idx.1 >= Some(age.len_edges) {
-                    idx.1 = None;
+            lookup.retain(|_, (nodes_idx, edge_idx)| {
+                if *edge_idx >= Some(age.len_edges) {
+                    *edge_idx = None;
                 }
-                idx.0 <= age.link_count
+                *nodes_idx <= age.link_count
             });
         }
         self.link_count = age.link_count;
@@ -83,7 +89,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
         // the prefix we are resetting to had `age.len_edges`, so
         assert!(self.edges.len() >= age.len_edges);
         // remove all newer edges
-        let to_fix: Vec<usize> = self
+        let to_fix: Vec<EdgeIndex> = self
             .edges
             .drain(age.len_edges..)
             .filter_map(|e| e.previous)
@@ -138,7 +144,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                     next: None,
                     previous: None,
                 });
-                let edge_index = self.edges.len() - 1;
+                let edge_index: EdgeIndex = self.edges.len() - 1;
                 self.link_count += 1;
                 entry.insert((self.link_count, Some(edge_index)));
             }
@@ -153,7 +159,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                             next: None,
                             previous: None,
                         });
-                        let edge_index = self.edges.len() - 1;
+                        let edge_index: EdgeIndex = self.edges.len() - 1;
                         entry.insert((link_count, Some(edge_index)));
                     }
                     (_, Some(mut edge_index)) => loop {
@@ -168,7 +174,8 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                                 next: None,
                                 previous: Some(edge_index),
                             });
-                            let new_index = NonZeroUsize::new(self.edges.len() - 1).unwrap();
+                            let new_index: NonZeroEdgeIndex =
+                                NonZeroUsize::new(self.edges.len() - 1).unwrap();
                             // make the list point to the new edge
                             self.edges[edge_index].next = Some(new_index);
                             return;
@@ -342,7 +349,7 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 #[derive(Clone, Debug)]
 pub struct Edges<'a, E: Clone> {
     graph: &'a [EdgeLink<E>],
-    index: Option<usize>,
+    index: Option<EdgeIndex>,
 }
 
 impl<'a, E: Clone> Edges<'a, E> {
