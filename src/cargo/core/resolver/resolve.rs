@@ -8,7 +8,7 @@ use url::Url;
 use crate::core::dependency::Kind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
-use crate::util::Graph;
+use crate::util::{Graph, Platform};
 
 use super::encode::Metadata;
 
@@ -25,8 +25,8 @@ pub struct Resolve {
     graph: Graph<PackageId, Vec<Dependency>>,
     replacements: HashMap<PackageId, PackageId>,
     reverse_replacements: HashMap<PackageId, PackageId>,
-    empty_features: HashSet<String>,
-    features: HashMap<PackageId, HashSet<String>>,
+    empty_features: HashMap<String, Option<Platform>>,
+    features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
     checksums: HashMap<PackageId, Option<String>>,
     metadata: Metadata,
     unused_patches: Vec<PackageId>,
@@ -38,7 +38,7 @@ impl Resolve {
     pub fn new(
         graph: Graph<PackageId, Vec<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
-        features: HashMap<PackageId, HashSet<String>>,
+        features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
@@ -67,7 +67,7 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: HashSet::new(),
+            empty_features: HashMap::new(),
             reverse_replacements,
             public_dependencies,
         }
@@ -213,7 +213,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.replacements
     }
 
-    pub fn features(&self, pkg: PackageId) -> &HashSet<String> {
+    pub fn features(&self, pkg: PackageId) -> &HashMap<String, Option<Platform>> {
         self.features.get(&pkg).unwrap_or(&self.empty_features)
     }
 
@@ -225,7 +225,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn features_sorted(&self, pkg: PackageId) -> Vec<&str> {
-        let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
+        let mut v = Vec::from_iter(self.features(pkg).iter().map(|(s, _)| s.as_ref()));
         v.sort_unstable();
         v
     }

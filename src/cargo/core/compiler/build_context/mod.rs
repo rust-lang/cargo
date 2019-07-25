@@ -10,7 +10,7 @@ use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
 use crate::util::errors::CargoResult;
-use crate::util::{profile, Cfg, Config, Rustc};
+use crate::util::{profile, Cfg, Config, Platform, Rustc};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
@@ -95,12 +95,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             .is_public_dep(unit.pkg.package_id(), dep.pkg.package_id())
     }
 
-    /// Whether a dependency should be compiled for the host or target platform,
+    /// Whether a given platform matches the host or target platform,
     /// specified by `Kind`.
-    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
-        // If this dependency is only available for certain platforms,
-        // make sure we're only enabling it for that platform.
-        let platform = match dep.platform() {
+    pub fn platform_activated(&self, platform: Option<&Platform>, kind: Kind) -> bool {
+        let platform = match platform {
             Some(p) => p,
             None => return true,
         };
@@ -111,7 +109,15 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         platform.matches(name, info.cfg())
     }
 
-    /// Gets the user-specified linker for a particular host or target.
+    /// Whether a dependency should be compiled for the host or target platform,
+    /// specified by `Kind`.
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+        // If this dependency is only available for certain platforms,
+        // make sure we're only enabling it for that platform.
+        self.platform_activated(dep.platform(), kind)
+    }
+
+    /// Gets the user-specified linker for a particular host or target
     pub fn linker(&self, kind: Kind) -> Option<&Path> {
         self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
     }

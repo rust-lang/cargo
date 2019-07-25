@@ -455,12 +455,12 @@ impl Requirements<'_> {
         if feat.is_empty() || self.seen(feat) {
             return Ok(());
         }
-        for fv in self
+        let feature = self
             .summary
             .features()
             .get(feat.as_str())
-            .expect("must be a valid feature")
-        {
+            .expect("must be a valid feature");
+        for fv in feature.1.as_slice() {
             match *fv {
                 FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
                     "cyclic feature dependency: feature `{}` depends on itself",

@@ -625,8 +625,10 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
-        rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+    for (feat, platform) in bcx.resolve.features(unit.pkg.package_id()) {
+        if bcx.platform_activated(platform.as_ref(), unit.kind) {
+            rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+        }
     }
 
     add_error_format(cx, &mut rustdoc, false, false)?;
@@ -915,8 +917,10 @@ fn build_base_args<'a, 'cfg>(
     // We ideally want deterministic invocations of rustc to ensure that
     // rustc-caching strategies like sccache are able to cache more, so sort the
     // feature list here.
-    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
-        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+    for (feat, platform) in bcx.resolve.features(unit.pkg.package_id()) {
+        if bcx.platform_activated(platform.as_ref(), unit.kind) {
+            cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+        }
     }
 
     match cx.files().metadata(unit) {

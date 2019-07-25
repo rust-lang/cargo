@@ -146,7 +146,25 @@ pub fn resolve(
         cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
-            .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
+            .map(|(k, v)| {
+                (
+                    *k,
+                    v.iter()
+                        .map(|x| {
+                            let platform = summaries
+                                .iter()
+                                .find(|(summary, _)| summary.features().get(x).is_some())
+                                .map(|(summary, _)| summary.features().get(x).unwrap().0.clone());
+                            let platform = if let Some(platform) = platform {
+                                platform
+                            } else {
+                                None
+                            };
+                            (x.to_string(), platform)
+                        })
+                        .collect(),
+                )
+            })
             .collect(),
         cksums,
         BTreeMap::new(),
