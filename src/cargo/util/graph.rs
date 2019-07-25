@@ -106,9 +106,9 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
         // IndexMap happens to do exactly what we need to keep the ordering correct.
         match self
             .nodes
-            .entry(node.clone())
+            .entry(node)
             .or_insert_with(IndexMap::new)
-            .entry(child.clone())
+            .entry(child)
         {
             Entry::Vacant(entry) => {
                 // add the new edge, and link and fix the new link count
@@ -121,23 +121,21 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                 entry.insert(edge_index);
             }
             Entry::Occupied(_) => {
-                // this pare is already linked
+                // this pair is already linked
             }
         };
     }
 
     /// connect `node`to `child` associating it with `edge`.
-    /// Note that if this and `link` are used on the same graph
-    ///      odd things may happen when `reset_to` is called.
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         use indexmap::map::Entry;
         let edge = Some(edge);
         // IndexMap happens to do exactly what we need to keep the ordering correct.
         match self
             .nodes
-            .entry(node.clone())
+            .entry(node)
             .or_insert_with(IndexMap::new)
-            .entry(child.clone())
+            .entry(child)
         {
             Entry::Vacant(entry) => {
                 // add the new edge, and link and fix the new link count
@@ -350,7 +348,11 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
     type Item = &'a E;
 
     fn next(&mut self) -> Option<&'a E> {
-        while let Some(edge_link) = self.index.and_then(|old_index| self.graph.get(old_index)) {
+        while let Some(edge_link) = self.index.and_then(|idx| {
+            // Check that the `idx` points to something in `self.graph`. It may not if we are
+            // looking at a smaller prefix of a larger graph.
+            self.graph.get(idx)
+        }) {
             self.index = edge_link.next.map(|i| i.get());
             if let Some(value) = edge_link.value.as_ref() {
                 return Some(value);
@@ -414,8 +416,6 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     }
 
     /// connect `node`to `child` with out associating any data.
-    /// Note that if this and `add_edge` are used on the same graph
-    ///      odd things may happen when `reset_to` is called.
     pub fn link(&mut self, node: N, child: N) {
         self.age = {
             let mut g = self.activate();
@@ -425,8 +425,6 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     }
 
     /// connect `node`to `child` associating it with `edge`.
-    /// Note that if this and `link` are used on the same graph
-    ///      odd things may happen when `reset_to` is called.
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         self.age = {
             let mut g = self.activate();
