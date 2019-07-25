@@ -1572,18 +1572,18 @@ pub fn translate_dep_info(
         .ok_or_else(|| internal("malformed dep-info format, no targets".to_string()))?
         .1;
 
+    let target_root = target_root.canonicalize()?;
+    let pkg_root = pkg_root.canonicalize()?;
     let mut new_contents = Vec::new();
     for file in deps {
-        let file = if cfg!(windows) && file.starts_with("\\\\?\\") {
-            // Remove Windows extended-length prefix, since functions like
-            // strip_prefix won't work if you mix with traditional dos paths.
-            PathBuf::from(&file[4..])
-        } else {
-            rustc_cwd.join(file)
-        };
-        let (ty, path) = if let Ok(stripped) = file.strip_prefix(target_root) {
+        // The path may be absolute or relative, canonical or not. Make sure
+        // it is canonicalized so we are comparing the same kinds of paths.
+        let canon_file = rustc_cwd.join(file).canonicalize()?;
+        let abs_file = rustc_cwd.join(file);
+
+        let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
-        } else if let Ok(stripped) = file.strip_prefix(pkg_root) {
+        } else if let Ok(stripped) = canon_file.strip_prefix(&pkg_root) {
             if !allow_package {
                 continue;
             }
@@ -1592,8 +1592,7 @@ pub fn translate_dep_info(
             // It's definitely not target root relative, but this is an absolute path (since it was
             // joined to rustc_cwd) and as such re-joining it later to the target root will have no
             // effect.
-            assert!(file.is_absolute(), "{:?} is absolute", file);
-            (DepInfoPathType::TargetRootRelative, &*file)
+            (DepInfoPathType::TargetRootRelative, &*abs_file)
         };
         new_contents.push(ty as u8);
         new_contents.extend(util::path2bytes(path)?);
