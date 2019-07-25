@@ -448,6 +448,29 @@ impl Project {
             .write_all(contents.replace("#", "").as_bytes())
             .unwrap();
     }
+
+    pub fn symlink(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) {
+        let src = self.root().join(src.as_ref());
+        let dst = self.root().join(dst.as_ref());
+        #[cfg(unix)]
+        {
+            if let Err(e) = os::unix::fs::symlink(&src, &dst) {
+                panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
+            }
+        }
+        #[cfg(windows)]
+        {
+            if src.is_dir() {
+                if let Err(e) = os::windows::fs::symlink_dir(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
+                }
+            } else {
+                if let Err(e) = os::windows::fs::symlink_file(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
+                }
+            }
+        }
+    }
 }
 
 // Generates a project layout
@@ -1745,4 +1768,32 @@ pub fn clippy_is_available() -> bool {
     } else {
         true
     }
+}
+
+#[cfg(windows)]
+pub fn symlink_supported() -> bool {
+    let src = paths::root().join("symlink_src");
+    fs::write(&src, "").unwrap();
+    let dst = paths::root().join("symlink_dst");
+    let result = match os::windows::fs::symlink_file(&src, &dst) {
+        Ok(_) => {
+            fs::remove_file(&dst).unwrap();
+            true
+        }
+        Err(e) => {
+            eprintln!(
+                "symlinks not supported: {:?}\n\
+                 Windows 10 users should enable developer mode.",
+                e
+            );
+            false
+        }
+    };
+    fs::remove_file(&src).unwrap();
+    return result;
+}
+
+#[cfg(not(windows))]
+pub fn symlink_supported() -> bool {
+    true
 }

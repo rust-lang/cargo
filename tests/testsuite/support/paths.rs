@@ -113,22 +113,11 @@ impl CargoPathExt for Path {
      * care all that much for our tests
      */
     fn rm_rf(&self) {
-        if !self.exists() {
-            return;
-        }
-
-        for file in t!(fs::read_dir(self)) {
-            let file = t!(file);
-            if file.file_type().map(|m| m.is_dir()).unwrap_or(false) {
-                file.path().rm_rf();
-            } else {
-                // On windows we can't remove a readonly file, and git will
-                // often clone files as readonly. As a result, we have some
-                // special logic to remove readonly files on windows.
-                do_op(&file.path(), "remove file", |p| fs::remove_file(p));
+        if self.exists() {
+            if let Err(e) = remove_dir_all::remove_dir_all(self) {
+                panic!("failed to remove {:?}: {:?}", self, e)
             }
         }
-        do_op(self, "remove dir", |p| fs::remove_dir(p));
     }
 
     fn mkdir_p(&self) {

@@ -1,7 +1,6 @@
+use crate::support::paths::{self, CargoPathExt};
 use crate::support::registry::Package;
-use crate::support::{
-    basic_bin_manifest, basic_manifest, main_file, paths, project, rustc_host, Project,
-};
+use crate::support::{basic_bin_manifest, basic_manifest, main_file, project, rustc_host, Project};
 use filetime::FileTime;
 use std::fs;
 use std::path::Path;
@@ -458,5 +457,45 @@ fn reg_dep_source_not_tracked() {
                 }
             }
         },
+    );
+}
+
+#[cargo_test]
+// Remove once https://github.com/rust-lang/rust/pull/61727 lands, and switch
+// to a `nightly` check.
+#[ignore]
+fn canonical_path() {
+    if !crate::support::symlink_supported() {
+        return;
+    }
+    Package::new("regdep", "0.1.0")
+        .file("src/lib.rs", "pub fn f() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            regdep = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn f() { regdep::f(); }")
+        .build();
+
+    let real = p.root().join("real_target");
+    real.mkdir_p();
+    p.symlink(real, "target");
+
+    p.cargo("build").run();
+
+    assert_deps_contains(
+        &p,
+        "target/debug/.fingerprint/foo-*/dep-lib-foo-*",
+        &[(1, "src/lib.rs"), (2, "debug/deps/libregdep-*.rlib")],
     );
 }
