@@ -1,12 +1,13 @@
-use std;
 use std::collections::HashSet;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::net::TcpListener;
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+use std::sync::Arc;
 use std::thread;
 
 use crate::support::paths;
 use crate::support::{basic_manifest, project};
-use bufstream::BufStream;
 use git2;
 
 // Tests that HTTP auth is offered from `credential.helper`.
@@ -25,15 +26,20 @@ fn http_auth_offered() {
             .collect()
     }
 
+    let connections = Arc::new(AtomicUsize::new(0));
+    let connections2 = connections.clone();
     let t = thread::spawn(move || {
-        let mut conn = BufStream::new(server.accept().unwrap().0);
+        let mut conn = BufReader::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
-        conn.write_all(
-            b"HTTP/1.1 401 Unauthorized\r\n\
+        connections2.fetch_add(1, SeqCst);
+        conn.get_mut()
+            .write_all(
+                b"HTTP/1.1 401 Unauthorized\r\n\
               WWW-Authenticate: Basic realm=\"wheee\"\r\n\
+              Content-Length: 0\r\n\
               \r\n",
-        )
-        .unwrap();
+            )
+            .unwrap();
         assert_eq!(
             req,
             vec![
@@ -44,16 +50,16 @@ fn http_auth_offered() {
             .map(|s| s.to_string())
             .collect()
         );
-        drop(conn);
 
-        let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
-        conn.write_all(
-            b"HTTP/1.1 401 Unauthorized\r\n\
+        connections2.fetch_add(1, SeqCst);
+        conn.get_mut()
+            .write_all(
+                b"HTTP/1.1 401 Unauthorized\r\n\
               WWW-Authenticate: Basic realm=\"wheee\"\r\n\
               \r\n",
-        )
-        .unwrap();
+            )
+            .unwrap();
         assert_eq!(
             req,
             vec![
@@ -144,6 +150,7 @@ Caused by:
         ))
         .run();
 
+    assert_eq!(connections.load(SeqCst), 2);
     t.join().ok().unwrap();
 }
 

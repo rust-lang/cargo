@@ -100,7 +100,6 @@ features = [
 ]
 
 [dev-dependencies]
-bufstream = "0.1"
 cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
 
 [[bin]]
