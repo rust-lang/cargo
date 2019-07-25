@@ -4,17 +4,15 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
-use std::num::NonZeroUsize;
 use std::rc::Rc;
 
 type EdgeIndex = usize;
-type NonZeroEdgeIndex = NonZeroUsize;
 
 #[derive(Clone, Debug)]
 struct EdgeLink<E: Clone> {
     value: Option<E>,
     /// the index into the edge list of the next edge related to the same (from, to) nodes
-    next: Option<NonZeroEdgeIndex>,
+    next: Option<EdgeIndex>, // can be `NonZeroUsize` but not worth the boilerplate
     /// the index into the edge list of the previous edge related to the same (from, to) nodes
     previous: Option<EdgeIndex>,
 }
@@ -162,13 +160,12 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                             next: None,
                             previous: Some(edge_index),
                         });
-                        let new_index: NonZeroEdgeIndex =
-                            NonZeroUsize::new(self.edges.len() - 1).unwrap();
+                        let new_index: EdgeIndex = self.edges.len() - 1;
                         // make the list point to the new edge
                         self.edges[edge_index].next = Some(new_index);
                         return;
                     }
-                    edge_index = self.edges[edge_index].next.unwrap().get();
+                    edge_index = self.edges[edge_index].next.unwrap();
                 }
             }
         }
@@ -353,7 +350,7 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
             // looking at a smaller prefix of a larger graph.
             self.graph.get(idx)
         }) {
-            self.index = edge_link.next.map(|i| i.get());
+            self.index = edge_link.next;
             if let Some(value) = edge_link.value.as_ref() {
                 return Some(value);
             }
