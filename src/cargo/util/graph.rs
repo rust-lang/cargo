@@ -326,40 +326,6 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone + PartialEq> PartialEq for Graph<N, E> 
 }
 impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 
-#[derive(Clone, Debug)]
-pub struct Edges<'a, E: Clone> {
-    graph: &'a [EdgeLink<E>],
-    index: Option<EdgeIndex>,
-}
-
-impl<'a, E: Clone> Edges<'a, E> {
-    pub fn is_empty(&self) -> bool {
-        self.index
-            .and_then(|idx| self.graph.get(idx))
-            .and_then(|l| l.value.as_ref())
-            .is_none()
-    }
-}
-
-impl<'a, E: Clone> Iterator for Edges<'a, E> {
-    type Item = &'a E;
-
-    fn next(&mut self) -> Option<&'a E> {
-        while let Some(edge_link) = self.index.and_then(|idx| {
-            // Check that the `idx` points to something in `self.graph`. It may not if we are
-            // looking at a smaller prefix of a larger graph.
-            self.graph.get(idx)
-        }) {
-            self.index = edge_link.next;
-            if let Some(value) = edge_link.value.as_ref() {
-                return Some(value);
-            }
-        }
-        self.index = None;
-        None
-    }
-}
-
 /// This is a directed Graph structure, that builds on the `Graph`'s "append only" internals
 /// to provide:
 ///  - `O(1)` clone
@@ -370,6 +336,13 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
 ///    of the graph.
 ///  - You can drop bigger modified clones, to allow a smaller clone to be activated for modifying.
 ///    this "backtracking" operation can be `O(n)`
+///
+/// The "Stack Discipline" is checked on best effort basis. If you attempt to read or write to a
+/// bigger clone after modifying a smaller clone it will probably panic. It may not panic if you
+/// arrange to have increased the size back to the size of the bigger clone, this is a kind of ABA problem.
+/// (If this terns out to be to hard to get right we can use "generational indices" to all ways panic.)
+/// This module dose not use `unsafe` so violating the "Stack Discipline" may return the wrong
+/// answer but will not trigger UB.
 #[derive(Clone)]
 pub struct StackGraph<N: Clone, E: Clone> {
     inner: Rc<RefCell<Graph<N, E>>>,
@@ -388,8 +361,8 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
 
     pub fn borrow(&self) -> StackGraphView<'_, N, E> {
         let inner = RefCell::borrow(&self.inner);
-        assert!(self.age.len_edges <= inner.len().len_edges);
-        assert!(self.age.len_nodes <= inner.len().len_nodes);
+        assert!(self.age.len_edges <= inner.len().len_edges, "The internal Graph was reset to something smaller before you tried to read from the StackGraphView");
+        assert!(self.age.len_nodes <= inner.len().len_nodes, "The internal Graph was reset to something smaller before you tried to read from the StackGraphView");
         StackGraphView {
             inner,
             age: self.age,
@@ -401,6 +374,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         if self.age != inner.len() {
             inner.reset_to(self.age);
         }
+        assert_eq!(inner.len(), self.age, "The internal Graph was reset to something smaller before you tried to write to the StackGraphView");
         inner
     }
 
@@ -498,6 +472,40 @@ impl<N: fmt::Display + Eq + Hash + Clone, E: Clone + fmt::Debug + PartialEq> fmt
         write!(fmt, "}}")?;
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Edges<'a, E: Clone> {
+    graph: &'a [EdgeLink<E>],
+    index: Option<EdgeIndex>,
+}
+
+impl<'a, E: Clone> Edges<'a, E> {
+    pub fn is_empty(&self) -> bool {
+        self.index
+            .and_then(|idx| self.graph.get(idx))
+            .and_then(|l| l.value.as_ref())
+            .is_none()
+    }
+}
+
+impl<'a, E: Clone> Iterator for Edges<'a, E> {
+    type Item = &'a E;
+
+    fn next(&mut self) -> Option<&'a E> {
+        while let Some(edge_link) = self.index.and_then(|idx| {
+            // Check that the `idx` points to something in `self.graph`. It may not if we are
+            // looking at a smaller prefix of a larger graph.
+            self.graph.get(idx)
+        }) {
+            self.index = edge_link.next;
+            if let Some(value) = edge_link.value.as_ref() {
+                return Some(value);
+            }
+        }
+        self.index = None;
+        None
     }
 }
 
