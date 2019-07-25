@@ -118,7 +118,7 @@ use std::time::{self, Duration};
 use std::usize;
 
 use cargo;
-use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
 use filetime;
 use serde_json::{self, Value};
 use url::Url;
@@ -855,7 +855,7 @@ impl Execs {
     fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
-            if env::var("CI").is_ok() {
+            if is_ci() {
                 panic!("`.stream()` is for local debugging")
             }
             process.exec_with_streaming(
@@ -1746,7 +1746,7 @@ pub fn is_coarse_mtime() -> bool {
     // This should actually be a test that `$CARGO_TARGET_DIR` is on an HFS
     // filesystem, (or any filesystem with low-resolution mtimes). However,
     // that's tricky to detect, so for now just deal with CI.
-    cfg!(target_os = "macos") && (env::var("CI").is_ok() || env::var("TF_BUILD").is_ok())
+    cfg!(target_os = "macos") && is_ci()
 }
 
 /// Some CI setups are much slower then the equipment used by Cargo itself.
@@ -1772,6 +1772,10 @@ pub fn clippy_is_available() -> bool {
 
 #[cfg(windows)]
 pub fn symlink_supported() -> bool {
+    if is_ci() {
+        // We want to be absolutely sure this runs on CI.
+        return true;
+    }
     let src = paths::root().join("symlink_src");
     fs::write(&src, "").unwrap();
     let dst = paths::root().join("symlink_dst");

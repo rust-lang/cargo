@@ -2,7 +2,7 @@ use std::env;
 
 use cargo::core::dependency::Kind;
 use cargo::core::{enable_nightly_features, Dependency};
-use cargo::util::Config;
+use cargo::util::{is_ci, Config};
 
 use resolver_tests::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
@@ -22,7 +22,7 @@ use proptest::prelude::*;
 proptest! {
     #![proptest_config(ProptestConfig {
         max_shrink_iters:
-            if env::var("CI").is_ok() || !atty::is(atty::Stream::Stderr) {
+            if is_ci() || !atty::is(atty::Stream::Stderr) {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
