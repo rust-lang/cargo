@@ -9,11 +9,10 @@ use std::rc::Rc;
 
 type EdgeIndex = usize;
 type NonZeroEdgeIndex = NonZeroUsize;
-type NodesIndex = usize;
 
 #[derive(Clone, Debug)]
 struct EdgeLink<E: Clone> {
-    value: E,
+    value: Option<E>,
     /// the index into the edge list of the next edge related to the same (from, to) nodes
     next: Option<NonZeroEdgeIndex>,
     /// the index into the edge list of the previous edge related to the same (from, to) nodes
@@ -28,19 +27,15 @@ struct EdgeLink<E: Clone> {
 pub struct Graph<N: Clone, E: Clone> {
     /// an index based linked list of the edge data for links. This maintains insertion order.
     edges: Vec<EdgeLink<E>>,
-    /// The total number of links in the `Graph`. This needs to be kept separately as a link may
-    /// not have any edge data associated with it.
-    link_count: NodesIndex,
     /// a hashmap that stores the set of nodes. This is an `IndexMap` so it maintains insertion order.
-    /// For etch node it stores all the other nodes that it links to.
-    /// For etch link it stores the link number when it was inserted and optionally a first index into `edges`.   
-    nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, (NodesIndex, Option<EdgeIndex>)>>,
+    /// For each node it stores all the other nodes that it links to.
+    /// For each link it stores the first index into `edges`.
+    nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, EdgeIndex>>,
 }
 
 /// All the data needed to query the prefix of a `Graph`
 #[derive(Copy, Clone, PartialEq, Debug)]
 struct GraphAge {
-    link_count: usize,
     len_edges: usize,
     len_nodes: usize,
 }
@@ -48,7 +43,6 @@ struct GraphAge {
 impl<N: Clone, E: Clone> Graph<N, E> {
     fn len(&self) -> GraphAge {
         GraphAge {
-            link_count: self.link_count,
             len_edges: self.edges.len(),
             len_nodes: self.nodes.len(),
         }
@@ -59,7 +53,6 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
         Graph {
             edges: vec![],
-            link_count: 0,
             nodes: Default::default(),
         }
     }
@@ -71,20 +64,13 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             self.nodes.pop();
         }
 
-        // the prefix we are resetting to had `age.link_count`, so remove all newer links
-        assert!(self.link_count >= age.link_count);
+        // the prefix we are resetting to had `age.len_edges`, so remove all links pointing to newer edges
         for (_, lookup) in self.nodes.iter_mut() {
             // todo: this dose not need to look at every link to remove edges
             //       but this is only called when a lockfile is not being used
             //       so it dose not need to be the fastest
-            lookup.retain(|_, (nodes_idx, edge_idx)| {
-                if *edge_idx >= Some(age.len_edges) {
-                    *edge_idx = None;
-                }
-                *nodes_idx <= age.link_count
-            });
+            lookup.retain(|_, idx| *idx < age.len_edges);
         }
-        self.link_count = age.link_count;
 
         // the prefix we are resetting to had `age.len_edges`, so
         assert!(self.edges.len() >= age.len_edges);
@@ -108,6 +94,9 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
         self.nodes.entry(node).or_insert_with(IndexMap::new);
     }
 
+    /// connect `node`to `child` with out associating any data.
+    /// Note that if this and `add_edge` are used on the same graph
+    ///      odd things may happen when `reset_to` is called.
     pub fn link(&mut self, node: N, child: N) {
         use indexmap::map::Entry;
         // IndexMap happens to do exactly what we need to keep the ordering correct.
@@ -118,9 +107,14 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             .entry(child.clone())
         {
             Entry::Vacant(entry) => {
-                // add the new link at the end and record the new link count
-                self.link_count += 1;
-                entry.insert((self.link_count, None));
+                // add the new edge, and link and fix the new link count
+                self.edges.push(EdgeLink {
+                    value: None,
+                    next: None,
+                    previous: None,
+                });
+                let edge_index: EdgeIndex = self.edges.len() - 1;
+                entry.insert(edge_index);
             }
             Entry::Occupied(_) => {
                 // this pare is already linked
@@ -128,8 +122,12 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
         };
     }
 
+    /// connect `node`to `child` associating it with `edge`.
+    /// Note that if this and `link` are used on the same graph
+    ///      odd things may happen when `reset_to` is called.
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         use indexmap::map::Entry;
+        let edge = Some(edge);
         // IndexMap happens to do exactly what we need to keep the ordering correct.
         match self
             .nodes
@@ -145,43 +143,30 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
                     previous: None,
                 });
                 let edge_index: EdgeIndex = self.edges.len() - 1;
-                self.link_count += 1;
-                entry.insert((self.link_count, Some(edge_index)));
+                entry.insert(edge_index);
             }
-            Entry::Occupied(mut entry) => {
+            Entry::Occupied(entry) => {
                 // this pare is already linked
-                let edge_index = *entry.get();
-                match edge_index {
-                    (link_count, None) => {
-                        // but when it was linked before it did not have edge data, so add it.
+                let mut edge_index = *entry.get();
+                loop {
+                    // follow the linked list
+                    if self.edges[edge_index].value == edge {
+                        return;
+                    }
+                    if self.edges[edge_index].next.is_none() {
+                        // we found the end, add the new edge
                         self.edges.push(EdgeLink {
                             value: edge,
                             next: None,
-                            previous: None,
+                            previous: Some(edge_index),
                         });
-                        let edge_index: EdgeIndex = self.edges.len() - 1;
-                        entry.insert((link_count, Some(edge_index)));
+                        let new_index: NonZeroEdgeIndex =
+                            NonZeroUsize::new(self.edges.len() - 1).unwrap();
+                        // make the list point to the new edge
+                        self.edges[edge_index].next = Some(new_index);
+                        return;
                     }
-                    (_, Some(mut edge_index)) => loop {
-                        // follow the linked list
-                        if self.edges[edge_index].value == edge {
-                            return;
-                        }
-                        if self.edges[edge_index].next.is_none() {
-                            // we found the end, add the new edge
-                            self.edges.push(EdgeLink {
-                                value: edge,
-                                next: None,
-                                previous: Some(edge_index),
-                            });
-                            let new_index: NonZeroEdgeIndex =
-                                NonZeroUsize::new(self.edges.len() - 1).unwrap();
-                            // make the list point to the new edge
-                            self.edges[edge_index].next = Some(new_index);
-                            return;
-                        }
-                        edge_index = self.edges[edge_index].next.unwrap().get();
-                    },
+                    edge_index = self.edges[edge_index].next.unwrap().get();
                 }
             }
         }
@@ -202,23 +187,19 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
     pub fn edge(&self, from: &N, to: &N) -> Edges<'_, E> {
         Edges {
             graph: &self.edges,
-            index: self
-                .nodes
-                .get(from)
-                .and_then(|x| x.get(to).copied())
-                .and_then(|x| x.1),
+            index: self.nodes.get(from).and_then(|x| x.get(to).copied()),
         }
     }
 
     pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, Edges<'_, E>)> {
         let edges = &self.edges;
         self.nodes.get(from).into_iter().flat_map(move |x| {
-            x.iter().map(move |(to, (_, idx))| {
+            x.iter().map(move |(to, idx)| {
                 (
                     to,
                     Edges {
                         graph: edges,
-                        index: *idx,
+                        index: Some(*idx),
                     },
                 )
             })
@@ -354,7 +335,10 @@ pub struct Edges<'a, E: Clone> {
 
 impl<'a, E: Clone> Edges<'a, E> {
     pub fn is_empty(&self) -> bool {
-        self.index.filter(|&idx| idx < self.graph.len()).is_none()
+        self.index
+            .and_then(|idx| self.graph.get(idx))
+            .and_then(|l| l.value.as_ref())
+            .is_none()
     }
 }
 
@@ -362,13 +346,14 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
     type Item = &'a E;
 
     fn next(&mut self) -> Option<&'a E> {
-        let old_index = self.index;
-        old_index
-            .and_then(|old_index| self.graph.get(old_index))
-            .map(|edge_link| {
-                self.index = edge_link.next.map(|i| i.get());
-                &edge_link.value
-            })
+        while let Some(edge_link) = self.index.and_then(|old_index| self.graph.get(old_index)) {
+            self.index = edge_link.next.map(|i| i.get());
+            if let Some(value) = edge_link.value.as_ref() {
+                return Some(value);
+            }
+        }
+        self.index = None;
+        None
     }
 }
 
@@ -402,7 +387,6 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         let inner = RefCell::borrow(&self.inner);
         assert!(self.age.len_edges <= inner.len().len_edges);
         assert!(self.age.len_nodes <= inner.len().len_nodes);
-        assert!(self.age.link_count <= inner.link_count);
         StackGraphView {
             inner,
             age: self.age,
@@ -425,6 +409,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         };
     }
 
+    /// connect `node`to `child` with out associating any data.
+    /// Note that if this and `add_edge` are used on the same graph
+    ///      odd things may happen when `reset_to` is called.
     pub fn link(&mut self, node: N, child: N) {
         self.age = {
             let mut g = self.activate();
@@ -433,6 +420,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         };
     }
 
+    /// connect `node`to `child` associating it with `edge`.
+    /// Note that if this and `link` are used on the same graph
+    ///      odd things may happen when `reset_to` is called.
     pub fn add_edge(&mut self, node: N, child: N, edge: E) {
         self.age = {
             let mut g = self.activate();
@@ -466,8 +456,8 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
                 .get_full(p)
                 .filter(|(i, _, _)| *i < self.age.len_nodes)
         }) {
-            for (p, (c, _)) in iter.iter() {
-                if *c <= self.age.link_count {
+            for (p, idx) in iter.iter() {
+                if *idx < self.age.len_edges {
                     if p == to {
                         return true;
                     }
@@ -496,8 +486,8 @@ impl<N: fmt::Display + Eq + Hash + Clone, E: Clone + fmt::Debug + PartialEq> fmt
         for (from, e) in self.borrow().inner.nodes.iter().take(self.age.len_nodes) {
             writeln!(fmt, "  - {}", from)?;
 
-            for (to, (c, _)) in e.iter() {
-                if *c <= self.age.link_count {
+            for (to, idx) in e.iter() {
+                if *idx < self.age.len_edges {
                     writeln!(fmt, "    - {}", to)?;
                     for edge in self.borrow().edge(from, to) {
                         writeln!(fmt, "      - {:?}", edge)?;
@@ -530,8 +520,7 @@ impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
                 .nodes
                 .get(from)
                 .and_then(|x| x.get(to).copied())
-                .filter(|(c, _)| c <= &self.age.link_count)
-                .and_then(|x| x.1),
+                .filter(|idx| idx < &self.age.len_edges),
         }
     }
 
@@ -543,17 +532,15 @@ impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
             .filter(|(i, _, _)| *i < self.age.len_nodes)
             .into_iter()
             .flat_map(move |(_, _, x)| {
-                x.iter()
-                    .filter(move |(_, (c, _))| c <= &self.age.link_count)
-                    .map(move |(to, (_, idx))| {
-                        (
-                            to,
-                            Edges {
-                                graph: edges,
-                                index: *idx,
-                            },
-                        )
-                    })
+                x.iter().map(move |(to, idx)| {
+                    (
+                        to,
+                        Edges {
+                            graph: edges,
+                            index: Some(*idx),
+                        },
+                    )
+                })
             })
     }
 
@@ -568,7 +555,7 @@ impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
             .filter(|(i, _, _)| *i < self.age.len_nodes)
             .and_then(|(_, _, p)| {
                 p.iter()
-                    .filter(|(_, (c, _))| c <= &self.age.link_count)
+                    .filter(|(_, idx)| **idx < self.age.len_edges)
                     // Note that we can have "cycles" introduced through dev-dependency
                     // edges, so make sure we don't loop infinitely.
                     .find(|&(node, _)| !result.contains(&node))
