@@ -66,10 +66,14 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
 
         // the prefix we are resetting to had `age.len_edges`, so remove all links pointing to newer edges
         for (_, lookup) in self.nodes.iter_mut() {
-            // todo: this dose not need to look at every link to remove edges
-            //       but this is only called when a lockfile is not being used
-            //       so it dose not need to be the fastest
-            lookup.retain(|_, idx| *idx < age.len_edges);
+            while lookup.len() >= 1
+                && lookup
+                    .get_index(lookup.len() - 1)
+                    .filter(|(_, idx)| idx >= &&age.len_edges)
+                    .is_some()
+            {
+                lookup.pop();
+            }
         }
 
         // the prefix we are resetting to had `age.len_edges`, so
