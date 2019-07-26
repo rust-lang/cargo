@@ -625,9 +625,15 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    for (feat, platform) in bcx.resolve.features(unit.pkg.package_id()) {
-        if bcx.platform_activated(platform.as_ref(), unit.kind) {
-            rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+    // Need to keep a correct order on the features, so get the sorted name first,
+    // then resolve the specified platform.
+    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
+        if let Some(platform) = bcx.resolve.features(unit.pkg.package_id()).get(feat) {
+            if bcx.platform_activated(platform.as_ref(), unit.kind) {
+                rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+            }
+        } else {
+            bail!("Failed to get the target for the feature `{}`", feat);
         }
     }
 
@@ -917,9 +923,13 @@ fn build_base_args<'a, 'cfg>(
     // We ideally want deterministic invocations of rustc to ensure that
     // rustc-caching strategies like sccache are able to cache more, so sort the
     // feature list here.
-    for (feat, platform) in bcx.resolve.features(unit.pkg.package_id()) {
-        if bcx.platform_activated(platform.as_ref(), unit.kind) {
-            cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
+        if let Some(platform) = bcx.resolve.features(unit.pkg.package_id()).get(feat) {
+            if bcx.platform_activated(platform.as_ref(), unit.kind) {
+                cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+            }
+        } else {
+            bail!("Failed to get the target for the feature `{}`", feat);
         }
     }
 
