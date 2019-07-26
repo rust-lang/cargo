@@ -333,6 +333,7 @@ pub struct CliUnstable {
     pub mtime_on_use: bool,
     pub install_upgrade: bool,
     pub cache_messages: bool,
+    pub binary_dep_depinfo: bool,
 }
 
 impl CliUnstable {
@@ -378,6 +379,7 @@ impl CliUnstable {
             "mtime-on-use" => self.mtime_on_use = true,
             "install-upgrade" => self.install_upgrade = true,
             "cache-messages" => self.cache_messages = true,
+            "binary-dep-depinfo" => self.binary_dep_depinfo = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

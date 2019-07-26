@@ -118,7 +118,7 @@ use std::time::{self, Duration};
 use std::usize;
 
 use cargo;
-use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
 use filetime;
 use serde_json::{self, Value};
 use url::Url;
@@ -332,15 +332,9 @@ impl Project {
     /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
     /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
-        let prefix = Project::get_lib_prefix(kind);
-
-        let extension = Project::get_lib_extension(kind);
-
-        let lib_file_name = format!("{}{}.{}", prefix, name, extension);
-
         self.target_debug_dir()
             .join("examples")
-            .join(&lib_file_name)
+            .join(paths::get_lib_filename(name, kind))
     }
 
     /// Path to a debug binary.
@@ -455,40 +449,26 @@ impl Project {
             .unwrap();
     }
 
-    fn get_lib_prefix(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "lib",
-            "staticlib" | "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    ""
-                } else {
-                    "lib"
-                }
+    pub fn symlink(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) {
+        let src = self.root().join(src.as_ref());
+        let dst = self.root().join(dst.as_ref());
+        #[cfg(unix)]
+        {
+            if let Err(e) = os::unix::fs::symlink(&src, &dst) {
+                panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
             }
-            _ => unreachable!(),
         }
-    }
-
-    fn get_lib_extension(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "rlib",
-            "staticlib" => {
-                if cfg!(windows) {
-                    "lib"
-                } else {
-                    "a"
+        #[cfg(windows)]
+        {
+            if src.is_dir() {
+                if let Err(e) = os::windows::fs::symlink_dir(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
+                }
+            } else {
+                if let Err(e) = os::windows::fs::symlink_file(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
                 }
             }
-            "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    "dll"
-                } else if cfg!(target_os = "macos") {
-                    "dylib"
-                } else {
-                    "so"
-                }
-            }
-            _ => unreachable!(),
         }
     }
 }
@@ -875,7 +855,7 @@ impl Execs {
     fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
-            if env::var("CI").is_ok() {
+            if is_ci() {
                 panic!("`.stream()` is for local debugging")
             }
             process.exec_with_streaming(
@@ -1766,7 +1746,7 @@ pub fn is_coarse_mtime() -> bool {
     // This should actually be a test that `$CARGO_TARGET_DIR` is on an HFS
     // filesystem, (or any filesystem with low-resolution mtimes). However,
     // that's tricky to detect, so for now just deal with CI.
-    cfg!(target_os = "macos") && (env::var("CI").is_ok() || env::var("TF_BUILD").is_ok())
+    cfg!(target_os = "macos") && is_ci()
 }
 
 /// Some CI setups are much slower then the equipment used by Cargo itself.
@@ -1788,4 +1768,36 @@ pub fn clippy_is_available() -> bool {
     } else {
         true
     }
+}
+
+#[cfg(windows)]
+pub fn symlink_supported() -> bool {
+    if is_ci() {
+        // We want to be absolutely sure this runs on CI.
+        return true;
+    }
+    let src = paths::root().join("symlink_src");
+    fs::write(&src, "").unwrap();
+    let dst = paths::root().join("symlink_dst");
+    let result = match os::windows::fs::symlink_file(&src, &dst) {
+        Ok(_) => {
+            fs::remove_file(&dst).unwrap();
+            true
+        }
+        Err(e) => {
+            eprintln!(
+                "symlinks not supported: {:?}\n\
+                 Windows 10 users should enable developer mode.",
+                e
+            );
+            false
+        }
+    };
+    fs::remove_file(&src).unwrap();
+    return result;
+}
+
+#[cfg(not(windows))]
+pub fn symlink_supported() -> bool {
+    true
 }

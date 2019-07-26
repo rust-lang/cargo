@@ -214,6 +214,9 @@ fn rustc<'a, 'cfg>(
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
+    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+        rustc.arg("-Zbinary-dep-depinfo");
+    }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
@@ -223,6 +226,7 @@ fn rustc<'a, 'cfg>(
     let exec = exec.clone();
 
     let root_output = cx.files().host_root().to_path_buf();
+    let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -317,7 +321,9 @@ fn rustc<'a, 'cfg>(
                 &dep_info_loc,
                 &cwd,
                 &pkg_root,
-                &root_output,
+                &target_dir,
+                // Do not track source files in the fingerprint for registry dependencies.
+                current_id.source_id().is_path(),
             )
             .chain_err(|| {
                 internal(format!(
