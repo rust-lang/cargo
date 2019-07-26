@@ -55,6 +55,64 @@ fn depend_on_alt_registry() {
 }
 
 #[cargo_test]
+fn depend_on_local_alt_registry() {
+    let root = paths::root();
+    t!(fs::create_dir(&root.join(".cargo")));
+    t!(t!(File::create(root.join(".cargo/config"))).write_all(
+        br#"
+        [registries.alternative]
+        local-registry = 'alternative-registry'
+    "#
+    ));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "alternative"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .alternative(true)
+        .publish();
+
+    p.cargo("build")
+        .with_stderr(&format!(
+            "\
+[UNPACKING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        ))
+        .run();
+
+    p.cargo("clean").run();
+
+    // Don't download a second time
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn depend_on_alt_registry_depends_on_same_registry_no_index() {
     let p = project()
         .file(

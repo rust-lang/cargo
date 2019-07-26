@@ -171,19 +171,11 @@ restore the source replacement configuration to continue the build
             srcs.push(SourceId::for_registry(&url)?);
         }
         if let Some(val) = table.get("local-registry") {
-            let (s, path) = val.string(&format!("source.{}.local-registry", name))?;
-            let mut path = path.to_path_buf();
-            path.pop();
-            path.pop();
-            path.push(s);
+            let path = val.path(&format!("source.{}.local-registry", name))?;
             srcs.push(SourceId::for_local_registry(&path)?);
         }
         if let Some(val) = table.get("directory") {
-            let (s, path) = val.string(&format!("source.{}.directory", name))?;
-            let mut path = path.to_path_buf();
-            path.pop();
-            path.pop();
-            path.push(s);
+            let path = val.path(&format!("source.{}.directory", name))?;
             srcs.push(SourceId::for_directory(&path)?);
         }
         if let Some(val) = table.get("git") {

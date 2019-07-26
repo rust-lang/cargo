@@ -524,7 +524,9 @@ impl Package {
 
     /// Returns the path to the compressed package file.
     pub fn archive_dst(&self) -> PathBuf {
-        if self.local {
+        if self.local && self.alternative {
+            alt_registry_path().join(format!("{}-{}.crate", self.name, self.vers))
+        } else if self.local {
             registry_path().join(format!("{}-{}.crate", self.name, self.vers))
         } else if self.alternative {
             alt_dl_path()

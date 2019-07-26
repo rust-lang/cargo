@@ -45,6 +45,25 @@ CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 > Note: [crates.io] does not accept packages that depend on crates from other
 > registries.
 
+### Local alternative registries
+
+An alternative registry can also be loaded from a local directory tree by
+configuring it as follows:
+
+```toml
+[registries]
+my-registry = { local-registry = "some/local/path" }
+```
+
+The `local-registry` key is interpreted relative to the file in which it is
+declared. This key should point to a
+[local registry source tree][local-registry], containing an
+[index subdirectory][index], and the `.crate` files for all crates in this local
+registry.
+
+[local-registry]: source-replacement.md#local-registry-sources
+[index]: registries.md#index-format
+
 ### Publishing to an Alternate Registry
 
 If the registry supports web API access, then packages can be published

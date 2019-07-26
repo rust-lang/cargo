@@ -142,6 +142,13 @@ impl SourceId {
                 let url = url.into_url()?;
                 SourceId::new(Kind::Path, url)
             }
+            "local-registry" => {
+                let url = url.into_url()?;
+                let path = url.to_file_path().map_err(|_| {
+                    failure::format_err!("local-registry must use file path: {:?}", url)
+                })?;
+                SourceId::for_local_registry(&path)
+            }
             kind => Err(failure::format_err!(
                 "unsupported source protocol: {}",
                 kind
@@ -213,6 +220,10 @@ impl SourceId {
     }
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
+        if let Some(path) = config.get_alt_local_registry(key)? {
+            return SourceId::for_local_registry(&path);
+        }
+
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
             kind: Kind::Registry,

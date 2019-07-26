@@ -689,6 +689,13 @@ impl Config {
         }
     }
 
+    pub fn get_alt_local_registry(&self, registry: &str) -> CargoResult<Option<PathBuf>> {
+        validate_package_name(registry, "registry name", "")?;
+
+        let key = format!("registries.{}.local-registry", registry);
+        self.get_cv(&key)?.map(|cv| cv.path(&key)).transpose()
+    }
+
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
@@ -1597,6 +1604,16 @@ impl ConfigValue {
             CV::String(ref s, ref p) => Ok((s, p)),
             _ => self.expected("string", key),
         }
+    }
+
+    pub fn path(&self, key: &str) -> CargoResult<PathBuf> {
+        let (rel, config_path) = self.string(key)?;
+        let mut path = config_path.to_path_buf();
+        path.pop();
+        path.pop();
+        path.push(rel);
+
+        Ok(path)
     }
 
     pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
