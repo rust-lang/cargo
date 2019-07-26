@@ -12,7 +12,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, Graph, IntoUrl};
+use cargo::util::{CargoResult, Config, Graph, IntoUrl, Platform};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
