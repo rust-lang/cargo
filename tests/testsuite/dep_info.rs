@@ -1,6 +1,8 @@
 use crate::support::paths::{self, CargoPathExt};
 use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_manifest, main_file, project, rustc_host, Project};
+use crate::support::{
+    basic_bin_manifest, basic_manifest, is_nightly, main_file, project, rustc_host, Project,
+};
 use filetime::FileTime;
 use std::fs;
 use std::path::Path;
@@ -166,10 +168,12 @@ fn no_rewrite_if_no_change() {
 }
 
 #[cargo_test]
-// Remove once https://github.com/rust-lang/rust/pull/61727 lands, and switch
-// to a `nightly` check.
-#[ignore]
 fn relative_depinfo_paths_ws() {
+    if !is_nightly() {
+        // See https://github.com/rust-lang/rust/issues/63012
+        return;
+    }
+
     // Test relative dep-info paths in a workspace with --target with
     // proc-macros and other dependency kinds.
     Package::new("regdep", "0.1.0")
@@ -257,8 +261,9 @@ fn relative_depinfo_paths_ws() {
         .build();
 
     let host = rustc_host();
-    p.cargo("build --target")
+    p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
+        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo [..]")
         .run();
 
@@ -293,17 +298,20 @@ fn relative_depinfo_paths_ws() {
     );
 
     // Make sure it stays fresh.
-    p.cargo("build --target")
+    p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
+        .masquerade_as_nightly_cargo()
         .with_stderr("[FINISHED] dev [..]")
         .run();
 }
 
 #[cargo_test]
-// Remove once https://github.com/rust-lang/rust/pull/61727 lands, and switch
-// to a `nightly` check.
-#[ignore]
 fn relative_depinfo_paths_no_ws() {
+    if !is_nightly() {
+        // See https://github.com/rust-lang/rust/issues/63012
+        return;
+    }
+
     // Test relative dep-info paths without a workspace with proc-macros and
     // other dependency kinds.
     Package::new("regdep", "0.1.0")
@@ -382,7 +390,8 @@ fn relative_depinfo_paths_no_ws() {
         .file("bar/src/lib.rs", "pub fn f() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("build -Z binary-dep-depinfo")
+        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo [..]")
         .run();
 
@@ -417,7 +426,10 @@ fn relative_depinfo_paths_no_ws() {
     );
 
     // Make sure it stays fresh.
-    p.cargo("build").with_stderr("[FINISHED] dev [..]").run();
+    p.cargo("build -Z binary-dep-depinfo")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[FINISHED] dev [..]")
+        .run();
 }
 
 #[cargo_test]
@@ -461,10 +473,11 @@ fn reg_dep_source_not_tracked() {
 }
 
 #[cargo_test]
-// Remove once https://github.com/rust-lang/rust/pull/61727 lands, and switch
-// to a `nightly` check.
-#[ignore]
 fn canonical_path() {
+    if !is_nightly() {
+        // See https://github.com/rust-lang/rust/issues/63012
+        return;
+    }
     if !crate::support::symlink_supported() {
         return;
     }
@@ -491,7 +504,9 @@ fn canonical_path() {
     real.mkdir_p();
     p.symlink(real, "target");
 
-    p.cargo("build").run();
+    p.cargo("build -Z binary-dep-depinfo")
+        .masquerade_as_nightly_cargo()
+        .run();
 
     assert_deps_contains(
         &p,
