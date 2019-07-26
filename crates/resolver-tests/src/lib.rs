@@ -170,7 +170,7 @@ pub fn resolve_with_config_raw(
     let summary = Summary::new(
         pkg_id("root"),
         deps,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         None::<String>,
         false,
     )
@@ -571,7 +571,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
     Summary::new(
         name.to_pkgid(),
         dep,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         link,
         false,
     )
@@ -599,7 +599,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
     Summary::new(
         pkg_id_loc(name, loc),
         Vec::new(),
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         link,
         false,
     )
@@ -613,7 +613,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     Summary::new(
         sum.package_id(),
         deps,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         sum.links().map(|a| a.as_str()),
         sum.namespaced_features(),
     )
