@@ -1,3 +1,59 @@
+//! This module implements some Graph data structures optimized for Cargo's uses.
+//! The module documentation here will try to justify why Cargo needs the odd set of requirements
+//! that the structures provide, but the how is documented on each type.
+//!
+//! Cargo uses these types for several things in the codebase, but by far the most important is
+//! the "dependency graph". It is a graph that records for each package all the packages that it
+//! depends on. It is used to decide what order to build the packages, for what targets, and when
+//! they need to be rebuilt (among many other things). One small complication is that we may have
+//! more then one edge between the same two packages because the same package might be present
+//! in both `[dependencies]` and `[build-dependencies]`.
+//! This module must provide a way to read it efficiently with no fuss nor complications. The
+//! "dependency graph" is constructed in two ways, when reading a lockfile and by running the resolver.
+//! When reading a lockfile the only complication is that the lockfile has what is depended on but
+//! not why. This module must provide a way to link two packages with out providing an example
+//! of the type of the edge.
+//! Running the resolver is the source of our most unusual requirements.
+//! The fundamental pattern of the resolver is like:
+//!
+//! ```ignore
+//! fn resolve_next(dependency_graph_so_far: _, mut unresolved_dependencies: _) -> Result<DependencyGraph, Problem> {
+//!     if let Some(unresolved) = unresolved_dependencies.pop() {
+//!         let combined_problem = Problem::new();
+//!         for candidate in unresolved {
+//!             let mut dgsf = dependency_graph_so_far.clone();
+//!             let mut ud = unresolved_dependencies.clone();
+//!             if let Err(prob) = activate(&mut dgsf, &mut ud, candidate) {
+//!                     combined_problem.extend(prob);
+//!                     continue
+//!                 };
+//!             match resolve_next(dgsf, ud) {
+//!                 Ok(dg) => return Ok(dg),
+//!                 Err(prob) => {
+//!                     if dependency_graph_so_far.has(prob) {
+//!                         return Err(prob)
+//!                     }
+//!                 }
+//!             }
+//!         }
+//!         Err(combined_problem)
+//!     } else {
+//!         Ok(finalize(dependency_graph_so_far))
+//!     }
+//! }
+//! ```
+//!
+//! The real resolver is not recursive to avoid blowing the stack, and has lots of other state to
+//! maintain. The most expensive (non recursive) call in this algorithm is the
+//! `dependency_graph_so_far.clone();`. To make this more annoying the first thing we try will
+//! probably work, and any work we do to prepare for the next iteration is wasted. If we had a
+//! `undo_activate` we could be much more efficient, completely remove the `.clone()` and just
+//! `undo_activate` if things tern out to not work. Unfortunately, making shore `undo_activate`
+//! handles all the corner cases correctly is not practical for the resolver. However, this is
+//! possible for a graph like thing, a `clone` means record the size of the graph. a `&mut self`
+//! method means undo everything newer and do the mutation, a `&self` method means only look at the
+//! older part. This module provides a `StackGraph` type to encapsulate this pattern.
+
 use indexmap::IndexMap;
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
@@ -91,7 +147,7 @@ impl<N: Clone + Eq + Hash, E: Clone + PartialEq> Graph<N, E> {
             .edges
             .drain(age.len_edges..)
             .filter_map(|e| e.previous)
-            .filter(|idx| idx <= &age.len_edges)
+            .filter(|idx| idx < &age.len_edges)
             .collect();
 
         // fix references into the newer edges we remove
@@ -363,6 +419,41 @@ pub struct StackGraph<N: Clone, E: Clone> {
     age: GraphAge,
 }
 
+#[test]
+fn demonstrate_stack_graph_can_read_all_clones() {
+    let mut graph = StackGraph::new();
+    let mut stack = Vec::new();
+    graph.add_edge(1, 2, 1);
+    stack.push(graph.clone());
+    graph.add_edge(2, 3, 2);
+    stack.push(graph.clone());
+    graph.add_edge(2, 3, 3);
+    stack.push(graph.clone());
+    assert_eq!(
+        stack.iter().map(|g| g.contains(&2)).collect::<Vec<bool>>(),
+        [false, true, true]
+    );
+    assert_eq!(stack[1].borrow().edge(&2, &3).collect::<Vec<_>>(), [&2]);
+    assert_eq!(stack[2].borrow().edge(&2, &3).collect::<Vec<_>>(), [&2, &3]);
+}
+
+#[test]
+#[should_panic]
+fn demonstrate_stack_graph_some_violations_panic() {
+    let mut graph = StackGraph::new();
+    let mut stack = Vec::new();
+    graph.add_edge(1, 2, 1);
+    stack.push(graph.clone());
+    graph.add_edge(2, 3, 2);
+    stack.push(graph.clone());
+    graph.add_edge(2, 3, 3);
+    stack.push(graph.clone());
+    // violate stack discipline
+    stack[0].clone().add_edge(2, 3, 4);
+
+    stack[2].borrow();
+}
+
 impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     pub fn new() -> StackGraph<N, E> {
         let inner = Graph::new();
@@ -533,7 +624,8 @@ impl<'a, E: Clone> Iterator for Edges<'a, E> {
 }
 
 /// A RAII gard that allows getting `&` references to the prefix of a `Graph` as stored in a `StackGraph`.
-/// Other views of the inner `Graph` may have added things after this `StackGraph` was created.
+/// Other clones of the inner `StackGraph` may have added things after this `StackGraph` was created
+/// and before this `StackGraphView` was `.borrow()`ed.
 /// So, we need to filter everything to only the prefix recorded by `self.age`.
 pub struct StackGraphView<'a, N: Clone, E: Clone> {
     inner: Ref<'a, Graph<N, E>>,
