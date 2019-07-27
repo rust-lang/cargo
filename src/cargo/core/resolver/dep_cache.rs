@@ -20,7 +20,7 @@ use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, 
 use crate::util::errors::CargoResult;
 
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{ActivateResult, Method};
+use crate::core::resolver::{ActivateResult, ResolveOpts};
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
@@ -34,7 +34,7 @@ pub struct RegistryQueryer<'a> {
     registry_cache: HashMap<Dependency, Rc<Vec<Summary>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
-        (Option<PackageId>, Summary, Method),
+        (Option<PackageId>, Summary, ResolveOpts),
         Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
     >,
     /// all the cases we ended up using a supplied replacement
@@ -192,20 +192,20 @@ impl<'a> RegistryQueryer<'a> {
     }
 
     /// Find out what dependencies will be added by activating `candidate`,
-    /// with features described in `method`. Then look up in the `registry`
+    /// with features described in `opts`. Then look up in the `registry`
     /// the candidates that will fulfil each of these dependencies, as it is the
     /// next obvious question.
     pub fn build_deps(
         &mut self,
         parent: Option<PackageId>,
         candidate: &Summary,
-        method: &Method,
+        opts: &ResolveOpts,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
         if let Some(out) = self
             .summary_cache
-            .get(&(parent, candidate.clone(), method.clone()))
+            .get(&(parent, candidate.clone(), opts.clone()))
             .cloned()
         {
             return Ok(out);
@@ -213,7 +213,7 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, method)?;
+        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -236,7 +236,7 @@ impl<'a> RegistryQueryer<'a> {
         // If we succeed we add the result to the cache so we can use it again next time.
         // We dont cache the failure cases as they dont impl Clone.
         self.summary_cache
-            .insert((parent, candidate.clone(), method.clone()), out.clone());
+            .insert((parent, candidate.clone(), opts.clone()), out.clone());
 
         Ok(out)
     }
@@ -247,18 +247,13 @@ impl<'a> RegistryQueryer<'a> {
 pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
-    method: &'b Method,
+    opts: &'b ResolveOpts,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
-    let dev_deps = match *method {
-        Method::Everything => true,
-        Method::Required { dev_deps, .. } => dev_deps,
-    };
-
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
+    let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 
-    let reqs = build_requirements(s, method)?;
+    let reqs = build_requirements(s, opts)?;
     let mut ret = Vec::new();
     let mut used_features = HashSet::new();
     let default_dep = (false, BTreeSet::new());
@@ -336,52 +331,34 @@ pub fn resolve_features<'b>(
     Ok((reqs.into_used(), ret))
 }
 
-/// Takes requested features for a single package from the input `Method` and
+/// Takes requested features for a single package from the input `ResolveOpts` and
 /// recurses to find all requested features, dependencies and requested
 /// dependency features in a `Requirements` object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method,
+    opts: &'b ResolveOpts,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    match method {
-        Method::Everything
-        | Method::Required {
-            all_features: true, ..
-        } => {
-            for key in s.features().keys() {
-                reqs.require_feature(*key)?;
-            }
-            for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name_in_toml());
-            }
+    if opts.all_features {
+        for key in s.features().keys() {
+            reqs.require_feature(*key)?;
         }
-        Method::Required {
-            all_features: false,
-            features: requested,
-            ..
-        } => {
-            for &f in requested.iter() {
-                reqs.require_value(&FeatureValue::new(f, s))?;
-            }
+        for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
+            reqs.require_dependency(dep.name_in_toml());
+        }
+    } else {
+        for &f in opts.features.iter() {
+            reqs.require_value(&FeatureValue::new(f, s))?;
         }
     }
-    match *method {
-        Method::Everything
-        | Method::Required {
-            uses_default_features: true,
-            ..
-        } => {
-            if s.features().contains_key("default") {
-                reqs.require_feature(InternedString::new("default"))?;
-            }
+
+    if opts.uses_default_features {
+        if s.features().contains_key("default") {
+            reqs.require_feature(InternedString::new("default"))?;
         }
-        Method::Required {
-            uses_default_features: false,
-            ..
-        } => {}
     }
+
     Ok(reqs)
 }
 

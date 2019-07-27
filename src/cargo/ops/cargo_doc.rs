@@ -5,6 +5,7 @@ use std::path::Path;
 use failure::Fail;
 use opener;
 
+use crate::core::resolver::ResolveOpts;
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::CargoResult;
@@ -21,13 +22,13 @@ pub struct DocOptions<'a> {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
     let specs = options.compile_opts.spec.to_package_id_specs(ws)?;
-    let resolve = ops::resolve_ws_precisely(
-        ws,
+    let opts = ResolveOpts::new(
+        /*dev_deps*/ true,
         &options.compile_opts.features,
         options.compile_opts.all_features,
-        options.compile_opts.no_default_features,
-        &specs,
-    )?;
+        !options.compile_opts.no_default_features,
+    );
+    let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
     let ids = specs

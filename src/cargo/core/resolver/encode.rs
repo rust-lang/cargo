@@ -105,6 +105,7 @@ use crate::util::{internal, Graph};
 
 use super::{Resolve, ResolveVersion};
 
+/// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
@@ -123,6 +124,14 @@ struct Patch {
 pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
+    /// Convert a `Cargo.lock` to a Resolve.
+    ///
+    /// Note that this `Resolve` is not "complete". For example, the
+    /// dependencies do not know the difference between regular/dev/build
+    /// dependencies, so they are not filled in. It also does not include
+    /// `features`. Care should be taken when using this Resolve. One of the
+    /// primary uses is to be used with `resolve_with_previous` to guide the
+    /// resolver to create a complete Resolve.
     pub fn into_resolve(self, ws: &Workspace<'_>) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
         let mut checksums = HashMap::new();
