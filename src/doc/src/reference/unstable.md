@@ -102,7 +102,7 @@ Overrides can only be specified for dev and release profiles.
 Profiles can be specified in `.cargo/config` files. The `-Z config-profile`
 command-line flag is required to use this feature. The format is the same as
 in a `Cargo.toml` manifest. If found in multiple config files, settings will
-be merged using the regular [config hierarchy](reference/config.html#hierarchical-structure).
+be merged using the regular [config hierarchy](config.md#hierarchical-structure).
 Config settings take precedence over manifest settings.
 
 ```toml
@@ -153,18 +153,6 @@ Example:
 
 ```
 cargo +nightly build --build-plan -Z unstable-options
-```
-
-### default-run
-* Original issue: [#2200](https://github.com/rust-lang/cargo/issues/2200)
-
-The `default-run` option in the `[package]` section of the manifest can be used
-to specify a default binary picked by `cargo run`. For example, when there is
-both `src/bin/a.rs` and `src/bin/b.rs`:
-
-```toml
-[package]
-default-run = "a"
 ```
 
 ### Metabuild

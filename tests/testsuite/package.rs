@@ -367,18 +367,6 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[WARNING] [..] file `dir_root_1/some_dir/file` is now excluded.
-See [..]
-[WARNING] [..] file `dir_root_2/some_dir/file` is now excluded.
-See [..]
-[WARNING] [..] file `dir_root_3/some_dir/file` is now excluded.
-See [..]
-[WARNING] [..] file `some_dir/dir_deep_1/some_dir/file` is now excluded.
-See [..]
-[WARNING] [..] file `some_dir/dir_deep_3/some_dir/file` is now excluded.
-See [..]
-[WARNING] [..] file `some_dir/file_deep_1` is now excluded.
-See [..]
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] file_root_3
@@ -758,7 +746,7 @@ committed into git:
 
 Cargo.toml
 
-to proceed despite this, pass the `--allow-dirty` flag
+to proceed despite this and include the uncommited changes, pass the `--allow-dirty` flag
 ",
         )
         .run();
@@ -1172,13 +1160,7 @@ fn include_cargo_toml_implicit() {
         .run();
 }
 
-fn include_exclude_test(
-    include: &str,
-    exclude: &str,
-    files: &[&str],
-    expected: &str,
-    has_warnings: bool,
-) {
+fn include_exclude_test(include: &str, exclude: &str, files: &[&str], expected: &str) {
     let mut pb = project().file(
         "Cargo.toml",
         &format!(
@@ -1203,13 +1185,10 @@ fn include_exclude_test(
     }
     let p = pb.build();
 
-    let mut e = p.cargo("package --list");
-    if has_warnings {
-        e.with_stderr_contains("[..]");
-    } else {
-        e.with_stderr("");
-    }
-    e.with_stdout(expected).run();
+    p.cargo("package --list")
+        .with_stderr("")
+        .with_stdout(expected)
+        .run();
     p.root().rm_rf();
 }
 
@@ -1230,7 +1209,6 @@ fn package_include_ignore_only() {
          src/abc2.rs\n\
          src/lib.rs\n\
          ",
-        false,
     )
 }
 
@@ -1246,7 +1224,6 @@ fn gitignore_patterns() {
          foo\n\
          x/foo/y\n\
          ",
-        true,
     );
 
     include_exclude_test(
@@ -1256,7 +1233,6 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          foo\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1269,7 +1245,6 @@ fn gitignore_patterns() {
          foo\n\
          src/lib.rs\n\
          ",
-        true,
     );
 
     include_exclude_test(
@@ -1292,7 +1267,6 @@ fn gitignore_patterns() {
          other\n\
          src/lib.rs\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1302,7 +1276,6 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          a/foo/bar\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1312,7 +1285,6 @@ fn gitignore_patterns() {
         "Cargo.toml\n\
          foo/x/y/z\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1324,7 +1296,6 @@ fn gitignore_patterns() {
          a/x/b\n\
          a/x/y/b\n\
          ",
-        false,
     );
 }
 
@@ -1338,7 +1309,6 @@ fn gitignore_negate() {
          Cargo.toml\n\
          src/lib.rs\n\
          ",
-        false,
     );
 
     // NOTE: This is unusual compared to git. Git treats `src/` as a
@@ -1352,7 +1322,6 @@ fn gitignore_negate() {
         "Cargo.toml\n\
          src/lib.rs\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1362,7 +1331,6 @@ fn gitignore_negate() {
         "Cargo.toml\n\
          src/lib.rs\n\
          ",
-        false,
     );
 
     include_exclude_test(
@@ -1372,6 +1340,5 @@ fn gitignore_negate() {
         "Cargo.toml\n\
          foo.rs\n\
          ",
-        false,
     );
 }

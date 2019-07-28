@@ -8,7 +8,7 @@ use url::Url;
 use crate::core::interning::InternedString;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{validate_package_name, ToSemver, ToUrl};
+use crate::util::{validate_package_name, IntoUrl, ToSemver};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -50,7 +50,7 @@ impl PackageIdSpec {
     /// }
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
         if spec.contains('/') {
-            if let Ok(url) = spec.to_url() {
+            if let Ok(url) = spec.into_url() {
                 return PackageIdSpec::from_url(url);
             }
             if !spec.contains("://") {

@@ -21,13 +21,13 @@ when listed as a dependency in another package, and as the default name of
 inferred lib and bin targets.
 
 The name must not be empty, use only [alphanumeric] characters or `-` or `_`.
-Note that `cargo new` and `cargo init` impose some additional restrictions on
+Note that [`cargo new`] and [`cargo init`] impose some additional restrictions on
 the package name, such as enforcing that it is a valid Rust identifier and not
 a keyword. [crates.io][cratesio] imposes even more restrictions, such as
 enforcing only ASCII characters, not a reserved name, not a special Windows
 name such as "nul", is not too long, etc.
 
-[alphanumeric]: ../std/primitive.char.html#method.is_alphanumeric
+[alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 
 #### The `version` field
 
@@ -66,7 +66,7 @@ edition = '2018'
 ```
 
 The `edition` key affects which edition your package is compiled with. Cargo
-will always generate packages via `cargo new` with the `edition` key set to the
+will always generate packages via [`cargo new`] with the `edition` key set to the
 latest edition. Setting the `edition` key in `[package]` will affect all
 targets/crates in the package, including test suites, benchmarks, binaries,
 examples, etc.
@@ -77,7 +77,7 @@ This field specifies a file in the package root which is a [build script] for
 building native code. More information can be found in the [build script
 guide][build script].
 
-[build script]: reference/build-scripts.html
+[build script]: build-scripts.md
 
 ```toml
 [package]
@@ -91,7 +91,7 @@ This field specifies the name of a native library that is being linked to.
 More information can be found in the [`links`][links] section of the build
 script guide.
 
-[links]: reference/build-scripts.html#the-links-manifest-key
+[links]: build-scripts.md#the-links-manifest-key
 
 ```toml
 [package]
@@ -269,7 +269,7 @@ license-file = "..."
 # Optional specification of badges to be displayed on crates.io.
 #
 # - The badges pertaining to build status that are currently available are
-#   Appveyor, CircleCI, GitLab, Azure DevOps and TravisCI.
+#   Appveyor, CircleCI, Cirrus CI, GitLab, Azure DevOps and TravisCI.
 # - Available badges pertaining to code test coverage are Codecov and
 #   Coveralls.
 # - There are also maintenance-related badges based on isitmaintained.com
@@ -289,6 +289,9 @@ appveyor = { repository = "...", branch = "master", service = "github" }
 
 # Circle CI: `repository` is required. `branch` is optional; default is `master`
 circle-ci = { repository = "...", branch = "master" }
+
+# Cirrus CI: `repository` is required. `branch` is optional; default is `master`
+cirrus-ci = { repository = "...", branch = "master" }
 
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
@@ -364,9 +367,20 @@ package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
 
+#### The `default-run` field
+
+The `default-run` field in the `[package]` section of the manifest can be used
+to specify a default binary picked by [`cargo run`]. For example, when there is
+both `src/bin/a.rs` and `src/bin/b.rs`:
+
+```toml
+[package]
+default-run = "a"
+```
+
 ### Dependency sections
 
-See the [specifying dependencies page](reference/specifying-dependencies.html) for
+See the [specifying dependencies page](specifying-dependencies.md) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
@@ -629,8 +643,8 @@ A crate may either specify `package.workspace` or specify `[workspace]`. That
 is, a crate cannot both be a root crate in a workspace (contain `[workspace]`)
 and also be a member crate of another workspace (contain `package.workspace`).
 
-Most of the time workspaces will not need to be dealt with as `cargo new` and
-`cargo init` will handle workspace configuration automatically.
+Most of the time workspaces will not need to be dealt with as [`cargo new`] and
+[`cargo init`] will handle workspace configuration automatically.
 
 [globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
@@ -643,7 +657,7 @@ manifest*.
 
 #### Package selection
 
-In a workspace, package-related cargo commands like `cargo build` apply to
+In a workspace, package-related cargo commands like [`cargo build`] apply to
 packages selected by `-p` / `--package` or `--all` command-line parameters.
 When neither is specified, the optional `default-members` configuration is used:
 
@@ -699,7 +713,7 @@ may be composed of single files or directories with a `main.rs` file.
 To structure your code after you've created the files and folders for your
 package, you should remember to use Rust's module system, which you can read
 about in [the
-book](../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html).
+book](../../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html).
 
 See [Configuring a target](#configuring-a-target) below for more details on
 manually configuring target settings. See [Target
@@ -720,7 +734,7 @@ You can run individual executable examples with the command `cargo run --example
 
 Specify `crate-type` to make an example be compiled as a library (additional
 information about crate types is available in
-[The Rust Reference](../reference/linkage.html)):
+[The Rust Reference](../../reference/linkage.html)):
 
 ```toml
 [[example]]
@@ -733,7 +747,7 @@ You can build individual library examples with the command `cargo build
 
 ### Tests
 
-When you run `cargo test`, Cargo will:
+When you run [`cargo test`], Cargo will:
 
 * compile and run your library’s unit tests, which are in the files reachable
   from `lib.rs` (naturally, any sections marked with `#[cfg(test)]` will be
@@ -745,7 +759,7 @@ When you run `cargo test`, Cargo will:
 
 #### Integration tests
 
-Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
+Each file in `tests/*.rs` is an integration test. When you run [`cargo test`],
 Cargo will compile each of these files as a separate crate. The crate can link
 to your library by using `extern crate <library-name>`, like any other code that
 depends on it.
@@ -898,7 +912,7 @@ The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
 `proc-macro`.
 
 You can read more about the different crate types in the
-[Rust Reference Manual](../reference/linkage.html)
+[Rust Reference Manual](../../reference/linkage.html)
 
 ### The `[patch]` Section
 
@@ -942,7 +956,7 @@ technical specification of this feature.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
 [crates.io]: https://crates.io/
-[replace]: reference/specifying-dependencies.html#overriding-dependencies
+[replace]: specifying-dependencies.md#overriding-dependencies
 
 ### The `[replace]` Section
 
@@ -956,7 +970,7 @@ other copies. The syntax is similar to the `[dependencies]` section:
 ```
 
 Each key in the `[replace]` table is a [package ID
-specification](reference/pkgid-spec.html), which allows arbitrarily choosing a node in the
+specification](pkgid-spec.md), which allows arbitrarily choosing a node in the
 dependency graph to override. The value of each key is the same as the
 `[dependencies]` syntax for specifying dependencies, except that you can't
 specify features. Note that when a crate is overridden the copy it's overridden
@@ -966,6 +980,11 @@ source (e.g., git or a local path).
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
 
+[`cargo build`]: ../commands/cargo-build.md
+[`cargo init`]: ../commands/cargo-init.md
+[`cargo new`]: ../commands/cargo-new.md
+[`cargo run`]: ../commands/cargo-run.md
+[`cargo test`]: ../commands/cargo-test.md
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
-[spdx-license-list]: https://spdx.org/licenses/
 [spdx-license-list-2.4]: https://github.com/spdx/license-list-data/tree/v2.4
+[spdx-license-list]: https://spdx.org/licenses/

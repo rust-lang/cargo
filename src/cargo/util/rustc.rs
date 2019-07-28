@@ -4,7 +4,6 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::env;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 use std::sync::Mutex;
 
 use log::{debug, info, warn};
@@ -67,15 +66,20 @@ impl Rustc {
     }
 
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
-    pub fn process(&self) -> ProcessBuilder {
+    pub fn process_with(&self, path: impl AsRef<Path>) -> ProcessBuilder {
         match self.wrapper {
             Some(ref wrapper) if !wrapper.get_program().is_empty() => {
                 let mut cmd = wrapper.clone();
-                cmd.arg(&self.path);
+                cmd.arg(path.as_ref());
                 cmd
             }
-            _ => self.process_no_wrapper(),
+            _ => util::process(path.as_ref()),
         }
+    }
+
+    /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
+    pub fn process(&self) -> ProcessBuilder {
+        self.process_with(&self.path)
     }
 
     pub fn process_no_wrapper(&self) -> ProcessBuilder {
@@ -84,10 +88,6 @@ impl Rustc {
 
     pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
         self.cache.lock().unwrap().cached_output(cmd)
-    }
-
-    pub fn cached_success(&self, cmd: &ProcessBuilder) -> CargoResult<bool> {
-        self.cache.lock().unwrap().cached_success(cmd)
     }
 
     pub fn set_wrapper(&mut self, wrapper: ProcessBuilder) {
@@ -130,16 +130,16 @@ impl Cache {
                 let data = match read(&cache_location) {
                     Ok(data) => {
                         if data.rustc_fingerprint == rustc_fingerprint {
-                            info!("reusing existing rustc info cache");
+                            debug!("reusing existing rustc info cache");
                             dirty = false;
                             data
                         } else {
-                            info!("different compiler, creating new rustc info cache");
+                            debug!("different compiler, creating new rustc info cache");
                             empty
                         }
                     }
                     Err(e) => {
-                        info!("failed to read rustc info cache: {}", e);
+                        debug!("failed to read rustc info cache: {}", e);
                         empty
                     }
                 };
@@ -158,7 +158,7 @@ impl Cache {
                 if let Err(e) = fingerprint {
                     warn!("failed to calculate rustc fingerprint: {}", e);
                 }
-                info!("rustc info cache disabled");
+                debug!("rustc info cache disabled");
                 Cache {
                     cache_location: None,
                     dirty: false,
@@ -172,11 +172,12 @@ impl Cache {
         let key = process_fingerprint(cmd);
         match self.data.outputs.entry(key) {
             Entry::Occupied(entry) => {
-                info!("rustc info cache hit");
+                debug!("rustc info cache hit");
                 Ok(entry.get().clone())
             }
             Entry::Vacant(entry) => {
-                info!("rustc info cache miss");
+                debug!("rustc info cache miss");
+                debug!("running {}", cmd);
                 let output = cmd.exec_with_output()?;
                 let stdout = String::from_utf8(output.stdout)
                     .map_err(|_| internal("rustc didn't return utf8 output"))?;
@@ -186,28 +187,6 @@ impl Cache {
                 entry.insert(output.clone());
                 self.dirty = true;
                 Ok(output)
-            }
-        }
-    }
-
-    fn cached_success(&mut self, cmd: &ProcessBuilder) -> CargoResult<bool> {
-        let key = process_fingerprint(cmd);
-        match self.data.successes.entry(key) {
-            Entry::Occupied(entry) => {
-                info!("rustc info cache hit");
-                Ok(*entry.get())
-            }
-            Entry::Vacant(entry) => {
-                info!("rustc info cache miss");
-                let success = cmd
-                    .build_command()
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()?
-                    .success();
-                entry.insert(success);
-                self.dirty = true;
-                Ok(success)
             }
         }
     }

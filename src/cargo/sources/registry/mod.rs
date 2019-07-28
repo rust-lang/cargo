@@ -177,7 +177,7 @@ use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary}
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
-use crate::util::to_url::ToUrl;
+use crate::util::into_url::IntoUrl;
 use crate::util::{internal, CargoResult, Config, Filesystem};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
@@ -304,7 +304,7 @@ impl<'a> RegistryDependency<'a> {
         } = self;
 
         let id = if let Some(registry) = &registry {
-            SourceId::for_registry(&registry.to_url()?)?
+            SourceId::for_registry(&registry.into_url()?)?
         } else {
             default
         };
@@ -517,7 +517,7 @@ impl<'cfg> RegistrySource<'cfg> {
             MaybePackage::Download { .. } => unreachable!(),
         };
 
-        // After we've loaded the package configure it's summary's `checksum`
+        // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
         let req = VersionReq::exact(package.version());
         let summary_with_cksum = self

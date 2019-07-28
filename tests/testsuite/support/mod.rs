@@ -118,7 +118,7 @@ use std::time::{self, Duration};
 use std::usize;
 
 use cargo;
-use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
 use filetime;
 use serde_json::{self, Value};
 use url::Url;
@@ -332,15 +332,9 @@ impl Project {
     /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
     /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
-        let prefix = Project::get_lib_prefix(kind);
-
-        let extension = Project::get_lib_extension(kind);
-
-        let lib_file_name = format!("{}{}.{}", prefix, name, extension);
-
         self.target_debug_dir()
             .join("examples")
-            .join(&lib_file_name)
+            .join(paths::get_lib_filename(name, kind))
     }
 
     /// Path to a debug binary.
@@ -455,40 +449,26 @@ impl Project {
             .unwrap();
     }
 
-    fn get_lib_prefix(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "lib",
-            "staticlib" | "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    ""
-                } else {
-                    "lib"
-                }
+    pub fn symlink(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) {
+        let src = self.root().join(src.as_ref());
+        let dst = self.root().join(dst.as_ref());
+        #[cfg(unix)]
+        {
+            if let Err(e) = os::unix::fs::symlink(&src, &dst) {
+                panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
             }
-            _ => unreachable!(),
         }
-    }
-
-    fn get_lib_extension(kind: &str) -> &str {
-        match kind {
-            "lib" | "rlib" => "rlib",
-            "staticlib" => {
-                if cfg!(windows) {
-                    "lib"
-                } else {
-                    "a"
+        #[cfg(windows)]
+        {
+            if src.is_dir() {
+                if let Err(e) = os::windows::fs::symlink_dir(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
+                }
+            } else {
+                if let Err(e) = os::windows::fs::symlink_file(&src, &dst) {
+                    panic!("failed to symlink {:?} to {:?}: {:?}", src, dst, e);
                 }
             }
-            "dylib" | "proc-macro" => {
-                if cfg!(windows) {
-                    "dll"
-                } else if cfg!(target_os = "macos") {
-                    "dylib"
-                } else {
-                    "so"
-                }
-            }
-            _ => unreachable!(),
         }
     }
 }
@@ -578,8 +558,8 @@ pub struct Execs {
     expect_stderr_unordered: Vec<String>,
     expect_neither_contains: Vec<String>,
     expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
-    expect_json: Option<Vec<Value>>,
-    expect_json_contains_unordered: Vec<Value>,
+    expect_json: Option<Vec<String>>,
+    expect_json_contains_unordered: Vec<String>,
     stream_output: bool,
 }
 
@@ -746,7 +726,7 @@ impl Execs {
         self.expect_json = Some(
             expected
                 .split("\n\n")
-                .map(|line| line.parse().expect("line to be a valid JSON value"))
+                .map(|line| line.to_string())
                 .collect(),
         );
         self
@@ -762,11 +742,8 @@ impl Execs {
     ///
     /// See `with_json` for more detail.
     pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
-        self.expect_json_contains_unordered.extend(
-            expected
-                .split("\n\n")
-                .map(|line| line.parse().expect("line to be a valid JSON value")),
-        );
+        self.expect_json_contains_unordered
+            .extend(expected.split("\n\n").map(|line| line.to_string()));
         self
     }
 
@@ -878,7 +855,7 @@ impl Execs {
     fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
-            if env::var("CI").is_ok() {
+            if is_ci() {
                 panic!("`.stream()` is for local debugging")
             }
             process.exec_with_streaming(
@@ -1033,12 +1010,12 @@ impl Execs {
             );
 
             if let (Err(_), Err(_)) = (match_std, match_err) {
-                Err(format!(
+                return Err(format!(
                     "expected to find:\n\
                      {}\n\n\
                      did not find in either output.",
                     expect
-                ))?;
+                ));
             }
         }
 
@@ -1110,25 +1087,51 @@ impl Execs {
             Err(..) => return Err(format!("{} was not utf8 encoded", description)),
             Ok(actual) => actual,
         };
-        // Let's not deal with \r\n vs \n on windows...
-        let actual = actual.replace("\r", "");
-        let actual = actual.replace("\t", "<tab>");
-        Ok(actual)
+        Ok(self.normalize_matcher(actual))
     }
 
-    fn replace_expected(&self, expected: &str) -> String {
+    fn normalize_matcher(&self, matcher: &str) -> String {
+        // Let's not deal with / vs \ (windows...)
+        let matcher = matcher.replace("\\\\", "/").replace("\\", "/");
+
+        // Weirdness for paths on Windows extends beyond `/` vs `\` apparently.
+        // Namely paths like `c:\` and `C:\` are equivalent and that can cause
+        // issues. The return value of `env::current_dir()` may return a
+        // lowercase drive name, but we round-trip a lot of values through `Url`
+        // which will auto-uppercase the drive name. To just ignore this
+        // distinction we try to canonicalize as much as possible, taking all
+        // forms of a path and canonicalizing them to one.
+        let replace_path = |s: &str, path: &Path, with: &str| {
+            let path_through_url = Url::from_file_path(path).unwrap().to_file_path().unwrap();
+            let path1 = path.display().to_string().replace("\\", "/");
+            let path2 = path_through_url.display().to_string().replace("\\", "/");
+            s.replace(&path1, with)
+                .replace(&path2, with)
+                .replace(with, &path1)
+        };
+
         // Do the template replacements on the expected string.
-        let replaced = match self.process_builder {
-            None => expected.to_string(),
-            Some(ref p) => match p.get_cwd() {
-                None => expected.to_string(),
-                Some(cwd) => expected.replace("[CWD]", &cwd.display().to_string()),
+        let matcher = match &self.process_builder {
+            None => matcher.to_string(),
+            Some(p) => match p.get_cwd() {
+                None => matcher.to_string(),
+                Some(cwd) => replace_path(&matcher, cwd, "[CWD]"),
             },
         };
 
-        // On Windows, we need to use a wildcard for the drive,
-        // because we don't actually know what it will be.
-        replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" })
+        // Similar to cwd above, perform similar treatment to the root path
+        // which in theory all of our paths should otherwise get rooted at.
+        let root = paths::root();
+        let matcher = replace_path(&matcher, &root, "[ROOT]");
+
+        // Let's not deal with \r\n vs \n on windows...
+        let matcher = matcher.replace("\r", "");
+
+        // It's easier to read tabs in outputs if they don't show up as literal
+        // hidden characters
+        let matcher = matcher.replace("\t", "<tab>");
+
+        return matcher;
     }
 
     fn match_std(
@@ -1140,7 +1143,7 @@ impl Execs {
         kind: MatchKind,
     ) -> MatchResult {
         let out = match expected {
-            Some(out) => self.replace_expected(out),
+            Some(out) => self.normalize_matcher(out),
             None => return Ok(()),
         };
 
@@ -1276,7 +1279,7 @@ impl Execs {
     ) -> MatchResult {
         let actual = self.normalize_actual("stderr", actual)?;
         let contains = |s, line| {
-            let mut s = self.replace_expected(s);
+            let mut s = self.normalize_matcher(s);
             s.insert_str(0, "[..]");
             s.push_str("[..]");
             lines_match(&s, line)
@@ -1309,13 +1312,19 @@ impl Execs {
         }
     }
 
-    fn match_json(&self, expected: &Value, line: &str) -> MatchResult {
+    fn match_json(&self, expected: &str, line: &str) -> MatchResult {
+        let expected = self.normalize_matcher(expected);
+        let line = self.normalize_matcher(line);
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
             Ok(actual) => actual,
         };
+        let expected = match expected.parse() {
+            Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
+            Ok(expected) => expected,
+        };
 
-        find_json_mismatch(expected, &actual)
+        find_json_mismatch(&expected, &actual)
     }
 
     fn diff_lines<'a>(
@@ -1372,14 +1381,9 @@ enum MatchKind {
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
 ///   to match cargo's "status" output and allows you to ignore the alignment.
 ///   See `substitute_macros` for a complete list of macros.
-/// - `[ROOT]` is `/` or `[..]:\` on Windows.
+/// - `[ROOT]` the path to the test directory's root
 /// - `[CWD]` is the working directory of the process that was run.
-pub fn lines_match(expected: &str, actual: &str) -> bool {
-    // Let's not deal with / vs \ (windows...)
-    // First replace backslash-escaped backslashes with forward slashes
-    // which can occur in, for example, JSON output
-    let expected = expected.replace("\\\\", "/").replace("\\", "/");
-    let mut actual: &str = &actual.replace("\\\\", "/").replace("\\", "/");
+pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     let expected = substitute_macros(&expected);
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
@@ -1650,7 +1654,9 @@ pub fn rustc_host() -> String {
 }
 
 pub fn is_nightly() -> bool {
-    RUSTC.with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
+    env::var("CARGO_TEST_DISABLE_NIGHTLY").is_err()
+        && RUSTC
+            .with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
 }
 
 pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
@@ -1740,7 +1746,7 @@ pub fn is_coarse_mtime() -> bool {
     // This should actually be a test that `$CARGO_TARGET_DIR` is on an HFS
     // filesystem, (or any filesystem with low-resolution mtimes). However,
     // that's tricky to detect, so for now just deal with CI.
-    cfg!(target_os = "macos") && env::var("CI").is_ok()
+    cfg!(target_os = "macos") && is_ci()
 }
 
 /// Some CI setups are much slower then the equipment used by Cargo itself.
@@ -1752,4 +1758,46 @@ pub fn slow_cpu_multiplier(main: u64) -> Duration {
             env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
     }
     Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
+}
+
+pub fn clippy_is_available() -> bool {
+    if let Err(e) = process("clippy-driver").arg("-V").exec_with_output() {
+        eprintln!("clippy-driver not available, skipping clippy test");
+        eprintln!("{:?}", e);
+        false
+    } else {
+        true
+    }
+}
+
+#[cfg(windows)]
+pub fn symlink_supported() -> bool {
+    if is_ci() {
+        // We want to be absolutely sure this runs on CI.
+        return true;
+    }
+    let src = paths::root().join("symlink_src");
+    fs::write(&src, "").unwrap();
+    let dst = paths::root().join("symlink_dst");
+    let result = match os::windows::fs::symlink_file(&src, &dst) {
+        Ok(_) => {
+            fs::remove_file(&dst).unwrap();
+            true
+        }
+        Err(e) => {
+            eprintln!(
+                "symlinks not supported: {:?}\n\
+                 Windows 10 users should enable developer mode.",
+                e
+            );
+            false
+        }
+    };
+    fs::remove_file(&src).unwrap();
+    return result;
+}
+
+#[cfg(not(windows))]
+pub fn symlink_supported() -> bool {
+    true
 }

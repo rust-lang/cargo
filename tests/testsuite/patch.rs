@@ -1020,3 +1020,117 @@ fn replace_prerelease() {
 
     p.cargo("build").run();
 }
+
+#[cargo_test]
+fn patch_older() {
+    Package::new("baz", "1.0.2").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+                baz = "=1.0.1"
+
+                [patch.crates-io]
+                baz = { path = "./baz" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                baz = "1.0.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [project]
+                name = "baz"
+                version = "1.0.1"
+                authors = []
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[COMPILING] baz v1.0.1 [..]
+[COMPILING] bar v0.5.0 [..]
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cycle() {
+    Package::new("a", "1.0.0").publish();
+    Package::new("b", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+
+                [patch.crates-io]
+                a = {path="a"}
+                b = {path="b"}
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "1.0.0"
+
+                [dependencies]
+                b = "1.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "1.0.0"
+
+                [dependencies]
+                a = "1.0"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: cyclic package dependency: [..]
+package `[..]`
+    ... which is depended on by `[..]`
+",
+        )
+        .run();
+}

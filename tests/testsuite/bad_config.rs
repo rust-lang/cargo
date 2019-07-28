@@ -1146,8 +1146,7 @@ fn ignored_git_revision() {
     foo.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
-            "\
-             [WARNING] key `branch` is ignored for dependency (bar). \
+            "[WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",
         )
         .run();

@@ -170,20 +170,9 @@ fn too_many_bins() {
     p.cargo("run")
         .with_status(101)
         .with_stderr(
-            "[ERROR] `cargo run` requires that a package only \
-             have one executable; use the `--bin` option \
-             to specify which one to run\navailable binaries: [..]\n",
-        )
-        .run();
-
-    // Using [..] here because the order is not stable
-    p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
             "[ERROR] `cargo run` could not determine which binary to run. \
-             Use the `--bin` option to specify a binary, or (on \
-             nightly) the `default-run` manifest key.\
+             Use the `--bin` option to specify a binary, or the \
+             `default-run` manifest key.\
              \navailable binaries: [..]\n",
         )
         .run();
@@ -241,8 +230,6 @@ fn specify_default_run() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["default-run"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -255,18 +242,9 @@ fn specify_default_run() {
         .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
         .build();
 
-    p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("hello A")
-        .run();
-    p.cargo("run --bin a")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("hello A")
-        .run();
-    p.cargo("run --bin b")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("hello B")
-        .run();
+    p.cargo("run").with_stdout("hello A").run();
+    p.cargo("run --bin a").with_stdout("hello A").run();
+    p.cargo("run --bin b").with_stdout("hello B").run();
 }
 
 #[cargo_test]
@@ -275,8 +253,6 @@ fn bogus_default_run() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["default-run"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -289,60 +265,16 @@ fn bogus_default_run() {
         .build();
 
     p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr("error: no bin target named `b`\n\nDid you mean [..]?")
-        .run();
-}
-
-#[cargo_test]
-fn default_run_unstable() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            default-run = "a"
-        "#,
-        )
-        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
-        .build();
-
-    p.cargo("run")
         .with_status(101)
         .with_stderr(
-            r#"error: failed to parse manifest at [..]
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  the `default-run` manifest key is unstable
+  default-run target `b` not found
 
-Caused by:
-  feature `default-run` is required
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can add
-`cargo-features = ["default-run"]` to enable this feature
-"#,
-        )
-        .run();
-
-    p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            r#"error: failed to parse manifest at [..]
-
-Caused by:
-  the `default-run` manifest key is unstable
-
-Caused by:
-  feature `default-run` is required
-
-consider adding `cargo-features = ["default-run"]` to the manifest
-"#,
+<tab>Did you mean `a`?
+",
         )
         .run();
 }
@@ -586,7 +518,7 @@ fn run_with_filename() {
             "\
 [ERROR] no bin target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 
@@ -601,7 +533,7 @@ Did you mean `a`?",
             "\
 [ERROR] no example target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 }
@@ -865,8 +797,7 @@ fn run_from_executable_folder() {
     p.cargo("run")
         .cwd(cwd)
         .with_stderr(
-            "\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
+            "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
              [RUNNING] `./foo[EXE]`",
         )
         .with_stdout("hello")
@@ -1103,7 +1034,7 @@ fn run_workspace() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] `cargo run` requires that a package only have one executable[..]
+[ERROR] `cargo run` could not determine which binary to run[..]
 available binaries: a, b",
         )
         .run();
@@ -1123,8 +1054,6 @@ fn default_run_workspace() {
         .file(
             "a/Cargo.toml",
             r#"
-            cargo-features = ["default-run"]
-
             [project]
             name = "a"
             version = "0.0.1"
@@ -1136,10 +1065,7 @@ fn default_run_workspace() {
         .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
         .build();
 
-    p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_stdout("run-a")
-        .run();
+    p.cargo("run").with_stdout("run-a").run();
 }
 
 #[cargo_test]

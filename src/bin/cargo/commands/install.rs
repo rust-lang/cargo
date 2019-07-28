@@ -2,7 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
 use cargo::ops;
-use cargo::util::ToUrl;
+use cargo::util::IntoUrl;
 
 pub fn cli() -> App {
     subcommand("install")
@@ -134,7 +134,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut from_cwd = false;
 
     let source = if let Some(url) = args.value_of("git") {
-        let url = url.to_url()?;
+        let url = url.into_url()?;
         let gitref = if let Some(branch) = args.value_of("branch") {
             GitReference::Branch(branch.to_string())
         } else if let Some(tag) = args.value_of("tag") {
@@ -160,9 +160,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let root = args.value_of("root");
 
     if args.is_present("no-track") && !config.cli_unstable().install_upgrade {
-        Err(failure::format_err!(
+        return Err(failure::format_err!(
             "`--no-track` flag is unstable, pass `-Z install-upgrade` to enable it"
-        ))?;
+        )
+        .into());
     };
 
     if args.is_present("list") {

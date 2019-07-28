@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use filetime::{self, FileTime};
 use lazy_static::lazy_static;
 
-static CARGO_INTEGRATION_TEST_DIR: &'static str = "cit";
+static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 lazy_static! {
     static ref GLOBAL_ROOT: PathBuf = {
@@ -113,22 +113,11 @@ impl CargoPathExt for Path {
      * care all that much for our tests
      */
     fn rm_rf(&self) {
-        if !self.exists() {
-            return;
-        }
-
-        for file in t!(fs::read_dir(self)) {
-            let file = t!(file);
-            if file.file_type().map(|m| m.is_dir()).unwrap_or(false) {
-                file.path().rm_rf();
-            } else {
-                // On windows we can't remove a readonly file, and git will
-                // often clone files as readonly. As a result, we have some
-                // special logic to remove readonly files on windows.
-                do_op(&file.path(), "remove file", |p| fs::remove_file(p));
+        if self.exists() {
+            if let Err(e) = remove_dir_all::remove_dir_all(self) {
+                panic!("failed to remove {:?}: {:?}", self, e)
             }
         }
-        do_op(self, "remove dir", |p| fs::remove_dir(p));
     }
 
     fn mkdir_p(&self) {
@@ -211,5 +200,56 @@ where
         Err(e) => {
             panic!("failed to {} {}: {}", desc, path.display(), e);
         }
+    }
+}
+
+/// Get the filename for a library.
+///
+/// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+///
+/// For example, dynamic library named "foo" would return:
+/// - macOS: "libfoo.dylib"
+/// - Windows: "foo.dll"
+/// - Unix: "libfoo.so"
+pub fn get_lib_filename(name: &str, kind: &str) -> String {
+    let prefix = get_lib_prefix(kind);
+    let extension = get_lib_extension(kind);
+    format!("{}{}.{}", prefix, name, extension)
+}
+
+pub fn get_lib_prefix(kind: &str) -> &str {
+    match kind {
+        "lib" | "rlib" => "lib",
+        "staticlib" | "dylib" | "proc-macro" => {
+            if cfg!(windows) {
+                ""
+            } else {
+                "lib"
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+pub fn get_lib_extension(kind: &str) -> &str {
+    match kind {
+        "lib" | "rlib" => "rlib",
+        "staticlib" => {
+            if cfg!(windows) {
+                "lib"
+            } else {
+                "a"
+            }
+        }
+        "dylib" | "proc-macro" => {
+            if cfg!(windows) {
+                "dll"
+            } else if cfg!(target_os = "macos") {
+                "dylib"
+            } else {
+                "so"
+            }
+        }
+        _ => unreachable!(),
     }
 }

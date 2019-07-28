@@ -510,6 +510,10 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
+                // Temporary fix to work around bug in libgit2 when creating a
+                // directory in the root of a posix filesystem.
+                // See: https://github.com/libgit2/libgit2/issues/5130
+                fs::create_dir_all(path)?;
                 GitRepo::init(path, config.cwd())?;
             }
         }

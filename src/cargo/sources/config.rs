@@ -14,7 +14,7 @@ use crate::core::{GitReference, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::ConfigValue;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, ToUrl};
+use crate::util::{Config, IntoUrl};
 
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
@@ -242,7 +242,7 @@ restore the source replacement configuration to continue the build
 
         fn url(cfg: &ConfigValue, key: &str) -> CargoResult<Url> {
             let (url, path) = cfg.string(key)?;
-            let url = url.to_url().chain_err(|| {
+            let url = url.into_url().chain_err(|| {
                 format!(
                     "configuration key `{}` specified an invalid \
                      URL (in {})",

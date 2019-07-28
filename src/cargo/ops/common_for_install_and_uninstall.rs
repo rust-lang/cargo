@@ -545,7 +545,7 @@ pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesyst
 }
 
 /// Determines the `PathSource` from a `SourceId`.
-pub fn path_source<'a>(source_id: SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
+pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSource<'_>> {
     let path = source_id
         .url()
         .to_file_path()

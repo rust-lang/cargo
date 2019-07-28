@@ -3,7 +3,7 @@ use std::fs::File;
 use git2;
 
 use crate::support::git;
-use crate::support::{basic_manifest, project};
+use crate::support::{basic_manifest, clippy_is_available, is_nightly, project};
 
 use std::io::Write;
 
@@ -141,8 +141,7 @@ fn broken_fixes_backed_out() {
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_stderr_contains(
-            "\
-             warning: failed to automatically apply fixes suggested by rustc \
+            "warning: failed to automatically apply fixes suggested by rustc \
              to crate `bar`\n\
              \n\
              after fixes were automatically applied the compiler reported \
@@ -413,7 +412,7 @@ fn specify_rustflags() {
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(stderr)
         .with_stdout("")
         .run();
@@ -517,8 +516,7 @@ fn preserve_line_endings() {
     let p = project()
         .file(
             "src/lib.rs",
-            "\
-             fn add(a: &u32) -> u32 { a + 1 }\r\n\
+            "fn add(a: &u32) -> u32 { a + 1 }\r\n\
              pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
              ",
         )
@@ -535,9 +533,8 @@ fn fix_deny_warnings() {
     let p = project()
         .file(
             "src/lib.rs",
-            "\
-                #![deny(warnings)]
-                pub fn foo() { let mut x = 3; drop(x); }
+            "#![deny(warnings)]
+             pub fn foo() { let mut x = 3; drop(x); }
             ",
         )
         .build();
@@ -703,8 +700,7 @@ fn warns_if_no_vcs_detected() {
     p.cargo("fix")
         .with_status(101)
         .with_stderr(
-            "\
-             error: no VCS found for this package and `cargo fix` can potentially perform \
+            "error: no VCS found for this package and `cargo fix` can potentially perform \
              destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
              ",
         )
@@ -1284,4 +1280,51 @@ fn fix_in_existing_repo_weird_ignore() {
         .with_status(101)
         .run();
     p.cargo("fix").cwd("src").run();
+}
+
+#[cargo_test]
+fn fix_with_clippy() {
+    if !is_nightly() {
+        // fix --clippy is unstable
+        eprintln!("skipping test: requires nightly");
+        return;
+    }
+
+    if !clippy_is_available() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                pub fn foo() {
+                    let mut v = Vec::<String>::new();
+                    let _ = v.iter_mut().filter(|&ref a| a.is_empty());
+                }
+    ",
+        )
+        .build();
+
+    let stderr = "\
+[CHECKING] foo v0.0.1 ([..])
+[FIXING] src/lib.rs (1 fix)
+[FINISHED] [..]
+";
+
+    p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
+
+    assert_eq!(
+        p.read_file("src/lib.rs"),
+        "
+                pub fn foo() {
+                    let mut v = Vec::<String>::new();
+                    let _ = v.iter_mut().filter(|a| a.is_empty());
+                }
+    "
+    );
 }

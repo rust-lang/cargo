@@ -1361,7 +1361,7 @@ fn env_rustflags_misspelled_build_script() {
 }
 
 #[cargo_test]
-fn reamp_path_prefix_ignored() {
+fn remap_path_prefix_ignored() {
     // Ensure that --remap-path-prefix does not affect metadata hash.
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build").run();
@@ -1372,15 +1372,24 @@ fn reamp_path_prefix_ignored() {
     assert_eq!(rlibs.len(), 1);
     p.cargo("clean").run();
 
+    let check_metadata_same = || {
+        let rlibs2 = p
+            .glob("target/debug/deps/*.rlib")
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(rlibs, rlibs2);
+    };
+
     p.cargo("build")
         .env(
             "RUSTFLAGS",
             "--remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo",
         )
         .run();
-    let rlibs2 = p
-        .glob("target/debug/deps/*.rlib")
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
-    assert_eq!(rlibs, rlibs2);
+    check_metadata_same();
+
+    p.cargo("clean").run();
+    p.cargo("rustc -- --remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo")
+        .run();
+    check_metadata_same();
 }

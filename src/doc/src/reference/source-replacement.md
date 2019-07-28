@@ -25,9 +25,9 @@ patching a dependency or a private registry. Cargo supports patching
 dependencies through the usage of [the `[replace]` key][replace-section], and
 private registry support is described in [Registries][registries].
 
-[replace-section]: reference/manifest.html#the-replace-section
-[overriding]: reference/specifying-dependencies.html#overriding-dependencies
-[registries]: reference/registries.html
+[replace-section]: manifest.md#the-replace-section
+[overriding]: specifying-dependencies.md#overriding-dependencies
+[registries]: registries.md
 
 ### Configuration
 
@@ -72,7 +72,7 @@ git = "https://example.com/path/to/repo"
 # rev = "313f44e8"
 ```
 
-[config]: reference/config.html
+[config]: config.md
 
 ### Registry Sources
 

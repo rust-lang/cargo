@@ -69,7 +69,6 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    #[serde(with = "url_serde")]
     registry: Option<Url>,
 }
 
@@ -328,6 +327,10 @@ impl Dependency {
     }
 
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+        if self.is_public() {
+            // Setting 'public' only makes sense for normal dependencies
+            assert_eq!(kind, Kind::Normal);
+        }
         Rc::make_mut(&mut self.inner).kind = kind;
         self
     }
@@ -433,7 +436,7 @@ impl Dependency {
         self.matches_id(sum.package_id())
     }
 
-    /// Returns `true` if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
@@ -456,13 +459,10 @@ impl Dependency {
 }
 
 impl Platform {
-    pub fn matches(&self, name: &str, cfg: Option<&[Cfg]>) -> bool {
+    pub fn matches(&self, name: &str, cfg: &[Cfg]) -> bool {
         match *self {
             Platform::Name(ref p) => p == name,
-            Platform::Cfg(ref p) => match cfg {
-                Some(cfg) => p.matches(cfg),
-                None => false,
-            },
+            Platform::Cfg(ref p) => p.matches(cfg),
         }
     }
 }

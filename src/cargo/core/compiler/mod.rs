@@ -180,9 +180,6 @@ fn rustc<'a, 'cfg>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
-    if cx.is_primary_package(unit) {
-        rustc.env("CARGO_PRIMARY_PACKAGE", "1");
-    }
     let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
@@ -217,6 +214,9 @@ fn rustc<'a, 'cfg>(
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
+    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+        rustc.arg("-Zbinary-dep-depinfo");
+    }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
@@ -226,6 +226,7 @@ fn rustc<'a, 'cfg>(
     let exec = exec.clone();
 
     let root_output = cx.files().host_root().to_path_buf();
+    let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -320,7 +321,9 @@ fn rustc<'a, 'cfg>(
                 &dep_info_loc,
                 &cwd,
                 &pkg_root,
-                &root_output,
+                &target_dir,
+                // Do not track source files in the fingerprint for registry dependencies.
+                current_id.source_id().is_path(),
             )
             .chain_err(|| {
                 internal(format!(
@@ -593,7 +596,11 @@ fn prepare_rustc<'a, 'cfg>(
     crate_types: &[&str],
     unit: &Unit<'a>,
 ) -> CargoResult<ProcessBuilder> {
-    let mut base = cx.compilation.rustc_process(unit.pkg, unit.target)?;
+    let is_primary = cx.is_primary_package(unit);
+
+    let mut base = cx
+        .compilation
+        .rustc_process(unit.pkg, unit.target, is_primary)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;

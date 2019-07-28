@@ -1,7 +1,10 @@
+use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
+use std::fmt::Write;
+use std::rc::Rc;
 use std::time::Instant;
 
 use cargo::core::dependency::Kind;
@@ -9,7 +12,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, Graph, ToUrl};
+use cargo::util::{CargoResult, Config, Graph, IntoUrl};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -17,92 +20,99 @@ use proptest::sample::Index;
 use proptest::string::string_regex;
 use varisat::{self, ExtendFormula};
 
-pub fn resolve(
-    pkg: PackageId,
-    deps: Vec<Dependency>,
-    registry: &[Summary],
-) -> CargoResult<Vec<PackageId>> {
-    resolve_with_config(pkg, deps, registry, None)
+pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
+    resolve_with_config(deps, registry, None)
 }
 
 pub fn resolve_and_validated(
-    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
-    sat_resolve: Option<&mut SatResolve>,
+    sat_resolve: Option<SatResolve>,
 ) -> CargoResult<Vec<PackageId>> {
-    let should_resolve = if let Some(sat) = sat_resolve {
-        sat.sat_resolve(&deps)
-    } else {
-        SatResolve::new(registry).sat_resolve(&deps)
-    };
-    let resolve = resolve_with_config_raw(pkg, deps, registry, None);
-    assert_eq!(resolve.is_ok(), should_resolve);
+    let resolve = resolve_with_config_raw(deps.clone(), registry, None);
 
-    let resolve = resolve?;
-    let mut stack = vec![pkg];
-    let mut used = HashSet::new();
-    let mut links = HashSet::new();
-    while let Some(p) = stack.pop() {
-        assert!(resolve.contains(&p));
-        if used.insert(p) {
-            // in the tests all `links` crates end in `-sys`
-            if p.name().ends_with("-sys") {
-                assert!(links.insert(p.name()));
-            }
-            stack.extend(resolve.deps(p).map(|(dp, deps)| {
-                for d in deps {
-                    assert!(d.matches_id(dp));
-                }
-                dp
-            }));
-        }
-    }
-    let out = resolve.sort();
-    assert_eq!(out.len(), used.len());
-
-    let mut pub_deps: HashMap<PackageId, HashSet<_>> = HashMap::new();
-    for &p in out.iter() {
-        // make the list of `p` public dependencies
-        let mut self_pub_dep = HashSet::new();
-        self_pub_dep.insert(p);
-        for (dp, deps) in resolve.deps(p) {
-            if deps.iter().any(|d| d.is_public()) {
-                self_pub_dep.extend(pub_deps[&dp].iter().cloned())
-            }
-        }
-        pub_deps.insert(p, self_pub_dep);
-
-        // check if `p` has a public dependencies conflicts
-        let seen_dep: BTreeSet<_> = resolve
-            .deps(p)
-            .flat_map(|(dp, _)| pub_deps[&dp].iter().cloned())
-            .collect();
-        let seen_dep: Vec<_> = seen_dep.iter().collect();
-        for a in seen_dep.windows(2) {
-            if a[0].name() == a[1].name() {
+    match resolve {
+        Err(e) => {
+            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
+            if sat_resolve.sat_resolve(&deps) {
                 panic!(
-                    "the package {:?} can publicly see {:?} and {:?}",
-                    p, a[0], a[1]
-                )
+                    "the resolve err but the sat_resolve thinks this will work:\n{}",
+                    sat_resolve.use_packages().unwrap()
+                );
             }
+            Err(e)
+        }
+        Ok(resolve) => {
+            let mut stack = vec![pkg_id("root")];
+            let mut used = HashSet::new();
+            let mut links = HashSet::new();
+            while let Some(p) = stack.pop() {
+                assert!(resolve.contains(&p));
+                if used.insert(p) {
+                    // in the tests all `links` crates end in `-sys`
+                    if p.name().ends_with("-sys") {
+                        assert!(links.insert(p.name()));
+                    }
+                    stack.extend(resolve.deps(p).map(|(dp, deps)| {
+                        for d in deps {
+                            assert!(d.matches_id(dp));
+                        }
+                        dp
+                    }));
+                }
+            }
+            let out = resolve.sort();
+            assert_eq!(out.len(), used.len());
+
+            let mut pub_deps: HashMap<PackageId, HashSet<_>> = HashMap::new();
+            for &p in out.iter() {
+                // make the list of `p` public dependencies
+                let mut self_pub_dep = HashSet::new();
+                self_pub_dep.insert(p);
+                for (dp, deps) in resolve.deps(p) {
+                    if deps.iter().any(|d| d.is_public()) {
+                        self_pub_dep.extend(pub_deps[&dp].iter().cloned())
+                    }
+                }
+                pub_deps.insert(p, self_pub_dep);
+
+                // check if `p` has a public dependencies conflicts
+                let seen_dep: BTreeSet<_> = resolve
+                    .deps(p)
+                    .flat_map(|(dp, _)| pub_deps[&dp].iter().cloned())
+                    .collect();
+                let seen_dep: Vec<_> = seen_dep.iter().collect();
+                for a in seen_dep.windows(2) {
+                    if a[0].name() == a[1].name() {
+                        panic!(
+                            "the package {:?} can publicly see {:?} and {:?}",
+                            p, a[0], a[1]
+                        )
+                    }
+                }
+            }
+            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
+            if !sat_resolve.sat_is_valid_solution(&out) {
+                panic!(
+                    "the sat_resolve err but the resolve thinks this will work:\n{:?}",
+                    resolve
+                );
+            }
+            Ok(out)
         }
     }
-    Ok(out)
 }
 
 pub fn resolve_with_config(
-    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(pkg, deps, registry, config)?;
+    let resolve = resolve_with_config_raw(deps, registry, config)?;
     Ok(resolve.sort())
 }
 
 pub fn resolve_with_config_raw(
-    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -158,7 +168,7 @@ pub fn resolve_with_config_raw(
         used: HashSet::new(),
     };
     let summary = Summary::new(
-        pkg,
+        pkg_id("root"),
         deps,
         &BTreeMap::<String, Vec<String>>::new(),
         None::<String>,
@@ -241,7 +251,9 @@ fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
 ///
 /// The SAT library dose not optimize for the newer version,
 /// so the selected packages may not match the real resolver.
-pub struct SatResolve {
+#[derive(Clone)]
+pub struct SatResolve(Rc<RefCell<SatResolveInner>>);
+struct SatResolveInner {
     solver: varisat::Solver<'static>,
     var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
     by_name: HashMap<&'static str, Vec<PackageId>>,
@@ -404,27 +416,27 @@ impl SatResolve {
         solver
             .solve()
             .expect("docs say it can't error in default config");
-
-        SatResolve {
+        SatResolve(Rc::new(RefCell::new(SatResolveInner {
             solver,
             var_for_is_packages_used,
             by_name,
-        }
+        })))
     }
-    pub fn sat_resolve(&mut self, deps: &[Dependency]) -> bool {
+    pub fn sat_resolve(&self, deps: &[Dependency]) -> bool {
+        let mut s = self.0.borrow_mut();
         let mut assumption = vec![];
         let mut this_call = None;
 
         // the starting `deps` need to be satisfied
         for dep in deps.iter() {
             let empty_vec = vec![];
-            let matches: Vec<varisat::Lit> = self
+            let matches: Vec<varisat::Lit> = s
                 .by_name
                 .get(dep.package_name().as_str())
                 .unwrap_or(&empty_vec)
                 .iter()
                 .filter(|&p| dep.matches_id(*p))
-                .map(|p| self.var_for_is_packages_used[p].positive())
+                .map(|p| s.var_for_is_packages_used[p].positive())
                 .collect();
             if matches.is_empty() {
                 return false;
@@ -432,21 +444,57 @@ impl SatResolve {
                 assumption.extend_from_slice(&matches)
             } else {
                 if this_call.is_none() {
-                    let new_var = self.solver.new_var();
+                    let new_var = s.solver.new_var();
                     this_call = Some(new_var);
                     assumption.push(new_var.positive());
                 }
                 let mut matches = matches;
                 matches.push(this_call.unwrap().negative());
-                self.solver.add_clause(&matches);
+                s.solver.add_clause(&matches);
             }
         }
 
-        self.solver.assume(&assumption);
+        s.solver.assume(&assumption);
 
-        self.solver
+        s.solver
             .solve()
             .expect("docs say it can't error in default config")
+    }
+    pub fn sat_is_valid_solution(&self, pids: &[PackageId]) -> bool {
+        let mut s = self.0.borrow_mut();
+        for p in pids {
+            if p.name().as_str() != "root" && !s.var_for_is_packages_used.contains_key(p) {
+                return false;
+            }
+        }
+        let assumption: Vec<_> = s
+            .var_for_is_packages_used
+            .iter()
+            .map(|(p, v)| v.lit(pids.contains(p)))
+            .collect();
+
+        s.solver.assume(&assumption);
+
+        s.solver
+            .solve()
+            .expect("docs say it can't error in default config")
+    }
+    fn use_packages(&self) -> Option<String> {
+        self.0.borrow().solver.model().map(|lits| {
+            let lits: HashSet<_> = lits
+                .iter()
+                .filter(|l| l.is_positive())
+                .map(|l| l.var())
+                .collect();
+            let mut out = String::new();
+            out.push_str("used:\n");
+            for (p, v) in self.0.borrow().var_for_is_packages_used.iter() {
+                if lits.contains(v) {
+                    writeln!(&mut out, "    {}", p).unwrap();
+                }
+            }
+            out
+        })
     }
 }
 
@@ -504,7 +552,7 @@ macro_rules! pkg {
 fn registry_loc() -> SourceId {
     lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"https://example.com".to_url().unwrap()).unwrap();
+            SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap();
     }
     *EXAMPLE_DOT_COM
 }
@@ -535,7 +583,7 @@ pub fn pkg_id(name: &str) -> PackageId {
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
-    let remote = loc.to_url();
+    let remote = loc.into_url();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
@@ -586,7 +634,7 @@ pub fn dep_req_kind(name: &str, req: &str, kind: Kind, public: bool) -> Dependen
 }
 
 pub fn dep_loc(name: &str, location: &str) -> Dependency {
-    let url = location.to_url().unwrap();
+    let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
     Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
@@ -856,7 +904,6 @@ fn meta_test_deep_trees_from_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -898,7 +945,6 @@ fn meta_test_multiple_versions_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );

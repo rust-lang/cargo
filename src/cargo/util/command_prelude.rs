@@ -100,7 +100,9 @@ pub trait AppExt: Sized {
 
     fn arg_features(self) -> Self {
         self._arg(
-            opt("features", "Space-separated list of features to activate").value_name("FEATURES"),
+            opt("features", "Space-separated list of features to activate")
+                .multiple(true)
+                .value_name("FEATURES"),
         )
         ._arg(opt("all-features", "Activate all available features"))
         ._arg(opt(
@@ -156,8 +158,7 @@ pub trait AppExt: Sized {
         self._arg(
             opt(
                 "vcs",
-                "\
-                 Initialize a new repository for the given version \
+                "Initialize a new repository for the given version \
                  control system (git, hg, pijul, or fossil) or do not \
                  initialize any version control at all (none), overriding \
                  a global configuration.",
@@ -565,10 +566,10 @@ pub enum CommandInfo {
 }
 
 impl CommandInfo {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            CommandInfo::BuiltIn { name, .. } => name.to_string(),
-            CommandInfo::External { name, .. } => name.to_string(),
+            CommandInfo::BuiltIn { name, .. } => name,
+            CommandInfo::External { name, .. } => name,
         }
     }
 }

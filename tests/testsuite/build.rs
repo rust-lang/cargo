@@ -936,7 +936,7 @@ fn cargo_compile_with_filename() {
             "\
 [ERROR] no bin target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 
@@ -951,7 +951,7 @@ Did you mean `a`?",
             "\
 [ERROR] no example target named `a.rs`
 
-Did you mean `a`?",
+<tab>Did you mean `a`?",
         )
         .run();
 }
@@ -4249,20 +4249,17 @@ fn targets_selected_default() {
     p.cargo("build -v")
         // Binaries.
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=[..]link[..]",
         )
         // Benchmarks.
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // Unit tests.
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4274,14 +4271,12 @@ fn targets_selected_all() {
     p.cargo("build -v --all-targets")
         // Binaries.
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=[..]link[..]",
         )
         // Unit tests.
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4293,14 +4288,12 @@ fn all_targets_no_lib() {
     p.cargo("build -v --all-targets")
         // Binaries.
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=[..]link[..]",
         )
         // Unit tests.
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4337,8 +4330,7 @@ fn no_linkable_target() {
         .build();
     p.cargo("build")
         .with_stderr_contains(
-            "\
-             [WARNING] The package `the_lib` provides no linkable [..] \
+            "[WARNING] The package `the_lib` provides no linkable [..] \
              while compiling `foo`. [..] in `the_lib`'s Cargo.toml. [..]",
         )
         .run();
@@ -4417,7 +4409,7 @@ fn target_filters_workspace() {
             "\
 [ERROR] no example target named `ex`
 
-Did you mean `ex1`?",
+<tab>Did you mean `ex1`?",
         )
         .run();
 
@@ -4580,6 +4572,67 @@ fn pipelining_works() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn pipelining_big_graph() {
+    if !crate::support::is_nightly() {
+        return;
+    }
+
+    // Create a crate graph of the form {a,b}{0..29}, where {a,b}(n) depend on {a,b}(n+1)
+    // Then have `foo`, a binary crate, depend on the whole thing.
+    let mut project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                a1 = { path = "a1" }
+                b1 = { path = "b1" }
+            "#,
+        )
+        .file("src/main.rs", "fn main(){}");
+
+    for n in 0..30 {
+        for x in &["a", "b"] {
+            project = project
+                .file(
+                    &format!("{x}{n}/Cargo.toml", x = x, n = n),
+                    &format!(
+                        r#"
+                            [package]
+                            name = "{x}{n}"
+                            version = "0.1.0"
+                            [dependencies]
+                            a{np1} = {{ path = "../a{np1}" }}
+                            b{np1} = {{ path = "../b{np1}" }}
+                        "#,
+                        x = x,
+                        n = n,
+                        np1 = n + 1
+                    ),
+                )
+                .file(&format!("{x}{n}/src/lib.rs", x = x, n = n), "");
+        }
+    }
+
+    let foo = project
+        .file("a30/Cargo.toml", &basic_lib_manifest("a30"))
+        .file(
+            "a30/src/lib.rs",
+            r#"compile_error!("don't actually build me");"#,
+        )
+        .file("b30/Cargo.toml", &basic_lib_manifest("b30"))
+        .file("b30/src/lib.rs", "")
+        .build();
+    foo.cargo("build -p foo")
+        .env("CARGO_BUILD_PIPELINING", "true")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] Could not compile `a30`[..]")
         .run();
 }
 

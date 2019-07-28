@@ -232,20 +232,17 @@ fn targets_selected_default() {
     p.cargo("rustc -v")
         // bin
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=[..]link[..]",
         )
         // bench
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // unit test
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -257,14 +254,12 @@ fn targets_selected_all() {
     p.cargo("rustc -v --all-targets")
         // bin
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=[..]link[..]",
         )
         // unit test
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();

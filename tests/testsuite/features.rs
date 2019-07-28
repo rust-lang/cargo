@@ -1400,35 +1400,23 @@ fn combining_features_and_package() {
     p.cargo("build -Z package-features --all --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for more than one package",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for more than one package")
         .run();
 
     p.cargo("build -Z package-features --package dep --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --all-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --no-default-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
     p.cargo("build -Z package-features --all --all-features")
@@ -1910,4 +1898,61 @@ fn no_feature_for_non_optional_dep() {
         .build();
 
     p.cargo("build --features bar/a").run();
+}
+
+#[cargo_test]
+fn features_option_given_twice() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+             "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(all(feature = "a", feature = "b"))]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features b").run();
+}
+
+#[cargo_test]
+fn multi_multi_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+                c = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+               #[cfg(all(feature = "a", feature = "b", feature = "c"))]
+               fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features").arg("b c").run();
 }

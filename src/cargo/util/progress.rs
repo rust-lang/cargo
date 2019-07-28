@@ -3,7 +3,7 @@ use std::env;
 use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
-use crate::util::{CargoResult, Config};
+use crate::util::{is_ci, CargoResult, Config};
 
 use unicode_width::UnicodeWidthChar;
 
@@ -45,7 +45,7 @@ impl<'cfg> Progress<'cfg> {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
-        if cfg.shell().verbosity() == Verbosity::Quiet || dumb || env::var("CI").is_ok() {
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
             return Progress { state: None };
         }
 

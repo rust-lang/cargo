@@ -1153,7 +1153,7 @@ fn changing_rustflags_is_cached() {
 
     p.cargo("build").run();
     p.cargo("build")
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1165,36 +1165,13 @@ fn changing_rustflags_is_cached() {
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
-fn simple_deps_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
-    // Cargo is experimenting with letting outside projects develop some
-    // limited forms of GC for target_dir. This is one of the forms.
-    // Specifically, Cargo is updating the mtime of files in
-    // target/profile/deps each time it uses the file.
-    // So a cleaner can remove files older then a time stamp without
-    // effecting any builds that happened since that time stamp.
-    let mut cleand = false;
-    dir.push("deps");
-    for dep in fs::read_dir(&dir).unwrap() {
-        let dep = dep.unwrap();
-        if filetime::FileTime::from_last_modification_time(&dep.metadata().unwrap()) <= timestamp {
-            fs::remove_file(dep.path()).unwrap();
-            println!("remove: {:?}", dep.path());
-            cleand = true;
-        }
-    }
-    assert!(
-        cleand,
-        "called simple_deps_cleaner, but there was nothing to remove"
-    );
-}
-
 #[cargo_test]
-fn simple_deps_cleaner_does_not_rebuild() {
+fn update_dependency_mtime_does_not_rebuild() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1214,10 +1191,7 @@ fn simple_deps_cleaner_does_not_rebuild() {
 
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .run();
-    p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([..])
@@ -1225,35 +1199,17 @@ fn simple_deps_cleaner_does_not_rebuild() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-    // This does not make new files, but it does update the mtime.
-    p.cargo("build -Z mtime-on-use")
+    // This does not make new files, but it does update the mtime of the dependency.
+    p.cargo("build -p bar -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    simple_deps_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
-        .run();
-    // But this should be cleaned and so need a rebuild
-    p.cargo("build -Z mtime-on-use")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "\
-[COMPILING] bar v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
         .run();
 }
 
@@ -1313,7 +1269,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([..])
@@ -1331,14 +1287,14 @@ fn fingerprint_cleaner_does_not_rebuild() {
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C target-cpu=native")
+        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild

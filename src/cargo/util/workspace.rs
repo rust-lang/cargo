@@ -46,7 +46,7 @@ fn print_available(
             writeln!(output, "    {}", target.name())?;
         }
     }
-    Err(failure::err_msg(output))?
+    Err(failure::err_msg(output))
 }
 
 pub fn print_available_examples(

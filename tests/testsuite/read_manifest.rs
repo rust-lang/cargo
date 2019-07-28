@@ -1,6 +1,6 @@
 use crate::support::{basic_bin_manifest, main_file, project};
 
-static MANIFEST_OUTPUT: &'static str = r#"
+static MANIFEST_OUTPUT: &str = r#"
 {
     "authors": [
         "wycats@example.com"

@@ -196,7 +196,7 @@ features! {
         [unstable] namespaced_features: bool,
 
         // "default-run" manifest option,
-        [unstable] default_run: bool,
+        [stable] default_run: bool,
 
         // Declarative build scripts.
         [unstable] metabuild: bool,
@@ -337,6 +337,7 @@ pub struct CliUnstable {
     pub install_upgrade: bool,
     pub cache_messages: bool,
     pub named_profiles: bool,
+    pub binary_dep_depinfo: bool,
 }
 
 impl CliUnstable {
@@ -383,6 +384,7 @@ impl CliUnstable {
             "install-upgrade" => self.install_upgrade = true,
             "cache-messages" => self.cache_messages = true,
             "named-profiles" => self.named_profiles = true,
+            "binary-dep-depinfo" => self.binary_dep_depinfo = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

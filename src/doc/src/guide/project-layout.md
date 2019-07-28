@@ -32,4 +32,4 @@ Cargo package:
 * Benchmarks go in the `benches` directory.
 
 These are explained in more detail in the [manifest
-description](reference/manifest.html#the-project-layout).
+description](../reference/manifest.md#the-project-layout).

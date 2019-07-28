@@ -60,15 +60,15 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::profile;
 
-use self::context::{Activations, Context};
+use self::context::Context;
 use self::dep_cache::RegistryQueryer;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
+pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
-pub use self::encode::{Metadata, WorkspaceResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::resolve::Resolve;
+pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::Method;
 
 mod conflict_cache;
@@ -151,9 +151,10 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
+        ResolveVersion::default(),
     );
 
-    check_cycles(&resolve, &cx.activations)?;
+    check_cycles(&resolve)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
 
@@ -208,7 +209,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
+        let (mut parent, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -217,7 +218,7 @@ fn activate_deps_loop(
         trace!(
             "{}[{}]>{} {} candidates",
             parent.name(),
-            cur,
+            cx.age(),
             dep.package_name(),
             candidates.len()
         );
@@ -263,7 +264,7 @@ fn activate_deps_loop(
                 trace!(
                     "{}[{}]>{} -- no candidates",
                     parent.name(),
-                    cur,
+                    cx.age(),
                     dep.package_name()
                 );
 
@@ -308,7 +309,6 @@ fn activate_deps_loop(
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
-                        cur = frame.cur;
                         cx = frame.context;
                         remaining_deps = frame.remaining_deps;
                         remaining_candidates = frame.remaining_candidates;
@@ -353,7 +353,6 @@ fn activate_deps_loop(
             // if we can.
             let backtrack = if has_another {
                 Some(BacktrackFrame {
-                    cur,
                     context: Context::clone(&cx),
                     remaining_deps: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
@@ -376,7 +375,7 @@ fn activate_deps_loop(
             trace!(
                 "{}[{}]>{} trying {}",
                 parent.name(),
-                cur,
+                cx.age(),
                 dep.package_name(),
                 candidate.version()
             );
@@ -409,7 +408,7 @@ fn activate_deps_loop(
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (ref new_dep, _, _))| {
+                            .filter_map(|(ref new_dep, _, _)| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
                             })
                             .next()
@@ -526,7 +525,7 @@ fn activate_deps_loop(
                         trace!(
                             "{}[{}]>{} skipping {} ",
                             parent.name(),
-                            cur,
+                            cx.age(),
                             dep.package_name(),
                             pid.version()
                         );
@@ -653,11 +652,16 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &method)?;
+    let activated = cx.flag_activated(&candidate, &method, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
-            if cx.flag_activated(replace, &method)? && activated {
+            // Note the `None` for parent here since `[replace]` is a bit wonky
+            // and doesn't activate the same things that `[patch]` typically
+            // does. TBH it basically cause panics in the test suite if
+            // `parent` is passed through here and `[replace]` is otherwise
+            // on life support so it's not critical to fix bugs anyway per se.
+            if cx.flag_activated(replace, &method, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -700,7 +704,6 @@ fn activate(
 
 #[derive(Clone)]
 struct BacktrackFrame {
-    cur: usize,
     context: Context,
     remaining_deps: RemainingDeps,
     remaining_candidates: RemainingCandidates,
@@ -759,7 +762,7 @@ impl RemainingCandidates {
         dep: &Dependency,
         parent: PackageId,
     ) -> Option<(Summary, bool)> {
-        'main: for (_, b) in self.remaining.by_ref() {
+        'main: for b in self.remaining.by_ref() {
             let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
@@ -905,12 +908,12 @@ fn generalize_conflicting(
                                     // we are imagining that we used other instead
                                     Some(backtrack_critical_age)
                                 } else {
-                                    cx.is_active(id).filter(|&age|
-                                        // we only care about things that are older then critical_age
-                                        age < backtrack_critical_age)
+                                    cx.is_active(id)
                                 }
                             },
                             Some(other.package_id()),
+                            // we only care about things that are newer then critical_age
+                            backtrack_critical_age,
                         )
                         .map(|con| (other.package_id(), con))
                 })
@@ -986,7 +989,12 @@ fn find_candidate(
             .any(|c| *c == ConflictReason::PublicDependency)
     {
         // we dont have abnormal situations. So we can ask `cx` for how far back we need to go.
-        cx.is_conflicting(Some(parent.package_id()), conflicting_activations)
+        let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
+        // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
+        // in building it. But we will just fall back to laboriously trying all possibilities witch
+        // will give us the correct answer so only `assert` if there is a developer to debug it.
+        debug_assert!(a.is_some());
+        a
     } else {
         None
     };
@@ -1040,19 +1048,14 @@ fn find_candidate(
     None
 }
 
-fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()> {
-    let summaries: HashMap<PackageId, &Summary> = activations
-        .values()
-        .map(|(s, _)| (s.package_id(), s))
-        .collect();
-
+fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     // Sort packages to produce user friendly deterministic errors.
     let mut all_packages: Vec<_> = resolve.iter().collect();
     all_packages.sort_unstable();
     let mut checked = HashSet::new();
     for pkg in all_packages {
         if !checked.contains(&pkg) {
-            visit(resolve, pkg, &summaries, &mut HashSet::new(), &mut checked)?
+            visit(resolve, pkg, &mut HashSet::new(), &mut checked)?
         }
     }
     return Ok(());
@@ -1060,7 +1063,6 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
     fn visit(
         resolve: &Resolve,
         id: PackageId,
-        summaries: &HashMap<PackageId, &Summary>,
         visited: &mut HashSet<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
@@ -1081,22 +1083,18 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         // visitation list as we can't induce a cycle through transitive
         // dependencies.
         if checked.insert(id) {
-            let summary = summaries[&id];
-            for dep in resolve.deps_not_replaced(id) {
-                let is_transitive = summary
-                    .dependencies()
-                    .iter()
-                    .any(|d| d.matches_id(dep) && d.is_transitive());
+            for (dep, listings) in resolve.deps_not_replaced(id) {
+                let is_transitive = listings.iter().any(|d| d.is_transitive());
                 let mut empty = HashSet::new();
                 let visited = if is_transitive {
                     &mut *visited
                 } else {
                     &mut empty
                 };
-                visit(resolve, dep, summaries, visited, checked)?;
+                visit(resolve, dep, visited, checked)?;
 
                 if let Some(id) = resolve.replacement(dep) {
-                    visit(resolve, id, summaries, visited, checked)?;
+                    visit(resolve, id, visited, checked)?;
                 }
             }
         }
@@ -1114,8 +1112,9 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
 /// *different* packages may collide in the lock file, hence this check.
 fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
+    let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
-        let encodable_pkd_id = encode::encodable_package_id(pkg_id);
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             failure::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \

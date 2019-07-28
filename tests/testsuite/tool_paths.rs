@@ -64,11 +64,15 @@ fn absolute_tools() {
         )
         .build();
 
-    foo.cargo("build --verbose").with_stderr("\
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar=[ROOT]bogus/nonexistent-ar -C linker=[ROOT]bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C ar=[..]bogus/nonexistent-ar -C linker=[..]bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-").run();
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -224,7 +228,7 @@ fn custom_runner_cfg_precedence() {
         .with_status(101)
         .with_stderr_contains(
             "\
-            [COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
