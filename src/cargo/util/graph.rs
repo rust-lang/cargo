@@ -400,19 +400,10 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 /// to provide:
 ///  - `O(1)` clone
 ///  - the clone has no overhead to read the `Graph` as it was
-///  - no overhead over using the `Graph` directly when modifying
-/// Is this too good to be true? There are two caveats:
-///  - It can only be modified using a strict "Stack Discipline", only modifying the biggest clone
-///    of the graph.
-///  - You can drop bigger modified clones, to allow a smaller clone to be activated for modifying.
-///    this "backtracking" operation can be `O(delta)`
-///
-/// The "Stack Discipline" is checked on best effort basis. If you attempt to read or write to a
-/// bigger clone after modifying a smaller clone it will probably panic. It may not panic if you
-/// arrange to have increased the size back to the size of the bigger clone, this is a kind of ABA problem.
-/// (If this terns out to be to hard to get right we can use "generational indices" to all ways panic.)
-/// This module dose not use `unsafe` so violating the "Stack Discipline" may return the wrong
-/// answer but will not trigger UB.
+///  - no overhead over using the `Graph` directly when modifying the biggest clone
+/// Is this too good to be true?
+///  - If a modification (`&mut` method) is done to a smaller older clone then a full `O(N)`
+///    deep clone will happen internally.
 #[derive(Clone)]
 pub struct StackGraph<N: Clone, E: Clone> {
     inner: Rc<RefCell<Graph<N, E>>>,
@@ -429,29 +420,16 @@ fn demonstrate_stack_graph_can_read_all_clones() {
     stack.push(graph.clone());
     graph.add_edge(2, 3, 3);
     stack.push(graph.clone());
+    // violate stack discipline, so a deep clone is needed
+    graph = stack[0].clone();
+    graph.add_edge(2, 3, 4);
     assert_eq!(
         stack.iter().map(|g| g.contains(&2)).collect::<Vec<bool>>(),
         [false, true, true]
     );
     assert_eq!(stack[1].borrow().edge(&2, &3).collect::<Vec<_>>(), [&2]);
     assert_eq!(stack[2].borrow().edge(&2, &3).collect::<Vec<_>>(), [&2, &3]);
-}
-
-#[test]
-#[should_panic]
-fn demonstrate_stack_graph_some_violations_panic() {
-    let mut graph = StackGraph::new();
-    let mut stack = Vec::new();
-    graph.add_edge(1, 2, 1);
-    stack.push(graph.clone());
-    graph.add_edge(2, 3, 2);
-    stack.push(graph.clone());
-    graph.add_edge(2, 3, 3);
-    stack.push(graph.clone());
-    // violate stack discipline
-    stack[0].clone().add_edge(2, 3, 4);
-
-    stack[2].borrow();
+    assert_eq!(graph.borrow().edge(&2, &3).collect::<Vec<_>>(), [&4]);
 }
 
 impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
@@ -475,11 +453,17 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     }
 
     fn activate(&mut self) -> RefMut<'_, Graph<N, E>> {
-        let mut inner = RefCell::borrow_mut(&mut self.inner);
-        if self.age != inner.len() {
+        let inner = if RefCell::borrow(&mut self.inner).len() == self.age {
+            // we are the biggest clone, so we can add to inner directly.
+            RefCell::borrow_mut(&mut self.inner)
+        } else {
+            // some other clone already modified inner. If the other bigger clone still exists
+            // then we need to deep clone. We dont know if it exists, so clone to be conservative.
+            let new = Rc::make_mut(&mut self.inner);
+            let mut inner = RefCell::borrow_mut(new);
             inner.reset_to(self.age);
-        }
-        assert_eq!(inner.len(), self.age, "The internal Graph was reset to something smaller before you tried to write to the StackGraphView");
+            inner
+        };
         inner
     }
 
