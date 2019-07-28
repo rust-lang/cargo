@@ -60,7 +60,7 @@ use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::profile;
 
-use self::context::{Activations, Context};
+use self::context::Context;
 use self::dep_cache::RegistryQueryer;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
@@ -68,7 +68,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::resolve::Resolve;
+pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::Method;
 
 mod conflict_cache;
@@ -169,9 +169,10 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
+        ResolveVersion::default(),
     );
 
-    check_cycles(&resolve, &cx.activations)?;
+    check_cycles(&resolve)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
 
@@ -1065,19 +1066,14 @@ fn find_candidate(
     None
 }
 
-fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()> {
-    let summaries: HashMap<PackageId, &Summary> = activations
-        .values()
-        .map(|(s, _)| (s.package_id(), s))
-        .collect();
-
+fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     // Sort packages to produce user friendly deterministic errors.
     let mut all_packages: Vec<_> = resolve.iter().collect();
     all_packages.sort_unstable();
     let mut checked = HashSet::new();
     for pkg in all_packages {
         if !checked.contains(&pkg) {
-            visit(resolve, pkg, &summaries, &mut HashSet::new(), &mut checked)?
+            visit(resolve, pkg, &mut HashSet::new(), &mut checked)?
         }
     }
     return Ok(());
@@ -1085,7 +1081,6 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
     fn visit(
         resolve: &Resolve,
         id: PackageId,
-        summaries: &HashMap<PackageId, &Summary>,
         visited: &mut HashSet<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
@@ -1106,22 +1101,18 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         // visitation list as we can't induce a cycle through transitive
         // dependencies.
         if checked.insert(id) {
-            let summary = summaries[&id];
-            for dep in resolve.deps_not_replaced(id) {
-                let is_transitive = summary
-                    .dependencies()
-                    .iter()
-                    .any(|d| d.matches_id(dep) && d.is_transitive());
+            for (dep, listings) in resolve.deps_not_replaced(id) {
+                let is_transitive = listings.iter().any(|d| d.is_transitive());
                 let mut empty = HashSet::new();
                 let visited = if is_transitive {
                     &mut *visited
                 } else {
                     &mut empty
                 };
-                visit(resolve, dep, summaries, visited, checked)?;
+                visit(resolve, dep, visited, checked)?;
 
                 if let Some(id) = resolve.replacement(dep) {
-                    visit(resolve, id, summaries, visited, checked)?;
+                    visit(resolve, id, visited, checked)?;
                 }
             }
         }
@@ -1139,8 +1130,9 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
 /// *different* packages may collide in the lock file, hence this check.
 fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
+    let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
-        let encodable_pkd_id = encode::encodable_package_id(pkg_id);
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             failure::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \

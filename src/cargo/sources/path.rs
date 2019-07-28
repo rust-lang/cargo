@@ -3,7 +3,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use filetime::FileTime;
-use glob::Pattern;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use log::{trace, warn};
@@ -93,80 +92,9 @@ impl<'cfg> PathSource<'cfg> {
     /// The basic assumption of this method is that all files in the directory
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
-    ///
-    /// ## Pattern matching strategy
-    ///
-    /// Migrating from a glob-like pattern matching (using `glob` crate) to a
-    /// gitignore-like pattern matching (using `ignore` crate). The migration
-    /// stages are:
-    ///
-    /// 1) Only warn users about the future change iff their matching rules are
-    ///    affected.
-    ///
-    /// 2) Switch to the new strategy and update documents. Still keep warning
-    ///    affected users. (CURRENT STAGE)
-    ///
-    /// 3) Drop the old strategy and no more warnings.
-    ///
-    /// See rust-lang/cargo#4268 for more info.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
-
-        // Glob-like matching rules.
-
-        let glob_parse = |p: &String| {
-            let pattern: &str = if p.starts_with('/') {
-                &p[1..p.len()]
-            } else {
-                p
-            };
-            Pattern::new(pattern)
-        };
-
-        let glob_exclude = pkg
-            .manifest()
-            .exclude()
-            .iter()
-            .map(|p| glob_parse(p))
-            .collect::<Result<Vec<_>, _>>();
-
-        let glob_include = pkg
-            .manifest()
-            .include()
-            .iter()
-            .map(|p| glob_parse(p))
-            .collect::<Result<Vec<_>, _>>();
-
-        // Don't warn if using a negate pattern, since those weren't ever
-        // previously supported.
-        let has_negate = pkg
-            .manifest()
-            .exclude()
-            .iter()
-            .chain(pkg.manifest().include().iter())
-            .any(|p| p.starts_with('!'));
-        // Don't warn about glob mismatch if it doesn't parse.
-        let glob_is_valid = glob_exclude.is_ok() && glob_include.is_ok() && !has_negate;
-        let glob_exclude = glob_exclude.unwrap_or_else(|_| Vec::new());
-        let glob_include = glob_include.unwrap_or_else(|_| Vec::new());
-
-        let glob_should_package = |relative_path: &Path| -> bool {
-            fn glob_match(patterns: &[Pattern], relative_path: &Path) -> bool {
-                patterns
-                    .iter()
-                    .any(|pattern| pattern.matches_path(relative_path))
-            }
-
-            // "Include" and "exclude" options are mutually exclusive.
-            if no_include_option {
-                !glob_match(&glob_exclude, relative_path)
-            } else {
-                glob_match(&glob_include, relative_path)
-            }
-        };
-
-        // Ignore-like matching rules.
 
         let mut exclude_builder = GitignoreBuilder::new(root);
         for rule in pkg.manifest().exclude() {
@@ -201,8 +129,6 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        // Matching to paths.
-
         let mut filter = |path: &Path| -> CargoResult<bool> {
             let relative_path = path.strip_prefix(root)?;
 
@@ -213,48 +139,7 @@ impl<'cfg> PathSource<'cfg> {
                 return Ok(true);
             }
 
-            let glob_should_package = glob_should_package(relative_path);
-            let ignore_should_package = ignore_should_package(relative_path)?;
-
-            if glob_is_valid && glob_should_package != ignore_should_package {
-                if glob_should_package {
-                    if no_include_option {
-                        self.config.shell().warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields has changed and \
-                             file `{}` is now excluded.\n\
-                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
-                             information.",
-                            relative_path.display()
-                        ))?;
-                    } else {
-                        self.config.shell().warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields has changed and \
-                             file `{}` is no longer included.\n\
-                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
-                             information.",
-                            relative_path.display()
-                        ))?;
-                    }
-                } else if no_include_option {
-                    self.config.shell().warn(format!(
-                        "Pattern matching for Cargo's include/exclude fields has changed and \
-                         file `{}` is NOT excluded.\n\
-                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
-                         information.",
-                        relative_path.display()
-                    ))?;
-                } else {
-                    self.config.shell().warn(format!(
-                        "Pattern matching for Cargo's include/exclude fields has changed and \
-                         file `{}` is now included.\n\
-                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
-                         information.",
-                        relative_path.display()
-                    ))?;
-                }
-            }
-
-            Ok(ignore_should_package)
+            ignore_should_package(relative_path)
         };
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).

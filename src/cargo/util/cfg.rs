@@ -288,13 +288,10 @@ impl<'a> Token<'a> {
 }
 
 impl Platform {
-    pub fn matches(&self, name: &str, cfg: Option<&[Cfg]>) -> bool {
+    pub fn matches(&self, name: &str, cfg: &[Cfg]) -> bool {
         match *self {
             Platform::Name(ref p) => p == name,
-            Platform::Cfg(ref p) => match cfg {
-                Some(cfg) => p.matches(cfg),
-                None => false,
-            },
+            Platform::Cfg(ref p) => p.matches(cfg),
         }
     }
 }

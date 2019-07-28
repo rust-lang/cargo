@@ -133,7 +133,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         };
-        info.cfg().unwrap_or(&[])
+        info.cfg()
     }
 
     /// Gets the host architecture triple.

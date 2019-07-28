@@ -5,6 +5,7 @@ use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use filetime::FileTime;
 use jobserver::Client;
 
 use crate::core::compiler::compilation;
@@ -34,6 +35,7 @@ pub struct Context<'a, 'cfg> {
     pub build_script_overridden: HashSet<(PackageId, Kind)>,
     pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
+    pub mtime_cache: HashMap<PathBuf, FileTime>,
     pub compiled: HashSet<Unit<'a>>,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links,
@@ -82,6 +84,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             compilation: Compilation::new(bcx)?,
             build_state: Arc::new(BuildState::new(&bcx.host_config, &bcx.target_config)),
             fingerprints: HashMap::new(),
+            mtime_cache: HashMap::new(),
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),

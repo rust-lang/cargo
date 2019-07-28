@@ -154,7 +154,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             return;
         }
         set.insert(dep);
-        for dep in resolve.deps_not_replaced(dep) {
+        for (dep, _) in resolve.deps_not_replaced(dep) {
             fill_with_deps(resolve, dep, set, visited);
         }
     }

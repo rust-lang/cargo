@@ -82,3 +82,8 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
     }
     Ok(())
 }
+
+/// Whether or not this running in a Continuous Integration environment.
+pub fn is_ci() -> bool {
+    std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
+}
