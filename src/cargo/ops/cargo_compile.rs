@@ -1,24 +1,26 @@
-//! Cargo `compile` currently does the following steps.
+//! The Cargo "compile" operation.
 //!
-//! All configurations are already injected as environment variables via the
-//! main cargo command.
+//! This module contains the entry point for starting the compilation process
+//! for commands like `build`, `test`, `doc`, `rustc`, etc.
 //!
-//! 1. Read the manifest.
-//! 2. Shell out to `cargo-resolve` with a list of dependencies and sources as
-//!    stdin.
+//! The `compile` function will do all the work to compile a workspace. A
+//! rough outline is:
 //!
-//!    a. Shell out to `--do update` and `--do list` for each source.
-//!    b. Resolve dependencies and return a list of name/version/source.
-//!
-//! 3. Shell out to `--do download` for each source.
-//! 4. Shell out to `--do get` for each source, and build up the list of paths
-//!    to pass to `rustc -L`.
-//! 5. Call `cargo-rustc` with the results of the resolver zipped together with
-//!    the results of the `get`.
-//!
-//!    a. Topologically sort the dependencies.
-//!    b. Compile each dependency in order, passing in the -L's pointing at each
-//!       previously compiled dependency.
+//! - Resolve the dependency graph (see `ops::resolve`).
+//! - Download any packages needed (see `PackageSet`).
+//! - Generate a list of top-level "units" of work for the targets the user
+//!   requested on the command-line. Each `Unit` corresponds to a compiler
+//!   invocation. This is done in this module (`generate_targets`).
+//! - Create a `Context` which will perform the following steps:
+//!     - Build the graph of `Unit` dependencies (see
+//!       `core::compiler::context::unit_dependencies`).
+//!     - Prepare the `target` directory (see `Layout`).
+//!     - Create a job queue (see `JobQueue`). The queue checks the
+//!       fingerprint of each `Unit` to determine if it should run or be
+//!       skipped.
+//!     - Execute the queue. Each leaf in the queue's dependency graph is
+//!       executed, and then removed from the graph when finished. This
+//!       repeats until the queue is empty.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
