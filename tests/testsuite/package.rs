@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::support::cargo_process;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{
-    basic_manifest, git, path2url, paths, project, publish::validate_crate_contents, registry,
+    basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
+    registry, symlink_supported,
 };
 use git2;
 
@@ -505,21 +505,19 @@ fn package_git_submodule() {
 }
 
 #[cargo_test]
-#[cfg_attr(windows, ignore)]
 /// Tests if a symlink to a git submodule is properly handled.
 ///
-/// This test is ignored on Windows, because it needs Administrator
-/// permissions to run. If you do want to run this test, please
-/// run the tests with ``--ignored``, e.g.
-///
-/// ```text
-/// cargo test -- --ignored
-/// ```
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
 fn package_symlink_to_submodule() {
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
     #[cfg(windows)]
     use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
 
     let project = git::new("foo", |project| {
         project.file("src/lib.rs", "pub fn foo() {}")
@@ -712,21 +710,19 @@ See [..]
 }
 
 #[cargo_test]
-#[cfg_attr(windows, ignore)]
 /// Tests if a broken symlink is properly handled when packaging.
 ///
-/// This test is ignored on Windows, because it needs Administrator
-/// permissions to run. If you do want to run this test, please
-/// run the tests with ``--ignored``, e.g.
-///
-/// ```text
-/// cargo test -- --ignored
-/// ```
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
 fn broken_symlink() {
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
     #[cfg(windows)]
     use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
 
     let p = project()
         .file(
@@ -764,17 +760,16 @@ Caused by:
 }
 
 #[cargo_test]
-#[cfg_attr(windows, ignore)]
 /// Tests if a symlink to a directory is proberly included.
 ///
-/// This test is ignored on Windows, because it needs Administrator
-/// permissions to run. If you do want to run this test, please
-/// run the tests with ``--ignored``, e.g.
-///
-/// ```text
-/// cargo test -- --ignored
-/// ```
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
 fn package_symlink_to_dir() {
+
+    if !symlink_supported() {
+        return;
+    }
+
     project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bla/Makefile", "all:")
