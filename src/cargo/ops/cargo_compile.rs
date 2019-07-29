@@ -25,14 +25,13 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::{Method, Resolve};
+use crate::core::resolver::{Resolve, ResolveOpts};
 use crate::core::{Package, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
@@ -299,14 +298,9 @@ pub fn compile_ws<'a>(
     };
 
     let specs = spec.to_package_id_specs(ws)?;
-    let features = Method::split_features(features);
-    let method = Method::Required {
-        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(build_config.mode),
-        features: Rc::new(features),
-        all_features,
-        uses_default_features: !no_default_features,
-    };
-    let resolve = ops::resolve_ws_with_method(ws, method, &specs)?;
+    let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
+    let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
+    let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
     let to_build_ids = specs

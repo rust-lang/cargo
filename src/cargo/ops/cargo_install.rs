@@ -8,7 +8,7 @@ use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{DefaultExecutor, Executor};
-use crate::core::resolver::Method;
+use crate::core::resolver::ResolveOpts;
 use crate::core::{Edition, PackageId, PackageIdSpec, Source, SourceId, Workspace};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
@@ -486,10 +486,10 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
     // It would be best if `source` could be passed in here to avoid a
     // duplicate "Updating", but since `source` is taken by value, then it
     // wouldn't be available for `compile_ws`.
-    let (pkg_set, resolve) = ops::resolve_ws_with_method(ws, Method::Everything, &specs)?;
+    let (pkg_set, resolve) = ops::resolve_ws_with_opts(ws, ResolveOpts::everything(), &specs)?;
     let mut sources = pkg_set.sources_mut();
 
-    // Checking the yanked status invovles taking a look at the registry and
+    // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
     let _lock = ws.config().acquire_package_cache_lock()?;
 

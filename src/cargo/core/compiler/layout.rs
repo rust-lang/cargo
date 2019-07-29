@@ -3,7 +3,7 @@
 //! The directory layout is a little tricky at times, hence a separate file to
 //! house this logic. The current layout looks like this:
 //!
-//! ```ignore
+//! ```text
 //! # This is the root directory for all output, the top-level package
 //! # places all of its output here.
 //! target/
