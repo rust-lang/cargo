@@ -4,7 +4,7 @@ use log::debug;
 use termcolor::Color::{self, Cyan, Green, Red};
 
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::Method;
+use crate::core::resolver::ResolveOpts;
 use crate::core::PackageId;
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
@@ -21,8 +21,15 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve =
-        ops::resolve_with_previous(&mut registry, ws, Method::Everything, None, None, &[], true)?;
+    let resolve = ops::resolve_with_previous(
+        &mut registry,
+        ws,
+        ResolveOpts::everything(),
+        None,
+        None,
+        &[],
+        true,
+    )?;
     ops::write_pkg_lockfile(ws, &resolve)?;
     Ok(())
 }
@@ -57,7 +64,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
-                        Method::Everything,
+                        ResolveOpts::everything(),
                         None,
                         None,
                         &[],
@@ -103,7 +110,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        Method::Everything,
+        ResolveOpts::everything(),
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],

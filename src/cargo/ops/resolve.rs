@@ -1,10 +1,22 @@
+//! High-level APIs for executing the resolver.
+//!
+//! This module provides functions for running the resolver given a workspace.
+//! There are roughly 3 main functions:
+//!
+//! - `resolve_ws`: A simple, high-level function with no options.
+//! - `resolve_ws_with_opts`: A medium-level function with options like
+//!   user-provided features. This is the most appropriate function to use in
+//!   most cases.
+//! - `resolve_with_previous`: A low-level function for running the resolver,
+//!   providing the most power and flexibility.
+
 use std::collections::HashSet;
 use std::rc::Rc;
 
 use log::{debug, trace};
 
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::{self, Method, Resolve};
+use crate::core::resolver::{self, Resolve, ResolveOpts};
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use crate::ops;
@@ -21,8 +33,12 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// Resolves all dependencies for the workspace using the previous
 /// lock file as a guide if present.
 ///
-/// This function will also write the result of resolution as a new
-/// lock file.
+/// This function will also write the result of resolution as a new lock file
+/// (unless it is an ephemeral workspace such as `cargo install` or `cargo
+/// package`).
+///
+/// This is a simple interface used by commands like `clean`, `fetch`, and
+/// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = resolve_with_registry(ws, &mut registry)?;
@@ -32,30 +48,17 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 
 /// Resolves dependencies for some packages of the workspace,
 /// taking into account `paths` overrides and activated features.
-pub fn resolve_ws_precisely<'a>(
+///
+/// This function will also write the result of resolution as a new lock file
+/// (unless `Workspace::require_optional_deps` is false, such as `cargo
+/// install` or `-Z avoid-dev-deps`), or it is an ephemeral workspace (`cargo
+/// install` or `cargo package`).
+///
+/// `specs` may be empty, which indicates it should resolve all workspace
+/// members. In this case, `opts.all_features` must be `true`.
+pub fn resolve_ws_with_opts<'a>(
     ws: &Workspace<'a>,
-    features: &[String],
-    all_features: bool,
-    no_default_features: bool,
-    specs: &[PackageIdSpec],
-) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let features = Method::split_features(features);
-    let method = if all_features {
-        Method::Everything
-    } else {
-        Method::Required {
-            dev_deps: true,
-            features: Rc::new(features),
-            all_features: false,
-            uses_default_features: !no_default_features,
-        }
-    };
-    resolve_ws_with_method(ws, method, specs)
-}
-
-pub fn resolve_ws_with_method<'a>(
-    ws: &Workspace<'a>,
-    method: Method,
+    opts: ResolveOpts,
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -67,6 +70,7 @@ pub fn resolve_ws_with_method<'a>(
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = resolve_with_registry(ws, &mut registry)?;
+        // No need to add patches again, `resolve_with_registry` has done it.
         add_patches = false;
 
         // Second, resolve with precisely what we're doing. Filter out
@@ -92,10 +96,10 @@ pub fn resolve_ws_with_method<'a>(
         ops::load_pkg_lockfile(ws)?
     };
 
-    let resolved_with_overrides = ops::resolve_with_previous(
+    let resolved_with_overrides = resolve_with_previous(
         &mut registry,
         ws,
-        method,
+        opts,
         resolve.as_ref(),
         None,
         specs,
@@ -115,7 +119,7 @@ fn resolve_with_registry<'cfg>(
     let resolve = resolve_with_previous(
         registry,
         ws,
-        Method::Everything,
+        ResolveOpts::everything(),
         prev.as_ref(),
         None,
         &[],
@@ -137,15 +141,26 @@ fn resolve_with_registry<'cfg>(
 ///
 /// The previous resolve normally comes from a lock file. This function does not
 /// read or write lock files from the filesystem.
+///
+/// `specs` may be empty, which indicates it should resolve all workspace
+/// members. In this case, `opts.all_features` must be `true`.
+///
+/// If `register_patches` is true, then entries from the `[patch]` table in
+/// the manifest will be added to the given `PackageRegistry`.
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    method: Method,
+    opts: ResolveOpts,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
+    assert!(
+        !specs.is_empty() || opts.all_features,
+        "no specs requires all_features"
+    );
+
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
     let _lock = ws.config().acquire_package_cache_lock()?;
@@ -228,85 +243,76 @@ pub fn resolve_with_previous<'cfg>(
     let mut summaries = Vec::new();
     if ws.config().cli_unstable().package_features {
         let mut members = Vec::new();
-        match &method {
-            Method::Everything => members.extend(ws.members()),
-            Method::Required {
-                features,
-                all_features,
-                uses_default_features,
-                ..
-            } => {
-                if specs.len() > 1 && !features.is_empty() {
-                    failure::bail!("cannot specify features for more than one package");
+        if specs.is_empty() {
+            members.extend(ws.members());
+        } else {
+            if specs.len() > 1 && !opts.features.is_empty() {
+                failure::bail!("cannot specify features for more than one package");
+            }
+            members.extend(
+                ws.members()
+                    .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id()))),
+            );
+            // Edge case: running `cargo build -p foo`, where `foo` is not a member
+            // of current workspace. Add all packages from workspace to get `foo`
+            // into the resolution graph.
+            if members.is_empty() {
+                if !(opts.features.is_empty() && !opts.all_features && opts.uses_default_features) {
+                    failure::bail!("cannot specify features for packages outside of workspace");
                 }
-                members.extend(
-                    ws.members()
-                        .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id()))),
-                );
-                // Edge case: running `cargo build -p foo`, where `foo` is not a member
-                // of current workspace. Add all packages from workspace to get `foo`
-                // into the resolution graph.
-                if members.is_empty() {
-                    if !(features.is_empty() && !all_features && *uses_default_features) {
-                        failure::bail!("cannot specify features for packages outside of workspace");
-                    }
-                    members.extend(ws.members());
-                }
+                members.extend(ws.members());
+                panic!("tested?");
             }
         }
         for member in members {
             let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, method.clone()))
+            summaries.push((summary, opts.clone()))
         }
     } else {
         for member in ws.members() {
-            let method_to_resolve = match method {
-                // When everything for a workspace we want to be sure to resolve all
-                // members in the workspace, so propagate the `Method::Everything`.
-                Method::Everything => Method::Everything,
-
+            let summary_resolve_opts = if specs.is_empty() {
+                // When resolving the entire workspace, resolve each member
+                // with all features enabled.
+                opts.clone()
+            } else {
                 // If we're not resolving everything though then we're constructing the
                 // exact crate graph we're going to build. Here we don't necessarily
                 // want to keep around all workspace crates as they may not all be
                 // built/tested.
                 //
-                // Additionally, the `method` specified represents command line
+                // Additionally, the `opts` specified represents command line
                 // flags, which really only matters for the current package
                 // (determined by the cwd). If other packages are specified (via
                 // `-p`) then the command line flags like features don't apply to
                 // them.
                 //
                 // As a result, if this `member` is the current member of the
-                // workspace, then we use `method` specified. Otherwise we use a
-                // base method with no features specified but using default features
+                // workspace, then we use `opts` specified. Otherwise we use a
+                // base `opts` with no features specified but using default features
                 // for any other packages specified with `-p`.
-                Method::Required {
-                    dev_deps,
-                    all_features,
-                    ..
-                } => {
-                    let base = Method::Required {
-                        dev_deps,
-                        features: Rc::default(),
-                        all_features,
-                        uses_default_features: true,
-                    };
-                    let member_id = member.package_id();
-                    match ws.current_opt() {
-                        Some(current) if member_id == current.package_id() => method.clone(),
-                        _ => {
-                            if specs.iter().any(|spec| spec.matches(member_id)) {
-                                base
-                            } else {
-                                continue;
+                let member_id = member.package_id();
+                match ws.current_opt() {
+                    Some(current) if member_id == current.package_id() => opts.clone(),
+                    _ => {
+                        if specs.iter().any(|spec| spec.matches(member_id)) {
+                            // -p for a workspace member that is not the
+                            // "current" one, don't use the local `--features`.
+                            ResolveOpts {
+                                dev_deps: opts.dev_deps,
+                                features: Rc::default(),
+                                all_features: opts.all_features,
+                                uses_default_features: true,
                             }
+                        } else {
+                            // `-p` for non-member, skip.
+                            continue;
                         }
                     }
                 }
             };
 
             let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, method_to_resolve));
+            summaries.push((summary, summary_resolve_opts));
         }
     };
 
