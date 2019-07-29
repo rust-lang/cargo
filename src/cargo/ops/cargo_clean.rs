@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+use crate::core::compiler::build_unit_dependencies;
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind};
 use crate::core::profiles::UnitFor;
@@ -104,7 +105,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    let mut cx = Context::new(config, &bcx)?;
+    let unit_dependencies = build_unit_dependencies(&bcx, &units)?;
+    let mut cx = Context::new(config, &bcx, unit_dependencies)?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {

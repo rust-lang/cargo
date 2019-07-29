@@ -10,6 +10,7 @@ mod job_queue;
 mod layout;
 mod output_depinfo;
 mod unit;
+mod unit_dependencies;
 
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -35,6 +36,7 @@ use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
+pub use self::unit_dependencies::build_unit_dependencies;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};

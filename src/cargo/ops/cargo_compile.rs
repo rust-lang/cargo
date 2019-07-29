@@ -27,6 +27,7 @@ use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::core::compiler::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -385,9 +386,11 @@ pub fn compile_ws<'a>(
         }
     }
 
+    let unit_dependencies = build_unit_dependencies(&bcx, &units)?;
+
     let ret = {
         let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx)?;
+        let cx = Context::new(config, &bcx, unit_dependencies)?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
 

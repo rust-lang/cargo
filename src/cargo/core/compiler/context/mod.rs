@@ -1,5 +1,5 @@
 #![allow(deprecated)]
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use jobserver::Client;
 
 use crate::core::compiler::compilation;
 use crate::core::compiler::Unit;
-use crate::core::{Package, PackageId, Resolve};
+use crate::core::{PackageId, Resolve};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{internal, profile, Config};
 
@@ -20,9 +20,6 @@ use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
-
-mod unit_dependencies;
-use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
@@ -66,8 +63,6 @@ pub struct Context<'a, 'cfg> {
     /// the compilation. This is `None` until after `unit_dependencies` has
     /// been computed.
     files: Option<CompilationFiles<'a, 'cfg>>,
-    /// Cache of packages, populated when they are downloaded.
-    package_cache: HashMap<PackageId, &'a Package>,
 
     /// A flag indicating whether pipelining is enabled for this compilation
     /// session. Pipelining largely only affects the edges of the dependency
@@ -82,7 +77,11 @@ pub struct Context<'a, 'cfg> {
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(config: &'cfg Config, bcx: &'a BuildContext<'a, 'cfg>) -> CargoResult<Self> {
+    pub fn new(
+        config: &'cfg Config,
+        bcx: &'a BuildContext<'a, 'cfg>,
+        unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    ) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
         // intentionally so! It's hoped that we can interact with GNU make and
@@ -115,9 +114,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             links: Links::new(),
             jobserver,
             primary_packages: HashSet::new(),
-            unit_dependencies: HashMap::new(),
+            unit_dependencies,
             files: None,
-            package_cache: HashMap::new(),
             rmeta_required: HashSet::new(),
             pipelining,
         })
@@ -305,7 +303,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.primary_packages
             .extend(units.iter().map(|u| u.pkg.package_id()));
 
-        build_unit_dependencies(self, units)?;
+        self.record_units_requiring_metadata();
+
         let files = CompilationFiles::new(
             units,
             host_layout,
@@ -367,28 +366,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.primary_packages.contains(&unit.pkg.package_id())
     }
 
-    /// Gets a package for the given package ID.
-    pub fn get_package(&self, id: PackageId) -> CargoResult<&'a Package> {
-        self.package_cache
-            .get(&id)
-            .cloned()
-            .ok_or_else(|| failure::format_err!("failed to find {}", id))
-    }
-
     /// Returns the list of filenames read by cargo to generate the `BuildContext`
     /// (all `Cargo.toml`, etc.).
     pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        let mut inputs = Vec::new();
+        let mut inputs = BTreeSet::new();
         // Note that we're using the `package_cache`, which should have been
         // populated by `build_unit_dependencies`, and only those packages are
         // considered as all the inputs.
         //
         // (Notably, we skip dev-deps here if they aren't present.)
-        for pkg in self.package_cache.values() {
-            inputs.push(pkg.manifest_path().to_path_buf());
+        for unit in self.unit_dependencies.keys() {
+            inputs.insert(unit.pkg.manifest_path().to_path_buf());
         }
-        inputs.sort();
-        Ok(inputs)
+        Ok(inputs.into_iter().collect())
     }
 
     fn check_collistions(&self) -> CargoResult<()> {
@@ -486,6 +476,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         Ok(())
+    }
+
+    /// Records the list of units which are required to emit metadata.
+    ///
+    /// Units which depend only on the metadata of others requires the others to
+    /// actually produce metadata, so we'll record that here.
+    fn record_units_requiring_metadata(&mut self) {
+        for (key, deps) in self.unit_dependencies.iter() {
+            for dep in deps {
+                if self.only_requires_rmeta(key, dep) {
+                    self.rmeta_required.insert(*dep);
+                }
+            }
+        }
     }
 
     /// Returns whether when `parent` depends on `dep` if it only requires the
