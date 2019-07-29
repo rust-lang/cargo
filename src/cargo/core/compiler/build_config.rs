@@ -156,7 +156,7 @@ pub enum CompileMode {
     /// a test.
     Check { test: bool },
     /// Used to indicate benchmarks should be built. This is not used in
-    /// `Target`, because it is essentially the same as `Test` (indicating
+    /// `Unit`, because it is essentially the same as `Test` (indicating
     /// `--test` should be passed to rustc) and by using `Test` instead it
     /// allows some de-duping of Units to occur.
     Bench,

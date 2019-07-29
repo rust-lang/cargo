@@ -48,6 +48,9 @@ pub struct UnitInner<'a> {
     pub kind: Kind,
     /// The "mode" this unit is being compiled for. See [`CompileMode`] for more details.
     pub mode: CompileMode,
+    /// The `cfg` features to enable for this unit.
+    /// This must be sorted.
+    pub features: Vec<&'a str>,
 }
 
 impl UnitInner<'_> {
@@ -139,6 +142,7 @@ impl<'a> UnitInterner<'a> {
         profile: Profile,
         kind: Kind,
         mode: CompileMode,
+        features: Vec<&'a str>,
     ) -> Unit<'a> {
         let inner = self.intern_inner(&UnitInner {
             pkg,
@@ -146,6 +150,7 @@ impl<'a> UnitInterner<'a> {
             profile,
             kind,
             mode,
+            features,
         });
         Unit { inner }
     }

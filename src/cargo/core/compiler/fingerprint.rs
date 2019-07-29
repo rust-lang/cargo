@@ -1090,10 +1090,7 @@ fn calculate_normal<'a, 'cfg>(
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(super::path_args(cx.bcx, unit).0),
-        features: format!(
-            "{:?}",
-            cx.bcx.resolve.features_sorted(unit.pkg.package_id())
-        ),
+        features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),

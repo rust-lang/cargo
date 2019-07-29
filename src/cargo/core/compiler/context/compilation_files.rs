@@ -522,9 +522,7 @@ fn compute_metadata<'a, 'cfg>(
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
-    bcx.resolve
-        .features_sorted(unit.pkg.package_id())
-        .hash(&mut hasher);
+    unit.features.hash(&mut hasher);
 
     // Mix in the target-metadata of all the dependencies of this target.
     {

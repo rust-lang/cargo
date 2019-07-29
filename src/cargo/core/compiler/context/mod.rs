@@ -227,7 +227,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 });
             }
 
-            let feats = self.bcx.resolve.features(unit.pkg.package_id());
+            let feats = &unit.features;
             if !feats.is_empty() {
                 self.compilation
                     .cfgs

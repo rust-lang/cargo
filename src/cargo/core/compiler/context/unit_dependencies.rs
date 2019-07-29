@@ -228,7 +228,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
                     t.is_bin() &&
                         // Skip binaries with required features that have not been selected.
                         t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                            bcx.resolve.features(id).contains(f)
+                            unit.features.contains(&f.as_str())
                         })
                 })
                 .map(|t| {
@@ -383,6 +383,7 @@ fn dep_build_script<'a>(
                 bcx.profiles.get_profile_run_custom_build(&unit.profile),
                 unit.kind,
                 CompileMode::RunCustomBuild,
+                bcx.resolve.features_sorted(unit.pkg.package_id()),
             );
 
             (unit, UnitFor::new_build())
@@ -423,7 +424,8 @@ fn new_unit<'a>(
         bcx.build_config.release,
     );
 
-    bcx.units.intern(pkg, target, profile, kind, mode)
+    let features = bcx.resolve.features_sorted(pkg.package_id());
+    bcx.units.intern(pkg, target, profile, kind, mode, features)
 }
 
 /// Fill in missing dependencies for units of the `RunCustomBuild`

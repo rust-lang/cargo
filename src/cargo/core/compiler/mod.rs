@@ -408,12 +408,7 @@ fn link_targets<'a, 'cfg>(
     let package_id = unit.pkg.package_id();
     let profile = unit.profile;
     let unit_mode = unit.mode;
-    let features = bcx
-        .resolve
-        .features_sorted(package_id)
-        .into_iter()
-        .map(|s| s.to_owned())
-        .collect();
+    let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
     let executable = cx.get_executable(unit)?;
     let mut target = unit.target.clone();
@@ -630,7 +625,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
+    for feat in &unit.features {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
@@ -913,10 +908,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("--cfg").arg("test");
     }
 
-    // We ideally want deterministic invocations of rustc to ensure that
-    // rustc-caching strategies like sccache are able to cache more, so sort the
-    // feature list here.
-    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
+    for feat in &unit.features {
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
