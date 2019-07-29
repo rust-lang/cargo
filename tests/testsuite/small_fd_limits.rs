@@ -98,9 +98,6 @@ fn use_git_gc() {
 }
 
 #[cargo_test]
-// it looks like this test passes on some windows machines but not others,
-// notably not on AppVeyor's machines. Sounds like another but for another day.
-#[cfg_attr(windows, ignore)]
 fn avoid_using_git() {
     let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
