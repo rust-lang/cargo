@@ -42,9 +42,10 @@ pub struct Resolve {
     /// forwards compatibility.
     metadata: Metadata,
     /// `[patch]` entries that did not match anything, preserved in
-    /// `Cargo.lock` as the `[[patch.unused]]` table array.
-    /// TODO: *Why* is this kept in `Cargo.lock`? Removing it doesn't seem to
-    /// affect anything.
+    /// `Cargo.lock` as the `[[patch.unused]]` table array. Tracking unused
+    /// patches helps prevent Cargo from being forced to re-update the
+    /// registry every time it runs, and keeps the resolve in a locked state
+    /// so it doesn't re-resolve the unused entries.
     unused_patches: Vec<PackageId>,
     /// A map from packages to a set of their public dependencies
     public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
