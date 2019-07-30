@@ -26,10 +26,3 @@ steps:
 # fix the link errors.
 - bash: cargo test --features 'deny-warnings curl/force-system-lib-on-osx'
   displayName: "cargo test"
-
-# Run any tests that have been marked ignore.
-#
-# `--include-ignored` is only supported on nightly so far, so we have to call
-# this separately for now.
-- bash: cargo test --features 'deny-warnings curl/force-system-lib-on-osx' -- --ignored
-  displayName: "cargo test -- --ignored"
