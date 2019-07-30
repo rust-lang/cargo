@@ -109,6 +109,14 @@ impl Layout {
     ///
     /// This function will block if the directory is already locked.
     pub fn at(config: &Config, root: Filesystem) -> CargoResult<Layout> {
+        // If the root directory doesn't already exist go ahead and create it
+        // here. Use this opportunity to exclude it from backups as well if the
+        // system supports it since this is a freshly created folder.
+        if !root.as_path_unlocked().exists() {
+            root.create_dir()?;
+            exclude_from_backups(root.as_path_unlocked());
+        }
+
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
@@ -127,42 +135,8 @@ impl Layout {
         })
     }
 
-    #[cfg(not(target_os = "macos"))]
-    fn exclude_from_backups(&self, _: &Path) {}
-
-    #[cfg(target_os = "macos")]
-    /// Marks files or directories as excluded from Time Machine on macOS
-    ///
-    /// This is recommended to prevent derived/temporary files from bloating backups.
-    fn exclude_from_backups(&self, path: &Path) {
-        use core_foundation::base::TCFType;
-        use core_foundation::{number, string, url};
-        use std::ptr;
-
-        // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
-        let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
-        let path = url::CFURL::from_path(path, false);
-        if let (Some(path), Ok(is_excluded_key)) = (path, is_excluded_key) {
-            unsafe {
-                url::CFURLSetResourcePropertyForKey(
-                    path.as_concrete_TypeRef(),
-                    is_excluded_key.as_concrete_TypeRef(),
-                    number::kCFBooleanTrue as *const _,
-                    ptr::null_mut(),
-                );
-            }
-        }
-        // Errors are ignored, since it's an optional feature and failure
-        // doesn't prevent Cargo from working
-    }
-
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> io::Result<()> {
-        if fs::metadata(&self.root).is_err() {
-            fs::create_dir_all(&self.root)?;
-            self.exclude_from_backups(&self.root);
-        }
-
         mkdir(&self.deps)?;
         mkdir(&self.native)?;
         mkdir(&self.incremental)?;
@@ -208,4 +182,33 @@ impl Layout {
     pub fn build(&self) -> &Path {
         &self.build
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn exclude_from_backups(_: &Path) {}
+
+#[cfg(target_os = "macos")]
+/// Marks files or directories as excluded from Time Machine on macOS
+///
+/// This is recommended to prevent derived/temporary files from bloating backups.
+fn exclude_from_backups(path: &Path) {
+    use core_foundation::base::TCFType;
+    use core_foundation::{number, string, url};
+    use std::ptr;
+
+    // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
+    let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
+    let path = url::CFURL::from_path(path, false);
+    if let (Some(path), Ok(is_excluded_key)) = (path, is_excluded_key) {
+        unsafe {
+            url::CFURLSetResourcePropertyForKey(
+                path.as_concrete_TypeRef(),
+                is_excluded_key.as_concrete_TypeRef(),
+                number::kCFBooleanTrue as *const _,
+                ptr::null_mut(),
+            );
+        }
+    }
+    // Errors are ignored, since it's an optional feature and failure
+    // doesn't prevent Cargo from working
 }
