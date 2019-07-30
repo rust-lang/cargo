@@ -251,14 +251,14 @@ pub(super) fn activation_error(
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let mut candidates = Vec::new();
-        if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
+        if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.clone()), true) {
             return to_resolve_err(e);
         };
-        candidates.sort_unstable();
-        candidates.dedup();
+        candidates.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+        candidates.dedup_by(|a, b| a.name() == b.name());
         let mut candidates: Vec<_> = candidates
             .iter()
-            .map(|n| (lev_distance(&*new_dep.package_name(), &*n), n))
+            .map(|n| (lev_distance(&*new_dep.package_name(), &*n.name()), n))
             .filter(|&(d, _)| d < 4)
             .collect();
         candidates.sort_by_key(|o| o.0);
@@ -269,25 +269,38 @@ pub(super) fn activation_error(
             dep.source_id()
         );
         if !candidates.is_empty() {
-            let mut names = candidates
-                .iter()
-                .take(3)
-                .map(|c| c.1.as_str())
-                .collect::<Vec<_>>();
+            // If dependency package name is equal to the name of the candidate here
+            // it may be a prerelease package which hasn't been speficied correctly
+            if dep.package_name() == candidates[0].1.name() &&
+                candidates[0].1.package_id().version().is_prerelease() {
+                msg.push_str("prerelease package needs to be specified explicitly\n");
+                msg.push_str(&format!(
+                    "{name} = {{ version = \"{version}\" }}", 
+                    name = candidates[0].1.name(),
+                    version = candidates[0].1.package_id().version()
+                ));
+            } else {
+                let mut names = candidates
+                    .iter()
+                    .take(3)
+                    .map(|c| c.1.name().as_str())
+                    .collect::<Vec<_>>();
 
-            if candidates.len() > 3 {
-                names.push("...");
+                if candidates.len() > 3 {
+                    names.push("...");
+                }
+
+                msg.push_str("perhaps you meant: ");
+                msg.push_str(&names.iter().enumerate().fold(
+                    String::default(),
+                    |acc, (i, el)| match i {
+                        0 => acc + el,
+                        i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                        _ => acc + ", " + el,
+                    },
+                ));
             }
 
-            msg.push_str("perhaps you meant: ");
-            msg.push_str(&names.iter().enumerate().fold(
-                String::default(),
-                |acc, (i, el)| match i {
-                    0 => acc + el,
-                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
-                    _ => acc + ", " + el,
-                },
-            ));
             msg.push_str("\n");
         }
         msg.push_str("required by ");

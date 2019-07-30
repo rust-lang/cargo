@@ -1396,6 +1396,55 @@ fn use_semver() {
 }
 
 #[cargo_test]
+fn use_semver_package_incorrectly() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [project]
+            name = "a"
+            version = "0.1.1-alpha.0"
+            authors = []
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            a = { version = "^0.1", path = "../a" }
+            "#,
+        )
+        .file("a/src/main.rs", "fn main() {}")
+        .file("b/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: no matching package named `a` found
+location searched: [..]
+prerelease package needs to be specified explicitly
+a = { version = \"0.1.1-alpha.0\" }
+required by package `b v0.1.0 ([..])`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn only_download_relevant() {
     let p = project()
         .file(
