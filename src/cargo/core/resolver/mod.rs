@@ -69,7 +69,7 @@ pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::resolve::{Resolve, ResolveVersion};
-pub use self::types::Method;
+pub use self::types::ResolveOpts;
 
 mod conflict_cache;
 mod context;
@@ -120,7 +120,7 @@ mod types;
 ///     When we have a decision for how to implement is without breaking existing functionality
 ///     this flag can be removed.
 pub fn resolve(
-    summaries: &[(Summary, Method)],
+    summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
@@ -187,7 +187,7 @@ pub fn resolve(
 fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
-    summaries: &[(Summary, Method)],
+    summaries: &[(Summary, ResolveOpts)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -198,9 +198,9 @@ fn activate_deps_loop(
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
-    for &(ref summary, ref method) in summaries {
+    for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), method.clone());
+        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -384,7 +384,7 @@ fn activate_deps_loop(
             };
 
             let pid = candidate.package_id();
-            let method = Method::Required {
+            let opts = ResolveOpts {
                 dev_deps: false,
                 features: Rc::clone(&features),
                 all_features: false,
@@ -397,7 +397,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, method);
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -601,7 +601,7 @@ fn activate_deps_loop(
 /// Attempts to activate the summary `candidate` in the context `cx`.
 ///
 /// This function will pull dependency summaries from the registry provided, and
-/// the dependencies of the package will be determined by the `method` provided.
+/// the dependencies of the package will be determined by the `opts` provided.
 /// If `candidate` was activated, this function returns the dependency frame to
 /// iterate through next.
 fn activate(
@@ -609,7 +609,7 @@ fn activate(
     registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
-    method: Method,
+    opts: ResolveOpts,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     if let Some((parent, dep)) = parent {
@@ -670,7 +670,7 @@ fn activate(
         }
     }
 
-    let activated = cx.flag_activated(&candidate, &method, parent)?;
+    let activated = cx.flag_activated(&candidate, &opts, parent)?;
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -679,7 +679,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, &method, None)? && activated {
+            if cx.flag_activated(replace, &opts, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -700,7 +700,7 @@ fn activate(
 
     let now = Instant::now();
     let (used_features, deps) =
-        &*registry.build_deps(parent.map(|p| p.0.package_id()), &candidate, &method)?;
+        &*registry.build_deps(parent.map(|p| p.0.package_id()), &candidate, &opts)?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {

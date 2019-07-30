@@ -99,19 +99,47 @@ impl ResolverProgress {
 /// optimized comparison operators like `is_subset` at the interfaces.
 pub type FeaturesSet = Rc<BTreeSet<InternedString>>;
 
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub enum Method {
-    Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
-    Required {
-        dev_deps: bool,
-        features: FeaturesSet,
-        all_features: bool,
-        uses_default_features: bool,
-    },
+/// Options for how the resolve should work.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct ResolveOpts {
+    /// Whether or not dev-dependencies should be included.
+    ///
+    /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
+    pub dev_deps: bool,
+    /// Set of features to enable (`--features=…`).
+    pub features: FeaturesSet,
+    /// Indicates *all* features should be enabled (`--all-features`).
+    pub all_features: bool,
+    /// Include the `default` feature (`--no-default-features` sets this false).
+    pub uses_default_features: bool,
 }
 
-impl Method {
-    pub fn split_features(features: &[String]) -> BTreeSet<InternedString> {
+impl ResolveOpts {
+    /// Creates a ResolveOpts that resolves everything.
+    pub fn everything() -> ResolveOpts {
+        ResolveOpts {
+            dev_deps: true,
+            features: Rc::new(BTreeSet::new()),
+            all_features: true,
+            uses_default_features: true,
+        }
+    }
+
+    pub fn new(
+        dev_deps: bool,
+        features: &[String],
+        all_features: bool,
+        uses_default_features: bool,
+    ) -> ResolveOpts {
+        ResolveOpts {
+            dev_deps,
+            features: Rc::new(ResolveOpts::split_features(features)),
+            all_features,
+            uses_default_features,
+        }
+    }
+
+    fn split_features(features: &[String]) -> BTreeSet<InternedString> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())

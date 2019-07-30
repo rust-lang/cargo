@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use cargo::core::dependency::Kind;
-use cargo::core::resolver::{self, Method};
+use cargo::core::resolver::{self, ResolveOpts};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
@@ -175,10 +175,10 @@ pub fn resolve_with_config_raw(
         false,
     )
     .unwrap();
-    let method = Method::Everything;
+    let opts = ResolveOpts::everything();
     let start = Instant::now();
     let resolve = resolver::resolve(
-        &[(summary, method)],
+        &[(summary, opts)],
         &[],
         &mut registry,
         &HashSet::new(),

@@ -283,7 +283,7 @@ impl<'cfg> Workspace<'cfg> {
             .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
     }
 
-    /// Returns the root [replace] section of this workspace.
+    /// Returns the root `[replace]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_replace(&self) -> &[(PackageIdSpec, Dependency)] {
@@ -293,7 +293,7 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
-    /// Returns the root [patch] section of this workspace.
+    /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_patch(&self) -> &HashMap<Url, Vec<Dependency>> {

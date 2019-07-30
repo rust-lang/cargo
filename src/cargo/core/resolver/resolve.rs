@@ -23,15 +23,34 @@ pub struct Resolve {
     /// from `Cargo.toml`. We need a `Vec` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, Vec<Dependency>>,
+    /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
+    /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
+    /// An empty `HashMap` to avoid creating a new `HashMap` for every package
+    /// that does not have any features, and to avoid using `Option` to
+    /// simplify the API.
     empty_features: HashMap<String, Option<Platform>>,
+    /// Features enabled for a given package.
     features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
+    /// Checksum for each package. A SHA256 hash of the `.crate` file used to
+    /// validate the correct crate file is used. This is `None` for sources
+    /// that do not use `.crate` files, like path or git dependencies.
     checksums: HashMap<PackageId, Option<String>>,
+    /// "Unknown" metadata. This is a collection of extra, unrecognized data
+    /// found in the `[metadata]` section of `Cargo.lock`, preserved for
+    /// forwards compatibility.
     metadata: Metadata,
+    /// `[patch]` entries that did not match anything, preserved in
+    /// `Cargo.lock` as the `[[patch.unused]]` table array. Tracking unused
+    /// patches helps prevent Cargo from being forced to re-update the
+    /// registry every time it runs, and keeps the resolve in a locked state
+    /// so it doesn't re-resolve the unused entries.
     unused_patches: Vec<PackageId>,
-    // A map from packages to a set of their public dependencies
+    /// A map from packages to a set of their public dependencies
     public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
+    /// Version of the `Cargo.lock` format, see
+    /// `cargo::core::resolver::encode` for more.
     version: ResolveVersion,
 }
 

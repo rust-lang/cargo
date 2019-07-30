@@ -23,8 +23,7 @@ pub use self::registry::{http_handle, needs_custom_http_transport, registry_logi
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::{publish, registry_configuration, RegistryConfig};
 pub use self::resolve::{
-    add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_precisely,
-    resolve_ws_with_method,
+    add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
 };
 pub use self::vendor::{vendor, VendorOptions};
 
