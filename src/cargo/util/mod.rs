@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-pub use self::cfg::{Cfg, CfgExpr};
+pub use self::cfg::{Cfg, CfgExpr, Platform};
 pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;

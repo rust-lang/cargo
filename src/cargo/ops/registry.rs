@@ -237,7 +237,7 @@ fn transmit(
         .map(|(feat, values)| {
             (
                 feat.to_string(),
-                values.iter().map(|fv| fv.to_string(summary)).collect(),
+                values.1.iter().map(|fv| fv.to_string(&summary)).collect(),
             )
         })
         .collect::<BTreeMap<String, Vec<String>>>();

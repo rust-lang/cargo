@@ -722,7 +722,11 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let mut summary = Summary::new(pkgid, deps, &features, links, false)?;
+        let ftrs = features
+            .iter()
+            .map(|(k, v)| (k.clone(), (None, v.clone())))
+            .collect();
+        let mut summary = Summary::new(pkgid, deps, &ftrs, links, false)?;
         summary.set_checksum(cksum.clone());
         Ok(IndexSummary {
             summary,

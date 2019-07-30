@@ -11,7 +11,7 @@ use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId};
 use semver::Version;
 
-use crate::util::CargoResult;
+use crate::util::{CargoResult, Platform};
 
 /// Subset of a `Manifest`. Contains only the most important information about
 /// a package.
@@ -36,7 +36,7 @@ impl Summary {
     pub fn new<K>(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: &BTreeMap<K, Vec<impl AsRef<str>>>,
+        features: &BTreeMap<K, (Option<Platform>, Vec<impl AsRef<str>>)>,
         links: Option<impl AsRef<str>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
@@ -149,7 +149,7 @@ impl Hash for Summary {
 // Checks features for errors, bailing out a CargoResult:Err if invalid,
 // and creates FeatureValues for each feature.
 fn build_feature_map<K>(
-    features: &BTreeMap<K, Vec<impl AsRef<str>>>,
+    features: &BTreeMap<K, (Option<Platform>, Vec<impl AsRef<str>>)>,
     dependencies: &[Dependency],
     namespaced: bool,
 ) -> CargoResult<FeatureMap>
@@ -201,7 +201,7 @@ where
         };
 
         let mut values = vec![];
-        for dep in list {
+        for dep in list.1.as_slice() {
             let val = FeatureValue::build(
                 InternedString::new(dep.as_ref()),
                 |fs| features.contains_key(fs.as_str()),
@@ -239,7 +239,7 @@ where
                 // we don't have to do so here.
                 (&Feature(feat), _, true) => {
                     if namespaced && !features.contains_key(&*feat) {
-                        map.insert(feat, vec![FeatureValue::Crate(feat)]);
+                        map.insert(feat, (list.0.clone(), vec![FeatureValue::Crate(feat)]));
                     }
                 }
                 // If features are namespaced and the value is not defined as a feature
@@ -337,7 +337,10 @@ where
             )
         }
 
-        map.insert(InternedString::new(feature.borrow()), values);
+        map.insert(
+            InternedString::new(feature.borrow()),
+            (list.0.clone(), values),
+        );
     }
     Ok(map)
 }
@@ -416,4 +419,5 @@ impl Serialize for FeatureValue {
     }
 }
 
-pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
+pub type FeatureMap = BTreeMap<InternedString, (Option<Platform>, Vec<FeatureValue>)>;
+pub type RefFeatureMap<'a> = BTreeMap<InternedString, &'a [FeatureValue]>;
