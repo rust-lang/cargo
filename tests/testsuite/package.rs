@@ -765,7 +765,6 @@ Caused by:
 /// This test requires you to be able to make symlinks.
 /// For windows, this may require you to enable developer mode.
 fn package_symlink_to_dir() {
-
     if !symlink_supported() {
         return;
     }
