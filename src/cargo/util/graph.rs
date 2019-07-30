@@ -48,7 +48,7 @@
 //! `dependency_graph_so_far.clone();`. To make this more annoying the first thing we try will
 //! probably work, and any work we do to prepare for the next iteration is wasted. If we had a
 //! `undo_activate` we could be much more efficient, completely remove the `.clone()` and just
-//! `undo_activate` if things tern out to not work. Unfortunately, making shore `undo_activate`
+//! `undo_activate` if things tern out to not work. Unfortunately, making sure `undo_activate`
 //! handles all the corner cases correctly is not practical for the resolver. However, this is
 //! possible for a graph like thing, a `clone` means record the size of the graph. a `&mut self`
 //! method means undo everything newer and do the mutation, a `&self` method means only look at the
@@ -57,7 +57,7 @@
 use indexmap::IndexMap;
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fmt;
 use std::hash::Hash;
 use std::rc::Rc;
@@ -75,7 +75,7 @@ struct EdgeLink<E: Clone> {
 
 /// This is a directed Graph structure. Each edge can have an `E` associated with it,
 /// but may have more then one or none. Furthermore, it is designed to be "append only" so that
-/// it can be queried as it would have bean when it was smaller. This allows a `reset_to` method
+/// it can be queried as it would have been when it was smaller. This allows a `reset_to` method
 /// that efficiently undoes the most reason modifications.
 #[derive(Clone)]
 pub struct Graph<N: Clone, E: Clone> {
@@ -90,7 +90,7 @@ pub struct Graph<N: Clone, E: Clone> {
 /// All the data needed to query the prefix of a `Graph`. The only way for eny of the `len_` in
 /// this to decrease is to call `reset_to`. All other modifications of a graph will increase at
 /// least one of the `len_`.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Ord, PartialOrd, Eq)]
 struct GraphAge {
     /// The number of stored edges, increased when `add_edge` or `link` is called.
     len_edges: usize,
@@ -398,16 +398,24 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 
 /// This is a directed Graph structure, that builds on the `Graph`'s "append only" internals
 /// to provide:
-///  - `O(1)` clone
+///  - `O(ln(number of clones))` clone, no dependence on the size of the graph
 ///  - the clone has no overhead to read the `Graph` as it was
 ///  - no overhead over using the `Graph` directly when modifying the biggest clone
 /// Is this too good to be true?
 ///  - If a modification (`&mut` method) is done to a smaller older clone then a full `O(N)`
 ///    deep clone will happen internally.
-#[derive(Clone)]
 pub struct StackGraph<N: Clone, E: Clone> {
+    /// The `Graph` shared by all clones, this `StackGraph` refers to only the prefix of size `age`
     inner: Rc<RefCell<Graph<N, E>>>,
+    /// The shared list of all extant references to the same `Graph`.
+    /// The largest one is allowed to reset and expend the `Graph` without doing a deep clone.
+    /// There can be more then one clone at the same age, so each one is associated with a unique arbitrary number.
+    /// This all so stores the largest arbitrary number so far used.
+    other_refs: Rc<RefCell<(BTreeSet<(GraphAge, usize)>, usize)>>,
+    /// The size of the `Graph` that this `StackGraph` refers to.
     age: GraphAge,
+    /// The arbitrary number that is unique to this clone.
+    this_ref: usize,
 }
 
 #[test]
@@ -432,12 +440,42 @@ fn demonstrate_stack_graph_can_read_all_clones() {
     assert_eq!(graph.borrow().edge(&2, &3).collect::<Vec<_>>(), [&4]);
 }
 
+impl<N: Clone, E: Clone> Clone for StackGraph<N, E> {
+    fn clone(&self) -> Self {
+        let count;
+        {
+            let mut other_refs = RefCell::borrow_mut(&self.other_refs);
+            other_refs.1 += 1;
+            count = other_refs.1;
+            other_refs.0.insert((self.age, count));
+        }
+        StackGraph {
+            inner: Rc::clone(&self.inner),
+            other_refs: Rc::clone(&self.other_refs),
+            this_ref: count,
+            age: self.age,
+        }
+    }
+}
+
+impl<N: Clone, E: Clone> Drop for StackGraph<N, E> {
+    fn drop(&mut self) {
+        RefCell::borrow_mut(&self.other_refs)
+            .0
+            .remove(&(self.age, self.this_ref));
+    }
+}
+
 impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     pub fn new() -> StackGraph<N, E> {
         let inner = Graph::new();
         let age = inner.len();
+        let mut other_refs = BTreeSet::new();
+        other_refs.insert((age, 0));
         StackGraph {
             inner: Rc::new(RefCell::new(inner)),
+            other_refs: Rc::new(RefCell::new((other_refs, 0))),
+            this_ref: 0,
             age,
         }
     }
@@ -452,13 +490,33 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         }
     }
 
+    /// Gets mutable access to the inner `Graph`. Uses `other_refs` to determine if a deep clone is
+    /// needed, and runs `reset_to` to get the `Graph` into the state it was in.
+    ///
+    /// It is the responsibility of the caller to re-add this clone to `other_refs` after the new age is determined.
     fn activate(&mut self) -> RefMut<'_, Graph<N, E>> {
-        let inner = if RefCell::borrow(&mut self.inner).len() == self.age {
+        let inner = if {
+            let mut borrow = RefCell::borrow_mut(&self.other_refs);
+            borrow.0.remove(&(self.age, self.this_ref));
+            borrow
+                .0
+                .iter()
+                .rev()
+                .next()
+                .map(|(a, _)| a <= &self.age)
+                .unwrap_or(true)
+        } {
             // we are the biggest clone, so we can add to inner directly.
-            RefCell::borrow_mut(&mut self.inner)
+            let mut inner = RefCell::borrow_mut(&mut self.inner);
+            if inner.len() != self.age {
+                // clean up after the larger clone that has since been dropped
+                inner.reset_to(self.age);
+            }
+            inner
         } else {
-            // some other clone already modified inner. If the other bigger clone still exists
-            // then we need to deep clone. We dont know if it exists, so clone to be conservative.
+            // a bigger clone still exists so do a deep clone.
+            self.other_refs = Rc::new(RefCell::new((BTreeSet::new(), 0)));
+            self.this_ref = 0;
             let new = Rc::make_mut(&mut self.inner);
             let mut inner = RefCell::borrow_mut(new);
             inner.reset_to(self.age);
@@ -473,6 +531,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.add(node);
             g.len()
         };
+        RefCell::borrow_mut(&self.other_refs)
+            .0
+            .insert((self.age, self.this_ref));
     }
 
     /// connect `node`to `child` with out associating any data.
@@ -482,6 +543,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.link(node, child);
             g.len()
         };
+        RefCell::borrow_mut(&self.other_refs)
+            .0
+            .insert((self.age, self.this_ref));
     }
 
     /// connect `node`to `child` associating it with `edge`.
@@ -491,6 +555,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.add_edge(node, child, edge);
             g.len()
         };
+        RefCell::borrow_mut(&self.other_refs)
+            .0
+            .insert((self.age, self.this_ref));
     }
 }
 
