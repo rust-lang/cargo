@@ -340,23 +340,24 @@ fn build_requirements<'a, 'b: 'a>(
     opts: &'b ResolveOpts,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
+    let empty_ftrs = (None, vec![]);
 
     if opts.all_features {
         for (key,val) in s.features() {
-            reqs.require_feature(*key, &val.0)?;
+            reqs.require_feature(*key, val.0.as_ref())?;
         }
         for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-            reqs.require_dependency(dep.name_in_toml(), &dep.platform().map(|p| p.clone()));
+            reqs.require_dependency(dep.name_in_toml(), dep.platform());
         }
     } else {
-        for (f, p) in opts.features.iter() {
-            reqs.require_value(&FeatureValue::new(*f, s), &p)?;
+        for (f, _) in opts.features.iter() {
+            reqs.require_value(&FeatureValue::new(*f, s), s.features().get(f).unwrap_or(&empty_ftrs).0.as_ref())?;
         }
     }
 
     if opts.uses_default_features {
         if s.features().contains_key("default") {
-            reqs.require_feature(InternedString::new("default"), &s.features().get("default").unwrap().0)?;
+            reqs.require_feature(InternedString::new("default"), s.features().get("default").unwrap_or(&empty_ftrs).0.as_ref())?;
         }
     }
 
@@ -392,7 +393,7 @@ impl Requirements<'_> {
         self.used
     }
 
-    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: &Option<Platform>) {
+    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: Option<&Platform>) {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
@@ -403,33 +404,33 @@ impl Requirements<'_> {
             .find(|p| p.name_in_toml() == package)
         {
             if dep.is_optional() {
-                self.used.insert(package, platform.clone());
+                self.used.insert(package, platform.cloned());
             }
         }
         self.deps
             .entry(package)
             .or_insert((false, BTreeMap::new()))
             .1
-            .insert(feat, platform.clone());
+            .insert(feat, platform.cloned());
     }
 
-    fn seen(&mut self, feat: InternedString, platform: &Option<Platform>) -> bool {
-        if self.visited.insert(feat, platform.clone()).is_none() {
-            self.used.insert(feat, platform.clone());
+    fn seen(&mut self, feat: InternedString, platform: Option<&Platform>) -> bool {
+        if self.visited.insert(feat, platform.cloned()).is_none() {
+            self.used.insert(feat, platform.cloned());
             false
         } else {
             true
         }
     }
 
-    fn require_dependency(&mut self, pkg: InternedString, platform: &Option<Platform>) {
+    fn require_dependency(&mut self, pkg: InternedString, platform: Option<&Platform>) {
         if self.seen(pkg, platform) {
             return;
         }
         self.deps.entry(pkg).or_insert((false, BTreeMap::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: InternedString, platform: &Option<Platform>) -> CargoResult<()> {
+    fn require_feature(&mut self, feat: InternedString, platform: Option<&Platform>) -> CargoResult<()> {
         if feat.is_empty() || self.seen(feat, platform) {
             return Ok(());
         }
@@ -447,12 +448,12 @@ impl Requirements<'_> {
                 ),
                 _ => {}
             }
-            self.require_value(fv, &feature.0)?;
+            self.require_value(fv, feature.0.as_ref())?;
         }
         Ok(())
     }
 
-    fn require_value(&mut self, fv: &FeatureValue, platform: &Option<Platform>) -> CargoResult<()> {
+    fn require_value(&mut self, fv: &FeatureValue, platform: Option<&Platform>) -> CargoResult<()> {
         match fv {
             FeatureValue::Feature(feat) => self.require_feature(*feat, platform)?,
             FeatureValue::Crate(dep) => self.require_dependency(*dep, platform),
