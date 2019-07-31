@@ -8,7 +8,7 @@ use url::Url;
 use crate::core::dependency::Kind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
-use crate::util::Graph;
+use crate::util::{Graph, Platform};
 
 use super::encode::Metadata;
 
@@ -27,12 +27,12 @@ pub struct Resolve {
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
-    /// An empty `HashSet` to avoid creating a new `HashSet` for every package
+    /// An empty `HashMap` to avoid creating a new `HashMap` for every package
     /// that does not have any features, and to avoid using `Option` to
     /// simplify the API.
-    empty_features: HashSet<String>,
+    empty_features: HashMap<String, Option<Platform>>,
     /// Features enabled for a given package.
-    features: HashMap<PackageId, HashSet<String>>,
+    features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
     /// Checksum for each package. A SHA256 hash of the `.crate` file used to
     /// validate the correct crate file is used. This is `None` for sources
     /// that do not use `.crate` files, like path or git dependencies.
@@ -71,7 +71,7 @@ impl Resolve {
     pub fn new(
         graph: Graph<PackageId, Vec<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
-        features: HashMap<PackageId, HashSet<String>>,
+        features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
@@ -101,7 +101,7 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: HashSet::new(),
+            empty_features: HashMap::new(),
             reverse_replacements,
             public_dependencies,
             version,
@@ -269,7 +269,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.replacements
     }
 
-    pub fn features(&self, pkg: PackageId) -> &HashSet<String> {
+    pub fn features(&self, pkg: PackageId) -> &HashMap<String, Option<Platform>> {
         self.features.get(&pkg).unwrap_or(&self.empty_features)
     }
 
@@ -281,7 +281,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn features_sorted(&self, pkg: PackageId) -> Vec<&str> {
-        let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
+        let mut v = Vec::from_iter(self.features(pkg).iter().map(|(s, _)| s.as_ref()));
         v.sort_unstable();
         v
     }

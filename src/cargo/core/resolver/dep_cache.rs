@@ -10,7 +10,7 @@
 //! This module impl that cache in all the gory details
 
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
 use log::debug;
@@ -18,8 +18,9 @@ use log::debug;
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
+use crate::util::Platform;
 
-use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
+use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesMap};
 use crate::core::resolver::{ActivateResult, ResolveOpts};
 
 pub struct RegistryQueryer<'a> {
@@ -35,7 +36,7 @@ pub struct RegistryQueryer<'a> {
     /// a cache of `Dependency`s that are required for a `Summary`
     summary_cache: HashMap<
         (Option<PackageId>, Summary, ResolveOpts),
-        Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>,
+        Rc<(HashMap<InternedString, Option<Platform>>, Rc<Vec<DepInfo>>)>,
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
@@ -200,7 +201,7 @@ impl<'a> RegistryQueryer<'a> {
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
-    ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
+    ) -> ActivateResult<Rc<(HashMap<InternedString, Option<Platform>>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
         if let Some(out) = self
@@ -248,7 +249,7 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
-) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
+) -> ActivateResult<(HashMap<InternedString, Option<Platform>>, Vec<(Dependency, FeaturesMap)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
@@ -256,7 +257,7 @@ pub fn resolve_features<'b>(
     let reqs = build_requirements(s, opts)?;
     let mut ret = Vec::new();
     let mut used_features = HashSet::new();
-    let default_dep = (false, BTreeSet::new());
+    let default_dep = (false, BTreeMap::new());
 
     // Next, collect all actually enabled dependencies and their features.
     for dep in deps {
@@ -292,12 +293,12 @@ pub fn resolve_features<'b>(
             });
         }
         let mut base = base.1.clone();
-        base.extend(dep.features().iter());
+        base.extend(dep.features().iter().map(|f| (f.clone(), dep.platform().map(|p| p.clone()))));
         for feature in base.iter() {
-            if feature.contains('/') {
+            if feature.0.contains('/') {
                 return Err(failure::format_err!(
                     "feature names may not contain slashes: `{}`",
-                    feature
+                    feature.0
                 )
                 .into());
             }
@@ -341,21 +342,21 @@ fn build_requirements<'a, 'b: 'a>(
     let mut reqs = Requirements::new(s);
 
     if opts.all_features {
-        for key in s.features().keys() {
-            reqs.require_feature(*key)?;
+        for (key,val) in s.features() {
+            reqs.require_feature(*key, &val.0)?;
         }
         for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-            reqs.require_dependency(dep.name_in_toml());
+            reqs.require_dependency(dep.name_in_toml(), &dep.platform().map(|p| p.clone()));
         }
     } else {
-        for &f in opts.features.iter() {
-            reqs.require_value(&FeatureValue::new(f, s))?;
+        for (f, p) in opts.features.iter() {
+            reqs.require_value(&FeatureValue::new(*f, s), &p)?;
         }
     }
 
     if opts.uses_default_features {
         if s.features().contains_key("default") {
-            reqs.require_feature(InternedString::new("default"))?;
+            reqs.require_feature(InternedString::new("default"), &s.features().get("default").unwrap().0)?;
         }
     }
 
@@ -369,12 +370,12 @@ struct Requirements<'a> {
     // specified set of features enabled. The boolean indicates whether this
     // package was specifically requested (rather than just requesting features
     // *within* this package).
-    deps: HashMap<InternedString, (bool, BTreeSet<InternedString>)>,
+    deps: HashMap<InternedString, (bool, BTreeMap<InternedString, Option<Platform>>)>,
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
-    used: HashSet<InternedString>,
-    visited: HashSet<InternedString>,
+    used: HashMap<InternedString, Option<Platform>>,
+    visited: HashMap<InternedString, Option<Platform>>,
 }
 
 impl Requirements<'_> {
@@ -382,16 +383,16 @@ impl Requirements<'_> {
         Requirements {
             summary,
             deps: HashMap::new(),
-            used: HashSet::new(),
-            visited: HashSet::new(),
+            used: HashMap::new(),
+            visited: HashMap::new(),
         }
     }
 
-    fn into_used(self) -> HashSet<InternedString> {
+    fn into_used(self) -> HashMap<InternedString, Option<Platform>> {
         self.used
     }
 
-    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
+    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: Option<Platform>) {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
@@ -402,41 +403,42 @@ impl Requirements<'_> {
             .find(|p| p.name_in_toml() == package)
         {
             if dep.is_optional() {
-                self.used.insert(package);
+                self.used.insert(package, platform.clone());
             }
         }
         self.deps
             .entry(package)
-            .or_insert((false, BTreeSet::new()))
+            .or_insert((false, BTreeMap::new()))
             .1
-            .insert(feat);
+            .insert(feat, platform);
     }
 
-    fn seen(&mut self, feat: InternedString) -> bool {
-        if self.visited.insert(feat) {
-            self.used.insert(feat);
+    fn seen(&mut self, feat: InternedString, platform: &Option<Platform>) -> bool {
+        if self.visited.insert(feat, platform.clone()).is_some() {
+            self.used.insert(feat, platform.clone());
             false
         } else {
             true
         }
     }
 
-    fn require_dependency(&mut self, pkg: InternedString) {
-        if self.seen(pkg) {
+    fn require_dependency(&mut self, pkg: InternedString, platform: &Option<Platform>) {
+        if self.seen(pkg, platform) {
             return;
         }
-        self.deps.entry(pkg).or_insert((false, BTreeSet::new())).0 = true;
+        self.deps.entry(pkg).or_insert((false, BTreeMap::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {
-        if feat.is_empty() || self.seen(feat) {
+    fn require_feature(&mut self, feat: InternedString, platform: &Option<Platform>) -> CargoResult<()> {
+        if feat.is_empty() || self.seen(feat, platform) {
             return Ok(());
         }
-        for fv in self
+        let feature = self
             .summary
             .features()
             .get(feat.as_str())
-            .expect("must be a valid feature")
+            .expect("must be a valid feature");
+        for fv in feature.1.as_slice()
         {
             match *fv {
                 FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
@@ -445,17 +447,17 @@ impl Requirements<'_> {
                 ),
                 _ => {}
             }
-            self.require_value(fv)?;
+            self.require_value(fv, &feature.0)?;
         }
         Ok(())
     }
 
-    fn require_value(&mut self, fv: &FeatureValue) -> CargoResult<()> {
+    fn require_value(&mut self, fv: &FeatureValue, platform: &Option<Platform>) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(*feat)?,
-            FeatureValue::Crate(dep) => self.require_dependency(*dep),
+            FeatureValue::Feature(feat) => self.require_feature(*feat, platform)?,
+            FeatureValue::Crate(dep) => self.require_dependency(*dep, platform),
             FeatureValue::CrateFeature(dep, dep_feat) => {
-                self.require_crate_feature(*dep, *dep_feat)
+                self.require_crate_feature(*dep, *dep_feat, platform.clone())
             }
         };
         Ok(())
