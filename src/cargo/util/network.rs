@@ -73,9 +73,12 @@ fn maybe_spurious(err: &Error) -> bool {
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use util::network;
-/// cargo_result = network::with_retry(&config, || something.download());
+/// ```
+/// # use crate::cargo::util::{CargoResult, Config};
+/// # let download_something = || return Ok(());
+/// # let config = Config::default().unwrap();
+/// use cargo::util::network;
+/// let cargo_result = network::with_retry(&config, || download_something());
 /// ```
 pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
 where

@@ -4,11 +4,10 @@ use std::io::prelude::*;
 
 use crate::support::paths::{root, CargoPathExt};
 use crate::support::registry::Package;
-use crate::support::ProjectBuilder;
 use crate::support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, rustc_host, sleep_ms,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
+    sleep_ms, symlink_supported, Execs, ProjectBuilder,
 };
-use crate::support::{main_file, project, Execs};
 use cargo::util::paths::dylib_path_envvar;
 
 #[cargo_test]
@@ -1495,9 +1494,12 @@ package `test v0.0.0 ([CWD])`",
 }
 
 #[cargo_test]
+/// Make sure broken symlinks don't break the build
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
 fn ignore_broken_symlinks() {
-    // windows and symlinks don't currently agree that well
-    if cfg!(windows) {
+    if !symlink_supported() {
         return;
     }
 

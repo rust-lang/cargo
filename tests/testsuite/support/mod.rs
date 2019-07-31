@@ -178,11 +178,24 @@ impl FileBuilder {
 struct SymlinkBuilder {
     dst: PathBuf,
     src: PathBuf,
+    src_is_dir: bool,
 }
 
 impl SymlinkBuilder {
     pub fn new(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
-        SymlinkBuilder { dst, src }
+        SymlinkBuilder {
+            dst,
+            src,
+            src_is_dir: false,
+        }
+    }
+
+    pub fn new_dir(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
+        SymlinkBuilder {
+            dst,
+            src,
+            src_is_dir: true,
+        }
     }
 
     #[cfg(unix)]
@@ -194,7 +207,11 @@ impl SymlinkBuilder {
     #[cfg(windows)]
     fn mk(&self) {
         self.dirname().mkdir_p();
-        t!(os::windows::fs::symlink_file(&self.dst, &self.src));
+        if self.src_is_dir {
+            t!(os::windows::fs::symlink_dir(&self.dst, &self.src));
+        } else {
+            t!(os::windows::fs::symlink_file(&self.dst, &self.src));
+        }
     }
 
     fn dirname(&self) -> &Path {
@@ -252,9 +269,18 @@ impl ProjectBuilder {
             .push(FileBuilder::new(self.root.root().join(path), body));
     }
 
-    /// Adds a symlink to the project.
+    /// Adds a symlink to a file to the project.
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
+            self.root.root().join(dst),
+            self.root.root().join(src),
+        ));
+        self
+    }
+
+    /// Create a symlink to a directory
+    pub fn symlink_dir<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
+        self.symlinks.push(SymlinkBuilder::new_dir(
             self.root.root().join(dst),
             self.root.root().join(src),
         ));
