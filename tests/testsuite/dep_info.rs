@@ -511,6 +511,6 @@ fn canonical_path() {
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/foo-*/dep-lib-foo-*",
-        &[(1, "src/lib.rs"), (2, "debug/deps/libregdep-*.rlib")],
+        &[(1, "src/lib.rs"), (2, "debug/deps/libregdep-*.rmeta")],
     );
 }
