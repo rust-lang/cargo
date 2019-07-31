@@ -392,7 +392,7 @@ impl Requirements<'_> {
         self.used
     }
 
-    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: Option<Platform>) {
+    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: &Option<Platform>) {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
@@ -410,11 +410,11 @@ impl Requirements<'_> {
             .entry(package)
             .or_insert((false, BTreeMap::new()))
             .1
-            .insert(feat, platform);
+            .insert(feat, platform.clone());
     }
 
     fn seen(&mut self, feat: InternedString, platform: &Option<Platform>) -> bool {
-        if self.visited.insert(feat, platform.clone()).is_some() {
+        if self.visited.insert(feat, platform.clone()).is_none() {
             self.used.insert(feat, platform.clone());
             false
         } else {
@@ -457,7 +457,7 @@ impl Requirements<'_> {
             FeatureValue::Feature(feat) => self.require_feature(*feat, platform)?,
             FeatureValue::Crate(dep) => self.require_dependency(*dep, platform),
             FeatureValue::CrateFeature(dep, dep_feat) => {
-                self.require_crate_feature(*dep, *dep_feat, platform.clone())
+                self.require_crate_feature(*dep, *dep_feat, platform)
             }
         };
         Ok(())
