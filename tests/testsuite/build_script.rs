@@ -333,7 +333,10 @@ fn links_no_build_cmd() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] package `foo v0.5.0 ([CWD])` specifies that it links to `a` but does \
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  package `foo v0.5.0 ([CWD])` specifies that it links to `a` but does \
 not have a custom build script
 ",
         )
@@ -386,6 +389,61 @@ package `foo v0.5.0 ([..])`
 
 failed to select a version for `a-sys` which could resolve this conflict
 ").run();
+}
+
+#[cargo_test]
+fn links_duplicates_old_registry() {
+    // Test old links validator. See `validate_links`.
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            links = "a"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            links = "a"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 ([..])
+[ERROR] multiple packages link to native library `a`, \
+    but a native library can be linked only once
+
+package `bar v0.1.0`
+    ... which is depended on by `foo v0.1.0 ([..]foo)`
+links to native library `a`
+
+package `foo v0.1.0 ([..]foo)`
+also links to native library `a`
+",
+        )
+        .run();
 }
 
 #[cargo_test]

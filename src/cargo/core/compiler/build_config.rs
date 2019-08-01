@@ -221,6 +221,14 @@ impl CompileMode {
         }
     }
 
+    /// Returns `true` if this is something that passes `--test` to rustc.
+    pub fn is_rustc_test(self) -> bool {
+        match self {
+            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true } => true,
+            _ => false,
+        }
+    }
+
     /// Returns `true` if this is the *execution* of a `build.rs` script.
     pub fn is_run_custom_build(self) -> bool {
         self == CompileMode::RunCustomBuild

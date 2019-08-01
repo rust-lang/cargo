@@ -103,6 +103,7 @@ impl<'a> fmt::Debug for Unit<'a> {
             .field("profile", &self.profile)
             .field("kind", &self.kind)
             .field("mode", &self.mode)
+            .field("features", &self.features)
             .finish()
     }
 }

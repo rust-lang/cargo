@@ -8,9 +8,11 @@ mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
+mod links;
 mod output_depinfo;
+pub mod standard_lib;
 mod unit;
-mod unit_dependencies;
+pub mod unit_dependencies;
 
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -36,7 +38,7 @@ use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
-pub use self::unit_dependencies::build_unit_dependencies;
+use self::unit_dependencies::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
@@ -123,7 +125,6 @@ fn compile<'a, 'cfg: 'a>(
     // we've got everything constructed.
     let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
     fingerprint::prepare_init(cx, unit)?;
-    cx.links.validate(bcx.resolve, unit)?;
 
     let job = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
@@ -987,38 +988,39 @@ fn build_deps_args<'a, 'cfg>(
         });
     }
 
-    let dep_targets = cx.dep_targets(unit);
+    // Create Vec since mutable cx is needed in closure below.
+    let deps = Vec::from(cx.unit_deps(unit));
 
     // If there is not one linkable target but should, rustc fails later
     // on if there is an `extern crate` for it. This may turn into a hard
     // error in the future (see PR #4797).
-    if !dep_targets
+    if !deps
         .iter()
-        .any(|u| !u.mode.is_doc() && u.target.linkable())
+        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.linkable())
     {
-        if let Some(u) = dep_targets
+        if let Some(dep) = deps
             .iter()
-            .find(|u| !u.mode.is_doc() && u.target.is_lib())
+            .find(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_lib())
         {
             bcx.config.shell().warn(format!(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
                  `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
                  Cargo.toml. This warning might turn into a hard error in the future.",
-                u.target.crate_name(),
+                dep.unit.target.crate_name(),
                 unit.target.crate_name(),
-                u.target.crate_name()
+                dep.unit.target.crate_name()
             ))?;
         }
     }
 
     let mut unstable_opts = false;
 
-    for dep in dep_targets {
-        if dep.mode.is_run_custom_build() {
-            cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep));
+    for dep in deps {
+        if dep.unit.mode.is_run_custom_build() {
+            cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep.unit));
         }
-        if dep.target.linkable() && !dep.mode.is_doc() {
+        if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
             link_to(cmd, cx, unit, &dep, &mut unstable_opts)?;
         }
     }
@@ -1035,13 +1037,11 @@ fn build_deps_args<'a, 'cfg>(
         cmd: &mut ProcessBuilder,
         cx: &mut Context<'a, 'cfg>,
         current: &Unit<'a>,
-        dep: &Unit<'a>,
+        dep: &UnitDep<'a>,
         need_unstable_opts: &mut bool,
     ) -> CargoResult<()> {
-        let bcx = cx.bcx;
-
         let mut value = OsString::new();
-        value.push(bcx.extern_crate_name(current, dep)?);
+        value.push(dep.extern_crate_name.as_str());
         value.push("=");
 
         let mut pass = |file| {
@@ -1054,7 +1054,7 @@ fn build_deps_args<'a, 'cfg>(
                 .features()
                 .require(Feature::public_dependency())
                 .is_ok()
-                && !bcx.is_public_dependency(current, dep)
+                && !dep.public
             {
                 cmd.arg("--extern-private");
                 *need_unstable_opts = true;
@@ -1065,13 +1065,13 @@ fn build_deps_args<'a, 'cfg>(
             cmd.arg(&value);
         };
 
-        let outputs = cx.outputs(dep)?;
+        let outputs = cx.outputs(&dep.unit)?;
         let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
             FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
             _ => None,
         });
 
-        if cx.only_requires_rmeta(current, dep) {
+        if cx.only_requires_rmeta(current, &dep.unit) {
             let (output, _rmeta) = outputs
                 .find(|(_output, rmeta)| *rmeta)
                 .expect("failed to find rlib dep for pipelined dep");

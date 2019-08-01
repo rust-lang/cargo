@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target};
+use crate::core::{Edition, InternedString, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -16,7 +16,7 @@ pub struct Doctest {
     pub target: Target,
     /// Extern dependencies needed by `rustdoc`. The path is the location of
     /// the compiled lib.
-    pub deps: Vec<(String, PathBuf)>,
+    pub deps: Vec<(InternedString, PathBuf)>,
 }
 
 /// A structure returning the result of a compilation.

@@ -334,6 +334,7 @@ pub struct CliUnstable {
     pub install_upgrade: bool,
     pub cache_messages: bool,
     pub binary_dep_depinfo: bool,
+    pub build_std: Option<Vec<String>>,
 }
 
 impl CliUnstable {
@@ -380,6 +381,9 @@ impl CliUnstable {
             "install-upgrade" => self.install_upgrade = true,
             "cache-messages" => self.cache_messages = true,
             "binary-dep-depinfo" => self.binary_dep_depinfo = true,
+            "build-std" => {
+                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
+            }
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

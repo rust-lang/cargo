@@ -138,17 +138,24 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config.target_dir()?;
+        let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
+        ws.target_dir = config.target_dir()?;
+        ws.root_manifest = ws.find_root(manifest_path)?;
+        ws.find_members()?;
+        ws.validate()?;
+        Ok(ws)
+    }
 
-        let mut ws = Workspace {
+    fn new_default(current_manifest: PathBuf, config: &'cfg Config) -> Workspace<'cfg> {
+        Workspace {
             config,
-            current_manifest: manifest_path.to_path_buf(),
+            current_manifest,
             packages: Packages {
                 config,
                 packages: HashMap::new(),
             },
             root_manifest: None,
-            target_dir,
+            target_dir: None,
             members: Vec::new(),
             member_ids: HashSet::new(),
             default_members: Vec::new(),
@@ -156,10 +163,24 @@ impl<'cfg> Workspace<'cfg> {
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
-        };
-        ws.root_manifest = ws.find_root(manifest_path)?;
+        }
+    }
+
+    pub fn new_virtual(
+        root_path: PathBuf,
+        current_manifest: PathBuf,
+        manifest: VirtualManifest,
+        config: &'cfg Config,
+    ) -> CargoResult<Workspace<'cfg>> {
+        let mut ws = Workspace::new_default(current_manifest, config);
+        ws.root_manifest = Some(root_path.join("Cargo.toml"));
+        ws.target_dir = config.target_dir()?;
+        ws.packages
+            .packages
+            .insert(root_path, MaybePackage::Virtual(manifest));
         ws.find_members()?;
-        ws.validate()?;
+        // TODO: validation does not work because it walks up the directory
+        // tree looking for the root which is a fake file that doesn't exist.
         Ok(ws)
     }
 
@@ -178,37 +199,21 @@ impl<'cfg> Workspace<'cfg> {
         target_dir: Option<Filesystem>,
         require_optional_deps: bool,
     ) -> CargoResult<Workspace<'cfg>> {
-        let mut ws = Workspace {
-            config,
-            current_manifest: package.manifest_path().to_path_buf(),
-            packages: Packages {
-                config,
-                packages: HashMap::new(),
-            },
-            root_manifest: None,
-            target_dir: None,
-            members: Vec::new(),
-            member_ids: HashSet::new(),
-            default_members: Vec::new(),
-            is_ephemeral: true,
-            require_optional_deps,
-            loaded_packages: RefCell::new(HashMap::new()),
-            ignore_lock: false,
+        let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
+        ws.is_ephemeral = true;
+        ws.require_optional_deps = require_optional_deps;
+        let key = ws.current_manifest.parent().unwrap();
+        let id = package.package_id();
+        let package = MaybePackage::Package(package);
+        ws.packages.packages.insert(key.to_path_buf(), package);
+        ws.target_dir = if let Some(dir) = target_dir {
+            Some(dir)
+        } else {
+            ws.config.target_dir()?
         };
-        {
-            let key = ws.current_manifest.parent().unwrap();
-            let id = package.package_id();
-            let package = MaybePackage::Package(package);
-            ws.packages.packages.insert(key.to_path_buf(), package);
-            ws.target_dir = if let Some(dir) = target_dir {
-                Some(dir)
-            } else {
-                ws.config.target_dir()?
-            };
-            ws.members.push(ws.current_manifest.clone());
-            ws.member_ids.insert(id);
-            ws.default_members.push(ws.current_manifest.clone());
-        }
+        ws.members.push(ws.current_manifest.clone());
+        ws.member_ids.insert(id);
+        ws.default_members.push(ws.current_manifest.clone());
         Ok(ws)
     }
 

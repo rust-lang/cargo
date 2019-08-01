@@ -452,6 +452,18 @@ impl<'cfg> PackageSet<'cfg> {
     pub fn sources_mut(&self) -> RefMut<'_, SourceMap<'cfg>> {
         self.sources.borrow_mut()
     }
+
+    /// Merge the given set into self.
+    pub fn add_set(&mut self, set: PackageSet<'cfg>) {
+        assert!(!self.downloading.get());
+        assert!(!set.downloading.get());
+        for (pkg_id, p_cell) in set.packages {
+            self.packages.entry(pkg_id).or_insert(p_cell);
+        }
+        let mut sources = self.sources.borrow_mut();
+        let other_sources = set.sources.into_inner();
+        sources.add_source_map(other_sources);
+    }
 }
 
 // When dynamically linked against libcurl, we want to ignore some failures

@@ -19,32 +19,254 @@ use crate::core::compiler::Unit;
 use crate::core::compiler::{BuildContext, CompileMode, Kind};
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;
-use crate::core::profiles::UnitFor;
-use crate::core::{Package, PackageId, Target};
+use crate::core::profiles::{Profile, UnitFor};
+use crate::core::resolver::Resolve;
+use crate::core::{InternedString, Package, PackageId, Target};
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
 
+/// The dependency graph of Units.
+pub type UnitGraph<'a> = HashMap<Unit<'a>, Vec<UnitDep<'a>>>;
+
+/// A unit dependency.
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
+pub struct UnitDep<'a> {
+    /// The dependency unit.
+    pub unit: Unit<'a>,
+    /// The purpose of this dependency (a dependency for a test, or a build
+    /// script, etc.).
+    pub unit_for: UnitFor,
+    /// The name the parent uses to refer to this dependency.
+    pub extern_crate_name: InternedString,
+    /// Whether or not this is a public dependency.
+    pub public: bool,
+}
+
+/// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {
     bcx: &'a BuildContext<'a, 'cfg>,
     waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,
-    unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    unit_dependencies: UnitGraph<'a>,
     package_cache: HashMap<PackageId, &'a Package>,
+    usr_resolve: &'a Resolve,
+    std_resolve: Option<&'a Resolve>,
+    /// This flag is `true` while generating the dependencies for the standard
+    /// library.
+    is_std: bool,
 }
 
 pub fn build_unit_dependencies<'a, 'cfg>(
     bcx: &'a BuildContext<'a, 'cfg>,
+    resolve: &'a Resolve,
+    std_resolve: Option<&'a Resolve>,
     roots: &[Unit<'a>],
-) -> CargoResult<HashMap<Unit<'a>, Vec<Unit<'a>>>> {
+    std_roots: &[Unit<'a>],
+) -> CargoResult<UnitGraph<'a>> {
     let mut state = State {
         bcx,
         downloads: bcx.packages.enable_download()?,
         waiting_on_download: HashSet::new(),
         unit_dependencies: HashMap::new(),
         package_cache: HashMap::new(),
+        usr_resolve: resolve,
+        std_resolve,
+        is_std: false,
     };
 
+    let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
+    let libtest_unit_deps = calc_deps_of_libtest(&mut state, std_roots, roots)?;
+
+    deps_of_roots(roots, &mut state)?;
+    super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
+    // Hopefully there aren't any links conflicts with the standard library?
+
+    if let Some(mut std_unit_deps) = std_unit_deps {
+        if let Some(libtest_unit_deps) = libtest_unit_deps {
+            attach_std_test(&mut state, libtest_unit_deps, &std_unit_deps);
+        }
+        fixup_proc_macro(&mut std_unit_deps);
+        attach_std_deps(&mut state, std_roots, std_unit_deps);
+    }
+
+    connect_run_custom_build_deps(&mut state.unit_dependencies);
+
+    // Dependencies are used in tons of places throughout the backend, many of
+    // which affect the determinism of the build itself. As a result be sure
+    // that dependency lists are always sorted to ensure we've always got a
+    // deterministic output.
+    for list in state.unit_dependencies.values_mut() {
+        list.sort();
+    }
+    trace!("ALL UNIT DEPENDENCIES {:#?}", state.unit_dependencies);
+
+    Ok(state.unit_dependencies)
+}
+
+/// Compute all the dependencies for the standard library.
+fn calc_deps_of_std<'a, 'cfg>(
+    mut state: &mut State<'a, 'cfg>,
+    std_roots: &[Unit<'a>],
+) -> CargoResult<Option<UnitGraph<'a>>> {
+    if std_roots.is_empty() {
+        return Ok(None);
+    }
+    // Compute dependencies for the standard library.
+    state.is_std = true;
+    deps_of_roots(std_roots, &mut state)?;
+    state.is_std = false;
+    Ok(Some(std::mem::replace(
+        &mut state.unit_dependencies,
+        HashMap::new(),
+    )))
+}
+
+/// Compute all the dependencies for libtest.
+/// Returns None if libtest is not needed.
+fn calc_deps_of_libtest<'a, 'cfg>(
+    mut state: &mut State<'a, 'cfg>,
+    std_roots: &[Unit<'a>],
+    roots: &[Unit<'a>],
+) -> CargoResult<Option<UnitGraph<'a>>> {
+    // Conditionally include libtest.
+    if std_roots.is_empty()
+        || !roots
+            .iter()
+            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+    {
+        return Ok(None);
+    }
+    state.is_std = true;
+    let test_id = state.resolve().query("test")?;
+    let test_pkg = state.get(test_id)?.expect("test doesn't need downloading");
+    let test_target = test_pkg
+        .targets()
+        .iter()
+        .find(|t| t.is_lib())
+        .expect("test has a lib");
+    let test_unit = new_unit(
+        state,
+        test_pkg,
+        test_target,
+        UnitFor::new_normal(),
+        Kind::Target,
+        CompileMode::Build,
+    );
+    let res = calc_deps_of_std(state, &[test_unit])?;
+    state.is_std = false;
+    Ok(res)
+}
+
+/// `proc_macro` has an implicit dependency on `std`, add it.
+fn fixup_proc_macro<'a>(std_unit_deps: &mut UnitGraph<'a>) {
+    // Synthesize a dependency from proc_macro -> std.
+    //
+    // This is a gross hack. This wouldn't be necessary with `--sysroot`. See
+    // also libtest below.
+    if let Some(std) = std_unit_deps
+        .keys()
+        .find(|unit| unit.pkg.name().as_str() == "std" && unit.target.is_lib())
+        .cloned()
+    {
+        for (unit, deps) in std_unit_deps.iter_mut() {
+            if unit.pkg.name().as_str() == "proc_macro" {
+                deps.push(UnitDep {
+                    unit: std,
+                    unit_for: UnitFor::new_normal(),
+                    extern_crate_name: InternedString::new("std"),
+                    public: true,
+                });
+            }
+        }
+    }
+}
+
+/// Add libtest as a dependency of any test unit that needs it.
+fn attach_std_test<'a, 'cfg>(
+    state: &mut State<'a, 'cfg>,
+    mut libtest_unit_deps: UnitGraph<'a>,
+    std_unit_deps: &UnitGraph<'a>,
+) {
+    // Attach libtest to any test unit.
+    let (test_unit, test_deps) = libtest_unit_deps
+        .iter_mut()
+        .find(|(k, _v)| k.pkg.name().as_str() == "test" && k.target.is_lib())
+        .expect("test in deps");
+    for (unit, deps) in state.unit_dependencies.iter_mut() {
+        if unit.kind == Kind::Target && unit.mode.is_rustc_test() && unit.target.harness() {
+            // `public` here will need to be driven by toml declaration.
+            deps.push(UnitDep {
+                unit: *test_unit,
+                unit_for: UnitFor::new_normal(),
+                extern_crate_name: test_unit.pkg.name(),
+                public: false,
+            });
+        }
+    }
+
+    // Synthesize a dependency from libtest -> libc.
+    //
+    // This is a gross hack. In theory, libtest should explicitly list this,
+    // but presumably it would cause libc to be built again when it just uses
+    // the version from sysroot. This won't be necessary if Cargo uses
+    // `--sysroot`.
+    let libc_unit = std_unit_deps
+        .keys()
+        .find(|unit| unit.pkg.name().as_str() == "libc" && unit.target.is_lib())
+        .expect("libc in deps");
+    let libc_dep = UnitDep {
+        unit: *libc_unit,
+        unit_for: UnitFor::new_normal(),
+        extern_crate_name: InternedString::new(&libc_unit.target.crate_name()),
+        public: false,
+    };
+    test_deps.push(libc_dep);
+
+    // And also include the dependencies of libtest itself.
+    for (unit, deps) in libtest_unit_deps.into_iter() {
+        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
+            panic!(
+                "libtest unit collision with existing unit: {:?}",
+                other_unit
+            );
+        }
+    }
+}
+
+/// Add the standard library units to the `unit_dependencies`.
+fn attach_std_deps<'a, 'cfg>(
+    state: &mut State<'a, 'cfg>,
+    std_roots: &[Unit<'a>],
+    std_unit_deps: UnitGraph<'a>,
+) {
+    // Attach the standard library as a dependency of every target unit.
+    for (unit, deps) in state.unit_dependencies.iter_mut() {
+        if unit.kind == Kind::Target && !unit.mode.is_run_custom_build() {
+            deps.extend(std_roots.iter().map(|unit| UnitDep {
+                unit: *unit,
+                unit_for: UnitFor::new_normal(),
+                extern_crate_name: unit.pkg.name(),
+                // TODO: Does this `public` make sense?
+                public: true,
+            }));
+        }
+    }
+    // And also include the dependencies of the standard library itself.
+    for (unit, deps) in std_unit_deps.into_iter() {
+        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
+            panic!("std unit collision with existing unit: {:?}", other_unit);
+        }
+    }
+}
+
+/// Compute all the dependencies of the given root units.
+/// The result is stored in state.unit_dependencies.
+fn deps_of_roots<'a, 'cfg>(roots: &[Unit<'a>], mut state: &mut State<'a, 'cfg>) -> CargoResult<()> {
+    // Loop because we are downloading while building the dependency graph.
+    // The partially-built unit graph is discarded through each pass of the
+    // loop because it is incomplete because not all required Packages have
+    // been downloaded.
     loop {
         for unit in roots.iter() {
             state.get(unit.pkg.package_id())?;
@@ -77,22 +299,10 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             break;
         }
     }
-
-    connect_run_custom_build_deps(&mut state);
-
-    trace!("ALL UNIT DEPENDENCIES {:#?}", state.unit_dependencies);
-
-    // Dependencies are used in tons of places throughout the backend, many of
-    // which affect the determinism of the build itself. As a result be sure
-    // that dependency lists are always sorted to ensure we've always got a
-    // deterministic output.
-    for list in state.unit_dependencies.values_mut() {
-        list.sort();
-    }
-
-    Ok(state.unit_dependencies)
+    Ok(())
 }
 
+/// Compute the dependencies of a single unit.
 fn deps_of<'a, 'cfg>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg>,
@@ -106,10 +316,9 @@ fn deps_of<'a, 'cfg>(
     // affect anything else in the hierarchy.
     if !state.unit_dependencies.contains_key(unit) {
         let unit_deps = compute_deps(unit, state, unit_for)?;
-        let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
-        state.unit_dependencies.insert(*unit, to_insert);
-        for (unit, unit_for) in unit_deps {
-            deps_of(&unit, state, unit_for)?;
+        state.unit_dependencies.insert(*unit, unit_deps.clone());
+        for unit_dep in unit_deps {
+            deps_of(&unit_dep.unit, state, unit_dep.unit_for)?;
         }
     }
     Ok(())
@@ -123,9 +332,9 @@ fn compute_deps<'a, 'cfg>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg>,
     unit_for: UnitFor,
-) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
+) -> CargoResult<Vec<UnitDep<'a>>> {
     if unit.mode.is_run_custom_build() {
-        return compute_deps_custom_build(unit, state.bcx);
+        return compute_deps_custom_build(unit, state);
     } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
         return compute_deps_doc(unit, state);
@@ -133,7 +342,7 @@ fn compute_deps<'a, 'cfg>(
 
     let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = bcx.resolve.deps(id).filter(|&(_id, deps)| {
+    let deps = state.resolve().deps(id).filter(|&(_id, deps)| {
         assert!(!deps.is_empty());
         deps.iter().any(|dep| {
             // If this target is a build command, then we only want build
@@ -182,13 +391,21 @@ fn compute_deps<'a, 'cfg>(
             && lib.proc_macro()
             && unit.kind == Kind::Target
         {
-            let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Target, mode);
-            ret.push((unit, dep_unit_for));
-            let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Host, mode);
-            ret.push((unit, dep_unit_for));
+            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Target, mode)?;
+            ret.push(unit_dep);
+            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Host, mode)?;
+            ret.push(unit_dep);
         } else {
-            let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
-            ret.push((unit, dep_unit_for));
+            let unit_dep = new_unit_dep(
+                state,
+                unit,
+                pkg,
+                lib,
+                dep_unit_for,
+                unit.kind.for_target(lib),
+                mode,
+            )?;
+            ret.push(unit_dep);
         }
     }
 
@@ -198,7 +415,7 @@ fn compute_deps<'a, 'cfg>(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(unit, bcx));
+    ret.extend(dep_build_script(unit, state)?);
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
@@ -207,7 +424,7 @@ fn compute_deps<'a, 'cfg>(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, bcx, unit_for));
+    ret.extend(maybe_lib(unit, state, unit_for)?);
 
     // If any integration tests/benches are being run, make sure that
     // binaries are built as well.
@@ -229,18 +446,17 @@ fn compute_deps<'a, 'cfg>(
                         })
                 })
                 .map(|t| {
-                    (
-                        new_unit(
-                            bcx,
-                            unit.pkg,
-                            t,
-                            UnitFor::new_normal(),
-                            unit.kind.for_target(t),
-                            CompileMode::Build,
-                        ),
+                    new_unit_dep(
+                        state,
+                        unit,
+                        unit.pkg,
+                        t,
                         UnitFor::new_normal(),
+                        unit.kind.for_target(t),
+                        CompileMode::Build,
                     )
-                }),
+                })
+                .collect::<CargoResult<Vec<UnitDep<'a>>>>()?,
         );
     }
 
@@ -253,15 +469,14 @@ fn compute_deps<'a, 'cfg>(
 /// the returned set of units must all be run before `unit` is run.
 fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, 'cfg>,
-) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
+    state: &mut State<'a, 'cfg>,
+) -> CargoResult<Vec<UnitDep<'a>>> {
     if let Some(links) = unit.pkg.manifest().links() {
-        if bcx.script_override(links, unit.kind).is_some() {
+        if state.bcx.script_override(links, unit.kind).is_some() {
             // Overridden build scripts don't have any dependencies.
             return Ok(Vec::new());
         }
     }
-
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.
@@ -271,28 +486,29 @@ fn compute_deps_custom_build<'a, 'cfg>(
     // We don't have a great way of handling (2) here right now so this is
     // deferred until after the graph of all unit dependencies has been
     // constructed.
-    let unit = new_unit(
-        bcx,
+    let unit_dep = new_unit_dep(
+        state,
+        unit,
         unit.pkg,
         unit.target,
+        // All dependencies of this unit should use profiles for custom
+        // builds.
         UnitFor::new_build(),
         // Build scripts always compiled for the host.
         Kind::Host,
         CompileMode::Build,
-    );
-    // All dependencies of this unit should use profiles for custom
-    // builds.
-    Ok(vec![(unit, UnitFor::new_build())])
+    )?;
+    Ok(vec![unit_dep])
 }
 
 /// Returns the dependencies necessary to document a package.
 fn compute_deps_doc<'a, 'cfg>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg>,
-) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
+) -> CargoResult<Vec<UnitDep<'a>>> {
     let bcx = state.bcx;
-    let deps = bcx
-        .resolve
+    let deps = state
+        .resolve()
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
@@ -318,42 +534,63 @@ fn compute_deps_doc<'a, 'cfg>(
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
-        let lib_unit = new_unit(bcx, dep, lib, dep_unit_for, unit.kind.for_target(lib), mode);
-        ret.push((lib_unit, dep_unit_for));
+        let lib_unit_dep = new_unit_dep(
+            state,
+            unit,
+            dep,
+            lib,
+            dep_unit_for,
+            unit.kind.for_target(lib),
+            mode,
+        )?;
+        ret.push(lib_unit_dep);
         if let CompileMode::Doc { deps: true } = unit.mode {
             // Document this lib as well.
-            let doc_unit = new_unit(
-                bcx,
+            let doc_unit_dep = new_unit_dep(
+                state,
+                unit,
                 dep,
                 lib,
                 dep_unit_for,
                 unit.kind.for_target(lib),
                 unit.mode,
-            );
-            ret.push((doc_unit, dep_unit_for));
+            )?;
+            ret.push(doc_unit_dep);
         }
     }
 
     // Be sure to build/run the build script for documented libraries.
-    ret.extend(dep_build_script(unit, bcx));
+    ret.extend(dep_build_script(unit, state)?);
 
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
-        ret.extend(maybe_lib(unit, bcx, UnitFor::new_normal()));
+        ret.extend(maybe_lib(unit, state, UnitFor::new_normal())?);
     }
     Ok(ret)
 }
 
 fn maybe_lib<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, '_>,
+    state: &mut State<'a, '_>,
     unit_for: UnitFor,
-) -> Option<(Unit<'a>, UnitFor)> {
-    unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
-        let mode = check_or_build_mode(unit.mode, t);
-        let unit = new_unit(bcx, unit.pkg, t, unit_for, unit.kind.for_target(t), mode);
-        (unit, unit_for)
-    })
+) -> CargoResult<Option<UnitDep<'a>>> {
+    unit.pkg
+        .targets()
+        .iter()
+        .find(|t| t.linkable())
+        .map(|t| {
+            let mode = check_or_build_mode(unit.mode, t);
+            new_unit_dep(
+                state,
+                unit,
+                unit.pkg,
+                t,
+                unit_for,
+                unit.kind.for_target(t),
+                mode,
+            )
+        })
+        .transpose()
 }
 
 /// If a build script is scheduled to be run for the package specified by
@@ -365,8 +602,8 @@ fn maybe_lib<'a>(
 /// build script.
 fn dep_build_script<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, '_>,
-) -> Option<(Unit<'a>, UnitFor)> {
+    state: &State<'a, '_>,
+) -> CargoResult<Option<UnitDep<'a>>> {
     unit.pkg
         .targets()
         .iter()
@@ -374,17 +611,22 @@ fn dep_build_script<'a>(
         .map(|t| {
             // The profile stored in the Unit is the profile for the thing
             // the custom build script is running for.
-            let unit = bcx.units.intern(
+            let profile = state
+                .bcx
+                .profiles
+                .get_profile_run_custom_build(&unit.profile);
+            new_unit_dep_with_profile(
+                state,
+                unit,
                 unit.pkg,
                 t,
-                bcx.profiles.get_profile_run_custom_build(&unit.profile),
+                UnitFor::new_build(),
                 unit.kind,
                 CompileMode::RunCustomBuild,
-                bcx.resolve.features_sorted(unit.pkg.package_id()),
-            );
-
-            (unit, UnitFor::new_build())
+                profile,
+            )
         })
+        .transpose()
 }
 
 /// Choose the correct mode for dependencies.
@@ -406,23 +648,77 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 fn new_unit<'a>(
-    bcx: &BuildContext<'a, '_>,
+    state: &State<'a, '_>,
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
     kind: Kind,
     mode: CompileMode,
 ) -> Unit<'a> {
-    let profile = bcx.profiles.get_profile(
+    let profile = state.bcx.profiles.get_profile(
         pkg.package_id(),
-        bcx.ws.is_member(pkg),
+        state.bcx.ws.is_member(pkg),
         unit_for,
         mode,
-        bcx.build_config.release,
+        state.bcx.build_config.release,
     );
 
-    let features = bcx.resolve.features_sorted(pkg.package_id());
-    bcx.units.intern(pkg, target, profile, kind, mode, features)
+    let features = state.resolve().features_sorted(pkg.package_id());
+    state
+        .bcx
+        .units
+        .intern(pkg, target, profile, kind, mode, features)
+}
+
+fn new_unit_dep<'a>(
+    state: &State<'a, '_>,
+    parent: &Unit<'a>,
+    pkg: &'a Package,
+    target: &'a Target,
+    unit_for: UnitFor,
+    kind: Kind,
+    mode: CompileMode,
+) -> CargoResult<UnitDep<'a>> {
+    let profile = state.bcx.profiles.get_profile(
+        pkg.package_id(),
+        state.bcx.ws.is_member(pkg),
+        unit_for,
+        mode,
+        state.bcx.build_config.release,
+    );
+    new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
+}
+
+fn new_unit_dep_with_profile<'a>(
+    state: &State<'a, '_>,
+    parent: &Unit<'a>,
+    pkg: &'a Package,
+    target: &'a Target,
+    unit_for: UnitFor,
+    kind: Kind,
+    mode: CompileMode,
+    profile: Profile,
+) -> CargoResult<UnitDep<'a>> {
+    // TODO: consider making extern_crate_name return InternedString?
+    let extern_crate_name = InternedString::new(&state.resolve().extern_crate_name(
+        parent.pkg.package_id(),
+        pkg.package_id(),
+        target,
+    )?);
+    let public = state
+        .resolve()
+        .is_public_dep(parent.pkg.package_id(), pkg.package_id());
+    let features = state.resolve().features_sorted(pkg.package_id());
+    let unit = state
+        .bcx
+        .units
+        .intern(pkg, target, profile, kind, mode, features);
+    Ok(UnitDep {
+        unit,
+        unit_for,
+        extern_crate_name,
+        public,
+    })
 }
 
 /// Fill in missing dependencies for units of the `RunCustomBuild`
@@ -435,7 +731,7 @@ fn new_unit<'a>(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
+fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph<'_>) {
     let mut new_deps = Vec::new();
 
     {
@@ -444,12 +740,12 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         // example a library might depend on a build script, so this map will
         // have the build script as the key and the library would be in the
         // value's set.
-        let mut reverse_deps = HashMap::new();
-        for (unit, deps) in state.unit_dependencies.iter() {
+        let mut reverse_deps_map = HashMap::new();
+        for (unit, deps) in unit_dependencies.iter() {
             for dep in deps {
-                if dep.mode == CompileMode::RunCustomBuild {
-                    reverse_deps
-                        .entry(dep)
+                if dep.unit.mode == CompileMode::RunCustomBuild {
+                    reverse_deps_map
+                        .entry(dep.unit)
                         .or_insert_with(HashSet::new)
                         .insert(unit);
                 }
@@ -465,28 +761,37 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         // `links`, then we depend on that package's build script! Here we use
         // `dep_build_script` to manufacture an appropriate build script unit to
         // depend on.
-        for unit in state
-            .unit_dependencies
+        for unit in unit_dependencies
             .keys()
             .filter(|k| k.mode == CompileMode::RunCustomBuild)
         {
-            let reverse_deps = match reverse_deps.get(unit) {
+            // This is the lib that runs this custom build.
+            let reverse_deps = match reverse_deps_map.get(unit) {
                 Some(set) => set,
                 None => continue,
             };
 
             let to_add = reverse_deps
                 .iter()
-                .flat_map(|reverse_dep| state.unit_dependencies[reverse_dep].iter())
+                // Get all deps for lib.
+                .flat_map(|reverse_dep| unit_dependencies[reverse_dep].iter())
+                // Only deps with `links`.
                 .filter(|other| {
-                    other.pkg != unit.pkg
-                        && other.target.linkable()
-                        && other.pkg.manifest().links().is_some()
+                    other.unit.pkg != unit.pkg
+                        && other.unit.target.linkable()
+                        && other.unit.pkg.manifest().links().is_some()
                 })
-                .filter_map(|other| dep_build_script(other, state.bcx).map(|p| p.0))
+                // Get the RunCustomBuild for other lib.
+                .filter_map(|other| {
+                    unit_dependencies[&other.unit]
+                        .iter()
+                        .find(|other_dep| other_dep.unit.mode == CompileMode::RunCustomBuild)
+                        .cloned()
+                })
                 .collect::<HashSet<_>>();
 
             if !to_add.is_empty() {
+                // (RunCustomBuild, set(other RunCustomBuild))
                 new_deps.push((*unit, to_add));
             }
         }
@@ -494,15 +799,19 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
 
     // And finally, add in all the missing dependencies!
     for (unit, new_deps) in new_deps {
-        state
-            .unit_dependencies
-            .get_mut(&unit)
-            .unwrap()
-            .extend(new_deps);
+        unit_dependencies.get_mut(&unit).unwrap().extend(new_deps);
     }
 }
 
 impl<'a, 'cfg> State<'a, 'cfg> {
+    fn resolve(&self) -> &'a Resolve {
+        if self.is_std {
+            self.std_resolve.unwrap()
+        } else {
+            self.usr_resolve
+        }
+    }
+
     fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         if let Some(pkg) = self.package_cache.get(&id) {
             return Ok(Some(pkg));

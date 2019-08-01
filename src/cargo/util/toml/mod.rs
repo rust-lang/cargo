@@ -895,6 +895,17 @@ impl TomlManifest {
             ));
         }
 
+        if let Some(links) = &project.links {
+            if !targets.iter().any(|t| t.is_custom_build()) {
+                bail!(
+                    "package `{}` specifies that it links to `{}` but does not \
+                     have a custom build script",
+                    pkgid,
+                    links
+                )
+            }
+        }
+
         let mut deps = Vec::new();
         let replace;
         let patch;
