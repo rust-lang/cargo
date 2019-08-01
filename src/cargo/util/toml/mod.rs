@@ -462,19 +462,6 @@ impl TomlProfile {
         }
 
         match name {
-            "dev" | "release" => {}
-            _ => {
-                if self.overrides.is_some() || self.build_override.is_some() {
-                    bail!(
-                        "Profile overrides may only be specified for \
-                         `dev` or `release` profile, not `{}`.",
-                        name
-                    );
-                }
-            }
-        }
-
-        match name {
             "doc" => {
                 warnings.push("profile `doc` is deprecated and has no effect".to_string());
             }
