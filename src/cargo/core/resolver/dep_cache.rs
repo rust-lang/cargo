@@ -455,7 +455,7 @@ impl Requirements<'_> {
 
     fn require_value(&mut self, fv: &FeatureValue, platform: Option<&Platform>) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(*feat, platform)?,
+            FeatureValue::Feature(feat) => self.require_feature(*feat, self.summary.features().get(feat).expect("must be a valid feature").0.as_ref())?,
             FeatureValue::Crate(dep) => self.require_dependency(*dep, platform),
             FeatureValue::CrateFeature(dep, dep_feat) => {
                 self.require_crate_feature(*dep, *dep_feat, platform)
