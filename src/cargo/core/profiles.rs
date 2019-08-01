@@ -344,15 +344,31 @@ impl ProfileMaker {
         unit_for: UnitFor,
     ) -> Profile {
         let mut profile = self.default;
+
+        let mut tomls = vec![];
         if let Some(ref toml) = self.toml {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            tomls.push(toml);
         }
         for toml in &self.inherits {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            tomls.push(toml);
         }
+
+        // First merge the profiles
+        for toml in &tomls {
+            merge_profile(&mut profile, toml);
+        }
+
+        // Then their overrides
+        for toml in &tomls {
+            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
+        }
+
+        // '.cargo/config' can still overrides everything we had so far.
         if let Some(ref toml) = self.config {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_profile(&mut profile, toml);
+            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
         }
+
         profile
     }
 
@@ -459,14 +475,13 @@ impl ProfileMaker {
     }
 }
 
-fn merge_toml(
+fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
     is_member: bool,
     unit_for: UnitFor,
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    merge_profile(profile, toml);
     if unit_for.is_build() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
