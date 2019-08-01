@@ -1235,25 +1235,36 @@ impl TomlManifest {
     }
 
     fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
-        let mut patch = HashMap::new();
-        for (url, deps) in self.patch.iter().flat_map(|x| x) {
-            let url = match &url[..] {
-                CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
-                _ => cx
-                    .config
-                    .get_registry_index(url)
-                    .or_else(|_| url.into_url())
-                    .chain_err(|| {
-                        format!("[patch] entry `{}` should be a URL or registry name", url)
-                    })?,
-            };
-            patch.insert(
-                url,
-                deps.iter()
-                    .map(|(name, dep)| dep.to_dependency(name, cx, None))
-                    .collect::<CargoResult<Vec<_>>>()?,
-            );
+        fn process_patch(toml_patch: &Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+                         cx: &mut Context<'_, '_>,
+                         patch: &mut HashMap<Url, Vec<Dependency>>) -> CargoResult<()> {
+            for (url, deps) in toml_patch.iter().flat_map(|x| x) {
+                let url = match &url[..] {
+                    CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
+                    _ => cx
+                        .config
+                        .get_registry_index(url)
+                        .or_else(|_| url.into_url())
+                        .chain_err(|| {
+                            format!("[patch] entry `{}` should be a URL or registry name", url)
+                        })?,
+                };
+                patch.insert(
+                    url,
+                    deps.iter()
+                        .map(|(name, dep)| dep.to_dependency(name, cx, None))
+                        .collect::<CargoResult<Vec<_>>>()?,
+                );
+            }
+            Ok(())
         }
+
+        let mut patch = HashMap::new();
+        process_patch(&self.patch, cx, &mut patch)?;
+
+        let config_patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>> = cx.config.get("patch")?;
+        process_patch(&config_patch, cx, &mut patch)?;
+
         Ok(patch)
     }
 
