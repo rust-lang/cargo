@@ -180,6 +180,9 @@ fn rustc<'a, 'cfg>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
+    if cx.is_primary_package(unit) {
+        rustc.env("CARGO_PRIMARY_PACKAGE", "1");
+    }
     let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
