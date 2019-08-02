@@ -258,6 +258,13 @@ fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
+    if let Some(links) = unit.pkg.manifest().links() {
+        if bcx.script_override(links, unit.kind).is_some() {
+            // Overridden build scripts don't have any dependencies.
+            return Ok(Vec::new());
+        }
+    }
+
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.

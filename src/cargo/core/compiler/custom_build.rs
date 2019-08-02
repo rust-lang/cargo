@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::core::compiler::job_queue::JobState;
 use crate::core::PackageId;
@@ -13,7 +13,7 @@ use crate::util::Cfg;
 use crate::util::{self, internal, paths, profile};
 
 use super::job::{Freshness, Job, Work};
-use super::{fingerprint, Context, Kind, TargetConfig, Unit};
+use super::{fingerprint, Context, Kind, Unit};
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -39,48 +39,57 @@ pub struct BuildOutput {
     pub warnings: Vec<String>,
 }
 
-/// Map of packages to build info.
-pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
+/// Map of packages to build script output.
+///
+/// This initially starts out as empty. Overridden build scripts get
+/// inserted during `build_map`. The rest of the entries are added
+/// immediately after each build script runs.
+pub type BuildScriptOutputs = HashMap<(PackageId, Kind), BuildOutput>;
 
-/// Build info and overrides.
-pub struct BuildState {
-    pub outputs: Mutex<BuildMap>,
-    overrides: HashMap<(String, Kind), BuildOutput>,
-}
-
+/// Linking information for a `Unit`.
+///
+/// See `build_map` for more details.
 #[derive(Default)]
 pub struct BuildScripts {
-    // Cargo will use this `to_link` vector to add `-L` flags to compiles as we
-    // propagate them upwards towards the final build. Note, however, that we
-    // need to preserve the ordering of `to_link` to be topologically sorted.
-    // This will ensure that build scripts which print their paths properly will
-    // correctly pick up the files they generated (if there are duplicates
-    // elsewhere).
-    //
-    // To preserve this ordering, the (id, kind) is stored in two places, once
-    // in the `Vec` and once in `seen_to_link` for a fast lookup. We maintain
-    // this as we're building interactively below to ensure that the memory
-    // usage here doesn't blow up too much.
-    //
-    // For more information, see #2354.
+    /// Cargo will use this `to_link` vector to add `-L` flags to compiles as we
+    /// propagate them upwards towards the final build. Note, however, that we
+    /// need to preserve the ordering of `to_link` to be topologically sorted.
+    /// This will ensure that build scripts which print their paths properly will
+    /// correctly pick up the files they generated (if there are duplicates
+    /// elsewhere).
+    ///
+    /// To preserve this ordering, the (id, kind) is stored in two places, once
+    /// in the `Vec` and once in `seen_to_link` for a fast lookup. We maintain
+    /// this as we're building interactively below to ensure that the memory
+    /// usage here doesn't blow up too much.
+    ///
+    /// For more information, see #2354.
     pub to_link: Vec<(PackageId, Kind)>,
+    /// This is only used while constructing `to_link` to avoid duplicates.
     seen_to_link: HashSet<(PackageId, Kind)>,
+    /// Host-only dependencies that have build scripts.
+    ///
+    /// This is the set of transitive dependencies that are host-only
+    /// (proc-macro, plugin, build-dependency) that contain a build script.
+    /// Any `BuildOutput::library_paths` path relative to `target` will be
+    /// added to LD_LIBRARY_PATH so that the compiler can find any dynamic
+    /// libraries a build script may have generated.
     pub plugins: BTreeSet<PackageId>,
 }
 
+/// Dependency information as declared by a build script.
 #[derive(Debug)]
 pub struct BuildDeps {
+    /// Absolute path to the file in the target directory that stores the
+    /// output of the build script.
     pub build_script_output: PathBuf,
+    /// Files that trigger a rebuild if they change.
     pub rerun_if_changed: Vec<PathBuf>,
+    /// Environment variables that trigger a rebuild if they change.
     pub rerun_if_env_changed: Vec<String>,
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-///
-/// The `req` given is the requirement which this run of the build script will
-/// prepare work for. If the requirement is specified as both the target and the
-/// host platforms it is assumed that the two are equal and the build script is
-/// only run once (not twice).
 pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "build script prepare: {}/{}",
@@ -90,7 +99,8 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRe
 
     let key = (unit.pkg.package_id(), unit.kind);
 
-    if cx.build_script_overridden.contains(&key) {
+    if cx.build_script_outputs.lock().unwrap().contains_key(&key) {
+        // The output is already set, thus the build script is overridden.
         fingerprint::prepare_target(cx, unit, false)
     } else {
         build_work(cx, unit)
@@ -233,7 +243,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             .collect::<Vec<_>>()
     };
     let pkg_name = unit.pkg.to_string();
-    let build_state = Arc::clone(&cx.build_state);
+    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
     let output_file = script_run_dir.join("output");
     let err_file = script_run_dir.join("stderr");
@@ -242,11 +252,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let all = (
         id,
         pkg_name.clone(),
-        Arc::clone(&build_state),
+        Arc::clone(&build_script_outputs),
         output_file.clone(),
         script_out_dir.clone(),
     );
-    let build_scripts = super::load_build_deps(cx, unit);
+    let build_scripts = cx.build_scripts.get(unit).cloned();
     let kind = unit.kind;
     let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.config.extra_verbose();
@@ -279,17 +289,17 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
         if !build_plan {
-            let build_state = build_state.outputs.lock().unwrap();
+            let build_script_outputs = build_script_outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id, kind);
-                let state = build_state.get(&key).ok_or_else(|| {
+                let script_output = build_script_outputs.get(&key).ok_or_else(|| {
                     internal(format!(
                         "failed to locate build state for env \
                          vars: {}/{:?}",
                         id, kind
                     ))
                 })?;
-                let data = &state.metadata;
+                let data = &script_output.metadata;
                 for &(ref key, ref value) in data.iter() {
                     cmd.env(
                         &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
@@ -298,7 +308,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 }
             }
             if let Some(build_scripts) = build_scripts {
-                super::add_plugin_deps(&mut cmd, &build_state, &build_scripts, &host_target_root)?;
+                super::add_plugin_deps(
+                    &mut cmd,
+                    &build_script_outputs,
+                    &build_scripts,
+                    &host_target_root,
+                )?;
             }
         }
 
@@ -346,7 +361,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         if json_messages {
             emit_build_output(state, &parsed_output, id);
         }
-        build_state.insert(id, kind, parsed_output);
+        build_script_outputs
+            .lock()
+            .unwrap()
+            .insert((id, kind), parsed_output);
         Ok(())
     });
 
@@ -354,7 +372,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |state| {
-        let (id, pkg_name, build_state, output_file, script_out_dir) = all;
+        let (id, pkg_name, build_script_outputs, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
             None => BuildOutput::parse_file(
@@ -369,7 +387,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             emit_build_output(state, &output, id);
         }
 
-        build_state.insert(id, kind, output);
+        build_script_outputs
+            .lock()
+            .unwrap()
+            .insert((id, kind), output);
         Ok(())
     });
 
@@ -384,25 +405,6 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         job.before(fresh);
     }
     Ok(job)
-}
-
-impl BuildState {
-    pub fn new(host_config: &TargetConfig, target_config: &TargetConfig) -> BuildState {
-        let mut overrides = HashMap::new();
-        let i1 = host_config.overrides.iter().map(|p| (p, Kind::Host));
-        let i2 = target_config.overrides.iter().map(|p| (p, Kind::Target));
-        for ((name, output), kind) in i1.chain(i2) {
-            overrides.insert((name.clone(), kind), output.clone());
-        }
-        BuildState {
-            outputs: Mutex::new(HashMap::new()),
-            overrides,
-        }
-    }
-
-    fn insert(&self, id: PackageId, kind: Kind, output: BuildOutput) {
-        self.outputs.lock().unwrap().insert((id, kind), output);
-    }
 }
 
 impl BuildOutput {
@@ -471,6 +473,7 @@ impl BuildOutput {
                 script_out_dir.to_str().unwrap(),
             );
 
+            // Keep in sync with TargetConfig::new.
             match key {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
@@ -597,14 +600,21 @@ impl BuildDeps {
     }
 }
 
-/// Computes the `build_scripts` map in the `Context` which tracks what build
-/// scripts each package depends on.
+/// Computes several maps in `Context`:
+/// - `build_scripts`: A map that tracks which build scripts each package
+///   depends on.
+/// - `build_explicit_deps`: Dependency statements emitted by build scripts
+///   from a previous run.
+/// - `build_script_outputs`: Pre-populates this with any overridden build
+///   scripts.
 ///
-/// The global `build_scripts` map lists for all (package, kind) tuples what set
-/// of packages' build script outputs must be considered. For example this lists
-/// all dependencies' `-L` flags which need to be propagated transitively.
+/// The important one here is `build_scripts`, which for each `(package,
+/// kind)` stores a `BuildScripts` object which contains a list of
+/// dependencies with build scripts that the unit should consider when
+/// linking. For example this lists all dependencies' `-L` flags which need to
+/// be propagated transitively.
 ///
-/// The given set of targets to this function is the initial set of
+/// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
 pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> CargoResult<()> {
     let mut ret = HashMap::new();
@@ -628,20 +638,15 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
             return Ok(&out[unit]);
         }
 
-        let key = unit
-            .pkg
-            .manifest()
-            .links()
-            .map(|l| (l.to_string(), unit.kind));
-        let build_state = &cx.build_state;
-        if let Some(output) = key.and_then(|k| build_state.overrides.get(&k)) {
-            let key = (unit.pkg.package_id(), unit.kind);
-            cx.build_script_overridden.insert(key);
-            build_state
-                .outputs
-                .lock()
-                .unwrap()
-                .insert(key, output.clone());
+        // If there is a build script override, pre-fill the build output.
+        if let Some(links) = unit.pkg.manifest().links() {
+            if let Some(output) = cx.bcx.script_override(links, unit.kind) {
+                let key = (unit.pkg.package_id(), unit.kind);
+                cx.build_script_outputs
+                    .lock()
+                    .unwrap()
+                    .insert(key, output.clone());
+            }
         }
 
         let mut ret = BuildScripts::default();
@@ -650,6 +655,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
             add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
 
+        // Load any dependency declarations from a previous run.
         if unit.mode.is_run_custom_build() {
             parse_previous_explicit_deps(cx, unit)?;
         }
@@ -658,16 +664,16 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut targets = cx.dep_targets(unit);
-        targets.sort_by_key(|u| u.pkg.package_id());
+        let mut dependencies = cx.dep_targets(unit);
+        dependencies.sort_by_key(|u| u.pkg.package_id());
 
-        for unit in targets.iter() {
-            let dep_scripts = build(out, cx, unit)?;
+        for dep_unit in dependencies.iter() {
+            let dep_scripts = build(out, cx, dep_unit)?;
 
-            if unit.target.for_host() {
+            if dep_unit.target.for_host() {
                 ret.plugins
                     .extend(dep_scripts.to_link.iter().map(|p| &p.0).cloned());
-            } else if unit.target.linkable() {
+            } else if dep_unit.target.linkable() {
                 for &(pkg, kind) in dep_scripts.to_link.iter() {
                     add_to_link(&mut ret, pkg, kind);
                 }

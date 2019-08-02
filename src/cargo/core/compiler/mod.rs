@@ -29,7 +29,7 @@ pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::Context;
-pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
+pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
@@ -192,9 +192,9 @@ fn rustc<'a, 'cfg>(
     let kind = unit.kind;
 
     // Prepare the native lib state (extra `-L` and `-l` flags).
-    let build_state = cx.build_state.clone();
+    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let current_id = unit.pkg.package_id();
-    let build_deps = load_build_deps(cx, unit);
+    let build_scripts = cx.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
@@ -242,20 +242,20 @@ fn rustc<'a, 'cfg>(
         // located somewhere in there.
         // Finally, if custom environment variables have been produced by
         // previous build scripts, we include them in the rustc invocation.
-        if let Some(build_deps) = build_deps {
-            let build_state = build_state.outputs.lock().unwrap();
+        if let Some(build_scripts) = build_scripts {
+            let script_outputs = build_script_outputs.lock().unwrap();
             if !build_plan {
                 add_native_deps(
                     &mut rustc,
-                    &build_state,
-                    &build_deps,
+                    &script_outputs,
+                    &build_scripts,
                     pass_l_flag,
                     pass_cdylib_link_args,
                     current_id,
                 )?;
-                add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
+                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &build_state, current_id, kind)?;
+            add_custom_env(&mut rustc, &script_outputs, current_id, kind)?;
         }
 
         for output in outputs.iter() {
@@ -341,16 +341,16 @@ fn rustc<'a, 'cfg>(
     // present in `state`) to the command provided.
     fn add_native_deps(
         rustc: &mut ProcessBuilder,
-        build_state: &BuildMap,
+        build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
         pass_cdylib_link_args: bool,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_state.get(key).ok_or_else(|| {
+            let output = build_script_outputs.get(key).ok_or_else(|| {
                 internal(format!(
-                    "couldn't find build state for {}/{:?}",
+                    "couldn't find build script output for {}/{:?}",
                     key.0, key.1
                 ))
             })?;
@@ -381,12 +381,12 @@ fn rustc<'a, 'cfg>(
     // been put there by one of the `build_scripts`) to the command provided.
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
-        build_state: &BuildMap,
+        build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
         kind: Kind,
     ) -> CargoResult<()> {
         let key = (current_id, kind);
-        if let Some(output) = build_state.get(&key) {
+        if let Some(output) = build_script_outputs.get(&key) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
             }
@@ -522,16 +522,12 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     Ok(())
 }
 
-fn load_build_deps(cx: &Context<'_, '_>, unit: &Unit<'_>) -> Option<Arc<BuildScripts>> {
-    cx.build_scripts.get(unit).cloned()
-}
-
-// For all plugin dependencies, add their -L paths (now calculated and
-// present in `state`) to the dynamic library load path for the command to
-// execute.
+// For all plugin dependencies, add their -L paths (now calculated and present
+// in `build_script_outputs`) to the dynamic library load path for the command
+// to execute.
 fn add_plugin_deps(
     rustc: &mut ProcessBuilder,
-    build_state: &BuildMap,
+    build_script_outputs: &BuildScriptOutputs,
     build_scripts: &BuildScripts,
     root_output: &PathBuf,
 ) -> CargoResult<()> {
@@ -539,7 +535,7 @@ fn add_plugin_deps(
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for &id in build_scripts.plugins.iter() {
-        let output = build_state
+        let output = build_script_outputs
             .get(&(id, Kind::Host))
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
         search_path.append(&mut filter_dynamic_search_path(
@@ -645,14 +641,14 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.args(bcx.rustdocflags_args(unit));
 
     let name = unit.pkg.name().to_string();
-    let build_state = cx.build_state.clone();
+    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let key = (unit.pkg.package_id(), unit.kind);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mut output_options = OutputOptions::new(cx, unit);
 
     Ok(Work::new(move |state| {
-        if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
+        if let Some(output) = build_script_outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
                 rustdoc.arg("--cfg").arg(cfg);
             }
