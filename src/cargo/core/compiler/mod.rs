@@ -18,7 +18,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use failure::Error;
+use failure::{bail, Error};
 use lazycell::LazyCell;
 use log::debug;
 use same_file::is_same_file;
