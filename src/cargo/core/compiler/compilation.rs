@@ -78,13 +78,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
-        let mut primary_unit_rustc_process =
-            bcx.build_config.primary_unit_rustc.clone().map(|mut r| {
-                if r.is_wrapper {
-                    r.proc.arg(&bcx.rustc.path);
-                }
-                r.proc
-            });
+        let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
 
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
