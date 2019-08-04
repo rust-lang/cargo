@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
-use crate::util::Config;
+use crate::util::{Config, Platform};
 
 use im_rc;
 
@@ -89,7 +89,7 @@ impl ResolverProgress {
     }
 }
 
-/// The preferred way to store the set of activated features for a package.
+/// The preferred way to store the map of activated feature-platform pairs for a package.
 /// This is sorted so that it impls Hash, and owns its contents,
 /// needed so it can be part of the key for caching in the `DepsCache`.
 /// It is also cloned often as part of `Context`, hence the `RC`.
@@ -97,7 +97,7 @@ impl ResolverProgress {
 /// but this can change with improvements to std, im, or llvm.
 /// Using a consistent type for this allows us to use the highly
 /// optimized comparison operators like `is_subset` at the interfaces.
-pub type FeaturesSet = Rc<BTreeSet<InternedString>>;
+pub type FeaturesMap = Rc<BTreeMap<InternedString, Option<Platform>>>;
 
 /// Options for how the resolve should work.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -107,7 +107,7 @@ pub struct ResolveOpts {
     /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
     pub dev_deps: bool,
     /// Set of features to enable (`--features=…`).
-    pub features: FeaturesSet,
+    pub features: FeaturesMap,
     /// Indicates *all* features should be enabled (`--all-features`).
     pub all_features: bool,
     /// Include the `default` feature (`--no-default-features` sets this false).
@@ -119,7 +119,7 @@ impl ResolveOpts {
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
             dev_deps: true,
-            features: Rc::new(BTreeSet::new()),
+            features: Rc::new(BTreeMap::new()),
             all_features: true,
             uses_default_features: true,
         }
@@ -139,14 +139,14 @@ impl ResolveOpts {
         }
     }
 
-    fn split_features(features: &[String]) -> BTreeSet<InternedString> {
+    fn split_features(features: &[String]) -> BTreeMap<InternedString, Option<Platform>> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(InternedString::new)
-            .collect::<BTreeSet<InternedString>>()
+            .map(|s| (InternedString::new(s), None))
+            .collect::<BTreeMap<InternedString, Option<Platform>>>()
     }
 }
 
@@ -253,7 +253,7 @@ impl RemainingDeps {
 /// Information about the dependencies for a crate, a tuple of:
 ///
 /// (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Summary>>, FeaturesSet);
+pub type DepInfo = (Dependency, Rc<Vec<Summary>>, FeaturesMap);
 
 /// All possible reasons that a package might fail to activate.
 ///

@@ -217,10 +217,19 @@ optional_feat = []
                 ],
                 "features": {
                   "default": [
+                    null,
+                    [
                       "default_feat"
+                    ]
                   ],
-                  "default_feat": [],
-                  "optional_feat": []
+                  "default_feat": [
+                    null,
+                    []
+                  ],
+                  "optional_feat": [
+                    null,
+                    []
+                  ]
                 },
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null

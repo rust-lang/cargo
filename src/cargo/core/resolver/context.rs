@@ -13,7 +13,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;
-use super::types::{ConflictMap, FeaturesSet, ResolveOpts};
+use super::types::{ConflictMap, FeaturesMap, ResolveOpts};
 
 pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -27,7 +27,7 @@ pub use super::resolve::Resolve;
 pub struct Context {
     pub activations: Activations,
     /// list the features that are activated for each package
-    pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
+    pub resolve_features: im_rc::HashMap<PackageId, FeaturesMap>,
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
     /// for each package the list of names it can see,
@@ -165,9 +165,9 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
-                opts.features.is_subset(prev)
+            	opts.features.keys().filter(|k| !prev.contains_key(k.as_str())).next().is_none()
                     && (!opts.uses_default_features
-                        || prev.contains("default")
+                        || prev.contains_key("default")
                         || !has_default_feature)
             }
             None => {

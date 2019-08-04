@@ -63,7 +63,7 @@ use crate::util::profile;
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
-use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
+use self::types::{FeaturesMap, RcVecIter, RemainingDeps, ResolverProgress};
 
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -146,7 +146,7 @@ pub fn resolve(
         cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
-            .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
+            .map(|(k, v)| (*k, v.iter().map(|(f,p)| (f.to_string(), p.clone())).collect()))
             .collect(),
         cksums,
         BTreeMap::new(),
@@ -691,7 +691,7 @@ fn activate(
                 .entry(candidate.package_id())
                 .or_insert_with(Rc::default),
         )
-        .extend(used_features);
+        .extend(used_features.clone());
     }
 
     let frame = DepsFrame {
@@ -709,7 +709,7 @@ struct BacktrackFrame {
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
-    features: FeaturesSet,
+    features: FeaturesMap,
     conflicting_activations: ConflictMap,
 }
 

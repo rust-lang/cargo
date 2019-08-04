@@ -18,7 +18,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use failure::Error;
+use failure::{bail, Error};
 use lazycell::LazyCell;
 use log::debug;
 use same_file::is_same_file;
@@ -630,8 +630,16 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     rustdoc.arg("-o").arg(doc_dir);
 
+    // Need to keep a correct order on the features, so get the sorted name first,
+    // then resolve the specified platform.
     for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
-        rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+        if let Some(platform) = bcx.resolve.features(unit.pkg.package_id()).get(feat) {
+            if bcx.platform_activated(platform.as_ref(), unit.kind) {
+                rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+            }
+        } else {
+            bail!("Failed to get the target for the feature `{}`", feat);
+        }
     }
 
     add_error_format_and_color(cx, &mut rustdoc, false)?;
@@ -897,7 +905,13 @@ fn build_base_args<'a, 'cfg>(
     // rustc-caching strategies like sccache are able to cache more, so sort the
     // feature list here.
     for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
-        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+        if let Some(platform) = bcx.resolve.features(unit.pkg.package_id()).get(feat) {
+            if bcx.platform_activated(platform.as_ref(), unit.kind) {
+                cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
+            }
+        } else {
+            bail!("Failed to get the target for the feature `{}`", feat);
+        }
     }
 
     match cx.files().metadata(unit) {

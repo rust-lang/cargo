@@ -2,6 +2,9 @@ use std::fmt;
 use std::iter;
 use std::str::{self, FromStr};
 
+use serde::ser;
+
+use crate::util::errors::CargoResultExt;
 use crate::util::CargoResult;
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
@@ -26,6 +29,12 @@ enum Token<'a> {
     Comma,
     Equals,
     String(&'a str),
+}
+
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
+pub enum Platform {
+    Name(String),
+    Cfg(CfgExpr),
 }
 
 struct Tokenizer<'a> {
@@ -273,6 +282,49 @@ impl<'a> Token<'a> {
             Token::Comma => "`,`",
             Token::Equals => "`=`",
             Token::String(..) => "a string",
+        }
+    }
+}
+
+impl Platform {
+    pub fn matches(&self, name: &str, cfg: &[Cfg]) -> bool {
+        match *self {
+            Platform::Name(ref p) => p == name,
+            Platform::Cfg(ref p) => p.matches(cfg),
+        }
+    }
+}
+
+impl ser::Serialize for Platform {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
+    }
+}
+
+impl FromStr for Platform {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> CargoResult<Platform> {
+        if s.starts_with("cfg(") && s.ends_with(')') {
+            let s = &s[4..s.len() - 1];
+            let p = s.parse().map(Platform::Cfg).chain_err(|| {
+                failure::format_err!("failed to parse `{}` as a cfg expression", s)
+            })?;
+            Ok(p)
+        } else {
+            Ok(Platform::Name(s.to_string()))
+        }
+    }
+}
+
+impl fmt::Display for Platform {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Platform::Name(ref n) => n.fmt(f),
+            Platform::Cfg(ref e) => write!(f, "cfg({})", e),
         }
     }
 }
