@@ -146,7 +146,12 @@ pub fn resolve(
         cx.resolve_replacements(&registry),
         cx.resolve_features
             .iter()
-            .map(|(k, v)| (*k, v.iter().map(|(f,p)| (f.to_string(), p.clone())).collect()))
+            .map(|(k, v)| {
+                (
+                    *k,
+                    v.iter().map(|(f, p)| (f.to_string(), p.clone())).collect(),
+                )
+            })
             .collect(),
         cksums,
         BTreeMap::new(),

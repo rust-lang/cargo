@@ -192,17 +192,17 @@ fn dont_include_default() {
 
 #[cargo_test]
 fn transitive() {
-	#[cfg(target_os = "macos")]
-	let config = "target_os = \"macos\"";
-	#[cfg(target_os = "windows")]
-	let config = "target_os = \"windows\"";
-	#[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-	let config = "unix";
+    #[cfg(target_os = "macos")]
+    let config = "target_os = \"macos\"";
+    #[cfg(target_os = "windows")]
+    let config = "target_os = \"windows\"";
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    let config = "unix";
 
-	let p = project()
-		.no_manifest()
+    let p = project()
+        .no_manifest()
         // root depends on a and c="1.1.0"
-		.file(
+        .file(
             "root/Cargo.toml",
             r#"
             [package]
@@ -214,20 +214,20 @@ fn transitive() {
 			a = { version = "*", path = "../a" }
 			c = { version = "1.1.0", path = "../c1" }
         "#,
-		)
-		.file(
-	        "root/src/main.rs",
+        )
+        .file(
+            "root/src/main.rs",
             r#"
             fn main() {
 			    println!("Hello, world!");
 			}
         "#,
-		)
-		// a depends on b and on OSX depends on b's flag maybe
-		.file(
+        )
+        // a depends on b and on OSX depends on b's flag maybe
+        .file(
             "a/Cargo.toml",
             &format!(
-            	r#"
+                r#"
 				[package]
 				name = "a"
 				version = "0.1.0"
@@ -241,17 +241,16 @@ fn transitive() {
 				[target.'cfg({})'.dependencies]
 				b = {{ version = "*", path = "../b", features = ["maybe"] }}
 		        "#,
-		        config,
-		        config,
-            )
-		)
-		.file(
+                config, config,
+            ),
+        )
+        .file(
             "a/src/lib.rs",
             r#"
         "#,
-		)
-		// b depends on c="=1.0.0" if maybe is active.
-		.file(
+        )
+        // b depends on c="=1.0.0" if maybe is active.
+        .file(
             "b/Cargo.toml",
             r#"
 			[package]
@@ -264,8 +263,8 @@ fn transitive() {
 			[features]
 			maybe = ["c"]
 		"#,
-		)
-		.file(
+        )
+        .file(
             "b/src/lib.rs",
             r#"
 			#[cfg(feature = "maybe")]
@@ -273,9 +272,9 @@ fn transitive() {
 				c::cee();
 			}
         "#,
-		)
-		// c 1.0.0
-		.file(
+        )
+        // c 1.0.0
+        .file(
             "c0/Cargo.toml",
             r#"
 			[package]
@@ -287,15 +286,15 @@ fn transitive() {
 			
 			[dependencies]
         "#,
-		)
-		.file(
+        )
+        .file(
             "c0/src/lib.rs",
             r#"			
 			pub fn cee() {}
         "#,
-		)
-		// c 1.1.0
-		.file(
+        )
+        // c 1.1.0
+        .file(
             "c1/Cargo.toml",
             r#"
 			[package]
@@ -307,15 +306,16 @@ fn transitive() {
 			
 			[dependencies]
         "#,
-		)
-		.file(
+        )
+        .file(
             "c1/src/lib.rs",
             r#"
         "#,
-		)
-		.build();
-		
-	p.cargo("build").cwd("root")
+        )
+        .build();
+
+    p.cargo("build")
+        .cwd("root")
         .with_stderr(
             "\
 [COMPILING] c v1.0.0 ([..])

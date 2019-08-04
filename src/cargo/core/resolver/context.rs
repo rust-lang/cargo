@@ -165,7 +165,11 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
-            	opts.features.keys().filter(|k| !prev.contains_key(k.as_str())).next().is_none()
+                opts.features
+                    .keys()
+                    .filter(|k| !prev.contains_key(k.as_str()))
+                    .next()
+                    .is_none()
                     && (!opts.uses_default_features
                         || prev.contains_key("default")
                         || !has_default_feature)

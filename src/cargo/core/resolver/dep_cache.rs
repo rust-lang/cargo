@@ -249,7 +249,10 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
-) -> ActivateResult<(HashMap<InternedString, Option<Platform>>, Vec<(Dependency, FeaturesMap)>)> {
+) -> ActivateResult<(
+    HashMap<InternedString, Option<Platform>>,
+    Vec<(Dependency, FeaturesMap)>,
+)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
@@ -293,7 +296,11 @@ pub fn resolve_features<'b>(
             });
         }
         let mut base = base.1.clone();
-        base.extend(dep.features().iter().map(|f| (f.clone(), dep.platform().map(|p| p.clone()))));
+        base.extend(
+            dep.features()
+                .iter()
+                .map(|f| (f.clone(), dep.platform().map(|p| p.clone()))),
+        );
         for feature in base.iter() {
             if feature.0.contains('/') {
                 return Err(failure::format_err!(
@@ -343,7 +350,7 @@ fn build_requirements<'a, 'b: 'a>(
     let empty_ftrs = (None, vec![]);
 
     if opts.all_features {
-        for (key,val) in s.features() {
+        for (key, val) in s.features() {
             reqs.require_feature(*key, val.0.as_ref())?;
         }
         for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
@@ -351,13 +358,23 @@ fn build_requirements<'a, 'b: 'a>(
         }
     } else {
         for (f, _) in opts.features.iter() {
-            reqs.require_value(&FeatureValue::new(*f, s), s.features().get(f).unwrap_or(&empty_ftrs).0.as_ref())?;
+            reqs.require_value(
+                &FeatureValue::new(*f, s),
+                s.features().get(f).unwrap_or(&empty_ftrs).0.as_ref(),
+            )?;
         }
     }
 
     if opts.uses_default_features {
         if s.features().contains_key("default") {
-            reqs.require_feature(InternedString::new("default"), s.features().get("default").unwrap_or(&empty_ftrs).0.as_ref())?;
+            reqs.require_feature(
+                InternedString::new("default"),
+                s.features()
+                    .get("default")
+                    .unwrap_or(&empty_ftrs)
+                    .0
+                    .as_ref(),
+            )?;
         }
     }
 
@@ -393,7 +410,12 @@ impl Requirements<'_> {
         self.used
     }
 
-    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString, platform: Option<&Platform>) {
+    fn require_crate_feature(
+        &mut self,
+        package: InternedString,
+        feat: InternedString,
+        platform: Option<&Platform>,
+    ) {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
@@ -430,7 +452,11 @@ impl Requirements<'_> {
         self.deps.entry(pkg).or_insert((false, BTreeMap::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: InternedString, platform: Option<&Platform>) -> CargoResult<()> {
+    fn require_feature(
+        &mut self,
+        feat: InternedString,
+        platform: Option<&Platform>,
+    ) -> CargoResult<()> {
         if feat.is_empty() || self.seen(feat, platform) {
             return Ok(());
         }
@@ -439,8 +465,7 @@ impl Requirements<'_> {
             .features()
             .get(feat.as_str())
             .expect("must be a valid feature");
-        for fv in feature.1.as_slice()
-        {
+        for fv in feature.1.as_slice() {
             match *fv {
                 FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
                     "cyclic feature dependency: feature `{}` depends on itself",
@@ -455,7 +480,15 @@ impl Requirements<'_> {
 
     fn require_value(&mut self, fv: &FeatureValue, platform: Option<&Platform>) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(*feat, self.summary.features().get(feat).expect("must be a valid feature").0.as_ref())?,
+            FeatureValue::Feature(feat) => self.require_feature(
+                *feat,
+                self.summary
+                    .features()
+                    .get(feat)
+                    .expect("must be a valid feature")
+                    .0
+                    .as_ref(),
+            )?,
             FeatureValue::Crate(dep) => self.require_dependency(*dep, platform),
             FeatureValue::CrateFeature(dep, dep_feat) => {
                 self.require_crate_feature(*dep, *dep_feat, platform)
