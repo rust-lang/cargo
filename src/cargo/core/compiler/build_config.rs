@@ -112,7 +112,10 @@ impl BuildConfig {
     /// Whether or not the *user* wants JSON output. Whether or not rustc
     /// actually uses JSON is decided in `add_error_format`.
     pub fn emit_json(&self) -> bool {
-        self.message_format == MessageFormat::Json
+        match self.message_format {
+            MessageFormat::Json { .. } => true,
+            _ => false,
+        }
     }
 
     pub fn test(&self) -> bool {
@@ -123,7 +126,17 @@ impl BuildConfig {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MessageFormat {
     Human,
-    Json,
+    Json {
+        /// Whether rustc diagnostics are rendered by cargo or included into the
+        /// output stream.
+        render_diagnostics: bool,
+        /// Whether the `rendered` field of rustc diagnostics are using the
+        /// "short" rendering.
+        short: bool,
+        /// Whether the `rendered` field of rustc diagnostics embed ansi color
+        /// codes.
+        ansi: bool,
+    },
     Short,
 }
 
