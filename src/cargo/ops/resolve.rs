@@ -261,7 +261,6 @@ pub fn resolve_with_previous<'cfg>(
                     failure::bail!("cannot specify features for packages outside of workspace");
                 }
                 members.extend(ws.members());
-                panic!("tested?");
             }
         }
         for member in members {

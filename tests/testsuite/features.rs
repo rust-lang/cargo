@@ -1425,6 +1425,9 @@ fn combining_features_and_package() {
     p.cargo("run -Z package-features --package bar --features main")
         .masquerade_as_nightly_cargo()
         .run();
+    p.cargo("build -Z package-features --package dep")
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[cargo_test]
