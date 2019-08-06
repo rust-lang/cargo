@@ -4,6 +4,11 @@
 //! rustup, as well functions to find the correct value of
 //! `CARGO_HOME` and `RUSTUP_HOME`.
 //!
+//! See also the [`dirs`](https://docs.rs/dirs) crate.
+//!
+//! _Note that as of 2019/08/06 it appears that cargo uses this crate, but
+//! rustup does not._
+//!
 //! The definition of `home_dir` provided by the standard library is
 //! incorrect because it considers the `HOME` environment variable on
 //! Windows. This causes surprising situations where a Rust program
