@@ -534,9 +534,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         unit: &Unit<'a>,
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
-        let output = cx.build_state.outputs.lock().unwrap();
+        let outputs = cx.build_script_outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
-        if let Some(output) = output.get(&(unit.pkg.package_id(), unit.kind)) {
+        if let Some(output) = outputs.get(&(unit.pkg.package_id(), unit.kind)) {
             if !output.warnings.is_empty() {
                 if let Some(msg) = msg {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;
