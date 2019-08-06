@@ -3,7 +3,7 @@
 trait Foo {}
 
 struct Bar<'a> {
-    w: &'a (Foo + Send),
+    w: &'a (dyn Foo + Send),
 }
 
 fn main() {
