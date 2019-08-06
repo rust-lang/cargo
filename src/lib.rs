@@ -21,6 +21,7 @@
 //! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
 #![deny(rust_2018_idioms)]
+#![allow(deprecated)] // uses std::env::home_dir when necessary
 
 use std::env;
 use std::io;
