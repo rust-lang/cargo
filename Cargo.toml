@@ -2,12 +2,23 @@
 name = "home"
 version = "0.3.3"
 authors = [ "Brian Anderson <andersrb@gmail.com>" ]
-description = "Shared definitions of home directories"
 documentation = "https://docs.rs/home"
-repository = "https://github.com/brson/home"
+edition = "2018"
 license = "MIT/Apache-2.0"
+repository = "https://github.com/brson/home"
+description = "Shared definitions of home directories"
 
 [target."cfg(windows)".dependencies]
-scopeguard = "0.3"
-winapi = { version = "0.3", features = ["errhandlingapi", "handleapi", "processthreadsapi", "std", "winerror", "winnt", "userenv"] }
+scopeguard = "1"
 
+[target."cfg(windows)".dependencies.winapi]
+version = "0.3"
+features = [
+    "errhandlingapi",
+    "handleapi",
+    "processthreadsapi",
+    "std",
+    "winerror",
+    "winnt",
+    "userenv",
+]
