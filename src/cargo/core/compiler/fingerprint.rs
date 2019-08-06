@@ -1581,8 +1581,11 @@ pub fn translate_dep_info(
     for file in deps {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
-        let canon_file = rustc_cwd.join(file).canonicalize()?;
         let abs_file = rustc_cwd.join(file);
+        // If canonicalization fails, just use the abs path. There is currently
+        // a bug where --remap-path-prefix is affecting .d files, causing them
+        // to point to non-existent paths.
+        let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
 
         let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)
