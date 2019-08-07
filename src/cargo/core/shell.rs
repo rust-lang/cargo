@@ -464,7 +464,13 @@ mod imp {
     }
 }
 
-#[cfg(any(all(unix, not(any(target_os = "linux", target_os = "macos"))), windows,))]
+#[cfg(any(
+    all(
+        unix,
+        not(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))
+    ),
+    windows,
+))]
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);
