@@ -366,7 +366,7 @@ impl ColorChoice {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))]
 mod imp {
     use std::mem;
 
@@ -377,7 +377,7 @@ mod imp {
     pub fn stderr_width() -> Option<usize> {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();
-            if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ, &mut winsize) < 0 {
+            if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ.into(), &mut winsize) < 0 {
                 return None;
             }
             if winsize.ws_col > 0 {
@@ -396,7 +396,10 @@ mod imp {
     }
 }
 
-#[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
+#[cfg(all(
+    unix,
+    not(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))
+))]
 mod imp {
     pub(super) use super::default_err_erase_line as err_erase_line;
 
