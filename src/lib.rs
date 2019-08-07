@@ -86,7 +86,7 @@ fn home_dir_() -> Option<PathBuf> {
                 return None;
             }
             let _g = scopeguard::guard(token, |h| {
-                let _ = CloseHandle(*h);
+                let _ = CloseHandle(h);
             });
             fill_utf16_buf(
                 |buf, mut sz| {
