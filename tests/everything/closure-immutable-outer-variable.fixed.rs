@@ -10,7 +10,7 @@
 
 // Point at the captured immutable outer variable
 
-fn foo(mut f: Box<FnMut()>) {
+fn foo(mut f: Box<dyn FnMut()>) {
     f();
 }
 
