@@ -750,27 +750,47 @@ fn add_error_format_and_color(
         if pipelined {
             json.push_str(",artifacts");
         }
-        if cx.bcx.build_config.message_format == MessageFormat::Short {
-            json.push_str(",diagnostic-short");
+        match cx.bcx.build_config.message_format {
+            MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
+                json.push_str(",diagnostic-short");
+            }
+            _ => {}
         }
         cmd.arg(json);
     } else {
+        let mut color = true;
         match cx.bcx.build_config.message_format {
             MessageFormat::Human => (),
-            MessageFormat::Json => {
+            MessageFormat::Json {
+                ansi,
+                short,
+                render_diagnostics,
+            } => {
                 cmd.arg("--error-format").arg("json");
+                // If ansi is explicitly requested, enable it. If we're
+                // rendering diagnostics ourselves then also enable it because
+                // we'll figure out what to do with the colors later.
+                if ansi || render_diagnostics {
+                    cmd.arg("--json=diagnostic-rendered-ansi");
+                }
+                if short {
+                    cmd.arg("--json=diagnostic-short");
+                }
+                color = false;
             }
             MessageFormat::Short => {
                 cmd.arg("--error-format").arg("short");
             }
         }
 
-        let color = if cx.bcx.config.shell().supports_color() {
-            "always"
-        } else {
-            "never"
-        };
-        cmd.args(&["--color", color]);
+        if color {
+            let color = if cx.bcx.config.shell().supports_color() {
+                "always"
+            } else {
+                "never"
+            };
+            cmd.args(&["--color", color]);
+        }
     }
     Ok(())
 }
@@ -1090,9 +1110,8 @@ impl Kind {
 }
 
 struct OutputOptions {
-    /// Get the `"rendered"` field from the JSON output and display it on
-    /// stderr instead of the JSON message.
-    extract_rendered_messages: bool,
+    /// What format we're emitting from Cargo itself.
+    format: MessageFormat,
     /// Look for JSON message that indicates .rmeta file is available for
     /// pipelined compilation.
     look_for_metadata_directive: bool,
@@ -1106,7 +1125,6 @@ struct OutputOptions {
 
 impl OutputOptions {
     fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
-        let extract_rendered_messages = cx.bcx.build_config.message_format != MessageFormat::Json;
         let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().supports_color();
         let cache_cell = if cx.bcx.build_config.cache_messages() {
@@ -1118,7 +1136,7 @@ impl OutputOptions {
             None
         };
         OutputOptions {
-            extract_rendered_messages,
+            format: cx.bcx.build_config.message_format,
             look_for_metadata_directive,
             color,
             cache_cell,
@@ -1175,55 +1193,66 @@ fn on_stderr_line(
         }
     };
 
-    // In some modes of compilation Cargo switches the compiler to JSON mode
-    // but the user didn't request that so we still want to print pretty rustc
-    // colorized diagnostics. In those cases (`extract_rendered_messages`) we
-    // take a look at the JSON blob we go, see if it's a relevant diagnostics,
-    // and if so forward just that diagnostic for us to print.
-    if options.extract_rendered_messages {
-        #[derive(serde::Deserialize)]
-        struct CompilerMessage {
-            rendered: String,
-        }
-        if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-            // state.stderr will add a newline
-            if error.rendered.ends_with('\n') {
-                error.rendered.pop();
+    // Depending on what we're emitting from Cargo itself, we figure out what to
+    // do with this JSON message.
+    match options.format {
+        // In the "human" output formats (human/short) or if diagnostic messages
+        // from rustc aren't being included in the output of Cargo's JSON
+        // messages then we extract the diagnostic (if present) here and handle
+        // it ourselves.
+        MessageFormat::Human
+        | MessageFormat::Short
+        | MessageFormat::Json {
+            render_diagnostics: true,
+            ..
+        } => {
+            #[derive(serde::Deserialize)]
+            struct CompilerMessage {
+                rendered: String,
             }
-            let rendered = if options.color {
-                error.rendered
-            } else {
-                // Strip only fails if the the Writer fails, which is Cursor
-                // on a Vec, which should never fail.
-                strip_ansi_escapes::strip(&error.rendered)
+            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                // state.stderr will add a newline
+                if error.rendered.ends_with('\n') {
+                    error.rendered.pop();
+                }
+                let rendered = if options.color {
+                    error.rendered
+                } else {
+                    // Strip only fails if the the Writer fails, which is Cursor
+                    // on a Vec, which should never fail.
+                    strip_ansi_escapes::strip(&error.rendered)
+                        .map(|v| String::from_utf8(v).expect("utf8"))
+                        .expect("strip should never fail")
+                };
+                state.stderr(rendered);
+                return Ok(());
+            }
+        }
+
+        // Remove color information from the rendered string. When pipelining is
+        // enabled and/or when cached messages are enabled we're always asking
+        // for ANSI colors from rustc, so unconditionally postprocess here and
+        // remove ansi color codes.
+        MessageFormat::Json { ansi: false, .. } => {
+            #[derive(serde::Deserialize, serde::Serialize)]
+            struct CompilerMessage {
+                rendered: String,
+                #[serde(flatten)]
+                other: std::collections::BTreeMap<String, serde_json::Value>,
+            }
+            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                error.rendered = strip_ansi_escapes::strip(&error.rendered)
                     .map(|v| String::from_utf8(v).expect("utf8"))
-                    .expect("strip should never fail")
-            };
-            state.stderr(rendered);
-            return Ok(());
+                    .unwrap_or(error.rendered);
+                let new_line = serde_json::to_string(&error)?;
+                let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
+                compiler_message = new_msg;
+            }
         }
-    } else {
-        // Remove color information from the rendered string. rustc has not
-        // included color in the past, so to avoid breaking anything, strip it
-        // out when --json=diagnostic-rendered-ansi is used. This runs
-        // unconditionally under the assumption that Cargo will eventually
-        // move to this as the default mode. Perhaps in the future, cargo
-        // could allow the user to enable/disable color (such as with a
-        // `--json` or `--color` or `--message-format` flag).
-        #[derive(serde::Deserialize, serde::Serialize)]
-        struct CompilerMessage {
-            rendered: String,
-            #[serde(flatten)]
-            other: std::collections::BTreeMap<String, serde_json::Value>,
-        }
-        if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-            error.rendered = strip_ansi_escapes::strip(&error.rendered)
-                .map(|v| String::from_utf8(v).expect("utf8"))
-                .unwrap_or(error.rendered);
-            let new_line = serde_json::to_string(&error)?;
-            let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
-            compiler_message = new_msg;
-        }
+
+        // If ansi colors are desired then we should be good to go! We can just
+        // pass through this message as-is.
+        MessageFormat::Json { ansi: true, .. } => {}
     }
 
     // In some modes of execution we will execute rustc with `-Z
@@ -1274,12 +1303,8 @@ fn replay_output_cache(
     color: bool,
 ) -> Work {
     let target = target.clone();
-    let extract_rendered_messages = match format {
-        MessageFormat::Human | MessageFormat::Short => true,
-        MessageFormat::Json => false,
-    };
     let mut options = OutputOptions {
-        extract_rendered_messages,
+        format,
         look_for_metadata_directive: false,
         color,
         cache_cell: None,

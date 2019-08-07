@@ -937,7 +937,7 @@ fn both_edition_migrate_flags() {
 error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
 
 USAGE:
-    cargo[..] fix --edition --message-format <FMT>
+    cargo[..] fix --edition
 
 For more information try --help
 ";

@@ -1,7 +1,3 @@
-use std::ffi::{OsStr, OsString};
-use std::fs;
-use std::path::PathBuf;
-
 use crate::core::compiler::{BuildConfig, MessageFormat};
 use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -14,6 +10,10 @@ use crate::util::{
 };
 use crate::CargoResult;
 use clap::{self, SubCommand};
+use failure::bail;
+use std::ffi::{OsStr, OsString};
+use std::fs;
+use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
@@ -134,13 +134,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_message_format(self) -> Self {
-        self._arg(
-            opt("message-format", "Error format")
-                .value_name("FMT")
-                .case_insensitive(true)
-                .possible_values(&["human", "json", "short"])
-                .default_value("human"),
-        )
+        self._arg(multi_opt("message-format", "FMT", "Error format"))
     }
 
     fn arg_build_plan(self) -> Self {
@@ -301,23 +295,70 @@ pub trait ArgMatchesExt {
             self._values_of("package"),
         )?;
 
-        let message_format = match self._value_of("message-format") {
-            None => MessageFormat::Human,
-            Some(f) => {
-                if f.eq_ignore_ascii_case("json") {
-                    MessageFormat::Json
-                } else if f.eq_ignore_ascii_case("human") {
-                    MessageFormat::Human
-                } else if f.eq_ignore_ascii_case("short") {
-                    MessageFormat::Short
-                } else {
-                    panic!("Impossible message format: {:?}", f)
+        let mut message_format = None;
+        let default_json = MessageFormat::Json {
+            short: false,
+            ansi: false,
+            render_diagnostics: false,
+        };
+        for fmt in self._values_of("message-format") {
+            for fmt in fmt.split(',') {
+                let fmt = fmt.to_ascii_lowercase();
+                match fmt.as_str() {
+                    "json" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(default_json);
+                    }
+                    "human" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(MessageFormat::Human);
+                    }
+                    "short" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(MessageFormat::Short);
+                    }
+                    "json-render-diagnostics" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json {
+                                render_diagnostics, ..
+                            }) => *render_diagnostics = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    "json-diagnostic-short" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json { short, .. }) => *short = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    "json-diagnostic-rendered-ansi" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json { ansi, .. }) => *ansi = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    s => bail!("invalid message format specifier: `{}`", s),
                 }
             }
-        };
+        }
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
-        build_config.message_format = message_format;
+        build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.release = self._is_present("release");
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
