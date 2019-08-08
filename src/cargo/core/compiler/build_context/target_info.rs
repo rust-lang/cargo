@@ -53,14 +53,17 @@ pub struct FileType {
     /// The kind of file.
     pub flavor: FileFlavor,
     /// The suffix for the file (for example, `.rlib`).
+    /// This is an empty string for executables on Unix-like platforms.
     suffix: String,
     /// The prefix for the file (for example, `lib`).
+    /// This is an empty string for things like executables.
     prefix: String,
-    // Wasm bin target will generate two files in deps such as
-    // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
-    // "-" and "_". should_replace_hyphens is a flag to indicate that
-    // we need to convert the stem "web-stuff" to "web_stuff", so we
-    // won't miss "web_stuff.wasm".
+    /// Flag to convert hyphen to underscore.
+    ///
+    /// wasm bin targets will generate two files in deps such as
+    /// "web-stuff.js" and "web_stuff.wasm". Note the different usages of "-"
+    /// and "_". This flag indicates that the stem "web-stuff" should be
+    /// converted to "web_stuff".
     should_replace_hyphens: bool,
 }
 
