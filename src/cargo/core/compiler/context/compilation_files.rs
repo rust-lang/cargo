@@ -145,7 +145,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// target.
     pub fn out_dir(&self, unit: &Unit<'a>) -> PathBuf {
         if unit.mode.is_doc() {
-            self.layout(unit.kind).root().parent().unwrap().join("doc")
+            self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
@@ -167,11 +167,6 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             Some(ref meta) => format!("{}-{}", name, meta),
             None => format!("{}-{}", name, self.target_short_hash(unit)),
         }
-    }
-
-    /// Returns the root of the build output tree for the target
-    pub fn target_root(&self) -> &Path {
-        self.target.as_ref().unwrap_or(&self.host).dest()
     }
 
     /// Returns the root of the build output tree for the host
@@ -261,8 +256,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// (eg a dependent lib).
     fn link_stem(&self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
         let out_dir = self.out_dir(unit);
-        let bin_stem = self.bin_stem(unit);
-        let file_stem = self.file_stem(unit);
+        let bin_stem = self.bin_stem(unit); // Stem without metadata.
+        let file_stem = self.file_stem(unit); // Stem with metadata.
 
         // We currently only lift files up from the `deps` directory. If
         // it was compiled into something like `example/` or `doc/` then

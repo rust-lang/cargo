@@ -480,6 +480,7 @@ fn link_targets<'a, 'cfg>(
     }))
 }
 
+/// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
 fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     debug!("linking {} to {}", src.display(), dst.display());
     if is_same_file(src, dst).unwrap_or(false) {
