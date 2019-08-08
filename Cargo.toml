@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.4.1"
+version = "0.4.2"
 authors = [ "Brian Anderson <andersrb@gmail.com>" ]
 documentation = "https://docs.rs/home"
 edition = "2018"
