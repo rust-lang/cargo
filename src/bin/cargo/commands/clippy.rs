@@ -6,6 +6,7 @@ use cargo::util;
 pub fn cli() -> App {
     subcommand("clippy-preview")
         .about("Checks a package to catch common mistakes and improve your Rust code.")
+        .arg(Arg::with_name("args").multiple(true))
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
@@ -69,7 +70,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .into());
     }
 
-    let wrapper = util::process(util::config::clippy_driver());
+    let mut wrapper = util::process(util::config::clippy_driver());
+
+    if let Some(clippy_args) = args.values_of("args") {
+        wrapper.args(&clippy_args.collect::<Vec<_>>());
+    }
+
     compile_opts.build_config.primary_unit_rustc = Some(wrapper);
     compile_opts.build_config.force_rebuild = true;
 
