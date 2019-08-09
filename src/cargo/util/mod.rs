@@ -85,7 +85,12 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
 
 /// Whether or not this running in a Continuous Integration environment.
 pub fn is_ci() -> bool {
-    std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
+    let is_ci = match std::env::var("CI") {
+        Ok(value) => !value.is_empty() && value != String::from("false"),
+        Err(_) => false,
+    };
+
+    is_ci || std::env::var("TF_BUILD").is_ok()
 }
 
 
