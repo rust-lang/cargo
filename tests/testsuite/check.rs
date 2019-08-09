@@ -367,7 +367,7 @@ fn rustc_check_err() {
         .with_status(101)
         .with_stderr_contains("[CHECKING] bar [..]")
         .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[..]cannot find function `qux` in module `bar`")
+        .with_stderr_contains("[..]cannot find function `qux` in [..] `bar`")
         .run();
 }
 
