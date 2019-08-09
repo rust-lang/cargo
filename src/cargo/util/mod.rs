@@ -87,3 +87,25 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
 pub fn is_ci() -> bool {
     std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
 }
+
+
+#[test]
+fn is_ci_when_ci_env_is_setted() {
+    std::env::set_var("CI", "test");
+
+    assert_eq!(is_ci(), true)
+}
+
+#[test]
+fn is_ci_when_ci_env_is_empty() {
+    std::env::set_var("CI", "");
+
+    assert_eq!(is_ci(), false)
+}
+
+#[test]
+fn is_ci_when_ci_env_is_false() {
+    std::env::set_var("CI", "false");
+
+    assert_eq!(is_ci(), false)
+}
