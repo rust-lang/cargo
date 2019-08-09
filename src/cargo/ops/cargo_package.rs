@@ -14,7 +14,7 @@ use tar::{Archive, Builder, EntryType, Header};
 use termcolor::Color;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::resolver::Method;
+use crate::core::resolver::ResolveOpts;
 use crate::core::Feature;
 use crate::core::{
     Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
@@ -152,7 +152,8 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     // Regenerate Cargo.lock using the old one as a guide.
     let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let (pkg_set, new_resolve) = ops::resolve_ws_with_method(&tmp_ws, Method::Everything, &specs)?;
+    let (pkg_set, new_resolve) =
+        ops::resolve_ws_with_opts(&tmp_ws, ResolveOpts::everything(), &specs)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
@@ -558,7 +559,7 @@ fn compare_resolve(
 }
 
 fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) -> CargoResult<()> {
-    // Checking the yanked status invovles taking a look at the registry and
+    // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
     let _lock = config.acquire_package_cache_lock()?;
 

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-doc
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-04-16
+.\" Generator: Asciidoctor 2.0.8
+.\"      Date: 2019-06-07
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-DOC" "1" "2019-04-16" "\ \&" "\ \&"
+.TH "CARGO\-DOC" "1" "2019-06-07" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -213,7 +213,8 @@ May also be specified with the \fBterm.color\fP
 .sp
 \fB\-\-message\-format\fP \fIFMT\fP
 .RS 4
-The output format for diagnostic messages. Valid values:
+The output format for diagnostic messages. Can be specified multiple times
+and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
 .ie n \{\
@@ -224,6 +225,17 @@ The output format for diagnostic messages. Valid values:
 .  IP \(bu 2.3
 .\}
 \fBhuman\fP (default): Display in a human\-readable text format.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBshort\fP: Emit shorter, human\-readable text messages.
 .RE
 .sp
 .RS 4
@@ -245,7 +257,35 @@ The output format for diagnostic messages. Valid values:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-\fBshort\fP: Emit shorter, human\-readable text messages.
+\fBjson\-diagnostic\-short\fP: Ensure the \fBrendered\fP field of JSON messages contains
+the "short" rendering from rustc.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-diagnostic\-rendered\-ansi\fP: Ensure the \fBrendered\fP field of JSON messages
+contains embedded ANSI color codes for respecting rustc\(cqs default color
+scheme.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-render\-diagnostics\fP: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo\(cqs own JSON diagnostics and others
+coming from rustc are still emitted.
 .RE
 .RE
 .SS "Manifest Options"

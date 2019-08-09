@@ -18,7 +18,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use failure::{bail, Error};
+use failure::Error;
 use lazycell::LazyCell;
 use log::debug;
 use same_file::is_same_file;
@@ -29,7 +29,7 @@ pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::Context;
-pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
+pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
@@ -192,9 +192,9 @@ fn rustc<'a, 'cfg>(
     let kind = unit.kind;
 
     // Prepare the native lib state (extra `-L` and `-l` flags).
-    let build_state = cx.build_state.clone();
+    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let current_id = unit.pkg.package_id();
-    let build_deps = load_build_deps(cx, unit);
+    let build_scripts = cx.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
@@ -242,20 +242,20 @@ fn rustc<'a, 'cfg>(
         // located somewhere in there.
         // Finally, if custom environment variables have been produced by
         // previous build scripts, we include them in the rustc invocation.
-        if let Some(build_deps) = build_deps {
-            let build_state = build_state.outputs.lock().unwrap();
+        if let Some(build_scripts) = build_scripts {
+            let script_outputs = build_script_outputs.lock().unwrap();
             if !build_plan {
                 add_native_deps(
                     &mut rustc,
-                    &build_state,
-                    &build_deps,
+                    &script_outputs,
+                    &build_scripts,
                     pass_l_flag,
                     pass_cdylib_link_args,
                     current_id,
                 )?;
-                add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
+                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &build_state, current_id, kind)?;
+            add_custom_env(&mut rustc, &script_outputs, current_id, kind)?;
         }
 
         for output in outputs.iter() {
@@ -341,16 +341,16 @@ fn rustc<'a, 'cfg>(
     // present in `state`) to the command provided.
     fn add_native_deps(
         rustc: &mut ProcessBuilder,
-        build_state: &BuildMap,
+        build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
         pass_cdylib_link_args: bool,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_state.get(key).ok_or_else(|| {
+            let output = build_script_outputs.get(key).ok_or_else(|| {
                 internal(format!(
-                    "couldn't find build state for {}/{:?}",
+                    "couldn't find build script output for {}/{:?}",
                     key.0, key.1
                 ))
             })?;
@@ -381,12 +381,12 @@ fn rustc<'a, 'cfg>(
     // been put there by one of the `build_scripts`) to the command provided.
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
-        build_state: &BuildMap,
+        build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
         kind: Kind,
     ) -> CargoResult<()> {
         let key = (current_id, kind);
-        if let Some(output) = build_state.get(&key) {
+        if let Some(output) = build_script_outputs.get(&key) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
             }
@@ -480,6 +480,7 @@ fn link_targets<'a, 'cfg>(
     }))
 }
 
+/// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
 fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     debug!("linking {} to {}", src.display(), dst.display());
     if is_same_file(src, dst).unwrap_or(false) {
@@ -522,16 +523,12 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     Ok(())
 }
 
-fn load_build_deps(cx: &Context<'_, '_>, unit: &Unit<'_>) -> Option<Arc<BuildScripts>> {
-    cx.build_scripts.get(unit).cloned()
-}
-
-// For all plugin dependencies, add their -L paths (now calculated and
-// present in `state`) to the dynamic library load path for the command to
-// execute.
+// For all plugin dependencies, add their -L paths (now calculated and present
+// in `build_script_outputs`) to the dynamic library load path for the command
+// to execute.
 fn add_plugin_deps(
     rustc: &mut ProcessBuilder,
-    build_state: &BuildMap,
+    build_script_outputs: &BuildScriptOutputs,
     build_scripts: &BuildScripts,
     root_output: &PathBuf,
 ) -> CargoResult<()> {
@@ -539,7 +536,7 @@ fn add_plugin_deps(
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for &id in build_scripts.plugins.iter() {
-        let output = build_state
+        let output = build_script_outputs
             .get(&(id, Kind::Host))
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
         search_path.append(&mut filter_dynamic_search_path(
@@ -614,7 +611,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
-    add_color(bcx, &mut rustdoc);
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
@@ -635,7 +631,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    add_error_format(cx, &mut rustdoc, false, false)?;
+    add_error_format_and_color(cx, &mut rustdoc, false)?;
 
     if let Some(args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -646,14 +642,14 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.args(bcx.rustdocflags_args(unit));
 
     let name = unit.pkg.name().to_string();
-    let build_state = cx.build_state.clone();
+    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let key = (unit.pkg.package_id(), unit.kind);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mut output_options = OutputOptions::new(cx, unit);
 
     Ok(Work::new(move |state| {
-        if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
+        if let Some(output) = build_script_outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
                 rustdoc.arg("--cfg").arg(cfg);
             }
@@ -722,39 +718,20 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessB
     }
 }
 
-fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
-    let shell = bcx.config.shell();
-    let color = if shell.supports_color() {
-        "always"
-    } else {
-        "never"
-    };
-    cmd.args(&["--color", color]);
-}
-
 /// Add error-format flags to the command.
 ///
-/// This is rather convoluted right now. The general overview is:
-/// - If -Zcache-messages or `build.pipelining` is enabled, Cargo always uses
-///   JSON output. This has several benefits, such as being easier to parse,
-///   handles changing formats (for replaying cached messages), ensures
-///   atomic output (so messages aren't interleaved), etc.
-/// - `supports_termcolor` is a temporary flag. rustdoc does not yet support
-///   the `--json-rendered` flag, but it is intended to fix that soon.
-/// - `short` output is not yet supported for JSON output. We haven't yet
-///   decided how this problem will be resolved. Probably either adding
-///   "short" to the JSON output, or more ambitiously moving diagnostic
-///   rendering to an external library that Cargo can share with rustc.
+/// This is somewhat odd right now, but the general overview is that if
+/// `-Zcache-messages` or `pipelined` is enabled then Cargo always uses JSON
+/// output. This has several benefits, such as being easier to parse, handles
+/// changing formats (for replaying cached messages), ensures atomic output (so
+/// messages aren't interleaved), etc.
 ///
-/// It is intended in the future that Cargo *always* uses the JSON output, and
-/// this function can be simplified. The above issues need to be resolved, the
-/// flags need to be stabilized, and we need more testing to ensure there
-/// aren't any regressions.
-fn add_error_format(
+/// It is intended in the future that Cargo *always* uses the JSON output (by
+/// turning on cache-messages by default), and this function can be simplified.
+fn add_error_format_and_color(
     cx: &Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     pipelined: bool,
-    supports_termcolor: bool,
 ) -> CargoResult<()> {
     // If this unit is producing a required rmeta file then we need to know
     // when the rmeta file is ready so we can signal to the rest of Cargo that
@@ -769,35 +746,51 @@ fn add_error_format(
     // internally understand that we should extract the `rendered` field and
     // present it if we can.
     if cx.bcx.build_config.cache_messages() || pipelined {
-        cmd.arg("--error-format=json").arg("-Zunstable-options");
-        if supports_termcolor {
-            cmd.arg("--json-rendered=termcolor");
-        }
-        if cx.bcx.build_config.message_format == MessageFormat::Short {
-            // FIXME(rust-lang/rust#60419): right now we have no way of
-            // turning on JSON messages from the compiler and also asking
-            // the rendered field to be in the `short` format.
-            bail!(
-                "currently `--message-format short` is incompatible with {}",
-                if pipelined {
-                    "pipelined compilation"
-                } else {
-                    "cached output"
-                }
-            );
-        }
+        cmd.arg("--error-format=json");
+        let mut json = String::from("--json=diagnostic-rendered-ansi");
         if pipelined {
-            cmd.arg("-Zemit-artifact-notifications");
+            json.push_str(",artifacts");
         }
+        match cx.bcx.build_config.message_format {
+            MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
+                json.push_str(",diagnostic-short");
+            }
+            _ => {}
+        }
+        cmd.arg(json);
     } else {
+        let mut color = true;
         match cx.bcx.build_config.message_format {
             MessageFormat::Human => (),
-            MessageFormat::Json => {
+            MessageFormat::Json {
+                ansi,
+                short,
+                render_diagnostics,
+            } => {
                 cmd.arg("--error-format").arg("json");
+                // If ansi is explicitly requested, enable it. If we're
+                // rendering diagnostics ourselves then also enable it because
+                // we'll figure out what to do with the colors later.
+                if ansi || render_diagnostics {
+                    cmd.arg("--json=diagnostic-rendered-ansi");
+                }
+                if short {
+                    cmd.arg("--json=diagnostic-short");
+                }
+                color = false;
             }
             MessageFormat::Short => {
                 cmd.arg("--error-format").arg("short");
             }
+        }
+
+        if color {
+            let color = if cx.bcx.config.shell().supports_color() {
+                "always"
+            } else {
+                "never"
+            };
+            cmd.args(&["--color", color]);
         }
     }
     Ok(())
@@ -829,8 +822,7 @@ fn build_base_args<'a, 'cfg>(
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     add_path_args(bcx, unit, cmd);
-    add_color(bcx, cmd);
-    add_error_format(cx, cmd, cx.rmeta_required(unit), true)?;
+    add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
 
     if !test {
         for crate_type in crate_types.iter() {
@@ -1119,9 +1111,8 @@ impl Kind {
 }
 
 struct OutputOptions {
-    /// Get the `"rendered"` field from the JSON output and display it on
-    /// stderr instead of the JSON message.
-    extract_rendered_messages: bool,
+    /// What format we're emitting from Cargo itself.
+    format: MessageFormat,
     /// Look for JSON message that indicates .rmeta file is available for
     /// pipelined compilation.
     look_for_metadata_directive: bool,
@@ -1135,7 +1126,6 @@ struct OutputOptions {
 
 impl OutputOptions {
     fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
-        let extract_rendered_messages = cx.bcx.build_config.message_format != MessageFormat::Json;
         let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().supports_color();
         let cache_cell = if cx.bcx.build_config.cache_messages() {
@@ -1147,7 +1137,7 @@ impl OutputOptions {
             None
         };
         OutputOptions {
-            extract_rendered_messages,
+            format: cx.bcx.build_config.message_format,
             look_for_metadata_directive,
             color,
             cache_cell,
@@ -1204,55 +1194,66 @@ fn on_stderr_line(
         }
     };
 
-    // In some modes of compilation Cargo switches the compiler to JSON mode
-    // but the user didn't request that so we still want to print pretty rustc
-    // colorized diagnostics. In those cases (`extract_rendered_messages`) we
-    // take a look at the JSON blob we go, see if it's a relevant diagnostics,
-    // and if so forward just that diagnostic for us to print.
-    if options.extract_rendered_messages {
-        #[derive(serde::Deserialize)]
-        struct CompilerMessage {
-            rendered: String,
-        }
-        if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-            // state.stderr will add a newline
-            if error.rendered.ends_with('\n') {
-                error.rendered.pop();
+    // Depending on what we're emitting from Cargo itself, we figure out what to
+    // do with this JSON message.
+    match options.format {
+        // In the "human" output formats (human/short) or if diagnostic messages
+        // from rustc aren't being included in the output of Cargo's JSON
+        // messages then we extract the diagnostic (if present) here and handle
+        // it ourselves.
+        MessageFormat::Human
+        | MessageFormat::Short
+        | MessageFormat::Json {
+            render_diagnostics: true,
+            ..
+        } => {
+            #[derive(serde::Deserialize)]
+            struct CompilerMessage {
+                rendered: String,
             }
-            let rendered = if options.color {
-                error.rendered
-            } else {
-                // Strip only fails if the the Writer fails, which is Cursor
-                // on a Vec, which should never fail.
-                strip_ansi_escapes::strip(&error.rendered)
+            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                // state.stderr will add a newline
+                if error.rendered.ends_with('\n') {
+                    error.rendered.pop();
+                }
+                let rendered = if options.color {
+                    error.rendered
+                } else {
+                    // Strip only fails if the the Writer fails, which is Cursor
+                    // on a Vec, which should never fail.
+                    strip_ansi_escapes::strip(&error.rendered)
+                        .map(|v| String::from_utf8(v).expect("utf8"))
+                        .expect("strip should never fail")
+                };
+                state.stderr(rendered);
+                return Ok(());
+            }
+        }
+
+        // Remove color information from the rendered string. When pipelining is
+        // enabled and/or when cached messages are enabled we're always asking
+        // for ANSI colors from rustc, so unconditionally postprocess here and
+        // remove ansi color codes.
+        MessageFormat::Json { ansi: false, .. } => {
+            #[derive(serde::Deserialize, serde::Serialize)]
+            struct CompilerMessage {
+                rendered: String,
+                #[serde(flatten)]
+                other: std::collections::BTreeMap<String, serde_json::Value>,
+            }
+            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+                error.rendered = strip_ansi_escapes::strip(&error.rendered)
                     .map(|v| String::from_utf8(v).expect("utf8"))
-                    .expect("strip should never fail")
-            };
-            state.stderr(rendered);
-            return Ok(());
+                    .unwrap_or(error.rendered);
+                let new_line = serde_json::to_string(&error)?;
+                let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
+                compiler_message = new_msg;
+            }
         }
-    } else {
-        // Remove color information from the rendered string. rustc has not
-        // included color in the past, so to avoid breaking anything, strip it
-        // out when --json-rendered=termcolor is used. This runs
-        // unconditionally under the assumption that Cargo will eventually
-        // move to this as the default mode. Perhaps in the future, cargo
-        // could allow the user to enable/disable color (such as with a
-        // `--json-rendered` or `--color` or `--message-format` flag).
-        #[derive(serde::Deserialize, serde::Serialize)]
-        struct CompilerMessage {
-            rendered: String,
-            #[serde(flatten)]
-            other: std::collections::BTreeMap<String, serde_json::Value>,
-        }
-        if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-            error.rendered = strip_ansi_escapes::strip(&error.rendered)
-                .map(|v| String::from_utf8(v).expect("utf8"))
-                .unwrap_or(error.rendered);
-            let new_line = serde_json::to_string(&error)?;
-            let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
-            compiler_message = new_msg;
-        }
+
+        // If ansi colors are desired then we should be good to go! We can just
+        // pass through this message as-is.
+        MessageFormat::Json { ansi: true, .. } => {}
     }
 
     // In some modes of execution we will execute rustc with `-Z
@@ -1303,14 +1304,8 @@ fn replay_output_cache(
     color: bool,
 ) -> Work {
     let target = target.clone();
-    let extract_rendered_messages = match format {
-        MessageFormat::Human => true,
-        MessageFormat::Json => false,
-        // FIXME: short not supported.
-        MessageFormat::Short => false,
-    };
     let mut options = OutputOptions {
-        extract_rendered_messages,
+        format,
         look_for_metadata_directive: false,
         color,
         cache_cell: None,

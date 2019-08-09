@@ -59,7 +59,7 @@ fn add_deps_for_unit<'a, 'b>(
 
     // Add rerun-if-changed dependencies
     let key = (unit.pkg.package_id(), unit.kind);
-    if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
+    if let Some(output) = context.build_script_outputs.lock().unwrap().get(&key) {
         for path in &output.rerun_if_changed {
             deps.insert(path.into());
         }

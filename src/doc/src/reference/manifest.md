@@ -628,7 +628,7 @@ dependencies residing in the workspace directory become members. You can add
 additional packages to the workspace by listing them in the `members` key. Note
 that members of the workspaces listed explicitly will also have their path
 dependencies included in the workspace. Sometimes a package may have a lot of
-workspace members and it can be onerous to keep up to date. The path dependency
+workspace members and it can be onerous to keep up to date. The `members` list
 can also use [globs][globs] to match multiple paths. Finally, the `exclude`
 key can be used to blacklist paths from being included in a workspace. This can
 be useful if some path dependencies aren't desired to be in the workspace at

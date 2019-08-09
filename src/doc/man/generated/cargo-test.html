@@ -326,17 +326,33 @@ terminal.</p>
 </dd>
 <dt class="hdlist1"><strong>--message-format</strong> <em>FMT</em></dt>
 <dd>
-<p>The output format for diagnostic messages. Valid values:</p>
+<p>The output format for diagnostic messages. Can be specified multiple times
+and consists of comma-separated values. Valid values:</p>
 <div class="ulist">
 <ul>
 <li>
 <p><code>human</code> (default): Display in a human-readable text format.</p>
 </li>
 <li>
+<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+</li>
+<li>
 <p><code>json</code>: Emit JSON messages to stdout.</p>
 </li>
 <li>
-<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+<p><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
+the "short" rendering from rustc.</p>
+</li>
+<li>
+<p><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
+contains embedded ANSI color codes for respecting rustc&#8217;s default color
+scheme.</p>
+</li>
+<li>
+<p><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo&#8217;s own JSON diagnostics and others
+coming from rustc are still emitted.</p>
 </li>
 </ul>
 </div>

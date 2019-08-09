@@ -286,12 +286,12 @@ pub fn prepare_target<'a, 'cfg>(
         // build script's fingerprint after it's executed. We do this by
         // using the `build_script_local_fingerprints` function which returns a
         // thunk we can invoke on a foreign thread to calculate this.
-        let state = Arc::clone(&cx.build_state);
+        let build_script_outputs = Arc::clone(&cx.build_script_outputs);
         let key = (unit.pkg.package_id(), unit.kind);
         let (gen_local, _overridden) = build_script_local_fingerprints(cx, unit);
         let output_path = cx.build_explicit_deps[unit].build_script_output.clone();
         Work::new(move |_| {
-            let outputs = state.outputs.lock().unwrap();
+            let outputs = build_script_outputs.lock().unwrap();
             let outputs = &outputs[&key];
             let deps = BuildDeps::new(&output_path, Some(outputs));
 
@@ -1264,8 +1264,11 @@ fn build_script_override_fingerprint<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
 ) -> Option<LocalFingerprint> {
-    let state = cx.build_state.outputs.lock().unwrap();
-    let output = state.get(&(unit.pkg.package_id(), unit.kind))?;
+    // Build script output is only populated at this stage when it is
+    // overridden.
+    let build_script_outputs = cx.build_script_outputs.lock().unwrap();
+    // Returns None if it is not overridden.
+    let output = build_script_outputs.get(&(unit.pkg.package_id(), unit.kind))?;
     let s = format!(
         "overridden build state with hash: {}",
         util::hash_u64(output)
@@ -1578,8 +1581,11 @@ pub fn translate_dep_info(
     for file in deps {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
-        let canon_file = rustc_cwd.join(file).canonicalize()?;
         let abs_file = rustc_cwd.join(file);
+        // If canonicalization fails, just use the abs path. There is currently
+        // a bug where --remap-path-prefix is affecting .d files, causing them
+        // to point to non-existent paths.
+        let canon_file = abs_file.canonicalize().unwrap_or_else(|_| abs_file.clone());
 
         let (ty, path) = if let Ok(stripped) = canon_file.strip_prefix(&target_root) {
             (DepInfoPathType::TargetRootRelative, stripped)

@@ -5,10 +5,20 @@
 
 ### Added
 
+- Cargo build pipelining has been enabled by default to leverage more idle CPU
+  parallelism during builds.
+  [#7143](https://github.com/rust-lang/cargo/pull/7143)
+- The `--message-format` option to Cargo can now be specified multiple times and
+  accepts a comma-separated list of values. In addition to the previous values
+  it also now accepts `json-diagnostic-short` and
+  `json-diagnostic-rendered-ansi` which configures the output coming from rustc
+  in `json` message mode.
+  [#7214](https://github.com/rust-lang/cargo/pull/7214)
+
 ### Changed
 
 ### Fixed
-- (Nightly only): Fixed exponential blowup when using CARGO_BUILD_PIPELINING.
+- (Nightly only): Fixed exponential blowup when using `CARGO_BUILD_PIPELINING`.
   [#7062](https://github.com/rust-lang/cargo/pull/7062)
 - Fixed using the wrong directory when updating git repositories when using
   the `git-fetch-with-cli` config option, and the `GIT_DIR` environment

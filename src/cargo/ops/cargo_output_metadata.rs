@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::ser;
 use serde::Serialize;
 
-use crate::core::resolver::Resolve;
+use crate::core::resolver::{Resolve, ResolveOpts};
 use crate::core::{Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
@@ -50,13 +50,13 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
 
 fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let (package_set, resolve) = ops::resolve_ws_precisely(
-        ws,
+    let opts = ResolveOpts::new(
+        /*dev_deps*/ true,
         &opt.features,
         opt.all_features,
-        opt.no_default_features,
-        &specs,
-    )?;
+        !opt.no_default_features,
+    );
+    let (package_set, resolve) = ops::resolve_ws_with_opts(ws, opts, &specs)?;
     let mut packages = HashMap::new();
     for pkg in package_set.get_many(package_set.package_ids())? {
         packages.insert(pkg.package_id(), pkg.clone());

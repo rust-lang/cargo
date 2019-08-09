@@ -21,7 +21,7 @@
 //! 3. To actually perform the feature gate, you'll want to have code that looks
 //!    like:
 //!
-//! ```rust,ignore
+//! ```rust,compile_fail
 //! use core::{Feature, Features};
 //!
 //! let feature = Feature::launch_into_space();

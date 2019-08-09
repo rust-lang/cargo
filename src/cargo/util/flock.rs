@@ -321,27 +321,8 @@ fn acquire(
     let msg = format!("waiting for file lock on {}", msg);
     config.shell().status_with_color("Blocking", &msg, Cyan)?;
 
-    // We're about to block the current process and not really do anything
-    // productive for what could possibly be a very long time. We could be
-    // waiting, for example, on another Cargo to finish a download, finish an
-    // entire build, etc. Since we're not doing anything productive we're not
-    // making good use of our jobserver token, if we have one.
-    //
-    // This can typically come about if `cargo` is invoked from `make` (or some
-    // other jobserver-providing system). In this situation it's actually best
-    // if we release the token back to the original jobserver to let some other
-    // cpu-hungry work continue to make progress. After we're done blocking
-    // we'll block waiting to reacquire a token as we'll probably be doing cpu
-    // hungry work ourselves.
-    let jobserver = config.jobserver_from_env();
-    if let Some(server) = jobserver {
-        server.release_raw()?;
-    }
-    let result = block().chain_err(|| format!("failed to lock file: {}", path.display()));
-    if let Some(server) = jobserver {
-        server.acquire_raw()?;
-    }
-    return Ok(result?);
+    block().chain_err(|| format!("failed to lock file: {}", path.display()))?;
+    return Ok(());
 
     #[cfg(all(target_os = "linux", not(target_env = "musl")))]
     fn is_on_nfs_mount(path: &Path) -> bool {

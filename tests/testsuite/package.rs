@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::support::cargo_process;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{
-    basic_manifest, git, path2url, paths, project, publish::validate_crate_contents, registry,
+    basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
+    registry, symlink_supported,
 };
 use git2;
 
@@ -505,6 +505,56 @@ fn package_git_submodule() {
 }
 
 #[cargo_test]
+/// Tests if a symlink to a git submodule is properly handled.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn package_symlink_to_submodule() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
+
+    let project = git::new("foo", |project| {
+        project.file("src/lib.rs", "pub fn foo() {}")
+    })
+    .unwrap();
+
+    let library = git::new("submodule", |library| {
+        library.no_manifest().file("Makefile", "all:")
+    })
+    .unwrap();
+
+    let repository = git2::Repository::open(&project.root()).unwrap();
+    let url = path2url(library.root()).to_string();
+    git::add_submodule(&repository, &url, Path::new("submodule"));
+    t!(symlink(
+        &project.root().join("submodule"),
+        &project.root().join("submodule-link")
+    ));
+    git::add(&repository);
+    git::commit(&repository);
+
+    let repository = git2::Repository::open(&project.root().join("submodule")).unwrap();
+    repository
+        .reset(
+            &repository.revparse_single("HEAD").unwrap(),
+            git2::ResetType::Hard,
+            None,
+        )
+        .unwrap();
+
+    project
+        .cargo("package --no-verify -v")
+        .with_stderr_contains("[ARCHIVING] submodule/Makefile")
+        .run();
+}
+
+#[cargo_test]
 fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
@@ -660,9 +710,19 @@ See [..]
 }
 
 #[cargo_test]
-#[cfg(unix)]
+/// Tests if a broken symlink is properly handled when packaging.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
 fn broken_symlink() {
-    use std::os::unix::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    if !symlink_supported() {
+        return;
+    }
 
     let p = project()
         .file(
@@ -681,7 +741,7 @@ fn broken_symlink() {
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
-    t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
+    t!(symlink("nowhere", &p.root().join("src/foo.rs")));
 
     p.cargo("package -v")
         .with_status(101)
@@ -696,6 +756,26 @@ Caused by:
   [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+/// Tests if a symlink to a directory is proberly included.
+///
+/// This test requires you to be able to make symlinks.
+/// For windows, this may require you to enable developer mode.
+fn package_symlink_to_dir() {
+    if !symlink_supported() {
+        return;
+    }
+
+    project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("bla/Makefile", "all:")
+        .symlink_dir("bla", "foo")
+        .build()
+        .cargo("package -v")
+        .with_stderr_contains("[ARCHIVING] foo/Makefile")
         .run();
 }
 

@@ -54,6 +54,52 @@ fn simple() {
     assert!(cargo_output2.stdout.is_empty());
 }
 
+// same as `simple`, except everything is using the short format
+#[cargo_test]
+fn simple_short() {
+    if !is_nightly() {
+        // --json-rendered is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                fn a() {}
+                fn b() {}
+            ",
+        )
+        .build();
+
+    let agnostic_path = Path::new("src").join("lib.rs");
+    let agnostic_path_s = agnostic_path.to_str().unwrap();
+
+    let rustc_output = process("rustc")
+        .cwd(p.root())
+        .args(&["--crate-type=lib", agnostic_path_s, "--error-format=short"])
+        .exec_with_output()
+        .expect("rustc to run");
+
+    assert!(rustc_output.stdout.is_empty());
+    assert!(rustc_output.status.success());
+
+    let cargo_output1 = p
+        .cargo("check -Zcache-messages -q --color=never --message-format=short")
+        .masquerade_as_nightly_cargo()
+        .exec_with_output()
+        .expect("cargo to run");
+    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output1.stderr));
+    // assert!(cargo_output1.stdout.is_empty());
+    let cargo_output2 = p
+        .cargo("check -Zcache-messages -q --message-format=short")
+        .masquerade_as_nightly_cargo()
+        .exec_with_output()
+        .expect("cargo to run");
+    println!("{}", String::from_utf8_lossy(&cargo_output2.stdout));
+    assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output2.stderr));
+    assert!(cargo_output2.stdout.is_empty());
+}
+
 #[cargo_test]
 fn color() {
     if !is_nightly() {
@@ -332,17 +378,5 @@ fn very_verbose() {
     p.cargo("check -Zcache-messages -vv")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]not_used[..]")
-        .run();
-}
-
-#[cargo_test]
-fn short_incompatible() {
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("check -Zcache-messages --message-format=short")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "[ERROR] currently `--message-format short` is incompatible with cached output",
-        )
-        .with_status(101)
         .run();
 }

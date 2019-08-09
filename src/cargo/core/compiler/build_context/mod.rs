@@ -16,6 +16,11 @@ mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
 
 /// The build context, containing all information about a build task.
+///
+/// It is intended that this is mostly static information. Stuff that mutates
+/// during the build can be found in the parent `Context`. (I say mostly,
+/// because this has internal caching, but nothing that should be observable
+/// or require &mut.)
 pub struct BuildContext<'a, 'cfg> {
     /// The workspace the build is for.
     pub ws: &'a Workspace<'cfg>,
@@ -183,6 +188,17 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
+
+    /// If a build script is overridden, this returns the `BuildOutput` to use.
+    ///
+    /// `lib_name` is the `links` library name and `kind` is whether it is for
+    /// Host or Target.
+    pub fn script_override(&self, lib_name: &str, kind: Kind) -> Option<&BuildOutput> {
+        match kind {
+            Kind::Host => self.host_config.overrides.get(lib_name),
+            Kind::Target => self.target_config.overrides.get(lib_name),
+        }
+    }
 }
 
 /// Information required to build for a target.
@@ -192,7 +208,11 @@ pub struct TargetConfig {
     pub ar: Option<PathBuf>,
     /// The path of the linker for this target.
     pub linker: Option<PathBuf>,
-    /// Special build options for any necessary input files (filename -> options).
+    /// Build script override for the given library name.
+    ///
+    /// Any package with a `links` value for the given library name will skip
+    /// running its build script and instead use the given output from the
+    /// config file.
     pub overrides: HashMap<String, BuildOutput>,
 }
 
