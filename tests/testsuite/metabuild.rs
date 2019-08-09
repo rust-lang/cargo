@@ -733,7 +733,7 @@ fn metabuild_failed_build_json() {
     "children": "{...}",
     "code": "{...}",
     "level": "error",
-    "message": "cannot find function `metabuild` in module `mb`",
+    "message": "cannot find function `metabuild` in [..] `mb`",
     "rendered": "[..]",
     "spans": "{...}"
   },
