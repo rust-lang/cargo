@@ -63,7 +63,7 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const CLIPPY_FIX_ARGS: &str = "__CARGO_FIX_CLIPPY_ARGS";
+const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_ARGS";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
@@ -74,7 +74,8 @@ pub struct FixOptions<'a> {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
-    pub clippy_args: Option<Vec<String>>,
+    pub use_clippy: bool,
+    pub primary_unit_args: Vec<String>,
 }
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
@@ -101,17 +102,12 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         wrapper.env(IDIOMS_ENV, "1");
     }
 
-    if opts.clippy_args.is_some() {
+    if opts.use_clippy {
         if let Err(e) = util::process("clippy-driver").arg("-V").exec_with_output() {
             eprintln!("Warning: clippy-driver not found: {:?}", e);
         }
 
-        let clippy_args = opts
-            .clippy_args
-            .as_ref()
-            .map_or_else(String::new, |args| serde_json::to_string(&args).unwrap());
-
-        wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
+        wrapper.env(CLIPPY_FIX_ENV, "1");
     }
 
     *opts
@@ -132,6 +128,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     let rustc = opts.compile_opts.config.load_global_rustc(Some(ws))?;
     wrapper.arg(&rustc.path);
+    wrapper.args(&opts.primary_unit_args);
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
@@ -586,7 +583,6 @@ struct FixArgs {
     enabled_edition: Option<String>,
     other: Vec<OsString>,
     rustc: Option<PathBuf>,
-    clippy_args: Vec<String>,
 }
 
 enum PrepareFor {
@@ -605,8 +601,7 @@ impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
 
-        if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
-            ret.clippy_args = serde_json::from_str(&clippy_args).unwrap();
+        if env::var(CLIPPY_FIX_ENV).is_ok() {
             ret.rustc = Some(util::config::clippy_driver());
         } else {
             ret.rustc = env::args_os().nth(1).map(PathBuf::from);
@@ -645,10 +640,6 @@ impl FixArgs {
     fn apply(&self, cmd: &mut Command) {
         if let Some(path) = &self.file {
             cmd.arg(path);
-        }
-
-        if !self.clippy_args.is_empty() {
-            cmd.args(&self.clippy_args);
         }
 
         cmd.args(&self.other).arg("--cap-lints=warn");

@@ -5,6 +5,7 @@ use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 pub fn cli() -> App {
     subcommand("fix")
         .about("Automatically fix lint warnings reported by rustc")
+        .arg(Arg::with_name("args").multiple(true))
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec(
             "Package(s) to fix",
@@ -76,10 +77,7 @@ pub fn cli() -> App {
             Arg::with_name("clippy")
                 .long("clippy")
                 .help("Get fix suggestions from clippy instead of rustc")
-                .hidden(true)
-                .multiple(true)
-                .min_values(0)
-                .number_of_values(1),
+                .hidden(true),
         )
         .after_help(
             "\
@@ -136,18 +134,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let use_clippy = args.is_present("clippy");
 
-    let clippy_args = args
-        .value_of("clippy")
-        .map(|s| s.split(' ').map(|s| s.to_string()).collect())
-        .or_else(|| Some(vec![]))
-        .filter(|_| use_clippy);
-
     if use_clippy && !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
             "`cargo fix --clippy` is unstable, pass `-Z unstable-options` to enable it"
         )
         .into());
     }
+
+    let primary_unit_args = args
+        .values_of("args")
+        .map(|args| args.map(ToOwned::to_owned).collect())
+        .unwrap_or_else(|| vec![]);
 
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
@@ -171,7 +168,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             allow_no_vcs: args.is_present("allow-no-vcs"),
             allow_staged: args.is_present("allow-staged"),
             broken_code: args.is_present("broken-code"),
-            clippy_args,
+            use_clippy,
+            primary_unit_args,
         },
     )?;
     Ok(())
