@@ -93,7 +93,6 @@ pub fn is_ci() -> bool {
     is_ci || std::env::var("TF_BUILD").is_ok()
 }
 
-
 #[test]
 fn is_ci_when_ci_env_is_setted() {
     std::env::set_var("CI", "test");
