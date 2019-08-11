@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::git::repo;
+use crate::support::git::{self, repo};
 use crate::support::paths;
 use crate::support::registry::{self, registry_path, registry_url, Package};
 use crate::support::{basic_manifest, project, publish};
@@ -283,11 +283,10 @@ fn git_deps() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] crates cannot be published with dependencies sourced from \
-a repository\neither publish `foo` as its own crate and \
-specify a version as a dependency or pull it into this \
-repository and specify it with a path and version\n\
-(crate `foo` has repository path `git://path/to/nowhere`)\
+[ERROR] all dependencies must have a version specified when publishing.
+dependency `foo` does not specify a version
+Note: The published dependency will use the version from crates.io,
+the `git` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -323,8 +322,10 @@ fn path_dependency_no_version() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] all path dependencies must have a version specified when publishing.
+[ERROR] all dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
+Note: The published dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
 ",
         )
         .run();
@@ -367,7 +368,7 @@ fn dont_publish_dirty() {
     registry::init();
     let p = project().file("bar", "").build();
 
-    let _ = repo(&paths::root().join("foo"))
+    let _ = git::repo(&paths::root().join("foo"))
         .file(
             "Cargo.toml",
             r#"
@@ -1069,4 +1070,111 @@ Check for a source-replacement in .cargo/config.
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn publish_git_with_version() {
+    // A dependency with both `git` and `version`.
+    Package::new("dep1", "1.0.1")
+        .file("src/lib.rs", "pub fn f() -> i32 {1}")
+        .publish();
+
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+            .file("src/lib.rs", "pub fn f() -> i32 {2}")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                edition = "2018"
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                dep1 = {{version = "1.0", git="{}"}}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            pub fn main() {
+                println!("{}", dep1::f());
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run").with_stdout("2").run();
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "dep1",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.1.0"
+          }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            (
+                "Cargo.toml",
+                // Check that only `version` is included in Cargo.toml.
+                "[..]\n\
+                 [dependencies.dep1]\n\
+                 version = \"1.0\"\n\
+                 ",
+            ),
+            (
+                "Cargo.lock",
+                // The important check here is that it is 1.0.1 in the registry.
+                "[..]\n\
+                 [[package]]\n\
+                 name = \"foo\"\n\
+                 version = \"0.1.0\"\n\
+                 dependencies = [\n\
+                 \x20\"dep1 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)\",\n\
+                 ]\n\
+                 [..]",
+            ),
+        ],
+    );
 }

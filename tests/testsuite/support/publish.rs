@@ -3,8 +3,8 @@ use std::fs::File;
 use std::io::{self, prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use crate::support::find_json_mismatch;
 use crate::support::registry::{self, alt_api_path};
+use crate::support::{find_json_mismatch, lines_match};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -26,6 +26,24 @@ pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_
         expected_json,
         expected_crate_name,
         expected_files,
+        &[],
+    );
+}
+
+/// Checks the result of a crate publish, along with the contents of the files.
+pub fn validate_upload_with_contents(
+    expected_json: &str,
+    expected_crate_name: &str,
+    expected_files: &[&str],
+    expected_contents: &[(&str, &str)],
+) {
+    let new_path = registry::api_path().join("api/v1/crates/new");
+    _validate_upload(
+        &new_path,
+        expected_json,
+        expected_crate_name,
+        expected_files,
+        expected_contents,
     );
 }
 
@@ -41,6 +59,7 @@ pub fn validate_alt_upload(
         expected_json,
         expected_crate_name,
         expected_files,
+        &[],
     );
 }
 
@@ -49,6 +68,7 @@ fn _validate_upload(
     expected_json: &str,
     expected_crate_name: &str,
     expected_files: &[&str],
+    expected_contents: &[(&str, &str)],
 ) {
     let mut f = File::open(new_path).unwrap();
     // 32-bit little-endian integer of length of JSON data.
@@ -69,7 +89,12 @@ fn _validate_upload(
     assert_eq!(f.seek(SeekFrom::End(0)).unwrap(), current);
 
     // Verify the tarball.
-    validate_crate_contents(&krate_bytes[..], expected_crate_name, expected_files, &[]);
+    validate_crate_contents(
+        &krate_bytes[..],
+        expected_crate_name,
+        expected_files,
+        expected_contents,
+    );
 }
 
 /// Checks the contents of a `.crate` file.
@@ -126,7 +151,16 @@ pub fn validate_crate_contents(
             let actual_contents = files
                 .get(&full_e_name)
                 .unwrap_or_else(|| panic!("file `{}` missing in archive", e_file_name));
-            assert_eq!(actual_contents, e_file_contents);
+            if !lines_match(e_file_contents, actual_contents) {
+                panic!(
+                    "Crate contents mismatch for {:?}:\n\
+                     --- expected\n\
+                     {}\n\
+                     --- actual \n\
+                     {}\n",
+                    e_file_name, e_file_contents, actual_contents
+                );
+            }
         }
     }
 }
