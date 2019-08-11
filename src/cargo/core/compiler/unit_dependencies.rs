@@ -194,7 +194,7 @@ fn attach_std_test<'a, 'cfg>(
         .find(|(k, _v)| k.pkg.name().as_str() == "test" && k.target.is_lib())
         .expect("test in deps");
     for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if unit.kind == Kind::Target && unit.mode.is_rustc_test() && unit.target.harness() {
+        if unit.mode.is_rustc_test() && unit.target.harness() {
             // `public` here will need to be driven by toml declaration.
             deps.push(UnitDep {
                 unit: *test_unit,
