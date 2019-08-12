@@ -345,6 +345,13 @@ fn registry(
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
+    if !sid.is_remote_registry() {
+        bail!(
+            "{} does not support API commands.\n\
+             Check for a source-replacement in .cargo/config.",
+            sid
+        );
+    }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);

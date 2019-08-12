@@ -1022,3 +1022,51 @@ fn publish_checks_for_token_before_verify() {
         .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
         .run();
 }
+
+#[cargo_test]
+fn publish_with_bad_source() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [source.crates-io]
+            replace-with = 'local-registry'
+
+            [source.local-registry]
+            local-registry = 'registry'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] registry `[..]/foo/registry` does not support API commands.
+Check for a source-replacement in .cargo/config.
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        r#"
+        [source.crates-io]
+        replace-with = "vendored-sources"
+
+        [source.vendored-sources]
+        directory = "vendor"
+        "#,
+    );
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] dir [..]/foo/vendor does not support API commands.
+Check for a source-replacement in .cargo/config.
+",
+        )
+        .run();
+}

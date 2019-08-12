@@ -259,6 +259,17 @@ impl SourceId {
         }
     }
 
+    /// Returns `true` if this source is a "remote" registry.
+    ///
+    /// "remote" may also mean a file URL to a git index, so it is not
+    /// necessarily "remote". This just means it is not `local-registry`.
+    pub fn is_remote_registry(self) -> bool {
+        match self.inner.kind {
+            Kind::Registry => true,
+            _ => false,
+        }
+    }
+
     /// Returns `true` if this source from a Git repository.
     pub fn is_git(self) -> bool {
         match self.inner.kind {
