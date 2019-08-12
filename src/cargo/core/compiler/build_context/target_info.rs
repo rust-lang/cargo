@@ -170,7 +170,15 @@ impl TargetInfo {
             }
         };
 
-        let cfg = lines.map(Cfg::from_str).collect::<CargoResult<Vec<_>>>()?;
+        let cfg = lines
+            .map(Cfg::from_str)
+            .collect::<CargoResult<Vec<_>>>()
+            .chain_err(|| {
+                format!(
+                    "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
+                    output
+                )
+            })?;
 
         Ok(TargetInfo {
             crate_type_process,
