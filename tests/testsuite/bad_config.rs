@@ -780,7 +780,7 @@ fn unused_keys_in_virtual_manifest() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid

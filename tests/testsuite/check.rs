@@ -396,7 +396,7 @@ fn check_all() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check --all -v")
+    p.cargo("check --workspace -v")
         .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
         .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
         .with_stderr_contains("[..] --crate-name b b/src/lib.rs [..]")
@@ -429,7 +429,7 @@ fn check_virtual_all_implied() {
 #[cargo_test]
 fn exclude_warns_on_non_existing_package() {
     let p = project().file("src/lib.rs", "").build();
-    p.cargo("check --all --exclude bar")
+    p.cargo("check --workspace --exclude bar")
         .with_stdout("")
         .with_stderr(
             r#"[WARNING] excluded package(s) bar not found in workspace `[CWD]`
