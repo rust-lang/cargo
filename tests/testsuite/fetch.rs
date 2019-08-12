@@ -112,3 +112,22 @@ fn fetch_platform_specific_dependencies() {
         .with_stderr_does_not_contain("[DOWNLOADED] d1 v1.2.3 [..]")
         .run();
 }
+
+#[cargo_test]
+fn fetch_warning() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            misspelled = "wut"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .with_stderr("[WARNING] unused manifest key: package.misspelled")
+        .run();
+}

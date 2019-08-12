@@ -16,6 +16,7 @@ pub fn fetch<'a>(
     ws: &Workspace<'a>,
     options: &FetchOptions<'a>,
 ) -> CargoResult<(Resolve, PackageSet<'a>)> {
+    ws.emit_warnings()?;
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let jobs = Some(1);
