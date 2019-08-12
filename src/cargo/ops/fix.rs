@@ -63,7 +63,7 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_ARGS";
+const CLIPPY_FIX_ENV: &str = "__CARGO_FIX_CLIPPY_PLZ";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
