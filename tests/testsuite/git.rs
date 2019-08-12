@@ -2691,3 +2691,120 @@ fn git_fetch_cli_env_clean() {
         .env("GIT_DIR", git_proj.root().join(".git"))
         .run();
 }
+
+#[cargo_test]
+fn dirty_submodule() {
+    // `cargo package` warns for dirty file in submodule.
+    let git_project = git::new("foo", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("foo", "0.5.0"))
+            // This is necessary because `git::add` is too eager.
+            .file(".gitignore", "/target")
+    })
+    .unwrap();
+    let git_project2 = git::new("src", |project| {
+        project.no_manifest().file("lib.rs", "pub fn f() {}")
+    })
+    .unwrap();
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = path2url(git_project2.root()).to_string();
+    git::add_submodule(&repo, &url, Path::new("src"));
+
+    // Submodule added, but not committed.
+    git_project
+        .cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no [..]
+See [..]
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+.gitmodules
+
+to proceed despite [..]
+",
+        )
+        .run();
+
+    git::commit(&repo);
+    git_project.cargo("package --no-verify").run();
+
+    // Modify file, check for warning.
+    git_project.change_file("src/lib.rs", "");
+    git_project
+        .cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no [..]
+See [..]
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+src/lib.rs
+
+to proceed despite [..]
+",
+        )
+        .run();
+    // Commit the change.
+    let sub_repo = git2::Repository::open(git_project.root().join("src")).unwrap();
+    git::add(&sub_repo);
+    git::commit(&sub_repo);
+    git::add(&repo);
+    git::commit(&repo);
+    git_project.cargo("package --no-verify").run();
+
+    // Try with a nested submodule.
+    let git_project3 = git::new("bar", |project| project.no_manifest().file("mod.rs", "")).unwrap();
+    let url = path2url(git_project3.root()).to_string();
+    git::add_submodule(&sub_repo, &url, Path::new("bar"));
+    git_project
+        .cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no [..]
+See [..]
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+src/.gitmodules
+
+to proceed despite [..]
+",
+        )
+        .run();
+
+    // Commit the submodule addition.
+    git::commit(&sub_repo);
+    git::add(&repo);
+    git::commit(&repo);
+    git_project.cargo("package --no-verify").run();
+    // Modify within nested submodule.
+    git_project.change_file("src/bar/mod.rs", "//test");
+    git_project
+        .cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr(
+            "\
+[WARNING] manifest has no [..]
+See [..]
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+src/bar/mod.rs
+
+to proceed despite [..]
+",
+        )
+        .run();
+    // And commit the change.
+    let sub_sub_repo = git2::Repository::open(git_project.root().join("src/bar")).unwrap();
+    git::add(&sub_sub_repo);
+    git::commit(&sub_sub_repo);
+    git::add(&sub_repo);
+    git::commit(&sub_repo);
+    git::add(&repo);
+    git::commit(&repo);
+    git_project.cargo("package --no-verify").run();
+}

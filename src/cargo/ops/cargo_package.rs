@@ -267,6 +267,24 @@ fn check_repo_state(
         allow_dirty: bool,
     ) -> CargoResult<Option<String>> {
         let workdir = repo.workdir().unwrap();
+
+        let mut sub_repos = Vec::new();
+        open_submodules(repo, &mut sub_repos)?;
+        // Sort so that longest paths are first, to check nested submodules first.
+        sub_repos.sort_unstable_by(|a, b| b.0.as_os_str().len().cmp(&a.0.as_os_str().len()));
+        let submodule_dirty = |path: &Path| -> bool {
+            sub_repos
+                .iter()
+                .filter(|(sub_path, _sub_repo)| path.starts_with(sub_path))
+                .any(|(sub_path, sub_repo)| {
+                    let relative = path.strip_prefix(sub_path).unwrap();
+                    sub_repo
+                        .status_file(relative)
+                        .map(|status| status != git2::Status::CURRENT)
+                        .unwrap_or(false)
+                })
+        };
+
         let dirty = src_files
             .iter()
             .filter(|file| {
@@ -274,7 +292,7 @@ fn check_repo_state(
                 if let Ok(status) = repo.status_file(relative) {
                     status != git2::Status::CURRENT
                 } else {
-                    false
+                    submodule_dirty(file)
                 }
             })
             .map(|path| {
@@ -299,6 +317,22 @@ fn check_repo_state(
             }
             Ok(None)
         }
+    }
+
+    /// Helper to recursively open all submodules.
+    fn open_submodules(
+        repo: &git2::Repository,
+        sub_repos: &mut Vec<(PathBuf, git2::Repository)>,
+    ) -> CargoResult<()> {
+        for submodule in repo.submodules()? {
+            // Ignore submodules that don't open, they are probably not initialized.
+            // If its files are required, then the verification step should fail.
+            if let Ok(sub_repo) = submodule.open() {
+                open_submodules(&sub_repo, sub_repos)?;
+                sub_repos.push((sub_repo.workdir().unwrap().to_owned(), sub_repo));
+            }
+        }
+        Ok(())
     }
 }
 
