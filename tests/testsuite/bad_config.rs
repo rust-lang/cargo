@@ -222,7 +222,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1
+  expected an equals, found eof at line 1 column 2
 ",
         )
         .run();
@@ -465,7 +465,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8
+  expected a table key, found a newline at line 8 column 23
 ",
         )
         .run();
