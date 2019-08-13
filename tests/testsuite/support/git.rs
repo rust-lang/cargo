@@ -129,11 +129,14 @@ impl Repository {
 /// Initialize a new repository at the given path.
 pub fn init(path: &Path) -> git2::Repository {
     let repo = t!(git2::Repository::init(path));
+    default_repo_cfg(&repo);
+    repo
+}
+
+fn default_repo_cfg(repo: &git2::Repository) {
     let mut cfg = t!(repo.config());
     t!(cfg.set_str("user.email", "foo@bar.com"));
     t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
-    repo
 }
 
 /// Create a new git repository with a project.
@@ -193,6 +196,7 @@ pub fn add_submodule<'a>(
     let path = path.to_str().unwrap().replace(r"\", "/");
     let mut s = t!(repo.submodule(url, Path::new(&path), false));
     let subrepo = t!(s.open());
+    default_repo_cfg(&subrepo);
     t!(subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*"));
     let mut origin = t!(subrepo.find_remote("origin"));
     t!(origin.fetch(&[], None, None));
