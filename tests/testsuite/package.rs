@@ -477,12 +477,10 @@ fn package_git_submodule() {
                 "#,
             )
             .file("src/lib.rs", "pub fn foo() {}")
-    })
-    .unwrap();
+    });
     let library = git::new("bar", |library| {
         library.no_manifest().file("Makefile", "all:")
-    })
-    .unwrap();
+    });
 
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();
@@ -521,13 +519,11 @@ fn package_symlink_to_submodule() {
 
     let project = git::new("foo", |project| {
         project.file("src/lib.rs", "pub fn foo() {}")
-    })
-    .unwrap();
+    });
 
     let library = git::new("submodule", |library| {
         library.no_manifest().file("Makefile", "all:")
-    })
-    .unwrap();
+    });
 
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();

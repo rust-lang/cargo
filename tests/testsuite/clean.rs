@@ -212,8 +212,7 @@ fn clean_git() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(

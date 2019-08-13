@@ -1127,8 +1127,7 @@ fn workspace_in_git() {
             )
             .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
             .file("foo/src/lib.rs", "")
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
@@ -1872,8 +1871,7 @@ fn dont_recurse_out_of_cargo_home() {
                 }
             "#,
             )
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
