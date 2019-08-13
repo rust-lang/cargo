@@ -2176,10 +2176,6 @@ Caused by:
 
 #[cargo_test]
 fn simple_with_build_config() {
-    if cross_compile::disabled() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2195,13 +2191,10 @@ fn simple_with_build_config() {
         )
         .file(
             "bar/.cargo/config",
-            &format!(
-                r#"
-                    [build]
-                    target = "{}"
-                    "#,
-                cross_compile::alternate()
-            ),
+            r#"
+                [build]
+                target = "wasm32-unknown-unknown"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
