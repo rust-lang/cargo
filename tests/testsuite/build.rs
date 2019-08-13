@@ -188,7 +188,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 3
+  invalid number at line 3 column 19
 ",
         )
         .run();
@@ -208,7 +208,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 1
+  invalid number at line 1 column 5
 ",
         )
         .run();
@@ -2274,7 +2274,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1
+  expected an equals, found an identifier at line 1 column 6
 ",
         )
         .run();

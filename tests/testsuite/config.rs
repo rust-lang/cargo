@@ -439,7 +439,7 @@ Caused by:
 Caused by:
   could not parse input as TOML
 Caused by:
-  expected an equals, found eof at line 1",
+  expected an equals, found eof at line 1 column 5",
     );
 }
 
@@ -517,7 +517,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid number at line 1",
+         could not parse TOML list: invalid number at line 1 column 10",
     );
 
     // Try some other sequence-like types.

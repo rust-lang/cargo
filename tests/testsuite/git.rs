@@ -2439,7 +2439,7 @@ fn invalid_git_dependency_manifest() {
              could not parse input as TOML\n\
              \n\
              Caused by:\n  \
-             duplicate key: `categories` for key `project`",
+             duplicate key: `categories` for key `project` at line 10 column 17",
             path2url(&git_root),
             path2url(&git_root),
         ))

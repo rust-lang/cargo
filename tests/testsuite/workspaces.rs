@@ -1001,7 +1001,7 @@ failed to parse manifest at `[..]foo/Cargo.toml`
 Caused by:
   could not parse input as TOML
 Caused by:
-  expected an equals, found eof at line 1
+  expected an equals, found eof at line 1 column 5
      Created binary (application) `bar` package
 ",
         )
