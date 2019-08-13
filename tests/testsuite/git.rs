@@ -2695,19 +2695,16 @@ fn git_fetch_cli_env_clean() {
 #[cargo_test]
 fn dirty_submodule() {
     // `cargo package` warns for dirty file in submodule.
-    let git_project = git::new("foo", |project| {
+    let (git_project, repo) = git::new_repo("foo", |project| {
         project
             .file("Cargo.toml", &basic_manifest("foo", "0.5.0"))
             // This is necessary because `git::add` is too eager.
             .file(".gitignore", "/target")
-    })
-    .unwrap();
+    });
     let git_project2 = git::new("src", |project| {
         project.no_manifest().file("lib.rs", "pub fn f() {}")
-    })
-    .unwrap();
+    });
 
-    let repo = git2::Repository::open(&git_project.root()).unwrap();
     let url = path2url(git_project2.root()).to_string();
     git::add_submodule(&repo, &url, Path::new("src"));
 
@@ -2757,7 +2754,7 @@ to proceed despite [..]
     git_project.cargo("package --no-verify").run();
 
     // Try with a nested submodule.
-    let git_project3 = git::new("bar", |project| project.no_manifest().file("mod.rs", "")).unwrap();
+    let git_project3 = git::new("bar", |project| project.no_manifest().file("mod.rs", ""));
     let url = path2url(git_project3.root()).to_string();
     git::add_submodule(&sub_repo, &url, Path::new("bar"));
     git_project
