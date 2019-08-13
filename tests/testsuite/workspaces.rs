@@ -2193,8 +2193,16 @@ fn simple_with_build_config() {
             "bar/.cargo/config",
             r#"
                 [build]
-                target = "wasm32-unknown-unknown"
+                target-file = "target.json"
             "#,
+        )
+        .file(
+            "bar/.cargo/target.json",
+            r#"
+            {
+             "dll-suffix": ".wasm",
+            }
+        "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
@@ -2212,7 +2220,7 @@ fn simple_with_build_config() {
 
     p.cargo("build --all").run();
     assert!(p.bin("foo").is_file());
-    assert!(p.bin("bar").is_file());
+    assert!(p.target_debug_dir().join("bar.wasm").is_file());
 
     assert!(p.root().join("Cargo.lock").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
