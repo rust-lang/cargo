@@ -2213,9 +2213,12 @@ fn simple_with_build_config() {
             version = "0.1.0"
             authors = []
             workspace = ".."
+
+            [lib]
+            crate-type = ["cdylib"]
         "#,
         )
-        .file("bar/src/main.rs", "fn main() {}");
+        .file("bar/src/lib.rs", "fn main() {}");
     let p = p.build();
 
     p.cargo("build --all").run();
