@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 
 use crate::support::registry::Package;
 use crate::support::sleep_ms;
-use crate::support::{basic_lib_manifest, basic_manifest, git, project};
+use crate::support::{basic_lib_manifest, basic_manifest, cross_compile, git, project};
 
 #[cargo_test]
 fn simple_explicit() {
@@ -2172,4 +2172,55 @@ Caused by:
   [..]",
         )
         .run();
+}
+
+#[cargo_test]
+fn simple_with_build_config() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["bar"]
+        "#,
+        )
+        .file(
+            "bar/.cargo/config",
+            &format!(
+                r#"
+                    [build]
+                    target = "{}"
+                    "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = ".."
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build --all").run();
+    assert!(p.bin("foo").is_file());
+    assert!(p.bin("bar").is_file());
+
+    assert!(p.root().join("Cargo.lock").is_file());
+    assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
