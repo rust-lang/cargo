@@ -363,8 +363,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
                 pub static COOL_STR:&str = "cached git repo rev1";
                 "#,
             )
-    })
-    .unwrap();
+    });
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();

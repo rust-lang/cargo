@@ -12,8 +12,7 @@ fn deleting_database_files() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let project = project
         .file(
@@ -71,8 +70,7 @@ fn deleting_checkout_files() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let project = project
         .file(

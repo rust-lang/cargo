@@ -562,8 +562,7 @@ two v1.0.0:
 
 #[cargo_test]
 fn upgrade_git() {
-    let git_project =
-        git::new("foo", |project| project.file("src/main.rs", "fn main() {}")).unwrap();
+    let git_project = git::new("foo", |project| project.file("src/main.rs", "fn main() {}"));
     // install
     cargo_process("install -Z install-upgrade --git")
         .arg(git_project.url().to_string())
@@ -618,8 +617,7 @@ fn switch_sources() {
         .build();
     let git_project = git::new("foo", |project| {
         project.file("src/main.rs", r#"fn main() { println!("git"); }"#)
-    })
-    .unwrap();
+    });
 
     cargo_process("install -Z install-upgrade foo")
         .masquerade_as_nightly_cargo()

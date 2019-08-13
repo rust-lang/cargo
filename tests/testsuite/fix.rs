@@ -1,7 +1,5 @@
 use std::fs::File;
 
-use git2;
-
 use crate::support::git;
 use crate::support::{basic_manifest, clippy_is_available, is_nightly, project};
 
@@ -710,15 +708,8 @@ fn warns_if_no_vcs_detected() {
 
 #[cargo_test]
 fn warns_about_dirty_working_directory() {
-    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
+    let p = git::new("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
 
-    let repo = git2::Repository::init(&p.root()).unwrap();
-    let mut cfg = t!(repo.config());
-    t!(cfg.set_str("user.email", "foo@bar.com"));
-    t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
-    git::add(&repo);
-    git::commit(&repo);
     File::create(p.root().join("src/lib.rs")).unwrap();
 
     p.cargo("fix")
@@ -741,15 +732,8 @@ commit the changes to these files:
 
 #[cargo_test]
 fn warns_about_staged_working_directory() {
-    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
+    let (p, repo) = git::new_repo("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
 
-    let repo = git2::Repository::init(&p.root()).unwrap();
-    let mut cfg = t!(repo.config());
-    t!(cfg.set_str("user.email", "foo@bar.com"));
-    t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
-    git::add(&repo);
-    git::commit(&repo);
     File::create(&p.root().join("src/lib.rs"))
         .unwrap()
         .write_all("pub fn bar() {}".to_string().as_bytes())
@@ -776,33 +760,17 @@ commit the changes to these files:
 
 #[cargo_test]
 fn does_not_warn_about_clean_working_directory() {
-    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
-
-    let repo = git2::Repository::init(&p.root()).unwrap();
-    let mut cfg = t!(repo.config());
-    t!(cfg.set_str("user.email", "foo@bar.com"));
-    t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
-    git::add(&repo);
-    git::commit(&repo);
-
+    let p = git::new("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
     p.cargo("fix").run();
 }
 
 #[cargo_test]
 fn does_not_warn_about_dirty_ignored_files() {
-    let p = project()
-        .file("src/lib.rs", "pub fn foo() {}")
-        .file(".gitignore", "bar\n")
-        .build();
+    let p = git::new("foo", |p| {
+        p.file("src/lib.rs", "pub fn foo() {}")
+            .file(".gitignore", "bar\n")
+    });
 
-    let repo = git2::Repository::init(&p.root()).unwrap();
-    let mut cfg = t!(repo.config());
-    t!(cfg.set_str("user.email", "foo@bar.com"));
-    t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
-    git::add(&repo);
-    git::commit(&repo);
     File::create(p.root().join("bar")).unwrap();
 
     p.cargo("fix").run();
@@ -1267,8 +1235,7 @@ fn fix_in_existing_repo_weird_ignore() {
             .file("src/lib.rs", "")
             .file(".gitignore", "foo\ninner\n")
             .file("inner/file", "")
-    })
-    .unwrap();
+    });
 
     p.cargo("fix").run();
     // This is questionable about whether it is the right behavior. It should

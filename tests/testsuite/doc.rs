@@ -1275,8 +1275,7 @@ fn doc_cap_lints() {
     let a = git::new("a", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
             .file("src/lib.rs", BAD_INTRA_LINK_LIB)
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(

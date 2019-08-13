@@ -318,8 +318,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(

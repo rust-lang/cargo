@@ -262,8 +262,7 @@ fn included_files_only() {
             .file("src/lib.rs", "")
             .file(".gitignore", "a")
             .file("a/b.md", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(
@@ -305,8 +304,7 @@ fn dependent_crates_in_crates() {
         .file("src/lib.rs", "")
         .file("b/Cargo.toml", &basic_lib_manifest("b"))
         .file("b/src/lib.rs", "")
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
@@ -336,8 +334,7 @@ fn vendoring_git_crates() {
         p.file("Cargo.toml", &basic_lib_manifest("serde_derive"))
             .file("src/lib.rs", "")
             .file("src/wut.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(
@@ -379,8 +376,7 @@ fn git_simple() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(
@@ -422,8 +418,7 @@ fn git_duplicate() {
         .file("src/lib.rs", "")
         .file("b/Cargo.toml", &basic_lib_manifest("b"))
         .file("b/src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(
@@ -505,4 +500,40 @@ fn depend_on_vendor_dir_not_deleted() {
 
     p.cargo("vendor --respect-source-config").run();
     assert!(p.root().join("vendor/libc").is_dir());
+}
+
+#[cargo_test]
+fn ignore_hidden() {
+    // Don't delete files starting with `.`
+    Package::new("bar", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            [dependencies]
+            bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("vendor --respect-source-config").run();
+    // Add a `.git` directory.
+    let repo = git::init(&p.root().join("vendor"));
+    git::add(&repo);
+    git::commit(&repo);
+    assert!(p.root().join("vendor/.git").exists());
+    // Vendor again, shouldn't change anything.
+    p.cargo("vendor --respect-source-config").run();
+    // .git should not be removed.
+    assert!(p.root().join("vendor/.git").exists());
+    // And just for good measure, make sure no files changed.
+    let mut opts = git2::StatusOptions::new();
+    assert!(repo
+        .statuses(Some(&mut opts))
+        .unwrap()
+        .iter()
+        .all(|status| status.status() == git2::Status::CURRENT));
 }
