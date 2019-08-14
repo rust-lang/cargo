@@ -353,10 +353,8 @@ fn build_requirements<'a, 'b: 'a>(
         }
     }
 
-    if opts.uses_default_features {
-        if s.features().contains_key("default") {
-            reqs.require_feature(InternedString::new("default"))?;
-        }
+    if opts.uses_default_features && s.features().contains_key("default") {
+        reqs.require_feature(InternedString::new("default"))?;
     }
 
     Ok(reqs)
