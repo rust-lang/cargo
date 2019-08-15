@@ -107,6 +107,9 @@ proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
+ssl-version = "tlsv1.3"  # Indicates which SSL version to use (defaults to
+                         # "default", "sslv2", "sslv3", "tlsv1", "tlsv1.0",
+                         # "tlsv1.1", "tlsv1.2", "tlsv1.3")
 low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
 multiplexing = true # whether or not to use HTTP/2 multiplexing where possible
 
