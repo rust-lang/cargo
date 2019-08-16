@@ -18,27 +18,37 @@ use winapi::um::winnt::TOKEN_READ;
 pub fn home_dir_inner() -> Option<PathBuf> {
     env::var_os("USERPROFILE")
         .map(PathBuf::from)
-        .or_else(|| unsafe {
-            let me = GetCurrentProcess();
-            let mut token = ptr::null_mut();
-            if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
-                return None;
-            }
-            let _g = scopeguard::guard(token, |h| {
-                let _ = CloseHandle(h);
-            });
-            fill_utf16_buf(
-                |buf, mut sz| {
-                    match GetUserProfileDirectoryW(token, buf, &mut sz) {
-                        0 if GetLastError() != ERROR_INSUFFICIENT_BUFFER => 0,
-                        0 => sz,
-                        _ => sz - 1, // sz includes the null terminator
-                    }
-                },
-                os2path,
-            )
-            .ok()
-        })
+        .or_else(|| home_dir_crt())
+}
+
+#[cfg(not(target_vendor = "uwp"))]
+fn home_dir_crt() -> Option<PathBuf> {
+    unsafe {
+        let me = GetCurrentProcess();
+        let mut token = ptr::null_mut();
+        if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
+            return None;
+        }
+        let _g = scopeguard::guard(token, |h| {
+            let _ = CloseHandle(h);
+        });
+        fill_utf16_buf(
+            |buf, mut sz| {
+                match GetUserProfileDirectoryW(token, buf, &mut sz) {
+                    0 if GetLastError() != ERROR_INSUFFICIENT_BUFFER => 0,
+                    0 => sz,
+                    _ => sz - 1, // sz includes the null terminator
+                }
+            },
+            os2path,
+        )
+        .ok()
+    }
+}
+
+#[cfg(target_vendor = "uwp")]
+fn home_dir_crt() -> Option<PathBuf> {
+    None
 }
 
 fn os2path(s: &[u16]) -> PathBuf {
