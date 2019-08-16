@@ -32,7 +32,6 @@ fn std_lib() {
     simple_lib_std();
     simple_bin_std();
     lib_nostd();
-    bin_nostd();
     check_core();
     cross_custom();
     hashbrown();
@@ -76,59 +75,6 @@ fn lib_nostd() {
         .build();
     cargo_build_std(&p, "build -v --lib", "core")
         .with_stderr_does_not_contain("[..]libstd[..]")
-        .run();
-}
-
-fn bin_nostd() {
-    if cfg!(windows) {
-        // I think windows requires setting up mainCRTStartup,
-        // I'm not in the mood to figure it out.
-        return;
-    }
-    let p = project()
-        .file("src/lib.rs", "#![no_std] pub fn foo() {}")
-        .file(
-            "src/main.rs",
-            r#"
-            #![no_std]
-            #![feature(lang_items, start, core_intrinsics)]
-
-            use core::panic::PanicInfo;
-
-            #[panic_handler]
-            fn panic(_info: &PanicInfo) -> ! {
-                unsafe { core::intrinsics::abort() }
-            }
-
-            #[start]
-            fn start(_argc: isize, _argv: *const *const u8) -> isize {
-                foo::foo();
-                123
-            }
-
-            #[lang = "eh_personality"]
-            extern fn eh_personality() {}
-            "#,
-        )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                let target = std::env::var("TARGET").expect("TARGET was not set");
-                if target.contains("apple-darwin") {
-                    println!("cargo:rustc-link-lib=System");
-                } else if target.contains("linux") {
-                    // TODO: why is this needed?
-                    println!("cargo:rustc-link-lib=c");
-                }
-            }
-            "#,
-        )
-        .build();
-
-    cargo_build_std(&p, "run -v", "core")
-        .with_status(123)
-        .with_stderr_contains("[RUNNING] [..]foo[EXE]`")
         .run();
 }
 
