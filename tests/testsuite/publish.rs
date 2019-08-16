@@ -899,6 +899,36 @@ fn publish_with_no_default_features() {
 }
 
 #[cargo_test]
+fn publish_with_unrusty_features() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            "invalid::characters" = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-default-features --dry-run --index")
+        .arg(registry_url().to_string())
+        .with_stderr_contains("error: expected a valid (not empty nor \"_\") feature name containing only letters, numbers, hyphens, or underscores.")
+        .with_stderr_contains("feature `invalid::characters` contains other characters.")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn publish_with_patch() {
     Package::new("bar", "1.0.0").publish();
 

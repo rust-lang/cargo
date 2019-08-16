@@ -56,6 +56,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
 
     if opts.check_metadata {
         check_metadata(pkg, config)?;
+        verify_features(pkg)?;
     }
 
     verify_dependencies(pkg)?;
@@ -212,6 +213,31 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
                  when packaging.\ndependency `{}` does not specify \
                  a version.",
                 dep.name_in_toml()
+            )
+        }
+    }
+    Ok(())
+}
+
+// Checks that the package features are rusty / can be published to crates.io.
+// Intended to avoid this suprise after a successful cargo publish --dry-run:
+// invalid upload request: invalid value: string "futures-0.1", expected a
+// valid feature name containing only letters, numbers, hyphens, or underscores
+fn verify_features(pkg: &Package) -> CargoResult<()> {
+    for (feature, _) in pkg.summary().features() {
+        if feature.is_empty() || feature.as_str() == "_" {
+            failure::bail!(
+                "expected a valid (not empty nor \"_\") feature name containing \
+                 only letters, numbers, hyphens, or underscores.\n\
+                 feature `{}` is not valid.",
+                feature
+            )
+        } else if !feature.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_') {
+            failure::bail!(
+                "expected a valid (not empty nor \"_\") feature name containing \
+                 only letters, numbers, hyphens, or underscores.\n\
+                 feature `{}` contains other characters.",
+                feature
             )
         }
     }
