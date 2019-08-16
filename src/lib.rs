@@ -26,7 +26,7 @@
 //! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
 #![deny(rust_2018_idioms)]
-#![allow(deprecated)] // uses std::env::home_dir when necessary
+#![allow(deprecated)] // uses env::home_dir when necessary
 
 use std::env;
 use std::io;
@@ -68,7 +68,6 @@ pub fn home_dir() -> Option<PathBuf> {
 
 #[cfg(windows)]
 fn home_dir_() -> Option<PathBuf> {
-    use scopeguard;
     use std::ptr;
     use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
     use winapi::um::errhandlingapi::GetLastError;
@@ -77,7 +76,7 @@ fn home_dir_() -> Option<PathBuf> {
     use winapi::um::userenv::GetUserProfileDirectoryW;
     use winapi::um::winnt::TOKEN_READ;
 
-    std::env::var_os("USERPROFILE")
+    env::var_os("USERPROFILE")
         .map(PathBuf::from)
         .or_else(|| unsafe {
             let me = GetCurrentProcess();
@@ -162,7 +161,7 @@ where
 
 #[cfg(any(unix, target_os = "redox"))]
 fn home_dir_() -> Option<PathBuf> {
-    std::env::home_dir()
+    env::home_dir()
 }
 
 /// Returns the storage directory used by Cargo, often knowns as
@@ -217,7 +216,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let user_home = home_dir.map(|p| p.join(".cargo"));
 
     // Compatibility with old cargo that used the std definition of home_dir
-    let compat_home_dir = std::env::home_dir();
+    let compat_home_dir = env::home_dir();
     let compat_user_home = compat_home_dir.map(|p| p.join(".cargo"));
 
     if let Some(p) = env_cargo_home {

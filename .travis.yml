@@ -1,3 +1,32 @@
+dist: xenial
 language: rust
 rust:
   - stable
+
+git:
+  depth: 1
+  quiet: true
+
+matrix:
+  fast_finish: true
+  include:
+    - os: linux
+      env: TARGET=x86_64-unknown-linux-gnu
+
+    - os: osx
+      osx_image: xcode9.2
+      env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
+
+    - os: windows
+      env: TARGET=x86_64-pc-windows-msvc EXE_EXT=.exe
+      services: nil
+
+    - name: rustfmt
+      install:
+        - rustup component add rustfmt
+      script:
+        - cargo fmt --all -- --check
+
+script:
+  - cargo build --verbose
+  - cargo test --verbose
