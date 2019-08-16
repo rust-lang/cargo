@@ -26,7 +26,6 @@
 //! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
 #![deny(rust_2018_idioms)]
-#![allow(deprecated)] // uses env::home_dir when necessary
 
 mod windows;
 
@@ -69,6 +68,7 @@ use windows::home_dir_inner;
 
 #[cfg(any(unix, target_os = "redox"))]
 fn home_dir_inner() -> Option<PathBuf> {
+    #[allow(deprecated)]
     env::home_dir()
 }
 
@@ -96,49 +96,26 @@ pub fn cargo_home() -> io::Result<PathBuf> {
 }
 
 pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    let env_var = env::var_os("CARGO_HOME");
-
-    // NB: During the multirust-rs -> rustup transition the install
-    // dir changed from ~/.multirust/bin to ~/.cargo/bin. Because
-    // multirust used to explicitly set CARGO_HOME it's possible to
-    // get here when e.g. installing under `cargo run` and decide to
-    // install to the wrong place. This check is to make the
-    // multirust-rs to rustup upgrade seamless.
-    let env_var = if let Some(v) = env_var {
-        let vv = v.to_string_lossy().to_string();
-        if vv.contains(".multirust/cargo")
-            || vv.contains(r".multirust\cargo")
-            || vv.trim().is_empty()
-        {
-            None
-        } else {
-            Some(v)
-        }
-    } else {
-        None
+    let cargo_home_env = match env::var_os("CARGO_HOME") {
+        Some(p) => match p.as_os_str().to_str() {
+            Some(q) if !q.trim().is_empty() => Some(p),
+            _ => None,
+        },
+        _ => None,
     };
 
-    let env_cargo_home = env_var.map(|home| cwd.join(home));
-    let home_dir =
-        home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
-    let user_home = home_dir.map(|p| p.join(".cargo"));
-
-    // Compatibility with old cargo that used the std definition of home_dir
-    let compat_home_dir = env::home_dir();
-    let compat_user_home = compat_home_dir.map(|p| p.join(".cargo"));
-
-    if let Some(p) = env_cargo_home {
-        Ok(p)
-    } else {
-        if let Some(d) = compat_user_home {
-            if d.exists() {
-                Ok(d)
+    match cargo_home_env {
+        Some(home) => {
+            let home = PathBuf::from(home);
+            if home.is_absolute() {
+                Ok(home)
             } else {
-                user_home
+                Ok(cwd.join(&home))
             }
-        } else {
-            user_home
         }
+        None => home_dir()
+            .map(|p| p.join(".cargo"))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find cargo home dir")),
     }
 }
 
@@ -171,48 +148,17 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 }
 
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    let env_var = env::var_os("RUSTUP_HOME");
-    let env_rustup_home = env_var.map(|home| cwd.join(home));
-    let home_dir =
-        || home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
-
-    let user_home = || {
-        if use_rustup_dir() {
-            home_dir().map(|d| d.join(".rustup"))
-        } else {
-            home_dir().map(|d| d.join(".multirust"))
+    match env::var_os("RUSTUP_HOME") {
+        Some(home) => {
+            let home = PathBuf::from(home);
+            if home.is_absolute() {
+                Ok(home)
+            } else {
+                Ok(cwd.join(&home))
+            }
         }
-    };
-
-    if let Some(p) = env_rustup_home {
-        Ok(p)
-    } else {
-        user_home()
+        None => home_dir()
+            .map(|d| d.join(".rustup"))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find rustup home dir")),
     }
-}
-
-fn use_rustup_dir() -> bool {
-    fn rustup_dir() -> Option<PathBuf> {
-        home_dir().map(|p| p.join(".rustup"))
-    }
-
-    fn multirust_dir() -> Option<PathBuf> {
-        home_dir().map(|p| p.join(".multirust"))
-    }
-
-    fn rustup_dir_exists() -> bool {
-        rustup_dir().map(|p| p.exists()).unwrap_or(false)
-    }
-
-    fn multirust_dir_exists() -> bool {
-        multirust_dir().map(|p| p.exists()).unwrap_or(false)
-    }
-
-    fn rustup_old_version_exists() -> bool {
-        rustup_dir()
-            .map(|p| p.join("rustup-version").exists())
-            .unwrap_or(false)
-    }
-
-    !rustup_old_version_exists() && (rustup_dir_exists() || !multirust_dir_exists())
 }
