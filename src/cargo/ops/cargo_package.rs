@@ -232,7 +232,10 @@ fn verify_features(pkg: &Package) -> CargoResult<()> {
                  feature `{}` is not valid.",
                 feature
             )
-        } else if !feature.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_') {
+        } else if !feature
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+        {
             failure::bail!(
                 "expected a valid (not empty nor \"_\") feature name containing \
                  only letters, numbers, hyphens, or underscores.\n\
