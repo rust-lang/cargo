@@ -90,6 +90,15 @@ fn home_dir_inner() -> Option<PathBuf> {
 ///
 /// This function fails if it fails to retrieve the current directory,
 /// or if the home directory cannot be determined.
+///
+/// # Examples
+///
+/// ```
+/// match home::cargo_home() {
+///     Ok(path) => println!("{}", path.display()),
+///     Err(err) => eprintln!("Cannot get your cargo home dir: {:?}", err),
+/// }
+/// ```
 pub fn cargo_home() -> io::Result<PathBuf> {
     let cwd = env::current_dir()?;
     cargo_home_with_cwd(&cwd)
@@ -142,6 +151,15 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 ///
 /// This function fails if it fails to retrieve the current directory,
 /// or if the home directory cannot be determined.
+///
+/// # Examples
+///
+/// ```
+/// match home::rustup_home() {
+///     Ok(path) => println!("{}", path.display()),
+///     Err(err) => eprintln!("Cannot get your rustup home dir: {:?}", err),
+/// }
+/// ```
 pub fn rustup_home() -> io::Result<PathBuf> {
     let cwd = env::current_dir()?;
     rustup_home_with_cwd(&cwd)
