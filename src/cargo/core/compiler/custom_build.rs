@@ -514,7 +514,7 @@ impl BuildOutput {
             .split(|c: char| c.is_whitespace())
             .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
-        
+
         while let Some(flag) = flags_iter.next() {
             if flag.starts_with("-l") || flag.starts_with("-L") {
                 // Check if this flag has no space before the value as is
@@ -528,7 +528,7 @@ impl BuildOutput {
                             "Flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
-                        }
+                        },
                     }
                 }
 
