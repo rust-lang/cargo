@@ -141,7 +141,7 @@ impl GitRemote {
     fn fetch_into(&self, dst: &mut git2::Repository, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &self.url.as_str(), refspec, cargo_config)
+        fetch(dst, self.url.as_str(), refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
@@ -152,7 +152,7 @@ impl GitRemote {
         let mut repo = init(dst, true)?;
         fetch(
             &mut repo,
-            &self.url.as_str(),
+            self.url.as_str(),
             "refs/heads/*:refs/heads/*",
             cargo_config,
         )?;
@@ -395,7 +395,7 @@ impl<'a> GitCheckout<'a> {
             };
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
-            fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
+            fetch(&mut repo, url, refspec, cargo_config).chain_err(|| {
                 internal(format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),

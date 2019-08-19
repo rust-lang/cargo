@@ -1157,7 +1157,7 @@ impl Execs {
         // hidden characters
         let matcher = matcher.replace("\t", "<tab>");
 
-        return matcher;
+        matcher
     }
 
     fn match_std(
@@ -1410,7 +1410,7 @@ enum MatchKind {
 /// - `[ROOT]` the path to the test directory's root
 /// - `[CWD]` is the working directory of the process that was run.
 pub fn lines_match(expected: &str, mut actual: &str) -> bool {
-    let expected = substitute_macros(&expected);
+    let expected = substitute_macros(expected);
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {
