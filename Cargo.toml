@@ -52,7 +52,7 @@ rustfix = "0.4.6"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
 serde = { version = "1.0.82", features = ['derive'] }
-serde_ignored = "0.0.4"
+serde_ignored = "0.1.0"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
 shell-escape = "0.1.4"
 strip-ansi-escapes = "0.1.0"
