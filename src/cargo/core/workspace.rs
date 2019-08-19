@@ -452,11 +452,15 @@ impl<'cfg> Workspace<'cfg> {
                 WorkspaceConfig::Root(ref root_config) => {
                     members_paths = root_config
                         .members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
-                    default_members_paths = if let Some(ref default) = root_config.default_members {
-                        Some(root_config.members_paths(default)?)
+                    default_members_paths = if root_manifest_path == self.current_manifest {
+                        if let Some(ref default) = root_config.default_members {
+                            Some(root_config.members_paths(default)?)
+                        } else {
+                            None
+                        }
                     } else {
                         None
-                    }
+                    };
                 }
                 _ => failure::bail!(
                     "root of a workspace inferred but wasn't a root: {}",
