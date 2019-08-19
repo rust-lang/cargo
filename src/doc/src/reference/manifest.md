@@ -958,6 +958,30 @@ technical specification of this feature.
 [crates.io]: https://crates.io/
 [replace]: specifying-dependencies.md#overriding-dependencies
 
+#### Using `[patch]` with multiple versions
+
+You can patch in multiple versions of the same crate with the `package` key used
+to rename dependencies. For example let's say that the `serde` crate has a
+bugfix that we'd like to use to its 1.\* series but we'd also like to prototype
+using a 2.0.0 version of serde we have in our git repository. To configure this
+we'd do:
+
+```toml
+[patch.crates-io]
+serde = { git = 'https://github.com/serde-rs/serde' }
+serde2 = { git = 'https://github.com/example/serde', package = 'serde', branch = 'v2' }
+```
+
+The first `serde = ...` directive indicates that serde 1.\* should be used from
+the git repository (pulling in the bugfix we need) and the second `serde2 = ...`
+directive indicates that the `serde` package should also be pulled from the `v2`
+branch of `https://github.com/example/serde`. We're assuming here that
+`Cargo.toml` on that branch mentions version 2.0.0.
+
+Note that when using the `package` key the `serde2` identifier here is actually
+ignored. We simply need a unique name which doesn't conflict with other patched
+crates.
+
 ### The `[replace]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
