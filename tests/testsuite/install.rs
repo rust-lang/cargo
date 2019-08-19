@@ -531,6 +531,7 @@ fn install_force_partial_overlap() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo-bin3[EXE]
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
+[REMOVING] executable `[..]/bin/foo-bin1[EXE]` from previous version foo v0.0.1 [..]
 [INSTALLED] package `foo v0.2.0 ([..]/foo2)` (executable `foo-bin3[EXE]`)
 [REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo-bin2[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -541,8 +542,6 @@ fn install_force_partial_overlap() {
     cargo_process("install --list")
         .with_stdout(
             "\
-foo v0.0.1 ([..]):
-    foo-bin1[..]
 foo v0.2.0 ([..]):
     foo-bin2[..]
     foo-bin3[..]

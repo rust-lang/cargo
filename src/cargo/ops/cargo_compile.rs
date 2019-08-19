@@ -443,6 +443,9 @@ impl CompileFilter {
         all_bens: bool,
         all_targets: bool,
     ) -> CompileFilter {
+        if all_targets {
+            return CompileFilter::new_all_targets();
+        }
         let rule_lib = if lib_only {
             LibRule::True
         } else {
@@ -453,18 +456,7 @@ impl CompileFilter {
         let rule_exms = FilterRule::new(exms, all_exms);
         let rule_bens = FilterRule::new(bens, all_bens);
 
-        if all_targets {
-            CompileFilter::Only {
-                all_targets: true,
-                lib: LibRule::Default,
-                bins: FilterRule::All,
-                examples: FilterRule::All,
-                benches: FilterRule::All,
-                tests: FilterRule::All,
-            }
-        } else {
-            CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
-        }
+        CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
     }
 
     /// Construct a CompileFilter from underlying primitives.
@@ -493,6 +485,17 @@ impl CompileFilter {
             CompileFilter::Default {
                 required_features_filterable: true,
             }
+        }
+    }
+
+    pub fn new_all_targets() -> CompileFilter {
+        CompileFilter::Only {
+            all_targets: true,
+            lib: LibRule::Default,
+            bins: FilterRule::All,
+            examples: FilterRule::All,
+            benches: FilterRule::All,
+            tests: FilterRule::All,
         }
     }
 

@@ -744,6 +744,14 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             .map(|t| to_exe(t.name()))
             .collect(),
         CompileFilter::Only {
+            all_targets: true, ..
+        } => pkg
+            .targets()
+            .iter()
+            .filter(|target| target.is_executable())
+            .map(|target| to_exe(target.name()))
+            .collect(),
+        CompileFilter::Only {
             ref bins,
             ref examples,
             ..
