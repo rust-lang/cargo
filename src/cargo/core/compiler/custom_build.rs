@@ -514,29 +514,38 @@ impl BuildOutput {
             .split(|c: char| c.is_whitespace())
             .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
+
         while let Some(flag) = flags_iter.next() {
-            if flag != "-l" && flag != "-L" {
+            if flag.starts_with("-l") || flag.starts_with("-L") {
+                // Check if this flag has no space before the value as is
+                // common with tools like pkg-config
+                // e.g. -L/some/dir/local/lib or -licui18n
+                let (flag, mut value) = flag.split_at(2);
+                if value.len() == 0 {
+                    value = match flags_iter.next() {
+                        Some(v) => v,
+                        None => failure::bail! {
+                            "Flag in rustc-flags has no value in {}: {}",
+                            whence,
+                            value
+                        },
+                    }
+                }
+
+                match flag {
+                    "-l" => library_links.push(value.to_string()),
+                    "-L" => library_paths.push(PathBuf::from(value)),
+
+                    // This was already checked above
+                    _ => unreachable!(),
+                };
+            } else {
                 failure::bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )
             }
-            let value = match flags_iter.next() {
-                Some(v) => v,
-                None => failure::bail!(
-                    "Flag in rustc-flags has no value in {}: `{}`",
-                    whence,
-                    value
-                ),
-            };
-            match flag {
-                "-l" => library_links.push(value.to_string()),
-                "-L" => library_paths.push(PathBuf::from(value)),
-
-                // was already checked above
-                _ => failure::bail!("only -l and -L flags are allowed"),
-            };
         }
         Ok((library_paths, library_links))
     }

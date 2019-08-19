@@ -255,6 +255,65 @@ fn custom_build_script_rustc_flags() {
 }
 
 #[cargo_test]
+fn custom_build_script_rustc_flags_no_space() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.foo]
+            path = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "build.rs"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "foo/build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rustc-flags=-lnonexistinglib -L/dummy/path1 -L/dummy/path2");
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name build_script_build foo/build.rs [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar src/main.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    --extern foo=[..]libfoo-[..] \
+    -L /dummy/path1 -L /dummy/path2`
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn links_no_build_cmd() {
     let p = project()
         .file(
