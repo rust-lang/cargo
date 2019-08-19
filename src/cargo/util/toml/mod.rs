@@ -801,23 +801,27 @@ impl TomlManifest {
         }
 
         fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
-            match *dep {
-                TomlDependency::Detailed(ref d) => {
+            match dep {
+                TomlDependency::Detailed(d) => {
                     let mut d = d.clone();
-                    d.path.take(); // path dependencies become crates.io deps
-                                   // registry specifications are elaborated to the index URL
+                    // Path dependencies become crates.io deps.
+                    d.path.take();
+                    // Same with git dependencies.
+                    d.git.take();
+                    d.branch.take();
+                    d.tag.take();
+                    d.rev.take();
+                    // registry specifications are elaborated to the index URL
                     if let Some(registry) = d.registry.take() {
                         let src = SourceId::alt_registry(config, &registry)?;
                         d.registry_index = Some(src.url().to_string());
                     }
                     Ok(TomlDependency::Detailed(d))
                 }
-                TomlDependency::Simple(ref s) => {
-                    Ok(TomlDependency::Detailed(DetailedTomlDependency {
-                        version: Some(s.clone()),
-                        ..Default::default()
-                    }))
-                }
+                TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
+                    version: Some(s.clone()),
+                    ..Default::default()
+                })),
             }
         }
     }
