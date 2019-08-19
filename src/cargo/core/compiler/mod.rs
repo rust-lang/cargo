@@ -486,7 +486,12 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     if is_same_file(src, dst).unwrap_or(false) {
         return Ok(());
     }
-    if dst.exists() {
+
+    // NB: we can't use dst.exists(), as if dst is a broken symlink,
+    // dst.exists() will return false. This is problematic, as we still need to
+    // unlink dst in this case. symlink_metadata(dst).is_ok() will tell us
+    // whether dst exists *without* following symlinks, which is what we want.
+    if fs::symlink_metadata(dst).is_ok() {
         paths::remove_file(&dst)?;
     }
 
