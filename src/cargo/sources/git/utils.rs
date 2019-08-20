@@ -100,24 +100,17 @@ impl GitRemote {
         reference: &GitReference,
         cargo_config: &Config,
     ) -> CargoResult<(GitDatabase, GitRevision)> {
-        let mut repo_and_rev = None;
-        if let Ok(mut repo) = git2::Repository::open(into) {
-            self.fetch_into(&mut repo, cargo_config)
-                .chain_err(|| format!("failed to fetch into {}", into.display()))?;
-            if let Ok(rev) = reference.resolve(&repo) {
-                repo_and_rev = Some((repo, rev));
+        let repo = match git2::Repository::open(into) {
+            Ok(mut repo) => {
+                self.fetch_into(&mut repo, cargo_config)
+                    .chain_err(|| format!("failed to fetch into {}", into.display()))?;
+                repo
             }
-        }
-        let (repo, rev) = match repo_and_rev {
-            Some(pair) => pair,
-            None => {
-                let repo = self
-                    .clone_into(into, cargo_config)
-                    .chain_err(|| format!("failed to clone into: {}", into.display()))?;
-                let rev = reference.resolve(&repo)?;
-                (repo, rev)
-            }
+            Err(_) => self
+                .clone_into(into, cargo_config)
+                .chain_err(|| format!("failed to clone into: {}", into.display()))?,
         };
+        let rev = reference.resolve(&repo)?;
 
         Ok((
             GitDatabase {
