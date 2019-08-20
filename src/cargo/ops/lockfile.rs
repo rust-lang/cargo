@@ -2,7 +2,7 @@ use std::io::prelude::*;
 
 use toml;
 
-use crate::core::{resolver, Resolve, Workspace};
+use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
@@ -122,10 +122,7 @@ fn resolve_to_string_orig(
     }
 
     let deps = toml["package"].as_array().unwrap();
-    for (i, dep) in deps.iter().enumerate() {
-        if i > 0 {
-            out.push_str("\n");
-        }
+    for dep in deps {
         let dep = dep.as_table().unwrap();
 
         out.push_str("[[package]]\n");
@@ -135,15 +132,29 @@ fn resolve_to_string_orig(
     if let Some(patch) = toml.get("patch") {
         let list = patch["unused"].as_array().unwrap();
         for entry in list {
-            out.push_str("\n[[patch.unused]]\n");
+            out.push_str("[[patch.unused]]\n");
             emit_package(entry.as_table().unwrap(), &mut out);
+            out.push_str("\n");
         }
     }
 
     if let Some(meta) = toml.get("metadata") {
-        out.push_str("\n");
         out.push_str("[metadata]\n");
         out.push_str(&meta.to_string());
+    }
+
+    // Historical versions of Cargo in the old format accidentally left trailing
+    // blank newlines at the end of files, so we just leave that as-is. For all
+    // encodings going forward, though, we want to be sure that our encoded lock
+    // file doesn't contain any trailing newlines so trim out the extra if
+    // necessary.
+    match resolve.version() {
+        ResolveVersion::V1 => {}
+        _ => {
+            while out.ends_with("\n\n") {
+                out.pop();
+            }
+        }
     }
 
     Ok((orig.ok(), out, ws_root))
@@ -203,7 +214,8 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
 
             out.push_str("]\n");
         }
+        out.push_str("\n");
     } else if dep.contains_key("replace") {
-        out.push_str(&format!("replace = {}\n", &dep["replace"]));
+        out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
     }
 }
