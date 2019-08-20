@@ -4168,6 +4168,34 @@ fn uplift_dsym_of_bin_on_mac() {
 }
 
 #[cargo_test]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
+    let p = project()
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .build();
+    let dsym = p.target_debug_dir().join("foo.dSYM");
+
+    p.cargo("build").run();
+    assert!(dsym.is_dir());
+
+    // Simulate the situation where the underlying dSYM bundle goes missing
+    // but the uplifted symlink to it remains. This would previously cause
+    // builds to permanently fail until the bad symlink was manually removed.
+    dsym.rm_rf();
+    p.symlink(
+        p.target_debug_dir()
+            .join("deps")
+            .join("foo-baaaaaadbaaaaaad.dSYM"),
+        &dsym,
+    );
+    assert!(dsym.is_symlink());
+    assert!(!dsym.exists());
+
+    p.cargo("build").run();
+    assert!(dsym.is_dir());
+}
+
+#[cargo_test]
 #[cfg(all(target_os = "windows", target_env = "msvc"))]
 fn uplift_pdb_of_bin_on_windows() {
     let p = project()
