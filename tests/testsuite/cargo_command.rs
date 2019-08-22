@@ -168,6 +168,49 @@ error: no such subcommand: `biuld`
         .run();
 }
 
+#[cargo_test]
+fn find_closest_alias() {
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::create_dir(&my_home).unwrap();
+    File::create(&my_home.join("config"))
+        .unwrap()
+        .write_all(
+            br#"
+        [alias]
+        myalias = "build"
+    "#,
+        )
+        .unwrap();
+
+    cargo_process("myalais")
+        .env("CARGO_HOME", &my_home)
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `myalais`
+
+<tab>Did you mean `myalias`?
+",
+        )
+        .run();
+
+    // But, if no alias is defined, it must not suggest one!
+    cargo_process("myalais")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no such subcommand: `myalais`
+",
+        )
+        .with_stderr_does_not_contain(
+            "\
+<tab>Did you mean `myalias`?
+",
+        )
+        .run();
+}
+
 // If a subcommand is more than an edit distance of 3 away, we don't make a suggestion.
 #[cargo_test]
 fn find_closest_dont_correct_nonsense() {
