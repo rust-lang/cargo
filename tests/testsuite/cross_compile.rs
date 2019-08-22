@@ -201,10 +201,10 @@ fn plugin_deps() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
+            extern crate rustc_driver;
             extern crate syntax;
 
-            use rustc_plugin::Registry;
+            use rustc_driver::plugin::Registry;
             use syntax::tokenstream::TokenTree;
             use syntax::source_map::Span;
             use syntax::ast::*;
@@ -296,11 +296,11 @@ fn plugin_to_the_max() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
+            extern crate rustc_driver;
             extern crate syntax;
             extern crate baz;
 
-            use rustc_plugin::Registry;
+            use rustc_driver::plugin::Registry;
             use syntax::tokenstream::TokenTree;
             use syntax::source_map::Span;
             use syntax::ast::*;
@@ -446,10 +446,10 @@ fn plugin_with_extra_dylib_dep() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
             extern crate baz;
+            extern crate rustc_driver;
 
-            use rustc_plugin::Registry;
+            use rustc_driver::plugin::Registry;
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
