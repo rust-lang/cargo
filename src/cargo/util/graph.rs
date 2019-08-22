@@ -450,15 +450,18 @@ impl<N: Clone, E: Clone> Clone for StackGraph<N, E> {
     }
 }
 
+fn remove_from_other_refs(borrow: &mut RefMut<'_, BTreeMap<GraphAge, usize>>, age: GraphAge) {
+    if let std::collections::btree_map::Entry::Occupied(mut val) = borrow.entry(age) {
+        *val.get_mut() -= 1;
+        if val.get() == &0 {
+            val.remove();
+        }
+    }
+}
+
 impl<N: Clone, E: Clone> Drop for StackGraph<N, E> {
     fn drop(&mut self) {
-        let mut borrow = RefCell::borrow_mut(&self.other_refs);
-        if let std::collections::btree_map::Entry::Occupied(mut val) = borrow.entry(self.age) {
-            *val.get_mut() -= 1;
-            if val.get() == &0 {
-                val.remove();
-            }
-        }
+        remove_from_other_refs(&mut RefCell::borrow_mut(&self.other_refs), self.age);
     }
 }
 
@@ -488,20 +491,14 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     /// Gets mutable access to the inner `Graph`. Uses `other_refs` to determine if a deep clone is
     /// needed, and runs `reset_to` to get the `Graph` into the state it was in.
     ///
-    /// It is the responsibility of the caller to re-add this clone to `other_refs` after the new age is determined.
+    /// It is the responsibility of the caller to set `self.age` and call `add_to_other_refs` after the new age is determined.
     fn activate(&mut self) -> RefMut<'_, Graph<N, E>> {
         let inner = if {
             let mut borrow = RefCell::borrow_mut(&self.other_refs);
-            if let std::collections::btree_map::Entry::Occupied(mut val) = borrow.entry(self.age) {
-                *val.get_mut() -= 1;
-                if val.get() == &0 {
-                    val.remove();
-                }
-            }
+            remove_from_other_refs(&mut borrow, self.age);
             borrow
                 .keys()
-                .rev()
-                .next()
+                .next_back()
                 .map(|a| a <= &self.age)
                 .unwrap_or(true)
         } {
@@ -523,15 +520,23 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
         inner
     }
 
+    fn add_to_other_refs(&mut self) {
+        *RefCell::borrow_mut(&self.other_refs)
+            .entry(self.age)
+            .or_insert(0) += 1;
+    }
+
+    pub fn clone_into_graph(&self) -> Graph<N, E> {
+        self.clone().activate().clone()
+    }
+
     pub fn add(&mut self, node: N) {
         self.age = {
             let mut g = self.activate();
             g.add(node);
             g.len()
         };
-        *RefCell::borrow_mut(&self.other_refs)
-            .entry(self.age)
-            .or_insert(0) += 1;
+        self.add_to_other_refs();
     }
 
     /// connect `node`to `child` with out associating any data.
@@ -541,9 +546,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.link(node, child);
             g.len()
         };
-        *RefCell::borrow_mut(&self.other_refs)
-            .entry(self.age)
-            .or_insert(0) += 1;
+        self.add_to_other_refs();
     }
 
     /// connect `node`to `child` associating it with `edge`.
@@ -553,9 +556,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.add_edge(node, child, edge);
             g.len()
         };
-        *RefCell::borrow_mut(&self.other_refs)
-            .entry(self.age)
-            .or_insert(0) += 1;
+        self.add_to_other_refs();
     }
 }
 
@@ -716,29 +717,5 @@ impl<'a, N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraphView<'a, N, E> {
                     )
                 })
             })
-    }
-
-    /// Resolves one of the paths from the given dependent package down to
-    /// a leaf.
-    pub fn path_to_bottom<'s>(&'s self, mut pkg: &'s N) -> Vec<&'s N> {
-        let mut result = vec![pkg];
-        while let Some(p) = self
-            .inner
-            .nodes
-            .get_full(pkg)
-            .filter(|(i, _, _)| *i < self.age.len_nodes)
-            .and_then(|(_, _, p)| {
-                p.iter()
-                    .filter(|(_, idx)| **idx < self.age.len_edges)
-                    // Note that we can have "cycles" introduced through dev-dependency
-                    // edges, so make sure we don't loop infinitely.
-                    .find(|&(node, _)| !result.contains(&node))
-                    .map(|(p, _)| p)
-            })
-        {
-            result.push(p);
-            pkg = p;
-        }
-        result
     }
 }
