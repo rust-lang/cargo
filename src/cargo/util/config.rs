@@ -369,6 +369,57 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
+    // Gets the subkeys defined for a given key.
+    pub fn get_subkeys(&self, key: &str) -> CargoResult<Vec<String>> {
+        let vals = self.values()?;
+        let mut parts = key.split('.').enumerate();
+        let mut val = match vals.get(parts.next().unwrap().1) {
+            Some(val) => val,
+            None => return Ok(Vec::new()),
+        };
+
+        for (i, part) in parts {
+            match *val {
+                CV::Table(ref map, _) => {
+                    val = match map.get(part) {
+                        Some(val) => val,
+                        None => return Ok(Vec::new()),
+                    }
+                }
+                CV::Integer(_, ref path)
+                | CV::String(_, ref path)
+                | CV::List(_, ref path)
+                | CV::Boolean(_, ref path) => {
+                    let idx = key.split('.').take(i).fold(0, |n, s| n + s.len()) + i - 1;
+                    let key_so_far = &key[..idx];
+                    failure::bail!(
+                        "expected table for configuration key `{}`, \
+                         but found {} in {}",
+                        key_so_far,
+                        val.desc(),
+                        path.display()
+                    )
+                }
+            }
+        }
+
+        let table = match *val {
+            CV::Table(ref map, _) => map,
+            CV::Integer(_, ref path)
+            | CV::String(_, ref path)
+            | CV::List(_, ref path)
+            | CV::Boolean(_, ref path) => failure::bail!(
+                "expected table for configuration key `{}`, \
+                 but found {} in {}",
+                key,
+                val.desc(),
+                path.display()
+            ),
+        };
+
+        Ok(table.keys().map(|key| key.clone()).collect())
+    }
+
     // Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env;
