@@ -57,7 +57,7 @@
 use indexmap::IndexMap;
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::Hash;
 use std::rc::Rc;
@@ -409,13 +409,10 @@ pub struct StackGraph<N: Clone, E: Clone> {
     inner: Rc<RefCell<Graph<N, E>>>,
     /// The shared list of all extant references to the same `Graph`.
     /// The largest one is allowed to reset and expend the `Graph` without doing a deep clone.
-    /// There can be more then one clone at the same age, so each one is associated with a unique arbitrary number.
-    /// This all so stores the largest arbitrary number so far used.
-    other_refs: Rc<RefCell<(BTreeSet<(GraphAge, usize)>, usize)>>,
+    /// There can be more then one clone at the same age, so each age is associated with a count.
+    other_refs: Rc<RefCell<BTreeMap<GraphAge, usize>>>,
     /// The size of the `Graph` that this `StackGraph` refers to.
     age: GraphAge,
-    /// The arbitrary number that is unique to this clone.
-    this_ref: usize,
 }
 
 #[test]
@@ -442,17 +439,12 @@ fn demonstrate_stack_graph_can_read_all_clones() {
 
 impl<N: Clone, E: Clone> Clone for StackGraph<N, E> {
     fn clone(&self) -> Self {
-        let count;
-        {
-            let mut other_refs = RefCell::borrow_mut(&self.other_refs);
-            other_refs.1 += 1;
-            count = other_refs.1;
-            other_refs.0.insert((self.age, count));
-        }
+        *RefCell::borrow_mut(&self.other_refs)
+            .entry(self.age)
+            .or_insert(0) += 1;
         StackGraph {
             inner: Rc::clone(&self.inner),
             other_refs: Rc::clone(&self.other_refs),
-            this_ref: count,
             age: self.age,
         }
     }
@@ -460,9 +452,13 @@ impl<N: Clone, E: Clone> Clone for StackGraph<N, E> {
 
 impl<N: Clone, E: Clone> Drop for StackGraph<N, E> {
     fn drop(&mut self) {
-        RefCell::borrow_mut(&self.other_refs)
-            .0
-            .remove(&(self.age, self.this_ref));
+        let mut borrow = RefCell::borrow_mut(&self.other_refs);
+        if let std::collections::btree_map::Entry::Occupied(mut val) = borrow.entry(self.age) {
+            *val.get_mut() -= 1;
+            if val.get() == &0 {
+                val.remove();
+            }
+        }
     }
 }
 
@@ -470,12 +466,11 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     pub fn new() -> StackGraph<N, E> {
         let inner = Graph::new();
         let age = inner.len();
-        let mut other_refs = BTreeSet::new();
-        other_refs.insert((age, 0));
+        let mut other_refs = BTreeMap::new();
+        other_refs.insert(age, 1);
         StackGraph {
             inner: Rc::new(RefCell::new(inner)),
-            other_refs: Rc::new(RefCell::new((other_refs, 0))),
-            this_ref: 0,
+            other_refs: Rc::new(RefCell::new(other_refs)),
             age,
         }
     }
@@ -497,13 +492,17 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
     fn activate(&mut self) -> RefMut<'_, Graph<N, E>> {
         let inner = if {
             let mut borrow = RefCell::borrow_mut(&self.other_refs);
-            borrow.0.remove(&(self.age, self.this_ref));
+            if let std::collections::btree_map::Entry::Occupied(mut val) = borrow.entry(self.age) {
+                *val.get_mut() -= 1;
+                if val.get() == &0 {
+                    val.remove();
+                }
+            }
             borrow
-                .0
-                .iter()
+                .keys()
                 .rev()
                 .next()
-                .map(|(a, _)| a <= &self.age)
+                .map(|a| a <= &self.age)
                 .unwrap_or(true)
         } {
             // we are the biggest clone, so we can add to inner directly.
@@ -515,8 +514,7 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             inner
         } else {
             // a bigger clone still exists so do a deep clone.
-            self.other_refs = Rc::new(RefCell::new((BTreeSet::new(), 0)));
-            self.this_ref = 0;
+            self.other_refs = Rc::new(RefCell::new(BTreeMap::new()));
             let new = Rc::make_mut(&mut self.inner);
             let mut inner = RefCell::borrow_mut(new);
             inner.reset_to(self.age);
@@ -531,9 +529,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.add(node);
             g.len()
         };
-        RefCell::borrow_mut(&self.other_refs)
-            .0
-            .insert((self.age, self.this_ref));
+        *RefCell::borrow_mut(&self.other_refs)
+            .entry(self.age)
+            .or_insert(0) += 1;
     }
 
     /// connect `node`to `child` with out associating any data.
@@ -543,9 +541,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.link(node, child);
             g.len()
         };
-        RefCell::borrow_mut(&self.other_refs)
-            .0
-            .insert((self.age, self.this_ref));
+        *RefCell::borrow_mut(&self.other_refs)
+            .entry(self.age)
+            .or_insert(0) += 1;
     }
 
     /// connect `node`to `child` associating it with `edge`.
@@ -555,9 +553,9 @@ impl<N: Eq + Hash + Clone, E: Clone + PartialEq> StackGraph<N, E> {
             g.add_edge(node, child, edge);
             g.len()
         };
-        RefCell::borrow_mut(&self.other_refs)
-            .0
-            .insert((self.age, self.this_ref));
+        *RefCell::borrow_mut(&self.other_refs)
+            .entry(self.age)
+            .or_insert(0) += 1;
     }
 }
 
