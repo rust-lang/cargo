@@ -54,7 +54,7 @@ email = "..."
 
 # By default `cargo new` will initialize a new Git repository. This key can
 # be set to change the version control system used. Valid values are `git`,
-# `hg` (for Mecurial), `pijul`, `fossil`, or `none` to disable this behavior.
+# `hg` (for Mercurial), `pijul`, `fossil`, or `none` to disable this behavior.
 vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
