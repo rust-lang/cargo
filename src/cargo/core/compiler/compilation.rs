@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target};
+use crate::core::{compiler::Kind, Edition, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -117,6 +117,7 @@ impl<'cfg> Compilation<'cfg> {
         &self,
         pkg: &Package,
         target: &Target,
+        kind: Kind,
         is_primary: bool,
     ) -> CargoResult<ProcessBuilder> {
         let rustc = if is_primary {
@@ -128,6 +129,15 @@ impl<'cfg> Compilation<'cfg> {
         };
 
         let mut p = self.fill_env(rustc, pkg, true)?;
+        // Invoking cargo build from an Xcode project targeting iOS or iOS Simulator used to fail to
+        // build any crate with a custom build script, because the wrong linker was invoked for the
+        // custom build script. This is because Xcode sets SDKROOT for the target platform (the
+        // build script must be built for the host platform instead)
+        if kind == Kind::Host {
+            #[cfg(target_os = "macos")]
+            p.env("SDKROOT", get_sdk_root("macosx")?);
+        }
+
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
@@ -307,4 +317,22 @@ fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec
     }
 
     Ok(None)
+}
+
+#[cfg(target_os = "macos")]
+fn get_sdk_root(sdk_name: &'_ str) -> CargoResult<String> {
+    let res = process("xcrun")
+        .arg("--show-sdk-path")
+        .arg("--sdk")
+        .arg(sdk_name)
+        .exec_with_output();
+
+    match res {
+        Ok(output) => Ok(String::from_utf8(output.stdout).unwrap().trim().to_string()),
+        Err(e) => Err(failure::format_err!(
+            "failed to get {} SDK path: {}",
+            sdk_name,
+            e
+        )),
+    }
 }

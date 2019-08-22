@@ -602,7 +602,7 @@ fn prepare_rustc<'a, 'cfg>(
 
     let mut base = cx
         .compilation
-        .rustc_process(unit.pkg, unit.target, is_primary)?;
+        .rustc_process(unit.pkg, unit.target, unit.kind, is_primary)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
