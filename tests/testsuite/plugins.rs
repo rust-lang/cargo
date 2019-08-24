@@ -67,10 +67,10 @@ fn plugin_to_the_max() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
             extern crate baz;
+            extern crate rustc_driver;
 
-            use rustc_plugin::Registry;
+            use rustc_driver::plugin::Registry;
 
             #[plugin_registrar]
             pub fn foo(_reg: &mut Registry) {
@@ -190,9 +190,9 @@ fn plugin_with_dynamic_native_dependency() {
             "bar/src/lib.rs",
             r#"
             #![feature(plugin_registrar, rustc_private)]
-            extern crate rustc_plugin;
 
-            use rustc_plugin::Registry;
+            extern crate rustc_driver;
+            use rustc_driver::plugin::Registry;
 
             #[cfg_attr(not(target_env = "msvc"), link(name = "builder"))]
             #[cfg_attr(target_env = "msvc", link(name = "builder.dll"))]
