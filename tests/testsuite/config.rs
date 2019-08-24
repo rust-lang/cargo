@@ -48,6 +48,12 @@ fn write_config(config: &str) {
     fs::write(path, config).unwrap();
 }
 
+fn write_config_toml(config: &str) {
+    let path = paths::root().join(".cargo/config.toml");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, config).unwrap();
+}
+
 fn new_config(env: &[(&str, &str)]) -> Config {
     enable_nightly_features(); // -Z advanced-env
     let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
@@ -110,6 +116,57 @@ f1 = 123
     let config = new_config(&[("CARGO_S_F1", "456")]);
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(456) });
+}
+
+#[cargo_test]
+fn config_works_with_extension() {
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    let config = new_config(&[]);
+
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+}
+
+#[cargo_test]
+fn config_ambiguous_filename() {
+    write_config(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 2
+",
+    );
+
+    let config = new_config(&[]);
+
+    // It should use the value from the one without the extension for
+    // backwards compatibility.
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // But it also should have warned.
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    let output = fs::read_to_string(path).unwrap();
+    let expected = "\
+warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+";
+    if !lines_match(expected, &output) {
+        panic!(
+            "Did not find expected:\n{}\nActual error:\n{}\n",
+            expected, output
+        );
+    }
 }
 
 #[cargo_test]

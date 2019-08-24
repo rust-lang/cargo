@@ -662,7 +662,7 @@ impl Config {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
-        walk_tree(path, &home, |path| {
+        self.walk_tree(path, &home, |path| {
             let mut contents = String::new();
             let mut file = File::open(&path)?;
             file.read_to_string(&mut contents)
@@ -687,6 +687,61 @@ impl Config {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
+    }
+
+    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
+    where
+        F: FnMut(&Path) -> CargoResult<()>,
+    {
+        let mut stash: HashSet<PathBuf> = HashSet::new();
+
+        for current in paths::ancestors(pwd) {
+            let possible = current.join(".cargo").join("config");
+            let possible_with_extension = current.join(".cargo").join("config.toml");
+
+            // If both 'config' and 'config.toml' exist, we should use 'config'
+            // for backward compatibility, but we should warn the user.
+            if fs::metadata(&possible).is_ok() {
+                if fs::metadata(&possible_with_extension).is_ok() {
+                    self.shell().warn(format!(
+                        "Both `{}` and `{}` exist. Using `{}`",
+                        possible.display(),
+                        possible_with_extension.display(),
+                        possible.display()
+                    ))?;
+                }
+
+                walk(&possible)?;
+                stash.insert(possible);
+            } else if fs::metadata(&possible_with_extension).is_ok() {
+                walk(&possible_with_extension)?;
+                stash.insert(possible);
+            }
+        }
+
+        // Once we're done, also be sure to walk the home directory even if it's not
+        // in our history to be sure we pick up that standard location for
+        // information.
+        let config = home.join("config");
+        let config_with_extension = home.join("config.toml");
+        if !stash.contains(&config) && fs::metadata(&config).is_ok() {
+            if fs::metadata(&config_with_extension).is_ok() {
+                self.shell().warn(format!(
+                    "Both `{}` and `{}` exist. Using `{}`",
+                    config.display(),
+                    config_with_extension.display(),
+                    config.display()
+                ))?;
+            }
+
+            walk(&config)?;
+        } else if !stash.contains(&config_with_extension)
+            && fs::metadata(&config_with_extension).is_ok()
+        {
+            walk(&config_with_extension)?;
+        }
+
+        Ok(())
     }
 
     /// Gets the index for a registry.
@@ -1671,31 +1726,6 @@ impl fmt::Display for Definition {
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
     ::home::cargo_home_with_cwd(cwd).ok()
-}
-
-fn walk_tree<F>(pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
-where
-    F: FnMut(&Path) -> CargoResult<()>,
-{
-    let mut stash: HashSet<PathBuf> = HashSet::new();
-
-    for current in paths::ancestors(pwd) {
-        let possible = current.join(".cargo").join("config");
-        if fs::metadata(&possible).is_ok() {
-            walk(&possible)?;
-            stash.insert(possible);
-        }
-    }
-
-    // Once we're done, also be sure to walk the home directory even if it's not
-    // in our history to be sure we pick up that standard location for
-    // information.
-    let config = home.join("config");
-    if !stash.contains(&config) && fs::metadata(&config).is_ok() {
-        walk(&config)?;
-    }
-
-    Ok(())
 }
 
 pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
