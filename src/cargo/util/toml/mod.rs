@@ -1517,6 +1517,8 @@ struct TomlTarget {
     proc_macro: Option<bool>,
     #[serde(rename = "proc_macro")]
     proc_macro2: Option<bool>,
+    #[serde(rename = "wasm-sandbox")]
+    wasm_sandbox: Option<bool>,
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,

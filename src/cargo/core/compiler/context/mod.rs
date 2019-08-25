@@ -298,6 +298,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             "debug"
         };
         let host_layout = Layout::new(self.bcx.ws, None, dest)?;
+        let host_sandbox_layout = Layout::new(self.bcx.ws, Some(super::build_context::HOST_SANDBOX_TARGET), dest)?;
         let target_layout = match self.bcx.build_config.requested_target.as_ref() {
             Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
             None => None,
@@ -309,6 +310,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let files = CompilationFiles::new(
             units,
             host_layout,
+            host_sandbox_layout,
             target_layout,
             export_dir,
             self.bcx.ws,
@@ -325,6 +327,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         self.files_mut()
             .host
+            .prepare()
+            .chain_err(|| internal("couldn't prepare build directories"))?;
+        self.files_mut()
+            .host_sandbox
             .prepare()
             .chain_err(|| internal("couldn't prepare build directories"))?;
         if let Some(ref mut target) = self.files.as_mut().unwrap().target {

@@ -140,6 +140,9 @@ impl<'a> UnitInterner<'a> {
         kind: Kind,
         mode: CompileMode,
     ) -> Unit<'a> {
+        // building custom_build implies Host
+        assert!(!(target.is_custom_build() && mode == CompileMode::Build) || kind == Kind::Host,
+            "target {:?} kind {:?} mode {:?}", target, kind, mode);
         let inner = self.intern_inner(&UnitInner {
             pkg,
             target,

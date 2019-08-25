@@ -640,10 +640,10 @@ fn generate_targets<'a>(
             _ => target_mode,
         };
         // Plugins or proc macros should be built for the host.
-        let kind = if target.for_host() {
-            Kind::Host
-        } else {
-            default_arch_kind
+        let kind = match (target.for_host(), target.wasm_sandbox()) {
+            (true, false) => Kind::Host,
+            (true, true) => Kind::HostSandbox,
+            (false, _) => default_arch_kind,
         };
         let profile = profiles.get_profile(
             pkg.package_id(),

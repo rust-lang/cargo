@@ -110,7 +110,7 @@ impl TargetInfo {
         let mut pipelining_test = process.clone();
         pipelining_test.args(&["--error-format=json", "--json=artifacts"]);
         let supports_pipelining = match kind {
-            Kind::Host => Some(rustc.cached_output(&pipelining_test).is_ok()),
+            Kind::Host | Kind::HostSandbox => Some(rustc.cached_output(&pipelining_test).is_ok()),
             Kind::Target => None,
         };
 
@@ -118,8 +118,14 @@ impl TargetInfo {
             .as_ref()
             .map(|s| s.as_str())
             .unwrap_or(&rustc.host);
-        if kind == Kind::Target {
-            process.arg("--target").arg(target_triple);
+        match kind {
+            Kind::Host => {}
+            Kind::HostSandbox => {
+                process.arg("--target").arg(super::HOST_SANDBOX_TARGET);
+            }
+            Kind::Target => {
+                process.arg("--target").arg(target_triple);
+            }
         }
 
         let crate_type_process = process.clone();
@@ -159,6 +165,13 @@ impl TargetInfo {
                 } else {
                     rustlib.push("lib");
                 }
+                rustlib
+            }
+            Kind::HostSandbox => {
+                rustlib.push("lib");
+                rustlib.push("rustlib");
+                rustlib.push(super::HOST_SANDBOX_TARGET);
+                rustlib.push("lib");
                 rustlib
             }
             Kind::Target => {

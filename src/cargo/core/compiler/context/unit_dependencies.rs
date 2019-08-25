@@ -187,7 +187,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
         {
             let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Target, mode);
             ret.push((unit, dep_unit_for));
-            let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Host, mode);
+            let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
             ret.push((unit, dep_unit_for));
         } else {
             let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
@@ -199,6 +199,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
     // all we need. If this isn't a build script, then it depends on the
     // build script if there is one.
     if unit.target.is_custom_build() {
+        assert_eq!(unit.kind, Kind::Host, "unit.target {:?}", unit.target);
         return Ok(ret);
     }
     ret.extend(dep_build_script(unit, bcx));

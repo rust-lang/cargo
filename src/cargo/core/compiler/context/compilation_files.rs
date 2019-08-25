@@ -53,6 +53,8 @@ impl fmt::Display for Metadata {
 pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
+    /// The target directory layout for the host sandbox architecture
+    pub(super) host_sandbox: Layout,
     /// The target directory layout for the target (if different from then host).
     pub(super) target: Option<Layout>,
     /// Additional directory to include a copy of the outputs.
@@ -93,6 +95,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
         roots: &[Unit<'a>],
         host: Layout,
+        host_sandbox: Layout,
         target: Option<Layout>,
         export_dir: Option<PathBuf>,
         ws: &'a Workspace<'cfg>,
@@ -110,6 +113,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         CompilationFiles {
             ws,
             host,
+            host_sandbox,
             target,
             export_dir,
             roots: roots.to_vec(),
@@ -122,6 +126,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub fn layout(&self, kind: Kind) -> &Layout {
         match kind {
             Kind::Host => &self.host,
+            Kind::HostSandbox => &self.host_sandbox,
             Kind::Target => self.target.as_ref().unwrap_or(&self.host),
         }
     }
@@ -345,10 +350,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let out_dir = self.out_dir(unit);
         let link_stem = self.link_stem(unit);
-        let info = if unit.kind == Kind::Host {
-            &bcx.host_info
-        } else {
-            &bcx.target_info
+        let info = match unit.kind {
+            Kind::Host => &bcx.host_info,
+            Kind::HostSandbox => &bcx.host_sandbox_info,
+            Kind::Target => &bcx.target_info,
         };
         let file_stem = self.file_stem(unit);
 

@@ -241,6 +241,7 @@ pub struct Target {
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
     proc_macro: bool,
+    wasm_sandbox: bool,
     edition: Edition,
 }
 
@@ -296,6 +297,7 @@ struct SerializedTarget<'a> {
     /// Corresponds to `--crate-type` compiler attribute.
     /// See https://doc.rust-lang.org/reference/linkage.html
     crate_types: Vec<&'a str>,
+    wasm_sandbox: bool,
     name: &'a str,
     src_path: Option<&'a PathBuf>,
     edition: &'a str,
@@ -315,6 +317,7 @@ impl ser::Serialize for Target {
         SerializedTarget {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
+            wasm_sandbox: self.wasm_sandbox,
             name: &self.name,
             src_path,
             edition: &self.edition.to_string(),
@@ -384,6 +387,7 @@ compact_debug! {
                 harness
                 for_host
                 proc_macro
+                wasm_sandbox
                 edition
             )]
         }
@@ -614,6 +618,7 @@ impl Target {
             harness: true,
             for_host: false,
             proc_macro: false,
+            wasm_sandbox: false,
             edition,
             tested: true,
             benched: true,
@@ -768,6 +773,9 @@ impl Target {
     pub fn proc_macro(&self) -> bool {
         self.proc_macro
     }
+    pub fn wasm_sandbox(&self) -> bool {
+        self.wasm_sandbox
+    }
     pub fn edition(&self) -> Edition {
         self.edition
     }
@@ -906,6 +914,10 @@ impl Target {
     }
     pub fn set_proc_macro(&mut self, proc_macro: bool) -> &mut Target {
         self.proc_macro = proc_macro;
+        self
+    }
+    pub fn set_wasm_sandbox(&mut self, wasm_sandbox: bool) -> &mut Target {
+        self.wasm_sandbox = wasm_sandbox;
         self
     }
     pub fn set_edition(&mut self, edition: Edition) -> &mut Target {

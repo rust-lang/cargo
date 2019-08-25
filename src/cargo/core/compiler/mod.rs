@@ -51,7 +51,11 @@ use crate::util::{internal, join_paths, profile};
 /// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum Kind {
+    /// Actual native host architecture
     Host,
+    /// For host, but in a wasm sandbox
+    HostSandbox,
+    /// Target architecture
     Target,
 }
 
@@ -947,16 +951,27 @@ fn build_base_args<'a, 'cfg>(
         }
     }
 
-    if unit.kind == Kind::Target {
-        opt(
-            cmd,
-            "--target",
-            "",
-            bcx.build_config
-                .requested_target
-                .as_ref()
-                .map(|s| s.as_ref()),
-        );
+    match unit.kind {
+        Kind::Host => {}
+        Kind::HostSandbox => {
+            opt(
+                cmd,
+                "--target",
+                "",
+                Some(cx.bcx.host_sandbox_triple().as_ref()),
+            );
+        }
+        Kind::Target => {
+            opt(
+                cmd,
+                "--target",
+                "",
+                bcx.build_config
+                    .requested_target
+                    .as_ref()
+                    .map(|s| s.as_ref()),
+            );
+        }
     }
 
     opt(cmd, "-C", "ar=", bcx.ar(unit.kind).map(|s| s.as_ref()));
@@ -1109,7 +1124,16 @@ impl Kind {
         // that needs to be on the host we lift ourselves up to `Host`.
         match self {
             Kind::Host => Kind::Host,
-            Kind::Target if target.for_host() => Kind::Host,
+            Kind::HostSandbox if target.is_custom_build() => Kind::Host,
+            Kind::HostSandbox => Kind::HostSandbox,
+            Kind::Target if target.for_host() => {
+                if target.wasm_sandbox() {
+                    assert!(!target.is_custom_build(), "target {:?}", target);
+                    Kind::HostSandbox
+                } else {
+                    Kind::Host
+                }
+            }
             Kind::Target => Kind::Target,
         }
     }

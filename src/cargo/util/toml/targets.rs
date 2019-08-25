@@ -769,7 +769,8 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
-        });
+        })
+        .set_wasm_sandbox(toml.wasm_sandbox.unwrap_or_else(|| t2.wasm_sandbox()));
     if let Some(edition) = toml.edition.clone() {
         features
             .require(Feature::edition())

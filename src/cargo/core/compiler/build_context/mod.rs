@@ -15,6 +15,8 @@ use crate::util::{profile, Cfg, Config, Rustc};
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
 
+pub const HOST_SANDBOX_TARGET: &str = "wasm32-unknown-unknown";
+
 /// The build context, containing all information about a build task.
 ///
 /// It is intended that this is mostly static information. Stuff that mutates
@@ -38,10 +40,13 @@ pub struct BuildContext<'a, 'cfg> {
     pub rustc: Rustc,
     /// Build information for the host arch.
     pub host_config: TargetConfig,
+    /// Build information for the host sandbox arch (wasm).
+    pub host_sandbox_config: TargetConfig,
     /// Build information for the target.
     pub target_config: TargetConfig,
     pub target_info: TargetInfo,
     pub host_info: TargetInfo,
+    pub host_sandbox_info: TargetInfo,
     pub units: &'a UnitInterner<'a>,
 }
 
@@ -59,18 +64,21 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         let rustc = config.load_global_rustc(Some(ws))?;
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
+        let host_sandbox_config = TargetConfig::new(config, HOST_SANDBOX_TARGET)?;
         let target_config = match build_config.requested_target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
             None => host_config.clone(),
         };
-        let (host_info, target_info) = {
+        let (host_info, host_sandbox_info, target_info) = {
             let _p = profile::start("BuildContext::probe_target_info");
             debug!("probe_target_info");
             let host_info =
                 TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Host)?;
+            let host_sandbox_info =
+                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::HostSandbox)?;
             let target_info =
                 TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
-            (host_info, target_info)
+            (host_info, host_sandbox_info, target_info)
         };
 
         Ok(BuildContext {
@@ -82,7 +90,9 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             target_config,
             target_info,
             host_config,
+            host_sandbox_config,
             host_info,
+            host_sandbox_info,
             build_config,
             profiles,
             extra_compiler_args,
@@ -111,6 +121,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         };
         let (name, info) = match kind {
             Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::HostSandbox => (self.host_sandbox_triple(), &self.host_sandbox_info),
             Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
@@ -130,6 +141,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn cfg(&self, kind: Kind) -> &[Cfg] {
         let info = match kind {
             Kind::Host => &self.host_info,
+            Kind::HostSandbox => &self.host_sandbox_info,
             Kind::Target => &self.target_info,
         };
         info.cfg()
@@ -145,6 +157,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         &self.rustc.host
     }
 
+    pub fn host_sandbox_triple(&self) -> &str {
+        HOST_SANDBOX_TARGET
+    }
+
     pub fn target_triple(&self) -> &str {
         self.build_config
             .requested_target
@@ -157,6 +173,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     fn target_config(&self, kind: Kind) -> &TargetConfig {
         match kind {
             Kind::Host => &self.host_config,
+            Kind::HostSandbox => &self.host_sandbox_config,
             Kind::Target => &self.target_config,
         }
     }
@@ -181,6 +198,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     fn info(&self, kind: Kind) -> &TargetInfo {
         match kind {
             Kind::Host => &self.host_info,
+            Kind::HostSandbox => &self.host_sandbox_info,
             Kind::Target => &self.target_info,
         }
     }
@@ -196,6 +214,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn script_override(&self, lib_name: &str, kind: Kind) -> Option<&BuildOutput> {
         match kind {
             Kind::Host => self.host_config.overrides.get(lib_name),
+            Kind::HostSandbox => self.host_sandbox_config.overrides.get(lib_name),
             Kind::Target => self.target_config.overrides.get(lib_name),
         }
     }
