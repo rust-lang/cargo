@@ -76,17 +76,12 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
-    let libtest_unit_deps = calc_deps_of_libtest(&mut state, std_roots, roots)?;
 
     deps_of_roots(roots, &mut state)?;
     super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
     // Hopefully there aren't any links conflicts with the standard library?
 
-    if let Some(mut std_unit_deps) = std_unit_deps {
-        if let Some(libtest_unit_deps) = libtest_unit_deps {
-            attach_std_test(&mut state, libtest_unit_deps, &std_unit_deps);
-        }
-        fixup_proc_macro(&mut std_unit_deps);
+    if let Some(std_unit_deps) = std_unit_deps {
         attach_std_deps(&mut state, std_roots, std_unit_deps);
     }
 
@@ -120,118 +115,6 @@ fn calc_deps_of_std<'a, 'cfg>(
         &mut state.unit_dependencies,
         HashMap::new(),
     )))
-}
-
-/// Compute all the dependencies for libtest.
-/// Returns None if libtest is not needed.
-fn calc_deps_of_libtest<'a, 'cfg>(
-    mut state: &mut State<'a, 'cfg>,
-    std_roots: &[Unit<'a>],
-    roots: &[Unit<'a>],
-) -> CargoResult<Option<UnitGraph<'a>>> {
-    // Conditionally include libtest.
-    if std_roots.is_empty()
-        || !roots
-            .iter()
-            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-    {
-        return Ok(None);
-    }
-    state.is_std = true;
-    let test_id = state.resolve().query("test")?;
-    let test_pkg = state.get(test_id)?.expect("test doesn't need downloading");
-    let test_target = test_pkg
-        .targets()
-        .iter()
-        .find(|t| t.is_lib())
-        .expect("test has a lib");
-    let test_unit = new_unit(
-        state,
-        test_pkg,
-        test_target,
-        UnitFor::new_normal(),
-        Kind::Target,
-        CompileMode::Build,
-    );
-    let res = calc_deps_of_std(state, &[test_unit])?;
-    state.is_std = false;
-    Ok(res)
-}
-
-/// `proc_macro` has an implicit dependency on `std`, add it.
-fn fixup_proc_macro<'a>(std_unit_deps: &mut UnitGraph<'a>) {
-    // Synthesize a dependency from proc_macro -> std.
-    //
-    // This is a gross hack. This wouldn't be necessary with `--sysroot`. See
-    // also libtest below.
-    if let Some(std) = std_unit_deps
-        .keys()
-        .find(|unit| unit.pkg.name().as_str() == "std" && unit.target.is_lib())
-        .cloned()
-    {
-        for (unit, deps) in std_unit_deps.iter_mut() {
-            if unit.pkg.name().as_str() == "proc_macro" {
-                deps.push(UnitDep {
-                    unit: std,
-                    unit_for: UnitFor::new_normal(),
-                    extern_crate_name: InternedString::new("std"),
-                    public: true,
-                });
-            }
-        }
-    }
-}
-
-/// Add libtest as a dependency of any test unit that needs it.
-fn attach_std_test<'a, 'cfg>(
-    state: &mut State<'a, 'cfg>,
-    mut libtest_unit_deps: UnitGraph<'a>,
-    std_unit_deps: &UnitGraph<'a>,
-) {
-    // Attach libtest to any test unit.
-    let (test_unit, test_deps) = libtest_unit_deps
-        .iter_mut()
-        .find(|(k, _v)| k.pkg.name().as_str() == "test" && k.target.is_lib())
-        .expect("test in deps");
-    for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if unit.mode.is_rustc_test() && unit.target.harness() {
-            // `public` here will need to be driven by toml declaration.
-            deps.push(UnitDep {
-                unit: *test_unit,
-                unit_for: UnitFor::new_normal(),
-                extern_crate_name: test_unit.pkg.name(),
-                public: false,
-            });
-        }
-    }
-
-    // Synthesize a dependency from libtest -> libc.
-    //
-    // This is a gross hack. In theory, libtest should explicitly list this,
-    // but presumably it would cause libc to be built again when it just uses
-    // the version from sysroot. This won't be necessary if Cargo uses
-    // `--sysroot`.
-    let libc_unit = std_unit_deps
-        .keys()
-        .find(|unit| unit.pkg.name().as_str() == "libc" && unit.target.is_lib())
-        .expect("libc in deps");
-    let libc_dep = UnitDep {
-        unit: *libc_unit,
-        unit_for: UnitFor::new_normal(),
-        extern_crate_name: InternedString::new(&libc_unit.target.crate_name()),
-        public: false,
-    };
-    test_deps.push(libc_dep);
-
-    // And also include the dependencies of libtest itself.
-    for (unit, deps) in libtest_unit_deps.into_iter() {
-        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-            panic!(
-                "libtest unit collision with existing unit: {:?}",
-                other_unit
-            );
-        }
-    }
 }
 
 /// Add the standard library units to the `unit_dependencies`.
@@ -647,29 +530,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     }
 }
 
-fn new_unit<'a>(
-    state: &State<'a, '_>,
-    pkg: &'a Package,
-    target: &'a Target,
-    unit_for: UnitFor,
-    kind: Kind,
-    mode: CompileMode,
-) -> Unit<'a> {
-    let profile = state.bcx.profiles.get_profile(
-        pkg.package_id(),
-        state.bcx.ws.is_member(pkg),
-        unit_for,
-        mode,
-        state.bcx.build_config.release,
-    );
-
-    let features = state.resolve().features_sorted(pkg.package_id());
-    state
-        .bcx
-        .units
-        .intern(pkg, target, profile, kind, mode, features)
-}
-
+/// Create a new Unit for a dependency from `parent` to `pkg` and `target`.
 fn new_unit_dep<'a>(
     state: &State<'a, '_>,
     parent: &Unit<'a>,

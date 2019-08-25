@@ -19,6 +19,7 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
         crates.insert("core");
         crates.insert("panic_unwind");
         crates.insert("compiler_builtins");
+        crates.insert("test");
     } else if crates.contains("core") {
         crates.insert("compiler_builtins");
     }
@@ -31,18 +32,22 @@ pub fn resolve_std<'cfg>(
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve)> {
     let src_path = detect_sysroot_src_path(ws)?;
-    let mut patch = HashMap::new();
+    let to_patch = [
+        "rustc-std-workspace-core",
+        "rustc-std-workspace-alloc",
+        "rustc-std-workspace-std",
+    ];
+    let patches = to_patch
+        .iter()
+        .map(|name| {
+            let source_path = SourceId::for_path(&src_path.join("src").join("tools").join(name))?;
+            let dep = Dependency::parse_no_deprecated(name, None, source_path)?;
+            Ok(dep)
+        })
+        .collect::<CargoResult<Vec<_>>>()?;
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
-    // rustc-std-workspace-core = { path = 'src/tools/rustc-std-workspace-core' }
-    let source_path_core =
-        SourceId::for_path(&src_path.join("src/tools/rustc-std-workspace-core"))?;
-    let core = Dependency::parse_no_deprecated("rustc-std-workspace-core", None, source_path_core)?;
-    // rustc-std-workspace-alloc = { path = 'src/tools/rustc-std-workspace-alloc' }
-    let source_path_alloc =
-        SourceId::for_path(&src_path.join("src/tools/rustc-std-workspace-alloc"))?;
-    let alloc =
-        Dependency::parse_no_deprecated("rustc-std-workspace-alloc", None, source_path_alloc)?;
-    patch.insert(crates_io_url, vec![core, alloc]);
+    let mut patch = HashMap::new();
+    patch.insert(crates_io_url, patches);
     let members = vec![
         String::from("src/libstd"),
         String::from("src/libcore"),
@@ -67,21 +72,18 @@ pub fn resolve_std<'cfg>(
     let config = ws.config();
     // This is a delicate hack. In order for features to resolve correctly,
     // the resolver needs to run a specific "current" member of the workspace.
-    // Thus, in order to set the features for `std`, we need to set `std` to
-    // be the "current" member. Since none of the other crates need to alter
-    // their features, this should be fine, for now. Perhaps in the future
-    // features will be decoupled from the resolver and it will be easier to
-    // control feature selection.
-    let current_manifest = src_path.join("src/libstd/Cargo.toml");
+    // Thus, in order to set the features for `std`, we need to set `libtest`
+    // to be the "current" member. `libtest` is the root, and all other
+    // standard library crates are dependencies from there. Since none of the
+    // other crates need to alter their features, this should be fine, for
+    // now. Perhaps in the future features will be decoupled from the resolver
+    // and it will be easier to control feature selection.
+    let current_manifest = src_path.join("src/libtest/Cargo.toml");
     // TODO: Consider setting require_option_deps false?
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
-    // `test` is not in the default set because it is optional, but it needs
-    // to be part of the resolve in case we do need it.
-    let mut spec_pkgs = Vec::from(crates);
-    spec_pkgs.push("test".to_string());
-    let spec = Packages::Packages(spec_pkgs);
+    let spec = Packages::Packages(Vec::from(crates));
     let specs = spec.to_package_id_specs(&std_ws)?;
     let features = vec!["panic-unwind".to_string(), "backtrace".to_string()];
     // dev_deps setting shouldn't really matter here.
