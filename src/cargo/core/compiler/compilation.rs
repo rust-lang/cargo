@@ -73,7 +73,7 @@ pub struct Compilation<'cfg> {
     primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
-    supports_rustdoc_crate_type: bool
+    supports_rustdoc_crate_type: bool,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -110,7 +110,7 @@ impl<'cfg> Compilation<'cfg> {
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: target_runner(bcx)?,
-            supports_rustdoc_crate_type: bcx.target_info.supports_rustdoc_crate_type
+            supports_rustdoc_crate_type: bcx.target_info.supports_rustdoc_crate_type,
         })
     }
 
