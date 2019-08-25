@@ -73,6 +73,7 @@ pub struct Compilation<'cfg> {
     primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
+    supports_rustdoc_crate_type: bool
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -109,6 +110,7 @@ impl<'cfg> Compilation<'cfg> {
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: target_runner(bcx)?,
+            supports_rustdoc_crate_type: bcx.target_info.supports_rustdoc_crate_type
         })
     }
 
@@ -140,8 +142,11 @@ impl<'cfg> Compilation<'cfg> {
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
-        for crate_type in target.rustc_crate_types() {
-            p.arg("--crate-type").arg(crate_type);
+
+        if self.supports_rustdoc_crate_type {
+            for crate_type in target.rustc_crate_types() {
+                p.arg("--crate-type").arg(crate_type);
+            }
         }
 
         Ok(p)
