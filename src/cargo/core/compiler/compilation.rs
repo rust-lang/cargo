@@ -2,12 +2,13 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use semver::Version;
 
 use super::BuildContext;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
-use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
+use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder, rustc::Rustc};
 
 pub struct Doctest {
     /// The package being doc-tested.
@@ -73,7 +74,7 @@ pub struct Compilation<'cfg> {
     primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
-    supports_rustdoc_crate_type: bool,
+    rustc: Rc<Rustc>
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -110,7 +111,7 @@ impl<'cfg> Compilation<'cfg> {
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: target_runner(bcx)?,
-            supports_rustdoc_crate_type: bcx.target_info.supports_rustdoc_crate_type,
+            rustc: bcx.rustc.clone()
         })
     }
 
@@ -136,6 +137,17 @@ impl<'cfg> Compilation<'cfg> {
         Ok(p)
     }
 
+    fn supports_rustdoc_crate_type(&self) -> CargoResult<bool> {
+        // NOTE: Unconditionally return 'true' once support for
+        // rustdoc '--crate-type' rides to stable
+        let mut crate_type_test = process(self.config.rustdoc()?);
+        // If '--crate-type' is not supported by rustcoc, this command
+        // will exit with an error. Otherwise, it will print a help message,
+        // and exit successfully
+        crate_type_test.args(&["--crate-type", "proc-macro", "--help"]);
+        Ok(self.rustc.cached_output(&crate_type_test).is_ok())
+    }
+
     /// See `process`.
     pub fn rustdoc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
         let mut p = self.fill_env(process(&*self.config.rustdoc()?), pkg, false)?;
@@ -143,7 +155,7 @@ impl<'cfg> Compilation<'cfg> {
             p.arg(format!("--edition={}", target.edition()));
         }
 
-        if self.supports_rustdoc_crate_type {
+        if self.supports_rustdoc_crate_type()? {
             for crate_type in target.rustc_crate_types() {
                 p.arg("--crate-type").arg(crate_type);
             }
