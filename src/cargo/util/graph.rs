@@ -41,18 +41,35 @@
 //!         Ok(finalize(dependency_graph_so_far))
 //!     }
 //! }
+//!
+//! fn activate(&mut dependency_graph: _, &mut unresolved_dependencies: _, candidate:_) -> Result<(), Problem> {
+//!     // check that we can use candidate given the other selected packages
+//!     if semver conflict { return Err(Problem::Semver); };
+//!     if links conflict { return Err(Problem::Links); };
+//!     ...
+//!     // update other state
+//!     if used a [replace] section { update that lookup table };
+//!     if used a [patch] section { update that lookup table };
+//!     update activated features
+//!     ...
+//!     // add candidate to dependency_graph
+//!     dependency_graph.add_edge(candidate.parent, candidate.id, candidate.dependency);
+//!     // add candidate's dependencies to the list to be resolved
+//!     unresolved_dependencies.extend(candidate.dependencies);
+//!     Ok(())
+//! }
 //! ```
 //!
-//! The real resolver is not recursive to avoid blowing the stack, and has lots of other state to
-//! maintain. The most expensive (non recursive) call in this algorithm is the
-//! `dependency_graph_so_far.clone();`. To make this more annoying the first thing we try will
-//! probably work, and any work we do to prepare for the next iteration is wasted. If we had a
-//! `undo_activate` we could be much more efficient, completely remove the `.clone()` and just
-//! `undo_activate` if things tern out to not work. Unfortunately, making sure `undo_activate`
-//! handles all the corner cases correctly is not practical for the resolver. However, this is
-//! possible for a graph like thing, a `clone` means record the size of the graph. a `&mut self`
-//! method means undo everything newer and do the mutation, a `&self` method means only look at the
-//! older part. This module provides a `StackGraph` type to encapsulate this pattern.
+//! The real resolver is not recursive to avoid blowing the stack. The most expensive
+//! (non recursive) call in this algorithm is the `dependency_graph_so_far.clone();`.
+//! To make this more annoying the first thing we try will probably work, and any work we do to
+//! prepare for the next iteration is wasted. If we had a  `undo_activate` we could be much more efficient,
+//! completely remove the `.clone()` and just  `undo_activate` if things tern out to not work.
+//! Unfortunately, making sure `undo_activate`  handles all the corner cases correctly is not
+//! practical for the resolver. However, this is  possible for a graph like thing, a `clone` means
+//! record the size of the graph. a `&mut self`  method means undo everything newer and do the
+//! mutation, a `&self` method means only look at the  older part. This module provides a
+//! `StackGraph` type to encapsulate this pattern.
 
 use indexmap::IndexMap;
 use std::borrow::Borrow;
@@ -64,6 +81,10 @@ use std::rc::Rc;
 
 type EdgeIndex = usize;
 
+/// This stores one Edge or Link element. If the two Nodes have data to connect them then we say it
+/// is an Edge and the `value` is `Some(E)`, if the two Nodes did not have data then we say it is a
+/// Link and the `value` is `None`. If there are other `EdgeLink`s associated with the same two Nodes,
+/// then we make a index based doubly linked list using the `next` and `previous` fields.
 #[derive(Clone, Debug)]
 struct EdgeLink<E: Clone> {
     value: Option<E>,
@@ -79,11 +100,13 @@ struct EdgeLink<E: Clone> {
 /// that efficiently undoes the most reason modifications.
 #[derive(Clone)]
 pub struct Graph<N: Clone, E: Clone> {
-    /// an index based linked list of the edge data for links. This maintains insertion order.
+    /// An index based linked list of the edge data. This maintains insertion order.
+    /// If the connection has data associated with it then that Edge is stored here.
+    /// If the connection has no data associated with it then that Link is represented with a dummy here.
     edges: Vec<EdgeLink<E>>,
-    /// a hashmap that stores the set of nodes. This is an `IndexMap` so it maintains insertion order.
-    /// For each node it stores all the other nodes that it links to.
-    /// For each link it stores the first index into `edges`.
+    /// A map from a "from" node to (a map of "to" node to the starting index in the `edges`).
+    /// The inner map may be empty to represent a Node that was `add` but not connected to anything.
+    /// The maps are `IndexMap`s so they maintains insertion order.
     nodes: indexmap::IndexMap<N, indexmap::IndexMap<N, EdgeIndex>>,
 }
 
@@ -402,7 +425,7 @@ impl<N: Eq + Hash + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 ///  - the clone has no overhead to read the `Graph` as it was
 ///  - no overhead over using the `Graph` directly when modifying the biggest clone
 /// Is this too good to be true?
-///  - If a modification (`&mut` method) is done to a smaller older clone then a full `O(N)`
+///  - If a modification (`&mut` method) is done to a clone that is not the largest then a full `O(N)`
 ///    deep clone will happen internally.
 pub struct StackGraph<N: Clone, E: Clone> {
     /// The `Graph` shared by all clones, this `StackGraph` refers to only the prefix of size `age`
