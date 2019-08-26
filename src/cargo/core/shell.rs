@@ -210,14 +210,14 @@ impl Shell {
         if self.needs_clear {
             self.err_erase_line();
         }
-        self.err.print(&"error:", Some(&message), Red, false)
+        self.err.print(&"error", Some(&message), Red, false)
     }
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning:", Some(&message), Yellow, false),
+            _ => self.print(&"warning", Some(&message), Yellow, false),
         }
     }
 
@@ -318,6 +318,8 @@ impl ShellOut {
                     write!(stream, "{:>12}", status)?;
                 } else {
                     write!(stream, "{}", status)?;
+                    stream.set_color(ColorSpec::new().set_bold(true))?;
+                    write!(stream, ":")?;
                 }
                 stream.reset()?;
                 match message {
@@ -329,7 +331,7 @@ impl ShellOut {
                 if justified {
                     write!(w, "{:>12}", status)?;
                 } else {
-                    write!(w, "{}", status)?;
+                    write!(w, "{}:", status)?;
                 }
                 match message {
                     Some(message) => writeln!(w, " {}", message)?,
