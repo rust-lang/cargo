@@ -1134,3 +1134,48 @@ package `[..]`
         )
         .run();
 }
+
+#[cargo_test]
+fn multipatch() {
+    Package::new("a", "1.0.0").publish();
+    Package::new("a", "2.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                a1 = { version = "1", package = "a" }
+                a2 = { version = "2", package = "a" }
+
+                [patch.crates-io]
+                b1 = { path = "a1", package = "a" }
+                b2 = { path = "a2", package = "a" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() { a1::f1(); a2::f2(); }")
+        .file(
+            "a1/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "1.0.0"
+            "#,
+        )
+        .file("a1/src/lib.rs", "pub fn f1() {}")
+        .file(
+            "a2/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "2.0.0"
+            "#,
+        )
+        .file("a2/src/lib.rs", "pub fn f2() {}")
+        .build();
+
+    p.cargo("build").run();
+}
