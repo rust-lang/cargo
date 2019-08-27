@@ -1179,3 +1179,162 @@ fn multipatch() {
 
     p.cargo("build").run();
 }
+
+#[cargo_test]
+fn patch_same_version() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    crate::support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "0.1"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: cannot have two `[patch]` entries which both resolve to `bar v0.1.0`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn two_semver_compatible() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    crate::support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "0.1"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { bar::foo() }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.2"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    // assert the build succeeds and doesn't panic anywhere, and then afterwards
+    // assert that the build succeeds again without updating anything or
+    // building anything else.
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn multipatch_select_big() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    crate::support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "*"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { bar::foo() }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.2.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    // assert the build succeeds, which is only possible if 0.2.0 is selected
+    // since 0.1.0 is missing the function we need. Afterwards assert that the
+    // build succeeds again without updating anything or building anything else.
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
