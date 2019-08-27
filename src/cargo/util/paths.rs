@@ -269,6 +269,15 @@ impl<'a> Iterator for PathAncestors<'a> {
     }
 }
 
+pub fn create_dir_all(p: impl AsRef<Path>) -> CargoResult<()> {
+    _create_dir_all(p.as_ref())
+}
+
+fn _create_dir_all(p: &Path) -> CargoResult<()> {
+    fs::create_dir_all(p).chain_err(|| format!("failed to create directory `{}`", p.display()))?;
+    Ok(())
+}
+
 pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
     _remove_dir_all(p.as_ref())
 }

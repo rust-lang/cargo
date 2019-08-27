@@ -75,7 +75,7 @@ fn sync(
         .map(|p| &**p)
         .unwrap_or(opts.destination);
 
-    fs::create_dir_all(&canonical_destination)?;
+    paths::create_dir_all(&canonical_destination)?;
     let mut to_remove = HashSet::new();
     if !opts.no_delete {
         for entry in canonical_destination.read_dir()? {
@@ -322,7 +322,7 @@ fn cp_sources(
             .iter()
             .fold(dst.to_owned(), |acc, component| acc.join(&component));
 
-        fs::create_dir_all(dst.parent().unwrap())?;
+        paths::create_dir_all(dst.parent().unwrap())?;
 
         fs::copy(&p, &dst)
             .chain_err(|| format!("failed to copy `{}` to `{}`", p.display(), dst.display()))?;
