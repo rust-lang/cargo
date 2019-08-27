@@ -10,7 +10,7 @@ use log::info;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout};
 use crate::core::compiler::{CompileMode, Unit};
-use crate::core::{TargetKind, Workspace};
+use crate::core::{LibKind, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a build.
@@ -410,8 +410,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             }
             TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
                 for kind in kinds {
+                    let crate_type =
+                        if kind == &LibKind::ProcMacro && unit.kind == Kind::HostSandbox {
+                            // wasm32-unknown-unknown doesn't support proc-macro, so just use cdylib
+                            "cdylib"
+                        } else {
+                            kind.crate_type()
+                        };
                     add(
-                        kind.crate_type(),
+                        crate_type,
                         if kind.linkable() {
                             FileFlavor::Linkable { rmeta: false }
                         } else {

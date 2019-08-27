@@ -875,7 +875,17 @@ impl Target {
     pub fn rustc_crate_types(&self) -> Vec<&str> {
         match self.kind {
             TargetKind::Lib(ref kinds) | TargetKind::ExampleLib(ref kinds) => {
-                kinds.iter().map(LibKind::crate_type).collect()
+                kinds
+                    .iter()
+                    .map(|kind| {
+                        // wasm32-unknown-unknown doesn't support proc-macro, so just use cdylib
+                        if self.wasm_sandbox() && kind == &LibKind::ProcMacro {
+                            "cdylib"
+                        } else {
+                            kind.crate_type()
+                        }
+                    })
+                    .collect()
             }
             TargetKind::CustomBuild
             | TargetKind::Bench
