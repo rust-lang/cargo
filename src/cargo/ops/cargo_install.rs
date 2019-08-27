@@ -347,7 +347,7 @@ fn install_one(
         (Some(tracker), duplicates)
     };
 
-    fs::create_dir_all(&dst)?;
+    paths::create_dir_all(&dst)?;
 
     // Copy all binaries to a temporary directory under `dst` first, catching
     // some failure modes (e.g., out of space) before touching the existing

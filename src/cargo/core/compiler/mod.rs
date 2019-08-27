@@ -447,9 +447,7 @@ fn link_targets<'a, 'cfg>(
             hardlink_or_copy(src, dst)?;
             if let Some(ref path) = output.export_path {
                 let export_dir = export_dir.as_ref().unwrap();
-                if !export_dir.exists() {
-                    fs::create_dir_all(export_dir)?;
-                }
+                paths::create_dir_all(export_dir)?;
 
                 hardlink_or_copy(src, path)?;
             }
@@ -628,7 +626,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
-    fs::create_dir_all(&doc_dir)?;
+    paths::create_dir_all(&doc_dir)?;
 
     rustdoc.arg("-o").arg(doc_dir);
 

@@ -189,7 +189,6 @@
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -1339,7 +1338,7 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 
     // Doc tests have no output, thus no fingerprint.
     if !new1.exists() && !unit.mode.is_doc_test() {
-        fs::create_dir(&new1)?;
+        paths::create_dir_all(&new1)?;
     }
 
     Ok(())

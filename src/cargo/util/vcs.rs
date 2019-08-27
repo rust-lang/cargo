@@ -1,9 +1,7 @@
-use std::fs::create_dir;
-use std::path::Path;
-
-use git2;
-
+use crate::util::paths;
 use crate::util::{process, CargoResult};
+use git2;
+use std::path::Path;
 
 // Check if we are in an existing repo. We define that to be true if either:
 //
@@ -68,7 +66,7 @@ impl PijulRepo {
 impl FossilRepo {
     pub fn init(path: &Path, cwd: &Path) -> CargoResult<FossilRepo> {
         // fossil doesn't create the directory so we'll do that first
-        create_dir(path)?;
+        paths::create_dir_all(path)?;
 
         // set up the paths we'll use
         let db_fname = ".fossil";

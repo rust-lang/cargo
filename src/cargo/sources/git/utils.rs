@@ -1,22 +1,20 @@
-use std::env;
-use std::fmt;
-use std::fs::{self, File};
-use std::mem;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
-use curl::easy::{Easy, List};
-use git2::{self, ObjectType};
-use log::{debug, info};
-use serde::ser;
-use serde::Serialize;
-use url::Url;
-
 use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{internal, network, Config, IntoUrl, Progress};
+use curl::easy::{Easy, List};
+use git2::{self, ObjectType};
+use log::{debug, info};
+use serde::ser;
+use serde::Serialize;
+use std::env;
+use std::fmt;
+use std::fs::File;
+use std::mem;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use url::Url;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -145,10 +143,10 @@ impl GitRemote {
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
-        if fs::metadata(&dst).is_ok() {
+        if dst.exists() {
             paths::remove_dir_all(dst)?;
         }
-        fs::create_dir_all(dst)?;
+        paths::create_dir_all(dst)?;
         let mut repo = init(dst, true)?;
         fetch(
             &mut repo,
@@ -257,8 +255,7 @@ impl<'a> GitCheckout<'a> {
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
-        fs::create_dir_all(&dirname)
-            .chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
+        paths::create_dir_all(&dirname)?;
         if into.exists() {
             paths::remove_dir_all(into)?;
         }

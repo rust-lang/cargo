@@ -66,18 +66,17 @@
 //! details like invalidating caches and whatnot which are handled below, but
 //! hopefully those are more obvious inline in the code itself.
 
+use crate::core::dependency::Dependency;
+use crate::core::{InternedString, PackageId, SourceId, Summary};
+use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::util::paths;
+use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use log::info;
+use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::str;
-
-use log::info;
-use semver::{Version, VersionReq};
-
-use crate::core::dependency::Dependency;
-use crate::core::{InternedString, PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
-use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
 /// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
@@ -559,7 +558,7 @@ impl Summaries {
         // This is opportunistic so we ignore failure here but are sure to log
         // something in case of error.
         if let Some(cache_bytes) = cache_bytes {
-            if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+            if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
                 let path = Filesystem::new(cache_path.clone());
                 config.assert_package_cache_locked(&path);
                 if let Err(e) = fs::write(cache_path, cache_bytes) {

@@ -1,6 +1,5 @@
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
@@ -262,8 +261,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let extra_verbose = bcx.config.extra_verbose();
     let (prev_output, prev_script_out_dir) = prev_build_output(cx, unit);
 
-    fs::create_dir_all(&script_dir)?;
-    fs::create_dir_all(&script_out_dir)?;
+    paths::create_dir_all(&script_dir)?;
+    paths::create_dir_all(&script_out_dir)?;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -275,14 +274,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        if fs::metadata(&script_out_dir).is_err() {
-            fs::create_dir(&script_out_dir).chain_err(|| {
-                internal(
-                    "failed to create script output directory for \
-                     build command",
-                )
-            })?;
-        }
+        paths::create_dir_all(&script_out_dir).chain_err(|| {
+            internal(
+                "failed to create script output directory for \
+                 build command",
+            )
+        })?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our
@@ -588,7 +585,7 @@ fn prepare_metabuild<'a, 'cfg>(
     output.push("}\n".to_string());
     let output = output.join("");
     let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
-    fs::create_dir_all(path.parent().unwrap())?;
+    paths::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())
 }
