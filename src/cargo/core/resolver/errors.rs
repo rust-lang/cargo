@@ -70,7 +70,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 
 pub(super) fn activation_error(
     cx: &Context,
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,

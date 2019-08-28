@@ -1,5 +1,3 @@
-use std::env;
-
 use cargo::core::dependency::Kind;
 use cargo::core::{enable_nightly_features, Dependency};
 use cargo::util::{is_ci, Config};

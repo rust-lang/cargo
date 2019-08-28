@@ -22,8 +22,8 @@ use crate::util::errors::CargoResult;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, ResolveOpts};
 
-pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (dyn Registry + 'a),
+pub struct RegistryQueryer<'a, R: Registry> {
+    pub registry: &'a mut R,
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
     /// If set the list of dependency candidates will be sorted by minimal
@@ -41,9 +41,9 @@ pub struct RegistryQueryer<'a> {
     used_replacements: HashMap<PackageId, Summary>,
 }
 
-impl<'a> RegistryQueryer<'a> {
+impl<'a, R: Registry> RegistryQueryer<'a, R> {
     pub fn new(
-        registry: &'a mut dyn Registry,
+        registry: &'a mut R,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,

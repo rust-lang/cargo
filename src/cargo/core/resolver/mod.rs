@@ -122,7 +122,7 @@ mod types;
 pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
@@ -168,7 +168,7 @@ pub fn resolve(
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop(
     mut cx: Context,
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     summaries: &[(Summary, ResolveOpts)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
@@ -588,7 +588,7 @@ fn activate_deps_loop(
 /// iterate through next.
 fn activate(
     cx: &mut Context,
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
     opts: ResolveOpts,
@@ -856,7 +856,7 @@ impl RemainingCandidates {
 /// Panics if the input conflict is not all active in `cx`.
 fn generalize_conflicting(
     cx: &Context,
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
     parent: &Summary,
     dep: &Dependency,

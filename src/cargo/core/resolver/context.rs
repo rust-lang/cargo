@@ -8,6 +8,7 @@ use failure::{bail, ensure};
 use log::debug;
 
 use crate::core::interning::InternedString;
+use crate::core::registry::Registry;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::util::CargoResult;
 use crate::util::Graph;
@@ -211,7 +212,7 @@ impl Context {
 
     pub fn resolve_replacements(
         &self,
-        registry: &RegistryQueryer<'_>,
+        registry: &RegistryQueryer<'_, impl Registry>,
     ) -> HashMap<PackageId, PackageId> {
         self.activations
             .values()
