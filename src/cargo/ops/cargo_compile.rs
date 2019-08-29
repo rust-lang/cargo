@@ -390,7 +390,16 @@ pub fn compile_ws<'a>(
     )?;
 
     let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
-        standard_lib::generate_std_roots(&bcx, crates, std_resolve.as_ref().unwrap())?
+        // Only build libtest if it looks like it is needed.
+        let mut crates = crates.clone();
+        if !crates.iter().any(|c| c == "test")
+            && units
+                .iter()
+                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+        {
+            crates.push("test".to_string());
+        }
+        standard_lib::generate_std_roots(&bcx, &crates, std_resolve.as_ref().unwrap())?
     } else {
         Vec::new()
     };

@@ -19,7 +19,6 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
         crates.insert("core");
         crates.insert("panic_unwind");
         crates.insert("compiler_builtins");
-        crates.insert("test");
     } else if crates.contains("core") {
         crates.insert("compiler_builtins");
     }
@@ -83,7 +82,11 @@ pub fn resolve_std<'cfg>(
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
-    let spec = Packages::Packages(Vec::from(crates));
+    // `test` is not in the default set because it is optional, but it needs
+    // to be part of the resolve in case we do need it.
+    let mut spec_pkgs = Vec::from(crates);
+    spec_pkgs.push("test".to_string());
+    let spec = Packages::Packages(spec_pkgs);
     let specs = spec.to_package_id_specs(&std_ws)?;
     let features = vec!["panic-unwind".to_string(), "backtrace".to_string()];
     // dev_deps setting shouldn't really matter here.
