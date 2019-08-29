@@ -13,6 +13,7 @@ system:
   checkouts of crates. By default these are stored under `$HOME/.cargo`, but
   this variable overrides the location of this directory. Once a crate is cached
   it is not removed by the clean command.
+  For more details refer to the [guide](../guide/cargo-home.md).
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
   relative to the current working directory.
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
