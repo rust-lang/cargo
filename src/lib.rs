@@ -6,8 +6,8 @@
 //!
 //! See also the [`dirs`](https://docs.rs/dirs) crate.
 //!
-//! _Note that as of 2019/08/06 it appears that cargo uses this crate, but
-//! rustup does not._
+//! _Note that as of 2019/08/06 it appears that cargo uses this crate. And
+//! rustup has used this crate since 2019/08/21._
 //!
 //! The definition of `home_dir` provided by the standard library is
 //! incorrect because it considers the `HOME` environment variable on
