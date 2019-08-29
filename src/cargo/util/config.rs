@@ -705,12 +705,25 @@ impl Config {
 
         if fs::metadata(&possible).is_ok() {
             if warn && fs::metadata(&possible_with_extension).is_ok() {
-                self.shell().warn(format!(
-                    "Both `{}` and `{}` exist. Using `{}`",
-                    possible.display(),
-                    possible_with_extension.display(),
-                    possible.display()
-                ))?;
+                // We don't want to print a warning if the version
+                // without the extension is just a symlink to the version
+                // WITH an extension, which people may want to do to
+                // support multiple Cargo versions at once and not
+                // get a warning.
+                let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
+                    target_path == possible_with_extension
+                } else {
+                    false
+                };
+
+                if !skip_warning {
+                    self.shell().warn(format!(
+                        "Both `{}` and `{}` exist. Using `{}`",
+                        possible.display(),
+                        possible_with_extension.display(),
+                        possible.display()
+                    ))?;
+                }
             }
 
             Ok(Some(possible))

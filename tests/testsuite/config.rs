@@ -1,6 +1,9 @@
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;
+use std::io;
+use std::os;
+use std::path::Path;
 
 use crate::support::{paths, project};
 use cargo::core::{enable_nightly_features, Shell};
@@ -52,6 +55,44 @@ fn write_config_toml(config: &str) {
     let path = paths::root().join(".cargo/config.toml");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, config).unwrap();
+}
+
+// Several test fail on windows if the user does not have permission to
+// create symlinks (the `SeCreateSymbolicLinkPrivilege`). Instead of
+// disabling these test on Windows, use this function to test whether we
+// have permission, and return otherwise. This way, we still don't run these
+// tests most of the time, but at least we do if the user has the right
+// permissions.
+// This function is derived from libstd fs tests.
+pub fn got_symlink_permission() -> bool {
+    if cfg!(unix) {
+        return true;
+    }
+    let link = paths::root().join("some_hopefully_unique_link_name");
+    let target = paths::root().join("nonexisting_target");
+
+    match symlink_file(&target, &link) {
+        Ok(_) => true,
+        // ERROR_PRIVILEGE_NOT_HELD = 1314
+        Err(ref err) if err.raw_os_error() == Some(1314) => false,
+        Err(_) => true,
+    }
+}
+
+#[cfg(unix)]
+fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
+    os::unix::fs::symlink(target, link)
+}
+
+#[cfg(windows)]
+fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
+    os::windows::fs::symlink_file(target, link)
+}
+
+fn symlink_config_to_config_toml() {
+    let toml_path = paths::root().join(".cargo/config.toml");
+    let symlink_path = paths::root().join(".cargo/config");
+    t!(symlink_file(&toml_path, &symlink_path));
 }
 
 fn new_config(env: &[(&str, &str)]) -> Config {
@@ -130,6 +171,42 @@ f1 = 1
     let config = new_config(&[]);
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !got_symlink_permission() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    symlink_config_to_config_toml();
+
+    let config = new_config(&[]);
+
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    let output = fs::read_to_string(path).unwrap();
+    let unexpected = "\
+warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+";
+    if lines_match(unexpected, &output) {
+        panic!(
+            "Found unexpected:\n{}\nActual error:\n{}\n",
+            unexpected, output
+        );
+    }
 }
 
 #[cargo_test]
