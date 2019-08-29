@@ -433,7 +433,7 @@ impl Requirements<'_> {
         for fv in self
             .summary
             .features()
-            .get(feat.as_str())
+            .get(&feat)
             .expect("must be a valid feature")
         {
             match *fv {

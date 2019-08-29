@@ -716,7 +716,7 @@ impl IndexSummary {
             links,
         } = serde_json::from_slice(line)?;
         log::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::new(&name, &vers, source_id)?;
+        let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps
             .into_iter()
             .map(|dep| dep.into_dep(source_id))

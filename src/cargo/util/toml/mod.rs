@@ -16,7 +16,7 @@ use url::Url;
 use crate::core::dependency::{Kind, Platform};
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Profiles;
-use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -650,7 +650,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
     edition: Option<String>,
-    name: String,
+    name: InternedString,
     version: semver::Version,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
@@ -697,7 +697,7 @@ pub struct TomlWorkspace {
 
 impl TomlProject {
     pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
-        PackageId::new(&self.name, self.version.clone(), source_id)
+        PackageId::new(self.name, self.version.clone(), source_id)
     }
 }
 
