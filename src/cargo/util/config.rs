@@ -689,6 +689,38 @@ impl Config {
         }
     }
 
+    /// The purpose of this function is to aid in the transition to using
+    /// .toml extensions on Cargo's config files, which were historically not used.
+    /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
+    /// When both exist, we want to prefer the one without an extension for
+    /// backwards compatibility, but warn the user appropriately.
+    fn get_file_path(
+        &self,
+        dir: &Path,
+        filename_without_extension: &str,
+        warn: bool,
+    ) -> CargoResult<Option<PathBuf>> {
+        let possible = dir.join(filename_without_extension);
+        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+
+        if fs::metadata(&possible).is_ok() {
+            if warn && fs::metadata(&possible_with_extension).is_ok() {
+                self.shell().warn(format!(
+                    "Both `{}` and `{}` exist. Using `{}`",
+                    possible.display(),
+                    possible_with_extension.display(),
+                    possible.display()
+                ))?;
+            }
+
+            Ok(Some(possible))
+        } else if fs::metadata(&possible_with_extension).is_ok() {
+            Ok(Some(possible_with_extension))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
     where
         F: FnMut(&Path) -> CargoResult<()>,
@@ -696,49 +728,19 @@ impl Config {
         let mut stash: HashSet<PathBuf> = HashSet::new();
 
         for current in paths::ancestors(pwd) {
-            let possible = current.join(".cargo").join("config");
-            let possible_with_extension = current.join(".cargo").join("config.toml");
-
-            // If both 'config' and 'config.toml' exist, we should use 'config'
-            // for backward compatibility, but we should warn the user.
-            if fs::metadata(&possible).is_ok() {
-                if fs::metadata(&possible_with_extension).is_ok() {
-                    self.shell().warn(format!(
-                        "Both `{}` and `{}` exist. Using `{}`",
-                        possible.display(),
-                        possible_with_extension.display(),
-                        possible.display()
-                    ))?;
-                }
-
-                walk(&possible)?;
-                stash.insert(possible);
-            } else if fs::metadata(&possible_with_extension).is_ok() {
-                walk(&possible_with_extension)?;
-                stash.insert(possible);
+            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
+                walk(&path)?;
+                stash.insert(path);
             }
         }
 
         // Once we're done, also be sure to walk the home directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
-        let config = home.join("config");
-        let config_with_extension = home.join("config.toml");
-        if !stash.contains(&config) && fs::metadata(&config).is_ok() {
-            if fs::metadata(&config_with_extension).is_ok() {
-                self.shell().warn(format!(
-                    "Both `{}` and `{}` exist. Using `{}`",
-                    config.display(),
-                    config_with_extension.display(),
-                    config.display()
-                ))?;
+        if let Some(path) = self.get_file_path(home, "config", true)? {
+            if !stash.contains(&path) {
+                walk(&path)?;
             }
-
-            walk(&config)?;
-        } else if !stash.contains(&config_with_extension)
-            && fs::metadata(&config_with_extension).is_ok()
-        {
-            walk(&config_with_extension)?;
         }
 
         Ok(())
@@ -781,10 +783,10 @@ impl Config {
     /// present.
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
-        let credentials = home_path.join("credentials");
-        if fs::metadata(&credentials).is_err() {
-            return Ok(());
-        }
+        let credentials = match self.get_file_path(&home_path, "credentials", true)? {
+            Some(credentials) => credentials,
+            None => return Ok(()),
+        };
 
         let mut contents = String::new();
         let mut file = File::open(&credentials)?;
@@ -1729,10 +1731,22 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 }
 
 pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+    // If 'credentials.toml' exists, we should write to that, otherwise
+    // use the legacy 'credentials'. There's no need to print the warning
+    // here, because it would already be printed at load time.
+    let home_path = cfg.home_path.clone().into_path_unlocked();
+    let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
+        Some(path) => match path.file_name() {
+            Some(filename) => Path::new(filename).to_owned(),
+            None => Path::new("credentials").to_owned(),
+        },
+        None => Path::new("credentials").to_owned(),
+    };
+
     let mut file = {
         cfg.home_path.create_dir()?;
         cfg.home_path
-            .open_rw(Path::new("credentials"), cfg, "credentials' config file")?
+            .open_rw(filename, cfg, "credentials' config file")?
     };
 
     let (key, value) = {
