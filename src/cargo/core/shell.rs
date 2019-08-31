@@ -134,6 +134,15 @@ impl Shell {
         }
     }
 
+    /// Returns the width of the terminal in spaces, if any. Always `None` in Windows.
+    pub fn accurate_err_width(&self) -> Option<usize> {
+        if self.is_err_tty() {
+            imp::accurate_stderr_width()
+        } else {
+            None
+        }
+    }
+
     /// Returns `true` if stderr is a tty.
     pub fn is_err_tty(&self) -> bool {
         match self.output {
@@ -411,6 +420,10 @@ mod imp {
     use super::Shell;
     use std::mem;
 
+    pub fn accurate_stderr_width() -> Option<usize> {
+        stderr_width()
+    }
+
     pub fn stderr_width() -> Option<usize> {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();
@@ -446,6 +459,10 @@ mod imp {
     use winapi::um::winnt::*;
 
     pub(super) use super::default_err_erase_line as err_erase_line;
+
+    pub fn accurate_stderr_width() -> Option<usize> {
+        None
+    }
 
     pub fn stderr_width() -> Option<usize> {
         unsafe {

@@ -47,6 +47,7 @@ pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Edition, Feature, PackageId, Target};
@@ -709,6 +710,7 @@ fn add_error_format_and_color(
         // to emit a message that cargo will intercept.
         json.push_str(",artifacts");
     }
+
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
             json.push_str(",diagnostic-short");
@@ -716,6 +718,16 @@ fn add_error_format_and_color(
         _ => {}
     }
     cmd.arg(json);
+
+    if nightly_features_allowed() {
+        if let (Some(width), _) | (_, Some(width)) = (
+            cx.bcx.config.cli_unstable().terminal_width,
+            cx.bcx.config.shell().accurate_err_width(),
+        ) {
+            cmd.arg(format!("-Zterminal-width={}", width));
+        }
+    }
+
     Ok(())
 }
 

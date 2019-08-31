@@ -357,6 +357,7 @@ pub struct CliUnstable {
     pub separate_nightlies: bool,
     pub multitarget: bool,
     pub rustdoc_map: bool,
+    pub terminal_width: Option<usize>,
 }
 
 impl CliUnstable {
@@ -411,6 +412,16 @@ impl CliUnstable {
             Ok(true)
         };
 
+        fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
+            Ok(match value {
+                Some(value) => match value.parse::<usize>() {
+                    Ok(value) => Some(value),
+                    Err(e) => bail!("expected a number, found: {}", e),
+                },
+                None => None,
+            })
+        }
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
@@ -437,6 +448,7 @@ impl CliUnstable {
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
+            "terminal-width" => self.terminal_width = parse_usize_opt(v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
