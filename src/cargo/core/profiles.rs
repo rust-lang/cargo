@@ -576,7 +576,7 @@ impl fmt::Display for PanicStrategy {
 
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
     /// any of its dependencies. This enables `build-override` profiles for

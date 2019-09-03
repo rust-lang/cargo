@@ -91,6 +91,7 @@ mod rustflags;
 mod search;
 mod shell_quoting;
 mod small_fd_limits;
+mod standard_lib;
 mod test;
 mod tool_paths;
 mod update;

@@ -318,4 +318,11 @@ impl<'src> SourceMap<'src> {
     ) -> impl Iterator<Item = (&'a SourceId, &'a mut (dyn Source + 'src))> {
         self.map.iter_mut().map(|(a, b)| (a, &mut **b))
     }
+
+    /// Merge the given map into self.
+    pub fn add_source_map(&mut self, other: SourceMap<'src>) {
+        for (key, value) in other.map {
+            self.map.entry(key).or_insert(value);
+        }
+    }
 }

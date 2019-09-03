@@ -8,7 +8,7 @@ use crate::core::compiler::unit::UnitInterner;
 use crate::core::compiler::{BuildConfig, BuildOutput, Kind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
-use crate::core::{PackageId, PackageSet, Resolve};
+use crate::core::{PackageId, PackageSet};
 use crate::util::errors::CargoResult;
 use crate::util::{profile, Cfg, Config, Rustc};
 
@@ -26,8 +26,6 @@ pub struct BuildContext<'a, 'cfg> {
     pub ws: &'a Workspace<'cfg>,
     /// The cargo configuration.
     pub config: &'cfg Config,
-    /// The dependency graph for our build.
-    pub resolve: &'a Resolve,
     pub profiles: &'a Profiles,
     pub build_config: &'a BuildConfig,
     /// Extra compiler args for either `rustc` or `rustdoc`.
@@ -48,7 +46,6 @@ pub struct BuildContext<'a, 'cfg> {
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn new(
         ws: &'a Workspace<'cfg>,
-        resolve: &'a Resolve,
         packages: &'a PackageSet<'cfg>,
         config: &'cfg Config,
         build_config: &'a BuildConfig,
@@ -75,7 +72,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
         Ok(BuildContext {
             ws,
-            resolve,
             packages,
             config,
             rustc,
@@ -88,16 +84,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             extra_compiler_args,
             units,
         })
-    }
-
-    pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
-        self.resolve
-            .extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
-    }
-
-    pub fn is_public_dependency(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> bool {
-        self.resolve
-            .is_public_dep(unit.pkg.package_id(), dep.pkg.package_id())
     }
 
     /// Whether a dependency should be compiled for the host or target platform,
