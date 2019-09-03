@@ -40,6 +40,7 @@ pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
 use self::unit_dependencies::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::Feature;
@@ -714,6 +715,14 @@ fn add_error_format_and_color(
     } else {
         let mut color = true;
         match cx.bcx.build_config.message_format {
+            MessageFormat::Human if nightly_features_allowed() => {
+                if let (Some(width), _) | (_, Some(width)) = (
+                    cx.bcx.config.cli_unstable().terminal_width,
+                    cx.bcx.config.shell().accurate_err_width(),
+                ) {
+                    cmd.arg(format!("-Zterminal-width={}", width));
+                }
+            }
             MessageFormat::Human => (),
             MessageFormat::Json {
                 ansi,

@@ -426,12 +426,6 @@ pub fn compile_ws<'a>(
             }
         }
     }
-    if let Some(width) = config.shell().err_width() {
-        for unit in &units {
-            bcx.extra_compiler_args
-                .insert(*unit, vec![format!("-Zterminal-width={}", width)]);
-        }
-    }
 
     let unit_dependencies = build_unit_dependencies(
         &bcx,

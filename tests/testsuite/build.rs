@@ -2,8 +2,8 @@ use cargo::util::paths::dylib_path_envvar;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, main_file, project,
+    rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs::{self, File};
@@ -4721,5 +4721,36 @@ d
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn simple_terminal_width() {
+    if !is_nightly() {
+        // --terminal-width is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                fn a() {
+/**/                    /**/ \
+/**/                    /**/ \
+/**/                    /**/ \
+/**/                    /**/ \
+/**/                    /**/ \
+/**/                    /**/ \
+/**/                    /**/ \
+                    let _: () = 42;
+                }
+            ",
+        )
+        .build();
+
+    p.cargo("build -Zterminal-width=60")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("3 | ...t _: () = 42;")
         .run();
 }

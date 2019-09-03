@@ -337,6 +337,7 @@ pub struct CliUnstable {
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
+    pub terminal_width: Option<usize>,
 }
 
 impl CliUnstable {
@@ -376,6 +377,16 @@ impl CliUnstable {
             }
         }
 
+        fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
+            Ok(match value {
+                Some(value) => match value.parse::<usize>() {
+                    Ok(value) => Some(value),
+                    Err(e) => failure::bail!("expected a number, found: {}", e),
+                },
+                None => None,
+            })
+        }
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
@@ -395,6 +406,7 @@ impl CliUnstable {
             }
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = true,
+            "terminal-width" => self.terminal_width = parse_usize_opt(v)?,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
