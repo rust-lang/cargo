@@ -38,7 +38,7 @@ pub fn resolve_std<'cfg>(
     ];
     let patches = to_patch
         .iter()
-        .map(|name| {
+        .map(|&name| {
             let source_path = SourceId::for_path(&src_path.join("src").join("tools").join(name))?;
             let dep = Dependency::parse_no_deprecated(name, None, source_path)?;
             Ok(dep)
