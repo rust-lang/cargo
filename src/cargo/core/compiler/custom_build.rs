@@ -157,6 +157,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let debug = unit.profile.debuginfo.unwrap_or(0) != 0;
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
+        .env("CARGO_TARGET_DIR", bcx.ws.target_dir())
         .env("NUM_JOBS", &bcx.jobs().to_string())
         .env(
             "TARGET",
