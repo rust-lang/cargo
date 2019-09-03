@@ -37,7 +37,7 @@ impl Summary {
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: &BTreeMap<K, Vec<impl AsRef<str>>>,
-        links: Option<impl AsRef<str>>,
+        links: Option<impl Into<InternedString>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
     where
@@ -66,7 +66,7 @@ impl Summary {
                 dependencies,
                 features: feature_map,
                 checksum: None,
-                links: links.map(|l| InternedString::new(l.as_ref())),
+                links: links.map(|l| l.into()),
                 namespaced_features,
             }),
         })

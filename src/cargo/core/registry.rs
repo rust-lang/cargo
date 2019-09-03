@@ -366,7 +366,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(&*dep.package_name(), s);
+            let dep = Dependency::new_override(dep.package_name(), s);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
                 return Ok(Some(results.remove(0)));

@@ -171,7 +171,7 @@ pub fn resolve_with_config_raw(
         pkg_id("root"),
         deps,
         &BTreeMap::<String, Vec<String>>::new(),
-        None::<String>,
+        None::<&String>,
         false,
     )
     .unwrap();
