@@ -1,5 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 use crate::support::cargo_process;
 use crate::support::install::cargo_home;
@@ -13,6 +14,15 @@ const ORIGINAL_TOKEN: &str = "api-token";
 
 fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
+    setup_new_credentials_at(config);
+}
+
+fn setup_new_credentials_toml() {
+    let config = cargo_home().join("credentials.toml");
+    setup_new_credentials_at(config);
+}
+
+fn setup_new_credentials_at(config: PathBuf) {
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(t!(File::create(&config))
         .write_all(format!(r#"token = "{token}""#, token = ORIGINAL_TOKEN).as_bytes()));
@@ -81,6 +91,42 @@ fn login_with_new_credentials() {
         .run();
 
     // Ensure that we get the new token for the registry
+    assert!(check_token(TOKEN, None));
+}
+
+#[cargo_test]
+fn credentials_work_with_extension() {
+    registry::init();
+    setup_new_credentials_toml();
+
+    cargo_process("login --host")
+        .arg(registry_url().to_string())
+        .arg(TOKEN)
+        .run();
+
+    // Ensure that we get the new token for the registry
+    assert!(check_token(TOKEN, None));
+}
+
+#[cargo_test]
+fn credentials_ambiguous_filename() {
+    registry::init();
+    setup_new_credentials();
+    setup_new_credentials_toml();
+
+    cargo_process("login --host")
+        .arg(registry_url().to_string())
+        .arg(TOKEN)
+        .with_stderr_contains(
+            "\
+[WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
+",
+        )
+        .run();
+
+    // It should use the value from the one without the extension
+    // for backwards compatibility. check_token explicitly checks
+    // 'credentials' without the extension, which is what we want.
     assert!(check_token(TOKEN, None));
 }
 
