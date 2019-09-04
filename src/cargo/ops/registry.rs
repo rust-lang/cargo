@@ -443,14 +443,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(ssl_version) = config.get_string("http.ssl-version")? {
         let version = match ssl_version.val.as_str() {
             "default" => SslVersion::Default,
-            "sslv2" => SslVersion::Sslv2,
-            "sslv3" => SslVersion::Sslv3,
             "tlsv1" => SslVersion::Tlsv1,
             "tlsv1.0" => SslVersion::Tlsv10,
             "tlsv1.1" => SslVersion::Tlsv11,
             "tlsv1.2" => SslVersion::Tlsv12,
             "tlsv1.3" => SslVersion::Tlsv13,
-            _ => bail!("Invalid ssl version `{}`, choose from 'default', 'sslv2', 'sslv3', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.", &ssl_version.val),
+            _ => bail!("Invalid ssl version `{}`, choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.", &ssl_version.val),
         };
         handle.ssl_min_max_version(version, version)?;
     }
