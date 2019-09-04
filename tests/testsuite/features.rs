@@ -1764,7 +1764,7 @@ fn all_features_all_crates() {
         .file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
         .build();
 
-    p.cargo("build --all-features --all").run();
+    p.cargo("build --all-features --workspace").run();
 }
 
 #[cargo_test]

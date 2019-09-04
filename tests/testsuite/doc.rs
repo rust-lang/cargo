@@ -220,7 +220,7 @@ fn doc_multiple_targets_same_name_lib() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_status(101)
         .with_stderr_contains("[..] library `foo_lib` is specified [..]")
         .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
@@ -263,7 +263,7 @@ fn doc_multiple_targets_same_name() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([CWD]/foo)")
         .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([CWD]/bar)")
         .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
@@ -307,7 +307,7 @@ fn doc_multiple_targets_same_name_bin() {
         .file("bar/src/foo-cli.rs", "")
         .build();
 
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_status(101)
         .with_stderr_contains("[..] binary `foo_cli` is specified [..]")
         .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
@@ -350,7 +350,7 @@ fn doc_multiple_targets_same_name_undoced() {
         .file("bar/src/foo-cli.rs", "")
         .build();
 
-    p.cargo("doc --all").run();
+    p.cargo("doc --workspace").run();
 }
 
 #[cargo_test]
@@ -926,7 +926,7 @@ fn doc_all_workspace() {
         .build();
 
     // The order in which bar is compiled or documented is not deterministic
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Checking bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
@@ -950,7 +950,7 @@ fn doc_all_virtual_manifest() {
         .build();
 
     // The order in which bar and baz are documented is not guaranteed
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .run();
@@ -1005,7 +1005,7 @@ fn doc_all_member_dependency_same_name() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("doc --all")
+    p.cargo("doc --workspace")
         .with_stderr_contains("[..] Updating `[..]` index")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .run();
@@ -1029,7 +1029,7 @@ fn doc_workspace_open_help_message() {
         .build();
 
     // The order in which bar is compiled or documented is not deterministic
-    p.cargo("doc --all --open")
+    p.cargo("doc --workspace --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
@@ -1246,7 +1246,7 @@ fn doc_private_ws() {
         .file("b/src/lib.rs", "fn p2() {}")
         .file("b/src/main.rs", "fn main() {}")
         .build();
-    p.cargo("doc --all --bins --lib --document-private-items -v")
+    p.cargo("doc --workspace --bins --lib --document-private-items -v")
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..] a/src/lib.rs [..]--document-private-items[..]",
         )

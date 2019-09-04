@@ -31,10 +31,7 @@ pub trait AppExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(opt(
-                "all",
-                "Will be changed to 'workspace' option (deprecated)",
-            ))
+            ._arg(opt("all", "Alias for --workspace (deprecated)"))
             ._arg(opt("workspace", all))
             ._arg(multi_opt("exclude", "SPEC", exclude))
     }
