@@ -38,9 +38,9 @@ which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
-All packages in the workspace are checked if the `--all` flag is supplied. The
-`--all` flag is automatically assumed for a virtual manifest.
-Note that `--exclude` has to be specified in conjunction with the `--all` flag.
+All packages in the workspace are checked if the `--workspace` flag is supplied. The
+`--workspace` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--workspace` flag.
 
 To allow or deny a lint from the command line you can use `cargo clippy --`
 with:

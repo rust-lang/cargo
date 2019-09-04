@@ -64,7 +64,7 @@ by the manifest will be selected.
 The default members of a workspace can be set explicitly with the
 \fBworkspace.default\-members\fP key in the root manifest. If this is not set, a
 virtual workspace will include all workspace members (equivalent to passing
-\fB\-\-all\fP), and a non\-virtual workspace will include only the root crate itself.
+\fB\-\-workspace\fP), and a non\-virtual workspace will include only the root crate itself.
 .sp
 \fB\-p\fP \fISPEC\fP..., \fB\-\-package\fP \fISPEC\fP...
 .RS 4
@@ -72,15 +72,20 @@ Document only the specified packages. See \fBcargo\-pkgid\fP(1) for the
 SPEC format. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-all\fP
+\fB\-\-workspace\fP
 .RS 4
 Document all members in the workspace.
+.RE
+.sp
+\fB\-\-all\fP
+.RS 4
+Deprecated alias for \fB\-\-workspace\fP.
 .RE
 .sp
 \fB\-\-exclude\fP \fISPEC\fP...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-all\fP flag. This flag may be specified multiple times.
+\fB\-\-workspace\fP flag. This flag may be specified multiple times.
 .RE
 .SS "Target Selection"
 .sp

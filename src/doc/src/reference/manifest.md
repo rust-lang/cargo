@@ -658,7 +658,7 @@ manifest*.
 #### Package selection
 
 In a workspace, package-related cargo commands like [`cargo build`] apply to
-packages selected by `-p` / `--package` or `--all` command-line parameters.
+packages selected by `-p` / `--package` or `--workspace` command-line parameters.
 When neither is specified, the optional `default-members` configuration is used:
 
 ```toml
@@ -670,7 +670,7 @@ default-members = ["path/to/member2", "path/to/member3/foo"]
 When specified, `default-members` must expand to a subset of `members`.
 
 When `default-members` is not specified, the default is the root manifest
-if it is a package, or every member manifest (as if `--all` were specified
+if it is a package, or every member manifest (as if `--workspace` were specified
 on the command-line) for virtual workspaces.
 
 ### The project layout

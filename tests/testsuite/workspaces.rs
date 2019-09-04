@@ -1862,7 +1862,7 @@ fn dep_used_with_separate_features() {
     let p = p.build();
 
     // Build the entire workspace.
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])

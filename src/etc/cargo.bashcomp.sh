@@ -37,7 +37,7 @@ _cargo()
 	local opt_quiet='-q --quiet'
 	local opt_color='--color'
 	local opt_common="$opt_help $opt_verbose $opt_quiet $opt_color"
-	local opt_pkg_spec='-p --package --all --exclude'
+	local opt_pkg_spec='-p --package --all --exclude --workspace'
 	local opt_pkg='-p --package'
 	local opt_feat='--features --all-features --no-default-features'
 	local opt_mani='--manifest-path'

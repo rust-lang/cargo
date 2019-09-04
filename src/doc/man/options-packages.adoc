@@ -7,16 +7,19 @@ by the manifest will be selected.
 The default members of a workspace can be set explicitly with the
 `workspace.default-members` key in the root manifest. If this is not set, a
 virtual workspace will include all workspace members (equivalent to passing
-`--all`), and a non-virtual workspace will include only the root crate itself.
+`--workspace`), and a non-virtual workspace will include only the root crate itself.
 
 *-p* _SPEC_...::
 *--package* _SPEC_...::
     {actionverb} only the specified packages. See man:cargo-pkgid[1] for the
     SPEC format. This flag may be specified multiple times.
 
-*--all*::
+*--workspace*::
     {actionverb} all members in the workspace.
+
+*--all*::
+    Deprecated alias for `--workspace`.
 
 *--exclude* _SPEC_...::
     Exclude the specified packages. Must be used in conjunction with the
-    `--all` flag. This flag may be specified multiple times.
+    `--workspace` flag. This flag may be specified multiple times.

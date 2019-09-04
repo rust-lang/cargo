@@ -106,7 +106,7 @@ impl Packages {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => failure::bail!("--exclude can only be used together with --all"),
+            (false, _, _) => failure::bail!("--exclude can only be used together with --workspace"),
             (true, 0, _) => Packages::All,
             (true, _, _) => Packages::OptOut(exclude),
         })
