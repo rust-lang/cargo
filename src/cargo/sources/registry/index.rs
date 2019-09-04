@@ -210,12 +210,10 @@ enum MaybeIndexSummary {
 
 /// A parsed representation of a summary from the index.
 ///
-/// In addition to a full `Summary` we have a few auxiliary pieces of
-/// information liked `yanked` and what the checksum hash is.
+/// In addition to a full `Summary` we have information on whether it is `yanked`.
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
-    pub hash: String,
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
@@ -242,13 +240,16 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
         let req = VersionReq::exact(pkg.version());
         let summary = self
             .summaries(pkg.name(), &req, load)?
             .next()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
-        Ok(summary.hash.clone())
+        summary
+            .summary
+            .checksum()
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -722,11 +723,10 @@ impl IndexSummary {
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let mut summary = Summary::new(pkgid, deps, &features, links, false)?;
-        summary.set_checksum(cksum.clone());
+        summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,
             yanked: yanked.unwrap_or(false),
-            hash: cksum,
         })
     }
 }
