@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-package
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.8
-.\"      Date: 2019-07-15
+.\" Generator: Asciidoctor 2.0.10
+.\"      Date: 2019-09-05
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-PACKAGE" "1" "2019-07-15" "\ \&" "\ \&"
+.TH "CARGO\-PACKAGE" "1" "2019-09-05" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -59,6 +59,7 @@ Load and check the current workspace, performing some basic checks.
 .\}
 Path dependencies are not allowed unless they have a version key. Cargo
 will ignore the path key for dependencies in published packages.
+\fBdev\-dependencies\fP do not have this restriction.
 .RE
 .RE
 .sp

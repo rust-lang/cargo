@@ -722,6 +722,7 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
+        let all = |_d: &TomlDependency| true;
         return Ok(TomlManifest {
             package: Some(package),
             project: None,
@@ -731,12 +732,13 @@ impl TomlManifest {
             example: self.example.clone(),
             test: self.test.clone(),
             bench: self.bench.clone(),
-            dependencies: map_deps(config, self.dependencies.as_ref())?,
+            dependencies: map_deps(config, self.dependencies.as_ref(), all)?,
             dev_dependencies: map_deps(
                 config,
                 self.dev_dependencies
                     .as_ref()
                     .or_else(|| self.dev_dependencies2.as_ref()),
+                TomlDependency::is_version_specified,
             )?,
             dev_dependencies2: None,
             build_dependencies: map_deps(
@@ -744,6 +746,7 @@ impl TomlManifest {
                 self.build_dependencies
                     .as_ref()
                     .or_else(|| self.build_dependencies2.as_ref()),
+                all,
             )?,
             build_dependencies2: None,
             features: self.features.clone(),
@@ -754,12 +757,13 @@ impl TomlManifest {
                         Ok((
                             k.clone(),
                             TomlPlatform {
-                                dependencies: map_deps(config, v.dependencies.as_ref())?,
+                                dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
                                 dev_dependencies: map_deps(
                                     config,
                                     v.dev_dependencies
                                         .as_ref()
                                         .or_else(|| v.dev_dependencies2.as_ref()),
+                                    TomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
                                 build_dependencies: map_deps(
@@ -767,6 +771,7 @@ impl TomlManifest {
                                     v.build_dependencies
                                         .as_ref()
                                         .or_else(|| v.build_dependencies2.as_ref()),
+                                    all,
                                 )?,
                                 build_dependencies2: None,
                             },
@@ -788,6 +793,7 @@ impl TomlManifest {
         fn map_deps(
             config: &Config,
             deps: Option<&BTreeMap<String, TomlDependency>>,
+            filter: impl Fn(&TomlDependency) -> bool,
         ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
             let deps = match deps {
                 Some(deps) => deps,
@@ -795,6 +801,7 @@ impl TomlManifest {
             };
             let deps = deps
                 .iter()
+                .filter(|(_k, v)| filter(v))
                 .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
                 .collect::<CargoResult<BTreeMap<_, _>>>()?;
             Ok(Some(deps))
@@ -1221,11 +1228,7 @@ impl TomlManifest {
                 spec.set_url(CRATES_IO_INDEX.parse().unwrap());
             }
 
-            let version_specified = match *replacement {
-                TomlDependency::Detailed(ref d) => d.version.is_some(),
-                TomlDependency::Simple(..) => true,
-            };
-            if version_specified {
+            if replacement.is_version_specified() {
                 bail!(
                     "replacements cannot specify a version \
                      requirement, but found one for `{}`",
@@ -1328,6 +1331,13 @@ impl TomlDependency {
             }
             .to_dependency(name, cx, kind),
             TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
+        }
+    }
+
+    fn is_version_specified(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.version.is_some(),
+            TomlDependency::Simple(..) => true,
         }
     }
 }

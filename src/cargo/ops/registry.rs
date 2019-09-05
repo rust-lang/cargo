@@ -116,6 +116,10 @@ fn verify_dependencies(
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() || dep.source_id().is_git() {
             if !dep.specified_req() {
+                if !dep.is_transitive() {
+                    // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
+                    continue;
+                }
                 let which = if dep.source_id().is_path() {
                     "path"
                 } else {
@@ -172,6 +176,10 @@ fn transmit(
     let deps = pkg
         .dependencies()
         .iter()
+        .filter(|dep| {
+            // Skip dev-dependency without version.
+            dep.is_transitive() || dep.specified_req()
+        })
         .map(|dep| {
             // If the dependency is from a different registry, then include the
             // registry in the dependency.
