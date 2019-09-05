@@ -182,6 +182,9 @@ include::section-exit-status.adoc[]
 `$CARGO_HOME/git/`::
     This directory contains cached downloads of git dependencies.
 
+Please note that the internal structure of the `$CARGO_HOME` directory is not
+stable yet and may be subject to change.
+
 == EXAMPLES
 
 . Build a local package and all of its dependencies:
