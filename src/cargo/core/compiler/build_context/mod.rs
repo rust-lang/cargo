@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str;
 
+use cargo_platform::Cfg;
 use log::debug;
 
 use crate::core::compiler::unit::UnitInterner;
@@ -10,7 +11,7 @@ use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet};
 use crate::util::errors::CargoResult;
-use crate::util::{profile, Cfg, Config, Rustc};
+use crate::util::{profile, Config, Rustc};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};

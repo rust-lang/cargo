@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
+use cargo_platform::Platform;
 use failure::bail;
 use log::{debug, trace};
 use semver::{self, VersionReq};
@@ -13,7 +14,7 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::core::dependency::{Kind, Platform};
+use crate::core::dependency::Kind;
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};

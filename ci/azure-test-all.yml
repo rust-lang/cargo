@@ -29,3 +29,6 @@ steps:
 
 - bash: cargo test -p cargo-test-support
   displayName: "cargo test -p cargo-test-support"
+
+- bash: cargo test -p cargo-platform
+  displayName: "cargo test -p cargo-platform"
