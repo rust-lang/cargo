@@ -237,7 +237,15 @@ fn doc() {
 
 fn check_std() {
     let p = project()
-        .file("src/lib.rs", "pub fn f() {}")
+        .file(
+            "src/lib.rs",
+            "
+                extern crate core;
+                extern crate alloc;
+                extern crate proc_macro;
+                pub fn f() {}
+            ",
+        )
         .file("src/main.rs", "fn main() {}")
         .file(
             "tests/t1.rs",
