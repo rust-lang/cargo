@@ -80,10 +80,13 @@ pub fn resolve_std<'cfg>(
     // now. Perhaps in the future features will be decoupled from the resolver
     // and it will be easier to control feature selection.
     let current_manifest = src_path.join("src/libtest/Cargo.toml");
-    // TODO: Consider setting require_option_deps false?
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
-    let std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
+    let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
+    // Don't require optional dependencies in this workspace, aka std's own
+    // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
+    // those included because we'll never use them anyway.
+    std_ws.set_require_optional_deps(false);
     // `test` is not in the default set because it is optional, but it needs
     // to be part of the resolve in case we do need it.
     let mut spec_pkgs = Vec::from(crates);
