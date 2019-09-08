@@ -353,10 +353,8 @@ fn build_requirements<'a, 'b: 'a>(
         }
     }
 
-    if opts.uses_default_features {
-        if s.features().contains_key("default") {
-            reqs.require_feature(InternedString::new("default"))?;
-        }
+    if opts.uses_default_features && s.features().contains_key("default") {
+        reqs.require_feature(InternedString::new("default"))?;
     }
 
     Ok(reqs)
@@ -435,7 +433,7 @@ impl Requirements<'_> {
         for fv in self
             .summary
             .features()
-            .get(feat.as_str())
+            .get(&feat)
             .expect("must be a valid feature")
         {
             match *fv {

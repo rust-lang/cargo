@@ -113,9 +113,13 @@ impl Hash for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
+    pub fn new<T: ToSemver>(
+        name: impl Into<InternedString>,
+        version: T,
+        sid: SourceId,
+    ) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
-        Ok(PackageId::pure(InternedString::new(name), v, sid))
+        Ok(PackageId::pure(name.into(), v, sid))
     }
 
     pub fn pure(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {

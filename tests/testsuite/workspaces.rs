@@ -83,6 +83,44 @@ fn simple_explicit_default_members() {
 }
 
 #[cargo_test]
+fn non_virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = [".", "bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] Compiling baz v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn inferred_root() {
     let p = project()
         .file(
@@ -849,6 +887,31 @@ but is not a member.
 }
 
 #[cargo_test]
+fn virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn virtual_build_no_members() {
     let p = project().file(
         "Cargo.toml",
@@ -1001,7 +1064,7 @@ failed to parse manifest at `[..]foo/Cargo.toml`
 Caused by:
   could not parse input as TOML
 Caused by:
-  expected an equals, found eof at line 1
+  expected an equals, found eof at line 1 column 5
      Created binary (application) `bar` package
 ",
         )
@@ -1127,8 +1190,7 @@ fn workspace_in_git() {
             )
             .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
             .file("foo/src/lib.rs", "")
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
@@ -1800,7 +1862,7 @@ fn dep_used_with_separate_features() {
     let p = p.build();
 
     // Build the entire workspace.
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1872,8 +1934,7 @@ fn dont_recurse_out_of_cargo_home() {
                 }
             "#,
             )
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-fix
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.8
-.\"      Date: 2019-06-07
+.\" Generator: Asciidoctor 2.0.10
+.\"      Date: 2019-08-19
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-FIX" "1" "2019-06-07" "\ \&" "\ \&"
+.TH "CARGO\-FIX" "1" "2019-08-19" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -113,11 +113,15 @@ Fix code even if the working directory has staged changes.
 .SS "Package Selection"
 .sp
 By default, when no package selection options are given, the packages selected
-depend on the current working directory. In the root of a virtual workspace,
-all workspace members are selected (\fB\-\-all\fP is implied). Otherwise, only the
-package in the current directory will be selected. The default packages may be
-overridden with the \fBworkspace.default\-members\fP key in the root \fBCargo.toml\fP
-manifest.
+depend on the selected manifest file (based on the current working directory if
+\fB\-\-manifest\-path\fP is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+.sp
+The default members of a workspace can be set explicitly with the
+\fBworkspace.default\-members\fP key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+\fB\-\-workspace\fP), and a non\-virtual workspace will include only the root crate itself.
 .sp
 \fB\-p\fP \fISPEC\fP..., \fB\-\-package\fP \fISPEC\fP...
 .RS 4
@@ -125,15 +129,20 @@ Fix only the specified packages. See \fBcargo\-pkgid\fP(1) for the
 SPEC format. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-all\fP
+\fB\-\-workspace\fP
 .RS 4
 Fix all members in the workspace.
+.RE
+.sp
+\fB\-\-all\fP
+.RS 4
+Deprecated alias for \fB\-\-workspace\fP.
 .RE
 .sp
 \fB\-\-exclude\fP \fISPEC\fP...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-all\fP flag. This flag may be specified multiple times.
+\fB\-\-workspace\fP flag. This flag may be specified multiple times.
 .RE
 .SS "Target Selection"
 .sp

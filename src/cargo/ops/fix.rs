@@ -130,6 +130,9 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         server.configure(&mut wrapper);
     }
 
+    let rustc = opts.compile_opts.config.load_global_rustc(Some(ws))?;
+    wrapper.arg(&rustc.path);
+
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
     // repeating build until there are no more changes to be applied
     opts.compile_opts.build_config.primary_unit_rustc = Some(wrapper);

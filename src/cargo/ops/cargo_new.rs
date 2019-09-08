@@ -513,7 +513,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
                 // Temporary fix to work around bug in libgit2 when creating a
                 // directory in the root of a posix filesystem.
                 // See: https://github.com/libgit2/libgit2/issues/5130
-                fs::create_dir_all(path)?;
+                paths::create_dir_all(path)?;
                 GitRepo::init(path, config.cwd())?;
             }
         }
@@ -533,7 +533,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
             }
         }
         VersionControl::NoVcs => {
-            fs::create_dir_all(path)?;
+            paths::create_dir_all(path)?;
         }
     };
 
@@ -650,7 +650,7 @@ edition = {}
         let path_of_source_file = path.join(i.relative_path.clone());
 
         if let Some(src_dir) = path_of_source_file.parent() {
-            fs::create_dir_all(src_dir)?;
+            paths::create_dir_all(src_dir)?;
         }
 
         let default_file_content: &[u8] = if i.bin {

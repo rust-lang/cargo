@@ -100,11 +100,16 @@ current edition.</p>
 <h3 id="cargo_fix_package_selection">Package Selection</h3>
 <div class="paragraph">
 <p>By default, when no package selection options are given, the packages selected
-depend on the current working directory. In the root of a virtual workspace,
-all workspace members are selected (<code>--all</code> is implied). Otherwise, only the
-package in the current directory will be selected. The default packages may be
-overridden with the <code>workspace.default-members</code> key in the root <code>Cargo.toml</code>
-manifest.</p>
+depend on the selected manifest file (based on the current working directory if
+<code>--manifest-path</code> is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.</p>
+</div>
+<div class="paragraph">
+<p>The default members of a workspace can be set explicitly with the
+<code>workspace.default-members</code> key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+<code>--workspace</code>), and a non-virtual workspace will include only the root crate itself.</p>
 </div>
 <div class="dlist">
 <dl>
@@ -114,14 +119,18 @@ manifest.</p>
 <p>Fix only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times.</p>
 </dd>
-<dt class="hdlist1"><strong>--all</strong></dt>
+<dt class="hdlist1"><strong>--workspace</strong></dt>
 <dd>
 <p>Fix all members in the workspace.</p>
+</dd>
+<dt class="hdlist1"><strong>--all</strong></dt>
+<dd>
+<p>Deprecated alias for <code>--workspace</code>.</p>
 </dd>
 <dt class="hdlist1"><strong>--exclude</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
 <p>Exclude the specified packages. Must be used in conjunction with the
-<code>--all</code> flag. This flag may be specified multiple times.</p>
+<code>--workspace</code> flag. This flag may be specified multiple times.</p>
 </dd>
 </dl>
 </div>

@@ -2797,7 +2797,7 @@ fn test_all_workspace() {
         .file("bar/src/lib.rs", "#[test] fn bar_test() {}")
         .build();
 
-    p.cargo("test --all")
+    p.cargo("test --workspace")
         .with_stdout_contains("test foo_test ... ok")
         .with_stdout_contains("test bar_test ... ok")
         .run();
@@ -2824,7 +2824,7 @@ fn test_all_exclude() {
         .file("baz/src/lib.rs", "#[test] pub fn baz() { assert!(false); }")
         .build();
 
-    p.cargo("test --all --exclude baz")
+    p.cargo("test --workspace --exclude baz")
         .with_stdout_contains(
             "running 1 test
 test bar ... ok",
@@ -2848,7 +2848,7 @@ fn test_all_virtual_manifest() {
         .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
-    p.cargo("test --all")
+    p.cargo("test --workspace")
         .with_stdout_contains("test a ... ok")
         .with_stdout_contains("test b ... ok")
         .run();
@@ -2902,7 +2902,7 @@ fn test_all_member_dependency_same_name() {
 
     Package::new("a", "0.1.0").publish();
 
-    p.cargo("test --all")
+    p.cargo("test --workspace")
         .with_stdout_contains("test a ... ok")
         .run();
 }
@@ -3037,7 +3037,7 @@ fn doctest_and_registry() {
 
     Package::new("b", "0.1.0").publish();
 
-    p.cargo("test --all -v").run();
+    p.cargo("test --workspace -v").run();
 }
 
 #[cargo_test]
@@ -3075,7 +3075,7 @@ fn test_order() {
         .file("tests/z.rs", "#[test] fn test_z() {}")
         .build();
 
-    p.cargo("test --all")
+    p.cargo("test --workspace")
         .with_stdout_contains(
             "
 running 1 test
@@ -3117,7 +3117,7 @@ fn cyclic_dev() {
         .file("tests/foo.rs", "extern crate foo;")
         .build();
 
-    p.cargo("test --all").run();
+    p.cargo("test --workspace").run();
 }
 
 #[cargo_test]
@@ -3228,7 +3228,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         .dep("bar", "0.1")
         .file("src/lib.rs", "extern crate bar;")
         .publish();
-    p.cargo("test --all --target").arg(rustc_host()).run();
+    p.cargo("test --workspace --target").arg(rustc_host()).run();
 }
 
 #[cargo_test]
@@ -3310,7 +3310,7 @@ fn test_hint_workspace_nonvirtual() {
         .file("a/src/lib.rs", "#[test] fn t1() {assert!(false)}")
         .build();
 
-    p.cargo("test --all")
+    p.cargo("test --workspace")
         .with_stderr_contains("[ERROR] test failed, to rerun pass '-p a --lib'")
         .with_status(101)
         .run();

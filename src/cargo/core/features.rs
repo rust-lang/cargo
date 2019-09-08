@@ -338,6 +338,7 @@ pub struct CliUnstable {
     pub cache_messages: bool,
     pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
+    pub build_std: Option<Vec<String>>,
 }
 
 impl CliUnstable {
@@ -385,6 +386,9 @@ impl CliUnstable {
             "cache-messages" => self.cache_messages = true,
             "named-profiles" => self.named_profiles = true,
             "binary-dep-depinfo" => self.binary_dep_depinfo = true,
+            "build-std" => {
+                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
+            }
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

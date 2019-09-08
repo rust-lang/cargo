@@ -7,7 +7,8 @@
 //! rough outline is:
 //!
 //! - Resolve the dependency graph (see `ops::resolve`).
-//! - Download any packages needed (see `PackageSet`).
+//! - Download any packages needed (see `PackageSet`). Note that dependency
+//!   downloads are deferred until `build_unit_dependencies`.
 //! - Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each `Unit` corresponds to a compiler
 //!   invocation. This is done in this module (`generate_targets`).
@@ -27,6 +28,8 @@ use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::core::compiler::standard_lib;
+use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -103,7 +106,7 @@ impl Packages {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => failure::bail!("--exclude can only be used together with --all"),
+            (false, _, _) => failure::bail!("--exclude can only be used together with --workspace"),
             (true, 0, _) => Packages::All,
             (true, _, _) => Packages::OptOut(exclude),
         })
@@ -297,16 +300,38 @@ pub fn compile_ws<'a>(
         Kind::Host
     };
 
+    let profiles = ws.profiles();
+
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
     let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
-    let (packages, resolve_with_overrides) = resolve;
+    let (mut packages, resolve_with_overrides) = resolve;
 
+    let std_resolve = if let Some(crates) = &config.cli_unstable().build_std {
+        if build_config.requested_target.is_none() {
+            // TODO: This should eventually be fixed. Unfortunately it is not
+            // easy to get the host triple in BuildConfig. Consider changing
+            // requested_target to an enum, or some other approach.
+            failure::bail!("-Zbuild-std requires --target");
+        }
+        let (std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
+        packages.add_set(std_package_set);
+        Some(std_resolve)
+    } else {
+        None
+    };
+
+    // Find the packages in the resolver that the user wants to build (those
+    // passed in with `-p` or the defaults from the workspace), and convert
+    // Vec<PackageIdSpec> to a Vec<&PackageId>.
     let to_build_ids = specs
         .iter()
         .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
+    // Now get the `Package` for each `PackageId`. This may trigger a download
+    // if the user specified `-p` for a dependency that is not downloaded.
+    // Dependencies will be downloaded during build_unit_dependencies.
     let mut to_builds = packages.get_many(to_build_ids)?;
 
     // The ordering here affects some error messages coming out of cargo, so
@@ -315,7 +340,7 @@ pub fn compile_ws<'a>(
     to_builds.sort_by_key(|p| p.package_id());
 
     for pkg in to_builds.iter() {
-        pkg.manifest().print_teapot(ws.config());
+        pkg.manifest().print_teapot(config);
 
         if build_config.mode.is_any_test()
             && !ws.is_member(pkg)
@@ -342,13 +367,11 @@ pub fn compile_ws<'a>(
         );
     }
 
-    let profiles = ws.profiles();
     profiles.validate_packages(&mut config.shell(), &packages)?;
 
     let interner = UnitInterner::new();
     let mut bcx = BuildContext::new(
         ws,
-        &resolve_with_overrides,
         &packages,
         config,
         build_config,
@@ -365,6 +388,21 @@ pub fn compile_ws<'a>(
         &resolve_with_overrides,
         &bcx,
     )?;
+
+    let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
+        // Only build libtest if it looks like it is needed.
+        let mut crates = crates.clone();
+        if !crates.iter().any(|c| c == "test")
+            && units
+                .iter()
+                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+        {
+            crates.push("test".to_string());
+        }
+        standard_lib::generate_std_roots(&bcx, &crates, std_resolve.as_ref().unwrap())?
+    } else {
+        Vec::new()
+    };
 
     if let Some(args) = extra_args {
         if units.len() != 1 {
@@ -385,9 +423,17 @@ pub fn compile_ws<'a>(
         }
     }
 
+    let unit_dependencies = build_unit_dependencies(
+        &bcx,
+        &resolve_with_overrides,
+        std_resolve.as_ref(),
+        &units,
+        &std_roots,
+    )?;
+
     let ret = {
         let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx)?;
+        let cx = Context::new(config, &bcx, unit_dependencies)?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
 
@@ -443,6 +489,9 @@ impl CompileFilter {
         all_bens: bool,
         all_targets: bool,
     ) -> CompileFilter {
+        if all_targets {
+            return CompileFilter::new_all_targets();
+        }
         let rule_lib = if lib_only {
             LibRule::True
         } else {
@@ -453,18 +502,7 @@ impl CompileFilter {
         let rule_exms = FilterRule::new(exms, all_exms);
         let rule_bens = FilterRule::new(bens, all_bens);
 
-        if all_targets {
-            CompileFilter::Only {
-                all_targets: true,
-                lib: LibRule::Default,
-                bins: FilterRule::All,
-                examples: FilterRule::All,
-                benches: FilterRule::All,
-                tests: FilterRule::All,
-            }
-        } else {
-            CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
-        }
+        CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
     }
 
     /// Construct a CompileFilter from underlying primitives.
@@ -493,6 +531,17 @@ impl CompileFilter {
             CompileFilter::Default {
                 required_features_filterable: true,
             }
+        }
+    }
+
+    pub fn new_all_targets() -> CompileFilter {
+        CompileFilter::Only {
+            all_targets: true,
+            lib: LibRule::Default,
+            bins: FilterRule::All,
+            examples: FilterRule::All,
+            benches: FilterRule::All,
+            tests: FilterRule::All,
         }
     }
 
@@ -577,7 +626,7 @@ fn generate_targets<'a>(
     packages: &[&'a Package],
     filter: &CompileFilter,
     default_arch_kind: Kind,
-    resolve: &Resolve,
+    resolve: &'a Resolve,
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
     let _ = profiles.base_profile(&bcx.build_config.profile_kind)?;
@@ -651,7 +700,9 @@ fn generate_targets<'a>(
             target_mode,
             bcx.build_config.profile_kind.clone(),
         );
-        bcx.units.intern(pkg, target, profile, kind, target_mode)
+        let features = resolve.features_sorted(pkg.package_id());
+        bcx.units
+            .intern(pkg, target, profile, kind, target_mode, features)
     };
 
     // Create a list of proposed targets.

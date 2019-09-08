@@ -210,14 +210,14 @@ impl Shell {
         if self.needs_clear {
             self.err_erase_line();
         }
-        self.err.print(&"error:", Some(&message), Red, false)
+        self.err.print(&"error", Some(&message), Red, false)
     }
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning:", Some(&message), Yellow, false),
+            _ => self.print(&"warning", Some(&message), Yellow, false),
         }
     }
 
@@ -318,6 +318,8 @@ impl ShellOut {
                     write!(stream, "{:>12}", status)?;
                 } else {
                     write!(stream, "{}", status)?;
+                    stream.set_color(ColorSpec::new().set_bold(true))?;
+                    write!(stream, ":")?;
                 }
                 stream.reset()?;
                 match message {
@@ -329,7 +331,7 @@ impl ShellOut {
                 if justified {
                     write!(w, "{:>12}", status)?;
                 } else {
-                    write!(w, "{}", status)?;
+                    write!(w, "{}:", status)?;
                 }
                 match message {
                     Some(message) => writeln!(w, " {}", message)?,
@@ -377,6 +379,8 @@ mod imp {
     pub fn stderr_width() -> Option<usize> {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();
+            // The .into() here is needed for FreeBSD which defines TIOCGWINSZ
+            // as c_uint but ioctl wants c_ulong.
             if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ.into(), &mut winsize) < 0 {
                 return None;
             }

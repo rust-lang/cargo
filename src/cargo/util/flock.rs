@@ -1,4 +1,4 @@
-use std::fs::{self, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
@@ -149,8 +149,9 @@ impl Filesystem {
     ///
     /// Handles errors where other Cargo processes are also attempting to
     /// concurrently create this directory.
-    pub fn create_dir(&self) -> io::Result<()> {
-        fs::create_dir_all(&self.root)
+    pub fn create_dir(&self) -> CargoResult<()> {
+        paths::create_dir_all(&self.root)?;
+        Ok(())
     }
 
     /// Returns an adaptor that can be used to print the path of this
@@ -221,10 +222,10 @@ impl Filesystem {
             .open(&path)
             .or_else(|e| {
                 if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
-                    fs::create_dir_all(path.parent().unwrap())?;
-                    opts.open(&path)
+                    paths::create_dir_all(path.parent().unwrap())?;
+                    Ok(opts.open(&path)?)
                 } else {
-                    Err(e)
+                    Err(failure::Error::from(e))
                 }
             })
             .chain_err(|| format!("failed to open: {}", path.display()))?;

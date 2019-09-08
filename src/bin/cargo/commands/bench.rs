@@ -59,9 +59,9 @@ which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
 
-All packages in the workspace are benchmarked if the `--all` flag is supplied. The
-`--all` flag is automatically assumed for a virtual manifest.
-Note that `--exclude` has to be specified in conjunction with the `--all` flag.
+All packages in the workspace are benchmarked if the `--workspace` flag is supplied. The
+`--workspace` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--workspace` flag.
 
 The `--jobs` argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.

@@ -129,7 +129,7 @@ fn incremental_config() {
 fn cargo_compile_with_workspace_excluded() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    p.cargo("build --all --exclude foo")
+    p.cargo("build --workspace --exclude foo")
         .with_stderr_does_not_contain("[..]virtual[..]")
         .with_stderr_contains("[..]no packages to compile")
         .with_status(101)
@@ -188,7 +188,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 3
+  invalid number at line 3 column 19
 ",
         )
         .run();
@@ -208,7 +208,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 1
+  invalid number at line 1 column 5
 ",
         )
         .run();
@@ -2274,7 +2274,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 1
+  expected an equals, found an identifier at line 1 column 6
 ",
         )
         .run();
@@ -3390,7 +3390,7 @@ fn build_all_workspace() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "[..] Compiling bar v0.1.0 ([..])\n\
              [..] Compiling foo v0.1.0 ([..])\n\
@@ -3420,7 +3420,7 @@ fn build_all_exclude() {
         .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
         .build();
 
-    p.cargo("build --all --exclude baz")
+    p.cargo("build --workspace --exclude baz")
         .with_stderr_contains("[..]Compiling foo v0.1.0 [..]")
         .with_stderr_contains("[..]Compiling bar v0.1.0 [..]")
         .with_stderr_does_not_contain("[..]Compiling baz v0.1.0 [..]")
@@ -3456,7 +3456,7 @@ fn build_all_workspace_implicit_examples() {
         .file("bar/examples/h.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --all --examples")
+    p.cargo("build --workspace --examples")
         .with_stderr(
             "[..] Compiling bar v0.1.0 ([..])\n\
              [..] Compiling foo v0.1.0 ([..])\n\
@@ -3490,7 +3490,7 @@ fn build_all_virtual_manifest() {
         .build();
 
     // The order in which bar and baz are built is not guaranteed
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
         .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
         .with_stderr(
@@ -3580,7 +3580,7 @@ fn build_all_virtual_manifest_implicit_examples() {
         .build();
 
     // The order in which bar and baz are built is not guaranteed
-    p.cargo("build --all --examples")
+    p.cargo("build --workspace --examples")
         .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
         .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
         .with_stderr(
@@ -3625,7 +3625,7 @@ fn build_all_member_dependency_same_name() {
 
     Package::new("a", "0.1.0").publish();
 
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "[UPDATING] `[..]` index\n\
              [DOWNLOADING] crates ...\n\
@@ -3695,7 +3695,7 @@ fn run_proper_alias_binary_from_src() {
         .file("src/bar.rs", r#"fn main() { println!("bar"); }"#)
         .build();
 
-    p.cargo("build --all").run();
+    p.cargo("build --workspace").run();
     p.process(&p.bin("foo")).with_stdout("foo\n").run();
     p.process(&p.bin("bar")).with_stdout("bar\n").run();
 }
@@ -3719,7 +3719,7 @@ fn run_proper_alias_binary_main_rs() {
         .file("src/main.rs", r#"fn main() { println!("main"); }"#)
         .build();
 
-    p.cargo("build --all").run();
+    p.cargo("build --workspace").run();
     p.process(&p.bin("foo")).with_stdout("main\n").run();
     p.process(&p.bin("bar")).with_stdout("main\n").run();
 }
@@ -4165,6 +4165,34 @@ fn uplift_dsym_of_bin_on_mac() {
     assert!(p.target_debug_dir().join("examples/c.dSYM").is_symlink());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
+}
+
+#[cargo_test]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+fn uplift_dsym_of_bin_on_mac_when_broken_link_exists() {
+    let p = project()
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .build();
+    let dsym = p.target_debug_dir().join("foo.dSYM");
+
+    p.cargo("build").run();
+    assert!(dsym.is_dir());
+
+    // Simulate the situation where the underlying dSYM bundle goes missing
+    // but the uplifted symlink to it remains. This would previously cause
+    // builds to permanently fail until the bad symlink was manually removed.
+    dsym.rm_rf();
+    p.symlink(
+        p.target_debug_dir()
+            .join("deps")
+            .join("foo-baaaaaadbaaaaaad.dSYM"),
+        &dsym,
+    );
+    assert!(dsym.is_symlink());
+    assert!(!dsym.exists());
+
+    p.cargo("build").run();
+    assert!(dsym.is_dir());
 }
 
 #[cargo_test]

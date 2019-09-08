@@ -201,11 +201,11 @@ fn plugin_deps() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
+            extern crate rustc_driver;
             extern crate syntax;
 
-            use rustc_plugin::Registry;
-            use syntax::tokenstream::TokenTree;
+            use rustc_driver::plugin::Registry;
+            use syntax::tokenstream::TokenStream;
             use syntax::source_map::Span;
             use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
@@ -215,7 +215,7 @@ fn plugin_deps() {
                 reg.register_macro("bar", expand_bar);
             }
 
-            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
+            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: TokenStream)
                           -> Box<MacResult + 'static> {
                 MacEager::expr(cx.expr_lit(sp, LitKind::Int(1, LitIntType::Unsuffixed)))
             }
@@ -296,12 +296,12 @@ fn plugin_to_the_max() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
+            extern crate rustc_driver;
             extern crate syntax;
             extern crate baz;
 
-            use rustc_plugin::Registry;
-            use syntax::tokenstream::TokenTree;
+            use rustc_driver::plugin::Registry;
+            use syntax::tokenstream::TokenStream;
             use syntax::source_map::Span;
             use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
@@ -312,7 +312,7 @@ fn plugin_to_the_max() {
                 reg.register_macro("bar", expand_bar);
             }
 
-            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
+            fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: TokenStream)
                           -> Box<MacResult + 'static> {
                 let bar = Ident::from_str("baz");
                 let path = cx.path(sp, vec![bar.clone(), bar]);
@@ -446,10 +446,10 @@ fn plugin_with_extra_dylib_dep() {
             r#"
             #![feature(plugin_registrar, rustc_private)]
 
-            extern crate rustc_plugin;
             extern crate baz;
+            extern crate rustc_driver;
 
-            use rustc_plugin::Registry;
+            use rustc_driver::plugin::Registry;
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {

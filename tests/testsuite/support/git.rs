@@ -42,7 +42,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use cargo::util::ProcessError;
 use git2;
 use url::Url;
 
@@ -66,12 +65,7 @@ pub fn repo(p: &Path) -> RepoBuilder {
 impl RepoBuilder {
     pub fn init(p: &Path) -> RepoBuilder {
         t!(fs::create_dir_all(p.parent().unwrap()));
-        let repo = t!(git2::Repository::init(p));
-        {
-            let mut config = t!(repo.config());
-            t!(config.set_str("user.name", "name"));
-            t!(config.set_str("user.email", "email"));
-        }
+        let repo = init(p);
         RepoBuilder {
             repo,
             files: Vec::new(),
@@ -132,8 +126,30 @@ impl Repository {
     }
 }
 
+/// Initialize a new repository at the given path.
+pub fn init(path: &Path) -> git2::Repository {
+    let repo = t!(git2::Repository::init(path));
+    default_repo_cfg(&repo);
+    repo
+}
+
+fn default_repo_cfg(repo: &git2::Repository) {
+    let mut cfg = t!(repo.config());
+    t!(cfg.set_str("user.email", "foo@bar.com"));
+    t!(cfg.set_str("user.name", "Foo Bar"));
+}
+
 /// Create a new git repository with a project.
-pub fn new<F>(name: &str, callback: F) -> Result<Project, ProcessError>
+pub fn new<F>(name: &str, callback: F) -> Project
+where
+    F: FnOnce(ProjectBuilder) -> ProjectBuilder,
+{
+    new_repo(name, callback).0
+}
+
+/// Create a new git repository with a project.
+/// Returns both the Project and the git Repository.
+pub fn new_repo<F>(name: &str, callback: F) -> (Project, git2::Repository)
 where
     F: FnOnce(ProjectBuilder) -> ProjectBuilder,
 {
@@ -141,14 +157,10 @@ where
     git_project = callback(git_project);
     let git_project = git_project.build();
 
-    let repo = t!(git2::Repository::init(&git_project.root()));
-    let mut cfg = t!(repo.config());
-    t!(cfg.set_str("user.email", "foo@bar.com"));
-    t!(cfg.set_str("user.name", "Foo Bar"));
-    drop(cfg);
+    let repo = init(&git_project.root());
     add(&repo);
     commit(&repo);
-    Ok(git_project)
+    (git_project, repo)
 }
 
 /// Add all files in the working directory to the git index.
@@ -184,6 +196,7 @@ pub fn add_submodule<'a>(
     let path = path.to_str().unwrap().replace(r"\", "/");
     let mut s = t!(repo.submodule(url, Path::new(&path), false));
     let subrepo = t!(s.open());
+    default_repo_cfg(&subrepo);
     t!(subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*"));
     let mut origin = t!(subrepo.find_remote("origin"));
     t!(origin.fetch(&[], None, None));

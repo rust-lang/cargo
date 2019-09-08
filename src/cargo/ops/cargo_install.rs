@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
@@ -9,7 +9,7 @@ use tempfile::Builder as TempFileBuilder;
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{DefaultExecutor, Executor};
 use crate::core::resolver::ResolveOpts;
-use crate::core::{Edition, PackageId, PackageIdSpec, Source, SourceId, Workspace};
+use crate::core::{Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Workspace};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
@@ -347,7 +347,7 @@ fn install_one(
         (Some(tracker), duplicates)
     };
 
-    fs::create_dir_all(&dst)?;
+    paths::create_dir_all(&dst)?;
 
     // Copy all binaries to a temporary directory under `dst` first, catching
     // some failure modes (e.g., out of space) before touching the existing
@@ -413,6 +413,13 @@ fn install_one(
             target,
             rustc.verbose_version,
         );
+
+        if let Err(e) = remove_orphaned_bins(&ws, &mut tracker, &duplicates, pkg, &dst) {
+            // Don't hard error on remove.
+            config
+                .shell()
+                .warn(format!("failed to remove orphan: {:?}", e))?;
+        }
 
         match tracker.save() {
             Err(err) => replace_result.chain_err(|| err)?,
@@ -517,6 +524,61 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
         println!("{}:", k);
         for bin in v {
             println!("    {}", bin);
+        }
+    }
+    Ok(())
+}
+
+/// Removes executables that are no longer part of a package that was
+/// previously installed.
+fn remove_orphaned_bins(
+    ws: &Workspace<'_>,
+    tracker: &mut InstallTracker,
+    duplicates: &BTreeMap<String, Option<PackageId>>,
+    pkg: &Package,
+    dst: &Path,
+) -> CargoResult<()> {
+    let filter = ops::CompileFilter::new_all_targets();
+    let all_self_names = exe_names(pkg, &filter);
+    let mut to_remove: HashMap<PackageId, BTreeSet<String>> = HashMap::new();
+    // For each package that we stomped on.
+    for other_pkg in duplicates.values() {
+        // Only for packages with the same name.
+        if let Some(other_pkg) = other_pkg {
+            if other_pkg.name() == pkg.name() {
+                // Check what the old package had installed.
+                if let Some(installed) = tracker.installed_bins(*other_pkg) {
+                    // If the old install has any names that no longer exist,
+                    // add them to the list to remove.
+                    for installed_name in installed {
+                        if !all_self_names.contains(installed_name.as_str()) {
+                            to_remove
+                                .entry(*other_pkg)
+                                .or_default()
+                                .insert(installed_name.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (old_pkg, bins) in to_remove {
+        tracker.remove(old_pkg, &bins);
+        for bin in bins {
+            let full_path = dst.join(bin);
+            if full_path.exists() {
+                ws.config().shell().status(
+                    "Removing",
+                    format!(
+                        "executable `{}` from previous version {}",
+                        full_path.display(),
+                        old_pkg
+                    ),
+                )?;
+                paths::remove_file(&full_path)
+                    .chain_err(|| format!("failed to remove {:?}", full_path))?;
+            }
         }
     }
     Ok(())

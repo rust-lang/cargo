@@ -62,7 +62,7 @@ include::section-exit-status.adoc[]
 
     cargo vendor
 
-. Vendor all dependencies into a local "third-part/vendor" folder
+. Vendor all dependencies into a local "third-party/vendor" folder
 
     cargo vendor third-party/vendor
 

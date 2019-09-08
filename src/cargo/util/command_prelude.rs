@@ -31,7 +31,8 @@ pub trait AppExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(opt("all", all))
+            ._arg(opt("all", "Alias for --workspace (deprecated)"))
+            ._arg(opt("workspace", all))
             ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
@@ -339,7 +340,8 @@ pub trait ArgMatchesExt {
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
-            self._is_present("all"),
+            // TODO Integrate into 'workspace'
+            self._is_present("workspace") || self._is_present("all"),
             self._values_of("exclude"),
             self._values_of("package"),
         )?;

@@ -23,6 +23,18 @@ pub struct InternedString {
     inner: &'static str,
 }
 
+impl<'a> From<&'a str> for InternedString {
+    fn from(item: &'a str) -> Self {
+        InternedString::new(item)
+    }
+}
+
+impl<'a> From<&'a String> for InternedString {
+    fn from(item: &'a String) -> Self {
+        InternedString::new(item)
+    }
+}
+
 impl PartialEq for InternedString {
     fn eq(&self, other: &InternedString) -> bool {
         ptr::eq(self.as_str(), other.as_str())
@@ -52,6 +64,12 @@ impl Deref for InternedString {
     type Target = str;
 
     fn deref(&self) -> &'static str {
+        self.as_str()
+    }
+}
+
+impl AsRef<str> for InternedString {
+    fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
@@ -103,5 +121,31 @@ impl Serialize for InternedString {
         S: Serializer,
     {
         serializer.serialize_str(self.inner)
+    }
+}
+
+struct InternedStringVisitor;
+
+impl<'de> serde::Deserialize<'de> for InternedString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(InternedStringVisitor)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for InternedStringVisitor {
+    type Value = InternedString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("an String like thing")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(InternedString::new(v))
     }
 }

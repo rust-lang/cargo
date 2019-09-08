@@ -222,7 +222,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1
+  expected an equals, found eof at line 1 column 2
 ",
         )
         .run();
@@ -465,7 +465,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8
+  expected a table key, found a newline at line 8 column 23
 ",
         )
         .run();
@@ -777,7 +777,7 @@ fn unused_keys_in_virtual_manifest() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid

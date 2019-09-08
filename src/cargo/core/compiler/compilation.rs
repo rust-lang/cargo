@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target};
+use crate::core::{Edition, InternedString, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -16,7 +16,7 @@ pub struct Doctest {
     pub target: Target,
     /// Extern dependencies needed by `rustdoc`. The path is the location of
     /// the compiled lib.
-    pub deps: Vec<(String, PathBuf)>,
+    pub deps: Vec<(InternedString, PathBuf)>,
 }
 
 /// A structure returning the result of a compilation.
@@ -79,11 +79,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
-        let mut primary_unit_rustc_process =
-            bcx.build_config.primary_unit_rustc.clone().map(|mut r| {
-                r.arg(&bcx.rustc.path);
-                r
-            });
+        let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
 
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();

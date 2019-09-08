@@ -114,41 +114,47 @@ fn verify_dependencies(
     registry_src: SourceId,
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
-        if dep.source_id().is_path() {
+        if dep.source_id().is_path() || dep.source_id().is_git() {
             if !dep.specified_req() {
+                let which = if dep.source_id().is_path() {
+                    "path"
+                } else {
+                    "git"
+                };
+                let dep_version_source = dep.registry_id().map_or_else(
+                    || "crates.io".to_string(),
+                    |registry_id| registry_id.display_registry_name(),
+                );
                 bail!(
-                    "all path dependencies must have a version specified \
-                     when publishing.\ndependency `{}` does not specify \
-                     a version",
-                    dep.package_name()
+                    "all dependencies must have a version specified when publishing.\n\
+                     dependency `{}` does not specify a version\n\
+                     Note: The published dependency will use the version from {},\n\
+                     the `{}` specification will be removed from the dependency declaration.",
+                    dep.package_name(),
+                    dep_version_source,
+                    which,
                 )
             }
+        // TomlManifest::prepare_for_publish will rewrite the dependency
+        // to be just the `version` field.
         } else if dep.source_id() != registry_src {
-            if dep.source_id().is_registry() {
-                // Block requests to send to crates.io with alt-registry deps.
-                // This extra hostname check is mostly to assist with testing,
-                // but also prevents someone using `--index` to specify
-                // something that points to crates.io.
-                if registry_src.is_default_registry() || registry.host_is_crates_io() {
-                    bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
-                           registries either publish `{}` on crates.io or pull it into this repository\n\
-                           and specify it with a path and version\n\
-                           (crate `{}` is pulled from {})",
-                          dep.package_name(),
-                          dep.package_name(),
-                          dep.source_id());
-                }
-            } else {
-                bail!(
-                    "crates cannot be published with dependencies sourced from \
-                     a repository\neither publish `{}` as its own crate and \
-                     specify a version as a dependency or pull it into this \
-                     repository and specify it with a path and version\n(crate `{}` has \
-                     repository path `{}`)",
-                    dep.package_name(),
-                    dep.package_name(),
-                    dep.source_id()
-                );
+            if !dep.source_id().is_registry() {
+                // Consider making SourceId::kind a public type that we can
+                // exhaustively match on. Using match can help ensure that
+                // every kind is properly handled.
+                panic!("unexpected source kind for dependency {:?}", dep);
+            }
+            // Block requests to send to crates.io with alt-registry deps.
+            // This extra hostname check is mostly to assist with testing,
+            // but also prevents someone using `--index` to specify
+            // something that points to crates.io.
+            if registry_src.is_default_registry() || registry.host_is_crates_io() {
+                bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                       registries. `{}` needs to be published to crates.io before publishing this crate.\n\
+                       (crate `{}` is pulled from {})",
+                      dep.package_name(),
+                      dep.package_name(),
+                      dep.source_id());
             }
         }
     }
@@ -345,6 +351,13 @@ fn registry(
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
+    if !sid.is_remote_registry() {
+        bail!(
+            "{} does not support API commands.\n\
+             Check for a source-replacement in .cargo/config.",
+            sid
+        );
+    }
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);

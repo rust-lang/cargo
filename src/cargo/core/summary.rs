@@ -26,7 +26,7 @@ pub struct Summary {
 struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: FeatureMap,
+    features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
     namespaced_features: bool,
@@ -37,7 +37,7 @@ impl Summary {
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: &BTreeMap<K, Vec<impl AsRef<str>>>,
-        links: Option<impl AsRef<str>>,
+        links: Option<impl Into<InternedString>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
     where
@@ -64,9 +64,9 @@ impl Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
                 dependencies,
-                features: feature_map,
+                features: Rc::new(feature_map),
                 checksum: None,
-                links: links.map(|l| InternedString::new(l.as_ref())),
+                links: links.map(|l| l.into()),
                 namespaced_features,
             }),
         })

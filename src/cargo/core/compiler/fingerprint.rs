@@ -189,7 +189,6 @@
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -202,7 +201,8 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
-use crate::core::Package;
+use crate::core::compiler::unit_dependencies::UnitDep;
+use crate::core::{InternedString, Package};
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
@@ -321,7 +321,7 @@ struct DepFingerprint {
     pkg_id: u64,
     /// The crate name we're using for this dependency, which if we change we'll
     /// need to recompile!
-    name: String,
+    name: InternedString,
     /// Whether or not this dependency is flagged as a public dependency or not.
     public: bool,
     /// Whether or not this dependency is an rmeta dependency or a "full"
@@ -447,7 +447,7 @@ impl<'de> Deserialize<'de> for DepFingerprint {
         let (pkg_id, name, public, hash) = <(u64, String, bool, u64)>::deserialize(d)?;
         Ok(DepFingerprint {
             pkg_id,
-            name,
+            name: InternedString::new(&name),
             public,
             fingerprint: Arc::new(Fingerprint {
                 memoized_hash: Mutex::new(Some(hash)),
@@ -933,12 +933,9 @@ impl DepFingerprint {
     fn new<'a, 'cfg>(
         cx: &mut Context<'a, 'cfg>,
         parent: &Unit<'a>,
-        dep: &Unit<'a>,
+        dep: &UnitDep<'a>,
     ) -> CargoResult<DepFingerprint> {
-        let fingerprint = calculate(cx, dep)?;
-        let name = cx.bcx.extern_crate_name(parent, dep)?;
-        let public = cx.bcx.is_public_dependency(parent, dep);
-
+        let fingerprint = calculate(cx, &dep.unit)?;
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
         // everything. To do that, however, we need to make sure that the cwd
@@ -949,18 +946,18 @@ impl DepFingerprint {
         // names (sort of for this same reason), so if the package source is a
         // `path` then we just hash the name, but otherwise we hash the full
         // id as it won't change when the directory is renamed.
-        let pkg_id = if dep.pkg.package_id().source_id().is_path() {
-            util::hash_u64(dep.pkg.package_id().name())
+        let pkg_id = if dep.unit.pkg.package_id().source_id().is_path() {
+            util::hash_u64(dep.unit.pkg.package_id().name())
         } else {
-            util::hash_u64(dep.pkg.package_id())
+            util::hash_u64(dep.unit.pkg.package_id())
         };
 
         Ok(DepFingerprint {
             pkg_id,
-            name,
-            public,
+            name: dep.extern_crate_name,
+            public: dep.public,
             fingerprint,
-            only_requires_rmeta: cx.only_requires_rmeta(parent, dep),
+            only_requires_rmeta: cx.only_requires_rmeta(parent, &dep.unit),
         })
     }
 }
@@ -1040,11 +1037,13 @@ fn calculate_normal<'a, 'cfg>(
     // Skip fingerprints of binaries because they don't actually induce a
     // recompile, they're just dependencies in the sense that they need to be
     // built.
-    let mut deps = cx
-        .dep_targets(unit)
-        .iter()
-        .filter(|u| !u.target.is_bin())
-        .map(|dep| DepFingerprint::new(cx, unit, dep))
+    //
+    // Create Vec since mutable cx is needed in closure.
+    let deps = Vec::from(cx.unit_deps(unit));
+    let mut deps = deps
+        .into_iter()
+        .filter(|dep| !dep.unit.target.is_bin())
+        .map(|dep| DepFingerprint::new(cx, unit, &dep))
         .collect::<CargoResult<Vec<_>>>()?;
     deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
 
@@ -1091,10 +1090,7 @@ fn calculate_normal<'a, 'cfg>(
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(super::path_args(cx.bcx, unit).0),
-        features: format!(
-            "{:?}",
-            cx.bcx.resolve.features_sorted(unit.pkg.package_id())
-        ),
+        features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
@@ -1136,9 +1132,10 @@ fn calculate_run_custom_build<'a, 'cfg>(
         // Overridden build scripts don't need to track deps.
         vec![]
     } else {
-        cx.dep_targets(unit)
-            .iter()
-            .map(|dep| DepFingerprint::new(cx, unit, dep))
+        // Create Vec since mutable cx is needed in closure.
+        let deps = Vec::from(cx.unit_deps(unit));
+        deps.into_iter()
+            .map(|dep| DepFingerprint::new(cx, unit, &dep))
             .collect::<CargoResult<Vec<_>>>()?
     };
 
@@ -1339,7 +1336,7 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 
     // Doc tests have no output, thus no fingerprint.
     if !new1.exists() && !unit.mode.is_doc_test() {
-        fs::create_dir(&new1)?;
+        paths::create_dir_all(&new1)?;
     }
 
     Ok(())

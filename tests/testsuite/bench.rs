@@ -1382,7 +1382,7 @@ fn bench_all_workspace() {
         )
         .build();
 
-    p.cargo("bench --all")
+    p.cargo("bench --workspace")
         .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
         .with_stdout_contains("test bench_bar ... bench: [..]")
         .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")
@@ -1430,7 +1430,7 @@ fn bench_all_exclude() {
         )
         .build();
 
-    p.cargo("bench --all --exclude baz")
+    p.cargo("bench --workspace --exclude baz")
         .with_stdout_contains(
             "\
 running 1 test
@@ -1484,7 +1484,7 @@ fn bench_all_virtual_manifest() {
         .build();
 
     // The order in which bar and baz are built is not guaranteed
-    p.cargo("bench --all")
+    p.cargo("bench --workspace")
         .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
         .with_stdout_contains("test bench_baz ... bench: [..]")
         .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")

@@ -16,7 +16,7 @@ use url::Url;
 use crate::core::dependency::{Kind, Platform};
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Profiles;
-use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -696,7 +696,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
     edition: Option<String>,
-    name: String,
+    name: InternedString,
     version: semver::Version,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
@@ -743,7 +743,7 @@ pub struct TomlWorkspace {
 
 impl TomlProject {
     pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
-        PackageId::new(&self.name, self.version.clone(), source_id)
+        PackageId::new(self.name, self.version.clone(), source_id)
     }
 }
 
@@ -847,23 +847,27 @@ impl TomlManifest {
         }
 
         fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
-            match *dep {
-                TomlDependency::Detailed(ref d) => {
+            match dep {
+                TomlDependency::Detailed(d) => {
                     let mut d = d.clone();
-                    d.path.take(); // path dependencies become crates.io deps
-                                   // registry specifications are elaborated to the index URL
+                    // Path dependencies become crates.io deps.
+                    d.path.take();
+                    // Same with git dependencies.
+                    d.git.take();
+                    d.branch.take();
+                    d.tag.take();
+                    d.rev.take();
+                    // registry specifications are elaborated to the index URL
                     if let Some(registry) = d.registry.take() {
                         let src = SourceId::alt_registry(config, &registry)?;
                         d.registry_index = Some(src.url().to_string());
                     }
                     Ok(TomlDependency::Detailed(d))
                 }
-                TomlDependency::Simple(ref s) => {
-                    Ok(TomlDependency::Detailed(DetailedTomlDependency {
-                        version: Some(s.clone()),
-                        ..Default::default()
-                    }))
-                }
+                TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
+                    version: Some(s.clone()),
+                    ..Default::default()
+                })),
             }
         }
     }
@@ -935,6 +939,17 @@ impl TomlManifest {
                  build targets: {}",
                 e
             ));
+        }
+
+        if let Some(links) = &project.links {
+            if !targets.iter().any(|t| t.is_custom_build()) {
+                bail!(
+                    "package `{}` specifies that it links to `{}` but does not \
+                     have a custom build script",
+                    pkgid,
+                    links
+                )
+            }
         }
 
         let mut deps = Vec::new();

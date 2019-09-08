@@ -66,18 +66,17 @@
 //! details like invalidating caches and whatnot which are handled below, but
 //! hopefully those are more obvious inline in the code itself.
 
+use crate::core::dependency::Dependency;
+use crate::core::{InternedString, PackageId, SourceId, Summary};
+use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::util::paths;
+use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use log::info;
+use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::str;
-
-use log::info;
-use semver::{Version, VersionReq};
-
-use crate::core::dependency::Dependency;
-use crate::core::{InternedString, PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
-use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
 /// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
@@ -211,12 +210,10 @@ enum MaybeIndexSummary {
 
 /// A parsed representation of a summary from the index.
 ///
-/// In addition to a full `Summary` we have a few auxiliary pieces of
-/// information liked `yanked` and what the checksum hash is.
+/// In addition to a full `Summary` we have information on whether it is `yanked`.
 pub struct IndexSummary {
     pub summary: Summary,
     pub yanked: bool,
-    pub hash: String,
 }
 
 /// A representation of the cache on disk that Cargo maintains of summaries.
@@ -243,13 +240,16 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Returns the hash listed for a specified `PackageId`.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<&str> {
         let req = VersionReq::exact(pkg.version());
         let summary = self
             .summaries(pkg.name(), &req, load)?
             .next()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?;
-        Ok(summary.hash.clone())
+        summary
+            .summary
+            .checksum()
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))
     }
 
     /// Load a list of summaries for `name` package in this registry which
@@ -559,7 +559,7 @@ impl Summaries {
         // This is opportunistic so we ignore failure here but are sure to log
         // something in case of error.
         if let Some(cache_bytes) = cache_bytes {
-            if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+            if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
                 let path = Filesystem::new(cache_path.clone());
                 config.assert_package_cache_locked(&path);
                 if let Err(e) = fs::write(cache_path, cache_bytes) {
@@ -717,17 +717,16 @@ impl IndexSummary {
             links,
         } = serde_json::from_slice(line)?;
         log::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::new(&name, &vers, source_id)?;
+        let pkgid = PackageId::new(name, &vers, source_id)?;
         let deps = deps
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let mut summary = Summary::new(pkgid, deps, &features, links, false)?;
-        summary.set_checksum(cksum.clone());
+        summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,
             yanked: yanked.unwrap_or(false),
-            hash: cksum,
         })
     }
 }

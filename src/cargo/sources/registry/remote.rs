@@ -3,12 +3,13 @@ use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::mem;
@@ -55,8 +56,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
-                    drop(fs::remove_dir_all(&path));
-                    fs::create_dir_all(&path)?;
+                    drop(paths::remove_dir_all(&path));
+                    paths::create_dir_all(&path)?;
 
                     // Note that we'd actually prefer to use a bare repository
                     // here as we're not actually going to check anything out.
@@ -230,7 +231,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url, refspec, self.config)
+        git::fetch(repo, url.as_str(), refspec, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
 

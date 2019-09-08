@@ -191,8 +191,7 @@ fn git_same_repo_different_tags() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn tag1() {}")
-    })
-    .unwrap();
+    });
 
     let repo = git2::Repository::open(&a.root()).unwrap();
     git::tag(&repo, "tag1");
@@ -269,8 +268,7 @@ fn git_same_branch_different_revs() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn f1() {}")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .no_manifest()
@@ -476,15 +474,13 @@ fn no_deadlock_with_git_dependencies() {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let dep2 = git::new("dep2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(

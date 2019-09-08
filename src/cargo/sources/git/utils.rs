@@ -1,22 +1,20 @@
-use std::env;
-use std::fmt;
-use std::fs::{self, File};
-use std::mem;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
-use curl::easy::{Easy, List};
-use git2::{self, ObjectType};
-use log::{debug, info};
-use serde::ser;
-use serde::Serialize;
-use url::Url;
-
 use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{internal, network, Config, IntoUrl, Progress};
+use curl::easy::{Easy, List};
+use git2::{self, ObjectType};
+use log::{debug, info};
+use serde::ser;
+use serde::Serialize;
+use std::env;
+use std::fmt;
+use std::fs::File;
+use std::mem;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use url::Url;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -141,18 +139,18 @@ impl GitRemote {
     fn fetch_into(&self, dst: &mut git2::Repository, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &self.url, refspec, cargo_config)
+        fetch(dst, self.url.as_str(), refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
-        if fs::metadata(&dst).is_ok() {
+        if dst.exists() {
             paths::remove_dir_all(dst)?;
         }
-        fs::create_dir_all(dst)?;
+        paths::create_dir_all(dst)?;
         let mut repo = init(dst, true)?;
         fetch(
             &mut repo,
-            &self.url,
+            self.url.as_str(),
             "refs/heads/*:refs/heads/*",
             cargo_config,
         )?;
@@ -257,8 +255,7 @@ impl<'a> GitCheckout<'a> {
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
-        fs::create_dir_all(&dirname)
-            .chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
+        paths::create_dir_all(&dirname)?;
         if into.exists() {
             paths::remove_dir_all(into)?;
         }
@@ -276,7 +273,7 @@ impl<'a> GitCheckout<'a> {
         // need authentication information we may want progress bars and such.
         let url = database.path.into_url()?;
         let mut repo = None;
-        with_fetch_options(&git_config, &url, config, &mut |fopts| {
+        with_fetch_options(&git_config, url.as_str(), config, &mut |fopts| {
             let mut checkout = git2::build::CheckoutBuilder::new();
             checkout.dry_run(); // we'll do this below during a `reset`
 
@@ -312,7 +309,7 @@ impl<'a> GitCheckout<'a> {
         info!("fetch {}", self.repo.path().display());
         let url = self.database.path.into_url()?;
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(&mut self.repo, &url, refspec, cargo_config)?;
+        fetch(&mut self.repo, url.as_str(), refspec, cargo_config)?;
         Ok(())
     }
 
@@ -393,11 +390,9 @@ impl<'a> GitCheckout<'a> {
                     init(&path, false)?
                 }
             };
-
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
-            let url = url.into_url()?;
-            fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
+            fetch(&mut repo, url, refspec, cargo_config).chain_err(|| {
                 internal(format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -640,13 +635,13 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
 
 pub fn with_fetch_options(
     git_config: &git2::Config,
-    url: &Url,
+    url: &str,
     config: &Config,
     cb: &mut dyn FnMut(git2::FetchOptions<'_>) -> CargoResult<()>,
 ) -> CargoResult<()> {
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
-        with_authentication(url.as_str(), git_config, |f| {
+        with_authentication(url, git_config, |f| {
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
 
@@ -669,7 +664,7 @@ pub fn with_fetch_options(
 
 pub fn fetch(
     repo: &mut git2::Repository,
-    url: &Url,
+    url: &str,
     refspec: &str,
     config: &Config,
 ) -> CargoResult<()> {
@@ -685,14 +680,17 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
-    if url.host_str() == Some("github.com") {
-        if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
-            let mut handle = config.http()?.borrow_mut();
-            debug!("attempting GitHub fast path for {}", url);
-            if github_up_to_date(&mut handle, url, &oid) {
-                return Ok(());
-            } else {
-                debug!("fast path failed, falling back to a git fetch");
+
+    if let Ok(url) = Url::parse(url) {
+        if url.host_str() == Some("github.com") {
+            if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
+                let mut handle = config.http()?.borrow_mut();
+                debug!("attempting GitHub fast path for {}", url);
+                if github_up_to_date(&mut handle, &url, &oid) {
+                    return Ok(());
+                } else {
+                    debug!("fast path failed, falling back to a git fetch");
+                }
             }
         }
     }
@@ -732,7 +730,7 @@ pub fn fetch(
         loop {
             debug!("initiating fetch of {} from {}", refspec, url);
             let res = repo
-                .remote_anonymous(url.as_str())?
+                .remote_anonymous(url)?
                 .fetch(&[refspec], Some(&mut opts), None);
             let err = match res {
                 Ok(()) => break,
@@ -759,7 +757,7 @@ pub fn fetch(
 
 fn fetch_with_cli(
     repo: &mut git2::Repository,
-    url: &Url,
+    url: &str,
     refspec: &str,
     config: &Config,
 ) -> CargoResult<()> {
@@ -768,7 +766,7 @@ fn fetch_with_cli(
         .arg("--tags") // fetch all tags
         .arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
-        .arg(url.to_string())
+        .arg(url)
         .arg(refspec)
         // If cargo is run by git (for example, the `exec` command in `git
         // rebase`), the GIT_DIR is set by git and will point to the wrong

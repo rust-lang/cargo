@@ -65,6 +65,7 @@ fn installed_process(name: &str) -> Execs {
 
 /// Check that the given package name/version has the following bins listed in
 /// the trackers. Also verifies that both trackers are in sync and valid.
+/// Pass in an empty `bins` list to assert that the package is *not* installed.
 fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
     let v1 = load_crates1();
     let v1_table = v1.get("v1").unwrap().as_table().unwrap();
@@ -88,7 +89,14 @@ fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
             .map(|b| b.as_str().unwrap().to_string())
             .collect();
         if pkg_id.name().as_str() == name && pkg_id.version().to_string() == version {
-            assert_eq!(bins, v1_bins);
+            if bins.is_empty() {
+                panic!(
+                    "Expected {} to not be installed, but found: {:?}",
+                    name, v1_bins
+                );
+            } else {
+                assert_eq!(bins, v1_bins);
+            }
         }
         let pkg_id_value = serde_json::to_value(&pkg_id).unwrap();
         let pkg_id_str = pkg_id_value.as_str().unwrap();
@@ -562,8 +570,7 @@ two v1.0.0:
 
 #[cargo_test]
 fn upgrade_git() {
-    let git_project =
-        git::new("foo", |project| project.file("src/main.rs", "fn main() {}")).unwrap();
+    let git_project = git::new("foo", |project| project.file("src/main.rs", "fn main() {}"));
     // install
     cargo_process("install -Z install-upgrade --git")
         .arg(git_project.url().to_string())
@@ -618,8 +625,7 @@ fn switch_sources() {
         .build();
     let git_project = git::new("foo", |project| {
         project.file("src/main.rs", r#"fn main() { println!("git"); }"#)
-    })
-    .unwrap();
+    });
 
     cargo_process("install -Z install-upgrade foo")
         .masquerade_as_nightly_cargo()
@@ -783,4 +789,59 @@ Add --force to overwrite
         )
         .with_status(101)
         .run();
+}
+
+#[cargo_test]
+fn deletes_orphaned() {
+    // When an executable is removed from a project, upgrading should remove it.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/other.rs", "fn main() {}")
+        .file("examples/ex1.rs", "fn main() {}")
+        .build();
+    p.cargo("install -Z install-upgrade --path . --bins --examples")
+        .masquerade_as_nightly_cargo()
+        .run();
+    assert!(installed_exe("other").exists());
+
+    // Remove a binary, add a new one, and bump the version.
+    fs::remove_file(p.root().join("src/bin/other.rs")).unwrap();
+    p.change_file("examples/ex2.rs", "fn main() {}");
+    p.change_file(
+        "Cargo.toml",
+        r#"
+        [package]
+        name = "foo"
+        version = "0.2.0"
+        "#,
+    );
+    p.cargo("install -Z install-upgrade --path . --bins --examples")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.2.0 [..]
+[COMPILING] foo v0.2.0 [..]
+[FINISHED] release [..]
+[INSTALLING] [..]/.cargo/bin/ex2[EXE]
+[REPLACING] [..]/.cargo/bin/ex1[EXE]
+[REPLACING] [..]/.cargo/bin/foo[EXE]
+[REMOVING] executable `[..]/.cargo/bin/other[EXE]` from previous version foo v0.1.0 [..]
+[INSTALLED] package `foo v0.2.0 [..]` (executable `ex2[EXE]`)
+[REPLACED] package `foo v0.1.0 [..]` with `foo v0.2.0 [..]` (executables `ex1[EXE]`, `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+    assert!(!installed_exe("other").exists());
+    validate_trackers("foo", "0.2.0", &["foo", "ex1", "ex2"]);
+    // 0.1.0 should not have any entries.
+    validate_trackers("foo", "0.1.0", &[]);
 }

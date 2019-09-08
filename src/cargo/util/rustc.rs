@@ -52,7 +52,12 @@ impl Rustc {
                 .lines()
                 .find(|l| l.starts_with("host: "))
                 .map(|l| &l[6..])
-                .ok_or_else(|| internal("rustc -v didn't have a line for `host:`"))?;
+                .ok_or_else(|| {
+                    failure::format_err!(
+                        "`rustc -vV` didn't have a line for `host:`, got:\n{}",
+                        verbose_version
+                    )
+                })?;
             triple.to_string()
         };
 

@@ -1134,7 +1134,7 @@ fn reuse_shared_build_dep() {
         .file("bar/build.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --all").run();
+    p.cargo("build --workspace").run();
     // This should not recompile!
     p.cargo("build -p foo -v")
         .with_stderr(

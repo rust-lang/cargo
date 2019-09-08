@@ -545,8 +545,7 @@ fn git_lock_file_doesnt_change() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     VendorPackage::new("git")
         .file("Cargo.toml", &basic_manifest("git", "0.5.0"))

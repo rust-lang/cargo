@@ -1,6 +1,5 @@
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
@@ -190,7 +189,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
-    for feat in bcx.resolve.features(unit.pkg.package_id()).iter() {
+    for feat in &unit.features {
         cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
     }
 
@@ -261,8 +260,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let extra_verbose = bcx.config.extra_verbose();
     let (prev_output, prev_script_out_dir) = prev_build_output(cx, unit);
 
-    fs::create_dir_all(&script_dir)?;
-    fs::create_dir_all(&script_out_dir)?;
+    paths::create_dir_all(&script_dir)?;
+    paths::create_dir_all(&script_out_dir)?;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -274,14 +273,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        if fs::metadata(&script_out_dir).is_err() {
-            fs::create_dir(&script_out_dir).chain_err(|| {
-                internal(
-                    "failed to create script output directory for \
-                     build command",
-                )
-            })?;
-        }
+        paths::create_dir_all(&script_out_dir).chain_err(|| {
+            internal(
+                "failed to create script output directory for \
+                 build command",
+            )
+        })?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our
@@ -513,29 +510,38 @@ impl BuildOutput {
             .split(|c: char| c.is_whitespace())
             .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
+
         while let Some(flag) = flags_iter.next() {
-            if flag != "-l" && flag != "-L" {
+            if flag.starts_with("-l") || flag.starts_with("-L") {
+                // Check if this flag has no space before the value as is
+                // common with tools like pkg-config
+                // e.g. -L/some/dir/local/lib or -licui18n
+                let (flag, mut value) = flag.split_at(2);
+                if value.len() == 0 {
+                    value = match flags_iter.next() {
+                        Some(v) => v,
+                        None => failure::bail! {
+                            "Flag in rustc-flags has no value in {}: {}",
+                            whence,
+                            value
+                        },
+                    }
+                }
+
+                match flag {
+                    "-l" => library_links.push(value.to_string()),
+                    "-L" => library_paths.push(PathBuf::from(value)),
+
+                    // This was already checked above
+                    _ => unreachable!(),
+                };
+            } else {
                 failure::bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )
             }
-            let value = match flags_iter.next() {
-                Some(v) => v,
-                None => failure::bail!(
-                    "Flag in rustc-flags has no value in {}: `{}`",
-                    whence,
-                    value
-                ),
-            };
-            match flag {
-                "-l" => library_links.push(value.to_string()),
-                "-L" => library_paths.push(PathBuf::from(value)),
-
-                // was already checked above
-                _ => failure::bail!("only -l and -L flags are allowed"),
-            };
         }
         Ok((library_paths, library_links))
     }
@@ -578,7 +584,7 @@ fn prepare_metabuild<'a, 'cfg>(
     output.push("}\n".to_string());
     let output = output.join("");
     let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
-    fs::create_dir_all(path.parent().unwrap())?;
+    paths::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())
 }
