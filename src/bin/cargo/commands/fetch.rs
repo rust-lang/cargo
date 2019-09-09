@@ -30,6 +30,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         target: args.target(),
     };
-    ops::fetch(&ws, &opts)?;
+    let _ = ops::fetch(&ws, &opts)?;
     Ok(())
 }
