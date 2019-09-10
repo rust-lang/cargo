@@ -1,5 +1,5 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
-use crate::core::Workspace;
+use crate::core::{profiles, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -303,7 +303,10 @@ pub trait ArgMatchesExt {
             None => None,
             Some("dev") => Some(ProfileKind::Dev),
             Some("release") => Some(ProfileKind::Release),
-            Some(name) => Some(ProfileKind::Custom(name.to_string())),
+            Some(name) => {
+                profiles::validate_name(name, "profile name")?;
+                Some(ProfileKind::Custom(name.to_string()))
+            },
         };
 
         match profile_checking {

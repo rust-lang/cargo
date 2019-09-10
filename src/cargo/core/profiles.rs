@@ -62,6 +62,13 @@ impl Profiles {
                         features.require(Feature::named_profiles())?;
                         break;
                     }
+
+                    match &profile.dir_name {
+                        None => {}
+                        Some(dir_name) => {
+                            validate_name(&dir_name, "dir-name")?;
+                        }
+                    }
                 }
                 _ => {
                     features.require(Feature::named_profiles())?;
@@ -309,6 +316,25 @@ impl Profiles {
         }
         Ok(())
     }
+}
+
+/// Validate dir-names and profile names according to RFC 2678.
+pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
+    if let Some(ch) = name
+        .chars()
+        .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
+    {
+        failure::bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
+    }
+
+    match name {
+        "package" | "build" | "debug" => {
+            failure::bail!("Invalid {}: `{}`", what, name);
+        }
+        _ => {},
+    }
+
+    Ok(())
 }
 
 /// An object used for handling the profile override hierarchy.
