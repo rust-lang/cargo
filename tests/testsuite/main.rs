@@ -44,6 +44,7 @@ mod doc;
 mod edition;
 mod error;
 mod features;
+mod features2;
 mod fetch;
 mod fix;
 mod freshness;

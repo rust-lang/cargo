@@ -1,0 +1,396 @@
+//! Tests for the new feature resolver.
+
+use cargo_test_support::project;
+use cargo_test_support::registry::{Dependency, Package};
+
+#[cargo_test]
+fn inactivate_targets() {
+    // Basic test of `itarget`. A shared dependency where an inactive [target]
+    // changes the features.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            compile_error!("f1 should not activate");
+            "#,
+        )
+        .publish();
+
+    Package::new("bar", "1.0.0")
+        .add_dep(
+            Dependency::new("common", "1.0")
+                .target("cfg(whatever)")
+                .enable_features(&["f1"]),
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            common = "1.0"
+            bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]f1 should not activate[..]")
+        .run();
+
+    p.cargo("check -Zfeatures=itarget")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn inactive_target_optional() {
+    // Activating optional [target] dependencies for inactivate target.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .feature("f2", &[])
+        .feature("f3", &[])
+        .feature("f4", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn f() {
+                if cfg!(feature="f1") { println!("f1"); }
+                if cfg!(feature="f2") { println!("f2"); }
+                if cfg!(feature="f3") { println!("f3"); }
+                if cfg!(feature="f4") { println!("f4"); }
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            common = "1.0"
+
+            [target.'cfg(whatever)'.dependencies]
+            dep1 = {path='dep1', optional=true}
+            dep2 = {path='dep2', optional=true, features=["f3"]}
+            common = {version="1.0", optional=true, features=["f4"]}
+
+            [features]
+            foo1 = ["dep1/f2"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                if cfg!(feature="foo1") { println!("foo1"); }
+                if cfg!(feature="dep1") { println!("dep1"); }
+                if cfg!(feature="dep2") { println!("dep2"); }
+                if cfg!(feature="common") { println!("common"); }
+                common::f();
+            }
+            "#,
+        )
+        .file(
+            "dep1/Cargo.toml",
+            r#"
+            [package]
+            name = "dep1"
+            version = "0.1.0"
+
+            [dependencies]
+            common = {version="1.0", features=["f1"]}
+
+            [features]
+            f2 = ["common/f2"]
+            "#,
+        )
+        .file(
+            "dep1/src/lib.rs",
+            r#"compile_error!("dep1 should not build");"#,
+        )
+        .file(
+            "dep2/Cargo.toml",
+            r#"
+            [package]
+            name = "dep2"
+            version = "0.1.0"
+
+            [dependencies]
+            common = "1.0"
+
+            [features]
+            f3 = ["common/f3"]
+            "#,
+        )
+        .file(
+            "dep2/src/lib.rs",
+            r#"compile_error!("dep2 should not build");"#,
+        )
+        .build();
+
+    p.cargo("run --all-features")
+        .with_stdout("foo1\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
+        .run();
+    p.cargo("run --features dep1")
+        .with_stdout("dep1\nf1\n")
+        .run();
+    p.cargo("run --features foo1")
+        .with_stdout("foo1\ndep1\nf1\nf2\n")
+        .run();
+    p.cargo("run --features dep2")
+        .with_stdout("dep2\nf3\n")
+        .run();
+    p.cargo("run --features common")
+        .with_stdout("common\nf4\n")
+        .run();
+
+    p.cargo("run -Zfeatures=itarget --all-features")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo1\n")
+        .run();
+    p.cargo("run -Zfeatures=itarget --features dep1")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("dep1\n")
+        .run();
+    p.cargo("run -Zfeatures=itarget --features foo1")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("foo1\n")
+        .run();
+    p.cargo("run -Zfeatures=itarget --features dep2")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("dep2\n")
+        .run();
+    p.cargo("run -Zfeatures=itarget --features common")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("common")
+        .run();
+}
+
+#[cargo_test]
+fn decouple_build_deps() {
+    // Basic test for `build_dep` decouple.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            pub fn foo() {}
+            #[cfg(not(feature = "f1"))]
+            pub fn bar() {}
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [build-dependencies]
+            common = {version="1.0", features=["f1"]}
+
+            [dependencies]
+            common = "1.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use common::foo;
+            fn main() {}
+            "#,
+        )
+        .file("src/lib.rs", "use common::bar;")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]unresolved import `common::bar`[..]")
+        .run();
+
+    p.cargo("check -Zfeatures=build_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn decouple_build_deps_nested() {
+    // `build_dep` decouple of transitive dependencies.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            pub fn foo() {}
+            #[cfg(not(feature = "f1"))]
+            pub fn bar() {}
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [build-dependencies]
+            bdep = {path="bdep"}
+
+            [dependencies]
+            common = "1.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use bdep::foo;
+            fn main() {}
+            "#,
+        )
+        .file("src/lib.rs", "use common::bar;")
+        .file(
+            "bdep/Cargo.toml",
+            r#"
+            [package]
+            name = "bdep"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            common = {version="1.0", features=["f1"]}
+            "#,
+        )
+        .file("bdep/src/lib.rs", "pub use common::foo;")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]unresolved import `common::bar`[..]")
+        .run();
+
+    p.cargo("check -Zfeatures=build_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn decouple_dev_deps() {
+    // Basic test for `dev_dep` decouple.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .feature("f2", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn foo() -> u32 {
+                let mut res = 0;
+                if cfg!(feature = "f1") {
+                    res |= 1;
+                }
+                if cfg!(feature = "f2") {
+                    res |= 2;
+                }
+                res
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            common = {version="1.0", features=["f1"]}
+
+            [dev-dependencies]
+            common = {version="1.0", features=["f2"]}
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                assert_eq!(foo::foo(), 1);
+                assert_eq!(common::foo(), 1);
+            }
+
+            #[test]
+            fn test_bin() {
+                assert_eq!(foo::foo(), 3);
+                assert_eq!(common::foo(), 3);
+            }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn foo() -> u32 {
+                common::foo()
+            }
+
+            #[test]
+            fn test_lib() {
+                assert_eq!(foo(), 3);
+                assert_eq!(common::foo(), 3);
+            }
+            "#,
+        )
+        .file(
+            "tests/t1.rs",
+            r#"
+            #[test]
+            fn test_t1() {
+                assert_eq!(foo::foo(), 3);
+                assert_eq!(common::foo(), 3);
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr_contains("[..]assertion failed[..]")
+        .run();
+
+    p.cargo("run -Zfeatures=dev_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.cargo("test").run();
+
+    p.cargo("test -Zfeatures=dev_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}

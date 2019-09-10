@@ -2142,3 +2142,53 @@ fn all_features_virtual_ws() {
         .with_stdout("f1\nf2\nf3\n")
         .run();
 }
+
+#[cargo_test]
+fn slash_optional_enables() {
+    // --features dep/feat will enable `dep` and set its feature.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = {path="dep", optional=true}
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(not(feature="dep"))]
+            compile_error!("dep not set");
+            "#,
+        )
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+
+            [features]
+            feat = []
+            "#,
+        )
+        .file(
+            "dep/src/lib.rs",
+            r#"
+            #[cfg(not(feature="feat"))]
+            compile_error!("feat not set");
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]dep not set[..]")
+        .run();
+
+    p.cargo("check --features dep/feat").run();
+}

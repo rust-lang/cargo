@@ -1,7 +1,9 @@
 //! Code for building the standard library.
 
-use crate::core::compiler::{BuildContext, CompileKind, CompileMode, Unit};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::core::dependency::DepKind;
 use crate::core::profiles::UnitFor;
+use crate::core::resolver::features::ResolvedFeatures;
 use crate::core::resolver::ResolveOpts;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
@@ -31,8 +33,10 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
 /// Resolve the standard library dependencies.
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
+    target_data: &RustcTargetData,
+    requested_target: CompileKind,
     crates: &[String],
-) -> CargoResult<(PackageSet<'cfg>, Resolve)> {
+) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
     let src_path = detect_sysroot_src_path(ws)?;
     let to_patch = [
         "rustc-std-workspace-core",
@@ -99,8 +103,12 @@ pub fn resolve_std<'cfg>(
         /*dev_deps*/ false, &features, /*all_features*/ false,
         /*uses_default_features*/ true,
     );
-    let resolve = ops::resolve_ws_with_opts(&std_ws, &opts, &specs)?;
-    Ok((resolve.pkg_set, resolve.targeted_resolve))
+    let resolve = ops::resolve_ws_with_opts(&std_ws, target_data, requested_target, &opts, &specs)?;
+    Ok((
+        resolve.pkg_set,
+        resolve.targeted_resolve,
+        resolve.resolved_features,
+    ))
 }
 
 /// Generate a list of root `Unit`s for the standard library.
@@ -110,6 +118,7 @@ pub fn generate_std_roots<'a>(
     bcx: &BuildContext<'a, '_>,
     crates: &[String],
     std_resolve: &'a Resolve,
+    std_features: &ResolvedFeatures,
     kind: CompileKind,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Generate the root Units for the standard library.
@@ -139,7 +148,11 @@ pub fn generate_std_roots<'a>(
                 unit_for,
                 mode,
             );
-            let features = std_resolve.features_sorted(pkg.package_id());
+            let features = std_features.activated_features(
+                pkg.package_id(),
+                DepKind::Normal,
+                bcx.build_config.requested_kind,
+            );
             Ok(bcx.units.intern(
                 pkg, lib, profile, kind, mode, features, /*is_std*/ true,
             ))

@@ -10,8 +10,9 @@
 //! - `resolve_with_previous`: A low-level function for running the resolver,
 //!   providing the most power and flexibility.
 
+use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::RequestedFeatures;
+use crate::core::resolver::features::{FeatureResolver, RequestedFeatures, ResolvedFeatures};
 use crate::core::resolver::{self, Resolve, ResolveOpts};
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -34,6 +35,8 @@ pub struct WorkspaceResolve<'a> {
     /// The narrowed resolve, with the specific features enabled, and only the
     /// given package specs requested.
     pub targeted_resolve: Resolve,
+    /// The features activated per package.
+    pub resolved_features: ResolvedFeatures,
 }
 
 const UNUSED_PATCH_WARNING: &str = "\
@@ -70,6 +73,8 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'a>(
     ws: &Workspace<'a>,
+    target_data: &RustcTargetData,
+    requested_target: CompileKind,
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
 ) -> CargoResult<WorkspaceResolve<'a>> {
@@ -119,10 +124,20 @@ pub fn resolve_ws_with_opts<'a>(
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
+    let resolved_features = FeatureResolver::resolve(
+        ws,
+        target_data,
+        &resolved_with_overrides,
+        &opts.features,
+        specs,
+        requested_target,
+    )?;
+
     Ok(WorkspaceResolve {
         pkg_set,
         workspace_resolve: resolve,
         targeted_resolve: resolved_with_overrides,
+        resolved_features,
     })
 }
 

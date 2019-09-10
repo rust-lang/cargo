@@ -1,6 +1,8 @@
-use crate::core::compiler::{CompileKind, CompileTarget, TargetInfo};
+use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::resolver::{Resolve, ResolveOpts};
-use crate::core::{dependency, Dependency, Package, PackageId, Workspace};
+
+use crate::core::dependency::DepKind;
+use crate::core::{Dependency, InternedString, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
 use cargo_platform::Platform;
@@ -34,13 +36,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         let packages = ws.members().cloned().collect();
         (packages, None)
     } else {
-        let resolve_opts = ResolveOpts::new(
-            /*dev_deps*/ true,
-            &opt.features,
-            opt.all_features,
-            !opt.no_default_features,
-        );
-        let (packages, resolve) = build_resolve_graph(ws, resolve_opts, &opt.filter_platform)?;
+        let (packages, resolve) = build_resolve_graph(ws, opt)?;
         (packages, Some(resolve))
     };
 
@@ -78,7 +74,7 @@ struct MetadataResolveNode {
     id: PackageId,
     dependencies: Vec<PackageId>,
     deps: Vec<Dep>,
-    features: Vec<String>,
+    features: Vec<InternedString>,
 }
 
 #[derive(Serialize)]
@@ -90,7 +86,7 @@ struct Dep {
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord)]
 struct DepKindInfo {
-    kind: dependency::DepKind,
+    kind: DepKind,
     target: Option<Platform>,
 }
 
@@ -106,23 +102,25 @@ impl From<&Dependency> for DepKindInfo {
 /// Builds the resolve graph as it will be displayed to the user.
 fn build_resolve_graph(
     ws: &Workspace<'_>,
-    resolve_opts: ResolveOpts,
-    target: &Option<String>,
+    metadata_opts: &OutputMetadataOptions,
 ) -> CargoResult<(Vec<Package>, MetadataResolve)> {
-    let target_info = match target {
-        Some(target) => {
-            let config = ws.config();
-            let ct = CompileTarget::new(target)?;
-            let short_name = ct.short_name().to_string();
-            let kind = CompileKind::Target(ct);
-            let rustc = config.load_global_rustc(Some(ws))?;
-            Some((short_name, TargetInfo::new(config, kind, &rustc, kind)?))
-        }
-        None => None,
+    // TODO: Without --filter-platform, features are being resolved for `host` only.
+    // How should this work?
+    let requested_kind = match &metadata_opts.filter_platform {
+        Some(t) => CompileKind::Target(CompileTarget::new(t)?),
+        None => CompileKind::Host,
     };
+    let target_data = RustcTargetData::new(ws, requested_kind)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let ws_resolve = ops::resolve_ws_with_opts(ws, &resolve_opts, &specs)?;
+    let resolve_opts = ResolveOpts::new(
+        /*dev_deps*/ true,
+        &metadata_opts.features,
+        metadata_opts.all_features,
+        !metadata_opts.no_default_features,
+    );
+    let ws_resolve =
+        ops::resolve_ws_with_opts(ws, &target_data, requested_kind, &resolve_opts, &specs)?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,
     // but that would be somewhat complex.
@@ -132,6 +130,7 @@ fn build_resolve_graph(
         .into_iter()
         .map(|pkg| (pkg.package_id(), pkg.clone()))
         .collect();
+
     // Start from the workspace roots, and recurse through filling out the
     // map, filtering targets as necessary.
     let mut node_map = HashMap::new();
@@ -141,7 +140,8 @@ fn build_resolve_graph(
             member_pkg.package_id(),
             &ws_resolve.targeted_resolve,
             &package_map,
-            target_info.as_ref(),
+            &target_data,
+            requested_kind,
         );
     }
     // Get a Vec of Packages.
@@ -161,27 +161,22 @@ fn build_resolve_graph_r(
     pkg_id: PackageId,
     resolve: &Resolve,
     package_map: &HashMap<PackageId, Package>,
-    target: Option<&(String, TargetInfo)>,
+    target_data: &RustcTargetData,
+    requested_kind: CompileKind,
 ) {
     if node_map.contains_key(&pkg_id) {
         return;
     }
-    let features = resolve
-        .features_sorted(pkg_id)
-        .into_iter()
-        .map(|s| s.to_string())
-        .collect();
+    let features = resolve.features(pkg_id).into_iter().cloned().collect();
+
     let deps: Vec<Dep> = resolve
         .deps(pkg_id)
-        .filter(|(_dep_id, deps)| match target {
-            Some((short_name, info)) => deps.iter().any(|dep| {
-                let platform = match dep.platform() {
-                    Some(p) => p,
-                    None => return true,
-                };
-                platform.matches(short_name, info.cfg())
-            }),
-            None => true,
+        .filter(|(_dep_id, deps)| match requested_kind {
+            CompileKind::Target(_) => deps
+                .iter()
+                .any(|dep| target_data.dep_platform_activated(dep, requested_kind)),
+            // No --filter-platform is interpreted as "all platforms".
+            CompileKind::Host => true,
         })
         .filter_map(|(dep_id, deps)| {
             let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
@@ -210,6 +205,13 @@ fn build_resolve_graph_r(
     };
     node_map.insert(pkg_id, node);
     for dep_id in to_visit {
-        build_resolve_graph_r(node_map, dep_id, resolve, package_map, target);
+        build_resolve_graph_r(
+            node_map,
+            dep_id,
+            resolve,
+            package_map,
+            target_data,
+            requested_kind,
+        );
     }
 }

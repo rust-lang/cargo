@@ -365,6 +365,7 @@ impl EncodableResolve {
             metadata,
             unused_patches,
             version,
+            HashMap::new(),
         ))
     }
 }

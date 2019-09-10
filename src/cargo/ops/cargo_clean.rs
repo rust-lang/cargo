@@ -6,8 +6,10 @@ use std::path::Path;
 use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
+use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::Workspace;
+use crate::core::resolver::features::{FeatureResolver, RequestedFeatures};
+use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
@@ -72,6 +74,20 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         HashMap::new(),
         target_data,
     )?;
+    let requested_features = RequestedFeatures::new_all(true);
+    let specs = opts
+        .spec
+        .iter()
+        .map(|spec| PackageIdSpec::parse(spec))
+        .collect::<CargoResult<Vec<_>>>()?;
+    let features = FeatureResolver::resolve(
+        ws,
+        &bcx.target_data,
+        &resolve,
+        &requested_features,
+        &specs,
+        bcx.build_config.requested_kind,
+    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -100,10 +116,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 *mode,
                             )
                         };
-                        let features = resolve.features_sorted(pkg.package_id());
-                        units.push(bcx.units.intern(
-                            pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
-                        ));
+                        for dep_kind in &[DepKind::Normal, DepKind::Development, DepKind::Build] {
+                            let features =
+                                features.activated_features(pkg.package_id(), *dep_kind, *kind);
+                            units.push(bcx.units.intern(
+                                pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
+                            ));
+                        }
                     }
                 }
             }
@@ -111,7 +130,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     let unit_dependencies =
-        unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
+        unit_dependencies::build_unit_dependencies(&bcx, &resolve, &features, None, &units, &[])?;
     let mut cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
     cx.prepare_units(None, &units)?;
 

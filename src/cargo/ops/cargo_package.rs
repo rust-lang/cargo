@@ -16,10 +16,10 @@ use serde_json::{self, json};
 use tar::{Archive, Builder, EntryType, Header};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::resolver::ResolveOpts;
+
 use crate::core::Feature;
 use crate::core::{
-    Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
+    Package, PackageId, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
 };
 use crate::ops;
 use crate::sources::PathSource;
@@ -152,21 +152,15 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.
-    let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let new_resolve = ops::resolve_ws_with_opts(&tmp_ws, &ResolveOpts::everything(), &specs)?;
+    let (pkg_set, new_resolve) = ops::resolve_ws(&tmp_ws)?;
 
     if let Some(orig_resolve) = orig_resolve {
-        compare_resolve(
-            config,
-            tmp_ws.current()?,
-            &orig_resolve,
-            &new_resolve.targeted_resolve,
-        )?;
+        compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
     }
-    check_yanked(config, &new_resolve.pkg_set, &new_resolve.targeted_resolve)?;
+    check_yanked(config, &pkg_set, &new_resolve)?;
 
-    ops::resolve_to_string(&tmp_ws, &new_resolve.targeted_resolve)
+    ops::resolve_to_string(&tmp_ws, &new_resolve)
 }
 
 // Checks that the package has some piece of metadata that a human can

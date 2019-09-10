@@ -473,3 +473,65 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 ```
 
 CLI paths are relative to the current working directory.
+
+## Features
+
+The `-Zfeatures` option causes Cargo to use a new feature resolver that can
+resolve features differently from before. It takes a comma separated list of
+options to indicate which new behaviors to enable. With no options, it should
+behave the same as without the flag.
+
+```console
+cargo +nightly -Zfeatures=itarget,build_dep
+```
+
+The available options are:
+
+* `itarget` — Ignores features for target-specific dependencies for targets
+  that don't match the current compile target. For example:
+
+  ```toml
+  [dependency.common]
+  version = "1.0"
+  features = ["f1"]
+
+  [target.'cfg(windows)'.dependencies.common]
+  version = "1.0"
+  features = ["f2"]
+  ```
+
+  When building this example for a non-Windows platform, the `f2` feature will
+  *not* be enabled.
+
+* `build_dep` — Prevents features enabled on build dependencies from being
+  enabled for normal dependencies. For example:
+
+  ```toml
+  [dependencies]
+  log = "0.4"
+
+  [build-dependencies]
+  log = {version = "0.4", features=['std']}
+  ```
+
+  When building the build script, the `log` crate will be built with the `std`
+  feature. When building the library of your package, it will not enable the
+  feature.
+
+* `dev_dep` — Prevents features enabled on dev dependencies from being enabled
+  for normal dependencies. For example:
+
+  ```toml
+  [dependencies]
+  serde = {version = "1.0", default-features = false}
+
+  [dev-dependencies]
+  serde = {version = "1.0", features = ["std"]}
+  ```
+
+  In this example, the library will normally link against `serde` without the
+  `std` feature. However, when built as a test or example, it will include the
+  `std` feature.
+
+* `compare` — This option compares the resolved features to the old resolver,
+  and will print any differences.

@@ -1,4 +1,5 @@
 use crate::core::compiler::CompileMode;
+use crate::core::dependency::DepKind;
 use crate::core::interning::InternedString;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
@@ -767,6 +768,8 @@ pub struct UnitFor {
     /// any of its dependencies. This enables `build-override` profiles for
     /// these targets.
     build: bool,
+    /// The dependency kind (normal, dev, build).
+    dep_kind: DepKind,
     /// How Cargo processes the `panic` setting or profiles. This is done to
     /// handle test/benches inheriting from dev/release, as well as forcing
     /// `for_host` units to always unwind.
@@ -794,6 +797,7 @@ impl UnitFor {
     pub fn new_normal() -> UnitFor {
         UnitFor {
             build: false,
+            dep_kind: DepKind::Normal,
             panic_setting: PanicSetting::ReadProfile,
         }
     }
@@ -802,6 +806,7 @@ impl UnitFor {
     pub fn new_build() -> UnitFor {
         UnitFor {
             build: true,
+            dep_kind: DepKind::Normal,
             // Force build scripts to always use `panic=unwind` for now to
             // maximally share dependencies with procedural macros.
             panic_setting: PanicSetting::AlwaysUnwind,
@@ -812,6 +817,7 @@ impl UnitFor {
     pub fn new_compiler() -> UnitFor {
         UnitFor {
             build: false,
+            dep_kind: DepKind::Normal,
             // Force plugins to use `panic=abort` so panics in the compiler do
             // not abort the process but instead end with a reasonable error
             // message that involves catching the panic in the compiler.
@@ -819,7 +825,7 @@ impl UnitFor {
         }
     }
 
-    /// A unit for a test/bench target or their dependencies.
+    /// A unit for a test/bench target.
     ///
     /// Note that `config` is taken here for unstable CLI features to detect
     /// whether `panic=abort` is supported for tests. Historical versions of
@@ -828,6 +834,7 @@ impl UnitFor {
     pub fn new_test(config: &Config) -> UnitFor {
         UnitFor {
             build: false,
+            dep_kind: DepKind::Development,
             // We're testing out an unstable feature (`-Zpanic-abort-tests`)
             // which inherits the panic setting from the dev/release profile
             // (basically avoid recompiles) but historical defaults required
@@ -850,12 +857,22 @@ impl UnitFor {
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             build: self.build || for_host,
+            dep_kind: self.dep_kind,
             panic_setting: if for_host {
                 PanicSetting::AlwaysUnwind
             } else {
                 self.panic_setting
             },
         }
+    }
+
+    /// Creates a variant for the given dependency kind.
+    ///
+    /// This is part of the machinery responsible for handling feature
+    /// decoupling in the new feature resolver.
+    pub fn with_dep_kind(mut self, kind: DepKind) -> UnitFor {
+        self.dep_kind = self.dep_kind.sticky_kind(kind);
+        self
     }
 
     /// Returns `true` if this unit is for a custom build script or one of its
@@ -869,23 +886,33 @@ impl UnitFor {
         self.panic_setting
     }
 
+    /// Returns the dependency kind this unit is intended for.
+    pub fn dep_kind(&self) -> DepKind {
+        self.dep_kind
+    }
+
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
+        // dep_kind isn't needed for profiles, so its value doesn't matter.
         static ALL: &[UnitFor] = &[
             UnitFor {
                 build: false,
+                dep_kind: DepKind::Normal,
                 panic_setting: PanicSetting::ReadProfile,
             },
             UnitFor {
                 build: true,
+                dep_kind: DepKind::Normal,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
                 build: false,
+                dep_kind: DepKind::Normal,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
                 build: false,
+                dep_kind: DepKind::Normal,
                 panic_setting: PanicSetting::Inherit,
             },
         ];

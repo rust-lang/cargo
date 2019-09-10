@@ -1,5 +1,5 @@
 use crate::core::compiler::{CompileKind, CompileMode};
-use crate::core::{profiles::Profile, Package, Target};
+use crate::core::{profiles::Profile, InternedString, Package, Target};
 use crate::util::hex::short_hash;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -50,7 +50,7 @@ pub struct UnitInner<'a> {
     pub mode: CompileMode,
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
-    pub features: Vec<&'a str>,
+    pub features: Vec<InternedString>,
     /// Whether this is a standard library unit.
     pub is_std: bool,
 }
@@ -145,7 +145,7 @@ impl<'a> UnitInterner<'a> {
         profile: Profile,
         kind: CompileKind,
         mode: CompileMode,
-        features: Vec<&'a str>,
+        features: Vec<InternedString>,
         is_std: bool,
     ) -> Unit<'a> {
         let inner = self.intern_inner(&UnitInner {

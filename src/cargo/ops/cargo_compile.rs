@@ -33,7 +33,9 @@ use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
+use crate::core::resolver::features;
 use crate::core::resolver::{Resolve, ResolveOpts};
 use crate::core::{LibKind, Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -311,14 +313,16 @@ pub fn compile_ws<'a>(
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
-    let resolve = ops::resolve_ws_with_opts(ws, &opts, &specs)?;
+    let resolve =
+        ops::resolve_ws_with_opts(ws, &target_data, build_config.requested_kind, &opts, &specs)?;
     let WorkspaceResolve {
         mut pkg_set,
         workspace_resolve,
         targeted_resolve: resolve,
+        resolved_features,
     } = resolve;
 
-    let std_resolve = if let Some(crates) = &config.cli_unstable().build_std {
+    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
         if build_config.build_plan {
             config
                 .shell()
@@ -330,10 +334,11 @@ pub fn compile_ws<'a>(
             // requested_target to an enum, or some other approach.
             anyhow::bail!("-Zbuild-std requires --target");
         }
-        let (mut std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
+        let (mut std_package_set, std_resolve, std_features) =
+            standard_lib::resolve_std(ws, &target_data, build_config.requested_kind, crates)?;
         remove_dylib_crate_type(&mut std_package_set)?;
         pkg_set.add_set(std_package_set);
-        Some(std_resolve)
+        Some((std_resolve, std_features))
     } else {
         None
     };
@@ -407,6 +412,7 @@ pub fn compile_ws<'a>(
         filter,
         build_config.requested_kind,
         &resolve,
+        &resolved_features,
         &bcx,
     )?;
 
@@ -423,10 +429,12 @@ pub fn compile_ws<'a>(
                 crates.push("test".to_string());
             }
         }
+        let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &bcx,
             &crates,
-            std_resolve.as_ref().unwrap(),
+            std_resolve,
+            std_features,
             build_config.requested_kind,
         )?
     } else {
@@ -463,8 +471,14 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let unit_dependencies =
-        build_unit_dependencies(&bcx, &resolve, std_resolve.as_ref(), &units, &std_roots)?;
+    let unit_dependencies = build_unit_dependencies(
+        &bcx,
+        &resolve,
+        &resolved_features,
+        std_resolve_features.as_ref(),
+        &units,
+        &std_roots,
+    )?;
 
     let ret = {
         let _p = profile::start("compiling");
@@ -661,6 +675,7 @@ fn generate_targets<'a>(
     filter: &CompileFilter,
     default_arch_kind: CompileKind,
     resolve: &'a Resolve,
+    resolved_features: &features::ResolvedFeatures,
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Helper for creating a `Unit` struct.
@@ -723,7 +738,12 @@ fn generate_targets<'a>(
         let profile =
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
-        let features = resolve.features_sorted(pkg.package_id());
+
+        let features = Vec::from(resolved_features.activated_features(
+            pkg.package_id(),
+            DepKind::Normal,
+            kind,
+        ));
         bcx.units.intern(
             pkg,
             target,
@@ -857,6 +877,10 @@ fn generate_targets<'a>(
 
     // Only include targets that are libraries or have all required
     // features available.
+    //
+    // `features_map` is a map of &Package -> enabled_features
+    // It is computed by the set of enabled features for the package plus
+    // every enabled feature of every enabled dependency.
     let mut features_map = HashMap::new();
     let mut units = HashSet::new();
     for Proposal {
@@ -868,9 +892,14 @@ fn generate_targets<'a>(
     {
         let unavailable_features = match target.required_features() {
             Some(rf) => {
-                let features = features_map
-                    .entry(pkg)
-                    .or_insert_with(|| resolve_all_features(resolve, pkg.package_id()));
+                let features = features_map.entry(pkg).or_insert_with(|| {
+                    resolve_all_features(
+                        resolve,
+                        resolved_features,
+                        pkg.package_id(),
+                        default_arch_kind,
+                    )
+                });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }
             None => Vec::new(),
@@ -900,16 +929,24 @@ fn generate_targets<'a>(
 
 fn resolve_all_features(
     resolve_with_overrides: &Resolve,
+    resolved_features: &features::ResolvedFeatures,
     package_id: PackageId,
+    default_arch_kind: CompileKind,
 ) -> HashSet<String> {
-    let mut features = resolve_with_overrides.features(package_id).clone();
+    let mut features: HashSet<String> = resolved_features
+        .activated_features(package_id, DepKind::Normal, default_arch_kind)
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
-        for feature in resolve_with_overrides.features(dep_id) {
+        for feature in
+            resolved_features.activated_features(dep_id, DepKind::Normal, default_arch_kind)
+        {
             for dep in deps {
-                features.insert(dep.name_in_toml().to_string() + "/" + feature);
+                features.insert(dep.name_in_toml().to_string() + "/" + &feature);
             }
         }
     }
