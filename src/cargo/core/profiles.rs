@@ -331,7 +331,7 @@ pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
         "package" | "build" | "debug" => {
             failure::bail!("Invalid {}: `{}`", what, name);
         }
-        _ => {},
+        _ => {}
     }
 
     Ok(())

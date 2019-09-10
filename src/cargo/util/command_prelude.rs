@@ -306,7 +306,7 @@ pub trait ArgMatchesExt {
             Some(name) => {
                 profiles::validate_name(name, "profile name")?;
                 Some(ProfileKind::Custom(name.to_string()))
-            },
+            }
         };
 
         match profile_checking {
