@@ -1,0 +1,15 @@
+[package]
+name = "std"
+version = "0.1.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+edition = "2018"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+core = { path = "../libcore" }
+compiler_builtins = { path = "../libcompiler_builtins" }
+panic_unwind = { path = "../libpanic_unwind" }
+registry-dep-using-core = { version = "1.0", features = ['mockbuild'] }
+registry-dep-using-alloc = { version = "1.0", features = ['mockbuild'] }
