@@ -29,7 +29,8 @@ static MANIFEST_OUTPUT: &str = r#"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml",
-    "metadata": null
+    "metadata": null,
+    "publish": null
 }"#;
 
 #[cargo_test]
