@@ -85,12 +85,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // all share the same jobserver.
         //
         // Note that if we don't have a jobserver in our environment then we
-        // create our own, and we create it with `n-1` tokens because one token
-        // is ourself, a running process.
+        // create our own, and we create it with `n` tokens, but immediately
+        // acquire one, because one token is ourself, a running process.
         let jobserver = match config.jobserver_from_env() {
             Some(c) => c.clone(),
-            None => Client::new(bcx.build_config.jobs as usize - 1)
-                .chain_err(|| "failed to create jobserver")?,
+            None => {
+                let client = Client::new(bcx.build_config.jobs as usize)
+                    .chain_err(|| "failed to create jobserver")?;
+                client.acquire_raw()?;
+                client
+            }
         };
 
         let pipelining = bcx
