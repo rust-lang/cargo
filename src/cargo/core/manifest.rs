@@ -463,6 +463,9 @@ impl Manifest {
     pub fn targets(&self) -> &[Target] {
         &self.targets
     }
+    pub fn targets_mut(&mut self) -> &mut [Target] {
+        &mut self.targets
+    }
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
@@ -751,6 +754,9 @@ impl Target {
     }
     pub fn kind(&self) -> &TargetKind {
         &self.kind
+    }
+    pub fn kind_mut(&mut self) -> &mut TargetKind {
+        &mut self.kind
     }
     pub fn tested(&self) -> bool {
         self.tested
