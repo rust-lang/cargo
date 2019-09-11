@@ -255,3 +255,84 @@ etc.).
 This also changes the way Cargo interacts with the compiler, helping to
 prevent interleaved messages when multiple crates attempt to display a message
 at the same time.
+
+### build-std
+* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+
+The `build-std` feature enables Cargo to compile the standard library itself as
+part of a crate graph compilation. This feature has also historically been known
+as "std-aware Cargo". This feature is still in very early stages of development,
+and is also a possible massive feature addition to Cargo. This is a very large
+feature to document, even in the minimal form that it exists in today, so if
+you're curious to stay up to date you'll want to follow the [tracking
+repository](https://github.com/rust-lang/wg-cargo-std-aware) and its set of
+issues.
+
+The functionality implemented today is behind a flag called `-Z build-std`. This
+flag indicates that Cargo should compile the standard library from source code
+using the same profile as the main build itself. Note that for this to work you
+need to have the source code for the standard library available, and at this
+time the only supported method of doing so is to add the `rust-src` rust rustup
+component:
+
+```
+$ rustup component add rust-src --toolchain nightly
+```
+
+It is also required today that the `-Z build-std` flag is combined with the
+`--target` flag. Note that you're not forced to do a cross compilation, you're
+just forced to pass `--target` in one form or another.
+
+Usage looks like:
+
+```
+$ cargo new foo
+$ cd foo
+$ cargo +nightly run -Z build-std --target x86_64-unknown-linux-gnu
+   Compiling core v0.0.0 (...)
+   ...
+   Compiling foo v0.1.0 (...)
+    Finished dev [unoptimized + debuginfo] target(s) in 21.00s
+     Running `target/x86_64-unknown-linux-gnu/debug/foo`
+Hello, world!
+```
+
+Here we recompiled the standard library in debug mode with debug assertions
+(like `src/main.rs` is compiled) and everything was linked together at the end.
+
+Using `-Z build-std` will implicitly compile the stable crates `core`, `std`,
+`alloc`, and `proc_macro`. If you're using `cargo test` it will also compile the
+`test` crate. If you're working with an environment which does not support some
+of these crates, then you can pass an argument to `-Zbuild-std` as well:
+
+```
+$ cargo +nightly build -Z build-std=core,alloc
+```
+
+The value here is a comma-separated list of standard library crates to build.
+
+#### Requirements
+
+As a summary, a list of requirements today to use `-Z build-std` are:
+
+* You must install libstd's source code through `rustup component add rust-src`
+* You must pass `--target`
+* You must use both a nightly Cargo and a nightly rustc
+* The `-Z build-std` flag must be passed to all `cargo` invocations.
+
+#### Reporting bugs and helping out
+
+The `-Z build-std` feature is in the very early stages of development! This
+feature for Cargo has an extremely long history and is very large in scope, and
+this is just the beginning. If you'd like to report bugs please either report
+them to:
+
+* Cargo - https://github.com/rust-lang/cargo/issues/new - for implementation bugs
+* The tracking repository -
+  https://github.com/rust-lang/wg-cargo-std-aware/issues/new - for larger design
+  questions.
+
+Also if you'd like to see a feature that's not yet implemented and/or if
+something doesn't quite work the way you'd like it to, feel free to check out
+the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
+the tracking repository, and if it's not there please file a new issue!
