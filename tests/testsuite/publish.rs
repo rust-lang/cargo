@@ -1217,7 +1217,7 @@ fn publish_dev_dep_no_version() {
         )
         .run();
 
-    publish::validate_upload(
+    publish::validate_upload_with_contents(
         r#"
         {
           "authors": [],
@@ -1241,5 +1241,21 @@ fn publish_dev_dep_no_version() {
         "#,
         "foo-0.1.0.crate",
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"[..]
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+description = "foo"
+homepage = "foo"
+documentation = "foo"
+license = "MIT"
+repository = "foo"
+
+[dev-dependencies]
+"#,
+        )],
     );
 }
