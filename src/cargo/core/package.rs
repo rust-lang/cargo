@@ -464,6 +464,15 @@ impl<'cfg> PackageSet<'cfg> {
         let other_sources = set.sources.into_inner();
         sources.add_source_map(other_sources);
     }
+
+    /// Get mutable access to an already downloaded package, if it's already
+    /// downoaded and it's part of this set. Does not actually attempt to
+    /// download anything if it's not already downloaded.
+    pub fn lookup_mut(&mut self, id: PackageId) -> Option<&mut Package> {
+        self.packages
+            .get_mut(&id)
+            .and_then(|cell| cell.borrow_mut())
+    }
 }
 
 // When dynamically linked against libcurl, we want to ignore some failures
