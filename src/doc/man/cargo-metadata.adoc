@@ -160,6 +160,11 @@ The output has the following format:
                     }
                 }
             },
+            /* List of registries to which this package may be published.
+               This is null if not specified. */
+            "publish": [
+                "crates-io"
+            ],
             /* Array of authors from the manifest.
                Empty array if no authors specified.
             */
