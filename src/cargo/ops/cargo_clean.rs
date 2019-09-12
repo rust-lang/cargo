@@ -47,7 +47,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         target_dir = target_dir.join(profiles.get_dir_name(&ProfileKind::Release));
     } else if opts.profile_specified {
         // After parsing profiles we know the dir-name of the profile, if a profile
-        // was passed freom the command line. If so, delete only the directory of
+        // was passed from the command line. If so, delete only the directory of
         // that profile.
         let dir_name = profiles.get_dir_name(&opts.profile_kind);
         target_dir = target_dir.join(dir_name);
