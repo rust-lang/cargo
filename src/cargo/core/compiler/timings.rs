@@ -3,6 +3,7 @@
 //! This module implements some simple tracking information for timing of how
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
+use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
 use crate::util::machine_message::{self, Message};
 use crate::util::{CargoResult, Config};
@@ -24,6 +25,8 @@ pub struct Timings<'a, 'cfg> {
     start: Instant,
     /// A rendered string of when compilation started.
     start_str: String,
+    /// Some information to display about rustc.
+    rustc_info: String,
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descrptions)`.
@@ -76,11 +79,7 @@ struct Concurrency {
 }
 
 impl<'a, 'cfg> Timings<'a, 'cfg> {
-    pub fn new(
-        config: &'cfg Config,
-        root_units: &[Unit<'_>],
-        profile: String,
-    ) -> Timings<'a, 'cfg> {
+    pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'_>]) -> Timings<'a, 'cfg> {
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
             let target_desc = unit.target.description_named();
@@ -98,20 +97,28 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             .collect();
         let start_str = format!("{}", humantime::format_rfc3339_seconds(SystemTime::now()));
         let has_report = |what| {
-            config
+            bcx.config
                 .cli_unstable()
                 .timings
                 .as_ref()
                 .map_or(false, |t| t.iter().any(|opt| opt == what))
         };
+        let rustc_info = render_rustc_info(bcx);
+        let profile = if bcx.build_config.release {
+            "release"
+        } else {
+            "dev"
+        }
+        .to_string();
 
         Timings {
-            config,
+            config: bcx.config,
             report_html: has_report("html"),
             report_info: has_report("info"),
             report_json: has_report("json"),
-            start: config.creation_time(),
+            start: bcx.config.creation_time(),
             start_str,
+            rustc_info,
             root_targets,
             profile,
             total_fresh: 0,
@@ -270,30 +277,27 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
   <tr>
     <td>Profile:</td><td>{}</td>
   </tr>
-    <tr>
-      <td>Fresh units:</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <td>Dirty units:</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <td>Total units:</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <td>Max concurrency:</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <td>Build start:</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <td>Total time:</td>
-      <td>{}</td>
-    </tr>
+  <tr>
+    <td>Fresh units:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>Dirty units:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>Total units:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>Max concurrency:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>Build start:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>Total time:</td><td>{}</td>
+  </tr>
+  <tr>
+    <td>rustc:</td><td>{}</td>
+  </tr>
 
 </table>
 "#,
@@ -305,6 +309,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             max_concurrency,
             self.start_str,
             total_time,
+            self.rustc_info,
         )?;
         Ok(())
     }
@@ -674,6 +679,24 @@ fn draw_graph_axes(f: &mut File, graph_height: u32, duration: u32) -> CargoResul
     Ok(graph_width)
 }
 
+fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
+    let version = bcx
+        .rustc
+        .verbose_version
+        .lines()
+        .next()
+        .expect("rustc version");
+    let requested_target = bcx
+        .build_config
+        .requested_target
+        .as_ref()
+        .map_or("Host", String::as_str);
+    format!(
+        "{}<br>Host: {}<br>Target: {}",
+        version, bcx.rustc.host, requested_target
+    )
+}
+
 static HTML_TMPL: &str = r#"
 <html>
 <head>
@@ -801,6 +824,7 @@ h1 {
 }
 
 .summary-table td:first-child {
+  vertical-align: top;
   text-align: right;
 }
 

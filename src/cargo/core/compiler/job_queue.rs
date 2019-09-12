@@ -133,13 +133,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'a>]) -> JobQueue<'a, 'cfg> {
         let (tx, rx) = channel();
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, bcx.config);
-        let profile = if bcx.build_config.release {
-            "release"
-        } else {
-            "dev"
-        }
-        .to_string();
-        let timings = Timings::new(bcx.config, root_units, profile);
+        let timings = Timings::new(bcx, root_units);
         JobQueue {
             queue: DependencyQueue::new(),
             tx,
