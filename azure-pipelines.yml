@@ -43,6 +43,7 @@ jobs:
       x86_64-msvc:
         TOOLCHAIN: stable-x86_64-pc-windows-msvc
         OTHER_TARGET: i686-pc-windows-msvc
+
 - job: rustfmt
   pool:
     vmImage: ubuntu-16.04
@@ -73,6 +74,20 @@ jobs:
   variables:
     TOOLCHAIN: stable
 
+- job: build_std
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+    - template: ci/azure-install-rust.yml
+    - bash: rustup component add rust-src
+      displayName: "Install rust-src"
+    - bash: cargo build
+    - bash: cargo test --test build-std
+      displayName: "tests"
+  variables:
+    TOOLCHAIN: nightly
+    CARGO_RUN_BUILD_STD_TESTS: 1
+
 - job: docs
   pool:
     vmImage: ubuntu-16.04
@@ -90,4 +105,3 @@ jobs:
       displayName: "Build mdbook documentation"
   variables:
     TOOLCHAIN: stable
-

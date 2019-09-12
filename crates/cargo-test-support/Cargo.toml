@@ -4,8 +4,12 @@ version = "0.1.0"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 edition = "2018"
 
+[lib]
+doctest = false
+
 [dependencies]
 cargo = { path = "../.." }
+cargo-test-macro = { path = "../cargo-test-macro" }
 filetime = "0.2"
 flate2 = "1.0"
 git2 = "0.10"

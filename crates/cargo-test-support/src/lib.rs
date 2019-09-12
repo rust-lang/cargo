@@ -135,6 +135,8 @@ macro_rules! t {
     };
 }
 
+pub use cargo_test_macro::cargo_test;
+
 pub mod cross_compile;
 pub mod git;
 pub mod paths;
