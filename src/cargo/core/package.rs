@@ -67,6 +67,7 @@ struct SerializedPackage<'a> {
     features: &'a FeatureMap,
     manifest_path: &'a Path,
     metadata: Option<&'a toml::Value>,
+    publish: Option<&'a Vec<String>>,
     authors: &'a [String],
     categories: &'a [String],
     keywords: &'a [String],
@@ -125,6 +126,7 @@ impl ser::Serialize for Package {
             edition: &self.manifest.edition().to_string(),
             links: self.manifest.links(),
             metabuild: self.manifest.metabuild(),
+            publish: self.publish().as_ref(),
         }
         .serialize(s)
     }
