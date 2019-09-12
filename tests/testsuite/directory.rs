@@ -9,7 +9,7 @@ use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{cksum, Package};
-use cargo_test_support::{basic_manifest, project, ProjectBuilder, t};
+use cargo_test_support::{basic_manifest, project, t, ProjectBuilder};
 
 fn setup() {
     let root = paths::root();

@@ -3,8 +3,8 @@ use std::io::prelude::*;
 
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::{sleep_ms, t};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
+use cargo_test_support::{sleep_ms, t};
 
 #[cargo_test]
 // I have no idea why this is failing spuriously on Windows;

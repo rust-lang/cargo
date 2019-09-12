@@ -1,5 +1,5 @@
-use cargo_test_support::project;
 use cargo;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn simple() {

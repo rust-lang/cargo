@@ -4,11 +4,11 @@ use std::io;
 use std::io::prelude::*;
 use std::thread;
 
+use cargo::util::paths::remove_dir_all;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, project};
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier};
-use cargo::util::paths::remove_dir_all;
 
 #[cargo_test]
 fn custom_build_script_failed() {

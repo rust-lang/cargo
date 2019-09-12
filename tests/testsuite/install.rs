@@ -5,7 +5,9 @@ use git2;
 
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
-use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
+use cargo_test_support::install::{
+    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
+};
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cargo_process, project};

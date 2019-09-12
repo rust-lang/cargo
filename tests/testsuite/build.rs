@@ -1,13 +1,13 @@
-use std::env;
-use std::fs::{self, File};
-use std::io::prelude::*;
+use cargo::util::paths::dylib_path_envvar;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, Execs, ProjectBuilder, t,
+    sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
-use cargo::util::paths::dylib_path_envvar;
+use std::env;
+use std::fs::{self, File};
+use std::io::prelude::*;
 
 #[cargo_test]
 fn cargo_compile_simple() {

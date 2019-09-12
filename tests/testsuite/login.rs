@@ -2,11 +2,11 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use cargo_test_support::{cargo_process, t};
-use cargo_test_support::install::cargo_home;
-use cargo_test_support::registry::{self, registry_url};
 use cargo::core::Shell;
 use cargo::util::config::Config;
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::registry::{self, registry_url};
+use cargo_test_support::{cargo_process, t};
 use toml;
 
 const TOKEN: &str = "test-token";

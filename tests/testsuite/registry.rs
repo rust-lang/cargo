@@ -2,12 +2,12 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
+use cargo::util::paths::remove_dir_all;
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{self, registry_path, registry_url, Dependency, Package};
 use cargo_test_support::{basic_manifest, project, t};
-use cargo::util::paths::remove_dir_all;
 
 #[cargo_test]
 fn simple() {

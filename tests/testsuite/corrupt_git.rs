@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use cargo::util::paths as cargopaths;
 use cargo_test_support::paths;
 use cargo_test_support::{basic_manifest, git, project};
-use cargo::util::paths as cargopaths;
 
 #[cargo_test]
 fn deleting_database_files() {

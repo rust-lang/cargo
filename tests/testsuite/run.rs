@@ -1,5 +1,5 @@
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 use cargo::util::paths::dylib_path_envvar;
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 
 #[cargo_test]
 fn simple() {
