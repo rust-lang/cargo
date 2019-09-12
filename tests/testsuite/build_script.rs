@@ -813,7 +813,7 @@ fn testing_and_such() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`",
+[RUNNING] `rustdoc [..]--test [..]`",
         )
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
@@ -2747,7 +2747,7 @@ fn doctest_receives_build_link_args() {
 
     p.cargo("test -v")
         .with_stderr_contains(
-            "[RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`",
+            "[RUNNING] `rustdoc [..]--test [..] --crate-name foo [..]-L native=bar[..]`",
         )
         .run();
 }

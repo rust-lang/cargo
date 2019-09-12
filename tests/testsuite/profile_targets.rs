@@ -306,7 +306,7 @@ fn profile_selection_test() {
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]
+[RUNNING] `rustdoc [..]--test [..]
 ").run();
     p.cargo("test -vv")
         .with_stderr_unordered(
@@ -319,7 +319,7 @@ fn profile_selection_test() {
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]
+[RUNNING] `rustdoc [..]--test [..]
 ",
         )
         .run();
@@ -371,7 +371,7 @@ fn profile_selection_test_release() {
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`
+[RUNNING] `rustdoc [..]--test [..]`
 ").run();
     p.cargo("test --release -vv")
         .with_stderr_unordered(
@@ -384,7 +384,7 @@ fn profile_selection_test_release() {
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]
+[RUNNING] `rustdoc [..]--test [..]
 ",
         )
         .run();
@@ -633,7 +633,7 @@ fn profile_selection_doc() {
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `rustdoc --crate-name bar bar/src/lib.rs [..]
+[RUNNING] `rustdoc [..]--crate-name bar bar/src/lib.rs [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [COMPILING] bdep [..]
 [RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
@@ -642,7 +642,7 @@ fn profile_selection_doc() {
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo [..]
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ").run();
 }
