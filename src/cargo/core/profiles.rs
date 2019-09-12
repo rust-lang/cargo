@@ -214,13 +214,13 @@ impl Profiles {
             Some(name) => {
                 let name = name.to_owned();
                 if set.get(&name).is_some() {
-                    failure::bail!("Inheritance loop of profiles cycles with {}", name);
+                    failure::bail!("Inheritance loop of profiles cycles with profile '{}'", name);
                 }
 
                 set.insert(name.clone());
                 match profiles.get(&name) {
                     None => {
-                        failure::bail!("Profile {} not found in Cargo.toml", name);
+                        failure::bail!("Profile '{}' not found in Cargo.toml", name);
                     }
                     Some(parent) => self.process_chain(&name, parent, set, result, profiles),
                 }
@@ -228,8 +228,8 @@ impl Profiles {
             None => {
                 failure::bail!(
                     "An 'inherits' directive is needed for all \
-                     profiles that are not 'dev' or 'release. Here \
-                     it is missing from {}",
+                     profiles that are not 'dev' or 'release'. Here \
+                     it is missing from '{}'",
                     name
                 );
             }
