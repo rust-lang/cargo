@@ -212,3 +212,31 @@ fn overrides_with_custom() {
         )
         .run();
 }
+
+#[cargo_test]
+fn conflicting_usage() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z unstable-options --profile=dev --release")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_unordered("error: Conflicting usage of --profile and --release")
+        .run();
+
+    p.cargo("install -Z unstable-options --profile=release --debug")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_unordered("error: Conflicting usage of --profile and --debug")
+        .run();
+}
