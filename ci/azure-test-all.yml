@@ -16,11 +16,6 @@ steps:
 - bash: rustup component add clippy || echo "clippy not available"
   displayName: "Install clippy (maybe)"
 
-# This is needed for standard library tests.
-- bash: rustup component add rust-src
-  condition: and(succeeded(), eq(variables['TOOLCHAIN'], 'nightly'))
-  displayName: "Install rust-src (maybe)"
-
 # Deny warnings on CI to avoid warnings getting into the codebase, and note the
 # `force-system-lib-on-osx` which is intended to fix compile issues on OSX where
 # compiling curl from source on OSX yields linker errors on Azure.
