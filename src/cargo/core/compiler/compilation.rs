@@ -8,7 +8,9 @@ use semver::Version;
 
 use super::BuildContext;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
-use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder, rustc::Rustc};
+use crate::util::{
+    self, join_paths, process, rustc::Rustc, CargoResult, CfgExpr, Config, ProcessBuilder,
+};
 
 pub struct Doctest {
     /// The package being doc-tested.
@@ -74,7 +76,7 @@ pub struct Compilation<'cfg> {
     primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
-    rustc: Rc<Rustc>
+    rustc: Rc<Rustc>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -111,7 +113,7 @@ impl<'cfg> Compilation<'cfg> {
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: target_runner(bcx)?,
-            rustc: bcx.rustc.clone()
+            rustc: bcx.rustc.clone(),
         })
     }
 

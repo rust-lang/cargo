@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::str;
 use std::rc::Rc;
+use std::str;
 
 use log::debug;
 
