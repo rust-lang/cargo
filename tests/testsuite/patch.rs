@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use crate::support::git;
-use crate::support::paths;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project, t};
 use toml;
 
 #[cargo_test]
@@ -1187,7 +1187,7 @@ fn patch_same_version() {
         .file("src/lib.rs", "")
         .build();
 
-    crate::support::registry::init();
+    cargo_test_support::registry::init();
 
     let p = project()
         .file(
@@ -1236,7 +1236,7 @@ fn two_semver_compatible() {
         .file("src/lib.rs", "")
         .build();
 
-    crate::support::registry::init();
+    cargo_test_support::registry::init();
 
     let p = project()
         .file(
@@ -1291,7 +1291,7 @@ fn multipatch_select_big() {
         .file("src/lib.rs", "")
         .build();
 
-    crate::support::registry::init();
+    cargo_test_support::registry::init();
 
     let p = project()
         .file(

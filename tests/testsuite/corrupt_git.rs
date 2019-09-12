@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::support::paths;
-use crate::support::{basic_manifest, git, project};
+use cargo_test_support::paths;
+use cargo_test_support::{basic_manifest, git, project};
 use cargo::util::paths as cargopaths;
 
 #[cargo_test]

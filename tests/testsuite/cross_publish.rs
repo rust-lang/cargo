@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::support::{cross_compile, project, publish, registry};
+use cargo_test_support::{cross_compile, project, publish, registry};
 
 #[cargo_test]
 fn simple_cross_package() {

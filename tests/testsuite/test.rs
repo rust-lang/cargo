@@ -3,10 +3,10 @@ use std::io::prelude::*;
 
 use cargo;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
-use crate::support::{rustc_host, sleep_ms};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
+use cargo_test_support::{rustc_host, sleep_ms};
 
 #[cargo_test]
 fn cargo_test_simple() {

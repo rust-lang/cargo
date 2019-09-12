@@ -1,6 +1,6 @@
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_bin_manifest, basic_manifest, is_nightly, main_file, project, rustc_host, Project,
 };
 use filetime::FileTime;
@@ -478,7 +478,7 @@ fn canonical_path() {
         // See https://github.com/rust-lang/rust/issues/63012
         return;
     }
-    if !crate::support::symlink_supported() {
+    if !cargo_test_support::symlink_supported() {
         return;
     }
     Package::new("regdep", "0.1.0")

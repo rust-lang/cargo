@@ -1,4 +1,4 @@
-use crate::support::{basic_bin_manifest, basic_manifest, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, project};
 
 #[cargo_test]
 fn build_lib_only() {

@@ -1,4 +1,4 @@
-use crate::support::{
+use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
     Project,
 };

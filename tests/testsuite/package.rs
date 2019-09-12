@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
-    registry, symlink_supported,
+    registry, symlink_supported, t,
 };
 use git2;
 

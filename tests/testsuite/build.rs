@@ -1,12 +1,11 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-
-use crate::support::paths::{root, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::paths::{root, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, Execs, ProjectBuilder,
+    sleep_ms, symlink_supported, Execs, ProjectBuilder, t,
 };
 use cargo::util::paths::dylib_path_envvar;
 
@@ -4541,7 +4540,7 @@ Caused by:
 
 #[cargo_test]
 fn tricky_pipelining() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -4571,7 +4570,7 @@ fn tricky_pipelining() {
 
 #[cargo_test]
 fn pipelining_works() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -4606,7 +4605,7 @@ fn pipelining_works() {
 
 #[cargo_test]
 fn pipelining_big_graph() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 

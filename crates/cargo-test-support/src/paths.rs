@@ -1,3 +1,5 @@
+use filetime::{self, FileTime};
+use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env;
@@ -6,9 +8,6 @@ use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
-
-use filetime::{self, FileTime};
-use lazy_static::lazy_static;
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 

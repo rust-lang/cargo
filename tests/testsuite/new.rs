@@ -2,8 +2,8 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::paths;
-use crate::support::{cargo_process, git_process};
+use cargo_test_support::paths;
+use cargo_test_support::{cargo_process, git_process};
 
 fn create_empty_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to

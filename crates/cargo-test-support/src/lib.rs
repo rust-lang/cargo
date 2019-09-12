@@ -125,6 +125,7 @@ use url::Url;
 
 use self::paths::CargoPathExt;
 
+#[macro_export]
 macro_rules! t {
     ($e:expr) => {
         match $e {
@@ -409,7 +410,7 @@ impl Project {
     ///             .with_stdout("bar\n")
     ///             .run();
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
-        let mut p = crate::support::process(program);
+        let mut p = process(program);
         p.cwd(self.root());
         execs().with_process_builder(p)
     }
@@ -1425,7 +1426,7 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     actual.is_empty() || expected.ends_with("[..]")
 }
 
-#[cargo_test]
+#[test]
 fn lines_match_works() {
     assert!(lines_match("a b", "a b"));
     assert!(lines_match("a[..]b", "a b"));

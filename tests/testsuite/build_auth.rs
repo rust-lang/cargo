@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 use std::thread;
 
-use crate::support::paths;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::paths;
+use cargo_test_support::{basic_manifest, project};
 use git2;
 
 // Tests that HTTP auth is offered from `credential.helper`.

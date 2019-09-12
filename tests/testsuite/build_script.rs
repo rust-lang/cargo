@@ -4,10 +4,10 @@ use std::io;
 use std::io::prelude::*;
 use std::thread;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, cross_compile, project};
-use crate::support::{rustc_host, sleep_ms, slow_cpu_multiplier};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 use cargo::util::paths::remove_dir_all;
 
 #[cargo_test]
@@ -2277,7 +2277,7 @@ fn flags_go_into_tests() {
 #[cargo_test]
 fn diamond_passes_args_only_once() {
     // FIXME: when pipelining rides to stable, enable this test on all channels.
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 

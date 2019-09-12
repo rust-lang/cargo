@@ -2,9 +2,9 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use crate::support::cargo_process;
-use crate::support::install::cargo_home;
-use crate::support::registry::{self, registry_url};
+use cargo_test_support::{cargo_process, t};
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::registry::{self, registry_url};
 use cargo::core::Shell;
 use cargo::util::config::Config;
 use toml;

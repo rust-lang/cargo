@@ -1,6 +1,6 @@
-use crate::support::publish::validate_alt_upload;
-use crate::support::registry::{self, Package};
-use crate::support::{basic_manifest, git, paths, project};
+use cargo_test_support::publish::validate_alt_upload;
+use cargo_test_support::registry::{self, Package};
+use cargo_test_support::{basic_manifest, git, paths, project};
 use cargo::util::IntoUrl;
 use std::fs::{self, File};
 use std::io::Write;

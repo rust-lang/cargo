@@ -54,6 +54,8 @@ jobs:
       displayName: "Check rustfmt (cargo)"
     - bash: cd crates/cargo-test-macro && cargo fmt --all -- --check
       displayName: "Check rustfmt (cargo-test-macro)"
+    - bash: cd crates/cargo-test-support && cargo fmt --all -- --check
+      displayName: "Check rustfmt (cargo-test-support)"
     - bash: cd crates/crates-io && cargo fmt --all -- --check
       displayName: "Check rustfmt (crates-io)"
     - bash: cd crates/resolver-tests && cargo fmt --all -- --check

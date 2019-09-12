@@ -103,6 +103,7 @@ features = [
 
 [dev-dependencies]
 cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
+cargo-test-support = { path = "crates/cargo-test-support", version = "0.1.0" }
 
 [[bin]]
 name = "cargo"

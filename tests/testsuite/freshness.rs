@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::SystemTime;
 
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::sleep_ms;
-use crate::support::{basic_manifest, is_coarse_mtime, project};
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::sleep_ms;
+use cargo_test_support::{basic_manifest, is_coarse_mtime, project};
 
 #[cargo_test]
 fn modifying_and_moving() {

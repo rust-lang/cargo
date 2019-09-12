@@ -1,4 +1,4 @@
-use crate::support::project;
+use cargo_test_support::project;
 
 const EXAMPLE: u8 = 0x1;
 const BIN: u8 = 0x2;

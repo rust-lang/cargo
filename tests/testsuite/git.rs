@@ -8,10 +8,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::sleep_ms;
-use crate::support::Project;
-use crate::support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::{sleep_ms, Project, t};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 
 fn disable_git_cli() -> bool {
     // mingw git on Windows does not support Windows-style file URIs.

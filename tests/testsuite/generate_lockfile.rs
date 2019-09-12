@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, paths, project, ProjectBuilder};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, paths, project, ProjectBuilder};
 
 #[cargo_test]
 fn adding_and_removing_packages() {

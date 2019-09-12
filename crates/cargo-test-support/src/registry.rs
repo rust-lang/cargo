@@ -1,17 +1,15 @@
-use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-
+use crate::git::repo;
+use crate::paths;
 use cargo::sources::CRATES_IO_INDEX;
 use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 use tar::{Builder, Header};
 use url::Url;
-
-use crate::support::git::repo;
-use crate::support::paths;
 
 /// Gets the path to the local index pretending to be crates.io. This is a Git repo
 /// initialized with a `config.json` file pointing to `dl_path` for downloads

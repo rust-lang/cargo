@@ -1,7 +1,7 @@
-use crate::support::git;
-use crate::support::paths;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn override_simple() {

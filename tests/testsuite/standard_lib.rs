@@ -1,10 +1,9 @@
-use crate::support::registry::{Dependency, Package};
-use crate::support::{is_nightly, paths, project, rustc_host, Execs};
+use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};
 
 fn setup() -> bool {
     if !is_nightly() {
         // -Zbuild-std is nightly
-        // -Zno-index-update is nightly
         // We don't want these tests to run on rust-lang/rust.
         return false;
     }

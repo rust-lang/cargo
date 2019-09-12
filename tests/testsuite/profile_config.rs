@@ -1,4 +1,4 @@
-use crate::support::{basic_lib_manifest, is_nightly, paths, project};
+use cargo_test_support::{basic_lib_manifest, is_nightly, paths, project};
 
 #[cargo_test]
 fn profile_config_gated() {
