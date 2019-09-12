@@ -165,12 +165,12 @@ fn run_doc_tests(
             .arg(&target.crate_name());
 
         if doctest_xcompile {
+            p.arg("--target").arg(&compilation.target);
             p.arg("-Zunstable-options");
             p.arg("--enable-per-target-ignores");
         }
 
         runtool.as_ref().map(|(runtool, runtool_args)| {
-            p.arg("--target").arg(&compilation.target);
             p.arg("--runtool").arg(runtool);
             for arg in runtool_args {
                 p.arg("--runtool-arg").arg(arg);
