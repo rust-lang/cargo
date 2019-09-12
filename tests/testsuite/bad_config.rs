@@ -709,6 +709,16 @@ warning: unused manifest key: target.foo.bar
 
     p.cargo("build -Z named-profiles")
         .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+warning: use `[profile.dev]` to configure debug builds
+[..]
+[..]",
+        )
+        .run();
+
+    p.cargo("build -Z named-profiles")
+        .masquerade_as_nightly_cargo()
         .run();
 
     let p = project()
