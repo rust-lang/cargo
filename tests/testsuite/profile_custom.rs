@@ -240,3 +240,80 @@ fn conflicting_usage() {
         .with_stderr_unordered("error: Conflicting usage of --profile and --debug")
         .run();
 }
+
+#[cargo_test]
+fn clean_custom_dirname() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.other]
+            inherits = "release"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
+
+    p.cargo("build --release")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("")
+        .run();
+
+    p.cargo("clean -p foo --release")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.cargo("build --release")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+
+    p.cargo("build -Z unstable-options --profile=other")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] other [optimized] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("clean")
+        .arg("--release")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Make sure that 'other' was not cleaned
+    assert!(p.build_dir().is_dir());
+    assert!(p.build_dir().join("debug").is_dir());
+    assert!(p.build_dir().join("other").is_dir());
+    assert!(!p.build_dir().join("release").is_dir());
+
+    // This should clean 'other'
+    p.cargo("clean -Z unstable-options --profile=other")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("")
+        .run();
+    assert!(p.build_dir().join("debug").is_dir());
+    assert!(!p.build_dir().join("other").is_dir());
+}
