@@ -71,6 +71,7 @@ mod path;
 mod plugins;
 mod proc_macro;
 mod profile_config;
+mod profile_custom;
 mod profile_overrides;
 mod profile_targets;
 mod profiles;
