@@ -214,7 +214,10 @@ impl Profiles {
             Some(name) => {
                 let name = name.to_owned();
                 if set.get(&name).is_some() {
-                    failure::bail!("Inheritance loop of profiles cycles with profile '{}'", name);
+                    failure::bail!(
+                        "Inheritance loop of profiles cycles with profile '{}'",
+                        name
+                    );
                 }
 
                 set.insert(name.clone());

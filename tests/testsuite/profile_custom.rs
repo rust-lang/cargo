@@ -1,4 +1,4 @@
-use crate::support::{project, basic_lib_manifest};
+use crate::support::{basic_lib_manifest, project};
 
 #[cargo_test]
 fn missing_inherits() {
@@ -183,7 +183,8 @@ fn overrides_with_custom() {
     // higher priority than profile options provided by custom profiles
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_unordered("\
+        .with_stderr_unordered(
+            "\
 [COMPILING] xxx [..]
 [COMPILING] yyy [..]
 [COMPILING] foo [..]
@@ -198,7 +199,8 @@ fn overrides_with_custom() {
     // This also verifies that the custom profile names appears in the finished line.
     p.cargo("build --profile=other -Z unstable-options -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_unordered("\
+        .with_stderr_unordered(
+            "\
 [COMPILING] xxx [..]
 [COMPILING] yyy [..]
 [COMPILING] foo [..]
@@ -210,5 +212,3 @@ fn overrides_with_custom() {
         )
         .run();
 }
-
-
