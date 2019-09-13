@@ -340,3 +340,63 @@ fn set_not_readonly(p: &Path) -> io::Result<bool> {
     fs::set_permissions(p, perms)?;
     Ok(true)
 }
+
+/// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
+///
+/// If the destination already exists, it is removed before linking.
+pub fn link_or_copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> CargoResult<()> {
+    let src = src.as_ref();
+    let dst = dst.as_ref();
+    _link_or_copy(src, dst)
+}
+
+fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
+    log::debug!("linking {} to {}", src.display(), dst.display());
+    if same_file::is_same_file(src, dst).unwrap_or(false) {
+        return Ok(());
+    }
+
+    // NB: we can't use dst.exists(), as if dst is a broken symlink,
+    // dst.exists() will return false. This is problematic, as we still need to
+    // unlink dst in this case. symlink_metadata(dst).is_ok() will tell us
+    // whether dst exists *without* following symlinks, which is what we want.
+    if fs::symlink_metadata(dst).is_ok() {
+        remove_file(&dst)?;
+    }
+
+    let link_result = if src.is_dir() {
+        #[cfg(target_os = "redox")]
+        use std::os::redox::fs::symlink;
+        #[cfg(unix)]
+        use std::os::unix::fs::symlink;
+        #[cfg(windows)]
+        // FIXME: This should probably panic or have a copy fallback. Symlinks
+        // are not supported in all windows environments. Currently symlinking
+        // is only used for .dSYM directories on macos, but this shouldn't be
+        // accidentally relied upon.
+        use std::os::windows::fs::symlink_dir as symlink;
+
+        let dst_dir = dst.parent().unwrap();
+        let src = if src.starts_with(dst_dir) {
+            src.strip_prefix(dst_dir).unwrap()
+        } else {
+            src
+        };
+        symlink(src, dst)
+    } else {
+        fs::hard_link(src, dst)
+    };
+    link_result
+        .or_else(|err| {
+            log::debug!("link failed {}. falling back to fs::copy", err);
+            fs::copy(src, dst).map(|_| ())
+        })
+        .chain_err(|| {
+            format!(
+                "failed to link or copy `{}` to `{}`",
+                src.display(),
+                dst.display()
+            )
+        })?;
+    Ok(())
+}
