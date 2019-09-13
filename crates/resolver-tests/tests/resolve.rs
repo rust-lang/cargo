@@ -1048,6 +1048,41 @@ fn resolving_with_constrained_sibling_backtrack_activation() {
 }
 
 #[test]
+fn resolving_with_public_constrained_sibling() {
+    // It makes sense to resolve most-constrained deps first, but
+    // with that logic the backtrack traps here come between the two
+    // attempted resolutions of 'constrained'. When backtracking,
+    // cargo should skip past them and resume resolution once the
+    // number of activations for 'constrained' changes.
+    let mut reglist = vec![
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "=1.0.0"),
+                                  dep_req("backtrack_trap1", "1.0"),
+                                  dep_req("backtrack_trap2", "1.0"),
+                                  dep_req("constrained", "<=60")]),
+        pkg!(("bar", "1.0.0") => [dep_req_kind("constrained", ">=60", Kind::Normal, true)]),
+    ];
+    // Bump these to make the test harder, but you'll also need to
+    // change the version constraints on `constrained` above. To correctly
+    // exercise Cargo, the relationship between the values is:
+    // NUM_CONSTRAINED - vsn < NUM_TRAPS < vsn
+    // to make sure the traps are resolved between `constrained`.
+    const NUM_TRAPS: usize = 45; // min 1
+    const NUM_CONSTRAINED: usize = 100; // min 1
+    for i in 0..NUM_TRAPS {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
+        reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
+    }
+    for i in 0..NUM_CONSTRAINED {
+        let vsn = format!("{}.0.0", i);
+        reglist.push(pkg!(("constrained", vsn.clone())));
+    }
+    let reg = registry(reglist);
+
+    let _ = resolve_and_validated(vec![dep_req("foo", "1")], &reg, None);
+}
+
+#[test]
 fn resolving_with_constrained_sibling_transitive_dep_effects() {
     // When backtracking due to a failed dependency, if Cargo is
     // trying to be clever and skip irrelevant dependencies, care must
