@@ -95,7 +95,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
                 (pkg_desc, targets)
             })
             .collect();
-        let start_str = format!("{}", humantime::format_rfc3339_seconds(SystemTime::now()));
+        let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
         let has_report = |what| {
             bcx.config
                 .cli_unstable()
