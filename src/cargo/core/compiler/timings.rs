@@ -6,7 +6,7 @@ use super::{CompileMode, Unit};
 use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
 use crate::util::machine_message::{self, Message};
-use crate::util::{CargoResult, Config};
+use crate::util::{paths, CargoResult, Config};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fs::File;
@@ -237,7 +237,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     /// Save HTML report to disk.
     pub fn report_html(&self) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs() as u32 + 1;
-        let mut f = File::create("cargo-timing.html")?;
+        let timestamp = self.start_str.replace(&['-', ':'][..], "");
+        let filename = format!("cargo-timing-{}.html", timestamp);
+        let mut f = File::create(&filename)?;
         let roots: Vec<&str> = self
             .root_targets
             .iter()
@@ -249,6 +251,18 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         self.fmt_timing_graph(&mut f, graph_width, duration)?;
         self.fmt_unit_table(&mut f)?;
         f.write_all(HTML_TMPL_FOOT.as_bytes())?;
+        drop(f);
+        let msg = format!(
+            "report saved to {}",
+            std::env::current_dir()
+                .unwrap_or_default()
+                .join(&filename)
+                .display()
+        );
+        paths::link_or_copy(&filename, "cargo-timing.html")?;
+        self.config
+            .shell()
+            .status_with_color("Timing", msg, termcolor::Color::Cyan)?;
         Ok(())
     }
 
