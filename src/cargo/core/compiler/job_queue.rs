@@ -121,7 +121,6 @@ impl<'a> JobState<'a> {
     /// This should only be called once because a metadata file can only be
     /// produced once!
     pub fn rmeta_produced(&self) {
-        assert!(self.rmeta_required.get());
         self.rmeta_required.set(false);
         let _ = self
             .tx

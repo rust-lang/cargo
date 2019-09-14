@@ -698,10 +698,11 @@ fn add_error_format_and_color(
     // prettily, and then when parsing JSON messages from rustc we need to
     // internally understand that we should extract the `rendered` field and
     // present it if we can.
-    if cx.bcx.build_config.cache_messages() || pipelined {
+    let wants_artifacts = pipelined || cx.bcx.config.cli_unstable().timings.is_some();
+    if cx.bcx.build_config.cache_messages() || wants_artifacts {
         cmd.arg("--error-format=json");
         let mut json = String::from("--json=diagnostic-rendered-ansi");
-        if pipelined {
+        if wants_artifacts {
             json.push_str(",artifacts");
         }
         match cx.bcx.build_config.message_format {
@@ -1075,7 +1076,8 @@ struct OutputOptions {
 
 impl OutputOptions {
     fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
-        let look_for_metadata_directive = cx.rmeta_required(unit);
+        let look_for_metadata_directive =
+            cx.rmeta_required(unit) || cx.bcx.config.cli_unstable().timings.is_some();
         let color = cx.bcx.config.shell().supports_color();
         let cache_cell = if cx.bcx.build_config.cache_messages() {
             let path = cx.files().message_cache_path(unit);
