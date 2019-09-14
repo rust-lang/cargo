@@ -390,11 +390,16 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             let width = (PX_PER_SEC * unit.duration).max(1.0);
 
             let dep_class = format!("dep-{}", i);
+            let class = if unit.unit.mode.is_run_custom_build() {
+                "unit-block-custom"
+            } else {
+                "unit-block"
+            };
             writeln!(
                 f,
                 "  <rect x=\"{:.1}\" y=\"{}\" width=\"{:.1}\" height=\"{}\" \
-                 rx=\"3\" class=\"unit-block\" data-dep-class=\"{}\" />",
-                x, y, width, BOX_HEIGHT, dep_class,
+                 rx=\"3\" class=\"{}\" data-dep-class=\"{}\" />",
+                x, y, width, BOX_HEIGHT, class, dep_class,
             )?;
             let draw_dep_lines = |f: &mut File, x, units| -> CargoResult<()> {
                 for unlocked in units {
@@ -741,6 +746,10 @@ h1 {
 
 .unit-block {
   fill: #95cce8;
+}
+
+.unit-block-custom {
+  fill: #f0b165;
 }
 
 .unit-block-codegen {
