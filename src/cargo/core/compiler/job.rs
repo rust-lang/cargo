@@ -12,17 +12,7 @@ pub struct Job {
 /// Each proc should send its description before starting.
 /// It should send either once or close immediately.
 pub struct Work {
-    inner: Box<dyn for<'a, 'b> FnBox<&'a JobState<'b>, CargoResult<()>> + Send>,
-}
-
-trait FnBox<A, R> {
-    fn call_box(self: Box<Self>, a: A) -> R;
-}
-
-impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
-    fn call_box(self: Box<F>, a: A) -> R {
-        (*self)(a)
-    }
+    inner: Box<dyn FnOnce(&JobState<'_>) -> CargoResult<()> + Send>,
 }
 
 impl Work {
@@ -38,7 +28,7 @@ impl Work {
     }
 
     pub fn call(self, tx: &JobState<'_>) -> CargoResult<()> {
-        self.inner.call_box(tx)
+        (self.inner)(tx)
     }
 
     pub fn then(self, next: Work) -> Work {
