@@ -37,6 +37,7 @@ fn std_lib() {
     hashbrown();
     libc();
     test();
+    custom_test_framework();
     target_proc_macro();
     bench();
     doc();
@@ -184,6 +185,47 @@ fn test() {
     cargo_build_std(&p, "test -v", "std")
         .with_stdout_contains("test tests::it_works ... ok")
         .run();
+}
+
+fn custom_test_framework() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+            #![no_std]
+            #![cfg_attr(test, no_main)]
+            #![feature(custom_test_frameworks)]
+            #![test_runner(crate::test_runner)]
+
+            pub fn test_runner(_tests: &[&dyn Fn()]) {}
+
+            #[panic_handler]
+            fn panic(_info: &core::panic::PanicInfo) -> ! {
+                loop {}
+            }
+            "#,
+        )
+        .file(
+            "target.json",
+            r#"
+            {
+                "llvm-target": "x86_64-unknown-none-gnu",
+                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                "arch": "x86_64",
+                "target-endian": "little",
+                "target-pointer-width": "64",
+                "target-c-int-width": "32",
+                "os": "none",
+                "linker-flavor": "ld.lld",
+                "linker": "rust-lld",
+                "executables": true,
+                "panic-strategy": "abort"
+            }
+            "#,
+        )
+        .build();
+
+    cargo_build_std(&p, "test --target target.json --no-run -v", "core").run();
 }
 
 fn target_proc_macro() {

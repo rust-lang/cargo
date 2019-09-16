@@ -398,7 +398,10 @@ pub fn compile_ws<'a>(
                 .iter()
                 .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
         {
-            crates.push("test".to_string());
+            // Only build libtest when libstd is built (libtest depends on libstd)
+            if crates.iter().any(|c| c == "std") {
+                crates.push("test".to_string());
+            }
         }
         standard_lib::generate_std_roots(&bcx, &crates, std_resolve.as_ref().unwrap())?
     } else {
