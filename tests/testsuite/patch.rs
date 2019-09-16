@@ -1338,3 +1338,68 @@ version. [..]
         )
         .run();
 }
+
+#[cargo_test]
+fn canonicalize_a_bunch() {
+    let base = git::repo(&paths::root().join("base"))
+        .file("Cargo.toml", &basic_manifest("base", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let intermediate = git::repo(&paths::root().join("intermediate"))
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "intermediate"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    # Note the lack of trailing slash
+                    base = {{ git = '{}' }}
+                "#,
+                base.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn f() { base::f() }")
+        .build();
+
+    let newbase = git::repo(&paths::root().join("newbase"))
+        .file("Cargo.toml", &basic_manifest("base", "0.1.0"))
+        .file("src/lib.rs", "pub fn f() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+
+                    [dependencies]
+                    # Note the trailing slashes
+                    base = {{ git = '{base}/' }}
+                    intermediate = {{ git = '{intermediate}/' }}
+
+                    [patch.'{base}'] # Note the lack of trailing slash
+                    base = {{ git = '{newbase}' }}
+                "#,
+                base = base.url(),
+                intermediate = intermediate.url(),
+                newbase = newbase.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn a() { base::f(); intermediate::f() }")
+        .build();
+
+    // Once to make sure it actually works
+    p.cargo("build").run();
+
+    // Then a few more times for good measure to ensure no weird warnings about
+    // `[patch]` are printed.
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+}
