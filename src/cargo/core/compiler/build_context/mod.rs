@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::str;
 
 use log::debug;
@@ -34,7 +33,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub packages: &'a PackageSet<'cfg>,
 
     /// Information about the compiler.
-    pub rustc: Rc<Rustc>,
+    pub rustc: Rustc,
     /// Build information for the host arch.
     pub host_config: TargetConfig,
     /// Build information for the target.
@@ -54,7 +53,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         units: &'a UnitInterner<'a>,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
-        let rustc = Rc::new(config.load_global_rustc(Some(ws))?);
+        let rustc = config.load_global_rustc(Some(ws))?;
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match build_config.requested_target.as_ref() {
