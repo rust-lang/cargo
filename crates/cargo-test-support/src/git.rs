@@ -38,14 +38,12 @@ use some of the helper functions in this file to interact with the repository.
 
 */
 
+use crate::{path2url, project, Project, ProjectBuilder};
+use git2;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-
-use git2;
 use url::Url;
-
-use crate::support::{path2url, project, Project, ProjectBuilder};
 
 #[must_use]
 pub struct RepoBuilder {

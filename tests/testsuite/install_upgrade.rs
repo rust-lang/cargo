@@ -5,10 +5,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::support::install::{cargo_home, exe};
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::install::{cargo_home, exe};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_manifest, cargo_process, cross_compile, execs, git, process, project, Execs,
 };
 

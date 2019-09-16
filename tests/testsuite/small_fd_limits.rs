@@ -3,10 +3,10 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::support::git;
-use crate::support::paths;
-use crate::support::project;
-use crate::support::registry::Package;
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 use git2;
 
 use url::Url;

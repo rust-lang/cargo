@@ -6,11 +6,11 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::{env, str};
 
-use crate::support::cargo_process;
-use crate::support::git;
-use crate::support::install::{assert_has_installed_exe, cargo_home};
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, execs, project, slow_cpu_multiplier};
+use cargo_test_support::cargo_process;
+use cargo_test_support::git;
+use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};
 use git2;
 
 fn pkg(name: &str, vers: &str) {

@@ -1,4 +1,4 @@
-use crate::support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn rustdoc_simple() {

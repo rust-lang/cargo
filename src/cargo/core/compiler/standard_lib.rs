@@ -7,6 +7,7 @@ use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspac
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::path::PathBuf;
 
 /// Parse the `-Zbuild-std` flag.
@@ -148,6 +149,10 @@ pub fn generate_std_roots<'a>(
 }
 
 fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
+    if let Some(s) = env::var_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
+        return Ok(s.into());
+    }
+
     // NOTE: This is temporary until we figure out how to acquire the source.
     // If we decide to keep the sysroot probe, then BuildConfig will need to
     // be restructured so that the TargetInfo is created earlier and passed

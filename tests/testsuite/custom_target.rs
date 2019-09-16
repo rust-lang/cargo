@@ -1,5 +1,5 @@
-use crate::support::is_nightly;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::is_nightly;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn custom_target_minimal() {

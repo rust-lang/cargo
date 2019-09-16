@@ -1,5 +1,5 @@
-use crate::support::project;
-use crate::support::registry::Package;
+use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 
 // Ensure that the "-Z minimal-versions" CLI option works and the minimal
 // version of a dependency ends up in the lock file.

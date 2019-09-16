@@ -1,6 +1,6 @@
-use crate::support::git;
-use crate::support::registry::Package;
-use crate::support::{basic_lib_manifest, project, Project};
+use cargo_test_support::git;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_lib_manifest, project, Project};
 
 #[cargo_test]
 fn vendor_simple() {

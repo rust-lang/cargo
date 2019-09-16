@@ -1,9 +1,9 @@
 use std::fmt::{self, Write};
 
-use crate::support::install::exe;
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::install::exe;
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn check_success() {

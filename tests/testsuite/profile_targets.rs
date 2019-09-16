@@ -1,4 +1,4 @@
-use crate::support::{basic_manifest, project, Project};
+use cargo_test_support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every target.
 

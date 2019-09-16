@@ -1,12 +1,10 @@
+use crate::registry::{self, alt_api_path};
+use crate::{find_json_mismatch, lines_match};
+use flate2::read::GzDecoder;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
-
-use crate::support::registry::{self, alt_api_path};
-use crate::support::{find_json_mismatch, lines_match};
-
-use flate2::read::GzDecoder;
 use tar::Archive;
 
 fn read_le_u32<R>(mut reader: R) -> io::Result<u32>

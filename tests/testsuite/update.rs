@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn minor_update_two_places() {

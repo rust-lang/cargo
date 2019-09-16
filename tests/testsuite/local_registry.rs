@@ -1,9 +1,9 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::{registry_path, Package};
-use crate::support::{basic_manifest, project};
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::{registry_path, Package};
+use cargo_test_support::{basic_manifest, project, t};
 
 fn setup() {
     let root = paths::root();

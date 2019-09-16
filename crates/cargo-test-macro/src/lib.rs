@@ -3,7 +3,7 @@ extern crate proc_macro;
 use proc_macro::*;
 
 #[proc_macro_attribute]
-pub fn cargo_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let span = Span::call_site();
     let mut ret = TokenStream::new();
     ret.extend(Some(TokenTree::from(Punct::new('#', Spacing::Alone))));
@@ -12,6 +12,8 @@ pub fn cargo_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
         Delimiter::Bracket,
         test.into(),
     ))));
+
+    let build_std = contains_ident(&attr, "build_std");
 
     for token in item {
         let group = match token {
@@ -29,25 +31,20 @@ pub fn cargo_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         };
 
-        let mut new_body = vec![
-            TokenTree::from(Ident::new("let", span)),
-            TokenTree::from(Ident::new("_test_guard", span)),
-            TokenTree::from(Punct::new('=', Spacing::Alone)),
-            TokenTree::from(Ident::new("crate", span)),
-            TokenTree::from(Punct::new(':', Spacing::Joint)),
-            TokenTree::from(Punct::new(':', Spacing::Alone)),
-            TokenTree::from(Ident::new("support", span)),
-            TokenTree::from(Punct::new(':', Spacing::Joint)),
-            TokenTree::from(Punct::new(':', Spacing::Alone)),
-            TokenTree::from(Ident::new("paths", span)),
-            TokenTree::from(Punct::new(':', Spacing::Joint)),
-            TokenTree::from(Punct::new(':', Spacing::Alone)),
-            TokenTree::from(Ident::new("init_root", span)),
-            TokenTree::from(Group::new(Delimiter::Parenthesis, TokenStream::new())),
-            TokenTree::from(Punct::new(';', Spacing::Alone)),
-        ]
-        .into_iter()
-        .collect::<TokenStream>();
+        let mut new_body =
+            to_token_stream("let _test_guard = cargo_test_support::paths::init_root();");
+
+        // If this is a `build_std` test (aka `tests/build-std/*.rs`) then they
+        // only run on nightly and they only run when specifically instructed to
+        // on CI.
+        if build_std {
+            let ts = to_token_stream("if !cargo_test_support::is_nightly() { return }");
+            new_body.extend(ts);
+            let ts = to_token_stream(
+                "if std::env::var(\"CARGO_RUN_BUILD_STD_TESTS\").is_err() { return }",
+            );
+            new_body.extend(ts);
+        }
         new_body.extend(group.stream());
         ret.extend(Some(TokenTree::from(Group::new(
             group.delimiter(),
@@ -56,4 +53,15 @@ pub fn cargo_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 
     return ret;
+}
+
+fn contains_ident(t: &TokenStream, ident: &str) -> bool {
+    t.clone().into_iter().any(|t| match t {
+        TokenTree::Ident(i) => i.to_string() == ident,
+        _ => false,
+    })
+}
+
+fn to_token_stream(code: &str) -> TokenStream {
+    code.parse().unwrap()
 }

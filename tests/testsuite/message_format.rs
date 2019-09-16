@@ -1,8 +1,8 @@
-use crate::support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn cannot_specify_two() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -26,7 +26,7 @@ fn cannot_specify_two() {
 
 #[cargo_test]
 fn double_json_works() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -51,7 +51,7 @@ fn double_json_works() {
 
 #[cargo_test]
 fn cargo_renders() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -87,7 +87,7 @@ error[..]`main`[..]
 
 #[cargo_test]
 fn cargo_renders_short() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -110,7 +110,7 @@ error[..]`main`[..]
 
 #[cargo_test]
 fn cargo_renders_ansi() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 

@@ -1,5 +1,5 @@
-use crate::support::registry::Package;
-use crate::support::{basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
 
 #[cargo_test]
 fn profile_override_gated() {

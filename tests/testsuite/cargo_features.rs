@@ -1,4 +1,4 @@
-use crate::support::{project, registry};
+use cargo_test_support::{project, registry};
 
 #[cargo_test]
 fn feature_required() {

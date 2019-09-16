@@ -3,9 +3,9 @@ use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{config::Config, errors::ManifestError};
 
-use crate::support::install::cargo_home;
-use crate::support::project;
-use crate::support::registry;
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::project;
+use cargo_test_support::registry;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.

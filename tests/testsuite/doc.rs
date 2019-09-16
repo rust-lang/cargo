@@ -2,10 +2,10 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::str;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_lib_manifest, basic_manifest, git, project};
-use crate::support::{is_nightly, rustc_host};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::{is_nightly, rustc_host};
 
 #[cargo_test]
 fn simple() {

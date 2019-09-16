@@ -1,7 +1,7 @@
 use std::fs::File;
 
-use crate::support::git;
-use crate::support::{basic_manifest, clippy_is_available, is_nightly, project};
+use cargo_test_support::git;
+use cargo_test_support::{basic_manifest, clippy_is_available, is_nightly, project};
 
 use std::io::Write;
 

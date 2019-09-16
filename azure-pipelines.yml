@@ -43,6 +43,7 @@ jobs:
       x86_64-msvc:
         TOOLCHAIN: stable-x86_64-pc-windows-msvc
         OTHER_TARGET: i686-pc-windows-msvc
+
 - job: rustfmt
   pool:
     vmImage: ubuntu-16.04
@@ -54,6 +55,8 @@ jobs:
       displayName: "Check rustfmt (cargo)"
     - bash: cd crates/cargo-test-macro && cargo fmt --all -- --check
       displayName: "Check rustfmt (cargo-test-macro)"
+    - bash: cd crates/cargo-test-support && cargo fmt --all -- --check
+      displayName: "Check rustfmt (cargo-test-support)"
     - bash: cd crates/crates-io && cargo fmt --all -- --check
       displayName: "Check rustfmt (crates-io)"
     - bash: cd crates/resolver-tests && cargo fmt --all -- --check
@@ -70,6 +73,20 @@ jobs:
       displayName: "Resolver tests"
   variables:
     TOOLCHAIN: stable
+
+- job: build_std
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+    - template: ci/azure-install-rust.yml
+    - bash: rustup component add rust-src
+      displayName: "Install rust-src"
+    - bash: cargo build
+    - bash: cargo test --test build-std
+      displayName: "tests"
+  variables:
+    TOOLCHAIN: nightly
+    CARGO_RUN_BUILD_STD_TESTS: 1
 
 - job: docs
   pool:
@@ -88,4 +105,3 @@ jobs:
       displayName: "Build mdbook documentation"
   variables:
     TOOLCHAIN: stable
-

@@ -5,16 +5,16 @@ use std::io;
 use std::os;
 use std::path::Path;
 
-use crate::support::{paths, project};
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo_test_support::{paths, project, t};
 use serde::Deserialize;
 
 fn lines_match(a: &str, b: &str) -> bool {
     // Perform a small amount of normalization for filesystem paths before we
     // send this to the `lines_match` function.
-    crate::support::lines_match(&a.replace("\\", "/"), &b.replace("\\", "/"))
+    cargo_test_support::lines_match(&a.replace("\\", "/"), &b.replace("\\", "/"))
 }
 
 #[cargo_test]

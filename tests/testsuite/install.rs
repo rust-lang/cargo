@@ -3,13 +3,14 @@ use std::io::prelude::*;
 
 use git2;
 
-use crate::support;
-use crate::support::cross_compile;
-use crate::support::git;
-use crate::support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
-use crate::support::paths;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, cargo_process, project};
+use cargo_test_support::cross_compile;
+use cargo_test_support::git;
+use cargo_test_support::install::{
+    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
+};
+use cargo_test_support::paths;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, cargo_process, project};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -1057,7 +1058,7 @@ fn install_target_native() {
     pkg("foo", "0.1.0");
 
     cargo_process("install foo --target")
-        .arg(support::rustc_host())
+        .arg(cargo_test_support::rustc_host())
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
 }

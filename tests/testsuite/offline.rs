@@ -1,4 +1,4 @@
-use crate::support::{basic_manifest, git, main_file, path2url, project, registry::Package};
+use cargo_test_support::{basic_manifest, git, main_file, path2url, project, registry::Package};
 use std::fs;
 
 #[cargo_test]
