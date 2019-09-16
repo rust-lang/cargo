@@ -333,7 +333,7 @@ fn parse_crate_type(
 ) -> CargoResult<Option<(String, String)>> {
     let not_supported = error.lines().any(|line| {
         (line.contains("unsupported crate type") || line.contains("unknown crate type"))
-            && line.contains(crate_type)
+            && line.contains(&format!("crate type `{}`", crate_type))
     });
     if not_supported {
         return Ok(None);
