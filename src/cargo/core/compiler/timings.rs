@@ -7,10 +7,9 @@ use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
 use crate::util::machine_message::{self, Message};
 use crate::util::{paths, CargoResult, Config};
-use std::cmp::max;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant, SystemTime};
 
 pub struct Timings<'a, 'cfg> {
@@ -66,6 +65,7 @@ struct UnitTime<'a> {
 }
 
 /// Periodic concurrency tracking information.
+#[derive(serde::Serialize)]
 struct Concurrency {
     /// Time as an offset in seconds from `Timings::start`.
     t: f64,
@@ -245,18 +245,32 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         let duration = self.start.elapsed().as_secs() as u32 + 1;
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
-        let mut f = File::create(&filename)?;
+        let mut f = BufWriter::new(File::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
             .iter()
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.fmt_summary_table(&mut f, duration)?;
-        let graph_width = self.fmt_pipeline_graph(&mut f, duration)?;
-        self.fmt_timing_graph(&mut f, graph_width, duration)?;
-        self.fmt_unit_table(&mut f)?;
-        f.write_all(HTML_TMPL_FOOT.as_bytes())?;
+        self.write_summary_table(&mut f, duration)?;
+        f.write_all(HTML_CANVAS.as_bytes())?;
+        self.write_unit_table(&mut f)?;
+        writeln!(
+            f,
+            "<script>\n\
+             DURATION = {};",
+            duration
+        )?;
+        self.write_js_data(&mut f)?;
+        write!(
+            f,
+            "{}\n\
+             </script>\n\
+             </body>\n\
+             </html>\n\
+             ",
+            include_str!("timings.js")
+        )?;
         drop(f);
         let msg = format!(
             "report saved to {}",
@@ -273,7 +287,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Render the summary table.
-    fn fmt_summary_table(&self, f: &mut File, duration: u32) -> CargoResult<()> {
+    fn write_summary_table(&self, f: &mut impl Write, duration: u32) -> CargoResult<()> {
         let targets: Vec<String> = self
             .root_targets
             .iter()
@@ -334,222 +348,78 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         Ok(())
     }
 
-    /// Render the box graph of the units over time.
-    fn fmt_pipeline_graph(&self, f: &mut File, duration: u32) -> CargoResult<u32> {
-        if self.unit_times.is_empty() {
-            return Ok(0);
-        }
-        const BOX_HEIGHT: u32 = 25;
-        const Y_TICK_DIST: u32 = BOX_HEIGHT + 2;
-
-        let graph_height = Y_TICK_DIST * self.unit_times.len() as u32;
-
-        let graph_width = draw_graph_axes(f, graph_height, duration)?;
-
-        // Draw Y tick marks.
-        write!(f, "<path class=\"graph-axes\" d=\"")?;
-        for n in 1..self.unit_times.len() as u32 {
-            let y = graph_height - (n * Y_TICK_DIST);
-            write!(f, "M {} {} l -5 0 ", X_LINE, y)?;
-        }
-        writeln!(f, "\" />")?;
-
-        // Draw Y labels.
-        for n in 0..self.unit_times.len() as u32 {
-            let y = MARGIN + (Y_TICK_DIST * (n + 1)) - 13;
-            writeln!(
-                f,
-                r#"<text x="{}" y="{}" class="graph-label-v">{}</text>"#,
-                X_LINE - 4,
-                y,
-                n + 1
-            )?;
-        }
-
-        // Draw the graph.
-        writeln!(
-            f,
-            r#"<svg x="{}" y="{}" width="{}" height="{}">"#,
-            X_LINE, MARGIN, graph_width, graph_height
-        )?;
-
-        // Create a map that will be used for drawing dependency lines.
-        let unit_map: HashMap<&Unit<'_>, (f64, u32)> = self
+    fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
+        // Create a map to link indices of unlocked units.
+        let unit_map: HashMap<Unit<'_>, usize> = self
             .unit_times
             .iter()
             .enumerate()
-            .map(|(i, unit)| {
-                let y = i as u32 * Y_TICK_DIST + 1;
-                let x = PX_PER_SEC * unit.start;
-                (&unit.unit, (x, y))
+            .map(|(i, ut)| (ut.unit, i))
+            .collect();
+        #[derive(serde::Serialize)]
+        struct UnitData {
+            i: usize,
+            name: String,
+            version: String,
+            mode: String,
+            target: String,
+            start: f64,
+            duration: f64,
+            rmeta_time: Option<f64>,
+            unlocked_units: Vec<usize>,
+            unlocked_rmeta_units: Vec<usize>,
+        }
+        let round = |x: f64| (x * 100.0).round() / 100.0;
+        let unit_data: Vec<UnitData> = self
+            .unit_times
+            .iter()
+            .enumerate()
+            .map(|(i, ut)| {
+                let mode = if ut.unit.mode.is_run_custom_build() {
+                    "run-custom-build"
+                } else {
+                    "todo"
+                }
+                .to_string();
+                let unlocked_units: Vec<usize> = ut
+                    .unlocked_units
+                    .iter()
+                    .map(|unit| unit_map[unit])
+                    .collect();
+                let unlocked_rmeta_units: Vec<usize> = ut
+                    .unlocked_rmeta_units
+                    .iter()
+                    .map(|unit| unit_map[unit])
+                    .collect();
+                UnitData {
+                    i,
+                    name: ut.unit.pkg.name().to_string(),
+                    version: ut.unit.pkg.version().to_string(),
+                    mode,
+                    target: ut.target.clone(),
+                    start: round(ut.start),
+                    duration: round(ut.duration),
+                    rmeta_time: ut.rmeta_time.map(|t| round(t)),
+                    unlocked_units,
+                    unlocked_rmeta_units,
+                }
             })
             .collect();
-
-        for (i, unit) in self.unit_times.iter().enumerate() {
-            let (x, y) = unit_map[&unit.unit];
-            let width = (PX_PER_SEC * unit.duration).max(1.0);
-
-            let dep_class = format!("dep-{}", i);
-            let class = if unit.unit.mode.is_run_custom_build() {
-                "unit-block-custom"
-            } else {
-                "unit-block"
-            };
-            writeln!(
-                f,
-                "  <rect x=\"{:.1}\" y=\"{}\" width=\"{:.1}\" height=\"{}\" \
-                 rx=\"3\" class=\"{}\" data-dep-class=\"{}\" />",
-                x, y, width, BOX_HEIGHT, class, dep_class,
-            )?;
-            let draw_dep_lines = |f: &mut File, x, units| -> CargoResult<()> {
-                for unlocked in units {
-                    let (u_x, u_y) = unit_map[&unlocked];
-                    writeln!(
-                        f,
-                        "  <path class=\"{} dep-line\" d=\"M {:.1} {} l -5 0 l 0 {} l {:.1} 0\" />",
-                        dep_class,
-                        x,
-                        y + BOX_HEIGHT / 2,
-                        u_y - y,
-                        u_x - x + 5.0,
-                    )?;
-                }
-                Ok(())
-            };
-            if let Some((rmeta_time, ctime, _cent)) = unit.codegen_time() {
-                let rmeta_x = x + PX_PER_SEC * rmeta_time;
-                writeln!(
-                    f,
-                    "  <rect x=\"{:.1}\" y=\"{}\" width=\"{:.1}\" \
-                     height=\"{}\" rx=\"3\" class=\"unit-block-codegen\"/>",
-                    rmeta_x,
-                    y,
-                    PX_PER_SEC * ctime,
-                    BOX_HEIGHT,
-                )?;
-                draw_dep_lines(f, rmeta_x, &unit.unlocked_rmeta_units)?;
-            }
-            writeln!(
-                f,
-                "  <text x=\"{:.1}\" y=\"{}\" class=\"unit-label\">{}{} {:.1}s</text>",
-                x + 5.0,
-                y + BOX_HEIGHT / 2 - 5,
-                unit.unit.pkg.name(),
-                unit.target,
-                unit.duration
-            )?;
-            draw_dep_lines(f, x + width, &unit.unlocked_units)?;
-        }
-        writeln!(f, r#"</svg>"#)?;
-        writeln!(f, r#"</svg>"#)?;
-        Ok(graph_width)
-    }
-
-    /// Render the line chart of concurrency information.
-    fn fmt_timing_graph(&self, f: &mut File, graph_width: u32, duration: u32) -> CargoResult<()> {
-        if graph_width == 0 || self.concurrency.is_empty() {
-            return Ok(());
-        }
-        const HEIGHT: u32 = 400;
-        const AXIS_HEIGHT: u32 = HEIGHT - MARGIN - Y_LINE;
-        const TOP_MARGIN: u32 = 10;
-        const GRAPH_HEIGHT: u32 = AXIS_HEIGHT - TOP_MARGIN;
-
-        draw_graph_axes(f, AXIS_HEIGHT, duration)?;
-
-        // Draw Y tick marks and labels.
-        write!(f, "<path class=\"graph-axes\" d=\"")?;
-        let max_v = self
-            .concurrency
-            .iter()
-            .map(|c| max(max(c.active, c.waiting), c.inactive))
-            .max()
-            .unwrap();
-        let (step, top) = split_ticks(max_v as u32, GRAPH_HEIGHT / MIN_TICK_DIST);
-        let num_ticks = top / step;
-        let tick_dist = GRAPH_HEIGHT / num_ticks;
-        let mut labels = String::new();
-
-        for n in 0..num_ticks {
-            let y = HEIGHT - Y_LINE - ((n + 1) * tick_dist);
-            write!(f, "M {} {} l -5 0 ", X_LINE, y)?;
-            labels.push_str(&format!(
-                "<text x=\"{}\" y=\"{}\" class=\"graph-label-v\">{}</text>\n",
-                X_LINE - 10,
-                y + 5,
-                (n + 1) * step
-            ));
-        }
-        writeln!(f, "\"/>")?;
-        f.write_all(labels.as_bytes())?;
-
-        // Label the Y axis.
-        let label_y = (HEIGHT - Y_LINE) / 2;
         writeln!(
             f,
-            "<text x=\"15\", y=\"{}\" \
-             class=\"graph-label-v\" transform=\"rotate(-90, 15, {})\"># Units</text>",
-            label_y, label_y
+            "const UNIT_DATA = {};",
+            serde_json::to_string_pretty(&unit_data)?
         )?;
-
-        // Draw the graph.
         writeln!(
             f,
-            r#"<svg x="{}" y="{}" width="{}" height="{}">"#,
-            X_LINE,
-            MARGIN,
-            graph_width,
-            GRAPH_HEIGHT + TOP_MARGIN
+            "const CONCURRENCY_DATA = {};",
+            serde_json::to_string_pretty(&self.concurrency)?
         )?;
-
-        let coord = |t, v| {
-            (
-                f64::from(graph_width) * (t / f64::from(duration)),
-                f64::from(TOP_MARGIN) + f64::from(GRAPH_HEIGHT) * (1.0 - (v as f64 / max_v as f64)),
-            )
-        };
-        let mut draw_line = |class, key: fn(&Concurrency) -> usize| {
-            write!(f, "<polyline points=\"")?;
-            let first = &self.concurrency[0];
-            let mut last = coord(first.t, key(first));
-            for c in &self.concurrency {
-                let (x, y) = coord(c.t, key(c));
-                write!(f, "{:.1},{:.1} {:.1},{:.1} ", x, last.1, x, y)?;
-                last = (x, y);
-            }
-            writeln!(f, "\" class=\"{}\" />", class)
-        };
-
-        draw_line("line-inactive", |c| c.inactive)?;
-        draw_line("line-waiting", |c| c.waiting)?;
-        draw_line("line-active", |c| c.active)?;
-
-        // Draw a legend.
-        write!(
-            f,
-            r#"
-<svg x="{}" y="20" width="100" height="62">
-  <rect width="100%" height="100%" fill="white" stroke="black" stroke-width="1" />
-  <line x1="5" y1="10" x2="50" y2="10" stroke="red" stroke-width="2"/>
-  <text x="54" y="11" dominant-baseline="middle" font-size="12px">Waiting</text>
-
-  <line x1="5" y1="50" x2="50" y2="50" stroke="green" stroke-width="2"/>
-  <text x="54" y="51" dominant-baseline="middle" font-size="12px">Active</text>
-
-  <line x1="5" y1="30" x2="50" y2="30" stroke="blue" stroke-width="2"/>
-  <text x="54" y="31" dominant-baseline="middle" font-size="12px">Inactive</text>
-</svg>
-"#,
-            graph_width - 120
-        )?;
-
-        writeln!(f, "</svg>")?;
-        writeln!(f, "</svg>")?;
         Ok(())
     }
 
     /// Render the table of all units.
-    fn fmt_unit_table(&self, f: &mut File) -> CargoResult<()> {
+    fn write_unit_table(&self, f: &mut impl Write) -> CargoResult<()> {
         write!(
             f,
             r#"
@@ -560,6 +430,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
       <th>Unit</th>
       <th>Total</th>
       <th>Codegen</th>
+      <th>Features</th>
     </tr>
   </thead>
   <tbody>
@@ -572,6 +443,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
                 None => "".to_string(),
                 Some((_rt, ctime, cent)) => format!("{:.1}s ({:.0}%)", ctime, cent),
             };
+            let features = unit.unit.features.join(", ");
             write!(
                 f,
                 r#"
@@ -580,13 +452,15 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
   <td>{}{}</td>
   <td>{:.1}s</td>
   <td>{}</td>
+  <td>{}</td>
 </tr>
 "#,
                 i + 1,
                 unit.name_ver(),
                 unit.target,
                 unit.duration,
-                codegen
+                codegen,
+                features,
             )?;
         }
         write!(f, "</tbody>\n</table>\n")?;
@@ -612,96 +486,6 @@ impl<'a> UnitTime<'a> {
 // Replace with as_secs_f64 when 1.38 hits stable.
 fn d_as_f64(d: Duration) -> f64 {
     (d.as_secs() as f64) + f64::from(d.subsec_nanos()) / 1_000_000_000.0
-}
-
-fn round_up(n: u32, step: u32) -> u32 {
-    if n % step == 0 {
-        n
-    } else {
-        (step - n % step) + n
-    }
-}
-
-/// Determine the `(step, max_value)` of the number of ticks along an axis.
-fn split_ticks(n: u32, max_ticks: u32) -> (u32, u32) {
-    if n <= max_ticks {
-        (1, n)
-    } else if n <= max_ticks * 2 {
-        (2, round_up(n, 2))
-    } else if n <= max_ticks * 4 {
-        (4, round_up(n, 4))
-    } else if n <= max_ticks * 5 {
-        (5, round_up(n, 5))
-    } else {
-        let mut step = 10;
-        loop {
-            let top = round_up(n, step);
-            if top <= max_ticks * step {
-                break (step, top);
-            }
-            step += 10;
-        }
-    }
-}
-
-const X_LINE: u32 = 50;
-const MARGIN: u32 = 5;
-const Y_LINE: u32 = 35; // relative to bottom
-const PX_PER_SEC: f64 = 20.0;
-const MIN_TICK_DIST: u32 = 50;
-
-fn draw_graph_axes(f: &mut File, graph_height: u32, duration: u32) -> CargoResult<u32> {
-    let graph_width = PX_PER_SEC as u32 * duration;
-    let width = graph_width + X_LINE + 30;
-    let height = graph_height + MARGIN + Y_LINE;
-    writeln!(
-        f,
-        r#"<svg width="{}" height="{}" class="graph">"#,
-        width, height
-    )?;
-
-    // Draw axes.
-    write!(
-        f,
-        "<path class=\"graph-axes\" d=\"\
-         M {} {} \
-         l 0 {} \
-         l {} 0 ",
-        X_LINE,
-        MARGIN,
-        graph_height,
-        graph_width + 20
-    )?;
-
-    // Draw X tick marks.
-    let tick_width = graph_width - 10;
-    let (step, top) = split_ticks(duration, tick_width / MIN_TICK_DIST);
-    let num_ticks = top / step;
-    let tick_dist = tick_width / num_ticks;
-    let mut labels = String::new();
-    for n in 0..num_ticks {
-        let x = X_LINE + ((n + 1) * tick_dist);
-        write!(f, "M {} {} l 0 5 ", x, height - Y_LINE)?;
-        labels.push_str(&format!(
-            "<text x=\"{}\" y=\"{}\" class=\"graph-label-h\">{}s</text>\n",
-            x,
-            height - Y_LINE + 20,
-            (n + 1) * step
-        ));
-    }
-
-    writeln!(f, "\" />")?;
-    f.write_all(labels.as_bytes())?;
-
-    // Draw vertical lines.
-    write!(f, "<path class=\"vert-line\" d=\"")?;
-    for n in 0..num_ticks {
-        let x = X_LINE + ((n + 1) * tick_dist);
-        write!(f, "M {} {} l 0 {} ", x, MARGIN, graph_height)?;
-    }
-    writeln!(f, "\" />")?;
-
-    Ok(graph_width)
 }
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
@@ -731,56 +515,19 @@ static HTML_TMPL: &str = r#"
 html {
   font-family: sans-serif;
 }
-svg {
+
+.canvas-container {
+  position: relative;
   margin-top: 5px;
   margin-bottom: 5px;
-  background: #f7f7f7;
 }
+
 h1 {
   border-bottom: 1px solid #c0c0c0;
-}
-.unit-label {
-  font-size: 12px;
-  dominant-baseline: hanging;
-}
-
-.unit-block {
-  fill: #95cce8;
-}
-
-.unit-block-custom {
-  fill: #f0b165;
-}
-
-.unit-block-codegen {
-  fill: #aa95e8;
-  pointer-events: none;
 }
 
 .graph {
   display: block;
-}
-
-.graph-label-v {
-  text-anchor: end;
-  fill: #303030;
-}
-
-.graph-label-h {
-  text-anchor: middle;
-  fill: #303030;
-}
-
-.graph-axes {
-  stroke-width: 2;
-  fill: none;
-  stroke: black;
-}
-
-.vert-line {
-  fill: none;
-  stroke: #c0c0c0;
-  stroke-dasharray: 2,4
 }
 
 .my-table {
@@ -857,34 +604,8 @@ h1 {
   text-align: right;
 }
 
-.line-waiting {
-  fill: none;
-  stroke: red;
-  stroke-width: 2px;
-}
-
-.line-active {
-  fill: none;
-  stroke: green;
-  stroke-width: 2px;
-}
-
-.line-inactive {
-  fill: none;
-  stroke: blue;
-  stroke-width: 2px;
-}
-
-.dep-line {
-  fill: none;
-  stroke: #ddd;
-  stroke-dasharray: 2;
-}
-
-.dep-line-highlight {
-  stroke: #3e3e3e;
-  stroke-width: 2;
-  stroke-dasharray: 4;
+.input-table td {
+  text-align: center;
 }
 
 </style>
@@ -894,21 +615,27 @@ h1 {
 <h1>Cargo Build Timings</h1>
 "#;
 
-static HTML_TMPL_FOOT: &str = r#"
-<script>
-function show_deps(event) {
-  for (const el of document.getElementsByClassName('dep-line')) {
-    el.classList.remove('dep-line-highlight');
-  }
-  for (const el of document.getElementsByClassName(event.currentTarget.dataset.depClass)) {
-    el.classList.add('dep-line-highlight');
-  }
-}
+static HTML_CANVAS: &str = r#"
+<table class="input-table">
+  <tr>
+    <td><label for="min-unit-time">Min unit time:</label></td>
+    <td><label for="scale">Scale:</label></td>
+  </tr>
+  <tr>
+    <td><input type="range" min="0" max="30" value="0" id="min-unit-time"></td>
+    <td><input type="range" min="1" max="50" value="20" id="scale"></td>
+  </tr>
+  <tr>
+    <td><output for="min-unit-time" id="min-unit-time-output"></output></td>
+    <td><output for="scale" id="scale-output"></output></td>
+  </tr>
+</table>
 
-for (const el of document.getElementsByClassName('unit-block')) {
-  el.onmouseover = show_deps;
-}
-</script>
-</body>
-</html>
+<div id="pipeline-container" class="canvas-container">
+ <canvas id="pipeline-graph" class="graph" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+ <canvas id="pipeline-graph-lines" style="position: absolute; left: 0; top: 0; z-index: 1; pointer-events:none;"></canvas>
+</div>
+<div class="canvas-container">
+  <canvas id="timing-graph" class="graph"></canvas>
+</div>
 "#;
