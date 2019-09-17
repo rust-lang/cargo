@@ -649,7 +649,7 @@ static HTML_CANVAS: &str = r#"
     <td><label for="scale">Scale:</label></td>
   </tr>
   <tr>
-    <td><input type="range" min="0" max="30" value="0" id="min-unit-time"></td>
+    <td><input type="range" min="0" max="30" step="0.1" value="0" id="min-unit-time"></td>
     <td><input type="range" min="1" max="50" value="20" id="scale"></td>
   </tr>
   <tr>
