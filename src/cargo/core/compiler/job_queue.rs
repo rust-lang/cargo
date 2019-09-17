@@ -16,6 +16,7 @@ use super::job::{
     Freshness::{self, Dirty, Fresh},
     Job,
 };
+use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
 use crate::handle_error;
@@ -41,6 +42,7 @@ pub struct JobQueue<'a, 'cfg> {
     is_release: bool,
     progress: Progress<'cfg>,
     next_id: u32,
+    timings: Timings<'a, 'cfg>,
 }
 
 pub struct JobState<'a> {
@@ -82,7 +84,7 @@ enum Artifact {
 }
 
 enum Message {
-    Run(String),
+    Run(u32, String),
     BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
@@ -93,7 +95,7 @@ enum Message {
 
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
-        let _ = self.tx.send(Message::Run(cmd.to_string()));
+        let _ = self.tx.send(Message::Run(self.id, cmd.to_string()));
     }
 
     pub fn build_plan(
@@ -121,7 +123,6 @@ impl<'a> JobState<'a> {
     /// This should only be called once because a metadata file can only be
     /// produced once!
     pub fn rmeta_produced(&self) {
-        assert!(self.rmeta_required.get());
         self.rmeta_required.set(false);
         let _ = self
             .tx
@@ -130,9 +131,10 @@ impl<'a> JobState<'a> {
 }
 
 impl<'a, 'cfg> JobQueue<'a, 'cfg> {
-    pub fn new(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a, 'cfg> {
+    pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'a>]) -> JobQueue<'a, 'cfg> {
         let (tx, rx) = channel();
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, bcx.config);
+        let timings = Timings::new(bcx, root_units);
         JobQueue {
             queue: DependencyQueue::new(),
             tx,
@@ -144,6 +146,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             is_release: bcx.build_config.release,
             progress,
             next_id: 0,
+            timings,
         }
     }
 
@@ -318,6 +321,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
+            self.timings
+                .mark_concurrency(self.active.len(), queue.len(), self.queue.len());
+
             // Drain all events at once to avoid displaying the progress bar
             // unnecessarily.
             let events: Vec<_> = self.rx.try_iter().collect();
@@ -330,18 +336,18 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
             for event in events {
                 match event {
-                    Message::Run(cmd) => {
+                    Message::Run(id, cmd) => {
                         cx.bcx
                             .config
                             .shell()
                             .verbose(|c| c.status("Running", &cmd))?;
+                        self.timings.unit_start(id, self.active[&id]);
                     }
                     Message::BuildPlanMsg(module_name, cmd, filenames) => {
                         plan.update(&module_name, &cmd, &filenames)?;
                     }
                     Message::Stdout(out) => {
-                        self.progress.clear();
-                        println!("{}", out);
+                        cx.bcx.config.shell().stdout_println(out);
                     }
                     Message::Stderr(err) => {
                         let mut shell = cx.bcx.config.shell();
@@ -369,7 +375,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         };
                         info!("end ({:?}): {:?}", unit, result);
                         match result {
-                            Ok(()) => self.finish(&unit, artifact, cx)?,
+                            Ok(()) => self.finish(id, &unit, artifact, cx)?,
                             Err(e) => {
                                 let msg = "The following warnings were emitted during compilation:";
                                 self.emit_warnings(Some(msg), &unit, cx)?;
@@ -427,6 +433,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
+            self.timings.finished()?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
@@ -542,8 +549,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
 
         match fresh {
-            Freshness::Fresh => doit(),
+            Freshness::Fresh => {
+                self.timings.add_fresh();
+                doit()
+            }
             Freshness::Dirty => {
+                self.timings.add_dirty();
                 scope.spawn(move |_| doit());
             }
         }
@@ -581,6 +592,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
     fn finish(
         &mut self,
+        id: u32,
         unit: &Unit<'a>,
         artifact: Artifact,
         cx: &mut Context<'_, '_>,
@@ -588,7 +600,11 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
         }
-        self.queue.finish(unit, &artifact);
+        let unlocked = self.queue.finish(unit, &artifact);
+        match artifact {
+            Artifact::All => self.timings.unit_finished(id, unlocked),
+            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+        }
         Ok(())
     }
 

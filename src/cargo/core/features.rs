@@ -335,6 +335,7 @@ pub struct CliUnstable {
     pub cache_messages: bool,
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
+    pub timings: Option<Vec<String>>,
 }
 
 impl CliUnstable {
@@ -367,6 +368,13 @@ impl CliUnstable {
             }
         }
 
+        fn parse_timings(value: Option<&str>) -> Vec<String> {
+            match value {
+                None => vec!["html".to_string(), "info".to_string()],
+                Some(v) => v.split(',').map(|s| s.to_string()).collect(),
+            }
+        }
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
@@ -384,6 +392,7 @@ impl CliUnstable {
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
+            "timings" => self.timings = Some(parse_timings(v)),
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

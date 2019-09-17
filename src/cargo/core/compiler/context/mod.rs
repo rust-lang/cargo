@@ -129,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
-        let mut queue = JobQueue::new(self.bcx);
+        let mut queue = JobQueue::new(self.bcx, units);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;
@@ -523,6 +523,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns whether when `unit` is built whether it should emit metadata as
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
-        self.rmeta_required.contains(unit)
+        self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
     }
 }

@@ -111,6 +111,13 @@ impl Shell {
         }
     }
 
+    pub fn stdout_println(&mut self, message: impl fmt::Display) {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+        println!("{}", message);
+    }
+
     /// Sets whether the next print should clear the current line.
     pub fn set_needs_clear(&mut self, needs_clear: bool) {
         self.needs_clear = needs_clear;
