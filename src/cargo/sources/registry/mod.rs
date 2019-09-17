@@ -161,25 +161,25 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use log::debug;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
 use crate::core::source::MaybePackage;
-use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
-use crate::util::to_url::ToUrl;
-use crate::util::{internal, CargoResult, Config, FileLock, Filesystem};
+use crate::util::into_url::IntoUrl;
+use crate::util::{internal, CargoResult, Config, Filesystem};
 
-const INDEX_LOCK: &str = ".cargo-index-lock";
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
@@ -194,7 +194,6 @@ pub struct RegistrySource<'cfg> {
     ops: Box<dyn RegistryData + 'cfg>,
     index: index::RegistryIndex<'cfg>,
     yanked_whitelist: HashSet<PackageId>,
-    index_locked: bool,
 }
 
 #[derive(Deserialize)]
@@ -208,7 +207,7 @@ pub struct RegistryConfig {
     ///
     /// For backwards compatibility, if the string does not contain `{crate}` or
     /// `{version}`, it will be extended with `/{crate}/{version}/download` to
-    /// support registries like crates.io which were crated before the
+    /// support registries like crates.io which were created before the
     /// templating setup was created.
     pub dl: String,
 
@@ -220,17 +219,18 @@ pub struct RegistryConfig {
 
 #[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
-    name: Cow<'a, str>,
+    name: InternedString,
     vers: Version,
+    #[serde(borrow)]
     deps: Vec<RegistryDependency<'a>>,
-    features: BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
+    features: BTreeMap<InternedString, Vec<InternedString>>,
     cksum: String,
     yanked: Option<bool>,
-    links: Option<Cow<'a, str>>,
+    links: Option<InternedString>,
 }
 
 #[test]
-fn escaped_cher_in_json() {
+fn escaped_char_in_json() {
     let _: RegistryPackage<'_> = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
     )
@@ -276,15 +276,17 @@ enum Field {
 
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
-    name: Cow<'a, str>,
+    name: InternedString,
+    #[serde(borrow)]
     req: Cow<'a, str>,
-    features: Vec<Cow<'a, str>>,
+    features: Vec<InternedString>,
     optional: bool,
     default_features: bool,
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
     registry: Option<Cow<'a, str>>,
-    package: Option<Cow<'a, str>>,
+    package: Option<InternedString>,
+    public: Option<bool>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -300,18 +302,18 @@ impl<'a> RegistryDependency<'a> {
             kind,
             registry,
             package,
+            public,
         } = self;
 
         let id = if let Some(registry) = &registry {
-            SourceId::for_registry(&registry.to_url()?)?
+            SourceId::for_registry(&registry.into_url()?)?
         } else {
             default
         };
 
-        let mut dep =
-            Dependency::parse_no_deprecated(package.as_ref().unwrap_or(&name), Some(&req), id)?;
+        let mut dep = Dependency::parse_no_deprecated(package.unwrap_or(name), Some(&req), id)?;
         if package.is_some() {
-            dep.set_explicit_name_in_toml(&name);
+            dep.set_explicit_name_in_toml(name);
         }
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
@@ -323,6 +325,9 @@ impl<'a> RegistryDependency<'a> {
             Some(target) => Some(target.parse()?),
             None => None,
         };
+
+        // All dependencies are private by default
+        let public = public.unwrap_or(false);
 
         // Unfortunately older versions of cargo and/or the registry ended up
         // publishing lots of entries where the features array contained the
@@ -341,7 +346,8 @@ impl<'a> RegistryDependency<'a> {
             .set_default_features(default_features)
             .set_features(features)
             .set_platform(platform)
-            .set_kind(kind);
+            .set_kind(kind)
+            .set_public(public);
 
         Ok(dep)
     }
@@ -352,27 +358,25 @@ pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
     fn load(
         &self,
-        _root: &Path,
+        root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
-    fn finish_download(
-        &mut self,
-        pkg: PackageId,
-        checksum: &str,
-        data: &[u8],
-    ) -> CargoResult<FileLock>;
+    fn finish_download(&mut self, pkg: PackageId, checksum: &str, data: &[u8])
+        -> CargoResult<File>;
 
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
         true
     }
+    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
+    fn current_version(&self) -> Option<InternedString>;
 }
 
 pub enum MaybeLock {
-    Ready(FileLock),
+    Ready(File),
     Download { url: String, descriptor: String },
 }
 
@@ -394,27 +398,18 @@ impl<'cfg> RegistrySource<'cfg> {
     ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(
-            source_id,
-            config,
-            &name,
-            Box::new(ops),
-            yanked_whitelist,
-            true,
-        )
+        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 
-    pub fn local(source_id: SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn local(
+        source_id: SourceId,
+        path: &Path,
+        yanked_whitelist: &HashSet<PackageId>,
+        config: &'cfg Config,
+    ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
-        RegistrySource::new(
-            source_id,
-            config,
-            &name,
-            Box::new(ops),
-            &HashSet::new(),
-            false,
-        )
+        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
     }
 
     fn new(
@@ -423,16 +418,14 @@ impl<'cfg> RegistrySource<'cfg> {
         name: &str,
         ops: Box<dyn RegistryData + 'cfg>,
         yanked_whitelist: &HashSet<PackageId>,
-        index_locked: bool,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config,
             source_id,
             updated: false,
-            index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
+            index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
-            index_locked,
             ops,
         }
     }
@@ -448,36 +441,27 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self, pkg: PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
+    fn unpack_package(&self, pkg: PackageId, tarball: &File) -> CargoResult<PathBuf> {
         // The `.cargo-ok` file is used to track if the source is already
-        // unpacked and to lock the directory for unpacking.
-        let mut ok = {
-            let package_dir = format!("{}-{}", pkg.name(), pkg.version());
-            let dst = self.src_path.join(&package_dir);
-            dst.create_dir()?;
-
-            // Attempt to open a read-only copy first to avoid an exclusive write
-            // lock and also work with read-only filesystems. If the file has
-            // any data, assume the source is already unpacked.
-            if let Ok(ok) = dst.open_ro(PACKAGE_SOURCE_LOCK, self.config, &package_dir) {
-                let meta = ok.file().metadata()?;
-                if meta.len() > 0 {
-                    let unpack_dir = ok.parent().to_path_buf();
-                    return Ok(unpack_dir);
-                }
+        // unpacked.
+        let package_dir = format!("{}-{}", pkg.name(), pkg.version());
+        let dst = self.src_path.join(&package_dir);
+        dst.create_dir()?;
+        let path = dst.join(PACKAGE_SOURCE_LOCK);
+        let path = self.config.assert_package_cache_locked(&path);
+        let unpack_dir = path.parent().unwrap();
+        if let Ok(meta) = path.metadata() {
+            if meta.len() > 0 {
+                return Ok(unpack_dir.to_path_buf());
             }
-
-            dst.open_rw(PACKAGE_SOURCE_LOCK, self.config, &package_dir)?
-        };
-        let unpack_dir = ok.parent().to_path_buf();
-
-        // If the file has any data, assume the source is already unpacked.
-        let meta = ok.file().metadata()?;
-        if meta.len() > 0 {
-            return Ok(unpack_dir);
         }
+        let mut ok = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)?;
 
-        let gz = GzDecoder::new(tarball.file());
+        let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
@@ -512,34 +496,50 @@ impl<'cfg> RegistrySource<'cfg> {
         // Write to the lock file to indicate that unpacking was successful.
         write!(ok, "ok")?;
 
-        Ok(unpack_dir)
+        Ok(unpack_dir.to_path_buf())
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
         self.ops.update_index()?;
         let path = self.ops.index_path();
-        self.index =
-            index::RegistryIndex::new(self.source_id, path, self.config, self.index_locked);
+        self.index = index::RegistryIndex::new(self.source_id, path, self.config);
+        self.updated = true;
         Ok(())
     }
 
-    fn get_pkg(&mut self, package: PackageId, path: &FileLock) -> CargoResult<Package> {
+    fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
         let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
-        let pkg = match src.download(package)? {
+        let mut pkg = match src.download(package)? {
             MaybePackage::Ready(pkg) => pkg,
             MaybePackage::Download { .. } => unreachable!(),
         };
+
+        // After we've loaded the package configure its summary's `checksum`
+        // field with the checksum we know for this `PackageId`.
+        let req = VersionReq::exact(package.version());
+        let summary_with_cksum = self
+            .index
+            .summaries(package.name(), &req, &mut *self.ops)?
+            .map(|s| s.summary.clone())
+            .next()
+            .expect("summary not found");
+        if let Some(cksum) = summary_with_cksum.checksum() {
+            pkg.manifest_mut()
+                .summary_mut()
+                .set_checksum(cksum.to_string());
+        }
+
         Ok(pkg)
     }
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        // If this is a precise dependency, then it came from a lockfile and in
+        // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
@@ -623,10 +623,17 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        self.source_id.display_registry()
+        self.source_id.display_index()
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         self.yanked_whitelist.extend(pkgs);
+    }
+
+    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+        if !self.updated {
+            self.do_update()?;
+        }
+        self.index.is_yanked(pkg, &mut *self.ops)
     }
 }

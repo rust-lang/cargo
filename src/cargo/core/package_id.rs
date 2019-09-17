@@ -59,7 +59,7 @@ impl ser::Serialize for PackageId {
             "{} {} ({})",
             self.inner.name,
             self.inner.version,
-            self.inner.source_id.to_url()
+            self.inner.source_id.into_url()
         ))
     }
 }
@@ -104,7 +104,7 @@ impl PartialEq for PackageId {
     }
 }
 
-impl<'a> Hash for PackageId {
+impl Hash for PackageId {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
         self.inner.name.hash(state);
         self.inner.version.hash(state);
@@ -113,9 +113,13 @@ impl<'a> Hash for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
+    pub fn new<T: ToSemver>(
+        name: impl Into<InternedString>,
+        version: T,
+        sid: SourceId,
+    ) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
-        Ok(PackageId::pure(InternedString::new(name), v, sid))
+        Ok(PackageId::pure(name.into(), v, sid))
     }
 
     pub fn pure(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {
@@ -205,11 +209,11 @@ mod tests {
     use super::PackageId;
     use crate::core::source::SourceId;
     use crate::sources::CRATES_IO_INDEX;
-    use crate::util::ToUrl;
+    use crate::util::IntoUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let loc = CRATES_IO_INDEX.to_url().unwrap();
+        let loc = CRATES_IO_INDEX.into_url().unwrap();
         let repo = SourceId::for_registry(&loc).unwrap();
 
         assert!(PackageId::new("foo", "1.0", repo).is_err());
@@ -220,11 +224,22 @@ mod tests {
 
     #[test]
     fn debug() {
-        let loc = CRATES_IO_INDEX.to_url().unwrap();
+        let loc = CRATES_IO_INDEX.into_url().unwrap();
         let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
         assert_eq!(r#"PackageId { name: "foo", version: "1.0.0", source: "registry `https://github.com/rust-lang/crates.io-index`" }"#, format!("{:?}", pkg_id));
 
-        let pretty = r#"
+        let expected = r#"
+PackageId {
+    name: "foo",
+    version: "1.0.0",
+    source: "registry `https://github.com/rust-lang/crates.io-index`",
+}
+"#
+        .trim();
+
+        // Can be removed once trailing commas in Debug have reached the stable
+        // channel.
+        let expected_without_trailing_comma = r#"
 PackageId {
     name: "foo",
     version: "1.0.0",
@@ -232,12 +247,18 @@ PackageId {
 }
 "#
         .trim();
-        assert_eq!(pretty, format!("{:#?}", pkg_id));
+
+        let actual = format!("{:#?}", pkg_id);
+        if actual.ends_with(",\n}") {
+            assert_eq!(actual, expected);
+        } else {
+            assert_eq!(actual, expected_without_trailing_comma);
+        }
     }
 
     #[test]
     fn display() {
-        let loc = CRATES_IO_INDEX.to_url().unwrap();
+        let loc = CRATES_IO_INDEX.into_url().unwrap();
         let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
         assert_eq!("foo v1.0.0", pkg_id.to_string());
     }

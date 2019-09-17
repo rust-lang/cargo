@@ -3,7 +3,9 @@ use crate::command_prelude::*;
 use crate::cli;
 
 pub fn cli() -> App {
-    subcommand("version").about("Show version information")
+    subcommand("version")
+        .about("Show version information")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
 }
 
 pub fn exec(_config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

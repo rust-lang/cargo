@@ -1,10 +1,10 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::support::registry::Package;
-use crate::support::rustc_host;
-use crate::support::{basic_manifest, project};
 use cargo::util::{Cfg, CfgExpr};
+use cargo_test_support::registry::Package;
+use cargo_test_support::rustc_host;
+use cargo_test_support::{basic_manifest, project};
 
 macro_rules! c {
     ($a:ident) => {
@@ -54,7 +54,7 @@ where
     );
 }
 
-#[test]
+#[cargo_test]
 fn cfg_syntax() {
     good("foo", c!(foo));
     good("_bar", c!(_bar));
@@ -66,7 +66,7 @@ fn cfg_syntax() {
     good("foo = \"3 e\"", c!(foo = "3 e"));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_syntax_bad() {
     bad::<Cfg>("", "found nothing");
     bad::<Cfg>(" ", "found nothing");
@@ -81,7 +81,7 @@ fn cfg_syntax_bad() {
     bad::<Cfg>("foo, bar", "malformed cfg value");
 }
 
-#[test]
+#[cargo_test]
 fn cfg_expr() {
     good("foo", e!(foo));
     good("_bar", e!(_bar));
@@ -100,7 +100,7 @@ fn cfg_expr() {
     good("not(all(a))", e!(not(all(a))));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_expr_bad() {
     bad::<CfgExpr>(" ", "found nothing");
     bad::<CfgExpr>(" all", "expected `(`");
@@ -112,7 +112,7 @@ fn cfg_expr_bad() {
     bad::<CfgExpr>("foo(a)", "consider using all() or any() explicitly");
 }
 
-#[test]
+#[cargo_test]
 fn cfg_matches() {
     assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)]));
     assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)]));
@@ -140,7 +140,7 @@ fn cfg_matches() {
     assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)]));
 }
 
-#[test]
+#[cargo_test]
 fn cfg_easy() {
     let p = project()
         .file(
@@ -164,7 +164,7 @@ fn cfg_easy() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_include() {
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
     let p = project()
@@ -197,7 +197,7 @@ fn dont_include() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn works_through_the_registry() {
     Package::new("baz", "0.1.0").publish();
     Package::new("bar", "0.1.0")
@@ -240,7 +240,7 @@ fn works_through_the_registry() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignore_version_from_other_platform() {
     let this_family = if cfg!(unix) { "unix" } else { "windows" };
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
@@ -286,7 +286,7 @@ fn ignore_version_from_other_platform() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_target_spec() {
     let p = project()
         .file(
@@ -320,7 +320,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_target_spec2() {
     let p = project()
         .file(
@@ -354,7 +354,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_match_ok() {
     let p = project()
         .file(
@@ -390,7 +390,7 @@ fn multiple_match_ok() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn any_ok() {
     let p = project()
         .file(
@@ -413,7 +413,7 @@ fn any_ok() {
 }
 
 // https://github.com/rust-lang/cargo/issues/5313
-#[test]
+#[cargo_test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn cfg_looks_at_rustflags_for_target() {
     let p = project()
@@ -444,5 +444,140 @@ fn cfg_looks_at_rustflags_for_target() {
 
     p.cargo("build --target x86_64-unknown-linux-gnu")
         .env("RUSTFLAGS", "--cfg with_b")
+        .run();
+}
+
+#[cargo_test]
+fn bad_cfg_discovery() {
+    // Check error messages when `rustc -v` and `rustc --print=*` parsing fails.
+    //
+    // This is a `rustc` replacement which behaves differently based on an
+    // environment variable.
+    let p = project()
+        .at("compiler")
+        .file("Cargo.toml", &basic_manifest("compiler", "0.1.0"))
+        .file(
+            "src/main.rs",
+            r#"
+fn run_rustc() -> String {
+    let mut cmd = std::process::Command::new("rustc");
+    for arg in std::env::args_os().skip(1) {
+        cmd.arg(arg);
+    }
+    String::from_utf8(cmd.output().unwrap().stdout).unwrap()
+}
+
+fn main() {
+    let mode = std::env::var("FUNKY_MODE").unwrap();
+    if mode == "bad-version" {
+        println!("foo");
+        return;
+    }
+    if std::env::args_os().any(|a| a == "-vV") {
+        print!("{}", run_rustc());
+        return;
+    }
+    if mode == "no-crate-types" {
+        return;
+    }
+    if mode == "bad-crate-type" {
+        println!("foo");
+        return;
+    }
+    let output = run_rustc();
+    let mut lines = output.lines();
+    let sysroot = loop {
+        let line = lines.next().unwrap();
+        if line.contains("___") {
+            println!("{}", line);
+        } else {
+            break line;
+        }
+    };
+    if mode == "no-sysroot" {
+        return;
+    }
+    println!("{}", sysroot);
+    if mode != "bad-cfg" {
+        panic!("unexpected");
+    }
+    println!("123");
+}
+"#,
+        )
+        .build();
+    p.cargo("build").run();
+    let funky_rustc = p.bin("compiler");
+
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "bad-version")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `rustc -vV` didn't have a line for `host:`, got:
+foo
+
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "no-crate-types")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] malformed output when learning about crate-type bin information
+command was: `[..]compiler[..] --crate-name ___ [..]`
+(no output received)
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "no-sysroot")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] output of --print=sysroot missing when learning about target-specific information from rustc
+command was: `[..]compiler[..]--crate-type [..]`
+
+--- stdout
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "bad-cfg")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse the cfg from `rustc --print=cfg`, got:
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]
+123
+
+
+Caused by:
+  unexpected character in cfg `1`, expected parens, a comma, an identifier, or a string
+",
+        )
         .run();
 }

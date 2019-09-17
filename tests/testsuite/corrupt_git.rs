@@ -1,19 +1,18 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::support::paths;
-use crate::support::{basic_manifest, git, project};
 use cargo::util::paths as cargopaths;
+use cargo_test_support::paths;
+use cargo_test_support::{basic_manifest, git, project};
 
-#[test]
+#[cargo_test]
 fn deleting_database_files() {
     let project = project();
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let project = project
         .file(
@@ -47,7 +46,7 @@ fn deleting_database_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -60,19 +59,18 @@ fn deleting_database_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
     }
 }
 
-#[test]
+#[cargo_test]
 fn deleting_checkout_files() {
     let project = project();
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let project = project
         .file(
@@ -124,7 +122,7 @@ fn deleting_checkout_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -137,7 +135,7 @@ fn deleting_checkout_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
     }
 }
 

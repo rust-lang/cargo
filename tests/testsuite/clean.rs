@@ -1,9 +1,9 @@
 use std::env;
 
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_manifest, git, main_file, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project};
 
-#[test]
+#[cargo_test]
 fn cargo_clean_simple() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -17,7 +17,7 @@ fn cargo_clean_simple() {
     assert!(!p.build_dir().is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn different_dir() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -28,14 +28,11 @@ fn different_dir() {
     p.cargo("build").run();
     assert!(p.build_dir().is_dir());
 
-    p.cargo("clean")
-        .cwd(&p.root().join("src"))
-        .with_stdout("")
-        .run();
+    p.cargo("clean").cwd("src").with_stdout("").run();
     assert!(!p.build_dir().is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn clean_multiple_packages() {
     let p = project()
         .file(
@@ -78,7 +75,7 @@ fn clean_multiple_packages() {
     assert!(d2_path.is_file());
 
     p.cargo("clean -p d1 -p d2")
-        .cwd(&p.root().join("src"))
+        .cwd("src")
         .with_stdout("")
         .run();
     assert!(p.bin("foo").is_file());
@@ -86,7 +83,7 @@ fn clean_multiple_packages() {
     assert!(!d2_path.is_file());
 }
 
-#[test]
+#[cargo_test]
 fn clean_release() {
     let p = project()
         .file(
@@ -129,7 +126,7 @@ fn clean_release() {
     assert!(!p.build_dir().join("release").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn clean_doc() {
     let p = project()
         .file(
@@ -161,7 +158,7 @@ fn clean_doc() {
     assert!(p.build_dir().is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn build_script() {
     let p = project()
         .file(
@@ -209,14 +206,13 @@ fn build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn clean_git() {
     let git = git::new("dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(
@@ -242,7 +238,7 @@ fn clean_git() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn registry() {
     let p = project()
         .file(
@@ -267,7 +263,7 @@ fn registry() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn clean_verbose() {
     let p = project()
         .file(
@@ -292,8 +288,32 @@ fn clean_verbose() {
             "\
 [REMOVING] [..]
 [REMOVING] [..]
+[REMOVING] [..]
 ",
         )
         .run();
     p.cargo("build").run();
+}
+
+#[cargo_test]
+fn clean_remove_rlib_rmeta() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    assert!(p.target_debug_dir().join("libfoo.rlib").exists());
+    let rmeta = p.glob("target/debug/deps/*.rmeta").next().unwrap().unwrap();
+    assert!(rmeta.exists());
+    p.cargo("clean -p foo").run();
+    assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
+    assert!(!rmeta.exists());
 }

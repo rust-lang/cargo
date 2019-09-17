@@ -4,7 +4,7 @@ use std::net::TcpListener;
 use std::process::{Child, Stdio};
 use std::thread;
 
-use crate::{support::project, support::slow_cpu_multiplier};
+use cargo_test_support::{project, slow_cpu_multiplier};
 
 #[cfg(unix)]
 fn enabled() -> bool {
@@ -46,7 +46,7 @@ fn enabled() -> bool {
     }
 }
 
-#[test]
+#[cargo_test]
 fn ctrl_c_kills_everyone() {
     if !enabled() {
         return;
@@ -131,8 +131,6 @@ fn ctrl_c_kills_everyone() {
 
 #[cfg(unix)]
 fn ctrl_c(child: &mut Child) {
-    use libc;
-
     let r = unsafe { libc::kill(-(child.id() as i32), libc::SIGINT) };
     if r < 0 {
         panic!("failed to kill: {}", io::Error::last_os_error());

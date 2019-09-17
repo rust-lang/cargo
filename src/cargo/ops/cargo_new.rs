@@ -9,7 +9,7 @@ use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
 use crate::core::{compiler, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::{self, CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{paths, validate_package_name, Config};
 
@@ -438,10 +438,12 @@ impl IgnoreList {
     /// Return the correctly formatted content of the ignore file for the given
     /// version control system as `String`.
     fn format_new(&self, vcs: VersionControl) -> String {
-        match vcs {
-            VersionControl::Hg => self.hg_ignore.join("\n"),
-            _ => self.ignore.join("\n"),
-        }
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
+        };
+
+        ignore_items.join("\n") + "\n"
     }
 
     /// format_existing is used to format the IgnoreList when the ignore file
@@ -459,22 +461,22 @@ impl IgnoreList {
 
         let mut out = "\n\n#Added by cargo\n\
                        #\n\
-                       #already existing elements are commented out\n"
+                       #already existing elements are commented out\n\n"
             .to_string();
 
         for item in ignore_items {
-            out.push('\n');
             if existing_items.contains(item) {
                 out.push('#');
             }
-            out.push_str(item)
+            out.push_str(item);
+            out.push('\n');
         }
 
         out
     }
 }
 
-/// write the ignore file to the given directory. If the ignore file for the
+/// Writes the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
 fn write_ignore_file(
@@ -503,11 +505,15 @@ fn write_ignore_file(
     Ok(ignore)
 }
 
-/// initialize the correct vcs system based on the provided config
+/// Initializes the correct VCS system based on the provided config.
 fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
+                // Temporary fix to work around bug in libgit2 when creating a
+                // directory in the root of a posix filesystem.
+                // See: https://github.com/libgit2/libgit2/issues/5130
+                paths::create_dir_all(path)?;
                 GitRepo::init(path, config.cwd())?;
             }
         }
@@ -522,12 +528,12 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
             }
         }
         VersionControl::Fossil => {
-            if path.join(".fossil").exists() {
+            if !path.join(".fossil").exists() {
                 FossilRepo::init(path, config.cwd())?;
             }
         }
         VersionControl::NoVcs => {
-            fs::create_dir_all(path)?;
+            paths::create_dir_all(path)?;
         }
     };
 
@@ -539,11 +545,11 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
 
-    // using the push method with two arguments ensures that the entries for
-    // both ignore and hgignore are in sync.
+    // Using the push method with two arguments ensures that the entries for
+    // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
-    ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
+    ignore.push("**/*.rs.bk", "glob:*.rs.bk");
     if !opts.bin {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
@@ -561,18 +567,23 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     write_ignore_file(path, &ignore, vcs)?;
 
     let (author_name, email) = discover_author()?;
-    // Hoo boy, sure glad we've got exhaustiveness checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
         | (None, Some(email), name, _)
-        | (None, None, name, Some(email)) => format!("{} <{}>", name, email),
+        | (None, None, name, Some(email)) => {
+            if email.is_empty() {
+                name
+            } else {
+                format!("{} <{}>", name, email)
+            }
+        }
         (Some(name), None, _, None) | (None, None, name, None) => name,
     };
 
     let mut cargotoml_path_specifier = String::new();
 
-    // Calculate what [lib] and [[bin]]s do we need to append to Cargo.toml
+    // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
 
     for i in &opts.source_files {
         if i.bin {
@@ -600,7 +611,7 @@ path = {}
         }
     }
 
-    // Create Cargo.toml file with necessary [lib] and [[bin]] sections, if needed
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
 
     paths::write(
         &path.join("Cargo.toml"),
@@ -611,6 +622,8 @@ version = "0.1.0"
 authors = [{}]
 edition = {}
 {}
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
 {}"#,
             name,
@@ -631,15 +644,13 @@ edition = {}
         .as_bytes(),
     )?;
 
-    // Create all specified source files
-    // (with respective parent directories)
-    // if they are don't exist
+    // Create all specified source files (with respective parent directories) if they don't exist.
 
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
         if let Some(src_dir) = path_of_source_file.parent() {
-            fs::create_dir_all(src_dir)?;
+            paths::create_dir_all(src_dir)?;
         }
 
         let default_file_content: &[u8] = if i.bin {
@@ -672,7 +683,7 @@ mod tests {
         let msg = format!(
             "compiling this new crate may not work due to invalid \
              workspace configuration\n\n{}",
-            e
+            errors::display_causes(&e)
         );
         config.shell().warn(msg)?;
     }

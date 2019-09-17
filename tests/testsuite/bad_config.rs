@@ -1,7 +1,7 @@
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn bad1() {
     let p = project()
         .file("src/lib.rs", "")
@@ -24,7 +24,7 @@ but found string in [..]config
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad2() {
     let p = project()
         .file("src/lib.rs", "")
@@ -58,7 +58,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad3() {
     let p = project()
         .file("src/lib.rs", "")
@@ -85,7 +85,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad4() {
     let p = project()
         .file(
@@ -109,7 +109,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad6() {
     let p = project()
         .file("src/lib.rs", "")
@@ -136,7 +136,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -160,7 +160,7 @@ invalid value: integer `-1`, expected u32
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn default_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -175,7 +175,7 @@ fn default_cargo_config_jobs() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn good_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
@@ -190,7 +190,7 @@ fn good_cargo_config_jobs() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_global_config() {
     let p = project()
         .file(
@@ -222,13 +222,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found eof at line 1
+  expected an equals, found eof at line 1 column 2
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_cargo_lock() {
     let p = project()
         .file("Cargo.lock", "[[package]]\nfoo = 92")
@@ -248,7 +248,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_packages_in_cargo_lock() {
     Package::new("bar", "0.1.0").publish();
 
@@ -302,7 +302,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_in_cargo_lock() {
     Package::new("bar", "0.1.0").publish();
 
@@ -351,7 +351,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_dependency_in_lockfile() {
     let p = project()
         .file("src/lib.rs", "")
@@ -371,7 +371,7 @@ fn bad_dependency_in_lockfile() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_git_dependency() {
     let p = project()
         .file(
@@ -409,7 +409,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_crate_type() {
     let p = project()
         .file(
@@ -435,7 +435,7 @@ fn bad_crate_type() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn malformed_override() {
     let p = project()
         .file(
@@ -465,13 +465,13 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8
+  expected a table key, found a newline at line 8 column 23
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_binary_names() {
     let p = project()
         .file(
@@ -508,7 +508,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_example_names() {
     let p = project()
         .file(
@@ -545,7 +545,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_bench_names() {
     let p = project()
         .file(
@@ -582,7 +582,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_deps() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -621,7 +621,7 @@ have a single canonical source path irrespective of build target.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn duplicate_deps_diff_sources() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -660,7 +660,7 @@ have a single canonical source path irrespective of build target.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_keys() {
     let p = project()
         .file(
@@ -766,7 +766,7 @@ warning: unused manifest key: lib.build
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_keys_in_virtual_manifest() {
     let p = project()
         .file(
@@ -780,7 +780,7 @@ fn unused_keys_in_virtual_manifest() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
-    p.cargo("build --all")
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
@@ -791,7 +791,7 @@ fn unused_keys_in_virtual_manifest() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn empty_dependencies() {
     let p = project()
         .file(
@@ -821,7 +821,7 @@ to use. This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_toml_historically_allowed_is_warned() {
     let p = project()
         .file(".cargo/config", "[bar] baz = 2")
@@ -834,7 +834,7 @@ fn invalid_toml_historically_allowed_is_warned() {
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
 
-The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
+The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
@@ -845,7 +845,7 @@ in the future.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ambiguous_git_reference() {
     let p = project()
         .file(
@@ -857,7 +857,7 @@ fn ambiguous_git_reference() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1"
+            git = "http://127.0.0.1"
             branch = "master"
             tag = "some-tag"
         "#,
@@ -877,7 +877,7 @@ This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config1() {
     let p = project()
         .file("src/lib.rs", "")
@@ -890,7 +890,7 @@ fn bad_source_config1() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config2() {
     let p = project()
         .file(
@@ -933,7 +933,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config3() {
     let p = project()
         .file(
@@ -953,7 +953,7 @@ fn bad_source_config3() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'crates-io'
         "#,
         )
@@ -975,7 +975,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config4() {
     let p = project()
         .file(
@@ -995,11 +995,11 @@ fn bad_source_config4() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'bar'
 
             [source.bar]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'crates-io'
         "#,
         )
@@ -1022,7 +1022,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config5() {
     let p = project()
         .file(
@@ -1042,7 +1042,7 @@ fn bad_source_config5() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'bar'
 
             [source.bar]
@@ -1064,7 +1064,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn both_git_and_path_specified() {
     let foo = project()
         .file(
@@ -1076,7 +1076,7 @@ fn both_git_and_path_specified() {
         authors = []
 
         [dependencies.bar]
-        git = "https://127.0.0.1"
+        git = "http://127.0.0.1"
         path = "bar"
     "#,
         )
@@ -1095,7 +1095,7 @@ This will be considered an error in future versions
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config6() {
     let p = project()
         .file(
@@ -1115,7 +1115,7 @@ fn bad_source_config6() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = ['not', 'a', 'string']
         "#,
         )
@@ -1127,7 +1127,7 @@ fn bad_source_config6() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ignored_git_revision() {
     let foo = project()
         .file(
@@ -1149,14 +1149,13 @@ fn ignored_git_revision() {
     foo.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
-            "\
-             [WARNING] key `branch` is ignored for dependency (bar). \
+            "[WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_source_config7() {
     let p = project()
         .file(
@@ -1176,7 +1175,7 @@ fn bad_source_config7() {
             ".cargo/config",
             r#"
             [source.foo]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             local-registry = 'file:///another/file'
         "#,
         )
@@ -1190,7 +1189,7 @@ fn bad_source_config7() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_dependency() {
     let p = project()
         .file(
@@ -1221,7 +1220,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_debuginfo() {
     let p = project()
         .file(
@@ -1252,7 +1251,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_opt_level() {
     let p = project()
         .file(
@@ -1278,5 +1277,27 @@ Caused by:
   invalid type: integer `3`, expected a boolean or a string for key [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn warn_semver_metadata() {
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+
+            [dependencies]
+            bar = "1.0.0+1234"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr_contains("[WARNING] version requirement `1.0.0+1234` for dependency `bar`[..]")
         .run();
 }

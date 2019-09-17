@@ -6,8 +6,7 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
-[![Build Status](https://travis-ci.com/rust-lang/cargo.svg?branch=master)](https://travis-ci.com/rust-lang/cargo)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
+[![Build Status](https://dev.azure.com/rust-lang/cargo/_apis/build/status/rust-lang.cargo?branchName=auto-cargo)](https://dev.azure.com/rust-lang/cargo/_build?definitionId=18)
 
 Code documentation: https://docs.rs/cargo/
 
@@ -50,10 +49,12 @@ a list of known community-developed subcommands.
 
 ## Releases
 
-High level release notes are available as part of [Rust's release notes][rel].
 Cargo releases coincide with Rust releases.
+High level release notes are available as part of [Rust's release notes][rel].
+Detailed release notes are available in this repo at [CHANGELOG.md].
 
 [rel]: https://github.com/rust-lang/rust/blob/master/RELEASES.md
+[CHANGELOG.md]: CHANGELOG.md
 
 ## Reporting issues
 
@@ -78,7 +79,7 @@ See LICENSE-APACHE and LICENSE-MIT for details.
 ### Third party software
 
 This product includes software developed by the OpenSSL Project
-for use in the OpenSSL Toolkit (http://www.openssl.org/).
+for use in the OpenSSL Toolkit (https://www.openssl.org/).
 
 In binary form, this product includes software that is licensed under the
 terms of the GNU General Public License, version 2, with a linking exception,

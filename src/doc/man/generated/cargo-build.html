@@ -25,28 +25,37 @@
 <h3 id="cargo_build_package_selection">Package Selection</h3>
 <div class="paragraph">
 <p>By default, when no package selection options are given, the packages selected
-depend on the current working directory. In the root of a virtual workspace,
-all workspace members are selected (<code>--all</code> is implied). Otherwise, only the
-package in the current directory will be selected. The default packages may be
-overridden with the <code>workspace.default-members</code> key in the root <code>Cargo.toml</code>
-manifest.</p>
+depend on the selected manifest file (based on the current working directory if
+<code>--manifest-path</code> is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.</p>
+</div>
+<div class="paragraph">
+<p>The default members of a workspace can be set explicitly with the
+<code>workspace.default-members</code> key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+<code>--workspace</code>), and a non-virtual workspace will include only the root crate itself.</p>
 </div>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-p</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build only the specified packages. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the
+<p>Build only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times.</p>
+</dd>
+<dt class="hdlist1"><strong>--workspace</strong></dt>
+<dd>
+<p>Build all members in the workspace.</p>
 </dd>
 <dt class="hdlist1"><strong>--all</strong></dt>
 <dd>
-<p>Build all members in the workspace.</p>
+<p>Deprecated alias for <code>--workspace</code>.</p>
 </dd>
 <dt class="hdlist1"><strong>--exclude</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
 <p>Exclude the specified packages. Must be used in conjunction with the
-<code>--all</code> flag. This flag may be specified multiple times.</p>
+<code>--workspace</code> flag. This flag may be specified multiple times.</p>
 </dd>
 </dl>
 </div>
@@ -159,7 +168,7 @@ architecture. The general format of the triple is
 list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>
@@ -178,15 +187,17 @@ list of supported targets.</p>
 <dd>
 <p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</p>
 </dd>
 <dt class="hdlist1"><strong>--out-dir</strong> <em>DIRECTORY</em></dt>
 <dd>
 <p>Copy final artifacts to this directory.</p>
 <div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z unstable-options</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/6790" class="bare">https://github.com/rust-lang/cargo/issues/6790</a> for more information.</p>
 </div>
 </dd>
 </dl>
@@ -202,7 +213,7 @@ the <code>-Z unstable-options</code> flag to enable.</p>
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -228,22 +239,38 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--message-format</strong> <em>FMT</em></dt>
 <dd>
-<p>The output format for diagnostic messages. Valid values:</p>
+<p>The output format for diagnostic messages. Can be specified multiple times
+and consists of comma-separated values. Valid values:</p>
 <div class="ulist">
 <ul>
 <li>
 <p><code>human</code> (default): Display in a human-readable text format.</p>
 </li>
 <li>
+<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+</li>
+<li>
 <p><code>json</code>: Emit JSON messages to stdout.</p>
 </li>
 <li>
-<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+<p><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
+the "short" rendering from rustc.</p>
+</li>
+<li>
+<p><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
+contains embedded ANSI color codes for respecting rustc&#8217;s default color
+scheme.</p>
+</li>
+<li>
+<p><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo&#8217;s own JSON diagnostics and others
+coming from rustc are still emitted.</p>
 </li>
 </ul>
 </div>
@@ -253,8 +280,10 @@ terminal.</p>
 <p>Outputs a series of JSON messages to stdout that indicate the commands to
 run the build.</p>
 <div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z unstable-options</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/5579" class="bare">https://github.com/rust-lang/cargo/issues/5579</a> for more information.</p>
 </div>
 </dd>
 </dl>
@@ -280,6 +309,23 @@ attempting to access the network to determine if it is out-of-date.</p>
 <p>These may be used in environments where you want to assert that the
 <code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
 access.</p>
+</div>
+</dd>
+<dt class="hdlist1"><strong>--offline</strong></dt>
+<dd>
+<p>Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.</p>
+<div class="paragraph">
+<p>Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+offline.</p>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -310,7 +356,7 @@ details.</p>
 <dt class="hdlist1"><strong>--jobs</strong> <em>N</em></dt>
 <dd>
 <p>Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</p>
 </dd>
 </dl>
@@ -324,7 +370,7 @@ the number of CPUs.</p>
 <div class="paragraph">
 <p>Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-<a href="reference/manifest.html#the-profile-sections">the reference</a>
+<a href="../reference/manifest.html#the-profile-sections">the reference</a>
 for more details.</p>
 </div>
 <div class="paragraph">
@@ -368,7 +414,7 @@ for more details.</p>
 <h2 id="cargo_build_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -419,7 +465,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_build_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-rustc.html">cargo-rustc(1)</a></p>
+<p><a href="index.html">cargo(1)</a>, <a href="cargo-rustc.html">cargo-rustc(1)</a></p>
 </div>
 </div>
 </div>

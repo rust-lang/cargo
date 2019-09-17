@@ -21,7 +21,7 @@ pub struct Dependency {
     inner: Rc<Inner>,
 }
 
-/// The data underlying a Dependency.
+/// The data underlying a `Dependency`.
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
 struct Inner {
     name: InternedString,
@@ -40,6 +40,7 @@ struct Inner {
     explicit_name_in_toml: Option<InternedString>,
 
     optional: bool,
+    public: bool,
     default_features: bool,
     features: Vec<InternedString>,
 
@@ -68,7 +69,6 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    #[serde(with = "url_serde")]
     registry: Option<Url>,
 }
 
@@ -101,7 +101,7 @@ pub enum Kind {
 }
 
 fn parse_req_with_deprecated(
-    name: &str,
+    name: InternedString,
     req: &str,
     extra: Option<(PackageId, &Config)>,
 ) -> CargoResult<VersionReq> {
@@ -163,12 +163,13 @@ impl ser::Serialize for Kind {
 impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(
-        name: &str,
+        name: impl Into<InternedString>,
         version: Option<&str>,
         source_id: SourceId,
         inside: PackageId,
         config: &Config,
     ) -> CargoResult<Dependency> {
+        let name = name.into();
         let arg = Some((inside, config));
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(name, v, arg)?),
@@ -187,10 +188,11 @@ impl Dependency {
 
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse_no_deprecated(
-        name: &str,
+        name: impl Into<InternedString>,
         version: Option<&str>,
         source_id: SourceId,
     ) -> CargoResult<Dependency> {
+        let name = name.into();
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(name, v, None)?),
             None => (false, VersionReq::any()),
@@ -206,17 +208,18 @@ impl Dependency {
         Ok(ret)
     }
 
-    pub fn new_override(name: &str, source_id: SourceId) -> Dependency {
+    pub fn new_override(name: InternedString, source_id: SourceId) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
             inner: Rc::new(Inner {
-                name: InternedString::new(name),
+                name,
                 source_id,
                 registry_id: None,
                 req: VersionReq::any(),
                 kind: Kind::Normal,
                 only_match_name: true,
                 optional: false,
+                public: false,
                 features: Vec::new(),
                 default_features: true,
                 specified_req: false,
@@ -233,7 +236,7 @@ impl Dependency {
     /// This is the name of this `Dependency` as listed in `Cargo.toml`.
     ///
     /// Or in other words, this is what shows up in the `[dependencies]` section
-    /// on the left hand side. This is **not** the name of the package that's
+    /// on the left hand side. This is *not* the name of the package that's
     /// being depended on as the dependency can be renamed. For that use
     /// `package_name` below.
     ///
@@ -293,6 +296,20 @@ impl Dependency {
         self.inner.kind
     }
 
+    pub fn is_public(&self) -> bool {
+        self.inner.public
+    }
+
+    /// Sets whether the dependency is public.
+    pub fn set_public(&mut self, public: bool) -> &mut Dependency {
+        if public {
+            // Setting 'public' only makes sense for normal dependencies
+            assert_eq!(self.kind(), Kind::Normal);
+        }
+        Rc::make_mut(&mut self.inner).public = public;
+        self
+    }
+
     pub fn specified_req(&self) -> bool {
         self.inner.specified_req
     }
@@ -312,6 +329,10 @@ impl Dependency {
     }
 
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+        if self.is_public() {
+            // Setting 'public' only makes sense for normal dependencies
+            assert_eq!(kind, Kind::Normal);
+        }
         Rc::make_mut(&mut self.inner).kind = kind;
         self
     }
@@ -319,12 +340,9 @@ impl Dependency {
     /// Sets the list of features requested for the package.
     pub fn set_features(
         &mut self,
-        features: impl IntoIterator<Item = impl AsRef<str>>,
+        features: impl IntoIterator<Item = impl Into<InternedString>>,
     ) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).features = features
-            .into_iter()
-            .map(|s| InternedString::new(s.as_ref()))
-            .collect();
+        Rc::make_mut(&mut self.inner).features = features.into_iter().map(|s| s.into()).collect();
         self
     }
 
@@ -340,13 +358,13 @@ impl Dependency {
         self
     }
 
-    /// Set the source id for this dependency
+    /// Sets the source ID for this dependency.
     pub fn set_source_id(&mut self, id: SourceId) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).source_id = id;
         self
     }
 
-    /// Set the version requirement for this dependency
+    /// Sets the version requirement for this dependency.
     pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).req = req;
         self
@@ -357,12 +375,15 @@ impl Dependency {
         self
     }
 
-    pub fn set_explicit_name_in_toml(&mut self, name: &str) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).explicit_name_in_toml = Some(InternedString::new(name));
+    pub fn set_explicit_name_in_toml(
+        &mut self,
+        name: impl Into<InternedString>,
+    ) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).explicit_name_in_toml = Some(name.into());
         self
     }
 
-    /// Lock this dependency to depending on the specified package id
+    /// Locks this dependency to depending on the specified package ID.
     pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
         assert!(self.inner.req.matches(id.version()));
@@ -377,14 +398,14 @@ impl Dependency {
             .set_source_id(id.source_id())
     }
 
-    /// Returns whether this is a "locked" dependency, basically whether it has
+    /// Returns `true` if this is a "locked" dependency, basically whether it has
     /// an exact version req.
     pub fn is_locked(&self) -> bool {
         // Kind of a hack to figure this out, but it works!
         self.inner.req.to_string().starts_with('=')
     }
 
-    /// Returns false if the dependency is only used to build the local package.
+    /// Returns `false` if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
         match self.inner.kind {
             Kind::Normal | Kind::Build => true,
@@ -403,7 +424,7 @@ impl Dependency {
         self.inner.optional
     }
 
-    /// Returns true if the default features of the dependency are requested.
+    /// Returns `true` if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool {
         self.inner.default_features
     }
@@ -412,17 +433,17 @@ impl Dependency {
         &self.inner.features
     }
 
-    /// Returns true if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
         self.matches_id(sum.package_id())
     }
 
-    /// Returns true if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
 
-    /// Returns true if the package (`id`) can fulfill this dependency request.
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: PackageId) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name
@@ -440,13 +461,10 @@ impl Dependency {
 }
 
 impl Platform {
-    pub fn matches(&self, name: &str, cfg: Option<&[Cfg]>) -> bool {
+    pub fn matches(&self, name: &str, cfg: &[Cfg]) -> bool {
         match *self {
             Platform::Name(ref p) => p == name,
-            Platform::Cfg(ref p) => match cfg {
-                Some(cfg) => p.matches(cfg),
-                None => false,
-            },
+            Platform::Cfg(ref p) => p.matches(cfg),
         }
     }
 }

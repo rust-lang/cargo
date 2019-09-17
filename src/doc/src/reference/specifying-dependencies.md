@@ -12,7 +12,7 @@ to do each of these.
 
 Cargo is configured to look for dependencies on [crates.io] by default. Only
 the name and a version string are required in this case. In [the cargo
-guide](guide/index.html), we specified a dependency on the `time` crate:
+guide](../guide/index.md), we specified a dependency on the `time` crate:
 
 ```toml
 [dependencies]
@@ -40,14 +40,14 @@ Here are some more examples of caret requirements and the versions that would
 be allowed with them:
 
 ```notrust
-^1.2.3 := >=1.2.3 <2.0.0
-^1.2 := >=1.2.0 <2.0.0
-^1 := >=1.0.0 <2.0.0
-^0.2.3 := >=0.2.3 <0.3.0
-^0.2 := >= 0.2.0 < 0.3.0
-^0.0.3 := >=0.0.3 <0.0.4
-^0.0 := >=0.0.0 <0.1.0
-^0 := >=0.0.0 <1.0.0
+^1.2.3  :=  >=1.2.3 <2.0.0
+^1.2    :=  >=1.2.0 <2.0.0
+^1      :=  >=1.0.0 <2.0.0
+^0.2.3  :=  >=0.2.3 <0.3.0
+^0.2    :=  >=0.2.0 <0.3.0
+^0.0.3  :=  >=0.0.3 <0.0.4
+^0.0    :=  >=0.0.0 <0.1.0
+^0      :=  >=0.0.0 <1.0.0
 ```
 
 This compatibility convention is different from SemVer in the way it treats
@@ -65,9 +65,9 @@ version, then minor- and patch-level changes are allowed.
 `~1.2.3` is an example of a tilde requirement.
 
 ```notrust
-~1.2.3 := >=1.2.3 <1.3.0
-~1.2 := >=1.2.0 <1.3.0
-~1 := >=1.0.0 <2.0.0
+~1.2.3  := >=1.2.3 <1.3.0
+~1.2    := >=1.2.0 <1.3.0
+~1      := >=1.0.0 <2.0.0
 ```
 
 ### Wildcard requirements
@@ -78,17 +78,17 @@ positioned.
 `*`, `1.*` and `1.2.*` are examples of wildcard requirements.
 
 ```notrust
-* := >=0.0.0
-1.* := >=1.0.0 <2.0.0
+*     := >=0.0.0
+1.*   := >=1.0.0 <2.0.0
 1.2.* := >=1.2.0 <1.3.0
 ```
 
-### Inequality requirements
+### Comparison requirements
 
-**Inequality requirements** allow manually specifying a version range or an
+**Comparison requirements** allow manually specifying a version range or an
 exact version to depend on.
 
-Here are some examples of inequality requirements:
+Here are some examples of comparison requirements:
 
 ```notrust
 >= 1.2.0
@@ -99,7 +99,7 @@ Here are some examples of inequality requirements:
 
 ### Multiple requirements
 
-Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
+Multiple version requirements can also be separated with a comma, e.g., `>= 1.2,
 < 1.5`.
 
 ### Specifying dependencies from other registries
@@ -114,7 +114,7 @@ to the name of the registry to use.
 some-crate = { version = "1.0", registry = "my-registry" }
 ```
 
-[registries documentation]: reference/registries.html
+[registries documentation]: registries.md
 
 ### Specifying dependencies from `git` repositories
 
@@ -144,7 +144,7 @@ rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 
 ### Specifying path dependencies
 
-Over time, our `hello_world` package from [the guide](guide/index.html) has
+Over time, our `hello_world` package from [the guide](../guide/index.md) has
 grown significantly in size! It’s gotten to the point that we probably want to
 split out a separate crate for others to use. To do this Cargo supports **path
 dependencies** which are typically sub-crates that live within one repository.
@@ -209,8 +209,8 @@ section][patch-section]. Historically some of these scenarios have been solved
 with [the `[replace]` section][replace-section], but we'll document the `[patch]`
 section here.
 
-[patch-section]: reference/manifest.html#the-patch-section
-[replace-section]: reference/manifest.html#the-replace-section
+[patch-section]: manifest.md#the-patch-section
+[replace-section]: manifest.md#the-replace-section
 
 ### Testing a bugfix
 
@@ -412,7 +412,7 @@ Path overrides are specified through `.cargo/config` instead of `Cargo.toml`,
 and you can find [more documentation about this configuration][config-docs].
 Inside of `.cargo/config` you'll specify a key called `paths`:
 
-[config-docs]: reference/config.html
+[config-docs]: config.md
 
 ```toml
 paths = ["/path/to/uuid"]
@@ -440,7 +440,8 @@ Cargo how to find local unpublished crates.
 
 
 Platform-specific dependencies take the same format, but are listed under a
-`target` section. Normally Rust-like `#[cfg]` syntax will be used to define
+`target` section. Normally Rust-like [`#[cfg]`
+syntax](../../reference/conditional-compilation.html) will be used to define
 these sections:
 
 ```toml
@@ -458,8 +459,18 @@ native = { path = "native/x86_64" }
 ```
 
 Like with Rust, the syntax here supports the `not`, `any`, and `all` operators
-to combine various cfg name/value pairs. Note that the `cfg` syntax has only
-been available since Cargo 0.9.0 (Rust 1.8.0).
+to combine various cfg name/value pairs.
+
+If you want to know which cfg targets are available on your platform, run
+`rustc --print=cfg` from the command line. If you want to know which `cfg`
+targets are available for another platform, such as 64-bit Windows,
+run `rustc --print=cfg --target=x86_64-pc-windows-msvc`.
+
+Unlike in your Rust source code,
+you cannot use `[target.'cfg(feature = "my_crate")'.dependencies]` to add
+dependencies based on optional crate features.
+Use [the `[features]` section](manifest.md#the-features-section)
+instead.
 
 In addition to `#[cfg]` syntax, Cargo also supports listing out the full target
 the dependencies would apply to:
@@ -549,7 +560,7 @@ features = ["secure-password", "civet"]
 ```
 
 More information about features can be found in the
-[manifest documentation](reference/manifest.html#the-features-section).
+[manifest documentation](manifest.md#the-features-section).
 
 ### Renaming dependencies in `Cargo.toml`
 

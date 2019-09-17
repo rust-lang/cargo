@@ -2,11 +2,11 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use crate::support::registry::Package;
-use crate::support::sleep_ms;
-use crate::support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::{sleep_ms, t};
 
-#[test]
+#[cargo_test]
 fn simple_explicit() {
     let p = project()
         .file(
@@ -39,7 +39,7 @@ fn simple_explicit() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -47,7 +47,7 @@ fn simple_explicit() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn simple_explicit_default_members() {
     let p = project()
         .file(
@@ -82,7 +82,45 @@ fn simple_explicit_default_members() {
     assert!(!p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
+fn non_virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = [".", "bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] Compiling baz v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn inferred_root() {
     let p = project()
         .file(
@@ -106,7 +144,7 @@ fn inferred_root() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -114,7 +152,7 @@ fn inferred_root() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn inferred_path_dep() {
     let p = project()
         .file(
@@ -141,7 +179,7 @@ fn inferred_path_dep() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -149,7 +187,7 @@ fn inferred_path_dep() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn transitive_path_dep() {
     let p = project()
         .file(
@@ -191,12 +229,12 @@ fn transitive_path_dep() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("baz")).run();
+    p.cargo("build").cwd("baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
     assert!(p.bin("baz").is_file());
@@ -206,7 +244,7 @@ fn transitive_path_dep() {
     assert!(!p.root().join("baz/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn parent_pointer_works() {
     let p = project()
         .file(
@@ -238,13 +276,13 @@ fn parent_pointer_works() {
         .file("bar/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("foo").run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.root().join("foo/Cargo.lock").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn same_names_in_workspace() {
     let p = project()
         .file(
@@ -285,7 +323,7 @@ error: two packages named `foo` in this workspace:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn parent_doesnt_point_to_child() {
     let p = project()
         .file(
@@ -305,7 +343,7 @@ fn parent_doesnt_point_to_child() {
     let p = p.build();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -314,12 +352,13 @@ current: [..]Cargo.toml
 workspace: [..]Cargo.toml
 
 this may be fixable [..]
+[..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_parent_pointer() {
     let p = project()
         .file(
@@ -348,7 +387,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_members() {
     let p = project()
         .file(
@@ -379,7 +418,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bare_workspace_ok() {
     let p = project()
         .file(
@@ -399,7 +438,7 @@ fn bare_workspace_ok() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn two_roots() {
     let p = project()
         .file(
@@ -442,7 +481,7 @@ error: multiple workspace roots found in the same workspace:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_isnt_root() {
     let p = project()
         .file(
@@ -466,7 +505,7 @@ fn workspace_isnt_root() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dangling_member() {
     let p = project()
         .file(
@@ -518,7 +557,7 @@ actual: [..]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cycle() {
     let p = project()
         .file(
@@ -553,7 +592,7 @@ fn cycle() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn share_dependencies() {
     let p = project()
         .file(
@@ -604,7 +643,7 @@ fn share_dependencies() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fetch_fetches_all() {
     let p = project()
         .file(
@@ -648,7 +687,7 @@ fn fetch_fetches_all() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lock_works_for_everyone() {
     let p = project()
         .file(
@@ -705,7 +744,7 @@ fn lock_works_for_everyone() {
         .run();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -718,7 +757,7 @@ fn lock_works_for_everyone() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn virtual_works() {
     let p = project()
         .file(
@@ -731,13 +770,13 @@ fn virtual_works() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.root().join("Cargo.lock").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn explicit_package_argument_works_with_virtual_manifest() {
     let p = project()
         .file(
@@ -756,7 +795,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn virtual_misconfigure() {
     let p = project()
         .file(
@@ -769,7 +808,7 @@ fn virtual_misconfigure() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -779,12 +818,13 @@ workspace: [..]Cargo.toml
 
 this may be fixable by adding `bar` to the `workspace.members` array of the \
 manifest located at: [..]
+[..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn virtual_build_all_implied() {
     let p = project()
         .file(
@@ -800,7 +840,7 @@ fn virtual_build_all_implied() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn virtual_default_members() {
     let p = project()
         .file(
@@ -821,7 +861,7 @@ fn virtual_default_members() {
     assert!(!p.bin("baz").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn virtual_default_member_is_not_a_member() {
     let p = project()
         .file(
@@ -846,7 +886,32 @@ but is not a member.
         .run();
 }
 
-#[test]
+#[cargo_test]
+fn virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn virtual_build_no_members() {
     let p = project().file(
         "Cargo.toml",
@@ -866,7 +931,7 @@ and the workspace has no members.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn include_virtual() {
     let p = project()
         .file(
@@ -900,7 +965,7 @@ error: multiple workspace roots found in the same workspace:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn members_include_path_deps() {
     let p = project()
         .file(
@@ -938,9 +1003,9 @@ fn members_include_path_deps() {
         .file("p3/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("p1")).run();
-    p.cargo("build").cwd(p.root().join("p2")).run();
-    p.cargo("build").cwd(p.root().join("p3")).run();
+    p.cargo("build").cwd("p1").run();
+    p.cargo("build").cwd("p2").run();
+    p.cargo("build").cwd("p3").run();
     p.cargo("build").run();
 
     assert!(p.root().join("target").is_dir());
@@ -949,7 +1014,7 @@ fn members_include_path_deps() {
     assert!(!p.root().join("p3/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn new_warns_you_this_will_not_work() {
     let p = project()
         .file(
@@ -979,13 +1044,34 @@ workspace: [..]
 
 this may be fixable by ensuring that this crate is depended on by the workspace \
 root: [..]
+[..]
 [CREATED] library `bar` package
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
+fn new_warning_with_corrupt_ws() {
+    let p = project().file("Cargo.toml", "asdf").build();
+    p.cargo("new bar")
+        .env("USER", "foo")
+        .with_stderr(
+            "\
+[WARNING] compiling this new crate may not work due to invalid workspace configuration
+
+failed to parse manifest at `[..]foo/Cargo.toml`
+Caused by:
+  could not parse input as TOML
+Caused by:
+  expected an equals, found eof at line 1 column 5
+     Created binary (application) `bar` package
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn lock_doesnt_change_depending_on_crate() {
     let p = project()
         .file(
@@ -1027,7 +1113,7 @@ fn lock_doesnt_change_depending_on_crate() {
     let mut lockfile = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
 
-    p.cargo("build").cwd(p.root().join("baz")).run();
+    p.cargo("build").cwd("baz").run();
 
     let mut lockfile2 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile2));
@@ -1035,7 +1121,7 @@ fn lock_doesnt_change_depending_on_crate() {
     assert_eq!(lockfile, lockfile2);
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_please() {
     let p = project()
         .file(
@@ -1075,23 +1161,23 @@ fn rebuild_please() {
         );
     let p = p.build();
 
-    p.cargo("run").cwd(p.root().join("bin")).run();
+    p.cargo("run").cwd("bin").run();
 
     sleep_ms(1000);
 
     t!(t!(File::create(p.root().join("lib/src/lib.rs")))
         .write_all(br#"pub fn foo() -> u32 { 1 }"#));
 
-    p.cargo("build").cwd(p.root().join("lib")).run();
+    p.cargo("build").cwd("lib").run();
 
     p.cargo("run")
-        .cwd(p.root().join("bin"))
+        .cwd("bin")
         .with_status(101)
         .with_stderr_contains("[..]assertion[..]")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_in_git() {
     let git_project = git::new("dep1", |project| {
         project
@@ -1104,8 +1190,7 @@ fn workspace_in_git() {
             )
             .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
             .file("foo/src/lib.rs", "")
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
@@ -1132,7 +1217,7 @@ fn workspace_in_git() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn lockfile_can_specify_nonexistant_members() {
     let p = project()
         .file(
@@ -1159,10 +1244,10 @@ fn lockfile_can_specify_nonexistant_members() {
 
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("a")).run();
+    p.cargo("build").cwd("a").run();
 }
 
-#[test]
+#[cargo_test]
 fn you_cannot_generate_lockfile_for_empty_workspaces() {
     let p = project()
         .file(
@@ -1181,7 +1266,7 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_with_transitive_dev_deps() {
     let p = project()
         .file(
@@ -1232,7 +1317,7 @@ fn workspace_with_transitive_dev_deps() {
     p.cargo("test -p bar").run();
 }
 
-#[test]
+#[cargo_test]
 fn error_if_parent_cargo_toml_is_invalid() {
     let p = project()
         .file("Cargo.toml", "Totally not a TOML file")
@@ -1241,13 +1326,13 @@ fn error_if_parent_cargo_toml_is_invalid() {
     let p = p.build();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr_contains("[ERROR] failed to parse manifest at `[..]`")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn relative_path_for_member_works() {
     let p = project()
         .file(
@@ -1276,11 +1361,11 @@ fn relative_path_for_member_works() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("foo").run();
+    p.cargo("build").cwd("bar").run();
 }
 
-#[test]
+#[cargo_test]
 fn relative_path_for_root_works() {
     let p = project()
         .file(
@@ -1305,11 +1390,11 @@ fn relative_path_for_root_works() {
     p.cargo("build --manifest-path ./Cargo.toml").run();
 
     p.cargo("build --manifest-path ../Cargo.toml")
-        .cwd(p.root().join("subproj"))
+        .cwd("subproj")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dep_outside_workspace_is_not_member() {
     let p = project()
         .no_manifest()
@@ -1332,10 +1417,10 @@ fn path_dep_outside_workspace_is_not_member() {
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_in_and_out_of_workspace() {
     let p = project()
         .no_manifest()
@@ -1387,7 +1472,7 @@ fn test_in_and_out_of_workspace() {
         .file("bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 
     assert!(p.root().join("ws/Cargo.lock").is_file());
     assert!(p.root().join("ws/target").is_dir());
@@ -1396,14 +1481,14 @@ fn test_in_and_out_of_workspace() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
     assert!(!p.root().join("bar/target").is_dir());
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/Cargo.lock").is_file());
     assert!(p.root().join("foo/target").is_dir());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
     assert!(!p.root().join("bar/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn test_path_dependency_under_member() {
     let p = project()
         .file(
@@ -1445,18 +1530,18 @@ fn test_path_dependency_under_member() {
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 
     assert!(!p.root().join("foo/bar/Cargo.lock").is_file());
     assert!(!p.root().join("foo/bar/target").is_dir());
 
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
 
     assert!(!p.root().join("foo/bar/Cargo.lock").is_file());
     assert!(!p.root().join("foo/bar/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn excluded_simple() {
     let p = project()
         .file(
@@ -1478,11 +1563,11 @@ fn excluded_simple() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn exclude_members_preferred() {
     let p = project()
         .file(
@@ -1507,13 +1592,13 @@ fn exclude_members_preferred() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(!p.root().join("foo/bar/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn exclude_but_also_depend() {
     let p = project()
         .file(
@@ -1540,13 +1625,13 @@ fn exclude_but_also_depend() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(p.root().join("foo/bar/target").is_dir());
 }
 
-#[test]
+#[cargo_test]
 fn glob_syntax() {
     let p = project()
         .file(
@@ -1602,15 +1687,15 @@ fn glob_syntax() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/bar")).run();
+    p.cargo("build").cwd("crates/bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/baz")).run();
+    p.cargo("build").cwd("crates/baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/qux")).run();
+    p.cargo("build").cwd("crates/qux").run();
     assert!(!p.bin("qux").is_file());
 
     assert!(p.root().join("Cargo.lock").is_file());
@@ -1620,7 +1705,7 @@ fn glob_syntax() {
 }
 
 /*FIXME: This fails because of how workspace.exclude and workspace.members are working.
-#[test]
+#[cargo_test]
 fn glob_syntax_2() {
     let p = project()
         .file("Cargo.toml", r#"
@@ -1664,15 +1749,15 @@ fn glob_syntax_2() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/bar")).run();
+    p.cargo("build").cwd("crates/bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/baz")).run();
+    p.cargo("build").cwd("crates/baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/qux")).run();
+    p.cargo("build").cwd("crates/qux").run();
     assert!(!p.bin("qux").is_file());
 
     assert!(p.root().join("Cargo.lock").is_file());
@@ -1682,7 +1767,7 @@ fn glob_syntax_2() {
 }
 */
 
-#[test]
+#[cargo_test]
 fn glob_syntax_invalid_members() {
     let p = project()
         .file(
@@ -1714,15 +1799,15 @@ Caused by:
         .run();
 }
 
-/// This is a freshness test for feature use with workspaces
+/// This is a freshness test for feature use with workspaces.
 ///
-/// feat_lib is used by caller1 and caller2, but with different features enabled.
-/// This test ensures that alternating building caller1, caller2 doesn't force
-/// recompile of feat_lib.
+/// `feat_lib` is used by `caller1` and `caller2`, but with different features enabled.
+/// This test ensures that alternating building `caller1`, `caller2` doesn't force
+/// recompile of `feat_lib`.
 ///
-/// Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
-/// a single cargo build at the top level will be enough.
-#[test]
+/// Ideally, once we solve rust-lang/cargo#3620, then a single Cargo build at the top level
+/// will be enough.
+#[cargo_test]
 fn dep_used_with_separate_features() {
     let p = project()
         .file(
@@ -1776,8 +1861,8 @@ fn dep_used_with_separate_features() {
         .file("caller2/src/lib.rs", "");
     let p = p.build();
 
-    // Build the entire workspace
-    p.cargo("build --all")
+    // Build the entire workspace.
+    p.cargo("build --workspace")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1790,12 +1875,12 @@ fn dep_used_with_separate_features() {
     assert!(p.bin("caller1").is_file());
     assert!(p.bin("caller2").is_file());
 
-    // Build caller1. should build the dep library. Because the features
+    // Build `caller1`. Should build the dep library. Because the features
     // are different than the full workspace, it rebuilds.
-    // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
-    // a single cargo build at the top level will be enough.
+    // Ideally once we solve rust-lang/cargo#3620, then a single Cargo build at the top level
+    // will be enough.
     p.cargo("build")
-        .cwd(p.root().join("caller1"))
+        .cwd("caller1")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1805,23 +1890,23 @@ fn dep_used_with_separate_features() {
         )
         .run();
 
-    // Alternate building caller2/caller1 a few times, just to make sure
-    // features are being built separately.  Should not rebuild anything
+    // Alternate building `caller2`/`caller1` a few times, just to make sure
+    // features are being built separately. Should not rebuild anything.
     p.cargo("build")
-        .cwd(p.root().join("caller2"))
+        .cwd("caller2")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
-        .cwd(p.root().join("caller1"))
+        .cwd("caller1")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
-        .cwd(p.root().join("caller2"))
+        .cwd("caller2")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_recurse_out_of_cargo_home() {
     let git_project = git::new("dep", |project| {
         project
@@ -1849,8 +1934,7 @@ fn dont_recurse_out_of_cargo_home() {
                 }
             "#,
             )
-    })
-    .unwrap();
+    });
     let p = project()
         .file(
             "Cargo.toml",
@@ -1876,8 +1960,9 @@ fn dont_recurse_out_of_cargo_home() {
         .run();
 }
 
-/*FIXME: This fails because of how workspace.exclude and workspace.members are working.
-#[test]
+// FIXME: this fails because of how workspace.exclude and workspace.members are working.
+/*
+#[cargo_test]
 fn include_and_exclude() {
     let p = project()
         .file("Cargo.toml", r#"
@@ -1891,15 +1976,15 @@ fn include_and_exclude() {
         .file("foo/bar/src/lib.rs", "");
     p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("target").is_dir());
     assert!(!p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(p.root().join("foo/bar/target").is_dir());
 }
 */
 
-#[test]
+#[cargo_test]
 fn cargo_home_at_root_works() {
     let p = project()
         .file(
@@ -1922,7 +2007,7 @@ fn cargo_home_at_root_works() {
     p.cargo("build --frozen").env("CARGO_HOME", p.root()).run();
 }
 
-#[test]
+#[cargo_test]
 fn relative_rustc() {
     let p = project()
         .file(
@@ -1972,7 +2057,7 @@ fn relative_rustc() {
     p.cargo("build").env("RUSTC", &file).run();
 }
 
-#[test]
+#[cargo_test]
 fn ws_rustc_err() {
     let p = project()
         .file(
@@ -1997,7 +2082,7 @@ fn ws_rustc_err() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn ws_err_unused() {
     for key in &[
         "[lib]",
@@ -2043,7 +2128,7 @@ Caused by:
     }
 }
 
-#[test]
+#[cargo_test]
 fn ws_warn_unused() {
     for (key, name) in &[
         ("[profile.dev]\nopt-level = 1", "profiles"),
@@ -2086,7 +2171,7 @@ workspace: [..]/foo/Cargo.toml
     }
 }
 
-#[test]
+#[cargo_test]
 fn ws_warn_path() {
     // Warnings include path to manifest.
     let p = project()
@@ -2111,5 +2196,41 @@ fn ws_warn_path() {
 
     p.cargo("check")
         .with_stderr_contains("[WARNING] [..]/foo/a/Cargo.toml: the cargo feature `edition`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn invalid_missing() {
+    // Warnings include path to manifest.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                x = { path = 'x' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -q")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: [..]
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]",
+        )
         .run();
 }

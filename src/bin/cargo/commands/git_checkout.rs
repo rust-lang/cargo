@@ -2,11 +2,12 @@ use crate::command_prelude::*;
 
 use cargo::core::{GitReference, Source, SourceId};
 use cargo::sources::GitSource;
-use cargo::util::ToUrl;
+use cargo::util::IntoUrl;
 
 pub fn cli() -> App {
     subcommand("git-checkout")
         .about("Checkout a copy of a Git repository")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             Arg::with_name("url")
                 .long("url")
@@ -22,7 +23,7 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let url = args.value_of("url").unwrap().to_url()?;
+    let url = args.value_of("url").unwrap().into_url()?;
     let reference = args.value_of("reference").unwrap();
 
     let reference = GitReference::Branch(reference.to_string());

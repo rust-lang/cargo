@@ -130,7 +130,11 @@ The output has the following format:
                     /* Array of required features.
                        This property is not included if no required features are set.
                     */
-                    "required-features": ["feat1"]
+                    "required-features": ["feat1"],
+                    /* Whether or not this target has doc tests enabled, and
+                       the target is compatible with doc testing.
+                    */
+                    "doctest": false
                 }
             ],
             /* Set of features defined for the package.
@@ -156,6 +160,11 @@ The output has the following format:
                     }
                 }
             },
+            /* List of registries to which this package may be published.
+               Publishing is unrestricted if null, and forbidden if an empty array. */
+            "publish": [
+                "crates-io"
+            ],
             /* Array of authors from the manifest.
                Empty array if no authors specified.
             */
@@ -212,7 +221,7 @@ The output has the following format:
                 */
                 "deps": [
                     {
-                        /* The name of the dependency.
+                        /* The name of the dependency's library target.
                            If this is a renamed dependency, this is the new
                            name.
                         */

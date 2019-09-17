@@ -6,11 +6,11 @@ use std::env;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::io::{self, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 use std::time::Instant;
 use std::vec;
 
@@ -18,20 +18,19 @@ use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
+use url::Url;
 
+use self::ConfigValue as CV;
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
-use crate::util::ToUrl;
-use crate::util::{paths, validate_package_name};
-use url::Url;
-
-use self::ConfigValue as CV;
+use crate::util::{paths, validate_package_name, FileLock};
+use crate::util::{IntoUrl, IntoUrlWithBase};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
@@ -53,10 +52,15 @@ pub struct Config {
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
-    /// `frozen` is set if we shouldn't access the network
+    /// `frozen` is the same as `locked`, but additionally will not access the
+    /// network to determine if the lock file is out-of-date.
     frozen: bool,
-    /// `locked` is set if we should not update lock files
+    /// `locked` is set if we should not update lock files. If the lock file
+    /// is missing, or needs to be updated, an error is produced.
     locked: bool,
+    /// `offline` is set if we should never access the network, but otherwise
+    /// continue operating if possible.
+    offline: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
     /// Cli flags of the form "-Z something"
@@ -75,12 +79,17 @@ pub struct Config {
     env: HashMap<String, String>,
     /// Profiles loaded from config.
     profiles: LazyCell<ConfigProfiles>,
+    /// Tracks which sources have been updated to avoid multiple updates.
+    updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
+    /// Lock, if held, of the global package cache along with the number of
+    /// acquisitions so far.
+    package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
 }
 
 impl Config {
     pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
-        static INIT: Once = ONCE_INIT;
+        static INIT: Once = Once::new();
 
         // This should be called early on in the process, so in theory the
         // unsafety is ok here. (taken ownership of random fds)
@@ -115,6 +124,7 @@ impl Config {
             extra_verbose: false,
             frozen: false,
             locked: false,
+            offline: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -130,6 +140,8 @@ impl Config {
             target_dir: None,
             env,
             profiles: LazyCell::new(),
+            updated_sources: LazyCell::new(),
+            package_cache_lock: RefCell::new(None),
         }
     }
 
@@ -146,32 +158,32 @@ impl Config {
         Ok(Config::new(shell, cwd, homedir))
     }
 
-    /// The user's cargo home directory (OS-dependent)
+    /// Gets the user's Cargo home directory (OS-dependent).
     pub fn home(&self) -> &Filesystem {
         &self.home_path
     }
 
-    /// The cargo git directory (`<cargo_home>/git`)
+    /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
         self.home_path.join("git")
     }
 
-    /// The cargo registry index directory (`<cargo_home>/registry/index`)
+    /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
     pub fn registry_index_path(&self) -> Filesystem {
         self.home_path.join("registry").join("index")
     }
 
-    /// The cargo registry cache directory (`<cargo_home>/registry/path`)
+    /// Gets the Cargo registry cache directory (`<cargo_home>/registry/path`).
     pub fn registry_cache_path(&self) -> Filesystem {
         self.home_path.join("registry").join("cache")
     }
 
-    /// The cargo registry source directory (`<cargo_home>/registry/src`)
+    /// Gets the Cargo registry source directory (`<cargo_home>/registry/src`).
     pub fn registry_source_path(&self) -> Filesystem {
         self.home_path.join("registry").join("src")
     }
 
-    /// The default cargo registry (`alternative-registry`)
+    /// Gets the default Cargo registry.
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
         Ok(match self.get_string("registry.default")? {
             Some(registry) => Some(registry.val),
@@ -179,28 +191,29 @@ impl Config {
         })
     }
 
-    /// Get a reference to the shell, for e.g. writing error messages
+    /// Gets a reference to the shell, e.g., for writing error messages.
     pub fn shell(&self) -> RefMut<'_, Shell> {
         self.shell.borrow_mut()
     }
 
-    /// Get the path to the `rustdoc` executable
+    /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
             .try_borrow_with(|| self.get_tool("rustdoc"))
             .map(AsRef::as_ref)
     }
 
-    /// Get the path to the `rustc` executable
-    pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
+    /// Gets the path to the `rustc` executable.
+    pub fn load_global_rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
+        let wrapper = self.maybe_get_tool("rustc_wrapper")?;
         Rustc::new(
             self.get_tool("rustc")?,
-            self.maybe_get_tool("rustc_wrapper")?,
+            wrapper,
             &self
                 .home()
                 .join("bin")
@@ -215,28 +228,28 @@ impl Config {
         )
     }
 
-    /// Get the path to the `cargo` executable
+    /// Gets the path to the `cargo` executable.
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe
             .try_borrow_with(|| {
                 fn from_current_exe() -> CargoResult<PathBuf> {
-                    // Try fetching the path to `cargo` using env::current_exe().
+                    // Try fetching the path to `cargo` using `env::current_exe()`.
                     // The method varies per operating system and might fail; in particular,
-                    // it depends on /proc being mounted on Linux, and some environments
+                    // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
                     let exe = env::current_exe()?.canonicalize()?;
                     Ok(exe)
                 }
 
                 fn from_argv() -> CargoResult<PathBuf> {
-                    // Grab argv[0] and attempt to resolve it to an absolute path.
-                    // If argv[0] has one component, it must have come from a PATH lookup,
-                    // so probe PATH in that case.
+                    // Grab `argv[0]` and attempt to resolve it to an absolute path.
+                    // If `argv[0]` has one component, it must have come from a `PATH` lookup,
+                    // so probe `PATH` in that case.
                     // Otherwise, it has multiple components and is either:
-                    // - a relative path (e.g. `./cargo`, `target/debug/cargo`), or
-                    // - an absolute path (e.g. `/usr/local/bin/cargo`).
-                    // In either case, Path::canonicalize will return the full absolute path
-                    // to the target if it exists
+                    // - a relative path (e.g., `./cargo`, `target/debug/cargo`), or
+                    // - an absolute path (e.g., `/usr/local/bin/cargo`).
+                    // In either case, `Path::canonicalize` will return the full absolute path
+                    // to the target if it exists.
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
@@ -271,11 +284,24 @@ impl Config {
         })
     }
 
+    pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
+        self.updated_sources
+            .borrow_with(|| RefCell::new(HashSet::new()))
+            .borrow_mut()
+    }
+
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.values.try_borrow_with(|| self.load_values())
     }
 
-    // Note: This is used by RLS, not Cargo.
+    pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
+        match self.values.borrow_mut() {
+            Some(map) => Ok(map),
+            None => failure::bail!("config values not loaded yet"),
+        }
+    }
+
+    // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
             failure::bail!("config values already found")
@@ -286,9 +312,8 @@ impl Config {
         }
     }
 
-    pub fn reload_rooted_at_cargo_home(&mut self) -> CargoResult<()> {
-        let home = self.home_path.clone().into_path_unlocked();
-        let values = self.load_values_from(&home)?;
+    pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
+        let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
         Ok(())
     }
@@ -437,7 +462,7 @@ impl Config {
         if is_path {
             definition.root(self).join(value)
         } else {
-            // A pathless name
+            // A pathless name.
             PathBuf::from(value)
         }
     }
@@ -468,7 +493,7 @@ impl Config {
         Ok(None)
     }
 
-    // NOTE: This does *not* support environment variables.  Use `get` instead
+    // NOTE: this does **not** support environment variables. Use `get` instead
     // if you want that.
     pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
         match self.get_cv(key)? {
@@ -514,8 +539,8 @@ impl Config {
         }
     }
 
-    // Recommend use `get` if you want a specific type, such as an unsigned value.
-    // Example:  config.get::<Option<u32>>("some.key")?
+    // Recommended to use `get` if you want a specific type, such as an unsigned value.
+    // Example: `config.get::<Option<u32>>("some.key")?`.
     pub fn get_i64(&self, key: &str) -> CargoResult<OptValue<i64>> {
         self.get_integer(&ConfigKey::from_str(key))
             .map_err(|e| e.into())
@@ -548,6 +573,7 @@ impl Config {
         color: &Option<String>,
         frozen: bool,
         locked: bool,
+        offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
     ) -> CargoResult<()> {
@@ -563,8 +589,8 @@ impl Config {
         let verbosity = match (verbose, cfg_verbose, quiet) {
             (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
 
-            // command line takes precedence over configuration, so ignore the
-            // configuration.
+            // Command line takes precedence over configuration, so ignore the
+            // configuration..
             (None, _, Some(true)) => Verbosity::Quiet,
 
             // Can't pass both at the same time on the command line regardless
@@ -592,6 +618,11 @@ impl Config {
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
+        self.offline = offline
+            || self
+                .get::<Option<bool>>("net.offline")
+                .unwrap_or(None)
+                .unwrap_or(false);
         self.target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
 
@@ -607,7 +638,11 @@ impl Config {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen() && !self.cli_unstable().offline
+        !self.frozen() && !self.offline()
+    }
+
+    pub fn offline(&self) -> bool {
+        self.offline
     }
 
     pub fn frozen(&self) -> bool {
@@ -618,7 +653,7 @@ impl Config {
         !self.frozen && !self.locked
     }
 
-    /// Loads configuration from the filesystem
+    /// Loads configuration from the filesystem.
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         self.load_values_from(&self.cwd)
     }
@@ -627,7 +662,7 @@ impl Config {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
-        walk_tree(path, &home, |path| {
+        self.walk_tree(path, &home, |path| {
             let mut contents = String::new();
             let mut file = File::open(&path)?;
             file.read_to_string(&mut contents)
@@ -654,30 +689,117 @@ impl Config {
         }
     }
 
+    /// The purpose of this function is to aid in the transition to using
+    /// .toml extensions on Cargo's config files, which were historically not used.
+    /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
+    /// When both exist, we want to prefer the one without an extension for
+    /// backwards compatibility, but warn the user appropriately.
+    fn get_file_path(
+        &self,
+        dir: &Path,
+        filename_without_extension: &str,
+        warn: bool,
+    ) -> CargoResult<Option<PathBuf>> {
+        let possible = dir.join(filename_without_extension);
+        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+
+        if fs::metadata(&possible).is_ok() {
+            if warn && fs::metadata(&possible_with_extension).is_ok() {
+                // We don't want to print a warning if the version
+                // without the extension is just a symlink to the version
+                // WITH an extension, which people may want to do to
+                // support multiple Cargo versions at once and not
+                // get a warning.
+                let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
+                    target_path == possible_with_extension
+                } else {
+                    false
+                };
+
+                if !skip_warning {
+                    self.shell().warn(format!(
+                        "Both `{}` and `{}` exist. Using `{}`",
+                        possible.display(),
+                        possible_with_extension.display(),
+                        possible.display()
+                    ))?;
+                }
+            }
+
+            Ok(Some(possible))
+        } else if fs::metadata(&possible_with_extension).is_ok() {
+            Ok(Some(possible_with_extension))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
+    where
+        F: FnMut(&Path) -> CargoResult<()>,
+    {
+        let mut stash: HashSet<PathBuf> = HashSet::new();
+
+        for current in paths::ancestors(pwd) {
+            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
+                walk(&path)?;
+                stash.insert(path);
+            }
+        }
+
+        // Once we're done, also be sure to walk the home directory even if it's not
+        // in our history to be sure we pick up that standard location for
+        // information.
+        if let Some(path) = self.get_file_path(home, "config", true)? {
+            if !stash.contains(&path) {
+                walk(&path)?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
-                Some(index) => {
-                    let url = index.val.to_url()?;
-                    if url.password().is_some() {
-                        failure::bail!("Registry URLs may not contain passwords");
-                    }
-                    url
-                }
+                Some(index) => self.resolve_registry_index(index)?,
                 None => failure::bail!("No index found for registry: `{}`", registry),
             },
         )
     }
 
-    /// Loads credentials config from the credentials file into the ConfigValue object, if present.
+    /// Gets the index for the default registry.
+    pub fn get_default_registry_index(&self) -> CargoResult<Option<Url>> {
+        Ok(match self.get_string("registry.index")? {
+            Some(index) => Some(self.resolve_registry_index(index)?),
+            None => None,
+        })
+    }
+
+    fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
+        let base = index
+            .definition
+            .root(self)
+            .join("truncated-by-url_with_base");
+        // Parse val to check it is a URL, not a relative path without a protocol.
+        let _parsed = index.val.into_url()?;
+        let url = index.val.into_url_with_base(Some(&*base))?;
+        if url.password().is_some() {
+            failure::bail!("Registry URLs may not contain passwords");
+        }
+        Ok(url)
+    }
+
+    /// Loads credentials config from the credentials file into the `ConfigValue` object, if
+    /// present.
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
-        let credentials = home_path.join("credentials");
-        if fs::metadata(&credentials).is_err() {
-            return Ok(());
-        }
+        let credentials = match self.get_file_path(&home_path, "credentials", true)? {
+            Some(credentials) => credentials,
+            None => return Ok(()),
+        };
 
         let mut contents = String::new();
         let mut file = File::open(&credentials)?;
@@ -702,7 +824,7 @@ impl Config {
             )
         })?;
 
-        // backwards compatibility for old .cargo/credentials layout
+        // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let value = match value {
                 CV::Table(ref mut value, _) => value,
@@ -719,14 +841,14 @@ impl Config {
             }
         }
 
-        // we want value to override cfg, so swap these
+        // We want value to override `cfg`, so swap these.
         mem::swap(cfg, &mut value);
         cfg.merge(value)?;
 
         Ok(())
     }
 
-    /// Look for a path for `tool` in an environment variable or config path, but return `None`
+    /// Looks for a path for `tool` in an environment variable or config path, and returns `None`
     /// if it's not present.
     fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
         let var = tool
@@ -754,9 +876,9 @@ impl Config {
         Ok(None)
     }
 
-    /// Look for a path for `tool` in an environment variable or config path, defaulting to `tool`
+    /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
-    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+    pub fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
             .map(|t| t.unwrap_or_else(|| PathBuf::from(tool)))
     }
@@ -789,9 +911,10 @@ impl Config {
         self.creation_time
     }
 
-    // Retrieve a config variable.
+    // Retrieves a config variable.
     //
-    // This supports most serde `Deserialize` types.  Examples:
+    // This supports most serde `Deserialize` types. Examples:
+    //
     //     let v: Option<u32> = config.get("some.nested.key")?;
     //     let v: Option<MyStruct> = config.get("some.key")?;
     //     let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
@@ -802,6 +925,84 @@ impl Config {
         };
         T::deserialize(d).map_err(|e| e.into())
     }
+
+    pub fn assert_package_cache_locked<'a>(&self, f: &'a Filesystem) -> &'a Path {
+        let ret = f.as_path_unlocked();
+        assert!(
+            self.package_cache_lock.borrow().is_some(),
+            "package cache lock is not currently held, Cargo forgot to call \
+             `acquire_package_cache_lock` before we got to this stack frame",
+        );
+        assert!(ret.starts_with(self.home_path.as_path_unlocked()));
+        ret
+    }
+
+    /// Acquires an exclusive lock on the global "package cache"
+    ///
+    /// This lock is global per-process and can be acquired recursively. An RAII
+    /// structure is returned to release the lock, and if this process
+    /// abnormally terminates the lock is also released.
+    pub fn acquire_package_cache_lock(&self) -> CargoResult<PackageCacheLock<'_>> {
+        let mut slot = self.package_cache_lock.borrow_mut();
+        match *slot {
+            // We've already acquired the lock in this process, so simply bump
+            // the count and continue.
+            Some((_, ref mut cnt)) => {
+                *cnt += 1;
+            }
+            None => {
+                let path = ".package-cache";
+                let desc = "package cache";
+
+                // First, attempt to open an exclusive lock which is in general
+                // the purpose of this lock!
+                //
+                // If that fails because of a readonly filesystem or a
+                // permission error, though, then we don't really want to fail
+                // just because of this. All files that this lock protects are
+                // in subfolders, so they're assumed by Cargo to also be
+                // readonly or have invalid permissions for us to write to. If
+                // that's the case, then we don't really need to grab a lock in
+                // the first place here.
+                //
+                // Despite this we attempt to grab a readonly lock. This means
+                // that if our read-only folder is shared read-write with
+                // someone else on the system we should synchronize with them,
+                // but if we can't even do that then we did our best and we just
+                // keep on chugging elsewhere.
+                match self.home_path.open_rw(path, self, desc) {
+                    Ok(lock) => *slot = Some((Some(lock), 1)),
+                    Err(e) => {
+                        if maybe_readonly(&e) {
+                            let lock = self.home_path.open_ro(path, self, desc).ok();
+                            *slot = Some((lock, 1));
+                            return Ok(PackageCacheLock(self));
+                        }
+
+                        Err(e).chain_err(|| "failed to acquire package cache lock")?;
+                    }
+                }
+            }
+        }
+        return Ok(PackageCacheLock(self));
+
+        fn maybe_readonly(err: &failure::Error) -> bool {
+            err.iter_chain().any(|err| {
+                if let Some(io) = err.downcast_ref::<io::Error>() {
+                    if io.kind() == io::ErrorKind::PermissionDenied {
+                        return true;
+                    }
+
+                    #[cfg(unix)]
+                    return io.raw_os_error() == Some(libc::EROFS);
+                }
+
+                false
+            })
+        }
+    }
+
+    pub fn release_package_cache_lock(&self) {}
 }
 
 /// A segment of a config key.
@@ -923,25 +1124,15 @@ impl ConfigError {
     }
 }
 
-impl std::error::Error for ConfigError {
-    // This can be removed once 1.27 is stable.
-    fn description(&self) -> &str {
-        "An error has occurred."
-    }
-}
+impl std::error::Error for ConfigError {}
 
-// Future Note: Currently we cannot override Fail::cause (due to
+// Future note: currently, we cannot override `Fail::cause` (due to
 // specialization) so we have no way to return the underlying causes. In the
 // future, once this limitation is lifted, this should instead implement
 // `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = self
-            .error
-            .iter_chain()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()
-            .join("\nCaused by:\n  ");
+        let message = errors::display_causes(&self.error);
         if let Some(ref definition) = self.definition {
             write!(f, "error in {}: {}", definition, message)
         } else {
@@ -1061,7 +1252,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         if self.config.has_key(&self.key) {
             visitor.visit_some(self)
         } else {
-            // Treat missing values as None.
+            // Treat missing values as `None`.
             visitor.visit_none()
         }
     }
@@ -1159,21 +1350,21 @@ impl<'config> ConfigMapAccess<'config> {
     ) -> Result<ConfigMapAccess<'config>, ConfigError> {
         let mut set = HashSet::new();
         if let Some(mut v) = config.get_table(&key.to_config())? {
-            // v: Value<HashMap<String, CV>>
+            // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 set.insert(ConfigKeyPart::CasePart(key));
             }
         }
         if config.cli_unstable().advanced_env {
-            // CARGO_PROFILE_DEV_OVERRIDES_
+            // `CARGO_PROFILE_DEV_OVERRIDES_`
             let env_pattern = format!("{}_", key.to_env());
             for env_key in config.env.keys() {
                 if env_key.starts_with(&env_pattern) {
-                    // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
+                    // `CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3`
                     let rest = &env_key[env_pattern.len()..];
-                    // rest = bar_OPT_LEVEL
+                    // `rest = bar_OPT_LEVEL`
                     let part = rest.splitn(2, '_').next().unwrap();
-                    // part = "bar"
+                    // `part = "bar"`
                     set.insert(ConfigKeyPart::CasePart(part.to_string()));
                 }
             }
@@ -1283,7 +1474,7 @@ impl ConfigSeqAccess {
                     .as_array()
                     .expect("env var was not array");
                 for value in values {
-                    // TODO: support other types
+                    // TODO: support other types.
                     let s = value.as_str().ok_or_else(|| {
                         ConfigError::new(
                             format!("expected string, found {}", value.type_str()),
@@ -1308,7 +1499,7 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
         T: de::DeserializeSeed<'de>,
     {
         match self.list_iter.next() {
-            // TODO: Add def to err?
+            // TODO: add `def` to error?
             Some((value, _def)) => seed.deserialize(value.into_deserializer()).map(Some),
             None => Ok(None),
         }
@@ -1316,7 +1507,7 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 }
 
 /// Use with the `get` API to fetch a string that will be converted to a
-/// `PathBuf`.  Relative paths are converted to absolute paths based on the
+/// `PathBuf`. Relative paths are converted to absolute paths based on the
 /// location of the config file.
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize)]
 pub struct ConfigRelativePath(PathBuf);
@@ -1552,36 +1743,23 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
     ::home::cargo_home_with_cwd(cwd).ok()
 }
 
-fn walk_tree<F>(pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
-where
-    F: FnMut(&Path) -> CargoResult<()>,
-{
-    let mut stash: HashSet<PathBuf> = HashSet::new();
-
-    for current in paths::ancestors(pwd) {
-        let possible = current.join(".cargo").join("config");
-        if fs::metadata(&possible).is_ok() {
-            walk(&possible)?;
-            stash.insert(possible);
-        }
-    }
-
-    // Once we're done, also be sure to walk the home directory even if it's not
-    // in our history to be sure we pick up that standard location for
-    // information.
-    let config = home.join("config");
-    if !stash.contains(&config) && fs::metadata(&config).is_ok() {
-        walk(&config)?;
-    }
-
-    Ok(())
-}
-
 pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+    // If 'credentials.toml' exists, we should write to that, otherwise
+    // use the legacy 'credentials'. There's no need to print the warning
+    // here, because it would already be printed at load time.
+    let home_path = cfg.home_path.clone().into_path_unlocked();
+    let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
+        Some(path) => match path.file_name() {
+            Some(filename) => Path::new(filename).to_owned(),
+            None => Path::new("credentials").to_owned(),
+        },
+        None => Path::new("credentials").to_owned(),
+    };
+
     let mut file = {
         cfg.home_path.create_dir()?;
         cfg.home_path
-            .open_rw(Path::new("credentials"), cfg, "credentials' config file")?
+            .open_rw(filename, cfg, "credentials' config file")?
     };
 
     let (key, value) = {
@@ -1613,7 +1791,7 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
 
-    // move the old token location to the new one
+    // Move the old token location to the new one.
     if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
         let mut map = HashMap::new();
         map.insert("token".to_string(), token);
@@ -1647,4 +1825,26 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
     fn set_permissions(file: &File, mode: u32) -> CargoResult<()> {
         Ok(())
     }
+}
+
+pub struct PackageCacheLock<'a>(&'a Config);
+
+impl Drop for PackageCacheLock<'_> {
+    fn drop(&mut self) {
+        let mut slot = self.0.package_cache_lock.borrow_mut();
+        let (_, cnt) = slot.as_mut().unwrap();
+        *cnt -= 1;
+        if *cnt == 0 {
+            *slot = None;
+        }
+    }
+}
+
+/// returns path to clippy-driver binary
+///
+/// Allows override of the path via `CARGO_CLIPPY_DRIVER` env variable
+pub fn clippy_driver() -> PathBuf {
+    env::var("CARGO_CLIPPY_DRIVER")
+        .unwrap_or_else(|_| "clippy-driver".into())
+        .into()
 }

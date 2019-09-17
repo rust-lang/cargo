@@ -9,6 +9,7 @@ pub fn cli() -> App {
         // .alias("r")
         .setting(AppSettings::TrailingVarArg)
         .about("Run a binary or example of the local package")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("args").multiple(true))
         .arg_targets_bin_example(
             "Name of the bin target to run",
@@ -49,7 +50,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .filter_map(|pkg| pkg.manifest().default_run())
             .collect();
         if default_runs.len() == 1 {
-            compile_opts.filter = CompileFilter::new(
+            compile_opts.filter = CompileFilter::from_raw_arguments(
                 false,
                 vec![default_runs[0].to_owned()],
                 false,
@@ -71,7 +72,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             };
         }
     };
-    match ops::run(&ws, &compile_opts, &values(args, "args"))? {
+    match ops::run(&ws, &compile_opts, &values_os(args, "args"))? {
         None => Ok(()),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty

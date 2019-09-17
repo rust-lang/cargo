@@ -2,8 +2,7 @@ use std::io::prelude::*;
 
 use toml;
 
-use crate::core::resolver::WorkspaceResolve;
-use crate::core::{resolver, Resolve, Workspace};
+use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
@@ -29,8 +28,58 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     Ok(resolve)
 }
 
+/// Generate a toml String of Cargo.lock from a Resolve.
+pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<String> {
+    let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve)?;
+    Ok(out)
+}
+
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<()> {
-    // Load the original lockfile if it exists.
+    let (orig, out, ws_root) = resolve_to_string_orig(ws, resolve)?;
+
+    // If the lock file contents haven't changed so don't rewrite it. This is
+    // helpful on read-only filesystems.
+    if let Some(orig) = orig {
+        if are_equal_lockfiles(orig, &out, ws) {
+            return Ok(());
+        }
+    }
+
+    if !ws.config().lock_update_allowed() {
+        if ws.config().offline() {
+            failure::bail!("can't update in the offline mode");
+        }
+
+        let flag = if ws.config().network_allowed() {
+            "--locked"
+        } else {
+            "--frozen"
+        };
+        failure::bail!(
+            "the lock file {} needs to be updated but {} was passed to \
+             prevent this",
+            ws.root().to_path_buf().join("Cargo.lock").display(),
+            flag
+        );
+    }
+
+    // Ok, if that didn't work just write it out
+    ws_root
+        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
+        .and_then(|mut f| {
+            f.file().set_len(0)?;
+            f.write_all(out.as_bytes())?;
+            Ok(())
+        })
+        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
+    Ok(())
+}
+
+fn resolve_to_string_orig(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+) -> CargoResult<(Option<String>, String, Filesystem)> {
+    // Load the original lock file if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
@@ -39,7 +88,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         Ok(s)
     });
 
-    let toml = toml::Value::try_from(WorkspaceResolve { ws, resolve }).unwrap();
+    let toml = toml::Value::try_from(resolve).unwrap();
 
     let mut out = String::new();
 
@@ -73,7 +122,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
     }
 
     let deps = toml["package"].as_array().unwrap();
-    for dep in deps.iter() {
+    for dep in deps {
         let dep = dep.as_table().unwrap();
 
         out.push_str("[[package]]\n");
@@ -94,42 +143,21 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         out.push_str(&meta.to_string());
     }
 
-    // If the lockfile contents haven't changed so don't rewrite it. This is
-    // helpful on read-only filesystems.
-    if let Ok(orig) = orig {
-        if are_equal_lockfiles(orig, &out, ws) {
-            return Ok(());
+    // Historical versions of Cargo in the old format accidentally left trailing
+    // blank newlines at the end of files, so we just leave that as-is. For all
+    // encodings going forward, though, we want to be sure that our encoded lock
+    // file doesn't contain any trailing newlines so trim out the extra if
+    // necessary.
+    match resolve.version() {
+        ResolveVersion::V1 => {}
+        _ => {
+            while out.ends_with("\n\n") {
+                out.pop();
+            }
         }
     }
 
-    if !ws.config().lock_update_allowed() {
-        if ws.config().cli_unstable().offline {
-            failure::bail!("can't update in the offline mode");
-        }
-
-        let flag = if ws.config().network_allowed() {
-            "--locked"
-        } else {
-            "--frozen"
-        };
-        failure::bail!(
-            "the lock file {} needs to be updated but {} was passed to \
-             prevent this",
-            ws.root().to_path_buf().join("Cargo.lock").display(),
-            flag
-        );
-    }
-
-    // Ok, if that didn't work just write it out
-    ws_root
-        .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
-        .and_then(|mut f| {
-            f.file().set_len(0)?;
-            f.write_all(out.as_bytes())?;
-            Ok(())
-        })
-        .chain_err(|| format!("failed to write {}", ws.root().join("Cargo.lock").display()))?;
-    Ok(())
+    Ok((orig.ok(), out, ws_root))
 }
 
 fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> bool {
@@ -137,9 +165,9 @@ fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> b
         orig = orig.replace("\r\n", "\n");
     }
 
-    // If we want to try and avoid updating the lockfile, parse both and
+    // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
-    // common case where we can update lockfiles.
+    // common case where we can update lock files.
     if !ws.config().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(&orig)?;
@@ -169,6 +197,9 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
 
     if dep.contains_key("source") {
         out.push_str(&format!("source = {}\n", &dep["source"]));
+    }
+    if dep.contains_key("checksum") {
+        out.push_str(&format!("checksum = {}\n", &dep["checksum"]));
     }
 
     if let Some(s) = dep.get("dependencies") {

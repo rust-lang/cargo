@@ -23,6 +23,10 @@ file before fetching the dependencies.
 
 If `--target` is not specified, then all target dependencies are fetched.
 
+See also the link:https://crates.io/crates/cargo-prefetch[cargo-prefetch]
+plugin which adds a command to download popular crates. This may be useful if
+you plan to use Cargo without a network with the `--offline` flag.
+
 == OPTIONS
 
 === Fetch options

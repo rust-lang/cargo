@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::{cmp, fmt, hash};
+use std::{cmp, env, fmt, hash};
 
 use serde::Deserialize;
 
@@ -7,9 +7,8 @@ use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
 use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
-use crate::util::lev_distance::lev_distance;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use crate::util::{CargoResult, Config};
+use crate::util::{closest_msg, CargoResult, Config};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
@@ -19,6 +18,10 @@ pub struct Profiles {
     test: ProfileMaker,
     bench: ProfileMaker,
     doc: ProfileMaker,
+    /// Incremental compilation can be overridden globally via:
+    /// - `CARGO_INCREMENTAL` environment variable.
+    /// - `build.incremental` config value.
+    incremental: Option<bool>,
 }
 
 impl Profiles {
@@ -33,7 +36,11 @@ impl Profiles {
         }
 
         let config_profiles = config.profiles()?;
-        config_profiles.validate(features, warnings)?;
+
+        let incremental = match env::var_os("CARGO_INCREMENTAL") {
+            Some(v) => Some(v == "1"),
+            None => config.get::<Option<bool>>("build.incremental")?,
+        };
 
         Ok(Profiles {
             dev: ProfileMaker {
@@ -61,10 +68,11 @@ impl Profiles {
                 toml: profiles.and_then(|p| p.doc.clone()),
                 config: None,
             },
+            incremental,
         })
     }
 
-    /// Retrieve the profile for a target.
+    /// Retrieves the profile for a target.
     /// `is_member` is whether or not this package is a member of the
     /// workspace.
     pub fn get_profile(
@@ -87,9 +95,9 @@ impl Profiles {
             | CompileMode::Check { .. }
             | CompileMode::Doctest
             | CompileMode::RunCustomBuild => {
-                // Note: RunCustomBuild doesn't normally use this code path.
+                // Note: `RunCustomBuild` doesn't normally use this code path.
                 // `build_unit_profiles` normally ensures that it selects the
-                // ancestor's profile.  However `cargo clean -p` can hit this
+                // ancestor's profile. However, `cargo clean -p` can hit this
                 // path.
                 if release {
                     &self.release
@@ -102,14 +110,28 @@ impl Profiles {
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
         // `panic` should not be set for tests/benches, or any of their
         // dependencies.
-        if !unit_for.is_panic_ok() || mode.is_any_test() {
-            profile.panic = None;
+        if !unit_for.is_panic_abort_ok() || mode.is_any_test() {
+            profile.panic = PanicStrategy::Unwind;
+        }
+
+        // Incremental can be globally overridden.
+        if let Some(v) = self.incremental {
+            profile.incremental = v;
+        }
+        // Only enable incremental compilation for sources the user can
+        // modify (aka path sources). For things that change infrequently,
+        // non-incremental builds yield better performance in the compiler
+        // itself (aka crates.io / git dependencies)
+        //
+        // (see also https://github.com/rust-lang/cargo/issues/3972)
+        if !pkg_id.source_id().is_path() {
+            profile.incremental = false;
         }
         profile
     }
 
     /// The profile for *running* a `build.rs` script is only used for setting
-    /// a few environment variables.  To ensure proper de-duplication of the
+    /// a few environment variables. To ensure proper de-duplication of the
     /// running `Unit`, this uses a stripped-down profile (so that unrelated
     /// profile flags don't cause `build.rs` to needlessly run multiple
     /// times).
@@ -121,7 +143,7 @@ impl Profiles {
     }
 
     /// This returns a generic base profile. This is currently used for the
-    /// `[Finished]` line.  It is not entirely accurate, since it doesn't
+    /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
@@ -149,10 +171,10 @@ impl Profiles {
 /// An object used for handling the profile override hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
-/// - Profiles in .cargo/config files (using same order as below).
-/// - [profile.dev.overrides.name] - A named package.
-/// - [profile.dev.overrides."*"] - This cannot apply to workspace members.
-/// - [profile.dev.build-override] - This can only apply to `build.rs` scripts
+/// - Profiles in `.cargo/config` files (using same order as below).
+/// - [profile.dev.overrides.name] -- a named package.
+/// - [profile.dev.overrides."*"] -- this cannot apply to workspace members.
+/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
 ///   and their dependencies.
 /// - [profile.dev]
 /// - Default (hard-coded) values.
@@ -259,7 +281,7 @@ impl ProfileMaker {
             let name_matches: Vec<String> = packages
                 .package_ids()
                 .filter_map(|pkg_id| {
-                    if pkg_id.name().as_str() == spec.name() {
+                    if pkg_id.name() == spec.name() {
                         Some(pkg_id.to_string())
                     } else {
                         None
@@ -267,23 +289,12 @@ impl ProfileMaker {
                 })
                 .collect();
             if name_matches.is_empty() {
-                let suggestion = packages
-                    .package_ids()
-                    .map(|p| (lev_distance(spec.name(), &p.name()), p.name()))
-                    .filter(|&(d, _)| d < 4)
-                    .min_by_key(|p| p.0)
-                    .map(|p| p.1);
-                match suggestion {
-                    Some(p) => shell.warn(format!(
-                        "profile override spec `{}` did not match any packages\n\n\
-                         Did you mean `{}`?",
-                        spec, p
-                    ))?,
-                    None => shell.warn(format!(
-                        "profile override spec `{}` did not match any packages",
-                        spec
-                    ))?,
-                }
+                let suggestion =
+                    closest_msg(&spec.name(), packages.package_ids(), |p| p.name().as_str());
+                shell.warn(format!(
+                    "profile override spec `{}` did not match any packages{}",
+                    spec, suggestion
+                ))?;
             } else {
                 shell.warn(format!(
                     "version or URL in profile override spec `{}` does not \
@@ -305,7 +316,7 @@ fn merge_toml(
     toml: &TomlProfile,
 ) {
     merge_profile(profile, toml);
-    if unit_for.is_custom_build() {
+    if unit_for.is_build() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -367,8 +378,13 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(rpath) = toml.rpath {
         profile.rpath = rpath;
     }
-    if let Some(ref panic) = toml.panic {
-        profile.panic = Some(InternedString::new(panic));
+    if let Some(panic) = &toml.panic {
+        profile.panic = match panic.as_str() {
+            "unwind" => PanicStrategy::Unwind,
+            "abort" => PanicStrategy::Abort,
+            // This should be validated in TomlProfile::validate
+            _ => panic!("Unexpected panic setting `{}`", panic),
+        };
     }
     if let Some(overflow_checks) = toml.overflow_checks {
         profile.overflow_checks = overflow_checks;
@@ -385,14 +401,14 @@ pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
     pub lto: Lto,
-    // None = use rustc default
+    // `None` means use rustc default.
     pub codegen_units: Option<u32>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
     pub rpath: bool,
     pub incremental: bool,
-    pub panic: Option<InternedString>,
+    pub panic: PanicStrategy,
 }
 
 impl Default for Profile {
@@ -407,7 +423,7 @@ impl Default for Profile {
             overflow_checks: false,
             rpath: false,
             incremental: false,
-            panic: None,
+            panic: PanicStrategy::Unwind,
         }
     }
 }
@@ -501,32 +517,32 @@ impl Profile {
         }
     }
 
-    /// Compare all fields except `name`, which doesn't affect compilation.
+    /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
     fn comparable(
         &self,
     ) -> (
-        &InternedString,
-        &Lto,
-        &Option<u32>,
-        &Option<u32>,
-        &bool,
-        &bool,
-        &bool,
-        &bool,
-        &Option<InternedString>,
+        InternedString,
+        Lto,
+        Option<u32>,
+        Option<u32>,
+        bool,
+        bool,
+        bool,
+        bool,
+        PanicStrategy,
     ) {
         (
-            &self.opt_level,
-            &self.lto,
-            &self.codegen_units,
-            &self.debuginfo,
-            &self.debug_assertions,
-            &self.overflow_checks,
-            &self.rpath,
-            &self.incremental,
-            &self.panic,
+            self.opt_level,
+            self.lto,
+            self.codegen_units,
+            self.debuginfo,
+            self.debug_assertions,
+            self.overflow_checks,
+            self.rpath,
+            self.incremental,
+            self.panic,
         )
     }
 }
@@ -541,97 +557,115 @@ pub enum Lto {
     Named(InternedString),
 }
 
+/// The `panic` setting.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
+pub enum PanicStrategy {
+    Unwind,
+    Abort,
+}
+
+impl fmt::Display for PanicStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            PanicStrategy::Unwind => "unwind",
+            PanicStrategy::Abort => "abort",
+        }
+        .fmt(f)
+    }
+}
+
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct UnitFor {
-    /// A target for `build.rs` or any of its dependencies.  This enables
-    /// `build-override` profiles for these targets.
-    custom_build: bool,
-    /// This is true if it is *allowed* to set the `panic` flag. Currently
+    /// A target for `build.rs` or any of its dependencies, or a proc-macro or
+    /// any of its dependencies. This enables `build-override` profiles for
+    /// these targets.
+    build: bool,
+    /// This is true if it is *allowed* to set the `panic=abort` flag. Currently
     /// this is false for test/bench targets and all their dependencies, and
-    /// "for_host" units such as proc-macro and custom build scripts and their
+    /// "for_host" units such as proc macro and custom build scripts and their
     /// dependencies.
-    panic_ok: bool,
+    panic_abort_ok: bool,
 }
 
 impl UnitFor {
-    /// A unit for a normal target/dependency (i.e. not custom build,
-    /// proc-macro/plugin, or test/bench).
+    /// A unit for a normal target/dependency (i.e., not custom build,
+    /// proc macro/plugin, or test/bench).
     pub fn new_normal() -> UnitFor {
         UnitFor {
-            custom_build: false,
-            panic_ok: true,
+            build: false,
+            panic_abort_ok: true,
         }
     }
 
     /// A unit for a custom build script or its dependencies.
     pub fn new_build() -> UnitFor {
         UnitFor {
-            custom_build: true,
-            panic_ok: false,
+            build: true,
+            panic_abort_ok: false,
         }
     }
 
-    /// A unit for a proc-macro or compiler plugin or their dependencies.
+    /// A unit for a proc macro or compiler plugin or their dependencies.
     pub fn new_compiler() -> UnitFor {
         UnitFor {
-            custom_build: false,
-            panic_ok: false,
+            build: false,
+            panic_abort_ok: false,
         }
     }
 
     /// A unit for a test/bench target or their dependencies.
     pub fn new_test() -> UnitFor {
         UnitFor {
-            custom_build: false,
-            panic_ok: false,
+            build: false,
+            panic_abort_ok: false,
         }
     }
 
-    /// Create a variant based on `for_host` setting.
+    /// Creates a variant based on `for_host` setting.
     ///
-    /// When `for_host` is true, this clears `panic_ok` in a sticky fashion so
-    /// that all its dependencies also have `panic_ok=false`.
+    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky fashion so
+    /// that all its dependencies also have `panic_abort_ok=false`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
-            custom_build: self.custom_build,
-            panic_ok: self.panic_ok && !for_host,
+            build: self.build || for_host,
+            panic_abort_ok: self.panic_abort_ok && !for_host,
         }
     }
 
-    /// Returns true if this unit is for a custom build script or one of its
+    /// Returns `true` if this unit is for a custom build script or one of its
     /// dependencies.
-    pub fn is_custom_build(self) -> bool {
-        self.custom_build
+    pub fn is_build(self) -> bool {
+        self.build
     }
 
-    /// Returns true if this unit is allowed to set the `panic` compiler flag.
-    pub fn is_panic_ok(self) -> bool {
-        self.panic_ok
+    /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
+    pub fn is_panic_abort_ok(self) -> bool {
+        self.panic_abort_ok
     }
 
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: [UnitFor; 3] = [
             UnitFor {
-                custom_build: false,
-                panic_ok: true,
+                build: false,
+                panic_abort_ok: true,
             },
             UnitFor {
-                custom_build: true,
-                panic_ok: false,
+                build: true,
+                panic_abort_ok: false,
             },
             UnitFor {
-                custom_build: false,
-                panic_ok: false,
+                build: false,
+                panic_abort_ok: false,
             },
         ];
         &ALL
     }
 }
 
-/// Profiles loaded from .cargo/config files.
+/// Profiles loaded from `.cargo/config` files.
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct ConfigProfiles {
     dev: Option<TomlProfile>,

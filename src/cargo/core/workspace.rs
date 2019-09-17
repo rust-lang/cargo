@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::slice;
 
@@ -8,9 +8,10 @@ use glob::glob;
 use log::debug;
 use url::Url;
 
+use crate::core::features::Features;
 use crate::core::profiles::Profiles;
 use crate::core::registry::PackageRegistry;
-use crate::core::{Dependency, PackageIdSpec};
+use crate::core::{Dependency, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;
@@ -51,24 +52,25 @@ pub struct Workspace<'cfg> {
     // paths. The packages themselves can be looked up through the `packages`
     // set above.
     members: Vec<PathBuf>,
+    member_ids: HashSet<PackageId>,
 
     // The subset of `members` that are used by the
     // `build`, `check`, `test`, and `bench` subcommands
-    // when no package is selected with `--package` / `-p` and `--all`
+    // when no package is selected with `--package` / `-p` and `--workspace`
     // is not used.
     //
     // This is set by the `default-members` config
     // in the `[workspace]` section.
     // When unset, this is the same as `members` for virtual workspaces
-    // (`--all` is implied)
+    // (`--workspace` is implied)
     // or only the root package for non-virtual workspaces.
     default_members: Vec<PathBuf>,
 
-    // True, if this is a temporary workspace created for the purposes of
-    // cargo install or cargo package.
+    // `true` if this is a temporary workspace created for the purposes of the
+    // `cargo install` or `cargo package` commands.
     is_ephemeral: bool,
 
-    // True if this workspace should enforce optional dependencies even when
+    // `true` if this workspace should enforce optional dependencies even when
     // not needed; false if this workspace should only enforce dependencies
     // needed by the current configuration (such as in cargo install). In some
     // cases `false` also results in the non-enforcement of dev-dependencies.
@@ -77,6 +79,10 @@ pub struct Workspace<'cfg> {
     // A cache of loaded packages for particular paths which is disjoint from
     // `packages` up above, used in the `load` method down below.
     loaded_packages: RefCell<HashMap<PathBuf, Package>>,
+
+    // If `true`, then the resolver will ignore any existing `Cargo.lock`
+    // file. This is set for `cargo install` without `--locked`.
+    ignore_lock: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -119,7 +125,7 @@ pub struct WorkspaceRootConfig {
 
 /// An iterator over the member packages of a workspace, returned by
 /// `Workspace::members`
-pub struct Members<'a, 'cfg: 'a> {
+pub struct Members<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     iter: slice::Iter<'a, PathBuf>,
 }
@@ -132,26 +138,49 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config.target_dir()?;
+        let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
+        ws.target_dir = config.target_dir()?;
+        ws.root_manifest = ws.find_root(manifest_path)?;
+        ws.find_members()?;
+        ws.validate()?;
+        Ok(ws)
+    }
 
-        let mut ws = Workspace {
+    fn new_default(current_manifest: PathBuf, config: &'cfg Config) -> Workspace<'cfg> {
+        Workspace {
             config,
-            current_manifest: manifest_path.to_path_buf(),
+            current_manifest,
             packages: Packages {
                 config,
                 packages: HashMap::new(),
             },
             root_manifest: None,
-            target_dir,
+            target_dir: None,
             members: Vec::new(),
+            member_ids: HashSet::new(),
             default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
-        };
-        ws.root_manifest = ws.find_root(manifest_path)?;
+            ignore_lock: false,
+        }
+    }
+
+    pub fn new_virtual(
+        root_path: PathBuf,
+        current_manifest: PathBuf,
+        manifest: VirtualManifest,
+        config: &'cfg Config,
+    ) -> CargoResult<Workspace<'cfg>> {
+        let mut ws = Workspace::new_default(current_manifest, config);
+        ws.root_manifest = Some(root_path.join("Cargo.toml"));
+        ws.target_dir = config.target_dir()?;
+        ws.packages
+            .packages
+            .insert(root_path, MaybePackage::Virtual(manifest));
         ws.find_members()?;
-        ws.validate()?;
+        // TODO: validation does not work because it walks up the directory
+        // tree looking for the root which is a fake file that doesn't exist.
         Ok(ws)
     }
 
@@ -170,33 +199,21 @@ impl<'cfg> Workspace<'cfg> {
         target_dir: Option<Filesystem>,
         require_optional_deps: bool,
     ) -> CargoResult<Workspace<'cfg>> {
-        let mut ws = Workspace {
-            config,
-            current_manifest: package.manifest_path().to_path_buf(),
-            packages: Packages {
-                config,
-                packages: HashMap::new(),
-            },
-            root_manifest: None,
-            target_dir: None,
-            members: Vec::new(),
-            default_members: Vec::new(),
-            is_ephemeral: true,
-            require_optional_deps,
-            loaded_packages: RefCell::new(HashMap::new()),
+        let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
+        ws.is_ephemeral = true;
+        ws.require_optional_deps = require_optional_deps;
+        let key = ws.current_manifest.parent().unwrap();
+        let id = package.package_id();
+        let package = MaybePackage::Package(package);
+        ws.packages.packages.insert(key.to_path_buf(), package);
+        ws.target_dir = if let Some(dir) = target_dir {
+            Some(dir)
+        } else {
+            ws.config.target_dir()?
         };
-        {
-            let key = ws.current_manifest.parent().unwrap();
-            let package = MaybePackage::Package(package);
-            ws.packages.packages.insert(key.to_path_buf(), package);
-            ws.target_dir = if let Some(dir) = target_dir {
-                Some(dir)
-            } else {
-                ws.config.target_dir()?
-            };
-            ws.members.push(ws.current_manifest.clone());
-            ws.default_members.push(ws.current_manifest.clone());
-        }
+        ws.members.push(ws.current_manifest.clone());
+        ws.member_ids.insert(id);
+        ws.default_members.push(ws.current_manifest.clone());
         Ok(ws)
     }
 
@@ -237,13 +254,9 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     pub fn profiles(&self) -> &Profiles {
-        let root = self
-            .root_manifest
-            .as_ref()
-            .unwrap_or(&self.current_manifest);
-        match *self.packages.get(root) {
-            MaybePackage::Package(ref p) => p.manifest().profiles(),
-            MaybePackage::Virtual(ref vm) => vm.profiles(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().profiles(),
+            MaybePackage::Virtual(vm) => vm.profiles(),
         }
     }
 
@@ -260,37 +273,38 @@ impl<'cfg> Workspace<'cfg> {
         .unwrap()
     }
 
+    /// Returns the root Package or VirtualManifest.
+    fn root_maybe(&self) -> &MaybePackage {
+        let root = self
+            .root_manifest
+            .as_ref()
+            .unwrap_or(&self.current_manifest);
+        self.packages.get(root)
+    }
+
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
             .unwrap_or_else(|| Filesystem::new(self.root().join("target")))
     }
 
-    /// Returns the root [replace] section of this workspace.
+    /// Returns the root `[replace]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_replace(&self) -> &[(PackageIdSpec, Dependency)] {
-        let path = match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        };
-        match *self.packages.get(path) {
-            MaybePackage::Package(ref p) => p.manifest().replace(),
-            MaybePackage::Virtual(ref vm) => vm.replace(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().replace(),
+            MaybePackage::Virtual(vm) => vm.replace(),
         }
     }
 
-    /// Returns the root [patch] section of this workspace.
+    /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_patch(&self) -> &HashMap<Url, Vec<Dependency>> {
-        let path = match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        };
-        match *self.packages.get(path) {
-            MaybePackage::Package(ref p) => p.manifest().patch(),
-            MaybePackage::Virtual(ref vm) => vm.patch(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().patch(),
+            MaybePackage::Virtual(vm) => vm.patch(),
         }
     }
 
@@ -312,7 +326,7 @@ impl<'cfg> Workspace<'cfg> {
 
     /// Returns true if the package is a member of the workspace.
     pub fn is_member(&self, pkg: &Package) -> bool {
-        self.members().any(|p| p == pkg)
+        self.member_ids.contains(&pkg.package_id())
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -323,11 +337,20 @@ impl<'cfg> Workspace<'cfg> {
         self.require_optional_deps
     }
 
-    pub fn set_require_optional_deps<'a>(
-        &'a mut self,
+    pub fn set_require_optional_deps(
+        &mut self,
         require_optional_deps: bool,
     ) -> &mut Workspace<'cfg> {
         self.require_optional_deps = require_optional_deps;
+        self
+    }
+
+    pub fn ignore_lock(&self) -> bool {
+        self.ignore_lock
+    }
+
+    pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'cfg> {
+        self.ignore_lock = ignore_lock;
         self
     }
 
@@ -418,6 +441,10 @@ impl<'cfg> Workspace<'cfg> {
                 debug!("find_members - only me as a member");
                 self.members.push(self.current_manifest.clone());
                 self.default_members.push(self.current_manifest.clone());
+                if let Ok(pkg) = self.current() {
+                    let id = pkg.package_id();
+                    self.member_ids.insert(id);
+                }
                 return Ok(());
             }
         };
@@ -430,11 +457,15 @@ impl<'cfg> Workspace<'cfg> {
                 WorkspaceConfig::Root(ref root_config) => {
                     members_paths = root_config
                         .members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
-                    default_members_paths = if let Some(ref default) = root_config.default_members {
-                        Some(root_config.members_paths(default)?)
+                    default_members_paths = if root_manifest_path == self.current_manifest {
+                        if let Some(ref default) = root_config.default_members {
+                            Some(root_config.members_paths(default)?)
+                        } else {
+                            None
+                        }
                     } else {
                         None
-                    }
+                    };
                 }
                 _ => failure::bail!(
                     "root of a workspace inferred but wasn't a root: {}",
@@ -503,6 +534,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
+            self.member_ids.insert(pkg.package_id());
             pkg.dependencies()
                 .iter()
                 .map(|d| d.source_id())
@@ -518,12 +550,28 @@ impl<'cfg> Workspace<'cfg> {
         Ok(())
     }
 
+    pub fn features(&self) -> &Features {
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().features(),
+            MaybePackage::Virtual(vm) => vm.features(),
+        }
+    }
+
     /// Validates a workspace, ensuring that a number of invariants are upheld:
     ///
     /// 1. A workspace only has one root.
     /// 2. All workspace members agree on this one root as the root.
     /// 3. The current crate is a member of this workspace.
     fn validate(&mut self) -> CargoResult<()> {
+        // Validate config profiles only once per workspace.
+        let features = self.features();
+        let mut warnings = Vec::new();
+        self.config.profiles()?.validate(features, &mut warnings)?;
+        for warning in warnings {
+            self.config.shell().warn(&warning)?;
+        }
+
+        // The rest of the checks require a VirtualManifest or multiple members.
         if self.root_manifest.is_none() {
             return Ok(());
         }
@@ -651,7 +699,10 @@ impl<'cfg> Workspace<'cfg> {
             failure::bail!(
                 "current package believes it's in a workspace when it's not:\n\
                  current:   {}\n\
-                 workspace: {}\n\n{}",
+                 workspace: {}\n\n{}\n\
+                 Alternatively, to keep it out of the workspace, add the package \
+                 to the `workspace.exclude` array, or add an empty `[workspace]` \
+                 table to the package's manifest.",
                 self.current_manifest.display(),
                 root.display(),
                 extra
@@ -827,7 +878,7 @@ impl MaybePackage {
 }
 
 impl WorkspaceRootConfig {
-    /// Create a new Intermediate Workspace Root configuration.
+    /// Creates a new Intermediate Workspace Root configuration.
     pub fn new(
         root_dir: &Path,
         members: &Option<Vec<String>>,
@@ -844,7 +895,7 @@ impl WorkspaceRootConfig {
 
     /// Checks the path against the `excluded` list.
     ///
-    /// This method does NOT consider the `members` list.
+    /// This method does **not** consider the `members` list.
     fn is_excluded(&self, manifest_path: &Path) -> bool {
         let excluded = self
             .exclude

@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::git::repo;
-use crate::support::paths;
-use crate::support::registry::{self, registry_path, registry_url, Package};
-use crate::support::{basic_manifest, project, publish};
+use cargo_test_support::git::{self, repo};
+use cargo_test_support::paths;
+use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::{basic_manifest, project, publish};
 
 const CLEAN_FOO_JSON: &str = r#"
     {
@@ -52,7 +52,7 @@ fn validate_upload_foo() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
 }
 
@@ -61,6 +61,7 @@ fn validate_upload_foo_clean() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -69,7 +70,7 @@ fn validate_upload_foo_clean() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     registry::init();
 
@@ -105,7 +106,7 @@ See [..]
     validate_upload_foo();
 }
 
-#[test]
+#[cargo_test]
 fn old_token_location() {
     // Check that the `token` key works at the root instead of under a
     // `[registry]` table.
@@ -160,7 +161,7 @@ See [..]
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
-#[test]
+#[cargo_test]
 fn simple_with_host() {
     registry::init();
 
@@ -207,7 +208,7 @@ See [..]
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
-#[test]
+#[cargo_test]
 fn simple_with_index_and_host() {
     registry::init();
 
@@ -254,7 +255,7 @@ See [..]
     validate_upload_foo();
 }
 
-#[test]
+#[cargo_test]
 fn git_deps() {
     registry::init();
 
@@ -282,17 +283,16 @@ fn git_deps() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] crates cannot be published with dependencies sourced from \
-a repository\neither publish `foo` as its own crate and \
-specify a version as a dependency or pull it into this \
-repository and specify it with a path and version\n\
-(crate `foo` has repository path `git://path/to/nowhere`)\
+[ERROR] all dependencies must have a version specified when publishing.
+dependency `foo` does not specify a version
+Note: The published dependency will use the version from crates.io,
+the `git` specification will be removed from the dependency declaration.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dependency_no_version() {
     registry::init();
 
@@ -322,14 +322,16 @@ fn path_dependency_no_version() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] all path dependencies must have a version specified when publishing.
+[ERROR] all dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
+Note: The published dependency will use the version from crates.io,
+the `path` specification will be removed from the dependency declaration.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unpublishable_crate() {
     registry::init();
 
@@ -354,19 +356,19 @@ fn unpublishable_crate() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dont_publish_dirty() {
     registry::init();
     let p = project().file("bar", "").build();
 
-    let _ = repo(&paths::root().join("foo"))
+    let _ = git::repo(&paths::root().join("foo"))
         .file(
             "Cargo.toml",
             r#"
@@ -395,13 +397,13 @@ committed into git:
 
 bar
 
-to proceed despite this, pass the `--allow-dirty` flag
+to proceed despite this and include the uncommited changes, pass the `--allow-dirty` flag
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_clean() {
     registry::init();
 
@@ -432,7 +434,7 @@ fn publish_clean() {
     validate_upload_foo_clean();
 }
 
-#[test]
+#[cargo_test]
 fn publish_in_sub_repo() {
     registry::init();
 
@@ -457,7 +459,7 @@ fn publish_in_sub_repo() {
         .build();
 
     p.cargo("publish")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .arg("--index")
         .arg(registry_url().to_string())
         .run();
@@ -465,7 +467,7 @@ fn publish_in_sub_repo() {
     validate_upload_foo_clean();
 }
 
-#[test]
+#[cargo_test]
 fn publish_when_ignored() {
     registry::init();
 
@@ -498,6 +500,7 @@ fn publish_when_ignored() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -507,7 +510,7 @@ fn publish_when_ignored() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn ignore_when_crate_ignored() {
     registry::init();
 
@@ -531,7 +534,7 @@ fn ignore_when_crate_ignored() {
         )
         .nocommit_file("bar/src/main.rs", "fn main() {}");
     p.cargo("publish")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .arg("--index")
         .arg(registry_url().to_string())
         .run();
@@ -539,11 +542,17 @@ fn ignore_when_crate_ignored() {
     publish::validate_upload(
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "baz"],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "baz",
+        ],
     );
 }
 
-#[test]
+#[cargo_test]
 fn new_crate_rejected() {
     registry::init();
 
@@ -575,7 +584,7 @@ fn new_crate_rejected() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn dry_run() {
     registry::init();
 
@@ -616,7 +625,7 @@ See [..]
     assert!(!registry::api_path().join("api/v1/crates/new").exists());
 }
 
-#[test]
+#[cargo_test]
 fn registry_not_in_publish_list() {
     registry::init();
 
@@ -644,14 +653,14 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_empty_list() {
     registry::init();
 
@@ -675,14 +684,14 @@ fn publish_empty_list() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_allowed_registry() {
     registry::init();
 
@@ -713,6 +722,7 @@ fn publish_allowed_registry() {
         CLEAN_FOO_JSON,
         "foo-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/main.rs",
@@ -721,7 +731,7 @@ fn publish_allowed_registry() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn block_publish_no_registry() {
     registry::init();
 
@@ -745,14 +755,48 @@ fn block_publish_no_registry() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
+fn publish_with_crates_io_explicit() {
+    // Explicitly setting `crates-io` in the publish list.
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = ["crates-io"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `foo` cannot be published.
+The registry `alternative` is not listed in the `publish` value in Cargo.toml.
+",
+        )
+        .run();
+
+    p.cargo("publish").run();
+}
+
+#[cargo_test]
 fn publish_with_select_features() {
     registry::init();
 
@@ -786,7 +830,7 @@ fn publish_with_select_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_all_features() {
     registry::init();
 
@@ -820,7 +864,7 @@ fn publish_with_all_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_no_default_features() {
     registry::init();
 
@@ -855,7 +899,7 @@ fn publish_with_no_default_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_with_patch() {
     Package::new("bar", "1.0.0").publish();
 
@@ -940,6 +984,197 @@ fn publish_with_patch() {
           }
         "#,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
+#[cargo_test]
+fn publish_checks_for_token_before_verify() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+
+    // Assert upload token error before the package is verified
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
+        .run();
+
+    // Assert package verified successfully on dry run
+    p.cargo("publish --dry-run")
+        .with_status(0)
+        .with_stderr_contains("[VERIFYING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[cargo_test]
+fn publish_with_bad_source() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [source.crates-io]
+            replace-with = 'local-registry'
+
+            [source.local-registry]
+            local-registry = 'registry'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] registry `[..]/foo/registry` does not support API commands.
+Check for a source-replacement in .cargo/config.
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        r#"
+        [source.crates-io]
+        replace-with = "vendored-sources"
+
+        [source.vendored-sources]
+        directory = "vendor"
+        "#,
+    );
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] dir [..]/foo/vendor does not support API commands.
+Check for a source-replacement in .cargo/config.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn publish_git_with_version() {
+    // A dependency with both `git` and `version`.
+    Package::new("dep1", "1.0.1")
+        .file("src/lib.rs", "pub fn f() -> i32 {1}")
+        .publish();
+
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+            .file("src/lib.rs", "pub fn f() -> i32 {2}")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                edition = "2018"
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                dep1 = {{version = "1.0", git="{}"}}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            pub fn main() {
+                println!("{}", dep1::f());
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run").with_stdout("2").run();
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "dep1",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.1.0"
+          }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            (
+                "Cargo.toml",
+                // Check that only `version` is included in Cargo.toml.
+                "[..]\n\
+                 [dependencies.dep1]\n\
+                 version = \"1.0\"\n\
+                 ",
+            ),
+            (
+                "Cargo.lock",
+                // The important check here is that it is 1.0.1 in the registry.
+                "[..]\n\
+                 [[package]]\n\
+                 name = \"foo\"\n\
+                 version = \"0.1.0\"\n\
+                 dependencies = [\n\
+                 \x20\"dep1 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)\",\n\
+                 ]\n\
+                 [..]",
+            ),
+        ],
     );
 }

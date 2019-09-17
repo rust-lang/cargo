@@ -1,9 +1,9 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::{registry_path, Package};
+use cargo_test_support::{basic_manifest, project, t};
 
 fn setup() {
     let root = paths::root();
@@ -20,7 +20,7 @@ fn setup() {
     ));
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     setup();
     Package::new("bar", "0.0.1")
@@ -61,7 +61,46 @@ fn simple() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
+fn depend_on_yanked() {
+    setup();
+    Package::new("bar", "0.0.1").local(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.0.1"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Run cargo to create lock file.
+    p.cargo("check").run();
+
+    registry_path().join("index").join("3").rm_rf();
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .yanked(true)
+        .publish();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn multiple_versions() {
     setup();
     Package::new("bar", "0.0.1").local(true).publish();
@@ -110,7 +149,7 @@ fn multiple_versions() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_names() {
     setup();
     Package::new("bar", "0.0.1")
@@ -163,7 +202,7 @@ fn multiple_names() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn interdependent() {
     setup();
     Package::new("bar", "0.0.1")
@@ -217,7 +256,7 @@ fn interdependent() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn path_dep_rewritten() {
     setup();
     Package::new("bar", "0.0.1")
@@ -285,7 +324,7 @@ fn path_dep_rewritten() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid_dir_bad() {
     setup();
     let p = project()
@@ -334,7 +373,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn different_directory_replacing_the_registry_is_bad() {
     setup();
 
@@ -383,7 +422,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `bar v0.0.1` is the same as when the lockfile was generated
@@ -393,7 +432,7 @@ unable to verify that `bar v0.0.1` is the same as when the lockfile was generate
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn crates_io_registry_url_is_optional() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));

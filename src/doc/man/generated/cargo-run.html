@@ -37,7 +37,7 @@ flag can be used to choose a different package in a workspace.</p>
 <dt class="hdlist1"><strong>-p</strong> <em>SPEC</em></dt>
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em></dt>
 <dd>
-<p>The package to run. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for
+<p>The package to run. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for
 the SPEC format.</p>
 </dd>
 </dl>
@@ -48,7 +48,8 @@ the SPEC format.</p>
 <div class="paragraph">
 <p>When no target selection options are given, <code>cargo run</code> will run the binary
 target. If there are multiple binary targets, you must pass a target flag to
-choose one.</p>
+choose one. Or, the <code>default-run</code> field may be specified in the <code>[package]</code>
+section of <code>Cargo.toml</code> to choose the name of the binary to run by default.</p>
 </div>
 <div class="dlist">
 <dl>
@@ -101,7 +102,7 @@ architecture. The general format of the triple is
 list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>
@@ -120,7 +121,7 @@ list of supported targets.</p>
 <dd>
 <p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</p>
 </dd>
 </dl>
@@ -136,7 +137,7 @@ to <code>target</code> in the root of the workspace.</p>
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -162,22 +163,38 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--message-format</strong> <em>FMT</em></dt>
 <dd>
-<p>The output format for diagnostic messages. Valid values:</p>
+<p>The output format for diagnostic messages. Can be specified multiple times
+and consists of comma-separated values. Valid values:</p>
 <div class="ulist">
 <ul>
 <li>
 <p><code>human</code> (default): Display in a human-readable text format.</p>
 </li>
 <li>
+<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+</li>
+<li>
 <p><code>json</code>: Emit JSON messages to stdout.</p>
 </li>
 <li>
-<p><code>short</code>: Emit shorter, human-readable text messages.</p>
+<p><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
+the "short" rendering from rustc.</p>
+</li>
+<li>
+<p><code>json-diagnostic-rendered-ansi</code>: Ensure the <code>rendered</code> field of JSON messages
+contains embedded ANSI color codes for respecting rustc&#8217;s default color
+scheme.</p>
+</li>
+<li>
+<p><code>json-render-diagnostics</code>: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo&#8217;s own JSON diagnostics and others
+coming from rustc are still emitted.</p>
 </li>
 </ul>
 </div>
@@ -205,6 +222,23 @@ attempting to access the network to determine if it is out-of-date.</p>
 <p>These may be used in environments where you want to assert that the
 <code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
 access.</p>
+</div>
+</dd>
+<dt class="hdlist1"><strong>--offline</strong></dt>
+<dd>
+<p>Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.</p>
+<div class="paragraph">
+<p>Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+offline.</p>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -235,7 +269,7 @@ details.</p>
 <dt class="hdlist1"><strong>--jobs</strong> <em>N</em></dt>
 <dd>
 <p>Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</p>
 </dd>
 </dl>
@@ -249,7 +283,7 @@ the number of CPUs.</p>
 <div class="paragraph">
 <p>Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-<a href="reference/manifest.html#the-profile-sections">the reference</a>
+<a href="../reference/manifest.html#the-profile-sections">the reference</a>
 for more details.</p>
 </div>
 <div class="paragraph">
@@ -293,7 +327,7 @@ for more details.</p>
 <h2 id="cargo_run_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -344,7 +378,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_run_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-build.html">cargo-build(1)</a></p>
+<p><a href="index.html">cargo(1)</a>, <a href="cargo-build.html">cargo-build(1)</a></p>
 </div>
 </div>
 </div>

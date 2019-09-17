@@ -1,23 +1,20 @@
+use crate::core::{InternedString, PackageId, SourceId};
+use crate::sources::git;
+use crate::sources::registry::MaybeLock;
+use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, Filesystem, Sha256};
+use lazycell::LazyCell;
+use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
-
-use lazycell::LazyCell;
-use log::{debug, trace};
-
-use crate::core::{PackageId, SourceId};
-use crate::sources::git;
-use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE,
-};
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, Sha256};
-use crate::util::{FileLock, Filesystem};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -27,6 +24,7 @@ pub struct RemoteRegistry<'cfg> {
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
     head: Cell<Option<git2::Oid>>,
+    current_sha: Cell<Option<InternedString>>,
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
@@ -39,12 +37,13 @@ impl<'cfg> RemoteRegistry<'cfg> {
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
+            current_sha: Cell::new(None),
         }
     }
 
     fn repo(&self) -> CargoResult<&git2::Repository> {
         self.repo.try_borrow_with(|| {
-            let path = self.index_path.clone().into_path_unlocked();
+            let path = self.config.assert_package_cache_locked(&self.index_path);
 
             // Fast path without a lock
             if let Ok(repo) = git2::Repository::open(&path) {
@@ -54,15 +53,11 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
             // Ok, now we need to lock and try the whole thing over again.
             trace!("acquiring registry index lock");
-            let lock = self.index_path.open_rw(
-                Path::new(INDEX_LOCK),
-                self.config,
-                "the registry index",
-            )?;
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
-                    let _ = lock.remove_siblings();
+                    drop(paths::remove_dir_all(&path));
+                    paths::create_dir_all(&path)?;
 
                     // Note that we'd actually prefer to use a bare repository
                     // here as we're not actually going to check anything out.
@@ -129,6 +124,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
     }
 }
 
+const LAST_UPDATED_FILE: &str = ".last-updated";
+
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?; // create intermediate dirs and initialize the repo
@@ -137,6 +134,19 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn index_path(&self) -> &Filesystem {
         &self.index_path
+    }
+
+    fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
+        self.config.assert_package_cache_locked(path)
+    }
+
+    fn current_version(&self) -> Option<InternedString> {
+        if let Some(sha) = self.current_sha.get() {
+            return Some(sha);
+        }
+        let sha = InternedString::new(&self.head().ok()?.to_string());
+        self.current_sha.set(Some(sha));
+        Some(sha)
     }
 
     fn load(
@@ -162,9 +172,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
         debug!("loading config");
         self.prepare()?;
-        let _lock =
-            self.index_path
-                .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index")?;
+        self.config.assert_package_cache_locked(&self.index_path);
         let mut config = None;
         self.load(Path::new(""), Path::new("config.json"), &mut |json| {
             config = Some(serde_json::from_slice(json)?);
@@ -175,10 +183,28 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
-        if self.config.cli_unstable().offline {
+        if self.config.offline() {
+            if self.repo()?.is_empty()? {
+                // An empty repository is guaranteed to fail, since hitting
+                // this path means we need at least one crate. This is an
+                // attempt to provide a better error message other than "no
+                // matching package named …".
+                failure::bail!(
+                    "unable to fetch {} in offline mode\n\
+                     Try running without the offline flag, or try running \
+                     `cargo fetch` within your project directory before going offline.",
+                    self.source_id
+                );
+            }
             return Ok(());
         }
         if self.config.cli_unstable().no_index_update {
+            return Ok(());
+        }
+        // Make sure the index is only updated once per session since it is an
+        // expensive operation. This generally only happens when the resolver
+        // is run multiple times, such as during `cargo publish`.
+        if self.config.updated_sources().contains(&self.source_id) {
             return Ok(());
         }
 
@@ -195,19 +221,24 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
-        let _lock =
-            self.index_path
-                .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
+        self.current_sha.set(None);
+        let path = self.config.assert_package_cache_locked(&self.index_path);
         self.config
             .shell()
-            .status("Updating", self.source_id.display_registry())?;
+            .status("Updating", self.source_id.display_index())?;
 
         // git fetch origin master
         let url = self.source_id.url();
         let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url, refspec, self.config)
+        git::fetch(repo, url.as_str(), refspec, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
+        self.config.updated_sources().insert(self.source_id);
+
+        // Create a dummy file to record the mtime for when we updated the
+        // index.
+        File::create(&path.join(LAST_UPDATED_FILE))?;
+
         Ok(())
     }
 
@@ -220,8 +251,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // If this fails then we fall through to the exclusive path where we may
         // have to redownload the file.
-        if let Ok(dst) = self.cache_path.open_ro(&filename, self.config, &filename) {
-            let meta = dst.file().metadata()?;
+        let path = self.cache_path.join(&filename);
+        let path = self.config.assert_package_cache_locked(&path);
+        if let Ok(dst) = File::open(&path) {
+            let meta = dst.metadata()?;
             if meta.len() > 0 {
                 return Ok(MaybeLock::Ready(dst));
             }
@@ -247,17 +280,23 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         pkg: PackageId,
         checksum: &str,
         data: &[u8],
-    ) -> CargoResult<FileLock> {
+    ) -> CargoResult<File> {
         // Verify what we just downloaded
-        let mut state = Sha256::new();
-        state.update(data);
-        if hex::encode(state.finish()) != checksum {
+        let actual = Sha256::new().update(data).finish_hex();
+        if actual != checksum {
             failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         let filename = self.filename(pkg);
-        let mut dst = self.cache_path.open_rw(&filename, self.config, &filename)?;
-        let meta = dst.file().metadata()?;
+        self.cache_path.create_dir()?;
+        let path = self.cache_path.join(&filename);
+        let path = self.config.assert_package_cache_locked(&path);
+        let mut dst = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)?;
+        let meta = dst.metadata()?;
         if meta.len() > 0 {
             return Ok(dst);
         }
@@ -271,8 +310,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
 
-        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
-            if let Ok(meta) = dst.file().metadata() {
+        let path = self.cache_path.join(path);
+        let path = self.config.assert_package_cache_locked(&path);
+        if let Ok(dst) = File::open(path) {
+            if let Ok(meta) = dst.metadata() {
                 return meta.len() > 0;
             }
         }

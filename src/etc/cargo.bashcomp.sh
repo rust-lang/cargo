@@ -1,3 +1,7 @@
+# Required for bash versions < 4.1
+# Default bash version is 3.2 on latest macOS. See #6874
+shopt -s extglob
+
 command -v cargo >/dev/null 2>&1 &&
 _cargo()
 {
@@ -33,7 +37,7 @@ _cargo()
 	local opt_quiet='-q --quiet'
 	local opt_color='--color'
 	local opt_common="$opt_help $opt_verbose $opt_quiet $opt_color"
-	local opt_pkg_spec='-p --package --all --exclude'
+	local opt_pkg_spec='-p --package --all --exclude --workspace'
 	local opt_pkg='-p --package'
 	local opt_feat='--features --all-features --no-default-features'
 	local opt_mani='--manifest-path'

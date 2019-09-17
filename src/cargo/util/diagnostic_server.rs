@@ -18,8 +18,7 @@ use crate::util::{Config, ProcessBuilder};
 
 const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =
-    "\
-     This likely indicates a bug in either rustc or cargo itself,\n\
+    "This likely indicates a bug in either rustc or cargo itself,\n\
      and we would appreciate a bug report! You're likely to see \n\
      a number of compiler warnings after this message which cargo\n\
      attempted to fix but failed. If you could open an issue at\n\
@@ -174,7 +173,7 @@ your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
 then you can re-enable the `edition` key in `Cargo.toml`. For some more
 information about transitioning to the {0} edition see:
 
-  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 ",
                     edition,
                     file,
@@ -200,7 +199,7 @@ consider migrating to the {0} edition by adding `edition = '{0}'` to
 `Cargo.toml` and then rerunning this command; a more detailed transition
 guide can be found at
 
-  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+  https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 ",
                     idioms,
                     file,

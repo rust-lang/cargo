@@ -1,6 +1,6 @@
-use crate::support::{basic_lib_manifest, paths, project};
+use cargo_test_support::{basic_lib_manifest, is_nightly, paths, project};
 
-#[test]
+#[cargo_test]
 fn profile_config_gated() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -24,7 +24,7 @@ fn profile_config_gated() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_validate_warnings() {
     let p = project()
         .file(
@@ -75,7 +75,7 @@ fn profile_config_validate_warnings() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_error_paths() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -110,7 +110,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_validate_errors() {
     let p = project()
         .file(
@@ -138,10 +138,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  config profile `profile.dev` is not valid
+[ERROR] config profile `profile.dev` is not valid
 
 Caused by:
   `panic` may not be specified in a profile override.
@@ -150,7 +147,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_syntax_errors() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -178,7 +175,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_override_spec_multiple() {
     let p = project()
         .file(
@@ -231,12 +228,16 @@ found profile override specs: bar, bar:0.5.0",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_all_options() {
+    if !is_nightly() {
+        // May be removed once 1.34 is stable (added support for incremental-LTO).
+        return;
+    }
+
     // Ensure all profile options are supported.
     let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -256,24 +257,27 @@ fn profile_config_all_options() {
 
     p.cargo("build --release -v -Z config-profile")
         .masquerade_as_nightly_cargo()
+        .env_remove("CARGO_INCREMENTAL")
         .with_stderr(
             "\
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] \
             -C opt-level=1 \
             -C panic=abort \
+            -C lto \
             -C codegen-units=2 \
             -C debuginfo=2 \
             -C debug-assertions=on \
             -C overflow-checks=off [..]\
-            -C rpath [..]
+            -C rpath [..]\
+            -C incremental=[..]
 [FINISHED] release [optimized + debuginfo] [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_override_precedence() {
     // Config values take precedence over manifest values.
     let p = project()
@@ -330,7 +334,7 @@ fn profile_config_override_precedence() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_no_warn_unknown_override() {
     let p = project()
         .file(
@@ -359,7 +363,7 @@ fn profile_config_no_warn_unknown_override() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_config_mixed_types() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))

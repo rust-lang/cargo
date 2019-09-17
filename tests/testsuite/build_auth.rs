@@ -1,16 +1,17 @@
-use std;
 use std::collections::HashSet;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::net::TcpListener;
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+use std::sync::Arc;
 use std::thread;
 
-use crate::support::paths;
-use crate::support::{basic_manifest, project};
-use bufstream::BufStream;
+use cargo_test_support::paths;
+use cargo_test_support::{basic_manifest, project};
 use git2;
 
-// Test that HTTP auth is offered from `credential.helper`
-#[test]
+// Tests that HTTP auth is offered from `credential.helper`.
+#[cargo_test]
 fn http_auth_offered() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
@@ -25,17 +26,20 @@ fn http_auth_offered() {
             .collect()
     }
 
+    let connections = Arc::new(AtomicUsize::new(0));
+    let connections2 = connections.clone();
     let t = thread::spawn(move || {
-        let mut conn = BufStream::new(server.accept().unwrap().0);
+        let mut conn = BufReader::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
-        conn.write_all(
-            b"\
-            HTTP/1.1 401 Unauthorized\r\n\
-            WWW-Authenticate: Basic realm=\"wheee\"\r\n
-            \r\n\
-        ",
-        )
-        .unwrap();
+        connections2.fetch_add(1, SeqCst);
+        conn.get_mut()
+            .write_all(
+                b"HTTP/1.1 401 Unauthorized\r\n\
+              WWW-Authenticate: Basic realm=\"wheee\"\r\n\
+              Content-Length: 0\r\n\
+              \r\n",
+            )
+            .unwrap();
         assert_eq!(
             req,
             vec![
@@ -46,18 +50,16 @@ fn http_auth_offered() {
             .map(|s| s.to_string())
             .collect()
         );
-        drop(conn);
 
-        let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
-        conn.write_all(
-            b"\
-            HTTP/1.1 401 Unauthorized\r\n\
-            WWW-Authenticate: Basic realm=\"wheee\"\r\n
-            \r\n\
-        ",
-        )
-        .unwrap();
+        connections2.fetch_add(1, SeqCst);
+        conn.get_mut()
+            .write_all(
+                b"HTTP/1.1 401 Unauthorized\r\n\
+              WWW-Authenticate: Basic realm=\"wheee\"\r\n\
+              \r\n",
+            )
+            .unwrap();
         assert_eq!(
             req,
             vec![
@@ -91,7 +93,11 @@ fn http_auth_offered() {
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
     config
-        .set_str("credential.helper", &script.display().to_string())
+        .set_str(
+            "credential.helper",
+            // This is a bash script so replace `\` with `/` for Windows
+            &script.display().to_string().replace("\\", "/"),
+        )
         .unwrap();
 
     let p = project()
@@ -113,10 +119,9 @@ fn http_auth_offered() {
         .file("src/main.rs", "")
         .file(
             ".cargo/config",
-            "\
-        [net]
-        retry = 0
-        ",
+            "[net]
+             retry = 0
+            ",
         )
         .build();
 
@@ -145,11 +150,12 @@ Caused by:
         ))
         .run();
 
+    assert_eq!(connections.load(SeqCst), 2);
     t.join().ok().unwrap();
 }
 
 // Boy, sure would be nice to have a TLS implementation in rust!
-#[test]
+#[cargo_test]
 fn https_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
@@ -179,10 +185,9 @@ fn https_something_happens() {
         .file("src/main.rs", "")
         .file(
             ".cargo/config",
-            "\
-        [net]
-        retry = 0
-        ",
+            "[net]
+             retry = 0
+            ",
         )
         .build();
 
@@ -200,9 +205,9 @@ Caused by:
             errmsg = if cfg!(windows) {
                 "[..]failed to send request: [..]"
             } else if cfg!(target_os = "macos") {
-                // OSX is difficult to tests as some builds may use
-                // Security.framework and others may use OpenSSL. In that case let's
-                // just not verify the error message here.
+                // macOS is difficult to tests as some builds may use Security.framework,
+                // while others may use OpenSSL. In that case, let's just not verify the error
+                // message here.
                 "[..]"
             } else {
                 "[..]SSL error: [..]"
@@ -213,8 +218,8 @@ Caused by:
     t.join().ok().unwrap();
 }
 
-// Boy, sure would be nice to have an SSH implementation in rust!
-#[test]
+// It would sure be nice to have an SSH implementation in Rust!
+#[cargo_test]
 fn ssh_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();

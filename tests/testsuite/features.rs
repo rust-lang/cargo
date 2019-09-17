@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project, t};
 
-#[test]
+#[cargo_test]
 fn invalid1() {
     let p = project()
         .file(
@@ -36,7 +36,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid2() {
     let p = project()
         .file(
@@ -70,7 +70,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid3() {
     let p = project()
         .file(
@@ -105,7 +105,7 @@ Consider adding `optional = true` to the dependency
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid4() {
     let p = project()
         .file(
@@ -149,7 +149,7 @@ failed to select a version for `bar` which could resolve this conflict",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid5() {
     let p = project()
         .file(
@@ -181,7 +181,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid6() {
     let p = project()
         .file(
@@ -212,7 +212,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid7() {
     let p = project()
         .file(
@@ -244,7 +244,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid8() {
     let p = project()
         .file(
@@ -271,7 +271,7 @@ fn invalid8() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid9() {
     let p = project()
         .file(
@@ -291,16 +291,15 @@ fn invalid9() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build --features bar").with_stderr("\
-warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
-that name, but only optional dependencies can be used as features. [..]
-   Compiling bar v0.0.1 ([..])
-   Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..]s
-").run();
+    p.cargo("build --features bar")
+.with_stderr(
+            "\
+error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
+",
+        ).with_status(101).run();
 }
 
-#[test]
+#[cargo_test]
 fn invalid10() {
     let p = project()
         .file(
@@ -335,16 +334,20 @@ fn invalid10() {
         .build();
 
     p.cargo("build").with_stderr("\
-warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
-that name, but only optional dependencies can be used as features. [..]
-   Compiling baz v0.0.1 ([..])
-   Compiling bar v0.0.1 ([..])
-   Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..]s
-").run();
+error: failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([..])`
+versions that meet the requirements `*` are: 0.0.1
+
+the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
+ It has a required dependency with that name, but only optional dependencies can be used as features.
+
+
+failed to select a version for `bar` which could resolve this conflict
+").with_status(101)
+        .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_transitive_dep_feature_requirement() {
     let p = project()
         .file(
@@ -408,7 +411,7 @@ fn no_transitive_dep_feature_requirement() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_feature_doesnt_build() {
     let p = project()
         .file(
@@ -461,7 +464,7 @@ fn no_feature_doesnt_build() {
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn default_feature_pulled_in() {
     let p = project()
         .file(
@@ -517,7 +520,7 @@ fn default_feature_pulled_in() {
     p.process(&p.bin("foo")).with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_feature() {
     let p = project()
         .file(
@@ -537,11 +540,11 @@ fn cyclic_feature() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr("[ERROR] Cyclic feature dependency: feature `default` depends on itself")
+        .with_stderr("[ERROR] cyclic feature dependency: feature `default` depends on itself")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cyclic_feature2() {
     let p = project()
         .file(
@@ -563,7 +566,7 @@ fn cyclic_feature2() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn groups_on_groups_on_groups() {
     let p = project()
         .file(
@@ -621,7 +624,7 @@ fn groups_on_groups_on_groups() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features() {
     let p = project()
         .file(
@@ -670,7 +673,7 @@ fn many_cli_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn union_features() {
     let p = project()
         .file(
@@ -753,7 +756,7 @@ fn union_features() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_features_no_rebuilds() {
     let p = project()
         .file(
@@ -810,7 +813,7 @@ fn many_features_no_rebuilds() {
 }
 
 // Tests that all cmd lines work with `--features ""`
-#[test]
+#[cargo_test]
 fn empty_features() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -818,7 +821,7 @@ fn empty_features() {
 }
 
 // Tests that all cmd lines work with `--features ""`
-#[test]
+#[cargo_test]
 fn transitive_features() {
     let p = project()
         .file(
@@ -858,7 +861,7 @@ fn transitive_features() {
     p.cargo("build --features foo").run();
 }
 
-#[test]
+#[cargo_test]
 fn everything_in_the_lockfile() {
     let p = project()
         .file(
@@ -935,7 +938,7 @@ fn everything_in_the_lockfile() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn no_rebuild_when_frobbing_default_feature() {
     let p = project()
         .file(
@@ -986,7 +989,7 @@ fn no_rebuild_when_frobbing_default_feature() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn unions_work_with_no_default_features() {
     let p = project()
         .file(
@@ -1037,7 +1040,7 @@ fn unions_work_with_no_default_features() {
     p.cargo("build").with_stdout("").run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_and_dev_dep() {
     let p = project()
         .file(
@@ -1069,7 +1072,7 @@ fn optional_and_dev_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn activating_feature_activates_dep() {
     let p = project()
         .file(
@@ -1109,7 +1112,7 @@ fn activating_feature_activates_dep() {
     p.cargo("build --features a -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn dep_feature_in_cmd_line() {
     let p = project()
         .file(
@@ -1193,7 +1196,7 @@ fn dep_feature_in_cmd_line() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn all_features_flag_enables_all_features() {
     let p = project()
         .file(
@@ -1238,7 +1241,7 @@ fn all_features_flag_enables_all_features() {
     p.cargo("build --all-features").run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features_comma_delimited() {
     let p = project()
         .file(
@@ -1286,7 +1289,7 @@ fn many_cli_features_comma_delimited() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn many_cli_features_comma_and_space_delimited() {
     let p = project()
         .file(
@@ -1353,7 +1356,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn combining_features_and_package() {
     Package::new("dep", "1.0.0").publish();
 
@@ -1394,49 +1397,40 @@ fn combining_features_and_package() {
         )
         .build();
 
-    p.cargo("build -Z package-features --all --features main")
+    p.cargo("build -Z package-features --workspace --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for more than one package",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for more than one package")
         .run();
 
     p.cargo("build -Z package-features --package dep --features main")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --all-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
     p.cargo("build -Z package-features --package dep --no-default-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-             [ERROR] cannot specify features for packages outside of workspace",
-        )
+        .with_stderr_contains("[ERROR] cannot specify features for packages outside of workspace")
         .run();
 
-    p.cargo("build -Z package-features --all --all-features")
+    p.cargo("build -Z package-features --workspace --all-features")
         .masquerade_as_nightly_cargo()
         .run();
     p.cargo("run -Z package-features --package bar --features main")
         .masquerade_as_nightly_cargo()
         .run();
+    p.cargo("build -Z package-features --package dep")
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_invalid_feature() {
     let p = project()
         .file(
@@ -1471,7 +1465,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_invalid_dependency() {
     let p = project()
         .file(
@@ -1506,7 +1500,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_non_optional_dependency() {
     let p = project()
         .file(
@@ -1545,7 +1539,7 @@ Consider adding `optional = true` to the dependency
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_implicit_feature() {
     let p = project()
         .file(
@@ -1572,7 +1566,7 @@ fn namespaced_implicit_feature() {
     p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_shadowed_dep() {
     let p = project()
         .file(
@@ -1608,7 +1602,7 @@ Consider adding `crate:baz` to this feature's requirements.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_shadowed_non_optional() {
     let p = project()
         .file(
@@ -1645,7 +1639,7 @@ Consider adding `crate:baz` to this feature's requirements and marking the depen
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_implicit_non_optional() {
     let p = project()
         .file(
@@ -1681,7 +1675,7 @@ A non-optional dependency of the same name is defined; consider adding `optional
     );
 }
 
-#[test]
+#[cargo_test]
 fn namespaced_same_name() {
     let p = project()
         .file(
@@ -1708,7 +1702,7 @@ fn namespaced_same_name() {
     p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn only_dep_is_optional() {
     Package::new("bar", "0.1.0").publish();
 
@@ -1737,7 +1731,7 @@ fn only_dep_is_optional() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn all_features_all_crates() {
     Package::new("bar", "0.1.0").publish();
 
@@ -1770,10 +1764,10 @@ fn all_features_all_crates() {
         .file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
         .build();
 
-    p.cargo("build --all-features --all").run();
+    p.cargo("build --all-features --workspace").run();
 }
 
-#[test]
+#[cargo_test]
 fn feature_off_dylib() {
     let p = project()
         .file(
@@ -1834,7 +1828,7 @@ fn feature_off_dylib() {
     p.cargo("run -p bar").run();
 }
 
-#[test]
+#[cargo_test]
 fn warn_if_default_features() {
     let p = project()
         .file(
@@ -1866,4 +1860,102 @@ fn warn_if_default_features() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
             "#.trim(),
         ).run();
+}
+
+#[cargo_test]
+fn no_feature_for_non_optional_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = { path = "bar" }
+             "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(not(feature = "bar"))]
+                fn main() {
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+             "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build --features bar/a").run();
+}
+
+#[cargo_test]
+fn features_option_given_twice() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+             "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(all(feature = "a", feature = "b"))]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features b").run();
+}
+
+#[cargo_test]
+fn multi_multi_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+                b = []
+                c = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+               #[cfg(all(feature = "a", feature = "b", feature = "c"))]
+               fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --features a --features").arg("b c").run();
 }

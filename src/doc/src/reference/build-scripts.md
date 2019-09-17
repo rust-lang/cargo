@@ -19,7 +19,7 @@ build = "build.rs"
 The Rust file designated by the `build` command (relative to the package root)
 will be compiled and invoked before anything else is compiled in the package,
 allowing your Rust code to depend on the built or generated artifacts.
-By default Cargo looks up for `"build.rs"` file in a package root (even if you
+By default Cargo looks for a `"build.rs"` file in a package root (even if you
 do not specify a value for `build`). Use `build = "custom_build_name.rs"` to specify
 a custom build name or `build = false` to disable automatic detection of the build script.
 
@@ -41,7 +41,7 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: reference/environment-variables.html
+[env]: environment-variables.md
 
 ### Outputs of the Build Script
 
@@ -62,6 +62,7 @@ cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
 cargo:rustc-cfg=foo
 cargo:rustc-env=FOO=bar
+cargo:rustc-cdylib-link-arg=-Wl,-soname,libfoo.so.1.2.3
 # arbitrary user-defined metadata
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
@@ -93,6 +94,9 @@ crate is built:
   This is useful for embedding additional metadata in crate's code,
   such as the hash of Git HEAD or the unique identifier of a continuous
   integration server.
+* `rustc-cdylib-link-arg=FLAG` is a flag passed to the compiler as
+  `-C link-arg=FLAG` when building a `cdylib`. Its usage is highly platform
+  specific. It is useful to set the shared library version or the runtime-path.
 * `rerun-if-changed=PATH` is a path to a file or directory which indicates that
   the build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
@@ -170,7 +174,7 @@ In other words, it’s forbidden to have two packages link to the same native
 library. Note, however, that there are [conventions in place][star-sys] to
 alleviate this.
 
-[star-sys]: #a-sys-packages
+[star-sys]: #-sys-packages
 
 As mentioned above in the output format, each build script can generate an
 arbitrary set of metadata in the form of key-value pairs. This metadata is
@@ -191,7 +195,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](reference/config.html).
+Cargo [configuration location](config.md).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]

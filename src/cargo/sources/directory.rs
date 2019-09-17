@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -116,7 +114,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let mut src = PathSource::new(&path, self.source_id, self.config);
             src.update()?;
-            let pkg = src.root_package()?;
+            let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
             let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
@@ -136,13 +134,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 )
             })?;
 
-            let mut manifest = pkg.manifest().clone();
-            let mut summary = manifest.summary().clone();
-            if let Some(ref package) = cksum.package {
-                summary = summary.set_checksum(package.clone());
+            if let Some(package) = &cksum.package {
+                pkg.manifest_mut()
+                    .summary_mut()
+                    .set_checksum(package.clone());
             }
-            manifest.set_summary(summary);
-            let pkg = Package::new(manifest, pkg.manifest_path());
             self.packages.insert(pkg.package_id(), (pkg, cksum));
         }
 
@@ -172,27 +168,15 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             None => failure::bail!("failed to find entry for `{}` in directory source", id),
         };
 
-        let mut buf = [0; 16 * 1024];
         for (file, cksum) in cksum.files.iter() {
-            let mut h = Sha256::new();
             let file = pkg.root().join(file);
-
-            (|| -> CargoResult<()> {
-                let mut f = File::open(&file)?;
-                loop {
-                    match f.read(&mut buf)? {
-                        0 => return Ok(()),
-                        n => h.update(&buf[..n]),
-                    }
-                }
-            })()
-            .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
-
-            let actual = hex::encode(h.finish());
+            let actual = Sha256::new()
+                .update_path(&file)
+                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
+                .finish_hex();
             if &*actual != cksum {
                 failure::bail!(
-                    "\
-                     the listed checksum of `{}` has changed:\n\
+                    "the listed checksum of `{}` has changed:\n\
                      expected: {}\n\
                      actual:   {}\n\
                      \n\
@@ -216,4 +200,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+
+    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
+    }
 }

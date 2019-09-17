@@ -35,7 +35,7 @@ for a Rust API for reading the metadata.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-javascript hljs" data-lang="javascript">{
+<pre class="highlightjs highlight"><code data-lang="javascript" class="language-javascript hljs">{
     /* Array of all packages in the workspace.
        It also includes all feature-enabled dependencies unless --no-deps is used.
     */
@@ -137,7 +137,11 @@ for a Rust API for reading the metadata.</p>
                     /* Array of required features.
                        This property is not included if no required features are set.
                     */
-                    "required-features": ["feat1"]
+                    "required-features": ["feat1"],
+                    /* Whether or not this target has doc tests enabled, and
+                       the target is compatible with doc testing.
+                    */
+                    "doctest": false
                 }
             ],
             /* Set of features defined for the package.
@@ -219,7 +223,7 @@ for a Rust API for reading the metadata.</p>
                 */
                 "deps": [
                     {
-                        /* The name of the dependency.
+                        /* The name of the dependency's library target.
                            If this is a renamed dependency, this is the new
                            name.
                         */
@@ -309,7 +313,7 @@ package.</p>
 <p>Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </dd>
 <dt class="hdlist1"><strong>-q</strong></dt>
 <dt class="hdlist1"><strong>--quiet</strong></dt>
@@ -335,7 +339,7 @@ terminal.</p>
 </div>
 <div class="paragraph">
 <p>May also be specified with the <code>term.color</code>
-<a href="reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -361,6 +365,23 @@ attempting to access the network to determine if it is out-of-date.</p>
 <p>These may be used in environments where you want to assert that the
 <code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
 access.</p>
+</div>
+</dd>
+<dt class="hdlist1"><strong>--offline</strong></dt>
+<dd>
+<p>Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.</p>
+<div class="paragraph">
+<p>Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
+offline.</p>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
 </div>
 </dd>
 </dl>
@@ -389,7 +410,7 @@ details.</p>
 <h2 id="cargo_metadata_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>See <a href="reference/environment-variables.html">the reference</a> for
+<p>See <a href="../reference/environment-variables.html">the reference</a> for
 details on environment variables that Cargo reads.</p>
 </div>
 </div>
@@ -432,7 +453,7 @@ details on environment variables that Cargo reads.</p>
 <h2 id="cargo_metadata_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a></p>
+<p><a href="index.html">cargo(1)</a></p>
 </div>
 </div>
 </div>

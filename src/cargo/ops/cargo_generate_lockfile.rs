@@ -4,7 +4,7 @@ use log::debug;
 use termcolor::Color::{self, Cyan, Green, Red};
 
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::Method;
+use crate::core::resolver::ResolveOpts;
 use crate::core::PackageId;
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
@@ -24,11 +24,10 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        Method::Everything,
+        ResolveOpts::everything(),
         None,
         None,
         &[],
-        true,
         true,
     )?;
     ops::write_pkg_lockfile(ws, &resolve)?;
@@ -44,13 +43,36 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         failure::bail!("you can't generate a lockfile for an empty workspace.")
     }
 
-    if opts.config.cli_unstable().offline {
+    if opts.config.offline() {
         failure::bail!("you can't update in the offline mode");
     }
 
+    // Updates often require a lot of modifications to the registry, so ensure
+    // that we're synchronized against other Cargos.
+    let _lock = ws.config().acquire_package_cache_lock()?;
+
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
-        None => return generate_lockfile(ws),
+        None => {
+            match opts.precise {
+                None => return generate_lockfile(ws),
+
+                // Precise option specified, so calculate a previous_resolve required
+                // by precise package update later.
+                Some(_) => {
+                    let mut registry = PackageRegistry::new(opts.config)?;
+                    ops::resolve_with_previous(
+                        &mut registry,
+                        ws,
+                        ResolveOpts::everything(),
+                        None,
+                        None,
+                        &[],
+                        true,
+                    )?
+                }
+            }
+        }
     };
     let mut registry = PackageRegistry::new(opts.config)?;
     let mut to_avoid = HashSet::new();
@@ -81,17 +103,17 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 });
             }
         }
+
         registry.add_sources(sources)?;
     }
 
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        Method::Everything,
+        ResolveOpts::everything(),
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],
-        true,
         true,
     )?;
 
@@ -139,7 +161,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             return;
         }
         set.insert(dep);
-        for dep in resolve.deps_not_replaced(dep) {
+        for (dep, _) in resolve.deps_not_replaced(dep) {
             fill_with_deps(resolve, dep, set, visited);
         }
     }
@@ -152,15 +174,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             (dep.name().as_str(), dep.source_id())
         }
 
-        // Removes all package ids in `b` from `a`. Note that this is somewhat
-        // more complicated because the equality for source ids does not take
-        // precise versions into account (e.g. git shas), but we want to take
+        // Removes all package IDs in `b` from `a`. Note that this is somewhat
+        // more complicated because the equality for source IDs does not take
+        // precise versions into account (e.g., git shas), but we want to take
         // that into account here.
         fn vec_subtract(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter()
                 .filter(|a| {
-                    // If this package id is not found in `b`, then it's definitely
-                    // in the subtracted set
+                    // If this package ID is not found in `b`, then it's definitely
+                    // in the subtracted set.
                     let i = match b.binary_search(a) {
                         Ok(i) => i,
                         Err(..) => return true,
@@ -173,7 +195,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     //
                     // Note that we only check this for non-registry sources,
                     // however, as registries contain enough version information in
-                    // the package id to disambiguate
+                    // the package ID to disambiguate.
                     if a.source_id().is_registry() {
                         return false;
                     }
@@ -186,7 +208,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .collect()
         }
 
-        // Map (package name, package source) to (removed versions, added versions).
+        // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
         let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {

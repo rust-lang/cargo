@@ -1,6 +1,3 @@
-use std::fs;
-use std::path::PathBuf;
-
 use crate::core::compiler::{BuildConfig, MessageFormat};
 use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -13,6 +10,10 @@ use crate::util::{
 };
 use crate::CargoResult;
 use clap::{self, SubCommand};
+use failure::bail;
+use std::ffi::{OsStr, OsString};
+use std::fs;
+use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
 pub use crate::{CliError, CliResult, Config};
@@ -30,7 +31,8 @@ pub trait AppExt: Sized {
         exclude: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
-            ._arg(opt("all", all))
+            ._arg(opt("all", "Alias for --workspace (deprecated)"))
+            ._arg(opt("workspace", all))
             ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
@@ -99,7 +101,9 @@ pub trait AppExt: Sized {
 
     fn arg_features(self) -> Self {
         self._arg(
-            opt("features", "Space-separated list of features to activate").value_name("FEATURES"),
+            opt("features", "Space-separated list of features to activate")
+                .multiple(true)
+                .value_name("FEATURES"),
         )
         ._arg(opt("all-features", "Activate all available features"))
         ._arg(opt(
@@ -131,25 +135,21 @@ pub trait AppExt: Sized {
     }
 
     fn arg_message_format(self) -> Self {
-        self._arg(
-            opt("message-format", "Error format")
-                .value_name("FMT")
-                .case_insensitive(true)
-                .possible_values(&["human", "json", "short"])
-                .default_value("human"),
-        )
+        self._arg(multi_opt("message-format", "FMT", "Error format"))
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(opt("build-plan", "Output the build plan in JSON"))
+        self._arg(opt(
+            "build-plan",
+            "Output the build plan in JSON (unstable)",
+        ))
     }
 
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
                 "vcs",
-                "\
-                 Initialize a new repository for the given version \
+                "Initialize a new repository for the given version \
                  control system (git, hg, pijul, or fossil) or do not \
                  initialize any version control at all (none), overriding \
                  a global configuration.",
@@ -220,7 +220,7 @@ pub fn multi_opt(
 ) -> Arg<'static, 'static> {
     // Note that all `.multiple(true)` arguments in Cargo should specify
     // `.number_of_values(1)` as well, so that `--foo val1 val2` is
-    // **not** parsed as `foo` with values ["val1", "val2"].
+    // *not* parsed as `foo` with values ["val1", "val2"].
     // `number_of_values` should become the default in clap 3.
     opt(name, help)
         .value_name(value_name)
@@ -295,28 +295,76 @@ pub trait ArgMatchesExt {
         workspace: Option<&Workspace<'a>>,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
-            self._is_present("all"),
+            // TODO Integrate into 'workspace'
+            self._is_present("workspace") || self._is_present("all"),
             self._values_of("exclude"),
             self._values_of("package"),
         )?;
 
-        let message_format = match self._value_of("message-format") {
-            None => MessageFormat::Human,
-            Some(f) => {
-                if f.eq_ignore_ascii_case("json") {
-                    MessageFormat::Json
-                } else if f.eq_ignore_ascii_case("human") {
-                    MessageFormat::Human
-                } else if f.eq_ignore_ascii_case("short") {
-                    MessageFormat::Short
-                } else {
-                    panic!("Impossible message format: {:?}", f)
+        let mut message_format = None;
+        let default_json = MessageFormat::Json {
+            short: false,
+            ansi: false,
+            render_diagnostics: false,
+        };
+        for fmt in self._values_of("message-format") {
+            for fmt in fmt.split(',') {
+                let fmt = fmt.to_ascii_lowercase();
+                match fmt.as_str() {
+                    "json" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(default_json);
+                    }
+                    "human" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(MessageFormat::Human);
+                    }
+                    "short" => {
+                        if message_format.is_some() {
+                            bail!("cannot specify two kinds of `message-format` arguments");
+                        }
+                        message_format = Some(MessageFormat::Short);
+                    }
+                    "json-render-diagnostics" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json {
+                                render_diagnostics, ..
+                            }) => *render_diagnostics = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    "json-diagnostic-short" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json { short, .. }) => *short = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    "json-diagnostic-rendered-ansi" => {
+                        if message_format.is_none() {
+                            message_format = Some(default_json);
+                        }
+                        match &mut message_format {
+                            Some(MessageFormat::Json { ansi, .. }) => *ansi = true,
+                            _ => bail!("cannot specify two kinds of `message-format` arguments"),
+                        }
+                    }
+                    s => bail!("invalid message format specifier: `{}`", s),
                 }
             }
-        };
+        }
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
-        build_config.message_format = message_format;
+        build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.release = self._is_present("release");
         build_config.force_rebuild = self._is_present("force-rebuild");
         if build_config.force_rebuild && !config.cli_unstable().unstable_options {
@@ -325,10 +373,10 @@ pub trait ArgMatchesExt {
             ))?;
         };
         build_config.build_plan = self._is_present("build-plan");
-        if build_config.build_plan && !config.cli_unstable().unstable_options {
-            Err(failure::format_err!(
-                "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
-            ))?;
+        if build_config.build_plan {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--build-plan", 5579)?;
         };
 
         let opts = CompileOptions {
@@ -338,7 +386,7 @@ pub trait ArgMatchesExt {
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
-            filter: CompileFilter::new(
+            filter: CompileFilter::from_raw_arguments(
                 self._is_present("lib"),
                 self._values_of("bin"),
                 self._is_present("bins"),
@@ -400,7 +448,7 @@ pub trait ArgMatchesExt {
                 validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
-                    // If "crates.io" is specified then we just need to return None
+                    // If "crates.io" is specified, then we just need to return `None`,
                     // as that will cause cargo to use crates.io. This is required
                     // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
@@ -415,11 +463,9 @@ pub trait ArgMatchesExt {
     }
 
     fn index(&self, config: &Config) -> CargoResult<Option<String>> {
-        // TODO: Deprecated
-        // remove once it has been decided --host can be removed
-        // We may instead want to repurpose the host flag, as
-        // mentioned in this issue
-        // https://github.com/rust-lang/cargo/issues/4208
+        // TODO: deprecated. Remove once it has been decided `--host` can be removed
+        // We may instead want to repurpose the host flag, as mentioned in issue
+        // rust-lang/cargo#4208.
         let msg = "The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
@@ -446,19 +492,19 @@ about this warning.";
         compile_opts: &CompileOptions<'_>,
     ) -> CargoResult<()> {
         if self.is_present_with_zero_values("example") {
-            print_available_examples(&workspace, &compile_opts)?;
+            print_available_examples(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("bin") {
-            print_available_binaries(&workspace, &compile_opts)?;
+            print_available_binaries(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("bench") {
-            print_available_benches(&workspace, &compile_opts)?;
+            print_available_benches(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("test") {
-            print_available_tests(&workspace, &compile_opts)?;
+            print_available_tests(workspace, compile_opts)?;
         }
 
         Ok(())
@@ -472,12 +518,20 @@ about this warning.";
 
     fn _values_of(&self, name: &str) -> Vec<String>;
 
+    fn _value_of_os(&self, name: &str) -> Option<&OsStr>;
+
+    fn _values_of_os(&self, name: &str) -> Vec<OsString>;
+
     fn _is_present(&self, name: &str) -> bool;
 }
 
 impl<'a> ArgMatchesExt for ArgMatches<'a> {
     fn _value_of(&self, name: &str) -> Option<&str> {
         self.value_of(name)
+    }
+
+    fn _value_of_os(&self, name: &str) -> Option<&OsStr> {
+        self.value_of_os(name)
     }
 
     fn _values_of(&self, name: &str) -> Vec<String> {
@@ -487,16 +541,24 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
             .collect()
     }
 
+    fn _values_of_os(&self, name: &str) -> Vec<OsString> {
+        self.values_of_os(name)
+            .unwrap_or_default()
+            .map(|s| s.to_os_string())
+            .collect()
+    }
+
     fn _is_present(&self, name: &str) -> bool {
         self.is_present(name)
     }
 }
 
 pub fn values(args: &ArgMatches<'_>, name: &str) -> Vec<String> {
-    args.values_of(name)
-        .unwrap_or_default()
-        .map(|s| s.to_string())
-        .collect()
+    args._values_of(name)
+}
+
+pub fn values_os(args: &ArgMatches<'_>, name: &str) -> Vec<OsString> {
+    args._values_of_os(name)
 }
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
@@ -506,10 +568,10 @@ pub enum CommandInfo {
 }
 
 impl CommandInfo {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            CommandInfo::BuiltIn { name, .. } => name.to_string(),
-            CommandInfo::External { name, .. } => name.to_string(),
+            CommandInfo::BuiltIn { name, .. } => name,
+            CommandInfo::External { name, .. } => name,
         }
     }
 }

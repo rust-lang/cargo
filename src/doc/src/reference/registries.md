@@ -130,7 +130,7 @@ The keys are:
   may have the markers `{crate}` and `{version}` which are replaced with the
   name and version of the crate to download. If the markers are not present,
   then the value `/{crate}/{version}/download` is appended to the end.
-- `api`: This is the base URL for the web API. This key is optional, and if it
+- `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
 
@@ -580,11 +580,11 @@ The "login" endpoint is not an actual API request. It exists solely for the
 [`cargo login`] command to display a URL to instruct a user to visit in a web
 browser to log in and retrieve an API token.
 
-[Source Replacement]: reference/source-replacement.html
-[`cargo login`]: commands/cargo-login.html
-[`cargo package`]: commands/cargo-package.html
-[`cargo publish`]: commands/cargo-publish.html
-[alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
-[config]: reference/config.html
+[Source Replacement]: source-replacement.md
+[`cargo login`]: ../commands/cargo-login.md
+[`cargo package`]: ../commands/cargo-package.md
+[`cargo publish`]: ../commands/cargo-publish.md
+[alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
+[config]: config.md
 [crates.io]: https://crates.io/
-[publishing documentation]: reference/publishing.html#cargo-owner
+[publishing documentation]: publishing.md#cargo-owner

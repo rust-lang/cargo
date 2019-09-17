@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-run
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-02-05
+.\" Generator: Asciidoctor 2.0.8
+.\"      Date: 2019-07-15
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-RUN" "1" "2019-02-05" "\ \&" "\ \&"
+.TH "CARGO\-RUN" "1" "2019-07-15" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -54,7 +54,8 @@ the SPEC format.
 .sp
 When no target selection options are given, \fBcargo run\fP will run the binary
 target. If there are multiple binary targets, you must pass a target flag to
-choose one.
+choose one. Or, the \fBdefault\-run\fP field may be specified in the \fB[package]\fP
+section of \fBCargo.toml\fP to choose the name of the binary to run by default.
 .sp
 \fB\-\-bin\fP \fINAME\fP
 .RS 4
@@ -175,7 +176,8 @@ May also be specified with the \fBterm.color\fP
 .sp
 \fB\-\-message\-format\fP \fIFMT\fP
 .RS 4
-The output format for diagnostic messages. Valid values:
+The output format for diagnostic messages. Can be specified multiple times
+and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
 .ie n \{\
@@ -186,6 +188,17 @@ The output format for diagnostic messages. Valid values:
 .  IP \(bu 2.3
 .\}
 \fBhuman\fP (default): Display in a human\-readable text format.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBshort\fP: Emit shorter, human\-readable text messages.
 .RE
 .sp
 .RS 4
@@ -207,7 +220,35 @@ The output format for diagnostic messages. Valid values:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-\fBshort\fP: Emit shorter, human\-readable text messages.
+\fBjson\-diagnostic\-short\fP: Ensure the \fBrendered\fP field of JSON messages contains
+the "short" rendering from rustc.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-diagnostic\-rendered\-ansi\fP: Ensure the \fBrendered\fP field of JSON messages
+contains embedded ANSI color codes for respecting rustc\(cqs default color
+scheme.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-render\-diagnostics\fP: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo\(cqs own JSON diagnostics and others
+coming from rustc are still emitted.
 .RE
 .RE
 .SS "Manifest Options"
@@ -228,6 +269,23 @@ attempting to access the network to determine if it is out\-of\-date.
 These may be used in environments where you want to assert that the
 \fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
 access.
+.RE
+.sp
+\fB\-\-offline\fP
+.RS 4
+Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.
+.sp
+Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the \fBcargo\-fetch\fP(1) command to download dependencies before going
+offline.
+.sp
+May also be specified with the \fBnet.offline\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
 .sp

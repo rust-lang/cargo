@@ -1,125 +1,123 @@
 #![allow(deprecated)]
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt::Write;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use filetime::FileTime;
 use jobserver::Client;
 
 use crate::core::compiler::compilation;
-use crate::core::profiles::Profile;
-use crate::core::{Package, PackageId, Resolve, Target};
+use crate::core::compiler::Unit;
+use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{internal, profile, short_hash, Config};
+use crate::util::{internal, profile, Config};
 
 use super::build_plan::BuildPlan;
-use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
+use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
+use super::unit_dependencies::{UnitDep, UnitGraph};
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
-
-mod unit_dependencies;
-use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
 pub use self::compilation_files::{Metadata, OutputFile};
 
-/// All information needed to define a Unit.
-///
-/// A unit is an object that has enough information so that cargo knows how to build it.
-/// For example, if your package has dependencies, then every dependency will be built as a library
-/// unit. If your package is a library, then it will be built as a library unit as well, or if it
-/// is a binary with `main.rs`, then a binary will be output. There are also separate unit types
-/// for `test`ing and `check`ing, amongst others.
-///
-/// The unit also holds information about all possible metadata about the package in `pkg`.
-///
-/// A unit needs to know extra information in addition to the type and root source file. For
-/// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
-/// whether you want a debug or release build. There is enough information in this struct to figure
-/// all that out.
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
-pub struct Unit<'a> {
-    /// Information about available targets, which files to include/exclude, etc. Basically stuff in
-    /// `Cargo.toml`.
-    pub pkg: &'a Package,
-    /// Information about the specific target to build, out of the possible targets in `pkg`. Not
-    /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
-    /// build.
-    pub target: &'a Target,
-    /// The profile contains information about *how* the build should be run, including debug
-    /// level, etc.
-    pub profile: Profile,
-    /// Whether this compilation unit is for the host or target architecture.
-    ///
-    /// For example, when
-    /// cross compiling and using a custom build script, the build script needs to be compiled for
-    /// the host architecture so the host rustc can use it (when compiling to the target
-    /// architecture).
-    pub kind: Kind,
-    /// The "mode" this unit is being compiled for.  See `CompileMode` for
-    /// more details.
-    pub mode: CompileMode,
-}
-
-impl<'a> Unit<'a> {
-    pub fn buildkey(&self) -> String {
-        format!("{}-{}", self.pkg.name(), short_hash(self))
-    }
-}
-
-pub struct Context<'a, 'cfg: 'a> {
+/// Collection of all the stuff that is needed to perform a build.
+pub struct Context<'a, 'cfg> {
+    /// Mostly static information about the build task.
     pub bcx: &'a BuildContext<'a, 'cfg>,
+    /// A large collection of information about the result of the entire compilation.
     pub compilation: Compilation<'cfg>,
-    pub build_state: Arc<BuildState>,
-    pub build_script_overridden: HashSet<(PackageId, Kind)>,
+    /// Output from build scripts, updated after each build script runs.
+    pub build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
+    /// Dependencies (like rerun-if-changed) declared by a build script.
+    /// This is *only* populated from the output from previous runs.
+    /// If the build script hasn't ever been run, then it must be run.
     pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
+    /// Fingerprints used to detect if a unit is out-of-date.
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
+    /// Cache of file mtimes to reduce filesystem hits.
+    pub mtime_cache: HashMap<PathBuf, FileTime>,
+    /// A set used to track which units have been compiled.
+    /// A unit may appear in the job graph multiple times as a dependency of
+    /// multiple packages, but it only needs to run once.
     pub compiled: HashSet<Unit<'a>>,
+    /// Linking information for each `Unit`.
+    /// See `build_map` for details.
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
-    pub links: Links,
+    /// Job server client to manage concurrency with other processes.
     pub jobserver: Client,
+    /// "Primary" packages are the ones the user selected on the command-line
+    /// with `-p` flags. If no flags are specified, then it is the defaults
+    /// based on the current directory and the default workspace members.
     primary_packages: HashSet<PackageId>,
-    unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    /// The dependency graph of units to compile.
+    unit_dependencies: UnitGraph<'a>,
+    /// An abstraction of the files and directories that will be generated by
+    /// the compilation. This is `None` until after `unit_dependencies` has
+    /// been computed.
     files: Option<CompilationFiles<'a, 'cfg>>,
-    package_cache: HashMap<PackageId, &'a Package>,
+
+    /// A flag indicating whether pipelining is enabled for this compilation
+    /// session. Pipelining largely only affects the edges of the dependency
+    /// graph that we generate at the end, and otherwise it's pretty
+    /// straightforward.
+    pipelining: bool,
+
+    /// A set of units which are compiling rlibs and are expected to produce
+    /// metadata files in addition to the rlib itself. This is only filled in
+    /// when `pipelining` above is enabled.
+    rmeta_required: HashSet<Unit<'a>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(config: &'cfg Config, bcx: &'a BuildContext<'a, 'cfg>) -> CargoResult<Self> {
+    pub fn new(
+        config: &'cfg Config,
+        bcx: &'a BuildContext<'a, 'cfg>,
+        unit_dependencies: UnitGraph<'a>,
+    ) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
         // intentionally so! It's hoped that we can interact with GNU make and
         // all share the same jobserver.
         //
         // Note that if we don't have a jobserver in our environment then we
-        // create our own, and we create it with `n-1` tokens because one token
-        // is ourself, a running process.
+        // create our own, and we create it with `n` tokens, but immediately
+        // acquire one, because one token is ourself, a running process.
         let jobserver = match config.jobserver_from_env() {
             Some(c) => c.clone(),
-            None => Client::new(bcx.build_config.jobs as usize - 1)
-                .chain_err(|| "failed to create jobserver")?,
+            None => {
+                let client = Client::new(bcx.build_config.jobs as usize)
+                    .chain_err(|| "failed to create jobserver")?;
+                client.acquire_raw()?;
+                client
+            }
         };
+
+        let pipelining = bcx
+            .config
+            .get_bool("build.pipelining")?
+            .map(|t| t.val)
+            .unwrap_or(bcx.host_info.supports_pipelining.unwrap());
 
         Ok(Self {
             bcx,
             compilation: Compilation::new(bcx)?,
-            build_state: Arc::new(BuildState::new(&bcx.host_config, &bcx.target_config)),
+            build_script_outputs: Arc::new(Mutex::new(BuildScriptOutputs::default())),
             fingerprints: HashMap::new(),
+            mtime_cache: HashMap::new(),
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
-            links: Links::new(),
             jobserver,
-            build_script_overridden: HashSet::new(),
-
             primary_packages: HashSet::new(),
-            unit_dependencies: HashMap::new(),
+            unit_dependencies,
             files: None,
-            package_cache: HashMap::new(),
+            rmeta_required: HashSet::new(),
+            pipelining,
         })
     }
 
@@ -168,11 +166,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
-                        unit.target.kind().clone(),
-                        unit.target.name().to_string(),
+                        unit.target.clone(),
                         output.path.clone(),
                     ));
-                } else if unit.target.is_bin() || unit.target.is_bin_example() {
+                } else if unit.target.is_executable() {
                     self.compilation.binaries.push(bindst.clone());
                 }
             }
@@ -192,8 +189,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
 
-            if unit.mode == CompileMode::Doctest {
-                // Note that we can *only* doctest rlib outputs here.  A
+            if unit.mode.is_doc_test() {
+                // Note that we can *only* doc-test rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
                 // doesn't do that). A dylib output, however, can be linked by
                 // the compiler, but will always fail. Currently all dylibs are
@@ -204,18 +201,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 // pass `--extern` for rlib deps and skip out on all other
                 // artifacts.
                 let mut doctest_deps = Vec::new();
-                for dep in self.dep_targets(unit) {
-                    if dep.target.is_lib() && dep.mode == CompileMode::Build {
-                        let outputs = self.outputs(&dep)?;
+                for dep in self.unit_deps(unit) {
+                    if dep.unit.target.is_lib() && dep.unit.mode == CompileMode::Build {
+                        let outputs = self.outputs(&dep.unit)?;
                         let outputs = outputs.iter().filter(|output| {
                             output.path.extension() == Some(OsStr::new("rlib"))
-                                || dep.target.for_host()
+                                || dep.unit.target.for_host()
                         });
                         for output in outputs {
-                            doctest_deps.push((
-                                self.bcx.extern_crate_name(unit, &dep)?,
-                                output.path.clone(),
-                            ));
+                            doctest_deps.push((dep.extern_crate_name, output.path.clone()));
                         }
                     }
                 }
@@ -228,7 +222,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 });
             }
 
-            let feats = self.bcx.resolve.features(unit.pkg.package_id());
+            let feats = &unit.features;
             if !feats.is_empty() {
                 self.compilation
                     .cfgs
@@ -240,18 +234,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .collect()
                     });
             }
-            let rustdocflags = self.bcx.rustdocflags_args(unit)?;
+            let rustdocflags = self.bcx.rustdocflags_args(unit);
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags
                     .entry(unit.pkg.package_id())
-                    .or_insert(rustdocflags);
+                    .or_insert_with(|| rustdocflags.to_vec());
             }
 
             super::output_depinfo(&mut self, unit)?;
         }
 
-        for (&(ref pkg, _), output) in self.build_state.outputs.lock().unwrap().iter() {
+        for (&(ref pkg, _), output) in self.build_script_outputs.lock().unwrap().iter() {
             self.compilation
                 .cfgs
                 .entry(pkg.clone())
@@ -278,7 +272,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 continue;
             }
 
-            let is_binary = unit.target.is_bin() || unit.target.is_bin_example();
+            let is_binary = unit.target.is_executable();
             let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
 
             if is_binary || is_test {
@@ -306,12 +300,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.primary_packages
             .extend(units.iter().map(|u| u.pkg.package_id()));
 
-        build_unit_dependencies(
-            units,
-            self.bcx,
-            &mut self.unit_dependencies,
-            &mut self.package_cache,
-        )?;
+        self.record_units_requiring_metadata();
+
         let files = CompilationFiles::new(
             units,
             host_layout,
@@ -356,117 +346,42 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the filenames that the given unit will generate.
+    /// Returns the filenames that the given unit will generate.
     pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    // TODO: this ideally should be `-> &[Unit<'a>]`
+    /// NOTE: This is deprecated, use `unit_deps` instead.
+    //
+    // TODO: this ideally should be `-> &[Unit<'a>]`.
     pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
-        // If this build script's execution has been overridden then we don't
-        // actually depend on anything, we've reached the end of the dependency
-        // chain as we've got all the info we're gonna get.
-        //
-        // Note there's a subtlety about this piece of code! The
-        // `build_script_overridden` map here is populated in
-        // `custom_build::build_map` which you need to call before inspecting
-        // dependencies. However, that code itself calls this method and
-        // gets a full pre-filtered set of dependencies. This is not super
-        // obvious, and clear, but it does work at the moment.
-        if unit.target.is_custom_build() {
-            let key = (unit.pkg.package_id(), unit.kind);
-            if self.build_script_overridden.contains(&key) {
-                return Vec::new();
-            }
-        }
-        let mut deps = self.unit_dependencies[unit].clone();
-        deps.sort();
-        deps
+        self.unit_dependencies[unit]
+            .iter()
+            .map(|dep| dep.unit)
+            .collect()
     }
 
-    pub fn incremental_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        // There's a number of ways to configure incremental compilation right
-        // now. In order of descending priority (first is highest priority) we
-        // have:
-        //
-        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
-        //   on/off incremental compilation for any cargo subcommand. We'll
-        //   respect this if set.
-        // * `build.incremental` - in `.cargo/config` this blanket key can
-        //   globally for a system configure whether incremental compilation is
-        //   enabled. Note that setting this to `true` will not actually affect
-        //   all builds though. For example a `true` value doesn't enable
-        //   release incremental builds, only dev incremental builds. This can
-        //   be useful to globally disable incremental compilation like
-        //   `CARGO_INCREMENTAL`.
-        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
-        //   be configured to enable/disable incremental compilation. This can
-        //   be primarily used to disable incremental when buggy for a package.
-        // * Finally, each profile has a default for whether it will enable
-        //   incremental compilation or not. Primarily development profiles
-        //   have it enabled by default while release profiles have it disabled
-        //   by default.
-        let global_cfg = self
-            .bcx
-            .config
-            .get_bool("build.incremental")?
-            .map(|c| c.val);
-        let incremental = match (
-            self.bcx.incremental_env,
-            global_cfg,
-            unit.profile.incremental,
-        ) {
-            (Some(v), _, _) => v,
-            (None, Some(false), _) => false,
-            (None, _, other) => other,
-        };
-
-        if !incremental {
-            return Ok(Vec::new());
-        }
-
-        // Only enable incremental compilation for sources the user can
-        // modify (aka path sources). For things that change infrequently,
-        // non-incremental builds yield better performance in the compiler
-        // itself (aka crates.io / git dependencies)
-        //
-        // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if !unit.pkg.package_id().source_id().is_path() {
-            return Ok(Vec::new());
-        }
-
-        let dir = self.files().layout(unit.kind).incremental().display();
-        Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
+    /// Direct dependencies for the given unit.
+    pub fn unit_deps(&self, unit: &Unit<'a>) -> &[UnitDep<'a>] {
+        &self.unit_dependencies[unit]
     }
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
     }
 
-    /// Gets a package for the given package id.
-    pub fn get_package(&self, id: PackageId) -> CargoResult<&'a Package> {
-        self.package_cache
-            .get(&id)
-            .cloned()
-            .ok_or_else(|| failure::format_err!("failed to find {}", id))
-    }
-
-    /// Return the list of filenames read by cargo to generate the BuildContext
-    /// (all Cargo.toml, etc).
+    /// Returns the list of filenames read by cargo to generate the `BuildContext`
+    /// (all `Cargo.toml`, etc.).
     pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        let mut inputs = Vec::new();
-        // Note that we're using the `package_cache`, which should have been
-        // populated by `build_unit_dependencies`, and only those packages are
-        // considered as all the inputs.
-        //
-        // (notably we skip dev-deps here if they aren't present)
-        for pkg in self.package_cache.values() {
-            inputs.push(pkg.manifest_path().to_path_buf());
+        // Keep sorted for consistency.
+        let mut inputs = BTreeSet::new();
+        // Note: dev-deps are skipped if they are not present in the unit graph.
+        for unit in self.unit_dependencies.keys() {
+            inputs.insert(unit.pkg.manifest_path().to_path_buf());
         }
-        inputs.sort();
-        Ok(inputs)
+        Ok(inputs.into_iter().collect())
     }
 
     fn check_collistions(&self) -> CargoResult<()> {
@@ -486,11 +401,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     path.display()
                 )
             };
-        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
-            This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
+        let suggestion =
+            "Consider changing their names to be unique or compiling them separately.\n\
+             This may become a hard error in the future; see \
+             <https://github.com/rust-lang/cargo/issues/6313>.";
+        let rustdoc_suggestion =
+            "This is a known bug where multiple crates with the same name use\n\
+             the same path; see <https://github.com/rust-lang/cargo/issues/6313>.";
         let report_collision = |unit: &Unit<'_>,
                                 other_unit: &Unit<'_>,
-                                path: &PathBuf|
+                                path: &PathBuf,
+                                suggestion: &str|
          -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
                 self.bcx.config.shell().warn(format!(
@@ -519,6 +440,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     unit, other_unit))
             }
         };
+
         let mut keys = self
             .unit_dependencies
             .keys()
@@ -529,11 +451,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         for unit in keys {
             for output in self.outputs(unit)?.iter() {
                 if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
-                    report_collision(unit, &other_unit, &output.path)?;
+                    if unit.mode.is_doc() {
+                        // See https://github.com/rust-lang/rust/issues/56169
+                        // and https://github.com/rust-lang/rust/issues/61378
+                        report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
+                    } else {
+                        report_collision(unit, other_unit, &output.path, suggestion)?;
+                    }
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
                     if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
-                        report_collision(unit, &other_unit, hardlink)?;
+                        report_collision(unit, other_unit, hardlink, suggestion)?;
                     }
                 }
                 if let Some(ref export_path) = output.export_path {
@@ -543,7 +471,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                              {}\
                              The exported filenames should be unique.\n\
                              {}",
-                            describe_collision(unit, &other_unit, &export_path),
+                            describe_collision(unit, other_unit, export_path),
                             suggestion
                         ))?;
                     }
@@ -552,71 +480,39 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         Ok(())
     }
-}
 
-#[derive(Default)]
-pub struct Links {
-    validated: HashSet<PackageId>,
-    links: HashMap<String, PackageId>,
-}
-
-impl Links {
-    pub fn new() -> Links {
-        Links {
-            validated: HashSet::new(),
-            links: HashMap::new(),
+    /// Records the list of units which are required to emit metadata.
+    ///
+    /// Units which depend only on the metadata of others requires the others to
+    /// actually produce metadata, so we'll record that here.
+    fn record_units_requiring_metadata(&mut self) {
+        for (key, deps) in self.unit_dependencies.iter() {
+            for dep in deps {
+                if self.only_requires_rmeta(key, &dep.unit) {
+                    self.rmeta_required.insert(dep.unit);
+                }
+            }
         }
     }
 
-    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'_>) -> CargoResult<()> {
-        if !self.validated.insert(unit.pkg.package_id()) {
-            return Ok(());
-        }
-        let lib = match unit.pkg.manifest().links() {
-            Some(lib) => lib,
-            None => return Ok(()),
-        };
-        if let Some(&prev) = self.links.get(lib) {
-            let pkg = unit.pkg.package_id();
+    /// Returns whether when `parent` depends on `dep` if it only requires the
+    /// metadata file from `dep`.
+    pub fn only_requires_rmeta(&self, parent: &Unit<'a>, dep: &Unit<'a>) -> bool {
+        // this is only enabled when pipelining is enabled
+        self.pipelining
+            // We're only a candidate for requiring an `rmeta` file if we
+            // ourselves are building an rlib,
+            && !parent.requires_upstream_objects()
+            && parent.mode == CompileMode::Build
+            // Our dependency must also be built as an rlib, otherwise the
+            // object code must be useful in some fashion
+            && !dep.requires_upstream_objects()
+            && dep.mode == CompileMode::Build
+    }
 
-            let describe_path = |pkgid: PackageId| -> String {
-                let dep_path = resolve.path_to_top(&pkgid);
-                let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-                for dep in dep_path.iter().skip(1) {
-                    write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
-                }
-                dep_path_desc
-            };
-
-            failure::bail!(
-                "multiple packages link to native library `{}`, \
-                 but a native library can be linked only once\n\
-                 \n\
-                 {}\nlinks to native library `{}`\n\
-                 \n\
-                 {}\nalso links to native library `{}`",
-                lib,
-                describe_path(prev),
-                lib,
-                describe_path(pkg),
-                lib
-            )
-        }
-        if !unit
-            .pkg
-            .manifest()
-            .targets()
-            .iter()
-            .any(|t| t.is_custom_build())
-        {
-            failure::bail!(
-                "package `{}` specifies that it links to `{}` but does not \
-                 have a custom build script",
-                unit.pkg.package_id(),
-                lib
-            )
-        }
-        self.links.insert(lib.to_string(), unit.pkg.package_id());
-        Ok(())
+    /// Returns whether when `unit` is built whether it should emit metadata as
+    /// well because some compilations rely on that.
+    pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
+        self.rmeta_required.contains(unit)
     }
 }

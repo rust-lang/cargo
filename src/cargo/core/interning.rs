@@ -23,6 +23,18 @@ pub struct InternedString {
     inner: &'static str,
 }
 
+impl<'a> From<&'a str> for InternedString {
+    fn from(item: &'a str) -> Self {
+        InternedString::new(item)
+    }
+}
+
+impl<'a> From<&'a String> for InternedString {
+    fn from(item: &'a String) -> Self {
+        InternedString::new(item)
+    }
+}
+
 impl PartialEq for InternedString {
     fn eq(&self, other: &InternedString) -> bool {
         ptr::eq(self.as_str(), other.as_str())
@@ -56,8 +68,14 @@ impl Deref for InternedString {
     }
 }
 
+impl AsRef<str> for InternedString {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
 impl Hash for InternedString {
-    // NB: we can't implement this as `identity(self).hash(state)`,
+    // N.B., we can't implement this as `identity(self).hash(state)`,
     // because we use this for on-disk fingerprints and so need
     // stability across Cargo invocations.
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -66,8 +84,8 @@ impl Hash for InternedString {
 }
 
 impl Borrow<str> for InternedString {
-    // if we implement Hash as `identity(self).hash(state)`,
-    // then this will nead to be removed.
+    // If we implement Hash as `identity(self).hash(state)`,
+    // then this will need to be removed.
     fn borrow(&self) -> &str {
         self.as_str()
     }
@@ -103,5 +121,31 @@ impl Serialize for InternedString {
         S: Serializer,
     {
         serializer.serialize_str(self.inner)
+    }
+}
+
+struct InternedStringVisitor;
+
+impl<'de> serde::Deserialize<'de> for InternedString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(InternedStringVisitor)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for InternedStringVisitor {
+    type Value = InternedString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("an String like thing")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(InternedString::new(v))
     }
 }

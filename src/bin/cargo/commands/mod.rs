@@ -6,6 +6,7 @@ pub fn builtin() -> Vec<App> {
         build::cli(),
         check::cli(),
         clean::cli(),
+        clippy::cli(),
         doc::cli(),
         fetch::cli(),
         fix::cli(),
@@ -29,6 +30,7 @@ pub fn builtin() -> Vec<App> {
         test::cli(),
         uninstall::cli(),
         update::cli(),
+        vendor::cli(),
         verify_project::cli(),
         version::cli(),
         yank::cli(),
@@ -41,6 +43,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "build" => build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
+        "clippy-preview" => clippy::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
         "fix" => fix::exec,
@@ -64,6 +67,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "test" => test::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
+        "vendor" => vendor::exec,
         "verify-project" => verify_project::exec,
         "version" => version::exec,
         "yank" => yank::exec,
@@ -76,6 +80,7 @@ pub mod bench;
 pub mod build;
 pub mod check;
 pub mod clean;
+pub mod clippy;
 pub mod doc;
 pub mod fetch;
 pub mod fix;
@@ -99,6 +104,7 @@ pub mod search;
 pub mod test;
 pub mod uninstall;
 pub mod update;
+pub mod vendor;
 pub mod verify_project;
 pub mod version;
 pub mod yank;

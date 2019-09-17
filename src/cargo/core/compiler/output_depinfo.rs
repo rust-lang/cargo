@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use log::debug;
 
-use super::{fingerprint, Context, Unit};
+use super::{fingerprint, Context, FileFlavor, Unit};
 use crate::util::paths;
 use crate::util::{internal, CargoResult};
 
@@ -39,7 +39,11 @@ fn add_deps_for_unit<'a, 'b>(
     if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
         let dep_info_loc = fingerprint::dep_info_loc(context, unit);
-        if let Some(paths) = fingerprint::parse_dep_info(unit.pkg, &dep_info_loc)? {
+        if let Some(paths) = fingerprint::parse_dep_info(
+            unit.pkg.root(),
+            context.files().host_root(),
+            &dep_info_loc,
+        )? {
             for path in paths {
                 deps.insert(path);
             }
@@ -55,7 +59,7 @@ fn add_deps_for_unit<'a, 'b>(
 
     // Add rerun-if-changed dependencies
     let key = (unit.pkg.package_id(), unit.kind);
-    if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
+    if let Some(output) = context.build_script_outputs.lock().unwrap().get(&key) {
         for path in &output.rerun_if_changed {
             deps.insert(path.into());
         }
@@ -94,7 +98,11 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for output in cx.outputs(unit)?.iter() {
+    for output in cx
+        .outputs(unit)?
+        .iter()
+        .filter(|o| o.flavor != FileFlavor::DebugInfo)
+    {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {

@@ -1,6 +1,6 @@
-use crate::support::{basic_bin_manifest, basic_manifest, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn build_lib_only() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -12,7 +12,7 @@ fn build_lib_only() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -21,7 +21,7 @@ fn build_lib_only() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_no_lib() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -34,7 +34,7 @@ fn build_with_no_lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_relative_cargo_home_path() {
     let p = project()
         .file(

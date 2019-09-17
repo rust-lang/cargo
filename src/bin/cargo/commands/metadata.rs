@@ -10,6 +10,7 @@ pub fn cli() -> App {
              the concrete used versions including overrides, \
              in machine-readable format",
         )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_features()
         .arg(opt(
             "no-deps",
@@ -30,8 +31,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let version = match args.value_of("format-version") {
         None => {
             config.shell().warn(
-                "\
-                 please specify `--format-version` flag explicitly \
+                "please specify `--format-version` flag explicitly \
                  to avoid compatibility problems",
             )?;
             1

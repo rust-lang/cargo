@@ -1,12 +1,11 @@
 use std::fmt::{self, Write};
 
-use crate::support::install::exe;
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
-use glob::glob;
+use cargo_test_support::install::exe;
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn check_success() {
     let foo = project()
         .file(
@@ -35,7 +34,7 @@ fn check_success() {
     foo.cargo("check").run();
 }
 
-#[test]
+#[cargo_test]
 fn check_fail() {
     let foo = project()
         .file(
@@ -67,7 +66,7 @@ fn check_fail() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_derive() {
     let foo = project()
         .file(
@@ -133,7 +132,7 @@ pub fn derive(_input: TokenStream) -> TokenStream {
     foo.cargo("check").run();
 }
 
-#[test]
+#[cargo_test]
 fn check_build() {
     let foo = project()
         .file(
@@ -164,7 +163,7 @@ fn check_build() {
     foo.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_check() {
     let foo = project()
         .file(
@@ -191,8 +190,8 @@ fn build_check() {
         .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
-    foo.cargo("build").run();
-    foo.cargo("check").run();
+    foo.cargo("build -v").run();
+    foo.cargo("check -v").run();
 }
 
 // Checks that --force-rebuild displays warnings even if the project has not changed
@@ -223,7 +222,7 @@ fn force_rebuild_displays_error() {
 
 // Checks that where a project has both a lib and a bin, the lib is only checked
 // not built.
-#[test]
+#[cargo_test]
 fn issue_3418() {
     let foo = project()
         .file("src/lib.rs", "")
@@ -231,13 +230,13 @@ fn issue_3418() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --emit=dep-info,metadata [..]")
+        .with_stderr_contains("[..] --emit=[..]metadata [..]")
         .run();
 }
 
 // Some weirdness that seems to be caused by a crate being built as well as
 // checked, but in this case with a proc macro too.
-#[test]
+#[cargo_test]
 fn issue_3419() {
     let p = project()
         .file(
@@ -298,7 +297,7 @@ fn issue_3419() {
 }
 
 // Check on a dylib should have a different metadata hash than build.
-#[test]
+#[cargo_test]
 fn dylib_check_preserves_build_cache() {
     let p = project()
         .file(
@@ -335,7 +334,7 @@ fn dylib_check_preserves_build_cache() {
 }
 
 // test `cargo rustc --profile check`
-#[test]
+#[cargo_test]
 fn rustc_check() {
     let foo = project()
         .file(
@@ -364,7 +363,7 @@ fn rustc_check() {
     foo.cargo("rustc --profile check -- --emit=metadata").run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_check_err() {
     let foo = project()
         .file(
@@ -394,11 +393,11 @@ fn rustc_check_err() {
         .with_status(101)
         .with_stderr_contains("[CHECKING] bar [..]")
         .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[..]cannot find function `qux` in module `bar`")
+        .with_stderr_contains("[..]cannot find function `qux` in [..] `bar`")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn check_all() {
     let p = project()
         .file(
@@ -423,7 +422,7 @@ fn check_all() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check --all -v")
+    p.cargo("check --workspace -v")
         .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
         .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
         .with_stderr_contains("[..] --crate-name b b/src/lib.rs [..]")
@@ -431,7 +430,7 @@ fn check_all() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn check_virtual_all_implied() {
     let p = project()
         .file(
@@ -453,7 +452,21 @@ fn check_virtual_all_implied() {
         .run();
 }
 
-#[test]
+#[cargo_test]
+fn exclude_warns_on_non_existing_package() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check --workspace --exclude bar")
+        .with_stdout("")
+        .with_stderr(
+            r#"[WARNING] excluded package(s) bar not found in workspace `[CWD]`
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn targets_selected_default() {
     let foo = project()
         .file("src/main.rs", "fn main() {}")
@@ -472,7 +485,7 @@ fn targets_selected_default() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_all() {
     let foo = project()
         .file("src/main.rs", "fn main() {}")
@@ -491,7 +504,7 @@ fn targets_selected_all() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn check_unit_test_profile() {
     let foo = project()
         .file(
@@ -516,7 +529,7 @@ fn check_unit_test_profile() {
 }
 
 // Verify what is checked with various command-line filters.
-#[test]
+#[cargo_test]
 fn check_filters() {
     let p = project()
         .file(
@@ -624,7 +637,7 @@ fn check_filters() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn check_artifacts() {
     // Verify which artifacts are created when running check (#4059).
     let p = project()
@@ -635,43 +648,34 @@ fn check_artifacts() {
         .file("benches/b1.rs", "")
         .build();
 
-    let assert_glob = |path: &str, count: usize| {
-        assert_eq!(
-            glob(&p.root().join(path).to_str().unwrap())
-                .unwrap()
-                .count(),
-            count
-        );
-    };
-
     p.cargo("check").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --lib").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bin foo").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --test t1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/t1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libt1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/t1-*").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/deps/libt1-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --example ex1").run();
@@ -682,20 +686,20 @@ fn check_artifacts() {
         .join("target/debug/examples")
         .join(exe("ex1"))
         .is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/examples/libex1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/examples/libex1-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bench b1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/b1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libb1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/b1-*").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/deps/libb1-*.rmeta").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn short_message_format() {
     let foo = project()
         .file("src/lib.rs", "fn foo() { let _x: bool = 'a'; }")
@@ -712,7 +716,7 @@ error: Could not compile `foo`.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn proc_macro() {
     let p = project()
         .file(
@@ -752,16 +756,16 @@ fn proc_macro() {
             "#,
         )
         .build();
-    p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
+    p.cargo("check -v").env("CARGO_LOG", "cargo=trace").run();
 }
 
-#[test]
+#[cargo_test]
 fn does_not_use_empty_rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();
 }
 
-#[test]
+#[cargo_test]
 fn error_from_deep_recursion() -> Result<(), fmt::Error> {
     let mut big_macro = String::new();
     writeln!(big_macro, "macro_rules! m {{")?;

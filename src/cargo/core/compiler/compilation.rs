@@ -6,23 +6,26 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target, TargetKind};
-use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
+use crate::core::{Edition, InternedString, Package, PackageId, Target};
+use crate::util::{
+    self, join_paths, process, rustc::Rustc, CargoResult, CfgExpr, Config, ProcessBuilder,
+};
 
 pub struct Doctest {
-    /// The package being doctested.
+    /// The package being doc-tested.
     pub package: Package,
     /// The target being tested (currently always the package's lib).
     pub target: Target,
     /// Extern dependencies needed by `rustdoc`. The path is the location of
     /// the compiled lib.
-    pub deps: Vec<(String, PathBuf)>,
+    pub deps: Vec<(InternedString, PathBuf)>,
 }
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
+    /// `(package, target, path_to_test_exe)`
+    pub tests: Vec<(Package, Target, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,
@@ -46,10 +49,10 @@ pub struct Compilation<'cfg> {
     pub host_deps_output: PathBuf,
 
     /// The path to rustc's own libstd
-    pub host_dylib_path: Option<PathBuf>,
+    pub host_dylib_path: PathBuf,
 
     /// The path to libstd for the target
-    pub target_dylib_path: Option<PathBuf>,
+    pub target_dylib_path: PathBuf,
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
@@ -69,41 +72,29 @@ pub struct Compilation<'cfg> {
 
     config: &'cfg Config,
     rustc_process: ProcessBuilder,
+    primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
+    supports_rustdoc_crate_type: bool,
 }
 
 impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
-        // If we're using cargo as a rustc wrapper then we're in a situation
-        // like `cargo fix`. For now just disregard the `RUSTC_WRAPPER` env var
-        // (which is typically set to `sccache` for now). Eventually we'll
-        // probably want to implement `RUSTC_WRAPPER` for `cargo fix`, but we'll
-        // leave that open as a bug for now.
-        let mut rustc = if bcx.build_config.cargo_as_rustc_wrapper {
-            let mut rustc = bcx.rustc.process_no_wrapper();
-            let prog = rustc.get_program().to_owned();
-            rustc.env("RUSTC", prog);
-            rustc.program(env::current_exe()?);
-            rustc
-        } else {
-            bcx.rustc.process()
-        };
+        let mut rustc = bcx.rustc.process();
+
+        let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
+
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
+
+            if let Some(rustc) = primary_unit_rustc_process.as_mut() {
+                rustc.display_env_vars();
+            }
         }
-        for (k, v) in bcx.build_config.extra_rustc_env.iter() {
-            rustc.env(k, v);
-        }
-        for arg in bcx.build_config.extra_rustc_args.iter() {
-            rustc.arg(arg);
-        }
-        let srv = bcx.build_config.rustfix_diagnostic_server.borrow();
-        if let Some(server) = &*srv {
-            server.configure(&mut rustc);
-        }
+
         Ok(Compilation {
-            native_dirs: BTreeSet::new(), // TODO: deprecated, remove
+            // TODO: deprecated; remove.
+            native_dirs: BTreeSet::new(),
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
@@ -117,15 +108,30 @@ impl<'cfg> Compilation<'cfg> {
             rustdocflags: HashMap::new(),
             config: bcx.config,
             rustc_process: rustc,
+            primary_unit_rustc_process,
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
-            target_runner: target_runner(&bcx)?,
+            target_runner: target_runner(bcx)?,
+            supports_rustdoc_crate_type: supports_rustdoc_crate_type(bcx.config, &bcx.rustc)?,
         })
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
-        let mut p = self.fill_env(self.rustc_process.clone(), pkg, true)?;
+    pub fn rustc_process(
+        &self,
+        pkg: &Package,
+        target: &Target,
+        is_primary: bool,
+    ) -> CargoResult<ProcessBuilder> {
+        let rustc = if is_primary {
+            self.primary_unit_rustc_process
+                .clone()
+                .unwrap_or_else(|| self.rustc_process.clone())
+        } else {
+            self.rustc_process.clone()
+        };
+
+        let mut p = self.fill_env(rustc, pkg, true)?;
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
@@ -138,6 +144,13 @@ impl<'cfg> Compilation<'cfg> {
         if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
+
+        if self.supports_rustdoc_crate_type {
+            for crate_type in target.rustc_crate_types() {
+                p.arg("--crate-type").arg(crate_type);
+            }
+        }
+
         Ok(p)
     }
 
@@ -184,27 +197,28 @@ impl<'cfg> Compilation<'cfg> {
     ) -> CargoResult<ProcessBuilder> {
         let mut search_path = if is_host {
             let mut search_path = vec![self.host_deps_output.clone()];
-            search_path.extend(self.host_dylib_path.clone());
+            search_path.push(self.host_dylib_path.clone());
             search_path
         } else {
             let mut search_path =
                 super::filter_dynamic_search_path(self.native_dirs.iter(), &self.root_output);
             search_path.push(self.deps_output.clone());
             search_path.push(self.root_output.clone());
-            search_path.extend(self.target_dylib_path.clone());
+            search_path.push(self.target_dylib_path.clone());
             search_path
         };
 
-        search_path.extend(util::dylib_path().into_iter());
-        if cfg!(target_os = "macos") {
+        let dylib_path = util::dylib_path();
+        let dylib_path_is_empty = dylib_path.is_empty();
+        search_path.extend(dylib_path.into_iter());
+        if cfg!(target_os = "macos") && dylib_path_is_empty {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
-            // set. Since Cargo is explicitly setting the value, make sure the
-            // defaults still work.
-            if let Ok(home) = env::var("HOME") {
+            // set or set to an empty string. Since Cargo is explicitly setting
+            // the value, make sure the defaults still work.
+            if let Some(home) = env::var_os("HOME") {
                 search_path.push(PathBuf::from(home).join("lib"));
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
-            search_path.push(PathBuf::from("/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
         }
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
@@ -280,30 +294,39 @@ fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec
     }
 
     // try target.'cfg(...)'.runner
-    if let Some(target_cfg) = bcx.target_info.cfg() {
-        if let Some(table) = bcx.config.get_table("target")? {
-            let mut matching_runner = None;
+    if let Some(table) = bcx.config.get_table("target")? {
+        let mut matching_runner = None;
 
-            for key in table.val.keys() {
-                if CfgExpr::matches_key(key, target_cfg) {
-                    let key = format!("target.{}.runner", key);
-                    if let Some(runner) = bcx.config.get_path_and_args(&key)? {
-                        // more than one match, error out
-                        if matching_runner.is_some() {
-                            failure::bail!(
-                                "several matching instances of `target.'cfg(..)'.runner` \
-                                 in `.cargo/config`"
-                            )
-                        }
-
-                        matching_runner = Some(runner.val);
+        for key in table.val.keys() {
+            if CfgExpr::matches_key(key, bcx.target_info.cfg()) {
+                let key = format!("target.{}.runner", key);
+                if let Some(runner) = bcx.config.get_path_and_args(&key)? {
+                    // more than one match, error out
+                    if matching_runner.is_some() {
+                        failure::bail!(
+                            "several matching instances of `target.'cfg(..)'.runner` \
+                             in `.cargo/config`"
+                        )
                     }
+
+                    matching_runner = Some(runner.val);
                 }
             }
-
-            return Ok(matching_runner);
         }
+
+        return Ok(matching_runner);
     }
 
     Ok(None)
+}
+
+fn supports_rustdoc_crate_type(config: &Config, rustc: &Rustc) -> CargoResult<bool> {
+    // NOTE: Unconditionally return 'true' once support for
+    // rustdoc '--crate-type' rides to stable
+    let mut crate_type_test = process(config.rustdoc()?);
+    // If '--crate-type' is not supported by rustcoc, this command
+    // will exit with an error. Otherwise, it will print a help message,
+    // and exit successfully
+    crate_type_test.args(&["--crate-type", "proc-macro", "--help"]);
+    Ok(rustc.cached_output(&crate_type_test).is_ok())
 }

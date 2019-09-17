@@ -4,13 +4,13 @@ use std::io;
 use std::io::prelude::*;
 use std::thread;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, cross_compile, project};
-use crate::support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 use cargo::util::paths::remove_dir_all;
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 
-#[test]
+#[cargo_test]
 fn custom_build_script_failed() {
     let p = project()
         .file(
@@ -35,12 +35,14 @@ fn custom_build_script_failed() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
+
+Caused by:
+  process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_env_vars() {
     let p = project()
         .file(
@@ -128,7 +130,7 @@ fn custom_build_env_vars() {
     p.cargo("build --features bar_feat").run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() {
         return;
@@ -163,7 +165,7 @@ fn custom_build_env_var_rustc_linker() {
     p.cargo("build --target").arg(&target).run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(
@@ -187,15 +189,13 @@ fn custom_build_script_wrong_rustc_flags() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
-            "\
-             [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([CWD])`: \
+            "[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([CWD])`: \
              `-aaa -bbb`",
         )
         .run();
 }
 
-/*
-#[test]
+#[cargo_test]
 fn custom_build_script_rustc_flags() {
     let p = project()
         .file(
@@ -210,7 +210,8 @@ fn custom_build_script_rustc_flags() {
             [dependencies.foo]
             path = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -221,7 +222,8 @@ fn custom_build_script_rustc_flags() {
             authors = ["wycats@example.com"]
             build = "build.rs"
         "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .file(
             "foo/build.rs",
             r#"
@@ -229,27 +231,89 @@ fn custom_build_script_rustc_flags() {
                 println!("cargo:rustc-flags=-l nonexistinglib -L /dummy/path1 -L /dummy/path2");
             }
         "#,
-        ).build();
+        )
+        .build();
 
-    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
     p.cargo("build --verbose")
-        .with_status(101)
         .with_stderr(
             "\
-[COMPILING] bar v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name test [CWD]/src/lib.rs --crate-type lib -C debuginfo=2 \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
-        --out-dir [CWD]/target \
-        --emit=dep-info,link \
-        -L [CWD]/target \
-        -L [CWD]/target/deps`
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name build_script_build foo/build.rs [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar src/main.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    --extern foo=[..]libfoo-[..] \
+    -L /dummy/path1 -L /dummy/path2`
+[FINISHED] dev [..]
 ",
-        ).run();
+        )
+        .run();
 }
-*/
 
-#[test]
+#[cargo_test]
+fn custom_build_script_rustc_flags_no_space() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.foo]
+            path = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "build.rs"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "foo/build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rustc-flags=-lnonexistinglib -L/dummy/path1 -L/dummy/path2");
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build --verbose")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name build_script_build foo/build.rs [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar src/main.rs [..]\
+    -L dependency=[CWD]/target/debug/deps \
+    --extern foo=[..]libfoo-[..] \
+    -L /dummy/path1 -L /dummy/path2`
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn links_no_build_cmd() {
     let p = project()
         .file(
@@ -269,14 +333,17 @@ fn links_no_build_cmd() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] package `foo v0.5.0 ([CWD])` specifies that it links to `a` but does \
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  package `foo v0.5.0 ([CWD])` specifies that it links to `a` but does \
 not have a custom build script
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_duplicates() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -324,7 +391,62 @@ failed to select a version for `a-sys` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
+fn links_duplicates_old_registry() {
+    // Test old links validator. See `validate_links`.
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            links = "a"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            links = "a"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 ([..])
+[ERROR] multiple packages link to native library `a`, \
+    but a native library can be linked only once
+
+package `bar v0.1.0`
+    ... which is depended on by `foo v0.1.0 ([..]foo)`
+links to native library `a`
+
+package `foo v0.1.0 ([..]foo)`
+also links to native library `a`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn links_duplicates_deep_dependency() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -388,7 +510,7 @@ failed to select a version for `a-sys` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn overrides_and_links() {
     let target = rustc_host();
 
@@ -461,7 +583,7 @@ fn overrides_and_links() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unused_overrides() {
     let target = rustc_host();
 
@@ -495,7 +617,7 @@ fn unused_overrides() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn links_passes_env_vars() {
     let p = project()
         .file(
@@ -552,7 +674,7 @@ fn links_passes_env_vars() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn only_rerun_build_script() {
     let p = project()
         .file(
@@ -587,7 +709,7 @@ fn only_rerun_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_continues_to_pass_env_vars() {
     let a = project()
         .at("a")
@@ -656,7 +778,7 @@ fn rebuild_continues_to_pass_env_vars() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn testing_and_such() {
     let p = project()
         .file(
@@ -691,7 +813,7 @@ fn testing_and_such() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`",
+[RUNNING] `rustdoc [..]--test [..]`",
         )
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
@@ -723,7 +845,7 @@ fn testing_and_such() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn propagation_of_l_flags() {
     let target = rustc_host();
     let p = project()
@@ -794,7 +916,7 @@ fn propagation_of_l_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn propagation_of_l_flags_new() {
     let target = rustc_host();
     let p = project()
@@ -869,7 +991,7 @@ fn propagation_of_l_flags_new() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_deps_simple() {
     let p = project()
         .file(
@@ -912,7 +1034,7 @@ fn build_deps_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_deps_not_for_normal() {
     let target = rustc_host();
     let p = project()
@@ -959,7 +1081,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_cmd_with_a_build_cmd() {
     let p = project()
         .file(
@@ -1015,19 +1137,19 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
 [RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin \
-    --emit=dep-info,link \
+    --emit=[..]link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
     -L [..]target/debug/deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs --color never --crate-type lib \
-    --emit=dep-info,link -C debuginfo=2 \
+    --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`
@@ -1037,7 +1159,7 @@ fn build_cmd_with_a_build_cmd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn out_dir_is_preserved() {
     let p = project()
         .file(
@@ -1094,7 +1216,7 @@ fn out_dir_is_preserved() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn output_separate_lines() {
     let p = project()
         .file(
@@ -1132,7 +1254,7 @@ fn output_separate_lines() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn output_separate_lines_new() {
     let p = project()
         .file(
@@ -1171,7 +1293,7 @@ fn output_separate_lines_new() {
 }
 
 #[cfg(not(windows))] // FIXME(#867)
-#[test]
+#[cargo_test]
 fn code_generation() {
     let p = project()
         .file(
@@ -1228,7 +1350,7 @@ fn code_generation() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn release_with_build_script() {
     let p = project()
         .file(
@@ -1253,7 +1375,7 @@ fn release_with_build_script() {
     p.cargo("build -v --release").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_only() {
     let p = project()
         .file(
@@ -1281,7 +1403,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn shared_dep_with_a_build_script() {
     let p = project()
         .file(
@@ -1331,7 +1453,7 @@ fn shared_dep_with_a_build_script() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_dep_host() {
     let p = project()
         .file(
@@ -1383,7 +1505,7 @@ fn transitive_dep_host() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_a_lib_with_a_build_command() {
     let p = project()
         .file(
@@ -1429,7 +1551,7 @@ fn test_a_lib_with_a_build_command() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_dev_dep_build_script() {
     let p = project()
         .file(
@@ -1462,7 +1584,7 @@ fn test_dev_dep_build_script() {
     p.cargo("test").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_with_dynamic_native_dependency() {
     let build = project()
         .at("builder")
@@ -1547,17 +1669,17 @@ fn build_script_with_dynamic_native_dependency() {
 
     build
         .cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 
     let root = build.root().join("target").join("debug");
     foo.cargo("build -v")
         .env("BUILDER_ROOT", root)
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_and_opt_level_set_correctly() {
     let p = project()
         .file(
@@ -1587,7 +1709,7 @@ fn profile_and_opt_level_set_correctly() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_debug_0() {
     let p = project()
         .file(
@@ -1618,7 +1740,7 @@ fn profile_debug_0() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn build_script_with_lto() {
     let p = project()
         .file(
@@ -1640,7 +1762,7 @@ fn build_script_with_lto() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn test_duplicate_deps() {
     let p = project()
         .file(
@@ -1680,7 +1802,7 @@ fn test_duplicate_deps() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_feedback() {
     let p = project()
         .file(
@@ -1702,7 +1824,7 @@ fn cfg_feedback() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override() {
     let target = rustc_host();
 
@@ -1735,7 +1857,7 @@ fn cfg_override() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_test() {
     let p = project()
         .file(
@@ -1797,7 +1919,7 @@ fn cfg_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_doc() {
     let p = project()
         .file(
@@ -1840,7 +1962,7 @@ fn cfg_doc() {
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override_test() {
     let p = project()
         .file(
@@ -1908,7 +2030,7 @@ fn cfg_override_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_override_doc() {
     let p = project()
         .file(
@@ -1959,7 +2081,7 @@ fn cfg_override_doc() {
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn env_build() {
     let p = project()
         .file(
@@ -1990,7 +2112,7 @@ fn env_build() {
     p.cargo("run -v").with_stdout("foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn env_test() {
     let p = project()
         .file(
@@ -2043,7 +2165,7 @@ fn env_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn env_doc() {
     let p = project()
         .file(
@@ -2071,7 +2193,7 @@ fn env_doc() {
     p.cargo("doc -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn flags_go_into_tests() {
     let p = project()
         .file(
@@ -2152,8 +2274,13 @@ fn flags_go_into_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn diamond_passes_args_only_once() {
+    // FIXME: when pipelining rides to stable, enable this test on all channels.
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -2228,14 +2355,14 @@ fn diamond_passes_args_only_once() {
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..]
-[RUNNING] `[..]rlib -L native=test`
+[RUNNING] `[..]rmeta -L native=test`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn adding_an_override_invalidates() {
     let target = rustc_host();
     let p = project()
@@ -2299,7 +2426,7 @@ fn adding_an_override_invalidates() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn changing_an_override_invalidates() {
     let target = rustc_host();
     let p = project()
@@ -2363,7 +2490,7 @@ fn changing_an_override_invalidates() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fresh_builds_possible_with_link_libs() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
@@ -2406,7 +2533,6 @@ fn fresh_builds_possible_with_link_libs() {
         .run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
@@ -2416,7 +2542,7 @@ fn fresh_builds_possible_with_link_libs() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fresh_builds_possible_with_multiple_metadata_overrides() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
@@ -2461,7 +2587,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
@@ -2471,7 +2597,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rebuild_only_on_explicit_paths() {
     let p = project()
         .file(
@@ -2582,7 +2708,7 @@ fn rebuild_only_on_explicit_paths() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn doctest_receives_build_link_args() {
     let p = project()
         .file(
@@ -2621,12 +2747,12 @@ fn doctest_receives_build_link_args() {
 
     p.cargo("test -v")
         .with_stderr_contains(
-            "[RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`",
+            "[RUNNING] `rustdoc [..]--test [..] --crate-name foo [..]-L native=bar[..]`",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn please_respect_the_dag() {
     let p = project()
         .file(
@@ -2678,7 +2804,7 @@ fn please_respect_the_dag() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn non_utf8_output() {
     let p = project()
         .file(
@@ -2715,7 +2841,7 @@ fn non_utf8_output() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dir() {
     let p = project()
         .file(
@@ -2755,7 +2881,7 @@ fn custom_target_dir() {
     p.cargo("build -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn panic_abort_with_build_scripts() {
     let p = project()
         .file(
@@ -2817,7 +2943,7 @@ fn panic_abort_with_build_scripts() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_emitted() {
     let p = project()
         .file(
@@ -2857,7 +2983,7 @@ warning: bar
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_hidden_for_upstream() {
     Package::new("bar", "0.1.0")
         .file(
@@ -2916,7 +3042,7 @@ fn warnings_hidden_for_upstream() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn warnings_printed_on_vv() {
     Package::new("bar", "0.1.0")
         .file(
@@ -2977,7 +3103,7 @@ warning: bar
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn output_shows_on_vv() {
     let p = project()
         .file(
@@ -3019,7 +3145,7 @@ fn output_shows_on_vv() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_with_dots() {
     let target = rustc_host();
 
@@ -3061,7 +3187,7 @@ fn links_with_dots() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_and_rustdoc_set_correctly() {
     let p = project()
         .file(
@@ -3090,7 +3216,7 @@ fn rustc_and_rustdoc_set_correctly() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn cfg_env_vars_available() {
     let p = project()
         .file(
@@ -3123,7 +3249,7 @@ fn cfg_env_vars_available() {
     p.cargo("bench").run();
 }
 
-#[test]
+#[cargo_test]
 fn switch_features_rerun() {
     let p = project()
         .file(
@@ -3180,7 +3306,7 @@ fn switch_features_rerun() {
     p.rename_run("foo", "with_foo2").with_stdout("foo\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn assume_build_script_when_build_rs_present() {
     let p = project()
         .file(
@@ -3206,7 +3332,7 @@ fn assume_build_script_when_build_rs_present() {
     p.cargo("run -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     let p = project()
         .file(
@@ -3242,7 +3368,7 @@ fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     p.cargo("run -v").run();
 }
 
-#[test]
+#[cargo_test]
 fn deterministic_rustc_dependency_flags() {
     // This bug is non-deterministic hence the large number of dependencies
     // in the hopes it will have a much higher chance of triggering it.
@@ -3361,7 +3487,7 @@ fn deterministic_rustc_dependency_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn links_duplicates_with_cycle() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
@@ -3425,12 +3551,12 @@ failed to select a version for `a` which could resolve this conflict
 ").run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_link_search_path() {
     _rename_with_link_search_path(false);
 }
 
-#[test]
+#[cargo_test]
 fn rename_with_link_search_path_cross() {
     if cross_compile::disabled() {
         return;
@@ -3518,7 +3644,7 @@ fn _rename_with_link_search_path(cross: bool) {
     let p2 = p2.build();
 
     // Move the output `libfoo.so` into the directory of `p2`, and then delete
-    // the `p` project. On OSX the `libfoo.dylib` artifact references the
+    // the `p` project. On macOS, the `libfoo.dylib` artifact references the
     // original path in `p` so we want to make sure that it can't find it (hence
     // the deletion).
     let root = if cross {
@@ -3584,7 +3710,7 @@ fn _rename_with_link_search_path(cross: bool) {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_build_script_dep() {
     let p = project()
         .file(
@@ -3636,7 +3762,7 @@ fn optional_build_script_dep() {
     p.cargo("run --features bar").with_stdout("1\n").run();
 }
 
-#[test]
+#[cargo_test]
 fn optional_build_dep_and_required_normal_dep() {
     let p = project()
         .file(
@@ -3695,4 +3821,143 @@ fn optional_build_dep_and_required_normal_dep() {
 [RUNNING] `[..]foo[EXE]`",
         )
         .run();
+}
+
+#[cargo_test]
+fn using_rerun_if_changed_does_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+}
+
+#[cargo_test]
+fn links_interrupted_can_restart() {
+    // Test for a `links` dependent build script getting canceled and then
+    // restarted. Steps:
+    // 1. Build to establish fingerprints.
+    // 2. Change something (an env var in this case) that triggers the
+    //    dependent build script to run again. Kill the top-level build script
+    //    while it is running (such as hitting Ctrl-C).
+    // 3. Run the build again, it should re-run the build script.
+    let bar = project()
+        .at("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-env-changed=SOMEVAR");
+            }
+            "#,
+        )
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                build = "build.rs"
+
+                [dependencies.bar]
+                path = '{}'
+                "#,
+                bar.root().display()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+            fn main() {
+                println!("cargo:rebuild-if-changed=build.rs");
+                if std::path::Path::new("abort").exists() {
+                    panic!("Crash!");
+                }
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    // Simulate the user hitting Ctrl-C during a build.
+    p.change_file("abort", "");
+    // Set SOMEVAR to trigger a rebuild.
+    p.cargo("build")
+        .env("SOMEVAR", "1")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+    fs::remove_file(p.root().join("abort")).unwrap();
+    // Try again without aborting the script.
+    // ***This is currently broken, the script does not re-run.
+    p.cargo("build -v")
+        .env("SOMEVAR", "1")
+        .with_stderr_contains("[RUNNING] [..]/foo-[..]/build-script-build[..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn build_script_scan_eacces() {
+    // build.rs causes a scan of the whole project, which can be a problem if
+    // a directory is not accessible.
+    use std::os::unix::fs::PermissionsExt;
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("secrets/stuff", "")
+        .build();
+    let path = p.root().join("secrets");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0)).unwrap();
+    // "Caused by" is a string from libc such as the following:
+    //   Permission denied (os error 13)
+    p.cargo("build")
+        .with_stderr(
+            "\
+[ERROR] cannot read \"[..]/foo/secrets\"
+
+Caused by:
+  [..]
+",
+        )
+        .with_status(101)
+        .run();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }

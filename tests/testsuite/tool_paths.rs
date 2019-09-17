@@ -1,7 +1,7 @@
-use crate::support::rustc_host;
-use crate::support::{basic_lib_manifest, project};
+use cargo_test_support::rustc_host;
+use cargo_test_support::{basic_lib_manifest, project};
 
-#[test]
+#[cargo_test]
 fn pathless_tools() {
     let target = rustc_host();
 
@@ -32,7 +32,7 @@ fn pathless_tools() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn absolute_tools() {
     let target = rustc_host();
 
@@ -64,14 +64,18 @@ fn absolute_tools() {
         )
         .build();
 
-    foo.cargo("build --verbose").with_stderr("\
+    foo.cargo("build --verbose")
+        .with_stderr(
+            "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar=[ROOT]bogus/nonexistent-ar -C linker=[ROOT]bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C ar=[..]bogus/nonexistent-ar -C linker=[..]bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-").run();
+",
+        )
+        .run();
 }
 
-#[test]
+#[cargo_test]
 fn relative_tools() {
     let target = rustc_host();
 
@@ -105,7 +109,7 @@ fn relative_tools() {
 
     let prefix = p.root().into_os_string().into_string().unwrap();
 
-    p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
+    p.cargo("build --verbose").cwd("bar").with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
@@ -115,7 +119,7 @@ fn relative_tools() {
         )).run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_runner() {
     let target = rustc_host();
 
@@ -173,7 +177,7 @@ fn custom_runner() {
 }
 
 // can set a custom runner via `target.'cfg(..)'.runner`
-#[test]
+#[cargo_test]
 fn custom_runner_cfg() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -188,18 +192,18 @@ fn custom_runner_cfg() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        ))
+        )
         .run();
 }
 
 // custom runner set via `target.$triple.runner` have precende over `target.'cfg(..)'.runner`
-#[test]
+#[cargo_test]
 fn custom_runner_cfg_precedence() {
     let target = rustc_host();
 
@@ -222,17 +226,17 @@ fn custom_runner_cfg_precedence() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
-            [COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        ))
+        )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_runner_cfg_collision() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -250,10 +254,10 @@ fn custom_runner_cfg_collision() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
 ",
-        ))
+        )
         .run();
 }

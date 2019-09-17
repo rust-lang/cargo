@@ -18,7 +18,7 @@ use crate::ops;
 use crate::sources::git;
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
-use crate::util::{CargoResult, Config, ToUrl};
+use crate::util::{CargoResult, Config, IntoUrl};
 
 lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
@@ -32,49 +32,49 @@ pub struct SourceId {
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 struct SourceIdInner {
-    /// The source URL
+    /// The source URL.
     url: Url,
-    /// `git::canonicalize_url(url)` for the url field
+    /// The result of `git::canonicalize_url()` on `url` field.
     canonical_url: Url,
-    /// The source kind
+    /// The source kind.
     kind: Kind,
-    // e.g. the exact git revision of the specified branch for a Git Source
+    /// For example, the exact Git revision of the specified branch for a Git Source.
     precise: Option<String>,
     /// Name of the registry source for alternative registries
-    /// WARNING: This is not always set for alt-registries when the name is
+    /// WARNING: this is not always set for alt-registries when the name is
     /// not known.
     name: Option<String>,
 }
 
-/// The possible kinds of code source. Along with SourceIdInner this fully defines the
-/// source
+/// The possible kinds of code source. Along with `SourceIdInner`, this fully defines the
+/// source.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
-    /// Kind::Git(<git reference>) represents a git repository
+    /// A git repository.
     Git(GitReference),
-    /// represents a local path
+    /// A local path..
     Path,
-    /// represents a remote registry
+    /// A remote registry.
     Registry,
-    /// represents a local filesystem-based registry
+    /// A local filesystem-based registry.
     LocalRegistry,
-    /// represents a directory-based registry
+    /// A directory-based registry.
     Directory,
 }
 
-/// Information to find a specific commit in a git repository
+/// Information to find a specific commit in a Git repository.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum GitReference {
-    /// from a tag
+    /// From a tag.
     Tag(String),
-    /// from the HEAD of a branch
+    /// From the HEAD of a branch.
     Branch(String),
-    /// from a specific revision
+    /// From a specific revision.
     Rev(String),
 }
 
 impl SourceId {
-    /// Create a SourceId object from the kind and url.
+    /// Creates a `SourceId` object from the kind and URL.
     ///
     /// The canonical url will be calculated, but the precise field will not
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
@@ -117,11 +117,11 @@ impl SourceId {
 
         match kind {
             "git" => {
-                let mut url = url.to_url()?;
+                let mut url = url.into_url()?;
                 let mut reference = GitReference::Branch("master".to_string());
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
-                        // map older 'ref' to branch
+                        // Map older 'ref' to branch.
                         "branch" | "ref" => reference = GitReference::Branch(v.into_owned()),
 
                         "rev" => reference = GitReference::Rev(v.into_owned()),
@@ -135,11 +135,11 @@ impl SourceId {
                 Ok(SourceId::for_git(&url, reference)?.with_precise(precise))
             }
             "registry" => {
-                let url = url.to_url()?;
+                let url = url.into_url()?;
                 Ok(SourceId::new(Kind::Registry, url)?.with_precise(Some("locked".to_string())))
             }
             "path" => {
-                let url = url.to_url()?;
+                let url = url.into_url()?;
                 SourceId::new(Kind::Path, url)
             }
             kind => Err(failure::format_err!(
@@ -149,40 +149,40 @@ impl SourceId {
         }
     }
 
-    /// A view of the `SourceId` that can be `Display`ed as a URL
-    pub fn to_url(&self) -> SourceIdToUrl<'_> {
-        SourceIdToUrl {
+    /// A view of the `SourceId` that can be `Display`ed as a URL.
+    pub fn into_url(&self) -> SourceIdIntoUrl<'_> {
+        SourceIdIntoUrl {
             inner: &*self.inner,
         }
     }
 
-    /// Create a SourceId from a filesystem path.
+    /// Creates a `SourceId` from a filesystem path.
     ///
-    /// Pass absolute path
+    /// `path`: an absolute path.
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::Path, url)
     }
 
-    /// Crate a SourceId from a git reference
+    /// Creates a `SourceId` from a Git reference.
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
         SourceId::new(Kind::Git(reference), url.clone())
     }
 
-    /// Create a SourceId from a registry url
+    /// Creates a SourceId from a registry URL.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
         SourceId::new(Kind::Registry, url.clone())
     }
 
-    /// Create a SourceId from a local registry path
+    /// Creates a SourceId from a local registry path.
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::LocalRegistry, url)
     }
 
-    /// Create a SourceId from a directory path
+    /// Creates a `SourceId` from a directory path.
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let url = path.into_url()?;
         SourceId::new(Kind::Directory, url)
     }
 
@@ -207,7 +207,7 @@ impl SourceId {
             } else {
                 CRATES_IO_INDEX
             };
-            let url = url.to_url()?;
+            let url = url.into_url()?;
             SourceId::for_registry(&url)
         })
     }
@@ -223,12 +223,12 @@ impl SourceId {
         }))
     }
 
-    /// Get this source URL
+    /// Gets this source URL.
     pub fn url(&self) -> &Url {
         &self.inner.url
     }
 
-    pub fn display_registry(self) -> String {
+    pub fn display_index(self) -> String {
         if self.is_default_registry() {
             "crates.io index".to_string()
         } else {
@@ -236,12 +236,22 @@ impl SourceId {
         }
     }
 
-    /// Is this source from a filesystem path
+    pub fn display_registry_name(self) -> String {
+        if self.is_default_registry() {
+            "crates.io".to_string()
+        } else if let Some(name) = &self.inner.name {
+            name.clone()
+        } else {
+            url_display(self.url())
+        }
+    }
+
+    /// Returns `true` if this source is from a filesystem path.
     pub fn is_path(self) -> bool {
         self.inner.kind == Kind::Path
     }
 
-    /// Is this source from a registry (either local or not)
+    /// Returns `true` if this source is from a registry (either local or not).
     pub fn is_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry | Kind::LocalRegistry => true,
@@ -249,7 +259,18 @@ impl SourceId {
         }
     }
 
-    /// Is this source from a git repository
+    /// Returns `true` if this source is a "remote" registry.
+    ///
+    /// "remote" may also mean a file URL to a git index, so it is not
+    /// necessarily "remote". This just means it is not `local-registry`.
+    pub fn is_remote_registry(self) -> bool {
+        match self.inner.kind {
+            Kind::Registry => true,
+            _ => false,
+        }
+    }
+
+    /// Returns `true` if this source from a Git repository.
     pub fn is_git(self) -> bool {
         match self.inner.kind {
             Kind::Git(_) => true,
@@ -283,7 +304,12 @@ impl SourceId {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                Ok(Box::new(RegistrySource::local(self, &path, config)))
+                Ok(Box::new(RegistrySource::local(
+                    self,
+                    &path,
+                    yanked_whitelist,
+                    config,
+                )))
             }
             Kind::Directory => {
                 let path = match self.inner.url.to_file_path() {
@@ -295,12 +321,12 @@ impl SourceId {
         }
     }
 
-    /// Get the value of the precise field
+    /// Gets the value of the precise field.
     pub fn precise(self) -> Option<&'static str> {
         self.inner.precise.as_ref().map(|s| &s[..])
     }
 
-    /// Get the git reference if this is a git source, otherwise None.
+    /// Gets the Git reference if this is a git source, otherwise `None`.
     pub fn git_reference(self) -> Option<&'static GitReference> {
         match self.inner.kind {
             Kind::Git(ref s) => Some(s),
@@ -308,7 +334,7 @@ impl SourceId {
         }
     }
 
-    /// Create a new SourceId from this source with the given `precise`
+    /// Creates a new `SourceId` from this source with the given `precise`.
     pub fn with_precise(self, v: Option<String>) -> SourceId {
         SourceId::wrap(SourceIdInner {
             precise: v,
@@ -316,16 +342,16 @@ impl SourceId {
         })
     }
 
-    /// Whether the remote registry is the standard https://crates.io
+    /// Returns `true` if the remote registry is the standard <https://crates.io>.
     pub fn is_default_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry => {}
             _ => return false,
         }
-        self.inner.url.to_string() == CRATES_IO_INDEX
+        self.inner.url.as_str() == CRATES_IO_INDEX
     }
 
-    /// Hash `self`
+    /// Hashes `self`.
     ///
     /// For paths, remove the workspace prefix so the same source will give the
     /// same hash in different locations.
@@ -363,7 +389,7 @@ impl PartialOrd for SourceId {
 
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.inner.cmp(&other.inner)
+        self.inner.cmp(other.inner)
     }
 }
 
@@ -375,7 +401,7 @@ impl ser::Serialize for SourceId {
         if self.is_path() {
             None::<String>.serialize(s)
         } else {
-            s.collect_str(&self.to_url())
+            s.collect_str(&self.into_url())
         }
     }
 }
@@ -489,11 +515,11 @@ impl Hash for SourceId {
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url
-pub struct SourceIdToUrl<'a> {
+pub struct SourceIdIntoUrl<'a> {
     inner: &'a SourceIdInner,
 }
 
-impl<'a> fmt::Display for SourceIdToUrl<'a> {
+impl<'a> fmt::Display for SourceIdIntoUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
@@ -564,15 +590,15 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, Kind, SourceId};
-    use crate::util::ToUrl;
+    use crate::util::IntoUrl;
 
     #[test]
     fn github_sources_equal() {
-        let loc = "https://github.com/foo/bar".to_url().unwrap();
+        let loc = "https://github.com/foo/bar".into_url().unwrap();
         let master = Kind::Git(GitReference::Branch("master".to_string()));
         let s1 = SourceId::new(master.clone(), loc).unwrap();
 
-        let loc = "git://github.com/foo/bar".to_url().unwrap();
+        let loc = "git://github.com/foo/bar".into_url().unwrap();
         let s2 = SourceId::new(master, loc.clone()).unwrap();
 
         assert_eq!(s1, s2);

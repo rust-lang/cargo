@@ -1,12 +1,11 @@
-use crate::support::{
+use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
     Project,
 };
-use glob::glob;
 use serde_json;
 use std::str;
 
-#[test]
+#[cargo_test]
 fn metabuild_gated() {
     let p = project()
         .file(
@@ -74,7 +73,7 @@ fn basic_project() -> Project {
         .build()
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_basic() {
     let p = basic_project();
     p.cargo("build -vv")
@@ -84,7 +83,7 @@ fn metabuild_basic() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_error_both() {
     let p = project()
         .file(
@@ -123,7 +122,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_missing_dep() {
     let p = project()
         .file(
@@ -152,7 +151,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_optional_dep() {
     let p = project()
         .file(
@@ -187,7 +186,7 @@ fn metabuild_optional_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_lib_name() {
     // Test when setting `name` on [lib].
     let p = project()
@@ -227,7 +226,7 @@ fn metabuild_lib_name() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_fresh() {
     if is_coarse_mtime() {
         // This test doesn't work on coarse mtimes very well. Because the
@@ -278,7 +277,7 @@ fn metabuild_fresh() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_links() {
     let p = project()
         .file(
@@ -313,7 +312,7 @@ fn metabuild_links() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_override() {
     let p = project()
         .file(
@@ -351,7 +350,7 @@ fn metabuild_override() {
     p.cargo("build -vv").masquerade_as_nightly_cargo().run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_workspace() {
     let p = project()
         .file(
@@ -410,7 +409,7 @@ fn metabuild_workspace() {
         )
         .build();
 
-    p.cargo("build -vv --all")
+    p.cargo("build -vv --workspace")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member1 0.0.1] Hello mb2 [..]member1")
@@ -419,7 +418,7 @@ fn metabuild_workspace() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_metadata() {
     // The metabuild Target is filtered out of the `metadata` results.
     let p = basic_project();
@@ -435,8 +434,7 @@ fn metabuild_metadata() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|p| p["name"].as_str().unwrap() == "foo")
-        .next()
+        .find(|p| p["name"].as_str().unwrap() == "foo")
         .unwrap()["metabuild"]
         .as_array()
         .unwrap()
@@ -446,7 +444,7 @@ fn metabuild_metadata() {
     assert_eq!(mb_info, ["mb", "mb-other"]);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_build_plan() {
     let p = basic_project();
 
@@ -463,7 +461,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb-[..].rlib"],
+            "outputs": [
+                "[..]/target/debug/deps/libmb-[..].rlib",
+                "[..]/target/debug/deps/libmb-[..].rmeta"
+            ],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -477,7 +478,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb_other-[..].rlib"],
+            "outputs": [
+                "[..]/target/debug/deps/libmb_other-[..].rlib",
+                "[..]/target/debug/deps/libmb_other-[..].rmeta"
+            ],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -519,7 +523,10 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [3],
-            "outputs": ["[..]/foo/target/debug/deps/libfoo-[..].rlib"],
+            "outputs": [
+                "[..]/foo/target/debug/deps/libfoo-[..].rlib",
+                "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
+            ],
             "links": "{...}",
             "program": "rustc",
             "args": "{...}",
@@ -537,20 +544,10 @@ fn metabuild_build_plan() {
         )
         .run();
 
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-foo-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/.metabuild/metabuild-foo-*.rs").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_two_versions() {
     // Two versions of a metabuild dep with the same name.
     let p = project()
@@ -616,26 +613,19 @@ fn metabuild_two_versions() {
         )
         .build();
 
-    p.cargo("build -vv --all")
+    p.cargo("build -vv --workspace")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
         .with_stdout_contains("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
 
     assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-member?-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
+        p.glob("target/.metabuild/metabuild-member?-*.rs").count(),
         2
     );
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_external_dependency() {
     Package::new("mb", "1.0.0")
         .file("Cargo.toml", &basic_manifest("mb", "1.0.0"))
@@ -681,20 +671,10 @@ fn metabuild_external_dependency() {
         .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
 
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-dep-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/.metabuild/metabuild-dep-*.rs").count(), 1);
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_json_artifact() {
     let p = basic_project();
     p.cargo("build --message-format=json")
@@ -715,6 +695,7 @@ fn metabuild_json_artifact() {
     "crate_types": [
       "bin"
     ],
+    "doctest": false,
     "edition": "2018",
     "kind": [
       "custom-build"
@@ -737,7 +718,7 @@ fn metabuild_json_artifact() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metabuild_failed_build_json() {
     let p = basic_project();
     // Modify the metabuild dep so that it fails to compile.
@@ -752,7 +733,7 @@ fn metabuild_failed_build_json() {
     "children": "{...}",
     "code": "{...}",
     "level": "error",
-    "message": "cannot find function `metabuild` in module `mb`",
+    "message": "cannot find function `metabuild` in [..] `mb`",
     "rendered": "[..]",
     "spans": "{...}"
   },
@@ -762,6 +743,7 @@ fn metabuild_failed_build_json() {
     "crate_types": [
       "bin"
     ],
+    "doctest": false,
     "edition": "2018",
     "kind": [
       "custom-build"

@@ -86,7 +86,7 @@ working on.
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
 sandbox-environment. The internal module `testsuite/support` provides a vast amount
-of helpers to minimize boilerplate.  See [`testsuite/support/mod.rs`] for an
+of helpers to minimize boilerplate. See [`testsuite/support/mod.rs`] for an
 introduction to writing tests.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
 installed locally, install them using the instructions returned by
@@ -96,7 +96,7 @@ ignore the cross-compile test failures or disable them by
 using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
 only on `nightly` toolchain. If you can, test both toolchains.
 * All code changes are expected to comply with the formatting suggested by `rustfmt`.
-You can use `rustup component add --toolchain nightly rustfmt-preview` to install `rustfmt` and use
+You can use `rustup component add --toolchain nightly rustfmt` to install `rustfmt` and use
 `rustfmt +nightly --unstable-features --skip-children` on the changed files to automatically format your code.
 * Push your commits to GitHub and create a pull request against Cargo's
 `master` branch.
@@ -110,7 +110,7 @@ weekends. If you don't get a reply, you may poke the core developers on [Discord
 
 A merge of Cargo's master-branch and your changes is immediately queued
 to be tested after the pull request is made. In case unforeseen
-problems are discovered during this step (e.g. a failure on a platform you
+problems are discovered during this step (e.g., a failure on a platform you
 originally did not develop on), you may ask for guidance. Push additional
 commits to your branch to tackle these problems.
 

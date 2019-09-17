@@ -1,7 +1,7 @@
-use crate::support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project};
 use std::env;
 
-#[test]
+#[cargo_test]
 fn collision_dylib() {
     // Path dependencies don't include metadata hash in filename for dylibs.
     let p = project()
@@ -39,8 +39,8 @@ fn collision_dylib() {
         .file("b/src/lib.rs", "")
         .build();
 
-    // j=1 is required because on windows you'll get an error because
-    // two processes will be writing to the file at the same time.
+    // `j=1` is required because on Windows you'll get an error due to
+    // two processes writing to the file at the same time.
     p.cargo("build -j=1")
         .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
@@ -48,12 +48,12 @@ The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filena
 Colliding filename is: [..]/foo/target/debug/deps/{}a{}
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX))
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn collision_example() {
     // Examples in a workspace can easily collide.
     let p = project()
@@ -77,14 +77,14 @@ The example target `ex1` in package `b v1.0.0 ([..]/foo/b)` has the same output 
 Colliding filename is: [..]/foo/target/debug/examples/ex1[EXE]
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ")
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn collision_export() {
-    // --out-dir combines some things which can cause conflicts.
+    // `--out-dir` combines some things which can cause conflicts.
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
         .file("examples/foo.rs", "fn main() {}")
@@ -99,7 +99,51 @@ The example target `foo` in package `foo v1.0.0 ([..]/foo)` has the same output 
 Colliding filename is: [..]/foo/out/foo[EXE]
 The exported filenames should be unique.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ")
+        .run();
+}
+
+#[cargo_test]
+fn collision_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            foo2 = { path = "foo2" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+            [package]
+            name = "foo2"
+            version = "0.1.0"
+
+            [lib]
+            name = "foo"
+            "#,
+        )
+        .file("foo2/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr_contains(
+            "\
+[WARNING] output filename collision.
+The lib target `foo` in package `foo2 v0.1.0 ([..]/foo/foo2)` has the same output \
+filename as the lib target `foo` in package `foo v0.1.0 ([..]/foo)`.
+Colliding filename is: [..]/foo/target/doc/foo/index.html
+The targets should have unique names.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+",
+        )
         .run();
 }

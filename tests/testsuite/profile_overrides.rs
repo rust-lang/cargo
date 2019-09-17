@@ -1,6 +1,7 @@
-use crate::support::{basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn profile_override_gated() {
     let p = project()
         .file(
@@ -65,7 +66,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_basic() {
     let p = project()
         .file(
@@ -105,7 +106,7 @@ fn profile_override_basic() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_warnings() {
     let p = project()
         .file(
@@ -140,7 +141,7 @@ fn profile_override_warnings() {
 [WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
 [WARNING] profile override spec `bart` did not match any packages
 
-Did you mean `bar`?
+<tab>Did you mean `bar`?
 [WARNING] profile override spec `no-suggestion` did not match any packages
 [COMPILING] [..]
 ",
@@ -148,7 +149,7 @@ Did you mean `bar`?
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_dev_release_only() {
     let p = project()
         .file(
@@ -184,7 +185,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_bad_settings() {
     let bad_values = [
         (
@@ -201,7 +202,7 @@ fn profile_override_bad_settings() {
         ),
         ("overrides = {}", "Profile overrides cannot be nested."),
     ];
-    for &(ref snippet, ref expected) in bad_values.iter() {
+    for &(snippet, expected) in bad_values.iter() {
         let p = project()
             .file(
                 "Cargo.toml",
@@ -235,7 +236,7 @@ fn profile_override_bad_settings() {
     }
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_hierarchy() {
     // Test that the precedence rules are correct for different types.
     let p = project()
@@ -320,24 +321,24 @@ fn profile_override_hierarchy() {
     p.cargo("build -v").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
-[RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=3 [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
-[RUNNING] `rustc --crate-name build_script_build m1/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=4 [..]
+[RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=4 [..]
+[RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=3 [..]
+[RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=1 [..]
+[RUNNING] `rustc --crate-name build_script_build m1/build.rs [..] --crate-type bin --emit=[..]link -C codegen-units=4 [..]
 [COMPILING] m2 [..]
-[RUNNING] `rustc --crate-name build_script_build m2/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name build_script_build m2/build.rs [..] --crate-type bin --emit=[..]link -C codegen-units=2 [..]
 [RUNNING] `[..]/m1-[..]/build-script-build`
 [RUNNING] `[..]/m2-[..]/build-script-build`
-[RUNNING] `rustc --crate-name m2 m2/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name m2 m2/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=2 [..]
 [COMPILING] m1 [..]
-[RUNNING] `rustc --crate-name m1 m1/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
+[RUNNING] `rustc --crate-name m1 m1/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=1 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_spec_multiple() {
     let p = project()
         .file(
@@ -375,7 +376,7 @@ found profile override specs: bar, bar:0.5.0",
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn profile_override_spec() {
     let p = project()
         .file(
@@ -437,5 +438,72 @@ fn profile_override_spec() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
         .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
+}
+
+#[cargo_test]
+fn override_proc_macro() {
+    Package::new("shared", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            shared = "1.0"
+            pm = {path = "pm"}
+
+            [profile.dev.build-override]
+            codegen-units = 4
+            "#,
+        )
+        .file("src/lib.rs", r#"pm::eat!{}"#)
+        .file(
+            "pm/Cargo.toml",
+            r#"
+            [package]
+            name = "pm"
+            version = "0.1.0"
+
+            [lib]
+            proc-macro = true
+
+            [dependencies]
+            shared = "1.0"
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro]
+            pub fn eat(_item: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        // Shared built for the proc-macro.
+        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
+        // Shared built for the library.
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name shared"],
+            &["-C codegen-units"],
+        )
+        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name pm [..]-C codegen-units=4[..]")
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc [..]--crate-name foo"],
+            &["-C codegen-units"],
+        )
         .run();
 }

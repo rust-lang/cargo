@@ -1,27 +1,18 @@
 use std::fmt;
+use std::mem;
 
 use super::job_queue::JobState;
-use crate::util::{CargoResult, Dirty, Fresh, Freshness};
+use crate::util::CargoResult;
 
 pub struct Job {
-    dirty: Work,
-    fresh: Work,
+    work: Work,
+    fresh: Freshness,
 }
 
 /// Each proc should send its description before starting.
 /// It should send either once or close immediately.
 pub struct Work {
-    inner: Box<dyn for<'a, 'b> FnBox<&'a JobState<'b>, CargoResult<()>> + Send>,
-}
-
-trait FnBox<A, R> {
-    fn call_box(self: Box<Self>, a: A) -> R;
-}
-
-impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
-    fn call_box(self: Box<F>, a: A) -> R {
-        (*self)(a)
-    }
+    inner: Box<dyn FnOnce(&JobState<'_>) -> CargoResult<()> + Send>,
 }
 
 impl Work {
@@ -37,7 +28,7 @@ impl Work {
     }
 
     pub fn call(self, tx: &JobState<'_>) -> CargoResult<()> {
-        self.inner.call_box(tx)
+        (self.inner)(tx)
     }
 
     pub fn then(self, next: Work) -> Work {
@@ -49,18 +40,27 @@ impl Work {
 }
 
 impl Job {
-    /// Create a new job representing a unit of work.
-    pub fn new(dirty: Work, fresh: Work) -> Job {
-        Job { dirty, fresh }
+    /// Creates a new job representing a unit of work.
+    pub fn new(work: Work, fresh: Freshness) -> Job {
+        Job { work, fresh }
     }
 
     /// Consumes this job by running it, returning the result of the
     /// computation.
-    pub fn run(self, fresh: Freshness, state: &JobState<'_>) -> CargoResult<()> {
-        match fresh {
-            Fresh => self.fresh.call(state),
-            Dirty => self.dirty.call(state),
-        }
+    pub fn run(self, state: &JobState<'_>) -> CargoResult<()> {
+        self.work.call(state)
+    }
+
+    /// Returns whether this job was fresh/dirty, where "fresh" means we're
+    /// likely to perform just some small bookkeeping where "dirty" means we'll
+    /// probably do something slow like invoke rustc.
+    pub fn freshness(&self) -> Freshness {
+        self.fresh
+    }
+
+    pub fn before(&mut self, next: Work) {
+        let prev = mem::replace(&mut self.work, Work::noop());
+        self.work = next.then(prev);
     }
 }
 
@@ -68,4 +68,14 @@ impl fmt::Debug for Job {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Job {{ ... }}")
     }
+}
+
+/// Indication of the freshness of a package.
+///
+/// A fresh package does not necessarily need to be rebuilt (unless a dependency
+/// was also rebuilt), and a dirty package must always be rebuilt.
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum Freshness {
+    Fresh,
+    Dirty,
 }

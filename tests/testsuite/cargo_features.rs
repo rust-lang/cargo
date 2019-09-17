@@ -1,6 +1,6 @@
-use crate::support::{project, registry};
+use cargo_test_support::{project, registry};
 
-#[test]
+#[cargo_test]
 fn feature_required() {
     let p = project()
         .file(
@@ -53,7 +53,7 @@ switch to nightly channel you can add
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn unknown_feature() {
     let p = project()
         .file(
@@ -82,7 +82,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn stable_feature_warns() {
     let p = project()
         .file(
@@ -110,7 +110,7 @@ necessary to be listed in the manifest
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn nightly_feature_requires_nightly() {
     let p = project()
         .file(
@@ -146,12 +146,13 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn nightly_feature_requires_nightly_in_dep() {
     let p = project()
         .file(
@@ -207,12 +208,13 @@ Caused by:
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cant_publish() {
     let p = project()
         .file(
@@ -248,12 +250,13 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn z_flags_rejected() {
     let p = project()
         .file(
@@ -272,7 +275,11 @@ fn z_flags_rejected() {
         .build();
     p.cargo("build -Zprint-im-a-teapot")
         .with_status(101)
-        .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo")
+        .with_stderr(
+            "error: the `-Z` flag is only accepted on the nightly \
+             channel of Cargo, but this is the `stable` channel\n\
+             See [..]",
+        )
         .run();
 
     p.cargo("build -Zarg")
@@ -293,7 +300,7 @@ fn z_flags_rejected() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn publish_allowed() {
     registry::init();
 

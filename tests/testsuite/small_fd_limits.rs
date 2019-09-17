@@ -3,10 +3,10 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::support::git;
-use crate::support::paths;
-use crate::support::project;
-use crate::support::registry::Package;
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 use git2;
 
 use url::Url;
@@ -73,7 +73,7 @@ fn run_test(path_env: Option<&OsStr>) {
     if let Some(path) = path_env {
         cmd.env("PATH", path);
     }
-    cmd.env("RUST_LOG", "trace");
+    cmd.env("CARGO_LOG", "trace");
     cmd.run();
     let after = find_index()
         .join(".git/objects/pack")
@@ -89,7 +89,7 @@ fn run_test(path_env: Option<&OsStr>) {
     );
 }
 
-#[test]
+#[cargo_test]
 fn use_git_gc() {
     if Command::new("git").arg("--version").output().is_err() {
         return;
@@ -97,10 +97,7 @@ fn use_git_gc() {
     run_test(None);
 }
 
-#[test]
-// it looks like this test passes on some windows machines but not others,
-// notably not on AppVeyor's machines. Sounds like another but for another day.
-#[cfg_attr(windows, ignore)]
+#[cargo_test]
 fn avoid_using_git() {
     let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();

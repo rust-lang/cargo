@@ -1,18 +1,19 @@
+use std::ffi::OsString;
 use std::iter;
 use std::path::Path;
 
-use crate::core::{nightly_features_allowed, TargetKind, Workspace};
+use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::{CargoResult, ProcessError};
 
 pub fn run(
     ws: &Workspace<'_>,
     options: &ops::CompileOptions<'_>,
-    args: &[String],
+    args: &[OsString],
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
-    // We compute the `bins` here *just for diagnosis*.  The actual set of
+    // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
     let packages = options.spec.get_packages(ws)?;
     let bins: Vec<_> = packages
@@ -34,7 +35,7 @@ pub fn run(
         if !options.filter.is_specific() {
             failure::bail!("a bin target must be available for `cargo run`")
         } else {
-            // this will be verified in cargo_compile
+            // This will be verified in `cargo_compile`.
         }
     }
 
@@ -54,22 +55,13 @@ pub fn run(
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
-            if nightly_features_allowed() {
-                failure::bail!(
-                    "`cargo run` could not determine which binary to run. \
-                     Use the `--bin` option to specify a binary, \
-                     or (on nightly) the `default-run` manifest key.\n\
-                     available binaries: {}",
-                    names.join(", ")
-                )
-            } else {
-                failure::bail!(
-                    "`cargo run` requires that a package only have one \
-                     executable; use the `--bin` option to specify which one \
-                     to run\navailable binaries: {}",
-                    names.join(", ")
-                )
-            }
+            failure::bail!(
+                "`cargo run` could not determine which binary to run. \
+                 Use the `--bin` option to specify a binary, \
+                 or the `default-run` manifest key.\n\
+                 available binaries: {}",
+                names.join(", ")
+            )
         } else {
             failure::bail!(
                 "`cargo run` can run at most one executable, but \

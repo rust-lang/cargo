@@ -2,6 +2,7 @@ use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
+use cargo::core::features;
 use cargo::{self, CliResult, Config};
 
 use super::commands;
@@ -18,7 +19,7 @@ pub fn main(config: &mut Config) -> CliResult {
                 return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
                     .map_err(|_| e.into());
             } else {
-                return Err(e)?;
+                return Err(e.into());
             }
         }
     };
@@ -31,11 +32,25 @@ Available unstable (nightly-only) flags:
     -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
     -Z minimal-versions -- Install minimal dependency versions instead of maximum
     -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
-    -Z offline          -- Offline mode that does not perform network requests
     -Z unstable-options -- Allow the usage of unstable options such as --registry
     -Z config-profile   -- Read profiles from .cargo/config files
+    -Z install-upgrade  -- `cargo install` will upgrade instead of failing
+    -Z cache-messages   -- Cache compiler messages
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
+        );
+        if !features::nightly_features_allowed() {
+            println!(
+                "\nUnstable flags are only available on the nightly channel \
+                 of Cargo, but this is the `{}` channel.\n\
+                 {}",
+                features::channel(),
+                features::SEE_CHANNELS
+            );
+        }
+        println!(
+            "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+             for more information about these flags."
         );
         return Ok(());
     }
@@ -47,8 +62,8 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
-    if let Some(ref code) = args.value_of("explain") {
-        let mut procss = config.rustc(None)?.process();
+    if let Some(code) = args.value_of("explain") {
+        let mut procss = config.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
@@ -145,7 +160,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quiet") {
+        if args.is_present("quiet") || subcommand_args.is_present("quiet") {
             Some(true)
         } else {
             None
@@ -153,6 +168,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
+        args.is_present("offline"),
         arg_target_dir,
         &args
             .values_of_lossy("unstable-features")
@@ -176,7 +192,6 @@ fn cli() -> App {
             AppSettings::VersionlessSubcommands,
             AppSettings::AllowExternalSubcommands,
         ])
-        .about("")
         .template(
             "\
 Rust's package manager
@@ -217,11 +232,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(
-            opt("quiet", "No output printed to stdout")
-                .short("q")
-                .global(true),
-        )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")
@@ -229,6 +240,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
+        .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
             Arg::with_name("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")

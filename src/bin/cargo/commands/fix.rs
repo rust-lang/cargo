@@ -1,10 +1,11 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, CompileFilter, FilterRule};
+use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 
 pub fn cli() -> App {
     subcommand("fix")
         .about("Automatically fix lint warnings reported by rustc")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec(
             "Package(s) to fix",
             "Fix all packages in the workspace",
@@ -71,6 +72,15 @@ pub fn cli() -> App {
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )
+        .arg(
+            Arg::with_name("clippy")
+                .long("clippy")
+                .help("Get fix suggestions from clippy instead of rustc")
+                .hidden(true)
+                .multiple(true)
+                .min_values(0)
+                .number_of_values(1),
+        )
         .after_help(
             "\
 This Cargo subcommand will automatically take rustc's suggestions from
@@ -124,16 +134,32 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // code as we can.
     let mut opts = args.compile_options(config, mode, Some(&ws))?;
 
+    let use_clippy = args.is_present("clippy");
+
+    let clippy_args = args
+        .value_of("clippy")
+        .map(|s| s.split(' ').map(|s| s.to_string()).collect())
+        .or_else(|| Some(vec![]))
+        .filter(|_| use_clippy);
+
+    if use_clippy && !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`cargo fix --clippy` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
+
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
             all_targets: true,
-            lib: true,
+            lib: LibRule::Default,
             bins: FilterRule::All,
             examples: FilterRule::All,
             benches: FilterRule::All,
             tests: FilterRule::All,
         }
     }
+
     ops::fix(
         &ws,
         &mut ops::FixOptions {
@@ -145,6 +171,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             allow_no_vcs: args.is_present("allow-no-vcs"),
             allow_staged: args.is_present("allow-staged"),
             broken_code: args.is_present("broken-code"),
+            clippy_args,
         },
     )?;
     Ok(())

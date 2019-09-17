@@ -1,10 +1,10 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn minor_update_two_places() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -58,7 +58,7 @@ fn minor_update_two_places() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_minor_update() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
@@ -117,7 +117,7 @@ fn transitive_minor_update() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn conservative() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
@@ -168,7 +168,7 @@ fn conservative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn update_via_new_dep() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -205,10 +205,10 @@ fn update_via_new_dep() {
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    p.cargo("build").env("RUST_LOG", "cargo=trace").run();
+    p.cargo("build").env("CARGO_LOG", "cargo=trace").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_via_new_member() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -250,7 +250,7 @@ fn update_via_new_member() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn add_dep_deep_new_requirement() {
     Package::new("log", "0.1.0").publish();
     let p = project()
@@ -279,7 +279,7 @@ fn add_dep_deep_new_requirement() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn everything_real_deep() {
     Package::new("log", "0.1.0").publish();
     Package::new("foo", "0.1.0").dep("log", "0.1").publish();
@@ -309,7 +309,7 @@ fn everything_real_deep() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn change_package_version() {
     let p = project()
         .file(
@@ -345,7 +345,7 @@ fn change_package_version() {
     p.cargo("build").run();
 }
 
-#[test]
+#[cargo_test]
 fn update_precise() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").publish();
@@ -395,7 +395,172 @@ fn update_precise() {
         .run();
 }
 
-#[test]
+// cargo update should respect its arguments even without a lockfile.
+// See issue "Running cargo update without a Cargo.lock ignores arguments"
+// at <https://github.com/rust-lang/cargo/issues/6872>.
+#[cargo_test]
+fn update_precise_first_run() {
+    Package::new("serde", "0.1.0").publish();
+    Package::new("serde", "0.2.0").publish();
+    Package::new("serde", "0.2.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+
+                [dependencies]
+                serde = "0.2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("update -p serde --precise 0.2.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.2.1 -> v0.2.0
+",
+        )
+        .run();
+
+    // Assert `cargo metadata` shows serde 0.2.0
+    p.cargo("metadata")
+        .with_json(
+            r#"{
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "dependencies": [],
+      "description": null,
+      "edition": "2015",
+      "features": {},
+      "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "name": "serde",
+      "readme": null,
+      "repository": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "serde",
+          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs"
+        }
+      ],
+      "version": "0.2.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "serde",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "^0.2",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "edition": "2015",
+      "features": {},
+      "id": "bar 0.0.1 (path+file://[..]/foo)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "name": "bar",
+      "readme": null,
+      "repository": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[..]/foo/src/lib.rs"
+        }
+      ],
+      "version": "0.0.1"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [
+          "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "name": "serde",
+            "pkg": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": [],
+        "id": "bar 0.0.1 (path+file://[..]/foo)"
+      },
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+      }
+    ],
+    "root": "bar 0.0.1 (path+file://[..]/foo)"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_members": [
+    "bar 0.0.1 (path+file://[..]/foo)"
+  ],
+  "workspace_root": "[..]/foo"
+}"#,
+        )
+        .run();
+
+    p.cargo("update -p serde --precise 0.2.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn preserve_top_comment() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -420,7 +585,7 @@ fn preserve_top_comment() {
     assert_eq!(lockfile, lockfile2);
 }
 
-#[test]
+#[cargo_test]
 fn dry_run_update() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();

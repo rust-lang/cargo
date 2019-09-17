@@ -1,62 +1,60 @@
 use std::collections::HashMap;
-use std::env;
 use std::path::{Path, PathBuf};
 use std::str;
 
 use log::debug;
 
+use crate::core::compiler::unit::UnitInterner;
+use crate::core::compiler::{BuildConfig, BuildOutput, Kind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
-use crate::core::{PackageId, PackageSet, Resolve};
+use crate::core::{PackageId, PackageSet};
 use crate::util::errors::CargoResult;
-use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
-
-use super::{BuildConfig, BuildOutput, Kind, Unit};
+use crate::util::{profile, Cfg, Config, Rustc};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
 
-/// The build context, containing all information about a build task
-pub struct BuildContext<'a, 'cfg: 'a> {
-    /// The workspace the build is for
+/// The build context, containing all information about a build task.
+///
+/// It is intended that this is mostly static information. Stuff that mutates
+/// during the build can be found in the parent `Context`. (I say mostly,
+/// because this has internal caching, but nothing that should be observable
+/// or require &mut.)
+pub struct BuildContext<'a, 'cfg> {
+    /// The workspace the build is for.
     pub ws: &'a Workspace<'cfg>,
-    /// The cargo configuration
+    /// The cargo configuration.
     pub config: &'cfg Config,
-    /// The dependency graph for our build
-    pub resolve: &'a Resolve,
     pub profiles: &'a Profiles,
     pub build_config: &'a BuildConfig,
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     pub packages: &'a PackageSet<'cfg>,
 
-    /// Information about the compiler
+    /// Information about the compiler.
     pub rustc: Rustc,
-    /// Build information for the host arch
+    /// Build information for the host arch.
     pub host_config: TargetConfig,
-    /// Build information for the target
+    /// Build information for the target.
     pub target_config: TargetConfig,
     pub target_info: TargetInfo,
     pub host_info: TargetInfo,
-    pub incremental_env: Option<bool>,
+    pub units: &'a UnitInterner<'a>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn new(
         ws: &'a Workspace<'cfg>,
-        resolve: &'a Resolve,
         packages: &'a PackageSet<'cfg>,
         config: &'cfg Config,
         build_config: &'a BuildConfig,
         profiles: &'a Profiles,
+        units: &'a UnitInterner<'a>,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
-        let incremental_env = match env::var("CARGO_INCREMENTAL") {
-            Ok(v) => Some(v == "1"),
-            Err(_) => None,
-        };
+        let rustc = config.load_global_rustc(Some(ws))?;
 
-        let rustc = config.rustc(Some(ws))?;
         let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match build_config.requested_target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
@@ -74,7 +72,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
         Ok(BuildContext {
             ws,
-            resolve,
             packages,
             config,
             rustc,
@@ -84,14 +81,9 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             host_info,
             build_config,
             profiles,
-            incremental_env,
             extra_compiler_args,
+            units,
         })
-    }
-
-    pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
-        self.resolve
-            .extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
     }
 
     /// Whether a dependency should be compiled for the host or target platform,
@@ -110,31 +102,31 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         platform.matches(name, info.cfg())
     }
 
-    /// Get the user-specified linker for a particular host or target
+    /// Gets the user-specified linker for a particular host or target.
     pub fn linker(&self, kind: Kind) -> Option<&Path> {
         self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
     }
 
-    /// Get the user-specified `ar` program for a particular host or target
+    /// Gets the user-specified `ar` program for a particular host or target.
     pub fn ar(&self, kind: Kind) -> Option<&Path> {
         self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
     }
 
-    /// Get the list of cfg printed out from the compiler for the specified kind
+    /// Gets the list of `cfg`s printed out from the compiler for the specified kind.
     pub fn cfg(&self, kind: Kind) -> &[Cfg] {
         let info = match kind {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         };
-        info.cfg().unwrap_or(&[])
+        info.cfg()
     }
 
-    /// The host arch triple
+    /// Gets the host architecture triple.
     ///
-    /// e.g. x86_64-unknown-linux-gnu, would be
-    ///  - machine: x86_64
-    ///  - hardware-platform: unknown
-    ///  - operating system: linux-gnu
+    /// For example, x86_64-unknown-linux-gnu, would be
+    /// - machine: x86_64,
+    /// - hardware-platform: unknown,
+    /// - operating system: linux-gnu.
     pub fn host_triple(&self) -> &str {
         &self.rustc.host
     }
@@ -147,7 +139,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             .unwrap_or_else(|| self.host_triple())
     }
 
-    /// Get the target configuration for a particular host or target
+    /// Gets the target configuration for a particular host or target.
     fn target_config(&self, kind: Kind) -> &TargetConfig {
         match kind {
             Kind::Host => &self.host_config,
@@ -155,31 +147,17 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         }
     }
 
-    /// Number of jobs specified for this build
+    /// Gets the number of jobs specified for this build.
     pub fn jobs(&self) -> u32 {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config.requested_target,
-            self.host_triple(),
-            self.info(unit.kind).cfg(),
-            unit.kind,
-            "RUSTFLAGS",
-        )
+    pub fn rustflags_args(&self, unit: &Unit<'_>) -> &[String] {
+        &self.info(unit.kind).rustflags
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config.requested_target,
-            self.host_triple(),
-            self.info(unit.kind).cfg(),
-            unit.kind,
-            "RUSTDOCFLAGS",
-        )
+    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> &[String] {
+        &self.info(unit.kind).rustdocflags
     }
 
     pub fn show_warnings(&self, pkg: PackageId) -> bool {
@@ -196,16 +174,31 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
+
+    /// If a build script is overridden, this returns the `BuildOutput` to use.
+    ///
+    /// `lib_name` is the `links` library name and `kind` is whether it is for
+    /// Host or Target.
+    pub fn script_override(&self, lib_name: &str, kind: Kind) -> Option<&BuildOutput> {
+        match kind {
+            Kind::Host => self.host_config.overrides.get(lib_name),
+            Kind::Target => self.target_config.overrides.get(lib_name),
+        }
+    }
 }
 
-/// Information required to build for a target
+/// Information required to build for a target.
 #[derive(Clone, Default)]
 pub struct TargetConfig {
     /// The path of archiver (lib builder) for this target.
     pub ar: Option<PathBuf>,
     /// The path of the linker for this target.
     pub linker: Option<PathBuf>,
-    /// Special build options for any necessary input files (filename -> options)
+    /// Build script override for the given library name.
+    ///
+    /// Any package with a `links` value for the given library name will skip
+    /// running its build script and instead use the given output from the
+    /// config file.
     pub overrides: HashMap<String, BuildOutput>,
 }
 
@@ -230,6 +223,7 @@ impl TargetConfig {
             let mut output = BuildOutput {
                 library_paths: Vec::new(),
                 library_links: Vec::new(),
+                linker_args: Vec::new(),
                 cfgs: Vec::new(),
                 env: Vec::new(),
                 metadata: Vec::new(),
@@ -265,6 +259,10 @@ impl TargetConfig {
                             .library_paths
                             .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                     }
+                    "rustc-cdylib-link-arg" => {
+                        let args = value.list(k)?;
+                        output.linker_args.extend(args.iter().map(|v| v.0.clone()));
+                    }
                     "rustc-cfg" => {
                         let list = value.list(k)?;
                         output.cfgs.extend(list.iter().map(|v| v.0.clone()));
@@ -289,125 +287,4 @@ impl TargetConfig {
 
         Ok(ret)
     }
-}
-
-/// Acquire extra flags to pass to the compiler from various locations.
-///
-/// The locations are:
-///
-///  - the `RUSTFLAGS` environment variable
-///
-/// then if this was not found
-///
-///  - `target.*.rustflags` from the manifest (Cargo.toml)
-///  - `target.cfg(..).rustflags` from the manifest
-///
-/// then if neither of these were found
-///
-///  - `build.rustflags` from the manifest
-///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
-fn env_args(
-    config: &Config,
-    requested_target: &Option<String>,
-    host_triple: &str,
-    target_cfg: Option<&[Cfg]>,
-    kind: Kind,
-    name: &str,
-) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
-    //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g. even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    let compiling_with_target = requested_target.is_some();
-    let is_target_kind = kind == Kind::Target;
-
-    if compiling_with_target && !is_target_kind {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
-    }
-
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
-        let args = a
-            .split(' ')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Ok(args.collect());
-    }
-
-    let mut rustflags = Vec::new();
-
-    let name = name
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
-    // Then the target.*.rustflags value...
-    let target = requested_target
-        .as_ref()
-        .map(|s| s.as_str())
-        .unwrap_or(host_triple);
-    let key = format!("target.{}.{}", target, name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        rustflags.extend(args);
-    }
-    // ...including target.'cfg(...)'.rustflags
-    if let Some(target_cfg) = target_cfg {
-        if let Some(table) = config.get_table("target")? {
-            let cfgs = table
-                .val
-                .keys()
-                .filter(|key| CfgExpr::matches_key(key, target_cfg));
-
-            // Note that we may have multiple matching `[target]` sections and
-            // because we're passing flags to the compiler this can affect
-            // cargo's caching and whether it rebuilds. Ensure a deterministic
-            // ordering through sorting for now. We may perhaps one day wish to
-            // ensure a deterministic ordering via the order keys were defined
-            // in files perhaps.
-            let mut cfgs = cfgs.collect::<Vec<_>>();
-            cfgs.sort();
-
-            for n in cfgs {
-                let key = format!("target.{}.{}", n, name);
-                if let Some(args) = config.get_list_or_split_string(&key)? {
-                    let args = args.val.into_iter();
-                    rustflags.extend(args);
-                }
-            }
-        }
-    }
-
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
-    }
-
-    // Then the build.rustflags value
-    let key = format!("build.{}", name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        return Ok(args.collect());
-    }
-
-    Ok(Vec::new())
 }

@@ -33,6 +33,34 @@ pub fn lev_distance(me: &str, t: &str) -> usize {
     dcol[t_last + 1]
 }
 
+/// Find the closest element from `iter` matching `choice`. The `key` callback
+/// is used to select a `&str` from the iterator to compare against `choice`.
+pub fn closest<'a, T>(
+    choice: &str,
+    iter: impl Iterator<Item = T>,
+    key: impl Fn(&T) -> &'a str,
+) -> Option<T> {
+    // Only consider candidates with a lev_distance of 3 or less so we don't
+    // suggest out-of-the-blue options.
+    iter.map(|e| (lev_distance(choice, key(&e)), e))
+        .filter(|&(d, _)| d < 4)
+        .min_by_key(|t| t.0)
+        .map(|t| t.1)
+}
+
+/// Version of `closest` that returns a common "suggestion" that can be tacked
+/// onto the end of an error message.
+pub fn closest_msg<'a, T>(
+    choice: &str,
+    iter: impl Iterator<Item = T>,
+    key: impl Fn(&T) -> &'a str,
+) -> String {
+    match closest(choice, iter, &key) {
+        Some(e) => format!("\n\n\tDid you mean `{}`?", key(&e)),
+        None => String::new(),
+    }
+}
+
 #[test]
 fn test_lev_distance() {
     use std::char::{from_u32, MAX};

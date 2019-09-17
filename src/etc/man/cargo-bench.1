@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-bench
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-23
+.\" Generator: Asciidoctor 2.0.10
+.\"      Date: 2019-08-19
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BENCH" "1" "2018-12-23" "\ \&" "\ \&"
+.TH "CARGO\-BENCH" "1" "2019-08-19" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -77,11 +77,15 @@ the executable as a whole.
 .SS "Package Selection"
 .sp
 By default, when no package selection options are given, the packages selected
-depend on the current working directory. In the root of a virtual workspace,
-all workspace members are selected (\fB\-\-all\fP is implied). Otherwise, only the
-package in the current directory will be selected. The default packages may be
-overridden with the \fBworkspace.default\-members\fP key in the root \fBCargo.toml\fP
-manifest.
+depend on the selected manifest file (based on the current working directory if
+\fB\-\-manifest\-path\fP is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+.sp
+The default members of a workspace can be set explicitly with the
+\fBworkspace.default\-members\fP key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+\fB\-\-workspace\fP), and a non\-virtual workspace will include only the root crate itself.
 .sp
 \fB\-p\fP \fISPEC\fP..., \fB\-\-package\fP \fISPEC\fP...
 .RS 4
@@ -89,15 +93,20 @@ Benchmark only the specified packages. See \fBcargo\-pkgid\fP(1) for the
 SPEC format. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-all\fP
+\fB\-\-workspace\fP
 .RS 4
 Benchmark all members in the workspace.
+.RE
+.sp
+\fB\-\-all\fP
+.RS 4
+Deprecated alias for \fB\-\-workspace\fP.
 .RE
 .sp
 \fB\-\-exclude\fP \fISPEC\fP...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-all\fP flag. This flag may be specified multiple times.
+\fB\-\-workspace\fP flag. This flag may be specified multiple times.
 .RE
 .SS "Target Selection"
 .sp
@@ -281,7 +290,7 @@ to \fBtarget\fP in the root of the workspace.
 .SS "Display Options"
 .sp
 By default the Rust test harness hides output from benchmark execution to keep
-results readable. Benchmark output can be recovered (e.g. for debugging) by
+results readable. Benchmark output can be recovered (e.g., for debugging) by
 passing \fB\-\-nocapture\fP to the benchmark binaries:
 .sp
 .if n .RS 4
@@ -347,7 +356,8 @@ May also be specified with the \fBterm.color\fP
 .sp
 \fB\-\-message\-format\fP \fIFMT\fP
 .RS 4
-The output format for diagnostic messages. Valid values:
+The output format for diagnostic messages. Can be specified multiple times
+and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
 .ie n \{\
@@ -358,6 +368,17 @@ The output format for diagnostic messages. Valid values:
 .  IP \(bu 2.3
 .\}
 \fBhuman\fP (default): Display in a human\-readable text format.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBshort\fP: Emit shorter, human\-readable text messages.
 .RE
 .sp
 .RS 4
@@ -379,7 +400,35 @@ The output format for diagnostic messages. Valid values:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-\fBshort\fP: Emit shorter, human\-readable text messages.
+\fBjson\-diagnostic\-short\fP: Ensure the \fBrendered\fP field of JSON messages contains
+the "short" rendering from rustc.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-diagnostic\-rendered\-ansi\fP: Ensure the \fBrendered\fP field of JSON messages
+contains embedded ANSI color codes for respecting rustc\(cqs default color
+scheme.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBjson\-render\-diagnostics\fP: Instruct Cargo to not include rustc diagnostics in
+in JSON messages printed, but instead Cargo itself should render the
+JSON diagnostics coming from rustc. Cargo\(cqs own JSON diagnostics and others
+coming from rustc are still emitted.
 .RE
 .RE
 .SS "Manifest Options"
@@ -400,6 +449,23 @@ attempting to access the network to determine if it is out\-of\-date.
 These may be used in environments where you want to assert that the
 \fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
 access.
+.RE
+.sp
+\fB\-\-offline\fP
+.RS 4
+Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.
+.sp
+Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the \fBcargo\-fetch\fP(1) command to download dependencies before going
+offline.
+.sp
+May also be specified with the \fBnet.offline\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
 .sp

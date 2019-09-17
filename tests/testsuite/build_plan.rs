@@ -1,7 +1,7 @@
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_manifest, main_file, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project};
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_simple() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -39,7 +39,7 @@ fn cargo_build_plan_simple() {
     assert!(!p.bin("foo").is_file());
 }
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_single_dep() {
     let p = project()
         .file(
@@ -85,7 +85,8 @@ fn cargo_build_plan_single_dep() {
                 "kind": "Host",
                 "links": "{...}",
                 "outputs": [
-                    "[..]/foo/target/debug/deps/libbar-[..].rlib"
+                    "[..]/foo/target/debug/deps/libbar-[..].rlib",
+                    "[..]/foo/target/debug/deps/libbar-[..].rmeta"
                 ],
                 "package_name": "bar",
                 "package_version": "0.0.1",
@@ -101,7 +102,8 @@ fn cargo_build_plan_single_dep() {
                 "kind": "Host",
                 "links": "{...}",
                 "outputs": [
-                    "[..]/foo/target/debug/deps/libfoo-[..].rlib"
+                    "[..]/foo/target/debug/deps/libfoo-[..].rlib",
+                    "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
                 ],
                 "package_name": "foo",
                 "package_version": "0.5.0",
@@ -116,7 +118,7 @@ fn cargo_build_plan_single_dep() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_build_plan_build_script() {
     let p = project()
         .file(
@@ -194,7 +196,7 @@ fn cargo_build_plan_build_script() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_plan_with_dev_dep() {
     Package::new("bar", "0.1.0").publish();
 

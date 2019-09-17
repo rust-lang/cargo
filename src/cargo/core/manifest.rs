@@ -22,7 +22,7 @@ pub enum EitherManifest {
     Virtual(VirtualManifest),
 }
 
-/// Contains all the information about a package, as loaded from a Cargo.toml.
+/// Contains all the information about a package, as loaded from a `Cargo.toml`.
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
@@ -66,6 +66,7 @@ pub struct VirtualManifest {
     workspace: WorkspaceConfig,
     profiles: Profiles,
     warnings: Warnings,
+    features: Features,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -83,11 +84,11 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,   // not markdown
-    pub readme: Option<String>,        // file, not contents
-    pub homepage: Option<String>,      // url
-    pub repository: Option<String>,    // url
-    pub documentation: Option<String>, // url
+    pub description: Option<String>,   // Not in Markdown
+    pub readme: Option<String>,        // File, not contents
+    pub homepage: Option<String>,      // URL
+    pub repository: Option<String>,    // URL
+    pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
 }
@@ -117,6 +118,19 @@ impl LibKind {
         match *self {
             LibKind::Lib | LibKind::Rlib | LibKind::Dylib | LibKind::ProcMacro => true,
             LibKind::Other(..) => false,
+        }
+    }
+
+    pub fn requires_upstream_objects(&self) -> bool {
+        match *self {
+            // "lib" == "rlib" and is a compilation that doesn't actually
+            // require upstream object files to exist, only upstream metadata
+            // files. As a result, it doesn't require upstream artifacts
+            LibKind::Lib | LibKind::Rlib => false,
+
+            // Everything else, however, is some form of "linkable output" or
+            // something that requires upstream object files.
+            _ => true,
         }
     }
 }
@@ -192,6 +206,20 @@ impl TargetKind {
             TargetKind::CustomBuild => "build-script",
         }
     }
+
+    /// Returns whether production of this artifact requires the object files
+    /// from dependencies to be available.
+    ///
+    /// This only returns `false` when all we're producing is an rlib, otherwise
+    /// it will return `true`.
+    pub fn requires_upstream_objects(&self) -> bool {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
+                kinds.iter().any(|k| k.requires_upstream_objects())
+            }
+            _ => true,
+        }
+    }
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -212,6 +240,7 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+    proc_macro: bool,
     edition: Edition,
 }
 
@@ -272,6 +301,7 @@ struct SerializedTarget<'a> {
     edition: &'a str,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
+    doctest: bool,
 }
 
 impl ser::Serialize for Target {
@@ -292,6 +322,7 @@ impl ser::Serialize for Target {
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
+            doctest: self.doctest && self.doctestable(),
         }
         .serialize(s)
     }
@@ -352,6 +383,7 @@ compact_debug! {
                 doctest
                 harness
                 for_host
+                proc_macro
                 edition
             )]
         }
@@ -425,8 +457,14 @@ impl Manifest {
     pub fn summary(&self) -> &Summary {
         &self.summary
     }
+    pub fn summary_mut(&mut self) -> &mut Summary {
+        &mut self.summary
+    }
     pub fn targets(&self) -> &[Target] {
         &self.targets
+    }
+    pub fn targets_mut(&mut self) -> &mut [Target] {
+        &mut self.targets
     }
     pub fn version(&self) -> &Version {
         self.package_id().version()
@@ -442,9 +480,6 @@ impl Manifest {
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
-    }
-    pub fn publish_lockfile(&self) -> bool {
-        self.publish_lockfile
     }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
@@ -467,10 +502,6 @@ impl Manifest {
         &self.features
     }
 
-    pub fn set_summary(&mut self, summary: Summary) {
-        self.summary = summary;
-    }
-
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
@@ -488,12 +519,6 @@ impl Manifest {
                          not work properly in England"
                     )
                 })?;
-        }
-
-        if self.default_run.is_some() {
-            self.features
-                .require(Feature::default_run())
-                .chain_err(|| failure::format_err!("the `default-run` manifest key is unstable"))?;
         }
 
         Ok(())
@@ -539,6 +564,7 @@ impl VirtualManifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         profiles: Profiles,
+        features: Features,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -546,6 +572,7 @@ impl VirtualManifest {
             workspace,
             profiles,
             warnings: Warnings::new(),
+            features,
         }
     }
 
@@ -572,6 +599,10 @@ impl VirtualManifest {
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
+
+    pub fn features(&self) -> &Features {
+        &self.features
+    }
 }
 
 impl Target {
@@ -585,6 +616,7 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
+            proc_macro: false,
             edition,
             tested: true,
             benched: true,
@@ -723,6 +755,9 @@ impl Target {
     pub fn kind(&self) -> &TargetKind {
         &self.kind
     }
+    pub fn kind_mut(&mut self) -> &mut TargetKind {
+        &mut self.kind
+    }
     pub fn tested(&self) -> bool {
         self.tested
     }
@@ -732,8 +767,12 @@ impl Target {
     pub fn documented(&self) -> bool {
         self.doc
     }
+    // A plugin, proc-macro, or build-script.
     pub fn for_host(&self) -> bool {
         self.for_host
+    }
+    pub fn proc_macro(&self) -> bool {
+        self.proc_macro
     }
     pub fn edition(&self) -> Edition {
         self.edition
@@ -783,6 +822,10 @@ impl Target {
         })
     }
 
+    /// Returns whether this target produces an artifact which can be linked
+    /// into a Rust crate.
+    ///
+    /// This only returns true for certain kinds of libraries.
     pub fn linkable(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref kinds) => kinds.iter().any(|k| k.linkable()),
@@ -801,7 +844,14 @@ impl Target {
         }
     }
 
-    pub fn is_bin_example(&self) -> bool {
+    /// Returns `true` if it is a binary or executable example.
+    /// NOTE: Tests are `false`!
+    pub fn is_executable(&self) -> bool {
+        self.is_bin() || self.is_exe_example()
+    }
+
+    /// Returns `true` if it is an executable example.
+    pub fn is_exe_example(&self) -> bool {
         // Needed for --all-examples in contexts where only runnable examples make sense
         match self.kind {
             TargetKind::ExampleBin => true,
@@ -858,6 +908,10 @@ impl Target {
     }
     pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
         self.for_host = for_host;
+        self
+    }
+    pub fn set_proc_macro(&mut self, proc_macro: bool) -> &mut Target {
+        self.proc_macro = proc_macro;
         self
     }
     pub fn set_edition(&mut self, edition: Edition) -> &mut Target {

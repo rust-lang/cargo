@@ -20,7 +20,7 @@ time = "0.1.12"
 ```
 
 The version string is a [semver] version requirement. The [specifying
-dependencies](reference/specifying-dependencies.html) docs have more information about
+dependencies](../reference/specifying-dependencies.md) docs have more information about
 the options you have here.
 
 [semver]: https://github.com/steveklabnik/semver#requirements
@@ -35,6 +35,7 @@ crates:
 name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
+edition = "2018"
 
 [dependencies]
 time = "0.1.12"
@@ -68,11 +69,9 @@ these dependencies we used.
 Now, if `regex` gets updated, we will still build with the same revision until
 we choose to `cargo update`.
 
-You can now use the `regex` library using `extern crate` in `main.rs`.
+You can now use the `regex` library in `main.rs`.
 
 ```rust
-extern crate regex;
-
 use regex::Regex;
 
 fn main() {

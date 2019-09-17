@@ -1,13 +1,15 @@
 use cargo::core::resolver::ResolveError;
-use cargo::core::{compiler::CompileMode, Workspace};
+use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{config::Config, errors::ManifestError};
 
-use crate::support::project;
+use cargo_test_support::install::cargo_home;
+use cargo_test_support::project;
+use cargo_test_support::registry;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.
-#[test]
+#[cargo_test]
 fn toml_deserialize_manifest_error() {
     let p = project()
         .file(
@@ -56,7 +58,7 @@ fn toml_deserialize_manifest_error() {
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest has an invalid dependency path.
-#[test]
+#[cargo_test]
 fn member_manifest_path_io_error() {
     let p = project()
         .file(
@@ -105,8 +107,8 @@ fn member_manifest_path_io_error() {
     assert_eq!(causes[1].manifest_path(), &missing_manifest_path);
 }
 
-/// Test dependency version errors provide which package failed via a `ResolveError`.
-#[test]
+/// Tests dependency version errors provide which package failed via a `ResolveError`.
+#[cargo_test]
 fn member_manifest_version_error() {
     let p = project()
         .file(
@@ -139,7 +141,9 @@ fn member_manifest_version_error() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    let config = Config::default().unwrap();
+    // Prevent this test from accessing the network by setting up .cargo/config.
+    registry::init();
+    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();

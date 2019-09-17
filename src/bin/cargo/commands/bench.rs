@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("bench")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             Arg::with_name("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),
@@ -46,23 +47,23 @@ pub fn cli() -> App {
         ))
         .after_help(
             "\
-The benchmark filtering argument `BENCHNAME` and all the arguments following the
+The benchmark filtering argument BENCHNAME and all the arguments following the
 two dashes (`--`) are passed to the benchmark binaries and thus to libtest
-(rustc's built in unit-test and micro-benchmarking framework).  If you're
+(rustc's built in unit-test and micro-benchmarking framework). If you're
 passing arguments to both Cargo and the binary, the ones after `--` go to the
-binary, the ones before go to Cargo.  For details about libtest's arguments see
+binary, the ones before go to Cargo. For details about libtest's arguments see
 the output of `cargo bench -- --help`.
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
 
-All packages in the workspace are benchmarked if the `--all` flag is supplied. The
-`--all` flag is automatically assumed for a virtual manifest.
-Note that `--exclude` has to be specified in conjunction with the `--all` flag.
+All packages in the workspace are benchmarked if the `--workspace` flag is supplied. The
+`--workspace` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--workspace` flag.
 
-The --jobs argument affects the building of the benchmark executable but does
+The `--jobs` argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.
 
 Compilation can be customized with the `bench` profile in the manifest.
@@ -82,17 +83,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts,
     };
 
-    let mut bench_args = vec![];
-    bench_args.extend(
-        args.value_of("BENCHNAME")
-            .into_iter()
-            .map(|s| s.to_string()),
-    );
-    bench_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
+    let bench_args = args.value_of("BENCHNAME").into_iter();
+    let bench_args = bench_args.chain(args.values_of("args").unwrap_or_default());
+    let bench_args = bench_args.collect::<Vec<_>>();
 
     let err = ops::run_benches(&ws, &ops, &bench_args)?;
     match err {

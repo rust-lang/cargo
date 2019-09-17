@@ -1,13 +1,13 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use crate::support::git;
-use crate::support::paths;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project, t};
 use toml;
 
-#[test]
+#[cargo_test]
 fn replace() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0")
@@ -67,7 +67,7 @@ fn replace() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn nonexistent() {
     Package::new("baz", "0.1.0").publish();
 
@@ -108,7 +108,7 @@ fn nonexistent() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_git() {
     let bar = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -155,7 +155,7 @@ fn patch_git() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_to_git() {
     let bar = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -203,7 +203,7 @@ fn patch_to_git() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn unused() {
     Package::new("bar", "0.1.0").publish();
 
@@ -273,7 +273,7 @@ fn unused() {
     );
 }
 
-#[test]
+#[cargo_test]
 fn unused_git() {
     Package::new("bar", "0.1.0").publish();
 
@@ -336,7 +336,7 @@ fn unused_git() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn add_patch() {
     Package::new("bar", "0.1.0").publish();
 
@@ -399,7 +399,7 @@ fn add_patch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn add_ignored_patch() {
     Package::new("bar", "0.1.0").publish();
 
@@ -485,7 +485,7 @@ fn add_ignored_patch() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn no_warn_ws_patch() {
     Package::new("c", "0.1.0").publish();
 
@@ -529,7 +529,7 @@ fn no_warn_ws_patch() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_minor() {
     Package::new("bar", "0.1.0").publish();
 
@@ -566,7 +566,7 @@ fn new_minor() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_new_minor() {
     Package::new("baz", "0.1.0").publish();
 
@@ -617,7 +617,7 @@ fn transitive_new_minor() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn new_major() {
     Package::new("bar", "0.1.0").publish();
 
@@ -684,7 +684,7 @@ fn new_major() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn transitive_new_major() {
     Package::new("baz", "0.1.0").publish();
 
@@ -735,7 +735,7 @@ fn transitive_new_major() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn remove_patch() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
@@ -811,7 +811,7 @@ fn remove_patch() {
     assert_ne!(lock_file1, lock_file2);
 }
 
-#[test]
+#[cargo_test]
 fn non_crates_io() {
     Package::new("bar", "0.1.0").publish();
 
@@ -849,7 +849,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_with_crates_io() {
     Package::new("bar", "0.1.0").publish();
 
@@ -886,7 +886,7 @@ Caused by:
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_in_virtual() {
     Package::new("bar", "0.1.0").publish();
 
@@ -922,7 +922,7 @@ fn patch_in_virtual() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn patch_depends_on_another_patch() {
     Package::new("bar", "0.1.0")
         .file("src/lib.rs", "broken code")
@@ -975,7 +975,7 @@ fn patch_depends_on_another_patch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_prerelease() {
     Package::new("baz", "1.1.0-pre.1").publish();
     let p = project()
@@ -1019,4 +1019,322 @@ fn replace_prerelease() {
         .build();
 
     p.cargo("build").run();
+}
+
+#[cargo_test]
+fn patch_older() {
+    Package::new("baz", "1.0.2").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+                baz = "=1.0.1"
+
+                [patch.crates-io]
+                baz = { path = "./baz" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                baz = "1.0.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [project]
+                name = "baz"
+                version = "1.0.1"
+                authors = []
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[COMPILING] baz v1.0.1 [..]
+[COMPILING] bar v0.5.0 [..]
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cycle() {
+    Package::new("a", "1.0.0").publish();
+    Package::new("b", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+
+                [patch.crates-io]
+                a = {path="a"}
+                b = {path="b"}
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "1.0.0"
+
+                [dependencies]
+                b = "1.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "1.0.0"
+
+                [dependencies]
+                a = "1.0"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: cyclic package dependency: [..]
+package `[..]`
+    ... which is depended on by `[..]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn multipatch() {
+    Package::new("a", "1.0.0").publish();
+    Package::new("a", "2.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                a1 = { version = "1", package = "a" }
+                a2 = { version = "2", package = "a" }
+
+                [patch.crates-io]
+                b1 = { path = "a1", package = "a" }
+                b2 = { path = "a2", package = "a" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() { a1::f1(); a2::f2(); }")
+        .file(
+            "a1/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "1.0.0"
+            "#,
+        )
+        .file("a1/src/lib.rs", "pub fn f1() {}")
+        .file(
+            "a2/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "2.0.0"
+            "#,
+        )
+        .file("a2/src/lib.rs", "pub fn f2() {}")
+        .build();
+
+    p.cargo("build").run();
+}
+
+#[cargo_test]
+fn patch_same_version() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    cargo_test_support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "0.1"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+error: cannot have two `[patch]` entries which both resolve to `bar v0.1.0`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn two_semver_compatible() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    cargo_test_support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "0.1"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { bar::foo() }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.2"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    // assert the build succeeds and doesn't panic anywhere, and then afterwards
+    // assert that the build succeeds again without updating anything or
+    // building anything else.
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+warning: Patch `bar v0.1.1 [..]` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn multipatch_select_big() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    cargo_test_support::registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                [dependencies]
+                bar = "*"
+                [patch.crates-io]
+                bar = {{ path = "bar" }}
+                bar2 = {{ git = '{}', package = 'bar' }}
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { bar::foo() }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.2.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    // assert the build succeeds, which is only possible if 0.2.0 is selected
+    // since 0.1.0 is missing the function we need. Afterwards assert that the
+    // build succeeds again without updating anything or building anything else.
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+warning: Patch `bar v0.1.0 [..]` was not used in the crate graph.
+Check that [..]
+with the [..]
+what is [..]
+version. [..]
+[FINISHED] [..]",
+        )
+        .run();
 }

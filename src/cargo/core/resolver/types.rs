@@ -1,13 +1,11 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use log::debug;
-
 use crate::core::interning::InternedString;
-use crate::core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
+use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::Config;
 
@@ -32,7 +30,7 @@ impl ResolverProgress {
             printed: false,
             deps_time: Duration::new(0, 0),
             // Some CI setups are much slower then the equipment used by Cargo itself.
-            // Architectures that do not have a modern processor, hardware emulation, ect.
+            // Architectures that do not have a modern processor, hardware emulation, etc.
             // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
             #[cfg(debug_assertions)]
             slow_cpu_multiplier: std::env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")
@@ -91,189 +89,65 @@ impl ResolverProgress {
     }
 }
 
-pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (dyn Registry + 'a),
-    replacements: &'a [(PackageIdSpec, Dependency)],
-    try_to_use: &'a HashSet<PackageId>,
-    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
-    // If set the list of dependency candidates will be sorted by minimal
-    // versions first. That allows `cargo update -Z minimal-versions` which will
-    // specify minimum dependency versions to be used.
-    minimal_versions: bool,
-}
+/// The preferred way to store the set of activated features for a package.
+/// This is sorted so that it impls Hash, and owns its contents,
+/// needed so it can be part of the key for caching in the `DepsCache`.
+/// It is also cloned often as part of `Context`, hence the `RC`.
+/// `im-rs::OrdSet` was slower of small sets like this,
+/// but this can change with improvements to std, im, or llvm.
+/// Using a consistent type for this allows us to use the highly
+/// optimized comparison operators like `is_subset` at the interfaces.
+pub type FeaturesSet = Rc<BTreeSet<InternedString>>;
 
-impl<'a> RegistryQueryer<'a> {
-    pub fn new(
-        registry: &'a mut dyn Registry,
-        replacements: &'a [(PackageIdSpec, Dependency)],
-        try_to_use: &'a HashSet<PackageId>,
-        minimal_versions: bool,
-    ) -> Self {
-        RegistryQueryer {
-            registry,
-            replacements,
-            cache: HashMap::new(),
-            try_to_use,
-            minimal_versions,
-        }
-    }
-
-    /// Queries the `registry` to return a list of candidates for `dep`.
+/// Options for how the resolve should work.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct ResolveOpts {
+    /// Whether or not dev-dependencies should be included.
     ///
-    /// This method is the location where overrides are taken into account. If
-    /// any candidates are returned which match an override then the override is
-    /// applied by performing a second query for what the override should
-    /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Candidate>>> {
-        if let Some(out) = self.cache.get(dep).cloned() {
-            return Ok(out);
-        }
-
-        let mut ret = Vec::new();
-        self.registry.query(
-            dep,
-            &mut |s| {
-                ret.push(Candidate {
-                    summary: s,
-                    replace: None,
-                });
-            },
-            false,
-        )?;
-        for candidate in ret.iter_mut() {
-            let summary = &candidate.summary;
-
-            let mut potential_matches = self
-                .replacements
-                .iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
-
-            let &(ref spec, ref dep) = match potential_matches.next() {
-                None => continue,
-                Some(replacement) => replacement,
-            };
-            debug!(
-                "found an override for {} {}",
-                dep.package_name(),
-                dep.version_req()
-            );
-
-            let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
-            let s = summaries.next().ok_or_else(|| {
-                failure::format_err!(
-                    "no matching package for override `{}` found\n\
-                     location searched: {}\n\
-                     version required: {}",
-                    spec,
-                    dep.source_id(),
-                    dep.version_req()
-                )
-            })?;
-            let summaries = summaries.collect::<Vec<_>>();
-            if !summaries.is_empty() {
-                let bullets = summaries
-                    .iter()
-                    .map(|s| format!("  * {}", s.package_id()))
-                    .collect::<Vec<_>>();
-                failure::bail!(
-                    "the replacement specification `{}` matched \
-                     multiple packages:\n  * {}\n{}",
-                    spec,
-                    s.package_id(),
-                    bullets.join("\n")
-                );
-            }
-
-            // The dependency should be hard-coded to have the same name and an
-            // exact version requirement, so both of these assertions should
-            // never fail.
-            assert_eq!(s.version(), summary.version());
-            assert_eq!(s.name(), summary.name());
-
-            let replace = if s.source_id() == summary.source_id() {
-                debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
-                None
-            } else {
-                Some(s)
-            };
-            let matched_spec = spec.clone();
-
-            // Make sure no duplicates
-            if let Some(&(ref spec, _)) = potential_matches.next() {
-                failure::bail!(
-                    "overlapping replacement specifications found:\n\n  \
-                     * {}\n  * {}\n\nboth specifications match: {}",
-                    matched_spec,
-                    spec,
-                    summary.package_id()
-                );
-            }
-
-            for dep in summary.dependencies() {
-                debug!("\t{} => {}", dep.package_name(), dep.version_req());
-            }
-
-            candidate.replace = replace;
-        }
-
-        // When we attempt versions for a package we'll want to do so in a
-        // sorted fashion to pick the "best candidates" first. Currently we try
-        // prioritized summaries (those in `try_to_use`) and failing that we
-        // list everything from the maximum version to the lowest version.
-        ret.sort_unstable_by(|a, b| {
-            let a_in_previous = self.try_to_use.contains(&a.summary.package_id());
-            let b_in_previous = self.try_to_use.contains(&b.summary.package_id());
-            let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
-            match previous_cmp {
-                Ordering::Equal => {
-                    let cmp = a.summary.version().cmp(b.summary.version());
-                    if self.minimal_versions {
-                        // Lower version ordered first.
-                        cmp
-                    } else {
-                        // Higher version ordered first.
-                        cmp.reverse()
-                    }
-                }
-                _ => previous_cmp,
-            }
-        });
-
-        let out = Rc::new(ret);
-
-        self.cache.insert(dep.clone(), out.clone());
-
-        Ok(out)
-    }
+    /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
+    pub dev_deps: bool,
+    /// Set of features to enable (`--features=…`).
+    pub features: FeaturesSet,
+    /// Indicates *all* features should be enabled (`--all-features`).
+    pub all_features: bool,
+    /// Include the `default` feature (`--no-default-features` sets this false).
+    pub uses_default_features: bool,
 }
 
-#[derive(Clone, Copy)]
-pub enum Method<'a> {
-    Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
-    Required {
+impl ResolveOpts {
+    /// Creates a ResolveOpts that resolves everything.
+    pub fn everything() -> ResolveOpts {
+        ResolveOpts {
+            dev_deps: true,
+            features: Rc::new(BTreeSet::new()),
+            all_features: true,
+            uses_default_features: true,
+        }
+    }
+
+    pub fn new(
         dev_deps: bool,
-        features: &'a [InternedString],
+        features: &[String],
         all_features: bool,
         uses_default_features: bool,
-    },
-}
+    ) -> ResolveOpts {
+        ResolveOpts {
+            dev_deps,
+            features: Rc::new(ResolveOpts::split_features(features)),
+            all_features,
+            uses_default_features,
+        }
+    }
 
-impl<'r> Method<'r> {
-    pub fn split_features(features: &[String]) -> Vec<InternedString> {
+    fn split_features(features: &[String]) -> BTreeSet<InternedString> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(|s| InternedString::new(s))
-            .collect::<Vec<InternedString>>()
+            .map(InternedString::new)
+            .collect::<BTreeSet<InternedString>>()
     }
-}
-
-#[derive(Clone)]
-pub struct Candidate {
-    pub summary: Summary,
-    pub replace: Option<Summary>,
 }
 
 #[derive(Clone)]
@@ -300,7 +174,7 @@ impl DepsFrame {
     pub fn flatten<'a>(&'a self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
         self.remaining_siblings
             .clone()
-            .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
+            .map(move |(d, _, _)| (self.parent.package_id(), d))
     }
 }
 
@@ -356,7 +230,7 @@ impl RemainingDeps {
         self.data.insert((x, insertion_time));
         self.time += 1;
     }
-    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
+    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, DepInfo))> {
         while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
@@ -376,10 +250,10 @@ impl RemainingDeps {
     }
 }
 
-// Information about the dependencies for a crate, a tuple of:
-//
-// (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<Vec<InternedString>>);
+/// Information about the dependencies for a crate, a tuple of:
+///
+/// (dependency info, candidates, features activated)
+pub type DepInfo = (Dependency, Rc<Vec<Summary>>, FeaturesSet);
 
 /// All possible reasons that a package might fail to activate.
 ///
@@ -402,6 +276,17 @@ pub enum ConflictReason {
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
+
+    /// A dependency listed features that ended up being a required dependency.
+    /// For example we tried to activate feature `foo` but the
+    /// candidate we're activating didn't actually have the feature `foo`
+    /// it had a dependency `foo` instead.
+    RequiredDependencyAsFeatures(InternedString),
+
+    // TODO: needs more info for `activation_error`
+    // TODO: needs more info for `find_candidate`
+    /// pub dep error
+    PublicDependency,
 }
 
 impl ConflictReason {
@@ -418,7 +303,20 @@ impl ConflictReason {
         }
         false
     }
+
+    pub fn is_required_dependency_as_features(&self) -> bool {
+        if let ConflictReason::RequiredDependencyAsFeatures(_) = *self {
+            return true;
+        }
+        false
+    }
 }
+
+/// A list of packages that have gotten in the way of resolving a dependency.
+/// If resolving a dependency fails then this represents an incompatibility,
+/// that dependency will never be resolve while all of these packages are active.
+/// This is useless if the packages can't be simultaneously activated for other reasons.
+pub type ConflictMap = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
     vec: Rc<Vec<T>>,
@@ -455,12 +353,10 @@ impl<T> Iterator for RcVecIter<T>
 where
     T: Clone,
 {
-    type Item = (usize, T);
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.rest
-            .next()
-            .and_then(|i| self.vec.get(i).map(|val| (i, val.clone())))
+        self.rest.next().and_then(|i| self.vec.get(i).cloned())
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -470,50 +366,3 @@ where
 }
 
 impl<T: Clone> ExactSizeIterator for RcVecIter<T> {}
-
-pub struct RcList<T> {
-    pub head: Option<Rc<(T, RcList<T>)>>,
-}
-
-impl<T> RcList<T> {
-    pub fn new() -> RcList<T> {
-        RcList { head: None }
-    }
-
-    pub fn push(&mut self, data: T) {
-        let node = Rc::new((
-            data,
-            RcList {
-                head: self.head.take(),
-            },
-        ));
-        self.head = Some(node);
-    }
-}
-
-// Not derived to avoid `T: Clone`
-impl<T> Clone for RcList<T> {
-    fn clone(&self) -> RcList<T> {
-        RcList {
-            head: self.head.clone(),
-        }
-    }
-}
-
-// Avoid stack overflows on drop by turning recursion into a loop
-impl<T> Drop for RcList<T> {
-    fn drop(&mut self) {
-        let mut cur = self.head.take();
-        while let Some(head) = cur {
-            match Rc::try_unwrap(head) {
-                Ok((_data, mut next)) => cur = next.head.take(),
-                Err(_) => break,
-            }
-        }
-    }
-}
-
-pub enum GraphNode {
-    Add(PackageId),
-    Link(PackageId, PackageId, Dependency),
-}

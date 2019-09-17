@@ -1,22 +1,20 @@
-use std::env;
-use std::fmt;
-use std::fs::{self, File};
-use std::mem;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
+use crate::core::GitReference;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::process_builder::process;
+use crate::util::{internal, network, Config, IntoUrl, Progress};
 use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
+use std::env;
+use std::fmt;
+use std::fs::File;
+use std::mem;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use url::Url;
-
-use crate::core::GitReference;
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
-use crate::util::process_builder::process;
-use crate::util::{internal, network, Config, Progress, ToUrl};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -141,18 +139,18 @@ impl GitRemote {
     fn fetch_into(&self, dst: &mut git2::Repository, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &self.url, refspec, cargo_config)
+        fetch(dst, self.url.as_str(), refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
-        if fs::metadata(&dst).is_ok() {
+        if dst.exists() {
             paths::remove_dir_all(dst)?;
         }
-        fs::create_dir_all(dst)?;
+        paths::create_dir_all(dst)?;
         let mut repo = init(dst, true)?;
         fetch(
             &mut repo,
-            &self.url,
+            self.url.as_str(),
             "refs/heads/*:refs/heads/*",
             cargo_config,
         )?;
@@ -257,8 +255,7 @@ impl<'a> GitCheckout<'a> {
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
-        fs::create_dir_all(&dirname)
-            .chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
+        paths::create_dir_all(&dirname)?;
         if into.exists() {
             paths::remove_dir_all(into)?;
         }
@@ -274,9 +271,9 @@ impl<'a> GitCheckout<'a> {
         //
         // Note that we still use the same fetch options because while we don't
         // need authentication information we may want progress bars and such.
-        let url = database.path.to_url()?;
+        let url = database.path.into_url()?;
         let mut repo = None;
-        with_fetch_options(&git_config, &url, config, &mut |fopts| {
+        with_fetch_options(&git_config, url.as_str(), config, &mut |fopts| {
             let mut checkout = git2::build::CheckoutBuilder::new();
             checkout.dry_run(); // we'll do this below during a `reset`
 
@@ -310,9 +307,9 @@ impl<'a> GitCheckout<'a> {
 
     fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
-        let url = self.database.path.to_url()?;
+        let url = self.database.path.into_url()?;
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(&mut self.repo, &url, refspec, cargo_config)?;
+        fetch(&mut self.repo, url.as_str(), refspec, cargo_config)?;
         Ok(())
     }
 
@@ -321,7 +318,7 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn reset(&self, config: &Config) -> CargoResult<()> {
-        // If we're interrupted while performing this reset (e.g. we die because
+        // If we're interrupted while performing this reset (e.g., we die because
         // of a signal) Cargo needs to be sure to try to check out this repo
         // again on the next go-round.
         //
@@ -393,11 +390,9 @@ impl<'a> GitCheckout<'a> {
                     init(&path, false)?
                 }
             };
-
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
-            let url = url.to_url()?;
-            fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
+            fetch(&mut repo, url, refspec, cargo_config).chain_err(|| {
                 internal(format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
@@ -429,7 +424,7 @@ impl<'a> GitCheckout<'a> {
 ///
 /// * If a username/password is allowed, then we fallback to git2-rs's
 ///   implementation of the credential helper. This is what is configured
-///   with `credential.helper` in git, and is the interface for the OSX
+///   with `credential.helper` in git, and is the interface for the macOS
 ///   keychain, for example.
 ///
 /// * After the above two have failed, we just kinda grapple attempting to
@@ -484,7 +479,7 @@ where
         // ssh-agent currently.
         //
         // If we get called with this then the only way that should be possible
-        // is if a username is specified in the URL itself (e.g. `username` is
+        // is if a username is specified in the URL itself (e.g., `username` is
         // Some), hence the unwrap() here. We try custom usernames down below.
         if allowed.contains(git2::CredentialType::SSH_KEY) && !tried_sshkey {
             // If ssh-agent authentication fails, libgit2 will keep
@@ -503,7 +498,13 @@ where
         // but we currently don't! Right now the only way we support fetching a
         // plaintext password is through the `credential.helper` support, so
         // fetch that here.
-        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+        //
+        // If ssh-agent authentication fails, libgit2 will keep calling this
+        // callback asking for other authentication methods to try. Check
+        // cred_helper_bad to make sure we only try the git credentail helper
+        // once, to avoid looping forever.
+        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) && cred_helper_bad.is_none()
+        {
             let r = git2::Cred::credential_helper(cfg, url, username);
             cred_helper_bad = Some(r.is_err());
             return r;
@@ -571,7 +572,7 @@ where
             //    for another mode of authentication.
             //
             // Essentially, if `attempts == 2` then in theory the only error was
-            // that this username failed to authenticate (e.g. no other network
+            // that this username failed to authenticate (e.g., no other network
             // errors happened). Otherwise something else is funny so we bail
             // out.
             if attempts != 2 {
@@ -634,13 +635,13 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> Ca
 
 pub fn with_fetch_options(
     git_config: &git2::Config,
-    url: &Url,
+    url: &str,
     config: &Config,
     cb: &mut dyn FnMut(git2::FetchOptions<'_>) -> CargoResult<()>,
 ) -> CargoResult<()> {
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
-        with_authentication(url.as_str(), git_config, |f| {
+        with_authentication(url, git_config, |f| {
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
 
@@ -663,7 +664,7 @@ pub fn with_fetch_options(
 
 pub fn fetch(
     repo: &mut git2::Repository,
-    url: &Url,
+    url: &str,
     refspec: &str,
     config: &Config,
 ) -> CargoResult<()> {
@@ -679,14 +680,17 @@ pub fn fetch(
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
-    if url.host_str() == Some("github.com") {
-        if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
-            let mut handle = config.http()?.borrow_mut();
-            debug!("attempting GitHub fast path for {}", url);
-            if github_up_to_date(&mut handle, url, &oid) {
-                return Ok(());
-            } else {
-                debug!("fast path failed, falling back to a git fetch");
+
+    if let Ok(url) = Url::parse(url) {
+        if url.host_str() == Some("github.com") {
+            if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
+                let mut handle = config.http()?.borrow_mut();
+                debug!("attempting GitHub fast path for {}", url);
+                if github_up_to_date(&mut handle, &url, &oid) {
+                    return Ok(());
+                } else {
+                    debug!("fast path failed, falling back to a git fetch");
+                }
             }
         }
     }
@@ -697,7 +701,7 @@ pub fn fetch(
     // request we're about to issue.
     maybe_gc_repo(repo)?;
 
-    // Unfortuantely `libgit2` is notably lacking in the realm of authentication
+    // Unfortunately `libgit2` is notably lacking in the realm of authentication
     // when compared to the `git` command line. As a result, allow an escape
     // hatch for users that would prefer to use `git`-the-CLI for fetching
     // repositories instead of `libgit2`-the-library. This should make more
@@ -716,7 +720,7 @@ pub fn fetch(
         // repository. It could also fail, however, for a whole slew of other
         // reasons (aka network related reasons). We want Cargo to automatically
         // recover from corrupt repositories, but we don't want Cargo to stomp
-        // over other legitimate errors.o
+        // over other legitimate errors.
         //
         // Consequently we save off the error of the `fetch` operation and if it
         // looks like a "corrupt repo" error then we blow away the repo and try
@@ -726,7 +730,7 @@ pub fn fetch(
         loop {
             debug!("initiating fetch of {} from {}", refspec, url);
             let res = repo
-                .remote_anonymous(url.as_str())?
+                .remote_anonymous(url)?
                 .fetch(&[refspec], Some(&mut opts), None);
             let err = match res {
                 Ok(()) => break,
@@ -753,22 +757,33 @@ pub fn fetch(
 
 fn fetch_with_cli(
     repo: &mut git2::Repository,
-    url: &Url,
+    url: &str,
     refspec: &str,
     config: &Config,
 ) -> CargoResult<()> {
     let mut cmd = process("git");
     cmd.arg("fetch")
         .arg("--tags") // fetch all tags
-        .arg("--quiet")
+        .arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
-        .arg(url.to_string())
+        .arg(url)
         .arg(refspec)
+        // If cargo is run by git (for example, the `exec` command in `git
+        // rebase`), the GIT_DIR is set by git and will point to the wrong
+        // location (this takes precedence over the cwd). Make sure this is
+        // unset so git will look at cwd for the repo.
+        .env_remove("GIT_DIR")
+        // The reset of these may not be necessary, but I'm including them
+        // just to be extra paranoid and avoid any issues.
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
         .cwd(repo.path());
     config
         .shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec()?;
+    cmd.exec_with_output()?;
     Ok(())
 }
 
@@ -858,7 +873,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
 
 fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
     let mut opts = git2::RepositoryInitOptions::new();
-    // Skip anyting related to templates, they just call all sorts of issues as
+    // Skip anything related to templates, they just call all sorts of issues as
     // we really don't want to use them yet they insist on being used. See #6240
     // for an example issue that comes up.
     opts.external_template(false);

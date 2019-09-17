@@ -1,6 +1,6 @@
-use crate::support::project;
+use cargo_test_support::project;
 
-#[test]
+#[cargo_test]
 fn parses_env() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -10,7 +10,7 @@ fn parses_env() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn parses_config() {
     let p = project()
         .file("src/lib.rs", "")
@@ -28,7 +28,7 @@ fn parses_config() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn bad_flags() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -39,7 +39,7 @@ fn bad_flags() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rerun() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -59,7 +59,7 @@ fn rerun() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
     let p = project()
         .file(
@@ -77,11 +77,21 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("test --doc")
         .env("RUSTDOCFLAGS", "--markdown-no-toc")
+        .run();
+}
+
+#[cargo_test]
+fn rustdocflags_misspelled() {
+    let p = project().file("src/main.rs", "fn main() { }").build();
+
+    p.cargo("doc")
+        .env("RUSTDOC_FLAGS", "foo")
+        .with_stderr_contains("[WARNING] Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?")
         .run();
 }

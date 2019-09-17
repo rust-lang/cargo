@@ -6,11 +6,11 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::{env, str};
 
-use crate::support::cargo_process;
-use crate::support::git;
-use crate::support::install::{assert_has_installed_exe, cargo_home};
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, execs, project, slow_cpu_multiplier};
+use cargo_test_support::cargo_process;
+use cargo_test_support::git;
+use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};
 use git2;
 
 fn pkg(name: &str, vers: &str) {
@@ -19,7 +19,7 @@ fn pkg(name: &str, vers: &str) {
         .publish();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_installs() {
     let p = project()
         .no_manifest()
@@ -29,8 +29,8 @@ fn multiple_installs() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("install").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("install").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("install").cwd("a").build_command();
+    let mut b = p.cargo("install").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -48,7 +48,7 @@ fn multiple_installs() {
     assert_has_installed_exe(cargo_home(), "bar");
 }
 
-#[test]
+#[cargo_test]
 fn concurrent_installs() {
     const LOCKED_BUILD: &str = "waiting for file lock on build directory";
 
@@ -77,7 +77,7 @@ fn concurrent_installs() {
     assert_has_installed_exe(cargo_home(), "bar");
 }
 
-#[test]
+#[cargo_test]
 fn one_install_should_be_bad() {
     let p = project()
         .no_manifest()
@@ -87,8 +87,8 @@ fn one_install_should_be_bad() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("install").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("install").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("install").cwd("a").build_command();
+    let mut b = p.cargo("install").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -117,7 +117,7 @@ fn one_install_should_be_bad() {
     assert_has_installed_exe(cargo_home(), "foo");
 }
 
-#[test]
+#[cargo_test]
 fn multiple_registry_fetches() {
     let mut pkg = Package::new("bar", "1.0.2");
     for i in 0..10 {
@@ -157,8 +157,8 @@ fn multiple_registry_fetches() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("build").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build").cwd("a").build_command();
+    let mut b = p.cargo("build").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -185,14 +185,13 @@ fn multiple_registry_fetches() {
         .is_file());
 }
 
-#[test]
+#[cargo_test]
 fn git_same_repo_different_tags() {
     let a = git::new("dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn tag1() {}")
-    })
-    .unwrap();
+    });
 
     let repo = git2::Repository::open(&a.root()).unwrap();
     git::tag(&repo, "tag1");
@@ -247,8 +246,8 @@ fn git_same_repo_different_tags() {
         );
     let p = p.build();
 
-    let mut a = p.cargo("build -v").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build -v").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build -v").cwd("a").build_command();
+    let mut b = p.cargo("build -v").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -263,14 +262,13 @@ fn git_same_repo_different_tags() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn git_same_branch_different_revs() {
     let a = git::new("dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn f1() {}")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .no_manifest()
@@ -316,7 +314,7 @@ fn git_same_branch_different_revs() {
 
     // Generate a Cargo.lock pointing at the current rev, then clear out the
     // target directory
-    p.cargo("build").cwd(p.root().join("a")).run();
+    p.cargo("build").cwd("a").run();
     fs::remove_dir_all(p.root().join("a/target")).unwrap();
 
     // Make a new commit on the master branch
@@ -330,8 +328,8 @@ fn git_same_branch_different_revs() {
 
     // Now run both builds in parallel. The build of `b` should pick up the
     // newest commit while the build of `a` should use the locked old commit.
-    let mut a = p.cargo("build").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build").cwd("a").build_command();
+    let mut b = p.cargo("build").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -346,7 +344,7 @@ fn git_same_branch_different_revs() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn same_project() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -372,7 +370,7 @@ fn same_project() {
 // Make sure that if Cargo dies while holding a lock that it's released and the
 // next Cargo to come in will take over cleanly.
 // older win versions don't support job objects, so skip test there
-#[test]
+#[cargo_test]
 #[cfg_attr(target_os = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
     let p = project()
@@ -434,7 +432,7 @@ fn killing_cargo_releases_the_lock() {
     execs().run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn debug_release_ok() {
     let p = project().file("src/main.rs", "fn main() {}");
     let p = p.build();
@@ -453,7 +451,7 @@ fn debug_release_ok() {
     let a = a.join().unwrap();
 
     execs()
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -461,7 +459,7 @@ fn debug_release_ok() {
         )
         .run_output(&a);
     execs()
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] release [optimized] target(s) in [..]
@@ -470,21 +468,19 @@ fn debug_release_ok() {
         .run_output(&b);
 }
 
-#[test]
+#[cargo_test]
 fn no_deadlock_with_git_dependencies() {
     let dep1 = git::new("dep1", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let dep2 = git::new("dep2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
             .file("src/lib.rs", "")
-    })
-    .unwrap();
+    });
 
     let p = project()
         .file(

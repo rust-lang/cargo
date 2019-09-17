@@ -1,10 +1,10 @@
-use crate::command_prelude::*;
+use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 
-use cargo::ops::{self, CompileFilter};
+use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("test")
-        // subcommand aliases are handled in aliased_command()
+        // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests and build examples of a local package")
@@ -17,6 +17,13 @@ pub fn cli() -> App {
                 .help("Arguments for the test binary")
                 .multiple(true)
                 .last(true),
+        )
+        .arg(
+            opt(
+                "quiet",
+                "Display one character per test instead of one line",
+            )
+            .short("q"),
         )
         .arg_targets_all(
             "Test only this package's library unit tests",
@@ -47,28 +54,28 @@ pub fn cli() -> App {
         .arg_message_format()
         .after_help(
             "\
-The test filtering argument `TESTNAME` and all the arguments following the
+The test filtering argument TESTNAME and all the arguments following the
 two dashes (`--`) are passed to the test binaries and thus to libtest
-(rustc's built in unit-test and micro-benchmarking framework).  If you're
+(rustc's built in unit-test and micro-benchmarking framework). If you're
 passing arguments to both Cargo and the binary, the ones after `--` go to the
-binary, the ones before go to Cargo.  For details about libtest's arguments see
-the output of `cargo test -- --help`.  As an example, this will run all
+binary, the ones before go to Cargo. For details about libtest's arguments see
+the output of `cargo test -- --help`. As an example, this will run all
 tests with `foo` in their name on 3 threads in parallel:
 
     cargo test foo -- --test-threads 3
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
-All packages in the workspace are tested if the `--all` flag is supplied. The
-`--all` flag is automatically assumed for a virtual manifest.
-Note that `--exclude` has to be specified in conjunction with the `--all` flag.
+All packages in the workspace are tested if the `--workspace` flag is supplied. The
+`--workspace` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--workspace` flag.
 
-The --jobs argument affects the building of the test executable but does
+The `--jobs` argument affects the building of the test executable but does
 not affect how many jobs are used when running the tests. The default value
-for the --jobs argument is the number of CPUs. If you want to control the
+for the `--jobs` argument is the number of CPUs. If you want to control the
 number of simultaneous running test cases, pass the `--test-threads` option
 to the test binaries:
 
@@ -77,7 +84,7 @@ to the test binaries:
 Compilation can be configured via the `test` profile in the manifest.
 
 By default the rust test harness hides output from test execution to
-keep results readable. Test output can be recovered (e.g. for debugging)
+keep results readable. Test output can be recovered (e.g., for debugging)
 by passing `--nocapture` to the test binaries:
 
     cargo test -- --nocapture
@@ -93,6 +100,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
+
+    // `TESTNAME` is actually an argument of the test binary, but it's
+    // important, so we explicitly mention it and reconfigure.
+    let test_name: Option<&str> = args.value_of("TESTNAME");
+    let test_args = args.value_of("TESTNAME").into_iter();
+    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
+    let test_args = test_args.collect::<Vec<_>>();
 
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
@@ -111,17 +125,22 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         }
         compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(
-            true,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            false,
+            LibRule::True,
+            FilterRule::none(),
+            FilterRule::none(),
+            FilterRule::none(),
+            FilterRule::none(),
         );
+    } else if test_name.is_some() {
+        if let CompileFilter::Default { .. } = compile_opts.filter {
+            compile_opts.filter = ops::CompileFilter::new(
+                LibRule::Default,   // compile the library, so the unit tests can be run filtered
+                FilterRule::All, // compile the binaries, so the unit tests in binaries can be run filtered
+                FilterRule::All, // compile the tests, so the integration tests can be run filtered
+                FilterRule::none(), // specify --examples to unit test binaries filtered
+                FilterRule::none(), // specify --benches to unit test benchmarks filtered
+            ); // also, specify --doc to run doc tests filtered
+        }
     }
 
     let ops = ops::TestOptions {
@@ -130,21 +149,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts,
     };
 
-    // TESTNAME is actually an argument of the test binary, but it's
-    // important so we explicitly mention it and reconfigure
-    let mut test_args = vec![];
-    test_args.extend(args.value_of("TESTNAME").into_iter().map(|s| s.to_string()));
-    test_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
-
     let err = ops::run_tests(&ws, &ops, &test_args)?;
     match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
-            Some(i) => CliError::new(failure::format_err!("{}", err.hint(&ws)), i),
+            Some(i) => CliError::new(
+                failure::format_err!("{}", err.hint(&ws, &ops.compile_opts)),
+                i,
+            ),
             None => CliError::new(err.into(), 101),
         }),
     }

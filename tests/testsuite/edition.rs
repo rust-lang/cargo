@@ -1,11 +1,7 @@
-use crate::support::{basic_lib_manifest, is_nightly, project};
+use cargo_test_support::{basic_lib_manifest, project};
 
-#[test]
+#[cargo_test]
 fn edition_works_for_build_script() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -32,5 +28,5 @@ fn edition_works_for_build_script() {
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().run();
+    p.cargo("build -v").run();
 }

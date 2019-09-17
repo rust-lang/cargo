@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::ser;
 use serde::Serialize;
 
-use crate::core::resolver::Resolve;
+use crate::core::resolver::{Resolve, ResolveOpts};
 use crate::core::{Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
@@ -42,7 +42,7 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })
@@ -50,14 +50,13 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
 
 fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let (package_set, resolve) = ops::resolve_ws_precisely(
-        ws,
-        None,
+    let opts = ResolveOpts::new(
+        /*dev_deps*/ true,
         &opt.features,
         opt.all_features,
-        opt.no_default_features,
-        &specs,
-    )?;
+        !opt.no_default_features,
+    );
+    let (package_set, resolve) = ops::resolve_ws_with_opts(ws, opts, &specs)?;
     let mut packages = HashMap::new();
     for pkg in package_set.get_many(package_set.package_ids())? {
         packages.insert(pkg.package_id(), pkg.clone());
@@ -70,7 +69,7 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
             resolve: (packages, resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })
@@ -87,7 +86,7 @@ pub struct ExportInfo {
 }
 
 /// Newtype wrapper to provide a custom `Serialize` implementation.
-/// The one from lockfile does not fit because it uses a non-standard
+/// The one from lock file does not fit because it uses a non-standard
 /// format for `PackageId`s
 #[derive(Serialize)]
 struct MetadataResolve {
@@ -105,7 +104,7 @@ where
 {
     #[derive(Serialize)]
     struct Dep {
-        name: Option<String>,
+        name: String,
         pkg: PackageId,
     }
 
@@ -123,13 +122,12 @@ where
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
             deps: resolve
                 .deps(id)
-                .map(|(pkg, _deps)| {
-                    let name = packages
+                .filter_map(|(pkg, _deps)| {
+                    packages
                         .get(&pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok());
-
-                    Dep { name, pkg }
+                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok())
+                        .map(|name| Dep { name, pkg })
                 })
                 .collect(),
             features: resolve.features_sorted(id),

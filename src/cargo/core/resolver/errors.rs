@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
@@ -8,7 +7,7 @@ use failure::{Error, Fail};
 use semver;
 
 use super::context::Context;
-use super::types::{Candidate, ConflictReason};
+use super::types::{ConflictMap, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -51,6 +50,7 @@ impl fmt::Display for ResolveError {
 
 pub type ActivateResult<T> = Result<T, ActivateError>;
 
+#[derive(Debug)]
 pub enum ActivateError {
     Fatal(failure::Error),
     Conflict(PackageId, ConflictReason),
@@ -73,16 +73,15 @@ pub(super) fn activation_error(
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
-    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
-    candidates: &[Candidate],
+    conflicting_activations: &ConflictMap,
+    candidates: &[Summary],
     config: Option<&Config>,
 ) -> ResolveError {
-    let graph = cx.graph();
     let to_resolve_err = |err| {
         ResolveError::new(
             err,
-            graph
-                .path_to_top(&parent.package_id())
+            cx.parents
+                .path_to_bottom(&parent.package_id())
                 .into_iter()
                 .cloned()
                 .collect(),
@@ -92,7 +91,9 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
+        msg.push_str(&describe_path(
+            &cx.parents.path_to_bottom(&parent.package_id()),
+        ));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -100,7 +101,7 @@ pub(super) fn activation_error(
         msg.push_str(
             &candidates
                 .iter()
-                .map(|v| v.summary.version())
+                .map(|v| v.version())
                 .map(|v| v.to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
@@ -123,10 +124,10 @@ pub(super) fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
         }
 
-        let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
+        let (features_errors, mut other_errors): (Vec<_>, Vec<_>) = other_errors
             .drain(..)
             .partition(|&(_, r)| r.is_missing_features());
 
@@ -145,6 +146,29 @@ pub(super) fn activation_error(
             // p == parent so the full path is redundant.
         }
 
+        let (required_dependency_as_features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
+            .drain(..)
+            .partition(|&(_, r)| r.is_required_dependency_as_features());
+
+        for &(p, r) in required_dependency_as_features_errors.iter() {
+            if let ConflictReason::RequiredDependencyAsFeatures(ref features) = *r {
+                msg.push_str("\n\nthe package `");
+                msg.push_str(&*p.name());
+                msg.push_str("` depends on `");
+                msg.push_str(&*dep.package_name());
+                msg.push_str("`, with features: `");
+                msg.push_str(features);
+                msg.push_str("` but `");
+                msg.push_str(&*dep.package_name());
+                msg.push_str("` does not have these features.\n");
+                msg.push_str(
+                    " It has a required dependency with that name, \
+                     but only optional dependencies can be used as features.\n",
+                );
+            }
+            // p == parent so the full path is redundant.
+        }
+
         if !other_errors.is_empty() {
             msg.push_str(
                 "\n\nall possible versions conflict with \
@@ -154,7 +178,7 @@ pub(super) fn activation_error(
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -179,101 +203,120 @@ pub(super) fn activation_error(
     };
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
-    let mut msg = if !candidates.is_empty() {
-        let versions = {
-            let mut versions = candidates
-                .iter()
-                .take(3)
-                .map(|cand| cand.version().to_string())
-                .collect::<Vec<_>>();
-
-            if candidates.len() > 3 {
-                versions.push("...".into());
-            }
-
-            versions.join(", ")
-        };
-
-        let mut msg = format!(
-            "failed to select a version for the requirement `{} = \"{}\"`\n  \
-             candidate versions found which didn't match: {}\n  \
-             location searched: {}\n",
-            dep.package_name(),
-            dep.version_req(),
-            versions,
-            registry.describe_source(dep.source_id()),
-        );
-        msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
-
-        // If we have a path dependency with a locked version, then this may
-        // indicate that we updated a sub-package and forgot to run `cargo
-        // update`. In this case try to print a helpful error!
-        if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
-            msg.push_str(
-                "\nconsider running `cargo update` to update \
-                 a path dependency's locked version",
-            );
-        }
-
-        if registry.is_replaced(dep.source_id()) {
-            msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
-        }
-
-        msg
-    } else {
-        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let mut candidates = Vec::new();
-        if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
-            return to_resolve_err(e);
-        };
-        candidates.sort_unstable();
-        candidates.dedup();
-        let mut candidates: Vec<_> = candidates
-            .iter()
-            .map(|n| (lev_distance(&*new_dep.package_name(), &*n), n))
-            .filter(|&(d, _)| d < 4)
-            .collect();
-        candidates.sort_by_key(|o| o.0);
-        let mut msg = format!(
-            "no matching package named `{}` found\n\
-             location searched: {}\n",
-            dep.package_name(),
-            dep.source_id()
-        );
+    let mut msg =
         if !candidates.is_empty() {
-            let mut names = candidates
-                .iter()
-                .take(3)
-                .map(|c| c.1.as_str())
-                .collect::<Vec<_>>();
+            let versions = {
+                let mut versions = candidates
+                    .iter()
+                    .take(3)
+                    .map(|cand| cand.version().to_string())
+                    .collect::<Vec<_>>();
 
-            if candidates.len() > 3 {
-                names.push("...");
+                if candidates.len() > 3 {
+                    versions.push("...".into());
+                }
+
+                versions.join(", ")
+            };
+
+            let mut msg = format!(
+                "failed to select a version for the requirement `{} = \"{}\"`\n  \
+                 candidate versions found which didn't match: {}\n  \
+                 location searched: {}\n",
+                dep.package_name(),
+                dep.version_req(),
+                versions,
+                registry.describe_source(dep.source_id()),
+            );
+            msg.push_str("required by ");
+            msg.push_str(&describe_path(
+                &cx.parents.path_to_bottom(&parent.package_id()),
+            ));
+
+            // If we have a path dependency with a locked version, then this may
+            // indicate that we updated a sub-package and forgot to run `cargo
+            // update`. In this case try to print a helpful error!
+            if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
+                msg.push_str(
+                    "\nconsider running `cargo update` to update \
+                     a path dependency's locked version",
+                );
             }
 
-            msg.push_str("perhaps you meant: ");
-            msg.push_str(&names.iter().enumerate().fold(
-                String::default(),
-                |acc, (i, el)| match i {
-                    0 => acc + el,
-                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
-                    _ => acc + ", " + el,
-                },
-            ));
-            msg.push_str("\n");
-        }
-        msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
+            if registry.is_replaced(dep.source_id()) {
+                msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
+            }
 
-        msg
-    };
+            msg
+        } else {
+            // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+            // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+            let mut candidates = Vec::new();
+            if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.clone()), true) {
+                return to_resolve_err(e);
+            };
+            candidates.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+            candidates.dedup_by(|a, b| a.name() == b.name());
+            let mut candidates: Vec<_> = candidates
+                .iter()
+                .map(|n| (lev_distance(&*new_dep.package_name(), &*n.name()), n))
+                .filter(|&(d, _)| d < 4)
+                .collect();
+            candidates.sort_by_key(|o| o.0);
+            let mut msg = format!(
+                "no matching package named `{}` found\n\
+                 location searched: {}\n",
+                dep.package_name(),
+                dep.source_id()
+            );
+            if !candidates.is_empty() {
+                // If dependency package name is equal to the name of the candidate here
+                // it may be a prerelease package which hasn't been speficied correctly
+                if dep.package_name() == candidates[0].1.name()
+                    && candidates[0].1.package_id().version().is_prerelease()
+                {
+                    msg.push_str("prerelease package needs to be specified explicitly\n");
+                    msg.push_str(&format!(
+                        "{name} = {{ version = \"{version}\" }}",
+                        name = candidates[0].1.name(),
+                        version = candidates[0].1.package_id().version()
+                    ));
+                } else {
+                    let mut names = candidates
+                        .iter()
+                        .take(3)
+                        .map(|c| c.1.name().as_str())
+                        .collect::<Vec<_>>();
+
+                    if candidates.len() > 3 {
+                        names.push("...");
+                    }
+
+                    msg.push_str("perhaps you meant: ");
+                    msg.push_str(&names.iter().enumerate().fold(
+                        String::default(),
+                        |acc, (i, el)| match i {
+                            0 => acc + el,
+                            i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                            _ => acc + ", " + el,
+                        },
+                    ));
+                }
+
+                msg.push_str("\n");
+            }
+            msg.push_str("required by ");
+            msg.push_str(&describe_path(
+                &cx.parents.path_to_bottom(&parent.package_id()),
+            ));
+
+            msg
+        };
 
     if let Some(config) = config {
-        if config.cli_unstable().offline {
+        if config.offline() {
             msg.push_str(
-                "\nAs a reminder, you're using offline mode (-Z offline) \
+                "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
                  without the offline flag.",

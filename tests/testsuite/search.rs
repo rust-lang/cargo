@@ -3,10 +3,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::support::cargo_process;
-use crate::support::git::repo;
-use crate::support::paths;
-use crate::support::registry::{api_path, registry_path, registry_url};
+use cargo_test_support::cargo_process;
+use cargo_test_support::git::repo;
+use cargo_test_support::paths;
+use cargo_test_support::registry::{api_path, registry_path, registry_url};
 use url::Url;
 
 fn api() -> Url {
@@ -97,7 +97,7 @@ registry = '{reg}'
         .unwrap();
 }
 
-#[test]
+#[cargo_test]
 fn not_update() {
     setup();
     set_cargo_config();
@@ -108,18 +108,18 @@ fn not_update() {
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
     let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
+    let lock = cfg.acquire_package_cache_lock().unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();
+    drop(lock);
 
     cargo_process("search postgres")
-            .with_stdout_contains(
-                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            )
-            .with_stderr("") // without "Updating ... index"
-    .run();
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stderr("") // without "Updating ... index"
+        .run();
 }
 
-#[test]
+#[cargo_test]
 fn replace_default() {
     setup();
     set_cargo_config();
@@ -130,7 +130,7 @@ fn replace_default() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn simple() {
     setup();
 
@@ -142,7 +142,7 @@ fn simple() {
 
 // TODO: Deprecated
 // remove once it has been decided '--host' can be safely removed
-#[test]
+#[cargo_test]
 fn simple_with_host() {
     setup();
 
@@ -168,7 +168,7 @@ about this warning.
 
 // TODO: Deprecated
 // remove once it has been decided '--host' can be safely removed
-#[test]
+#[cargo_test]
 fn simple_with_index_and_host() {
     setup();
 
@@ -194,7 +194,7 @@ about this warning.
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_query_params() {
     setup();
 
@@ -204,7 +204,7 @@ fn multiple_query_params() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn help() {
     cargo_process("search -h").run();
     cargo_process("help search").run();

@@ -1,10 +1,10 @@
-use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
-the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
+the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target";
 
-#[test]
+#[cargo_test]
 fn build_lib_for_foo() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -16,7 +16,7 @@ fn build_lib_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -26,7 +26,7 @@ fn build_lib_for_foo() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn lib() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -38,7 +38,7 @@ fn lib() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
@@ -49,7 +49,7 @@ fn lib() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_main_and_allow_unstable_options() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -61,12 +61,12 @@ fn build_main_and_allow_unstable_options() {
             "\
 [COMPILING] {name} v{version} ([CWD])
 [RUNNING] `rustc --crate-name {name} src/lib.rs --color never --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs --color never --crate-type bin \
-        --emit=dep-info,link -C debuginfo=2 \
+        --emit=[..]link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
@@ -80,7 +80,7 @@ fn build_main_and_allow_unstable_options() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
@@ -93,7 +93,7 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_args_to_one_of_multiple_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -106,17 +106,18 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=[..]link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src/bin/bar.rs --color never --crate-type bin --emit=dep-info,link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs --color never --crate-type bin --emit=[..]link \
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
-#[test]
+#[cargo_test]
 fn fails_with_args_to_all_binaries() {
     let p = project()
         .file("src/bin/foo.rs", "fn main() {}")
@@ -131,7 +132,7 @@ fn fails_with_args_to_all_binaries() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project()
         .file("tests/foo.rs", r#" "#)
@@ -144,10 +145,10 @@ fn build_with_args_to_one_of_multiple_tests() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=[..]link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs --color never --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs --color never --emit=[..]link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -155,7 +156,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_foo_with_bar_dependency() {
     let foo = project()
         .file(
@@ -191,7 +192,7 @@ fn build_foo_with_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn build_only_bar_dependency() {
     let foo = project()
         .file(
@@ -225,51 +226,46 @@ fn build_only_bar_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("rustc -v")
         // bin
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+             --emit=[..]link[..]",
         )
         // bench
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // unit test
         .with_stderr_does_not_contain(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn targets_selected_all() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("rustc -v --all-targets")
         // bin
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+             --emit=[..]link[..]",
         )
         // unit test
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn fail_with_multiple_packages() {
     let foo = project()
         .file(
@@ -327,7 +323,7 @@ error: The argument '--package <SPEC>' was provided more than once, \
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_with_other_profile() {
     let p = project()
         .file(
@@ -358,7 +354,7 @@ fn rustc_with_other_profile() {
     p.cargo("rustc --profile test").run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_fingerprint() {
     // Verify that the fingerprint includes the rustc args.
     let p = project()
@@ -406,7 +402,7 @@ fn rustc_fingerprint() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rustc_test_with_implicit_bin() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

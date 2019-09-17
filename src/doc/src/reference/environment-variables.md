@@ -10,9 +10,10 @@ You can override these environment variables to change Cargo's behavior on your
 system:
 
 * `CARGO_HOME` — Cargo maintains a local cache of the registry index and of git
-  checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
+  checkouts of crates. By default these are stored under `$HOME/.cargo`, but
   this variable overrides the location of this directory. Once a crate is cached
   it is not removed by the clean command.
+  For more details refer to the [guide](../guide/cargo-home.md).
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
   relative to the current working directory.
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
@@ -38,7 +39,7 @@ system:
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
 
-[config-env]: reference/config.html#environment-variables
+[config-env]: config.md#environment-variables
 
 ### Environment variables Cargo sets for crates
 
@@ -65,7 +66,7 @@ let version = env!("CARGO_PKG_VERSION");
 * `CARGO_PKG_HOMEPAGE` - The home page from the manifest of your package.
 * `CARGO_PKG_REPOSITORY` - The repository from the manifest of your package.
 * `OUT_DIR` - If the package has a build script, this is set to the folder where the build
-              script should place its output.  See below for more information.
+              script should place its output. See below for more information.
 
 ### Environment variables Cargo sets for build scripts
 
@@ -130,11 +131,11 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    about [cargo configuration][cargo-config] for more
                    information.
 
-[links]: reference/build-scripts.html#the-links-manifest-key
-[configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
+[links]: build-scripts.md#the-links-manifest-key
+[configuration]: ../../reference/conditional-compilation.html
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
-[cargo-config]: reference/config.html
-[Target Triple]: appendix/glossary.html#target
+[cargo-config]: config.md
+[Target Triple]: ../appendix/glossary.md#target
 
 ### Environment variables Cargo sets for 3rd party subcommands
 

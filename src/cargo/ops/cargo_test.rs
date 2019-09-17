@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 
 use crate::core::compiler::{Compilation, Doctest};
+use crate::core::shell::Verbosity;
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
@@ -15,7 +16,7 @@ pub struct TestOptions<'a> {
 pub fn run_tests(
     ws: &Workspace<'_>,
     options: &TestOptions<'_>,
-    test_args: &[String],
+    test_args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
 
@@ -24,7 +25,7 @@ pub fn run_tests(
     }
     let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
 
-    // If we have an error and want to fail fast, return
+    // If we have an error and want to fail fast, then return.
     if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(test, errors)));
     }
@@ -42,16 +43,19 @@ pub fn run_tests(
 pub fn run_benches(
     ws: &Workspace<'_>,
     options: &TestOptions<'_>,
-    args: &[String],
+    args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
-    let mut args = args.to_vec();
-    args.push("--bench".to_string());
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
         return Ok(None);
     }
+
+    let mut args = args.to_vec();
+    args.push("--bench");
+
     let (test, errors) = run_unit_tests(options, &args, &compilation)?;
+
     match errors.len() {
         0 => Ok(None),
         _ => Ok(Some(CargoTestError::new(test, errors))),
@@ -69,10 +73,10 @@ fn compile_tests<'a>(
     Ok(compilation)
 }
 
-/// Run the unit and integration tests of a package.
+/// Runs the unit and integration tests of a package.
 fn run_unit_tests(
     options: &TestOptions<'_>,
-    test_args: &[String],
+    test_args: &[&str],
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
@@ -80,10 +84,15 @@ fn run_unit_tests(
 
     let mut errors = Vec::new();
 
-    for &(ref pkg, ref kind, ref test, ref exe) in &compilation.tests {
+    for &(ref pkg, ref target, ref exe) in &compilation.tests {
+        let kind = target.kind();
+        let test = target.name().to_string();
         let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
+        if target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+            cmd.arg("--quiet");
+        }
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;
@@ -125,13 +134,13 @@ fn run_unit_tests(
 
 fn run_doc_tests(
     options: &TestOptions<'_>,
-    test_args: &[String],
+    test_args: &[&str],
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/rust doctests if target != host
+    // We don't build/run doc tests if `target` does not equal `host`.
     if compilation.host != compilation.target {
         return Ok((Test::Doc, errors));
     }
@@ -176,7 +185,7 @@ fn run_doc_tests(
         }
 
         for &(ref extern_crate_name, ref lib) in deps.iter() {
-            let mut arg = OsString::from(extern_crate_name);
+            let mut arg = OsString::from(extern_crate_name.as_str());
             arg.push("=");
             arg.push(lib);
             p.arg("--extern").arg(&arg);

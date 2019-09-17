@@ -1,14 +1,23 @@
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;
+use std::io;
+use std::os;
+use std::path::Path;
 
-use crate::support::{lines_match, paths, project};
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo_test_support::{paths, project, t};
 use serde::Deserialize;
 
-#[test]
+fn lines_match(a: &str, b: &str) -> bool {
+    // Perform a small amount of normalization for filesystem paths before we
+    // send this to the `lines_match` function.
+    cargo_test_support::lines_match(&a.replace("\\", "/"), &b.replace("\\", "/"))
+}
+
+#[cargo_test]
 fn read_env_vars_for_config() {
     let p = project()
         .file(
@@ -42,6 +51,50 @@ fn write_config(config: &str) {
     fs::write(path, config).unwrap();
 }
 
+fn write_config_toml(config: &str) {
+    let path = paths::root().join(".cargo/config.toml");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, config).unwrap();
+}
+
+// Several test fail on windows if the user does not have permission to
+// create symlinks (the `SeCreateSymbolicLinkPrivilege`). Instead of
+// disabling these test on Windows, use this function to test whether we
+// have permission, and return otherwise. This way, we still don't run these
+// tests most of the time, but at least we do if the user has the right
+// permissions.
+// This function is derived from libstd fs tests.
+pub fn got_symlink_permission() -> bool {
+    if cfg!(unix) {
+        return true;
+    }
+    let link = paths::root().join("some_hopefully_unique_link_name");
+    let target = paths::root().join("nonexisting_target");
+
+    match symlink_file(&target, &link) {
+        Ok(_) => true,
+        // ERROR_PRIVILEGE_NOT_HELD = 1314
+        Err(ref err) if err.raw_os_error() == Some(1314) => false,
+        Err(_) => true,
+    }
+}
+
+#[cfg(unix)]
+fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
+    os::unix::fs::symlink(target, link)
+}
+
+#[cfg(windows)]
+fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
+    os::windows::fs::symlink_file(target, link)
+}
+
+fn symlink_config_to_config_toml() {
+    let toml_path = paths::root().join(".cargo/config.toml");
+    let symlink_path = paths::root().join(".cargo/config");
+    t!(symlink_file(&toml_path, &symlink_path));
+}
+
 fn new_config(env: &[(&str, &str)]) -> Config {
     enable_nightly_features(); // -Z advanced-env
     let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
@@ -59,6 +112,7 @@ fn new_config(env: &[(&str, &str)]) -> Config {
             0,
             None,
             &None,
+            false,
             false,
             false,
             &None,
@@ -83,7 +137,7 @@ fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     }
 }
 
-#[test]
+#[cargo_test]
 fn get_config() {
     write_config(
         "\
@@ -105,7 +159,94 @@ f1 = 123
     assert_eq!(s, S { f1: Some(456) });
 }
 
-#[test]
+#[cargo_test]
+fn config_works_with_extension() {
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    let config = new_config(&[]);
+
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !got_symlink_permission() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    symlink_config_to_config_toml();
+
+    let config = new_config(&[]);
+
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    let output = fs::read_to_string(path).unwrap();
+    let unexpected = "\
+warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+";
+    if lines_match(unexpected, &output) {
+        panic!(
+            "Found unexpected:\n{}\nActual error:\n{}\n",
+            unexpected, output
+        );
+    }
+}
+
+#[cargo_test]
+fn config_ambiguous_filename() {
+    write_config(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 2
+",
+    );
+
+    let config = new_config(&[]);
+
+    // It should use the value from the one without the extension for
+    // backwards compatibility.
+    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // But it also should have warned.
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    let output = fs::read_to_string(path).unwrap();
+    let expected = "\
+warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+";
+    if !lines_match(expected, &output) {
+        panic!(
+            "Did not find expected:\n{}\nActual error:\n{}\n",
+            expected, output
+        );
+    }
+}
+
+#[cargo_test]
 fn config_unused_fields() {
     write_config(
         "\
@@ -143,7 +284,7 @@ warning: unused key `S.unused` in config file `[..]/.cargo/config`
     }
 }
 
-#[test]
+#[cargo_test]
 fn config_load_toml_profile() {
     write_config(
         "\
@@ -173,7 +314,7 @@ codegen-units = 9
         ("CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL", "2"),
     ]);
 
-    // TODO: don't use actual tomlprofile
+    // TODO: don't use actual `tomlprofile`.
     let p: toml::TomlProfile = config.get("profile.dev").unwrap();
     let mut overrides = collections::BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
@@ -237,7 +378,7 @@ codegen-units = 9
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_deserialize_any() {
     // Some tests to exercise deserialize_any for deserializers that need to
     // be told the format.
@@ -282,7 +423,7 @@ c = ['c']
     }
 }
 
-#[test]
+#[cargo_test]
 fn config_toml_errors() {
     write_config(
         "\
@@ -310,7 +451,7 @@ opt-level = 'foo'
     );
 }
 
-#[test]
+#[cargo_test]
 fn load_nested() {
     write_config(
         "\
@@ -346,7 +487,7 @@ asdf = 3
     assert_eq!(n, expected);
 }
 
-#[test]
+#[cargo_test]
 fn get_errors() {
     write_config(
         "\
@@ -401,7 +542,7 @@ big = 123456789
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_option() {
     write_config(
         "\
@@ -419,7 +560,7 @@ f1 = 1
     assert_eq!(config.get::<Option<i32>>("bar.zzzz").unwrap(), None);
 }
 
-#[test]
+#[cargo_test]
 fn config_bad_toml() {
     write_config("asdf");
     let config = new_config(&[]);
@@ -432,11 +573,11 @@ Caused by:
 Caused by:
   could not parse input as TOML
 Caused by:
-  expected an equals, found eof at line 1",
+  expected an equals, found eof at line 1 column 5",
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_list() {
     write_config(
         "\
@@ -510,7 +651,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid number at line 1",
+         could not parse TOML list: invalid number at line 1 column 10",
     );
 
     // Try some other sequence-like types.
@@ -561,7 +702,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_other_types() {
     write_config(
         "\
@@ -583,7 +724,7 @@ ns2 = 456
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_relative_path() {
     write_config(&format!(
         "\
@@ -634,7 +775,7 @@ abs = '{}'
     );
 }
 
-#[test]
+#[cargo_test]
 fn config_get_integers() {
     write_config(
         "\

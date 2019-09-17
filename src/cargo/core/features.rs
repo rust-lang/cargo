@@ -1,4 +1,4 @@
-//! Support for nightly features in Cargo itself
+//! Support for nightly features in Cargo itself.
 //!
 //! This file is the version of `feature_gate.rs` in upstream Rust for Cargo
 //! itself and is intended to be the avenue for which new features in Cargo are
@@ -21,7 +21,7 @@
 //! 3. To actually perform the feature gate, you'll want to have code that looks
 //!    like:
 //!
-//! ```rust,ignore
+//! ```rust,compile_fail
 //! use core::{Feature, Features};
 //!
 //! let feature = Feature::launch_into_space();
@@ -37,7 +37,7 @@
 //!
 //! 4. Update the unstable documentation at
 //!    `src/doc/src/reference/unstable.md` to include a short description of
-//!    how to use your new feature.  When the feature is stabilized, be sure
+//!    how to use your new feature. When the feature is stabilized, be sure
 //!    that the Cargo Guide or Reference is updated to fully document the
 //!    feature and remove the entry from the Unstable section.
 //!
@@ -54,6 +54,10 @@ use failure::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
+
+pub const SEE_CHANNELS: &str =
+    "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
+     about Rust release channels.";
 
 /// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
@@ -150,17 +154,17 @@ macro_rules! stab {
     };
 }
 
-/// A listing of all features in Cargo
-///
-/// "look here"
-///
-/// This is the macro that lists all stable and unstable features in Cargo.
-/// You'll want to add to this macro whenever you add a feature to Cargo, also
-/// following the directions above.
-///
-/// Note that all feature names here are valid Rust identifiers, but the `_`
-/// character is translated to `-` when specified in the `cargo-features`
-/// manifest entry in `Cargo.toml`.
+// A listing of all features in Cargo.
+//
+// "look here"
+//
+// This is the macro that lists all stable and unstable features in Cargo.
+// You'll want to add to this macro whenever you add a feature to Cargo, also
+// following the directions above.
+//
+// Note that all feature names here are valid Rust identifiers, but the `_`
+// character is translated to `-` when specified in the `cargo-features`
+// manifest entry in `Cargo.toml`.
 features! {
     pub struct Features {
 
@@ -182,6 +186,7 @@ features! {
         [stable] rename_dependency: bool,
 
         // Whether a lock file is published with this crate
+        // This is deprecated, and will likely be removed in a future version.
         [unstable] publish_lockfile: bool,
 
         // Overriding profiles for dependencies.
@@ -191,10 +196,13 @@ features! {
         [unstable] namespaced_features: bool,
 
         // "default-run" manifest option,
-        [unstable] default_run: bool,
+        [stable] default_run: bool,
 
         // Declarative build scripts.
         [unstable] metabuild: bool,
+
+        // Specifying the 'public' attribute on dependencies
+        [unstable] public_dependency: bool,
     }
 }
 
@@ -235,9 +243,11 @@ impl Features {
             }
             Status::Unstable if !nightly_features_allowed() => failure::bail!(
                 "the cargo feature `{}` requires a nightly version of \
-                 Cargo, but this is the `{}` channel",
+                 Cargo, but this is the `{}` channel\n\
+                 {}",
                 feature,
-                channel()
+                channel(),
+                SEE_CHANNELS
             ),
             Status::Unstable => {}
         }
@@ -313,20 +323,30 @@ impl Features {
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
-    pub offline: bool,
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
     pub minimal_versions: bool,
     pub package_features: bool,
     pub advanced_env: bool,
     pub config_profile: bool,
+    pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
+    pub install_upgrade: bool,
+    pub cache_messages: bool,
+    pub binary_dep_depinfo: bool,
+    pub build_std: Option<Vec<String>>,
 }
 
 impl CliUnstable {
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
-            failure::bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
+            failure::bail!(
+                "the `-Z` flag is only accepted on the nightly channel of Cargo, \
+                 but this is the `{}` channel\n\
+                 {}",
+                channel(),
+                SEE_CHANNELS
+            );
         }
         for flag in flags {
             self.add(flag)?;
@@ -350,22 +370,62 @@ impl CliUnstable {
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
-            "offline" => self.offline = true,
             "no-index-update" => self.no_index_update = true,
             "avoid-dev-deps" => self.avoid_dev_deps = true,
             "minimal-versions" => self.minimal_versions = true,
             "package-features" => self.package_features = true,
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
+            "dual-proc-macros" => self.dual_proc_macros = true,
             "mtime-on-use" => self.mtime_on_use = true,
+            "install-upgrade" => self.install_upgrade = true,
+            "cache-messages" => self.cache_messages = true,
+            "binary-dep-depinfo" => self.binary_dep_depinfo = true,
+            "build-std" => {
+                self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
+            }
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
         Ok(())
     }
+
+    /// Generates an error if `-Z unstable-options` was not used.
+    /// Intended to be used when a user passes a command-line flag that
+    /// requires `-Z unstable-options`.
+    pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
+        if !self.unstable_options {
+            let see = format!(
+                "See https://github.com/rust-lang/cargo/issues/{} for more \
+                 information about the `{}` flag.",
+                issue, flag
+            );
+            if nightly_features_allowed() {
+                failure::bail!(
+                    "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                     {}",
+                    flag,
+                    see
+                );
+            } else {
+                failure::bail!(
+                    "the `{}` flag is unstable, and only available on the nightly channel \
+                     of Cargo, but this is the `{}` channel\n\
+                     {}\n\
+                     {}",
+                    flag,
+                    channel(),
+                    SEE_CHANNELS,
+                    see
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
-fn channel() -> String {
+/// Returns the current release channel ("stable", "beta", "nightly", "dev").
+pub fn channel() -> String {
     if let Ok(override_channel) = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS") {
         return override_channel;
     }

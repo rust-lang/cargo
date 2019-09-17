@@ -1,18 +1,18 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::hash::Hash;
 use std::iter::FromIterator;
 
 use url::Url;
 
+use crate::core::dependency::Kind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
 use crate::util::Graph;
 
 use super::encode::Metadata;
 
-/// Represents a fully resolved package dependency graph. Each node in the graph
+/// Represents a fully-resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
 ///
 /// Each instance of `Resolve` also understands the full set of features used
@@ -20,16 +20,51 @@ use super::encode::Metadata;
 #[derive(PartialEq)]
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
-    /// from Cargo.toml. We need a `Vec` here because the same package
+    /// from `Cargo.toml`. We need a `Vec` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, Vec<Dependency>>,
+    /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
+    /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
+    /// An empty `HashSet` to avoid creating a new `HashSet` for every package
+    /// that does not have any features, and to avoid using `Option` to
+    /// simplify the API.
     empty_features: HashSet<String>,
+    /// Features enabled for a given package.
     features: HashMap<PackageId, HashSet<String>>,
+    /// Checksum for each package. A SHA256 hash of the `.crate` file used to
+    /// validate the correct crate file is used. This is `None` for sources
+    /// that do not use `.crate` files, like path or git dependencies.
     checksums: HashMap<PackageId, Option<String>>,
+    /// "Unknown" metadata. This is a collection of extra, unrecognized data
+    /// found in the `[metadata]` section of `Cargo.lock`, preserved for
+    /// forwards compatibility.
     metadata: Metadata,
+    /// `[patch]` entries that did not match anything, preserved in
+    /// `Cargo.lock` as the `[[patch.unused]]` table array. Tracking unused
+    /// patches helps prevent Cargo from being forced to re-update the
+    /// registry every time it runs, and keeps the resolve in a locked state
+    /// so it doesn't re-resolve the unused entries.
     unused_patches: Vec<PackageId>,
+    /// A map from packages to a set of their public dependencies
+    public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
+    /// Version of the `Cargo.lock` format, see
+    /// `cargo::core::resolver::encode` for more.
+    version: ResolveVersion,
+}
+
+/// A version to indicate how a `Cargo.lock` should be serialized. Currently V1
+/// is the default and dates back to the origins of Cargo. A V2 is currently
+/// being proposed which provides a much more compact representation of
+/// dependency edges and also moves checksums out of `[metadata]`.
+///
+/// It's theorized that we can add more here over time to track larger changes
+/// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
+#[derive(PartialEq, Clone, Debug)]
+pub enum ResolveVersion {
+    V1,
+    V2,
 }
 
 impl Resolve {
@@ -40,8 +75,25 @@ impl Resolve {
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
+        version: ResolveVersion,
     ) -> Resolve {
         let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
+        let public_dependencies = graph
+            .iter()
+            .map(|p| {
+                let public_deps = graph
+                    .edges(p)
+                    .filter(|(_, deps)| {
+                        deps.iter()
+                            .any(|d| d.kind() == Kind::Normal && d.is_public())
+                    })
+                    .map(|(dep_package, _)| *dep_package)
+                    .collect::<HashSet<PackageId>>();
+
+                (*p, public_deps)
+            })
+            .collect();
+
         Resolve {
             graph,
             replacements,
@@ -51,6 +103,8 @@ impl Resolve {
             unused_patches,
             empty_features: HashSet::new(),
             reverse_replacements,
+            public_dependencies,
+            version,
         }
     }
 
@@ -71,12 +125,12 @@ impl Resolve {
 
     pub fn merge_from(&mut self, previous: &Resolve) -> CargoResult<()> {
         // Given a previous instance of resolve, it should be forbidden to ever
-        // have a checksums which *differ*. If the same package id has differing
+        // have a checksums which *differ*. If the same package ID has differing
         // checksums, then something has gone wrong such as:
         //
         // * Something got seriously corrupted
         // * A "mirror" isn't actually a mirror as some changes were made
-        // * A replacement source wasn't actually a replacment, some changes
+        // * A replacement source wasn't actually a replacement, some changes
         //   were made
         //
         // In all of these cases, we want to report an error to indicate that
@@ -144,7 +198,7 @@ checksum for `{}` changed between lock files
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `{0}` is the same as when the lockfile was generated
@@ -157,13 +211,30 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
         // Be sure to just copy over any unknown metadata.
         self.metadata = previous.metadata.clone();
+
+        // The goal of Cargo is largely to preserve the encoding of
+        // `Cargo.lock` that it finds on the filesystem. Sometimes `Cargo.lock`
+        // changes are in the works where they haven't been set as the default
+        // yet but will become the default soon. We want to preserve those
+        // features if we find them.
+        //
+        // For this reason if the previous `Cargo.lock` is from the future, or
+        // otherwise it looks like it's produced with future features we
+        // understand, then the new resolve will be encoded with the same
+        // version. Note that new instances of `Resolve` always use the default
+        // encoding, and this is where we switch it to a future encoding if the
+        // future encoding isn't yet the default.
+        if previous.version.from_the_future() {
+            self.version = previous.version.clone();
+        }
+
         Ok(())
     }
 
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
     where
         PackageId: Borrow<Q>,
-        Q: Hash + Eq,
+        Q: Ord + Eq,
     {
         self.graph.contains(k)
     }
@@ -177,13 +248,17 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
-        self.graph
-            .edges(&pkg)
-            .map(move |(&id, deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
+        self.deps_not_replaced(pkg)
+            .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
 
-    pub fn deps_not_replaced<'a>(&'a self, pkg: PackageId) -> impl Iterator<Item = PackageId> + 'a {
-        self.graph.edges(&pkg).map(|(&id, _)| id)
+    pub fn deps_not_replaced(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, &[Dependency])> {
+        self.graph
+            .edges(&pkg)
+            .map(|(id, deps)| (*id, deps.as_slice()))
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
@@ -196,6 +271,13 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
     pub fn features(&self, pkg: PackageId) -> &HashSet<String> {
         self.features.get(&pkg).unwrap_or(&self.empty_features)
+    }
+
+    pub fn is_public_dep(&self, pkg: PackageId, dep: PackageId) -> bool {
+        self.public_dependencies
+            .get(&pkg)
+            .map(|public_deps| public_deps.contains(&dep))
+            .unwrap_or_else(|| panic!("Unknown dependency {:?} for package {:?}", dep, pkg))
     }
 
     pub fn features_sorted(&self, pkg: PackageId) -> Vec<&str> {
@@ -270,6 +352,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             None => panic!("no Dependency listed for `{}` => `{}`", from, to),
         }
     }
+
+    /// Returns the version of the encoding that's being used for this lock
+    /// file.
+    pub fn version(&self) -> &ResolveVersion {
+        &self.version
+    }
 }
 
 impl fmt::Debug for Resolve {
@@ -280,5 +368,27 @@ impl fmt::Debug for Resolve {
             writeln!(fmt, "  {}: {:?}", pkg, features)?;
         }
         write!(fmt, "}}")
+    }
+}
+
+impl ResolveVersion {
+    /// The default way to encode `Cargo.lock`.
+    ///
+    /// This is used for new `Cargo.lock` files that are generated without a
+    /// previous `Cargo.lock` files, and generally matches with what we want to
+    /// encode.
+    pub fn default() -> ResolveVersion {
+        ResolveVersion::V1
+    }
+
+    /// Returns whether this encoding version is "from the future".
+    ///
+    /// This means that this encoding version is not currently the default but
+    /// intended to become the default "soon".
+    pub fn from_the_future(&self) -> bool {
+        match self {
+            ResolveVersion::V2 => true,
+            ResolveVersion::V1 => false,
+        }
     }
 }

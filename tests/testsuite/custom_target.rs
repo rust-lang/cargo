@@ -1,9 +1,10 @@
-use crate::support::is_nightly;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::is_nightly;
+use cargo_test_support::{basic_manifest, project};
 
-#[test]
+#[cargo_test]
 fn custom_target_minimal() {
     if !is_nightly() {
+        // Requires features no_core, lang_items
         return;
     }
     let p = project()
@@ -50,9 +51,10 @@ fn custom_target_minimal() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn custom_target_dependency() {
     if !is_nightly() {
+        // Requires features no_core, lang_items, optin_builtin_traits
         return;
     }
     let p = project()
@@ -127,4 +129,51 @@ fn custom_target_dependency() {
         .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
+}
+
+#[cargo_test]
+fn custom_bin_target() {
+    if !is_nightly() {
+        // Requires features no_core, lang_items
+        return;
+    }
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(no_core)]
+            #![feature(lang_items)]
+            #![no_core]
+            #![no_main]
+
+            #[lang = "sized"]
+            pub trait Sized {
+                // Empty.
+            }
+            #[lang = "copy"]
+            pub trait Copy {
+                // Empty.
+            }
+        "#,
+        )
+        .file(
+            "custom-bin-target.json",
+            r#"
+            {
+                "llvm-target": "x86_64-unknown-none-gnu",
+                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                "arch": "x86_64",
+                "target-endian": "little",
+                "target-pointer-width": "64",
+                "target-c-int-width": "32",
+                "os": "none",
+                "linker-flavor": "ld.lld",
+                "linker": "rust-lld",
+                "executables": true
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build --target custom-bin-target.json -v").run();
 }

@@ -1,4 +1,4 @@
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -22,19 +22,21 @@ use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{FeatureMap, SourceMap, Summary};
 use crate::ops;
+use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
-use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
+use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 /// Information about a package that is available somewhere in the file system.
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
-// TODO: Is manifest_path a relic?
+//
+// TODO: is `manifest_path` a relic?
 #[derive(Clone)]
 pub struct Package {
-    /// The package's manifest
+    /// The package's manifest.
     manifest: Manifest,
-    /// The root of the package
+    /// The root of the package.
     manifest_path: PathBuf,
 }
 
@@ -65,6 +67,7 @@ struct SerializedPackage<'a> {
     features: &'a FeatureMap,
     manifest_path: &'a Path,
     metadata: Option<&'a toml::Value>,
+    publish: Option<&'a Vec<String>>,
     authors: &'a [String],
     categories: &'a [String],
     keywords: &'a [String],
@@ -104,7 +107,7 @@ impl ser::Serialize for Package {
 
         SerializedPackage {
             name: &*package_id.name(),
-            version: &package_id.version(),
+            version: package_id.version(),
             id: package_id,
             license,
             license_file,
@@ -123,13 +126,14 @@ impl ser::Serialize for Package {
             edition: &self.manifest.edition().to_string(),
             links: self.manifest.links(),
             metabuild: self.manifest.metabuild(),
+            publish: self.publish().as_ref(),
         }
         .serialize(s)
     }
 }
 
 impl Package {
-    /// Create a package from a manifest and its location
+    /// Creates a package from a manifest and its location.
     pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
             manifest,
@@ -137,69 +141,58 @@ impl Package {
         }
     }
 
-    /// Get the manifest dependencies
+    /// Gets the manifest dependencies.
     pub fn dependencies(&self) -> &[Dependency] {
         self.manifest.dependencies()
     }
-    /// Get the manifest
+    /// Gets the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
     }
-    /// Get the path to the manifest
+    /// Gets the manifest.
+    pub fn manifest_mut(&mut self) -> &mut Manifest {
+        &mut self.manifest
+    }
+    /// Gets the path to the manifest.
     pub fn manifest_path(&self) -> &Path {
         &self.manifest_path
     }
-    /// Get the name of the package
+    /// Gets the name of the package.
     pub fn name(&self) -> InternedString {
         self.package_id().name()
     }
-    /// Get the PackageId object for the package (fully defines a package)
+    /// Gets the `PackageId` object for the package (fully defines a package).
     pub fn package_id(&self) -> PackageId {
         self.manifest.package_id()
     }
-    /// Get the root folder of the package
+    /// Gets the root folder of the package.
     pub fn root(&self) -> &Path {
         self.manifest_path.parent().unwrap()
     }
-    /// Get the summary for the package
+    /// Gets the summary for the package.
     pub fn summary(&self) -> &Summary {
         self.manifest.summary()
     }
-    /// Get the targets specified in the manifest
+    /// Gets the targets specified in the manifest.
     pub fn targets(&self) -> &[Target] {
         self.manifest.targets()
     }
-    /// Get the current package version
+    /// Gets the current package version.
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
-    /// Get the package authors
+    /// Gets the package authors.
     pub fn authors(&self) -> &Vec<String> {
         &self.manifest.metadata().authors
     }
-    /// Whether the package is set to publish
+    /// Returns `true` if the package is set to publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
         self.manifest.publish()
     }
 
-    /// Whether the package uses a custom build script for any target
+    /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
-    }
-
-    pub fn find_closest_target(
-        &self,
-        target: &str,
-        is_expected_kind: fn(&Target) -> bool,
-    ) -> Option<&Target> {
-        let targets = self.targets();
-
-        let matches = targets
-            .iter()
-            .filter(|t| is_expected_kind(t))
-            .map(|t| (lev_distance(target, t.name()), t))
-            .filter(|&(d, _)| d < 4);
-        matches.min_by_key(|t| t.0).map(|t| t.1)
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Package {
@@ -213,13 +206,12 @@ impl Package {
         let manifest = self.manifest().original().prepare_for_publish(config)?;
         let toml = toml::to_string(&manifest)?;
         Ok(format!(
-            "\
-             # THIS FILE IS AUTOMATICALLY GENERATED BY CARGO\n\
+            "# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO\n\
              #\n\
              # When uploading crates to the registry Cargo will automatically\n\
              # \"normalize\" Cargo.toml files for maximal compatibility\n\
              # with all versions of Cargo and also rewrite `path` dependencies\n\
-             # to registry (e.g. crates.io) dependencies\n\
+             # to registry (e.g., crates.io) dependencies\n\
              #\n\
              # If you believe there's an error in this file please file an\n\
              # issue against the rust-lang/cargo repository. If you're\n\
@@ -230,6 +222,11 @@ impl Package {
              ",
             toml
         ))
+    }
+
+    /// Returns if package should include `Cargo.lock`.
+    pub fn include_lockfile(&self) -> bool {
+        self.targets().iter().any(|t| t.is_example() || t.is_bin())
     }
 }
 
@@ -262,26 +259,49 @@ impl hash::Hash for Package {
     }
 }
 
+/// A set of packages, with the intent to download.
+///
+/// This is primarily used to convert a set of `PackageId`s to `Package`s. It
+/// will download as needed, or used the cached download if available.
 pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
     multi: Multi,
+    /// Used to prevent reusing the PackageSet to download twice.
     downloading: Cell<bool>,
+    /// Whether or not to use curl HTTP/2 multiplexing.
     multiplexing: bool,
 }
 
-pub struct Downloads<'a, 'cfg: 'a> {
+/// Helper for downloading crates.
+pub struct Downloads<'a, 'cfg> {
     set: &'a PackageSet<'cfg>,
+    /// When a download is started, it is added to this map. The key is a
+    /// "token" (see `Download::token`). It is removed once the download is
+    /// finished.
     pending: HashMap<usize, (Download<'cfg>, EasyHandle)>,
+    /// Set of packages currently being downloaded. This should stay in sync
+    /// with `pending`.
     pending_ids: HashSet<PackageId>,
+    /// The final result of each download. A pair `(token, result)`. This is a
+    /// temporary holding area, needed because curl can report multiple
+    /// downloads at once, but the main loop (`wait`) is written to only
+    /// handle one at a time.
     results: Vec<(usize, Result<(), curl::Error>)>,
+    /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
+    /// Progress bar.
     progress: RefCell<Option<Progress<'cfg>>>,
+    /// Number of downloads that have successfully finished.
     downloads_finished: usize,
+    /// Total bytes for all successfully downloaded packages.
     downloaded_bytes: u64,
+    /// Size (in bytes) and package name of the largest downloaded package.
     largest: (u64, String),
+    /// Time when downloading started.
     start: Instant,
+    /// Indicates *all* downloads were successful.
     success: bool,
 
     /// Timeout management, both of timeout thresholds as well as whether or not
@@ -289,36 +309,50 @@ pub struct Downloads<'a, 'cfg: 'a> {
     ///
     /// Note that timeout management is done manually here instead of in libcurl
     /// because we want to apply timeouts to an entire batch of operations, not
-    /// any one particular single operatino
-    timeout: ops::HttpTimeout, // timeout configuration
-    updated_at: Cell<Instant>,       // last time we received bytes
-    next_speed_check: Cell<Instant>, // if threshold isn't 0 by this time, error
-    next_speed_check_bytes_threshold: Cell<u64>, // decremented when we receive bytes
+    /// any one particular single operation.
+    timeout: ops::HttpTimeout,
+    /// Last time bytes were received.
+    updated_at: Cell<Instant>,
+    /// This is a slow-speed check. It is reset to `now + timeout_duration`
+    /// every time at least `threshold` bytes are received. If the current
+    /// time ever exceeds `next_speed_check`, then give up and report a
+    /// timeout error.
+    next_speed_check: Cell<Instant>,
+    /// This is the slow-speed threshold byte count. It starts at the
+    /// configured threshold value (default 10), and is decremented by the
+    /// number of bytes received in each chunk. If it is <= zero, the
+    /// threshold has been met and data is being received fast enough not to
+    /// trigger a timeout; reset `next_speed_check` and set this back to the
+    /// configured threshold.
+    next_speed_check_bytes_threshold: Cell<u64>,
+    /// Global filesystem lock to ensure only one Cargo is downloading at a
+    /// time.
+    _lock: PackageCacheLock<'cfg>,
 }
 
 struct Download<'cfg> {
-    /// Token for this download, used as the key of the `Downloads::pending` map
+    /// The token for this download, used as the key of the `Downloads::pending` map
     /// and stored in `EasyHandle` as well.
     token: usize,
 
-    /// Package that we're downloading
+    /// The package that we're downloading.
     id: PackageId,
 
-    /// Actual downloaded data, updated throughout the lifetime of this download
+    /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
 
     /// The URL that we're downloading from, cached here for error messages and
     /// reenqueuing.
     url: String,
 
-    /// A descriptive string to print when we've finished downloading this crate
+    /// A descriptive string to print when we've finished downloading this crate.
     descriptor: String,
 
-    /// Statistics updated from the progress callback in libcurl
+    /// Statistics updated from the progress callback in libcurl.
     total: Cell<u64>,
     current: Cell<u64>,
 
-    /// The moment we started this transfer at
+    /// The moment we started this transfer at.
     start: Instant,
     timed_out: Cell<Option<String>>,
 
@@ -392,6 +426,7 @@ impl<'cfg> PackageSet<'cfg> {
             timeout,
             next_speed_check: Cell::new(Instant::now()),
             next_speed_check_bytes_threshold: Cell::new(0),
+            _lock: self.config.acquire_package_cache_lock()?,
         })
     }
 
@@ -414,6 +449,31 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
         self.sources.borrow()
+    }
+
+    pub fn sources_mut(&self) -> RefMut<'_, SourceMap<'cfg>> {
+        self.sources.borrow_mut()
+    }
+
+    /// Merge the given set into self.
+    pub fn add_set(&mut self, set: PackageSet<'cfg>) {
+        assert!(!self.downloading.get());
+        assert!(!set.downloading.get());
+        for (pkg_id, p_cell) in set.packages {
+            self.packages.entry(pkg_id).or_insert(p_cell);
+        }
+        let mut sources = self.sources.borrow_mut();
+        let other_sources = set.sources.into_inner();
+        sources.add_source_map(other_sources);
+    }
+
+    /// Get mutable access to an already downloaded package, if it's already
+    /// downoaded and it's part of this set. Does not actually attempt to
+    /// download anything if it's not already downloaded.
+    pub fn lookup_mut(&mut self, id: PackageId) -> Option<&mut Package> {
+        self.packages
+            .get_mut(&id)
+            .and_then(|cell| cell.borrow_mut())
     }
 }
 
@@ -441,6 +501,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
     pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
+        Ok(self
+            .start_inner(id)
+            .chain_err(|| format!("failed to download `{}`", id))?)
+    }
+
+    fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         // First up see if we've already cached this package, in which case
         // there's nothing to do.
         let slot = self
@@ -474,7 +540,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // Ok we're going to download this crate, so let's set up all our
         // internal state and hand off an `Easy` handle to our libcurl `Multi`
         // handle. This won't actually start the transfer, but later it'll
-        // hapen during `wait_for_download`
+        // happen during `wait_for_download`
         let token = self.next;
         self.next += 1;
         debug!("downloading {} as {}", id, token);
@@ -565,7 +631,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         Ok(None)
     }
 
-    /// Returns the number of crates that are still downloading
+    /// Returns the number of crates that are still downloading.
     pub fn remaining(&self) -> usize {
         self.pending.len()
     }
@@ -710,6 +776,8 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         Ok(())
     }
 
+    /// Block, waiting for curl. Returns a token and a `Result` for that token
+    /// (`Ok` means the download successfully finished).
     fn wait_for_curl(&mut self) -> CargoResult<(usize, Result<(), curl::Error>)> {
         // This is the main workhorse loop. We use libcurl's portable `wait`
         // method to actually perform blocking. This isn't necessarily too
@@ -717,7 +785,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // a few anyway.
         //
         // Here we start off by asking the `multi` handle to do some work via
-        // the `perform` method. This will actually do I/O work (nonblocking)
+        // the `perform` method. This will actually do I/O work (non-blocking)
         // and attempt to make progress. Afterwards we ask about the `messages`
         // contained in the handle which will inform us if anything has finished
         // transferring.
@@ -739,7 +807,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             self.set.multi.messages(|msg| {
                 let token = msg.token().expect("failed to read token");
                 let handle = &pending[&token].1;
-                if let Some(result) = msg.result_for(&handle) {
+                if let Some(result) = msg.result_for(handle) {
                     results.push((token, result));
                 } else {
                     debug!("message without a result (?)");
@@ -875,21 +943,31 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
         if !progress.is_enabled() {
             return;
         }
-        // If we didn't download anything, no need for a summary
+        // If we didn't download anything, no need for a summary.
         if self.downloads_finished == 0 {
             return;
         }
-        // If an error happened, let's not clutter up the output
+        // If an error happened, let's not clutter up the output.
         if !self.success {
             return;
         }
+        // pick the correct plural of crate(s)
+        let crate_string = if self.downloads_finished == 1 {
+            "crate"
+        } else {
+            "crates"
+        };
         let mut status = format!(
-            "{} crates ({}) in {}",
+            "{} {} ({}) in {}",
             self.downloads_finished,
+            crate_string,
             ByteSize(self.downloaded_bytes),
             util::elapsed(self.start.elapsed())
         );
-        if self.largest.0 > ByteSize::mb(1).0 {
+        // print the size of largest crate if it was >1mb
+        // however don't print if only a single crate was downloaded
+        // because it is obvious that it will be the largest then
+        if self.largest.0 > ByteSize::mb(1).0 && self.downloads_finished > 1 {
             status.push_str(&format!(
                 " (largest was `{}` at {})",
                 self.largest.1,

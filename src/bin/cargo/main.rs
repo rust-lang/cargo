@@ -1,6 +1,8 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::redundant_closure)] // there's a false positive
+#![warn(clippy::needless_borrow)]
+#![warn(clippy::redundant_clone)]
 
 use std::collections::BTreeSet;
 use std::env;
@@ -8,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::core::shell::Shell;
-use cargo::util::{self, command_prelude, lev_distance, CargoResult, CliResult, Config};
+use cargo::util::{self, closest_msg, command_prelude, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
 mod cli;
@@ -18,9 +20,9 @@ use crate::command_prelude::*;
 
 fn main() {
     #[cfg(feature = "pretty-env-logger")]
-    pretty_env_logger::init();
+    pretty_env_logger::init_custom_env("CARGO_LOG");
     #[cfg(not(feature = "pretty-env-logger"))]
-    env_logger::init();
+    env_logger::init_from_env("CARGO_LOG");
     cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {
@@ -111,18 +113,6 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
     commands
 }
 
-fn find_closest(config: &Config, cmd: &str) -> Option<String> {
-    let cmds = list_commands(config);
-    // Only consider candidates with a lev_distance of 3 or less so we don't
-    // suggest out-of-the-blue options.
-    cmds.into_iter()
-        .map(|c| c.name())
-        .map(|c| (lev_distance(&c, cmd), c))
-        .filter(|&(d, _)| d < 4)
-        .min_by_key(|a| a.0)
-        .map(|slot| slot.1)
-}
-
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
@@ -132,14 +122,9 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let command = match path {
         Some(command) => command,
         None => {
-            let err = match find_closest(config, cmd) {
-                Some(closest) => failure::format_err!(
-                    "no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
-                    cmd,
-                    closest
-                ),
-                None => failure::format_err!("no such subcommand: `{}`", cmd),
-            };
+            let cmds = list_commands(config);
+            let did_you_mean = closest_msg(cmd, cmds.iter(), |c| c.name());
+            let err = failure::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }
     };

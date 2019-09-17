@@ -1,7 +1,7 @@
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_simple() {
     let p = project()
         .file("src/foo.rs", "")
@@ -39,6 +39,7 @@ fn cargo_metadata_simple() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doctest": false,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/foo.rs"
@@ -46,7 +47,8 @@ fn cargo_metadata_simple() {
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -69,7 +71,7 @@ fn cargo_metadata_simple() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_warns_on_implicit_version() {
     let p = project()
         .file("src/foo.rs", "")
@@ -81,7 +83,7 @@ fn cargo_metadata_warns_on_implicit_version() {
     p.cargo("metadata --format-version 1").with_stderr("").run();
 }
 
-#[test]
+#[cargo_test]
 fn library_with_several_crate_types() {
     let p = project()
         .file("src/lib.rs", "")
@@ -129,6 +131,7 @@ crate-type = ["lib", "staticlib"]
                             "lib",
                             "staticlib"
                         ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -136,7 +139,8 @@ crate-type = ["lib", "staticlib"]
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -159,7 +163,7 @@ crate-type = ["lib", "staticlib"]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn library_with_features() {
     let p = project()
         .file("src/lib.rs", "")
@@ -207,6 +211,7 @@ optional_feat = []
                         "crate_types": [
                             "lib"
                         ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -220,7 +225,8 @@ optional_feat = []
                   "optional_feat": []
                 },
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -246,7 +252,7 @@ optional_feat = []
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_with_deps_and_version() {
     let p = project()
         .file("src/foo.rs", "")
@@ -293,6 +299,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
@@ -302,6 +309,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doctest": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -351,6 +359,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -360,6 +369,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doctest": false,
                         "edition": "2015",
                         "kind": [
                             "bin"
@@ -384,6 +394,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "foobar",
                 "readme": null,
                 "repository": null,
@@ -393,6 +404,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doctest": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -430,6 +442,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
@@ -439,6 +452,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doctest": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -509,7 +523,7 @@ fn cargo_metadata_with_deps_and_version() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn example() {
     let p = project()
         .file("src/lib.rs", "")
@@ -552,6 +566,7 @@ name = "ex"
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -559,6 +574,7 @@ name = "ex"
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "bin" ],
+                        "doctest": false,
                         "edition": "2015",
                         "name": "ex",
                         "src_path": "[..]/foo/examples/ex.rs"
@@ -566,7 +582,8 @@ name = "ex"
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": [
@@ -591,7 +608,7 @@ name = "ex"
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn example_lib() {
     let p = project()
         .file("src/lib.rs", "")
@@ -635,6 +652,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -642,6 +660,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "rlib", "dylib" ],
+                        "doctest": false,
                         "edition": "2015",
                         "name": "ex",
                         "src_path": "[..]/foo/examples/ex.rs"
@@ -649,7 +668,8 @@ crate-type = ["rlib", "dylib"]
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": [
@@ -674,7 +694,7 @@ crate-type = ["rlib", "dylib"]
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_metadata() {
     let p = project()
         .file(
@@ -717,6 +737,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "bar",
                         "src_path": "[..]bar/src/lib.rs"
@@ -724,7 +745,8 @@ fn workspace_metadata() {
                 ],
                 "features": {},
                 "manifest_path": "[..]bar/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             },
             {
                 "authors": [
@@ -748,6 +770,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "baz",
                         "src_path": "[..]baz/src/lib.rs"
@@ -755,7 +778,8 @@ fn workspace_metadata() {
                 ],
                 "features": {},
                 "manifest_path": "[..]baz/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -784,7 +808,7 @@ fn workspace_metadata() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn workspace_metadata_no_deps() {
     let p = project()
         .file(
@@ -827,6 +851,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "bar",
                         "src_path": "[..]bar/src/lib.rs"
@@ -834,7 +859,8 @@ fn workspace_metadata_no_deps() {
                 ],
                 "features": {},
                 "manifest_path": "[..]bar/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             },
             {
                 "authors": [
@@ -858,6 +884,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": ["lib"],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "baz",
                         "src_path": "[..]baz/src/lib.rs"
@@ -865,7 +892,8 @@ fn workspace_metadata_no_deps() {
                 ],
                 "features": {},
                 "manifest_path": "[..]baz/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -878,7 +906,7 @@ fn workspace_metadata_no_deps() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();
 
@@ -915,6 +943,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "targets":[{
             "kind":["bin"],
             "crate_types":["bin"],
+            "doctest": false,
             "edition": "2015",
             "name":"foo",
             "src_path":"[..]/foo/src/foo.rs"
@@ -922,6 +951,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "features":{},
         "manifest_path":"[..]Cargo.toml",
         "metadata": null,
+        "publish": null,
         "readme": null,
         "repository": null
     }],
@@ -932,7 +962,7 @@ const MANIFEST_OUTPUT: &str = r#"
     "workspace_root": "[..]/foo"
 }"#;
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -945,7 +975,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -959,7 +989,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -976,7 +1006,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -994,7 +1024,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_no_deps_cwd() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -1006,7 +1036,7 @@ fn cargo_metadata_no_deps_cwd() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn cargo_metadata_bad_version() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -1024,7 +1054,7 @@ error: '2' isn't a valid value for '--format-version <VERSION>'
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn multiple_features() {
     let p = project()
         .file(
@@ -1046,7 +1076,7 @@ fn multiple_features() {
     p.cargo("metadata --features").arg("a b").run();
 }
 
-#[test]
+#[cargo_test]
 fn package_metadata() {
     let p = project()
         .file(
@@ -1093,6 +1123,7 @@ fn package_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doctest": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]foo/src/lib.rs"
@@ -1104,7 +1135,8 @@ fn package_metadata() {
                     "bar": {
                         "baz": "quux"
                     }
-                }
+                },
+                "publish": null
             }
         ],
         "workspace_members": ["foo[..]"],
@@ -1117,7 +1149,74 @@ fn package_metadata() {
         .run();
 }
 
-#[test]
+#[cargo_test]
+fn package_publish() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+            categories = ["database"]
+            keywords = ["database"]
+            readme = "README.md"
+            repository = "https://github.com/rust-lang/cargo"
+            publish = ["my-registry"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata --no-deps")
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": ["wycats@example.com"],
+                "categories": ["database"],
+                "name": "foo",
+                "readme": "README.md",
+                "repository": "https://github.com/rust-lang/cargo",
+                "version": "0.1.0",
+                "id": "foo[..]",
+                "keywords": ["database"],
+                "source": null,
+                "dependencies": [],
+                "edition": "2015",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "doctest": true,
+                        "edition": "2015",
+                        "name": "foo",
+                        "src_path": "[..]foo/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]foo/Cargo.toml",
+                "metadata": null,
+                "publish": ["my-registry"]
+            }
+        ],
+        "workspace_members": ["foo[..]"],
+        "resolve": null,
+        "target_directory": "[..]foo/target",
+        "version": 1,
+        "workspace_root": "[..]/foo"
+    }"#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_metadata_path_to_cargo_toml_project() {
     let p = project()
         .file(
@@ -1158,6 +1257,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
@@ -1167,6 +1267,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doctest": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1201,15 +1302,13 @@ fn cargo_metadata_path_to_cargo_toml_project() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn package_edition_2018() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-
             [package]
             name = "foo"
             version = "0.1.0"
@@ -1219,7 +1318,6 @@ fn package_edition_2018() {
         )
         .build();
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
         {
@@ -1240,6 +1338,7 @@ fn package_edition_2018() {
                     "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
+                    "publish": null,
                     "name": "foo",
                     "readme": null,
                     "repository": null,
@@ -1249,6 +1348,7 @@ fn package_edition_2018() {
                             "crate_types": [
                                 "lib"
                             ],
+                            "doctest": true,
                             "edition": "2018",
                             "kind": [
                                 "lib"
@@ -1283,7 +1383,7 @@ fn package_edition_2018() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn target_edition_2018() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1291,8 +1391,6 @@ fn target_edition_2018() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-
             [package]
             name = "foo"
             version = "0.1.0"
@@ -1305,7 +1403,6 @@ fn target_edition_2018() {
         )
         .build();
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
         {
@@ -1326,6 +1423,7 @@ fn target_edition_2018() {
                     "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
+                    "publish": null,
                     "name": "foo",
                     "readme": null,
                     "repository": null,
@@ -1335,6 +1433,7 @@ fn target_edition_2018() {
                             "crate_types": [
                                 "lib"
                             ],
+                            "doctest": true,
                             "edition": "2018",
                             "kind": [
                                 "lib"
@@ -1346,6 +1445,7 @@ fn target_edition_2018() {
                             "crate_types": [
                                 "bin"
                             ],
+                            "doctest": false,
                             "edition": "2015",
                             "kind": [
                                 "bin"
@@ -1380,7 +1480,7 @@ fn target_edition_2018() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn rename_dependency() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
@@ -1389,8 +1489,6 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rename-dependency"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1405,7 +1503,6 @@ fn rename_dependency() {
         .build();
 
     p.cargo("metadata")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
 {
@@ -1449,6 +1546,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "foo",
             "readme": null,
             "repository": null,
@@ -1458,6 +1556,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doctest": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1482,6 +1581,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "bar",
             "readme": null,
             "repository": null,
@@ -1491,6 +1591,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doctest": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1515,6 +1616,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "bar",
             "readme": null,
             "repository": null,
@@ -1524,6 +1626,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doctest": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1581,7 +1684,7 @@ fn rename_dependency() {
         .run();
 }
 
-#[test]
+#[cargo_test]
 fn metadata_links() {
     let p = project()
         .file(
@@ -1616,6 +1719,7 @@ fn metadata_links() {
       "links": "a",
       "manifest_path": "[..]/foo/Cargo.toml",
       "metadata": null,
+      "publish": null,
       "name": "foo",
       "readme": null,
       "repository": null,
@@ -1625,6 +1729,7 @@ fn metadata_links() {
           "crate_types": [
             "lib"
           ],
+          "doctest": true,
           "edition": "2015",
           "kind": [
             "lib"
@@ -1636,6 +1741,7 @@ fn metadata_links() {
           "crate_types": [
             "bin"
           ],
+          "doctest": false,
           "edition": "2015",
           "kind": [
             "custom-build"
@@ -1668,4 +1774,33 @@ fn metadata_links() {
 "#,
         )
         .run()
+}
+
+#[cargo_test]
+fn deps_with_bin_only() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            bdep = { path = "bdep" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bdep/Cargo.toml", &basic_bin_manifest("bdep"))
+        .file("bdep/src/main.rs", "fn main() {}")
+        .build();
+
+    let output = p
+        .cargo("metadata")
+        .exec_with_output()
+        .expect("cargo metadata failed");
+    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
+    let nodes = &meta["resolve"]["nodes"];
+    assert!(nodes[0]["deps"].as_array().unwrap().is_empty());
+    assert!(nodes[1]["deps"].as_array().unwrap().is_empty());
 }

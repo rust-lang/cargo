@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
+use crate::core::compiler::unit_dependencies;
+use crate::core::compiler::UnitInterner;
+use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind};
 use crate::core::profiles::UnitFor;
 use crate::core::Workspace;
 use crate::ops;
@@ -50,6 +52,18 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let profiles = ws.profiles();
+    let interner = UnitInterner::new();
+    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
+    build_config.release = opts.release;
+    let bcx = BuildContext::new(
+        ws,
+        &packages,
+        opts.config,
+        &build_config,
+        profiles,
+        &interner,
+        HashMap::new(),
+    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -79,34 +93,30 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 opts.release,
                             )
                         };
-                        units.push(Unit {
-                            pkg,
-                            target,
-                            profile,
-                            kind: *kind,
-                            mode: *mode,
-                        });
+                        let features = resolve.features_sorted(pkg.package_id());
+                        units.push(
+                            bcx.units
+                                .intern(pkg, target, profile, *kind, *mode, features),
+                        );
                     }
                 }
             }
         }
     }
 
-    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
-    build_config.release = opts.release;
-    let bcx = BuildContext::new(
-        ws,
-        &resolve,
-        &packages,
-        opts.config,
-        &build_config,
-        profiles,
-        HashMap::new(),
-    )?;
-    let mut cx = Context::new(config, &bcx)?;
+    let unit_dependencies =
+        unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
+    let mut cx = Context::new(config, &bcx, unit_dependencies)?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {
+        if unit.mode.is_doc() || unit.mode.is_doc_test() {
+            // Cleaning individual rustdoc crates is currently not supported.
+            // For example, the search index would need to be rebuilt to fully
+            // remove it (otherwise you're left with lots of broken links).
+            // Doc tests produce no output.
+            continue;
+        }
         rm_rf(&cx.files().fingerprint_dir(unit), config)?;
         if unit.target.is_custom_build() {
             if unit.mode.is_run_custom_build() {

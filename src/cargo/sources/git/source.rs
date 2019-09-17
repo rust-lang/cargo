@@ -71,12 +71,12 @@ fn ident(url: &Url) -> CargoResult<String> {
     Ok(format!("{}-{}", ident, short_hash(&url)))
 }
 
-// Some hacks and heuristics for making equivalent URLs hash the same
+// Some hacks and heuristics for making equivalent URLs hash the same.
 pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     let mut url = url.clone();
 
-    // cannot-be-a-base-urls are not supported
-    // eg. github.com:rust-lang-nursery/rustfmt.git
+    // cannot-be-a-base-urls (e.g., `github.com:rust-lang-nursery/rustfmt.git`)
+    // are not supported.
     if url.cannot_be_a_base() {
         failure::bail!(
             "invalid url `{}`: cannot-be-a-base-URLs are not supported",
@@ -84,23 +84,23 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
         )
     }
 
-    // Strip a trailing slash
+    // Strip a trailing slash.
     if url.path().ends_with('/') {
         url.path_segments_mut().unwrap().pop_if_empty();
     }
 
-    // HACKHACK: For GitHub URL's specifically just lowercase
-    // everything.  GitHub treats both the same, but they hash
+    // HACK: for GitHub URLs specifically, just lower-case
+    // everything. GitHub treats both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
-    // same case conversion rules that GitHub does. (#84)
+    // same case conversion rules that GitHub does. (See issue #84.)
     if url.host_str() == Some("github.com") {
         url.set_scheme("https").unwrap();
         let path = url.path().to_lowercase();
         url.set_path(&path);
     }
 
-    // Repos generally can be accessed with or w/o '.git'
+    // Repos can generally be accessed with or without `.git` extension.
     let needs_chopping = url.path().ends_with(".git");
     if needs_chopping {
         let last = {
@@ -129,7 +129,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let src = self
             .path_source
             .as_mut()
-            .expect("BUG: update() must be called before query()");
+            .expect("BUG: `update()` must be called before `query()`");
         src.query(dep, f)
     }
 
@@ -137,7 +137,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let src = self
             .path_source
             .as_mut()
-            .expect("BUG: update() must be called before query()");
+            .expect("BUG: `update()` must be called before `query()`");
         src.fuzzy_query(dep, f)
     }
 
@@ -154,16 +154,13 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn update(&mut self) -> CargoResult<()> {
-        let lock =
-            self.config
-                .git_path()
-                .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;
+        let git_path = self.config.git_path();
+        let git_path = self.config.assert_package_cache_locked(&git_path);
+        let db_path = git_path.join("db").join(&self.ident);
 
-        let db_path = lock.parent().join("db").join(&self.ident);
-
-        if self.config.cli_unstable().offline && !db_path.exists() {
+        if self.config.offline() && !db_path.exists() {
             failure::bail!(
-                "can't checkout from '{}': you are in the offline mode (-Z offline)",
+                "can't checkout from '{}': you are in the offline mode (--offline)",
                 self.remote.url()
             );
         }
@@ -175,7 +172,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let actual_rev = self.remote.rev_for(&db_path, &self.reference);
         let should_update = actual_rev.is_err() || self.source_id.precise().is_none();
 
-        let (db, actual_rev) = if should_update && !self.config.cli_unstable().offline {
+        let (db, actual_rev) = if should_update && !self.config.offline() {
             self.config.shell().status(
                 "Updating",
                 format!("git repository `{}`", self.remote.url()),
@@ -189,22 +186,17 @@ impl<'cfg> Source for GitSource<'cfg> {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
 
-        // Don’t use the full hash,
-        // to contribute less to reaching the path length limit on Windows:
-        // https://github.com/servo/servo/pull/14397
+        // Don’t use the full hash, in order to contribute less to reaching the
+        // path length limit on Windows. See
+        // <https://github.com/servo/servo/pull/14397>.
         let short_id = db.to_short_id(&actual_rev).unwrap();
 
-        let checkout_path = lock
-            .parent()
+        let checkout_path = git_path
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
 
-        // Copy the database to the checkout location. After this we could drop
-        // the lock on the database as we no longer needed it, but we leave it
-        // in scope so the destructors here won't tamper with too much.
-        // Checkout is immutable, so we don't need to protect it with a lock once
-        // it is created.
+        // Copy the database to the checkout location.
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
@@ -217,13 +209,13 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
-            "getting packages for package id `{}` from `{:?}`",
+            "getting packages for package ID `{}` from `{:?}`",
             id,
             self.remote
         );
         self.path_source
             .as_mut()
-            .expect("BUG: update() must be called before get()")
+            .expect("BUG: `update()` must be called before `get()`")
             .download(id)
     }
 
@@ -236,16 +228,20 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        format!("git repository {}", self.source_id)
+        format!("Git repository {}", self.source_id)
     }
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+
+    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::ident;
-    use crate::util::ToUrl;
+    use crate::util::IntoUrl;
     use url::Url;
 
     #[test]
@@ -295,6 +291,6 @@ mod test {
     }
 
     fn url(s: &str) -> Url {
-        s.to_url().unwrap()
+        s.into_url().unwrap()
     }
 }

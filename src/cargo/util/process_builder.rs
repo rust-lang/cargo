@@ -20,14 +20,14 @@ pub struct ProcessBuilder {
     args: Vec<OsString>,
     /// Any environment variables that should be set for the program.
     env: HashMap<String, Option<OsString>>,
-    /// Which directory to run the program from.
+    /// The directory to run the program from.
     cwd: Option<OsString>,
     /// The `make` jobserver. See the [jobserver crate][jobserver_docs] for
     /// more information.
     ///
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
     jobserver: Option<Client>,
-    /// Whether to include environment variable in display
+    /// `true` to include environment variable in display.
     display_env_vars: bool,
 }
 
@@ -59,69 +59,66 @@ impl fmt::Display for ProcessBuilder {
 }
 
 impl ProcessBuilder {
-    /// (chainable) Set the executable for the process.
+    /// (chainable) Sets the executable for the process.
     pub fn program<T: AsRef<OsStr>>(&mut self, program: T) -> &mut ProcessBuilder {
         self.program = program.as_ref().to_os_string();
         self
     }
 
-    /// (chainable) Add an arg to the args list.
+    /// (chainable) Adds `arg` to the args list.
     pub fn arg<T: AsRef<OsStr>>(&mut self, arg: T) -> &mut ProcessBuilder {
         self.args.push(arg.as_ref().to_os_string());
         self
     }
 
-    /// (chainable) Add many args to the args list.
-    pub fn args<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
+    /// (chainable) Adds multiple `args` to the args list.
+    pub fn args<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
         self.args
-            .extend(arguments.iter().map(|t| t.as_ref().to_os_string()));
+            .extend(args.iter().map(|t| t.as_ref().to_os_string()));
         self
     }
 
-    /// (chainable) Replace args with new args list
-    pub fn args_replace<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
-        self.args = arguments
-            .iter()
-            .map(|t| t.as_ref().to_os_string())
-            .collect();
+    /// (chainable) Replaces the args list with the given `args`.
+    pub fn args_replace<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
+        self.args = args.iter().map(|t| t.as_ref().to_os_string()).collect();
         self
     }
 
-    /// (chainable) Set the current working directory of the process
+    /// (chainable) Sets the current working directory of the process.
     pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut ProcessBuilder {
         self.cwd = Some(path.as_ref().to_os_string());
         self
     }
 
-    /// (chainable) Set an environment variable for the process.
+    /// (chainable) Sets an environment variable for the process.
     pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut ProcessBuilder {
         self.env
             .insert(key.to_string(), Some(val.as_ref().to_os_string()));
         self
     }
 
-    /// (chainable) Unset an environment variable for the process.
+    /// (chainable) Unsets an environment variable for the process.
     pub fn env_remove(&mut self, key: &str) -> &mut ProcessBuilder {
         self.env.insert(key.to_string(), None);
         self
     }
 
-    /// Get the executable name.
+    /// Gets the executable name.
     pub fn get_program(&self) -> &OsString {
         &self.program
     }
 
-    /// Get the program arguments
+    /// Gets the program arguments.
     pub fn get_args(&self) -> &[OsString] {
         &self.args
     }
 
-    /// Get the current working directory for the process
+    /// Gets the current working directory for the process.
     pub fn get_cwd(&self) -> Option<&Path> {
         self.cwd.as_ref().map(Path::new)
     }
 
-    /// Get an environment variable as the process will see it (will inherit from environment
+    /// Gets an environment variable as the process will see it (will inherit from environment
     /// unless explicitally unset).
     pub fn get_env(&self, var: &str) -> Option<OsString> {
         self.env
@@ -131,13 +128,13 @@ impl ProcessBuilder {
             .and_then(|s| s)
     }
 
-    /// Get all environment variables explicitly set or unset for the process (not inherited
+    /// Gets all environment variables explicitly set or unset for the process (not inherited
     /// vars).
     pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
         &self.env
     }
 
-    /// Set the `make` jobserver. See the [jobserver crate][jobserver_docs] for
+    /// Sets the `make` jobserver. See the [jobserver crate][jobserver_docs] for
     /// more information.
     ///
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
@@ -146,13 +143,13 @@ impl ProcessBuilder {
         self
     }
 
-    /// Enable environment variable display
+    /// Enables environment variable display.
     pub fn display_env_vars(&mut self) -> &mut Self {
         self.display_env_vars = true;
         self
     }
 
-    /// Run the process, waiting for completion, and mapping non-success exit codes to an error.
+    /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
         let exit = command.status().chain_err(|| {
@@ -173,16 +170,16 @@ impl ProcessBuilder {
 
     /// Replaces the current process with the target process.
     ///
-    /// On Unix, this executes the process using the unix syscall `execvp`, which will block
+    /// On Unix, this executes the process using the Unix syscall `execvp`, which will block
     /// this process, and will only return if there is an error.
     ///
     /// On Windows this isn't technically possible. Instead we emulate it to the best of our
-    /// ability. One aspect we fix here is that we specify a handler for the ctrl-c handler.
-    /// In doing so (and by effectively ignoring it) we should emulate proxying ctrl-c
+    /// ability. One aspect we fix here is that we specify a handler for the Ctrl-C handler.
+    /// In doing so (and by effectively ignoring it) we should emulate proxying Ctrl-C
     /// handling to the application at hand, which will either terminate or handle it itself.
-    /// According to microsoft's documentation at:
-    /// https://docs.microsoft.com/en-us/windows/console/ctrl-c-and-ctrl-break-signals
-    /// the ctrl-c signal is sent to all processes attached to a terminal, which should
+    /// According to Microsoft's documentation at
+    /// <https://docs.microsoft.com/en-us/windows/console/ctrl-c-and-ctrl-break-signals>.
+    /// the Ctrl-C signal is sent to all processes attached to a terminal, which should
     /// include our child process. If the child terminates then we'll reap them in Cargo
     /// pretty quickly, and if the child handles the signal then we won't terminate
     /// (and we shouldn't!) until the process itself later exits.
@@ -190,7 +187,7 @@ impl ProcessBuilder {
         imp::exec_replace(self)
     }
 
-    /// Execute the process, returning the stdio output, or an error if non-zero exit status.
+    /// Executes the process, returning the stdio output, or an error if non-zero exit status.
     pub fn exec_with_output(&self) -> CargoResult<Output> {
         let mut command = self.build_command();
 
@@ -210,12 +207,15 @@ impl ProcessBuilder {
         }
     }
 
-    /// Execute a command, passing each line of stdout and stderr to the supplied callbacks, which
+    /// Executes a command, passing each line of stdout and stderr to the supplied callbacks, which
     /// can mutate the string data.
     ///
     /// If any invocations of these function return an error, it will be propagated.
     ///
-    /// Optionally, output can be passed to errors using `print_output`
+    /// If `capture_output` is true, then all the output will also be buffered
+    /// and stored in the returned `Output` object. If it is false, no caching
+    /// is done, and the callbacks are solely responsible for handling the
+    /// output.
     pub fn exec_with_streaming(
         &self,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
@@ -304,7 +304,7 @@ impl ProcessBuilder {
         Ok(output)
     }
 
-    /// Converts ProcessBuilder into a `std::process::Command`, and handles the jobserver if
+    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
     /// present.
     pub fn build_command(&self) -> Command {
         let mut command = Command::new(&self.program);
@@ -370,7 +370,7 @@ mod imp {
     use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
     unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
-        // Do nothing. Let the child process handle it.
+        // Do nothing; let the child process handle it.
         TRUE
     }
 
@@ -381,7 +381,7 @@ mod imp {
             }
         }
 
-        // Just exec the process as normal.
+        // Just execute the process as normal.
         process_builder.exec()
     }
 }

@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use std::mem;
 use std::rc::Rc;
 
@@ -25,7 +26,7 @@ pub struct Summary {
 struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: FeatureMap,
+    features: Rc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
     namespaced_features: bool,
@@ -36,7 +37,7 @@ impl Summary {
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: &BTreeMap<K, Vec<impl AsRef<str>>>,
-        links: Option<impl AsRef<str>>,
+        links: Option<impl Into<InternedString>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
     where
@@ -58,14 +59,14 @@ impl Summary {
                 )
             }
         }
-        let feature_map = build_feature_map(&features, &dependencies, namespaced_features)?;
+        let feature_map = build_feature_map(features, &dependencies, namespaced_features)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
                 dependencies,
-                features: feature_map,
+                features: Rc::new(feature_map),
                 checksum: None,
-                links: links.map(|l| InternedString::new(l.as_ref())),
+                links: links.map(|l| l.into()),
                 namespaced_features,
             }),
         })
@@ -104,9 +105,8 @@ impl Summary {
         self
     }
 
-    pub fn set_checksum(mut self, cksum: String) -> Summary {
+    pub fn set_checksum(&mut self, cksum: String) {
         Rc::make_mut(&mut self.inner).checksum = Some(cksum);
-        self
     }
 
     pub fn map_dependencies<F>(mut self, f: F) -> Summary
@@ -135,6 +135,14 @@ impl Summary {
 impl PartialEq for Summary {
     fn eq(&self, other: &Summary) -> bool {
         self.inner.package_id == other.inner.package_id
+    }
+}
+
+impl Eq for Summary {}
+
+impl Hash for Summary {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inner.package_id.hash(state);
     }
 }
 
@@ -170,7 +178,7 @@ where
         // iteration over the list if the dependency is found in the list.
         let mut dependency_found = if namespaced {
             match dep_map.get(feature.borrow()) {
-                Some(ref dep_data) => {
+                Some(dep_data) => {
                     if !dep_data.iter().any(|d| d.is_optional()) {
                         failure::bail!(
                             "Feature `{}` includes the dependency of the same name, but this is \
