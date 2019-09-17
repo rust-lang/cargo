@@ -193,6 +193,21 @@ function render_timing_graph() {
       y: TOP_MARGIN + GRAPH_HEIGHT * (1.0 - (v / max_v))
     };
   }
+
+  const cpuFillStyle = 'rgba(250, 119, 0, 0.2)';
+  ctx.beginPath();
+  ctx.fillStyle = cpuFillStyle;
+  let bottomLeft = coord(CPU_USAGE[0][0], 0);
+  ctx.moveTo(bottomLeft.x, bottomLeft.y);
+  for (let i=0; i < CPU_USAGE.length; i++) {
+    let [time, usage] = CPU_USAGE[i];
+    let {x, y} = coord(time, usage / 100.0 * max_v);
+    ctx.lineTo(x, y);
+  }
+  let bottomRight = coord(CPU_USAGE[CPU_USAGE.length - 1][0], 0);
+  ctx.lineTo(bottomRight.x, bottomRight.y);
+  ctx.fill();
+
   function draw_line(style, key) {
     let first = CONCURRENCY_DATA[0];
     let last = coord(first.t, key(first));
@@ -216,7 +231,7 @@ function render_timing_graph() {
   // Draw a legend.
   ctx.restore();
   ctx.save();
-  ctx.translate(graph_width-120, MARGIN);
+  ctx.translate(graph_width-150, MARGIN);
   // background
   ctx.fillStyle = '#fff';
   ctx.strokeStyle = '#000';
@@ -224,7 +239,7 @@ function render_timing_graph() {
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'start';
   ctx.beginPath();
-  ctx.rect(0, 0, 120, 62);
+  ctx.rect(0, 0, 150, 82);
   ctx.stroke();
   ctx.fill();
 
@@ -250,6 +265,13 @@ function render_timing_graph() {
   ctx.lineTo(50, 50);
   ctx.stroke();
   ctx.fillText('Active', 54, 51);
+
+  ctx.beginPath();
+  ctx.fillStyle = cpuFillStyle
+  ctx.fillRect(15, 60, 30, 15);
+  ctx.fill();
+  ctx.fillStyle = 'black';
+  ctx.fillText('CPU Usage', 54, 71);
 
   ctx.restore();
 }
