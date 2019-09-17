@@ -40,7 +40,7 @@ pub struct JobQueue<'a, 'cfg> {
     is_release: bool,
     progress: Progress<'cfg>,
     next_id: u32,
-    timings: Option<Timings<'a, 'cfg>>,
+    timings: Timings<'a, 'cfg>,
 }
 
 pub struct JobState<'a> {
@@ -132,10 +132,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'a>]) -> JobQueue<'a, 'cfg> {
         let (tx, rx) = channel();
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, bcx.config);
-        let timings = match bcx.config.cli_unstable().timings {
-            Some(..) => Some(Timings::new(bcx, root_units)),
-            None => None,
-        };
+        let timings = Timings::new(bcx, root_units);
         JobQueue {
             queue: DependencyQueue::new(),
             tx,
@@ -322,9 +319,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
-            if let Some(t) = &mut self.timings {
-                t.mark_concurrency(self.active.len(), queue.len(), self.queue.len());
-            }
+            self.timings
+                .mark_concurrency(self.active.len(), queue.len(), self.queue.len());
 
             // Drain all events at once to avoid displaying the progress bar
             // unnecessarily.
@@ -343,9 +339,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                             .config
                             .shell()
                             .verbose(|c| c.status("Running", &cmd))?;
-                        if let Some(t) = &mut self.timings {
-                            t.unit_start(id, self.active[&id]);
-                        }
+                        self.timings.unit_start(id, self.active[&id]);
                     }
                     Message::BuildPlanMsg(module_name, cmd, filenames) => {
                         plan.update(&module_name, &cmd, &filenames)?;
@@ -437,9 +431,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
-            if let Some(t) = &mut self.timings {
-                t.finished()?;
-            }
+            self.timings.finished()?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
@@ -535,15 +527,11 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
         match fresh {
             Freshness::Fresh => {
-                if let Some(t) = &mut self.timings {
-                    t.add_fresh();
-                }
+                self.timings.add_fresh();
                 doit()
             }
             Freshness::Dirty => {
-                if let Some(t) = &mut self.timings {
-                    t.add_dirty();
-                }
+                self.timings.add_dirty();
                 scope.spawn(move |_| doit());
             }
         }
@@ -590,11 +578,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             self.emit_warnings(None, unit, cx)?;
         }
         let unlocked = self.queue.finish(unit, &artifact);
-        if let Some(t) = &mut self.timings {
-            match artifact {
-                Artifact::All => t.unit_finished(id, unlocked),
-                Artifact::Metadata => t.unit_rmeta_finished(id, unlocked),
-            }
+        match artifact {
+            Artifact::All => self.timings.unit_finished(id, unlocked),
+            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
         }
         Ok(())
     }

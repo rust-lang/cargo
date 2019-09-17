@@ -14,6 +14,8 @@ use std::time::{Duration, Instant, SystemTime};
 
 pub struct Timings<'a, 'cfg> {
     config: &'cfg Config,
+    /// Whether or not timings should be captured.
+    enabled: bool,
     /// If true, saves an HTML report to disk.
     report_html: bool,
     /// If true, reports unit completion to stderr.
@@ -80,6 +82,18 @@ struct Concurrency {
 
 impl<'a, 'cfg> Timings<'a, 'cfg> {
     pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'_>]) -> Timings<'a, 'cfg> {
+        let has_report = |what| {
+            bcx.config
+                .cli_unstable()
+                .timings
+                .as_ref()
+                .map_or(false, |t| t.iter().any(|opt| opt == what))
+        };
+        let report_html = has_report("html");
+        let report_info = has_report("info");
+        let report_json = has_report("json");
+        let enabled = report_html | report_info | report_json;
+
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
             let target_desc = unit.target.description_named();
@@ -96,13 +110,6 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             })
             .collect();
         let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
-        let has_report = |what| {
-            bcx.config
-                .cli_unstable()
-                .timings
-                .as_ref()
-                .map_or(false, |t| t.iter().any(|opt| opt == what))
-        };
         let rustc_info = render_rustc_info(bcx);
         let profile = if bcx.build_config.release {
             "release"
@@ -113,9 +120,10 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
         Timings {
             config: bcx.config,
-            report_html: has_report("html"),
-            report_info: has_report("info"),
-            report_json: has_report("json"),
+            enabled,
+            report_html,
+            report_info,
+            report_json,
             start: bcx.config.creation_time(),
             start_str,
             rustc_info,
@@ -131,6 +139,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
     /// Mark that a unit has started running.
     pub fn unit_start(&mut self, id: u32, unit: Unit<'a>) {
+        if !self.enabled {
+            return;
+        }
         let mut target = if unit.target.is_lib() && unit.mode == CompileMode::Build {
             // Special case for brevity, since most dependencies hit
             // this path.
@@ -162,6 +173,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
     /// Mark that the `.rmeta` file as generated.
     pub fn unit_rmeta_finished(&mut self, id: u32, unlocked: Vec<&Unit<'a>>) {
+        if !self.enabled {
+            return;
+        }
         // `id` may not always be active. "fresh" units unconditionally
         // generate `Message::Finish`, but this active map only tracks dirty
         // units.
@@ -175,6 +189,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
     /// Mark that a unit has finished running.
     pub fn unit_finished(&mut self, id: u32, unlocked: Vec<&Unit<'a>>) {
+        if !self.enabled {
+            return;
+        }
         // See note above in `unit_rmeta_finished`, this may not always be active.
         if let Some(mut unit_time) = self.active.remove(&id) {
             let t = d_as_f64(self.start.elapsed());
@@ -210,6 +227,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
     /// This is called periodically to mark the concurrency of internal structures.
     pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
+        if !self.enabled {
+            return;
+        }
         let c = Concurrency {
             t: d_as_f64(self.start.elapsed()),
             active,
@@ -231,6 +251,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
 
     /// Call this when all units are finished.
     pub fn finished(&mut self) -> CargoResult<()> {
+        if !self.enabled {
+            return Ok(());
+        }
         self.mark_concurrency(0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
@@ -241,7 +264,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Save HTML report to disk.
-    pub fn report_html(&self) -> CargoResult<()> {
+    fn report_html(&self) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs() as u32 + 1;
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
