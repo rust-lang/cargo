@@ -606,7 +606,7 @@ fn compile_failure() {
     found at `[..]target`
 
 Caused by:
-  Could not compile `foo`.
+  could not compile `foo`.
 
 To learn more, run the command again with --verbose.
 ",

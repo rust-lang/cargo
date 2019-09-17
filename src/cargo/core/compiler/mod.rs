@@ -300,7 +300,7 @@ fn rustc<'a, 'cfg>(
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
             .map_err(internal_if_simple_exit_code)
-            .chain_err(|| format!("Could not compile `{}`.", name))?;
+            .chain_err(|| format!("could not compile `{}`.", name))?;
         }
 
         if do_rename && real_name != crate_name {

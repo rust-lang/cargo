@@ -26,7 +26,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Could not compile `foo`.")
+        .with_stderr_contains("[ERROR] could not compile `foo`.")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }

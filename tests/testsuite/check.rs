@@ -684,7 +684,7 @@ fn short_message_format() {
             "\
 src/lib.rs:1:27: error[E0308]: mismatched types
 error: aborting due to previous error
-error: Could not compile `foo`.
+error: could not compile `foo`.
 ",
         )
         .run();
