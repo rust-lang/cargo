@@ -9,7 +9,7 @@ use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{profile, Config};
+use crate::util::{profile, CanonicalUrl, Config};
 
 /// Source of information about a group of packages.
 ///
@@ -75,9 +75,9 @@ pub struct PackageRegistry<'cfg> {
     yanked_whitelist: HashSet<PackageId>,
     source_config: SourceConfigMap<'cfg>,
 
-    patches: HashMap<Url, Vec<Summary>>,
+    patches: HashMap<CanonicalUrl, Vec<Summary>>,
     patches_locked: bool,
-    patches_available: HashMap<Url, Vec<PackageId>>,
+    patches_available: HashMap<CanonicalUrl, Vec<PackageId>>,
 }
 
 /// A map of all "locked packages" which is filled in when parsing a lock file
@@ -230,6 +230,8 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// `query` until `lock_patches` is called below, which should be called
     /// once all patches have been added.
     pub fn patch(&mut self, url: &Url, deps: &[Dependency]) -> CargoResult<()> {
+        let canonical = CanonicalUrl::new(url)?;
+
         // First up we need to actually resolve each `deps` specification to
         // precisely one summary. We're not using the `query` method below as it
         // internally uses maps we're building up as part of this method
@@ -284,7 +286,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                         url
                     )
                 }
-                if summary.package_id().source_id().url() == url {
+                if *summary.package_id().source_id().canonical_url() == canonical {
                     failure::bail!(
                         "patch for `{}` in `{}` points to the same source, but \
                          patches must point to different sources",
@@ -317,8 +319,8 @@ impl<'cfg> PackageRegistry<'cfg> {
         // `lock` method) and otherwise store the unlocked summaries in
         // `patches` to get locked in a future call to `lock_patches`.
         let ids = unlocked_summaries.iter().map(|s| s.package_id()).collect();
-        self.patches_available.insert(url.clone(), ids);
-        self.patches.insert(url.clone(), unlocked_summaries);
+        self.patches_available.insert(canonical.clone(), ids);
+        self.patches.insert(canonical, unlocked_summaries);
 
         Ok(())
     }
@@ -340,8 +342,11 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.patches_locked = true;
     }
 
-    pub fn patches(&self) -> &HashMap<Url, Vec<Summary>> {
-        &self.patches
+    pub fn patches(&self) -> Vec<Summary> {
+        self.patches
+            .values()
+            .flat_map(|v| v.iter().cloned())
+            .collect()
     }
 
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
@@ -472,7 +477,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             // This means that `dep.matches(..)` will always return false, when
             // what we really care about is the name/version match.
             let mut patches = Vec::<Summary>::new();
-            if let Some(extra) = self.patches.get(dep.source_id().url()) {
+            if let Some(extra) = self.patches.get(dep.source_id().canonical_url()) {
                 patches.extend(
                     extra
                         .iter()
@@ -605,7 +610,11 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     }
 }
 
-fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Summary) -> Summary {
+fn lock(
+    locked: &LockedMap,
+    patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
+    summary: Summary,
+) -> Summary {
     let pair = locked
         .get(&summary.source_id())
         .and_then(|map| map.get(&*summary.name()))
@@ -669,7 +678,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
                 // map, and we see if `id` is contained in the list of patches
                 // for that url. If it is then this lock is still valid,
                 // otherwise the lock is no longer valid.
-                match patches.get(dep.source_id().url()) {
+                match patches.get(dep.source_id().canonical_url()) {
                     Some(list) => list.contains(&id),
                     None => false,
                 }

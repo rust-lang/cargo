@@ -15,10 +15,9 @@ use url::Url;
 
 use crate::core::PackageId;
 use crate::ops;
-use crate::sources::git;
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
-use crate::util::{CargoResult, Config, IntoUrl};
+use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
 
 lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
@@ -34,8 +33,8 @@ pub struct SourceId {
 struct SourceIdInner {
     /// The source URL.
     url: Url,
-    /// The result of `git::canonicalize_url()` on `url` field.
-    canonical_url: Url,
+    /// The canonical version of the above url
+    canonical_url: CanonicalUrl,
     /// The source kind.
     kind: Kind,
     /// For example, the exact Git revision of the specified branch for a Git Source.
@@ -80,7 +79,7 @@ impl SourceId {
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
         let source_id = SourceId::wrap(SourceIdInner {
             kind,
-            canonical_url: git::canonicalize_url(&url)?,
+            canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
             name: None,
@@ -216,7 +215,7 @@ impl SourceId {
         let url = config.get_registry_index(key)?;
         Ok(SourceId::wrap(SourceIdInner {
             kind: Kind::Registry,
-            canonical_url: git::canonicalize_url(&url)?,
+            canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,
             name: Some(key.to_string()),
@@ -226,6 +225,12 @@ impl SourceId {
     /// Gets this source URL.
     pub fn url(&self) -> &Url {
         &self.inner.url
+    }
+
+    /// Gets the canonical URL of this source, used for internal comparison
+    /// purposes.
+    pub fn canonical_url(&self) -> &CanonicalUrl {
+        &self.inner.canonical_url
     }
 
     pub fn display_index(self) -> String {
@@ -508,7 +513,7 @@ impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match self.inner.kind {
-            Kind::Git(_) => self.inner.canonical_url.as_str().hash(into),
+            Kind::Git(_) => self.inner.canonical_url.hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
     }
