@@ -301,7 +301,6 @@ pub fn prepare_target<'a, 'cfg>(
             // hobble along if it happens to return `Some`.
             if let Some(new_local) = (gen_local)(&deps, None)? {
                 *fingerprint.local.lock().unwrap() = new_local;
-                *fingerprint.memoized_hash.lock().unwrap() = None;
             }
 
             write_fingerprint(&loc, &fingerprint)
@@ -602,6 +601,16 @@ impl Fingerprint {
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
         }
+    }
+
+    /// For performance reasons fingerprints will memoize their own hash, but
+    /// there's also internal mutability with its `local` field which can
+    /// change, for example with build scripts, during a build.
+    ///
+    /// This method can be used to bust all memoized hashes just before a build
+    /// to ensure that after a build completes everything is up-to-date.
+    pub fn clear_memoized(&self) {
+        *self.memoized_hash.lock().unwrap() = None;
     }
 
     fn hash(&self) -> u64 {
