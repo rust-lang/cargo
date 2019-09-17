@@ -179,12 +179,14 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         // `id` may not always be active. "fresh" units unconditionally
         // generate `Message::Finish`, but this active map only tracks dirty
         // units.
-        if let Some(unit_time) = self.active.get_mut(&id) {
-            let t = d_as_f64(self.start.elapsed());
-            unit_time.rmeta_time = Some(t - unit_time.start);
-            assert!(unit_time.unlocked_rmeta_units.is_empty());
-            unit_time.unlocked_rmeta_units.extend(unlocked);
-        }
+        let unit_time = match self.active.get_mut(&id) {
+            Some(ut) => ut,
+            None => return,
+        };
+        let t = d_as_f64(self.start.elapsed());
+        unit_time.rmeta_time = Some(t - unit_time.start);
+        assert!(unit_time.unlocked_rmeta_units.is_empty());
+        unit_time.unlocked_rmeta_units.extend(unlocked);
     }
 
     /// Mark that a unit has finished running.
@@ -193,36 +195,38 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             return;
         }
         // See note above in `unit_rmeta_finished`, this may not always be active.
-        if let Some(mut unit_time) = self.active.remove(&id) {
-            let t = d_as_f64(self.start.elapsed());
-            unit_time.duration = t - unit_time.start;
-            assert!(unit_time.unlocked_units.is_empty());
-            unit_time.unlocked_units.extend(unlocked);
-            if self.report_info {
-                let msg = format!(
-                    "{}{} in {:.1}s",
-                    unit_time.name_ver(),
-                    unit_time.target,
-                    unit_time.duration
-                );
-                let _ =
-                    self.config
-                        .shell()
-                        .status_with_color("Completed", msg, termcolor::Color::Cyan);
-            }
-            if self.report_json {
-                let msg = machine_message::TimingInfo {
-                    package_id: unit_time.unit.pkg.package_id(),
-                    target: unit_time.unit.target,
-                    mode: unit_time.unit.mode,
-                    duration: unit_time.duration,
-                    rmeta_time: unit_time.rmeta_time,
-                }
-                .to_json_string();
-                self.config.shell().stdout_println(msg);
-            }
-            self.unit_times.push(unit_time);
+        let mut unit_time = match self.active.remove(&id) {
+            Some(ut) => ut,
+            None => return,
+        };
+        let t = d_as_f64(self.start.elapsed());
+        unit_time.duration = t - unit_time.start;
+        assert!(unit_time.unlocked_units.is_empty());
+        unit_time.unlocked_units.extend(unlocked);
+        if self.report_info {
+            let msg = format!(
+                "{}{} in {:.1}s",
+                unit_time.name_ver(),
+                unit_time.target,
+                unit_time.duration
+            );
+            let _ = self
+                .config
+                .shell()
+                .status_with_color("Completed", msg, termcolor::Color::Cyan);
         }
+        if self.report_json {
+            let msg = machine_message::TimingInfo {
+                package_id: unit_time.unit.pkg.package_id(),
+                target: unit_time.unit.target,
+                mode: unit_time.unit.mode,
+                duration: unit_time.duration,
+                rmeta_time: unit_time.rmeta_time,
+            }
+            .to_json_string();
+            self.config.shell().stdout_println(msg);
+        }
+        self.unit_times.push(unit_time);
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
