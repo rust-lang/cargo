@@ -147,6 +147,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
         }
 
+        // Now that we've got the full job queue and we've done all our
+        // fingerprint analysis to determine what to run, bust all the memoized
+        // fingerprint hashes to ensure that during the build they all get the
+        // most up-to-date values. In theory we only need to bust hashes that
+        // transitively depend on a dirty build script, but it shouldn't matter
+        // that much for performance anyway.
+        for fingerprint in self.fingerprints.values() {
+            fingerprint.clear_memoized();
+        }
+
         // Now that we've figured out everything that we're going to do, do it!
         queue.execute(&mut self, &mut plan)?;
 
