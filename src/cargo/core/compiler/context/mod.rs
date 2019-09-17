@@ -513,6 +513,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns whether when `unit` is built whether it should emit metadata as
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
-        self.rmeta_required.contains(unit)
+        self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
     }
 }
