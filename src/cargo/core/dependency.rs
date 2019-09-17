@@ -7,7 +7,6 @@ use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
-use url::Url;
 
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
@@ -69,7 +68,7 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    registry: Option<Url>,
+    registry: Option<&'a str>,
 }
 
 impl ser::Serialize for Dependency {
@@ -77,6 +76,7 @@ impl ser::Serialize for Dependency {
     where
         S: ser::Serializer,
     {
+        let registry_id = self.registry_id();
         SerializedDependency {
             name: &*self.package_name(),
             source: self.source_id(),
@@ -87,7 +87,7 @@ impl ser::Serialize for Dependency {
             features: self.features(),
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
-            registry: self.registry_id().map(|sid| sid.url().clone()),
+            registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
         }
         .serialize(s)
     }
