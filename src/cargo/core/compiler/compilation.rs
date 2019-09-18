@@ -163,7 +163,7 @@ impl<'cfg> Compilation<'cfg> {
         self.fill_env(process(cmd), pkg, true)
     }
 
-    fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
+    pub fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
         &self.target_runner
     }
 

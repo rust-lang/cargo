@@ -140,8 +140,14 @@ fn run_doc_tests(
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/run doc tests if `target` does not equal `host`.
-    if compilation.host != compilation.target {
+    // The unstable doctest-xcompile feature enables both per-target-ignores and
+    // cross-compiling doctests. As a side effect, this feature also gates running
+    // doctests with runtools when target == host.
+    let doctest_xcompile = config.cli_unstable().doctest_xcompile;
+    let mut runtool: &Option<(std::path::PathBuf, Vec<String>)> = &None;
+    if doctest_xcompile {
+        runtool = compilation.target_runner();
+    } else if compilation.host != compilation.target {
         return Ok((Test::Doc, errors));
     }
 
@@ -157,6 +163,19 @@ fn run_doc_tests(
             .arg(target.src_path().path().unwrap())
             .arg("--crate-name")
             .arg(&target.crate_name());
+
+        if doctest_xcompile {
+            p.arg("--target").arg(&compilation.target);
+            p.arg("-Zunstable-options");
+            p.arg("--enable-per-target-ignores");
+        }
+
+        runtool.as_ref().map(|(runtool, runtool_args)| {
+            p.arg("--runtool").arg(runtool);
+            for arg in runtool_args {
+                p.arg("--runtool-arg").arg(arg);
+            }
+        });
 
         for &rust_dep in &[&compilation.deps_output] {
             let mut arg = OsString::from("dependency=");
@@ -194,7 +213,6 @@ fn run_doc_tests(
         if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {
             p.args(flags);
         }
-
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;

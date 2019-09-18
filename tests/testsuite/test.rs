@@ -8,6 +8,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
 };
+use cargo_test_support::{cross_compile, is_nightly, paths};
 use cargo_test_support::{rustc_host, sleep_ms};
 
 #[cargo_test]
@@ -3659,4 +3660,233 @@ fn test_dep_with_dev() {
              and is not a member of the workspace",
         )
         .run();
+}
+
+#[cargo_test]
+fn cargo_test_doctest_xcompile_ignores() {
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "src/lib.rs",
+            r#"
+            ///```ignore-x86_64
+            ///assert!(cfg!(not(target_arch = "x86_64")));
+            ///```
+            pub fn foo() -> u8 {
+                4
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    #[cfg(not(target_arch = "x86_64"))]
+    p.cargo("test")
+        .with_stdout_contains(
+            "\
+             test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
+             ",
+        )
+        .run();
+    #[cfg(target_arch = "x86_64")]
+    p.cargo("test")
+        .with_status(101)
+        .with_stdout_contains(
+            "\
+             test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out\
+             ",
+        )
+        .run();
+
+    #[cfg(not(target_arch = "x86_64"))]
+    p.cargo("test -Zdoctest-xcompile")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains(
+            "\
+             test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
+             ",
+        )
+        .run();
+
+    #[cfg(target_arch = "x86_64")]
+    p.cargo("test -Zdoctest-xcompile")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains(
+            "\
+             test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out\
+             ",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_test_doctest_xcompile() {
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "src/lib.rs",
+            r#"
+
+            ///```
+            ///assert!(1 == 1);
+            ///```
+            pub fn foo() -> u8 {
+                4
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo(&format!("test --target {}", cross_compile::alternate()))
+        .with_stdout_contains(
+            "\
+             running 0 tests\
+             ",
+        )
+        .run();
+    p.cargo(&format!(
+        "test --target {} -Zdoctest-xcompile",
+        cross_compile::alternate()
+    ))
+    .masquerade_as_nightly_cargo()
+    .with_stdout_contains(
+        "\
+         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
+         ",
+    )
+    .run();
+}
+
+#[cargo_test]
+fn cargo_test_doctest_xcompile_runner() {
+    use std::fs;
+    if !is_nightly() {
+        return;
+    }
+
+    let runner = project()
+        .file("Cargo.toml", &basic_bin_manifest("runner"))
+        .file(
+            "src/main.rs",
+            r#"
+            pub fn main() {
+                eprintln!("this is a runner");
+                let args: Vec<String> = std::env::args().collect();
+                std::process::Command::new(&args[1]).spawn();
+            }
+            "#,
+        )
+        .build();
+
+    runner.cargo("build").run();
+    assert!(runner.bin("runner").is_file());
+    let runner_path = paths::root().join("runner");
+    fs::copy(&runner.bin("runner"), &runner_path).unwrap();
+
+    let config = paths::root().join(".cargo/config");
+
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    File::create(config)
+        .unwrap()
+        .write_all(
+            format!(
+                r#"
+[target.'cfg(target_arch = "x86")']
+runner = "{}"
+"#,
+                runner_path.to_str().unwrap()
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "src/lib.rs",
+            r#"
+            ///```
+            ///assert!(cfg!(target_arch = "x86"));
+            ///```
+            pub fn foo() -> u8 {
+                4
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo(&format!("test --target {}", cross_compile::alternate()))
+        .with_stdout_contains(
+            "\
+             running 0 tests\
+             ",
+        )
+        .run();
+    p.cargo(&format!(
+        "test --target {} -Zdoctest-xcompile",
+        cross_compile::alternate()
+    ))
+    .masquerade_as_nightly_cargo()
+    .with_stdout_contains(
+        "\
+         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
+         ",
+    )
+    .with_stderr_contains(
+        "\
+         this is a runner\
+         ",
+    )
+    .run();
+}
+
+#[cargo_test]
+fn cargo_test_doctest_xcompile_no_runner() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "src/lib.rs",
+            r#"
+
+            ///```
+            ///assert!(cfg!(target_arch = "x86"));
+            ///```
+            pub fn foo() -> u8 {
+                4
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo(&format!("test --target {}", cross_compile::alternate()))
+        .with_stdout_contains(
+            "\
+             running 0 tests\
+             ",
+        )
+        .run();
+    p.cargo(&format!(
+        "test --target {} -Zdoctest-xcompile",
+        cross_compile::alternate()
+    ))
+    .masquerade_as_nightly_cargo()
+    .with_stdout_contains(
+        "\
+         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
+         ",
+    )
+    .run();
 }
