@@ -1,4 +1,4 @@
-use crate::support::project;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn net_retry_loads_from_config() {

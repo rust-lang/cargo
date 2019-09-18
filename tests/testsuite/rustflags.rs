@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::io::Write;
 
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_lib_manifest, basic_manifest, paths, project, project_in_home, rustc_host,
 };
 

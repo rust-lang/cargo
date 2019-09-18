@@ -343,7 +343,7 @@ pub fn resolve_with_previous<'cfg>(
         Some(ws.config()),
         ws.features().require(Feature::public_dependency()).is_ok(),
     )?;
-    resolved.register_used_patches(registry.patches());
+    resolved.register_used_patches(&registry.patches());
     if register_patches {
         // It would be good if this warning was more targeted and helpful
         // (such as showing close candidates that failed to match). However,

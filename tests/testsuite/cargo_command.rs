@@ -4,11 +4,11 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use crate::support::cargo_process;
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
 use cargo;
+use cargo_test_support::cargo_process;
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
 
 #[cfg_attr(windows, allow(dead_code))]
 enum FakeKind<'a> {

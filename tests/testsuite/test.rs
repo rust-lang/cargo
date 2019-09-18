@@ -3,10 +3,12 @@ use std::io::prelude::*;
 
 use cargo;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
-use crate::support::{rustc_host, sleep_ms};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
+};
+use cargo_test_support::{rustc_host, sleep_ms};
 
 #[cargo_test]
 fn cargo_test_simple() {
@@ -97,7 +99,7 @@ fn cargo_test_release() {
 [RUNNING] `[..]target/release/deps/foo-[..][EXE]`
 [RUNNING] `[..]target/release/deps/test-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]lib.rs[..]`",
+[RUNNING] `rustdoc [..]--test [..]lib.rs[..]`",
         )
         .with_stdout_contains_n("test test ... ok", 2)
         .with_stdout_contains("running 0 tests")
@@ -2702,7 +2704,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
         .with_stderr_contains(
             "\
 [DOCTEST] feature_a
-[RUNNING] `rustdoc --test [..]mock_serde_codegen[..]`",
+[RUNNING] `rustdoc [..]--test [..]mock_serde_codegen[..]`",
         )
         .run();
 
@@ -2710,7 +2712,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
         .with_stderr_contains(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]feature_a[..]`",
+[RUNNING] `rustdoc [..]--test [..]feature_a[..]`",
         )
         .run();
 }

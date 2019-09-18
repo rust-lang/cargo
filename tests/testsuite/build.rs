@@ -1,14 +1,13 @@
+use cargo::util::paths::dylib_path_envvar;
+use cargo_test_support::paths::{root, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
+    sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+};
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-
-use crate::support::paths::{root, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, Execs, ProjectBuilder,
-};
-use cargo::util::paths::dylib_path_envvar;
 
 #[cargo_test]
 fn cargo_compile_simple() {
@@ -512,7 +511,7 @@ fn cargo_compile_with_invalid_code() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] Could not compile `foo`.
+[ERROR] could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n",
         )
@@ -552,7 +551,7 @@ fn cargo_compile_with_invalid_code_in_deps() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_contains("[..]invalid rust code[..]")
-        .with_stderr_contains("[ERROR] Could not compile [..]")
+        .with_stderr_contains("[ERROR] could not compile [..]")
         .run();
 }
 
@@ -4529,7 +4528,7 @@ fn signal_display() {
             "\
 [COMPILING] pm [..]
 [COMPILING] foo [..]
-[ERROR] Could not compile `foo`.
+[ERROR] could not compile `foo`.
 
 Caused by:
   process didn't exit successfully: `rustc [..]` (signal: 6, SIGABRT: process abort signal)
@@ -4541,7 +4540,7 @@ Caused by:
 
 #[cargo_test]
 fn tricky_pipelining() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -4571,7 +4570,7 @@ fn tricky_pipelining() {
 
 #[cargo_test]
 fn pipelining_works() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -4606,7 +4605,7 @@ fn pipelining_works() {
 
 #[cargo_test]
 fn pipelining_big_graph() {
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -4661,7 +4660,7 @@ fn pipelining_big_graph() {
     foo.cargo("build -p foo")
         .env("CARGO_BUILD_PIPELINING", "true")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Could not compile `a30`[..]")
+        .with_stderr_contains("[ERROR] could not compile `a30`[..]")
         .run();
 }
 

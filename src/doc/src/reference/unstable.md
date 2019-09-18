@@ -314,3 +314,144 @@ etc.).
 This also changes the way Cargo interacts with the compiler, helping to
 prevent interleaved messages when multiple crates attempt to display a message
 at the same time.
+
+### build-std
+* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+
+The `build-std` feature enables Cargo to compile the standard library itself as
+part of a crate graph compilation. This feature has also historically been known
+as "std-aware Cargo". This feature is still in very early stages of development,
+and is also a possible massive feature addition to Cargo. This is a very large
+feature to document, even in the minimal form that it exists in today, so if
+you're curious to stay up to date you'll want to follow the [tracking
+repository](https://github.com/rust-lang/wg-cargo-std-aware) and its set of
+issues.
+
+The functionality implemented today is behind a flag called `-Z build-std`. This
+flag indicates that Cargo should compile the standard library from source code
+using the same profile as the main build itself. Note that for this to work you
+need to have the source code for the standard library available, and at this
+time the only supported method of doing so is to add the `rust-src` rust rustup
+component:
+
+```
+$ rustup component add rust-src --toolchain nightly
+```
+
+It is also required today that the `-Z build-std` flag is combined with the
+`--target` flag. Note that you're not forced to do a cross compilation, you're
+just forced to pass `--target` in one form or another.
+
+Usage looks like:
+
+```
+$ cargo new foo
+$ cd foo
+$ cargo +nightly run -Z build-std --target x86_64-unknown-linux-gnu
+   Compiling core v0.0.0 (...)
+   ...
+   Compiling foo v0.1.0 (...)
+    Finished dev [unoptimized + debuginfo] target(s) in 21.00s
+     Running `target/x86_64-unknown-linux-gnu/debug/foo`
+Hello, world!
+```
+
+Here we recompiled the standard library in debug mode with debug assertions
+(like `src/main.rs` is compiled) and everything was linked together at the end.
+
+Using `-Z build-std` will implicitly compile the stable crates `core`, `std`,
+`alloc`, and `proc_macro`. If you're using `cargo test` it will also compile the
+`test` crate. If you're working with an environment which does not support some
+of these crates, then you can pass an argument to `-Zbuild-std` as well:
+
+```
+$ cargo +nightly build -Z build-std=core,alloc
+```
+
+The value here is a comma-separated list of standard library crates to build.
+
+#### Requirements
+
+As a summary, a list of requirements today to use `-Z build-std` are:
+
+* You must install libstd's source code through `rustup component add rust-src`
+* You must pass `--target`
+* You must use both a nightly Cargo and a nightly rustc
+* The `-Z build-std` flag must be passed to all `cargo` invocations.
+
+#### Reporting bugs and helping out
+
+The `-Z build-std` feature is in the very early stages of development! This
+feature for Cargo has an extremely long history and is very large in scope, and
+this is just the beginning. If you'd like to report bugs please either report
+them to:
+
+* Cargo - https://github.com/rust-lang/cargo/issues/new - for implementation bugs
+* The tracking repository -
+  https://github.com/rust-lang/wg-cargo-std-aware/issues/new - for larger design
+  questions.
+
+Also if you'd like to see a feature that's not yet implemented and/or if
+something doesn't quite work the way you'd like it to, feel free to check out
+the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
+the tracking repository, and if it's not there please file a new issue!
+
+### timings
+
+The `timings` feature gives some information about how long each compilation
+takes, and tracks concurrency information over time.
+
+```
+cargo +nightly build -Z timings
+```
+
+The `-Ztimings` flag can optionally take a comma-separated list of the
+following values:
+
+- `html` — Saves a file called `cargo-timing.html` to the current directory
+  with a report of the compilation. Files are also saved with a timestamp in
+  the filename if you want to look at older runs.
+- `info` — Displays a message to stdout after each compilation finishes with
+  how long it took.
+- `json` — Emits some JSON information about timing information.
+
+The default if none are specified is `html,info`.
+
+#### Reading the graphs
+
+There are two graphs in the output. The "unit" graph shows the duration of
+each unit over time. A "unit" is a single compiler invocation. There are lines
+that show which additional units are "unlocked" when a unit finishes. That is,
+it shows the new units that are now allowed to run because their dependencies
+are all finished. Hover the mouse over a unit to highlight the lines. This can
+help visualize the critical path of dependencies. This may change between runs
+because the units may finish in different orders.
+
+The "codegen" times are highlighted in a lavender color. In some cases, build
+pipelining allows units to start when their dependencies are performing code
+generation. This information is not always displayed (for example, binary
+units do not show when code generation starts).
+
+The "custom build" units are `build.rs` scripts, which when run are
+highlighted in orange.
+
+The second graph shows Cargo's concurrency over time. The three lines are:
+- "Waiting" (red) — This is the number of units waiting for a CPU slot to
+  open.
+- "Inactive" (blue) — This is the number of units that are waiting for their
+  dependencies to finish.
+- "Active" (green) — This is the number of units currently running.
+
+Note: This does not show the concurrency in the compiler itself. `rustc`
+coordinates with Cargo via the "job server" to stay within the concurrency
+limit. This currently mostly applies to the code generation phase.
+
+Tips for addressing compile times:
+- Look for slow dependencies.
+    - Check if they have features that you may wish to consider disabling.
+    - Consider trying to remove the dependency completely.
+- Look for a crate being built multiple times with different versions. Try to
+  remove the older versions from the dependency graph.
+- Split large crates into smaller pieces.
+- If there are a large number of crates bottlenecked on a single crate, focus
+  your attention on improving that one crate to improve parallelism.

@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use crate::support::git::{self, repo};
-use crate::support::paths;
-use crate::support::registry::{self, registry_path, registry_url, Package};
-use crate::support::{basic_manifest, project, publish};
+use cargo_test_support::git::{self, repo};
+use cargo_test_support::paths;
+use cargo_test_support::registry::{self, registry_path, registry_url, Package};
+use cargo_test_support::{basic_manifest, project, publish};
 
 const CLEAN_FOO_JSON: &str = r#"
     {

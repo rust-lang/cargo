@@ -2,7 +2,7 @@ use std::net::TcpListener;
 use std::process::Command;
 use std::thread;
 
-use crate::support::{cargo_exe, project};
+use cargo_test_support::{cargo_exe, project};
 
 #[cargo_test]
 fn jobserver_exists() {

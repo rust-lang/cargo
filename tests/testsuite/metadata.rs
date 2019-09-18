@@ -1,5 +1,5 @@
-use crate::support::registry::Package;
-use crate::support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
 
 #[cargo_test]
 fn cargo_metadata_simple() {
@@ -47,7 +47,8 @@ fn cargo_metadata_simple() {
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -138,7 +139,8 @@ crate-type = ["lib", "staticlib"]
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -223,7 +225,8 @@ optional_feat = []
                   "optional_feat": []
                 },
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -296,6 +299,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
@@ -355,6 +359,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
@@ -389,6 +394,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "foobar",
                 "readme": null,
                 "repository": null,
@@ -436,6 +442,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
@@ -575,7 +582,8 @@ name = "ex"
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": [
@@ -660,7 +668,8 @@ crate-type = ["rlib", "dylib"]
                 ],
                 "features": {},
                 "manifest_path": "[..]Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": [
@@ -736,7 +745,8 @@ fn workspace_metadata() {
                 ],
                 "features": {},
                 "manifest_path": "[..]bar/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             },
             {
                 "authors": [
@@ -768,7 +778,8 @@ fn workspace_metadata() {
                 ],
                 "features": {},
                 "manifest_path": "[..]baz/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -848,7 +859,8 @@ fn workspace_metadata_no_deps() {
                 ],
                 "features": {},
                 "manifest_path": "[..]bar/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             },
             {
                 "authors": [
@@ -880,7 +892,8 @@ fn workspace_metadata_no_deps() {
                 ],
                 "features": {},
                 "manifest_path": "[..]baz/Cargo.toml",
-                "metadata": null
+                "metadata": null,
+                "publish": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -938,6 +951,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "features":{},
         "manifest_path":"[..]Cargo.toml",
         "metadata": null,
+        "publish": null,
         "readme": null,
         "repository": null
     }],
@@ -1121,7 +1135,75 @@ fn package_metadata() {
                     "bar": {
                         "baz": "quux"
                     }
-                }
+                },
+                "publish": null
+            }
+        ],
+        "workspace_members": ["foo[..]"],
+        "resolve": null,
+        "target_directory": "[..]foo/target",
+        "version": 1,
+        "workspace_root": "[..]/foo"
+    }"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn package_publish() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+            categories = ["database"]
+            keywords = ["database"]
+            readme = "README.md"
+            repository = "https://github.com/rust-lang/cargo"
+            publish = ["my-registry"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata --no-deps")
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": ["wycats@example.com"],
+                "categories": ["database"],
+                "name": "foo",
+                "readme": "README.md",
+                "repository": "https://github.com/rust-lang/cargo",
+                "version": "0.1.0",
+                "id": "foo[..]",
+                "keywords": ["database"],
+                "source": null,
+                "dependencies": [],
+                "edition": "2015",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "doctest": true,
+                        "edition": "2015",
+                        "name": "foo",
+                        "src_path": "[..]foo/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]foo/Cargo.toml",
+                "metadata": null,
+                "publish": ["my-registry"]
             }
         ],
         "workspace_members": ["foo[..]"],
@@ -1175,6 +1257,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
+                "publish": null,
                 "name": "bar",
                 "readme": null,
                 "repository": null,
@@ -1255,6 +1338,7 @@ fn package_edition_2018() {
                     "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
+                    "publish": null,
                     "name": "foo",
                     "readme": null,
                     "repository": null,
@@ -1339,6 +1423,7 @@ fn target_edition_2018() {
                     "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
+                    "publish": null,
                     "name": "foo",
                     "readme": null,
                     "repository": null,
@@ -1461,6 +1546,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "foo",
             "readme": null,
             "repository": null,
@@ -1495,6 +1581,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "bar",
             "readme": null,
             "repository": null,
@@ -1529,6 +1616,7 @@ fn rename_dependency() {
             "links": null,
             "manifest_path": "[..]",
             "metadata": null,
+            "publish": null,
             "name": "bar",
             "readme": null,
             "repository": null,
@@ -1631,6 +1719,7 @@ fn metadata_links() {
       "links": "a",
       "manifest_path": "[..]/foo/Cargo.toml",
       "metadata": null,
+      "publish": null,
       "name": "foo",
       "readme": null,
       "repository": null,

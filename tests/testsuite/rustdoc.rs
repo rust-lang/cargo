@@ -1,4 +1,4 @@
-use crate::support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn rustdoc_simple() {
@@ -8,7 +8,7 @@ fn rustdoc_simple() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -26,7 +26,7 @@ fn rustdoc_args() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
@@ -66,7 +66,7 @@ fn rustdoc_foo_with_bar_dependency() {
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
@@ -105,7 +105,7 @@ fn rustdoc_only_bar_dependency() {
         .with_stderr(
             "\
 [DOCUMENTING] bar v0.0.1 ([..])
-[RUNNING] `rustdoc --crate-name bar [..]bar/src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name bar [..]bar/src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
@@ -127,7 +127,7 @@ fn rustdoc_same_name_documents_lib() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
@@ -162,6 +162,39 @@ fn features() {
 }
 
 #[cargo_test]
+fn proc_macro_crate_type() {
+    // NOTE - Remove this once 'rustdoc --crate-type'
+    // rides to stable
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            proc-macro = true
+
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("rustdoc --verbose")
+        .with_stderr_contains(
+            "\
+[RUNNING] `rustdoc --crate-type proc-macro [..]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn rustdoc_target() {
     let p = project().file("src/lib.rs", "").build();
@@ -170,7 +203,7 @@ fn rustdoc_target() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
     --target x86_64-unknown-linux-gnu \
     -o [CWD]/target/x86_64-unknown-linux-gnu/doc \
     [..] \

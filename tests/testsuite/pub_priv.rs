@@ -1,5 +1,5 @@
-use crate::support::registry::Package;
-use crate::support::{is_nightly, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{is_nightly, project};
 
 #[cargo_test]
 fn exported_priv_warning() {

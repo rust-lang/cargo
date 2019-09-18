@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn minor_update_two_places() {
@@ -447,6 +447,7 @@ fn update_precise_first_run() {
       "links": null,
       "manifest_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/Cargo.toml",
       "metadata": null,
+      "publish": null,
       "name": "serde",
       "readme": null,
       "repository": null,
@@ -494,6 +495,7 @@ fn update_precise_first_run() {
       "links": null,
       "manifest_path": "[..]/foo/Cargo.toml",
       "metadata": null,
+      "publish": null,
       "name": "bar",
       "readme": null,
       "repository": null,

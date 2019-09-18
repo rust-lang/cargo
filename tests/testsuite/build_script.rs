@@ -4,11 +4,11 @@ use std::io;
 use std::io::prelude::*;
 use std::thread;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, cross_compile, project};
-use crate::support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 use cargo::util::paths::remove_dir_all;
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 
 #[cargo_test]
 fn custom_build_script_failed() {
@@ -813,7 +813,7 @@ fn testing_and_such() {
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]/foo-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`",
+[RUNNING] `rustdoc [..]--test [..]`",
         )
         .with_stdout_contains_n("running 0 tests", 2)
         .run();
@@ -1072,7 +1072,7 @@ fn build_deps_not_for_normal() {
         .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
         .with_stderr_contains(
             "\
-[ERROR] Could not compile `foo`.
+[ERROR] could not compile `foo`.
 
 Caused by:
   process didn't exit successfully: [..]
@@ -2277,7 +2277,7 @@ fn flags_go_into_tests() {
 #[cargo_test]
 fn diamond_passes_args_only_once() {
     // FIXME: when pipelining rides to stable, enable this test on all channels.
-    if !crate::support::is_nightly() {
+    if !cargo_test_support::is_nightly() {
         return;
     }
 
@@ -2747,7 +2747,7 @@ fn doctest_receives_build_link_args() {
 
     p.cargo("test -v")
         .with_stderr_contains(
-            "[RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`",
+            "[RUNNING] `rustdoc [..]--test [..] --crate-name foo [..]-L native=bar[..]`",
         )
         .run();
 }

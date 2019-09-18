@@ -1,4 +1,4 @@
-use crate::support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project};
 use std::env;
 
 #[cargo_test]

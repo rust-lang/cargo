@@ -1,7 +1,7 @@
-use crate::support::git;
-use crate::support::paths;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::git;
+use cargo_test_support::paths;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn rename_dependency() {
@@ -263,7 +263,7 @@ fn can_run_doc_tests() {
         .with_stderr_contains(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [CWD]/src/lib.rs \
+[RUNNING] `rustdoc [..]--test [CWD]/src/lib.rs \
         [..] \
         --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
         --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \

@@ -1,4 +1,4 @@
-use crate::support::{basic_bin_manifest, main_file, project};
+use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 static MANIFEST_OUTPUT: &str = r#"
 {
@@ -29,7 +29,8 @@ static MANIFEST_OUTPUT: &str = r#"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml",
-    "metadata": null
+    "metadata": null,
+    "publish": null
 }"#;
 
 #[cargo_test]

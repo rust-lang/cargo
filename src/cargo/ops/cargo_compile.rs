@@ -35,7 +35,7 @@ use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Resolve, ResolveOpts};
-use crate::core::{Package, Target};
+use crate::core::{LibKind, Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::util::config::Config;
@@ -315,7 +315,8 @@ pub fn compile_ws<'a>(
             // requested_target to an enum, or some other approach.
             failure::bail!("-Zbuild-std requires --target");
         }
-        let (std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
+        let (mut std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
+        remove_dylib_crate_type(&mut std_package_set)?;
         packages.add_set(std_package_set);
         Some(std_resolve)
     } else {
@@ -397,7 +398,10 @@ pub fn compile_ws<'a>(
                 .iter()
                 .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
         {
-            crates.push("test".to_string());
+            // Only build libtest when libstd is built (libtest depends on libstd)
+            if crates.iter().any(|c| c == "std") {
+                crates.push("test".to_string());
+            }
         }
         standard_lib::generate_std_roots(&bcx, &crates, std_resolve.as_ref().unwrap())?
     } else {
@@ -989,4 +993,36 @@ fn filter_targets<'a>(
         }
     }
     proposals
+}
+
+/// When using `-Zbuild-std` we're building the standard library, but a
+/// technical detail of the standard library right now is that it builds itself
+/// as both an `rlib` and a `dylib`. We don't actually want to really publicize
+/// the `dylib` and in general it's a pain to work with, so when building libstd
+/// we want to remove the `dylib` crate type.
+///
+/// Cargo doesn't have a fantastic way of doing that right now, so let's hack
+/// around it a bit and (ab)use the fact that we have mutable access to
+/// `PackageSet` here to rewrite downloaded packages. We iterate over all `path`
+/// packages (which should download immediately and not actually cause blocking
+/// here) and edit their manifests to only list one `LibKind` for an `Rlib`.
+fn remove_dylib_crate_type(set: &mut PackageSet<'_>) -> CargoResult<()> {
+    let ids = set
+        .package_ids()
+        .filter(|p| p.source_id().is_path())
+        .collect::<Vec<_>>();
+    set.get_many(ids.iter().cloned())?;
+
+    for id in ids {
+        let pkg = set.lookup_mut(id).expect("should be downloaded now");
+
+        for target in pkg.manifest_mut().targets_mut() {
+            if let TargetKind::Lib(crate_types) = target.kind_mut() {
+                crate_types.truncate(0);
+                crate_types.push(LibKind::Rlib);
+            }
+        }
+    }
+
+    Ok(())
 }

@@ -1,9 +1,8 @@
+use crate::{basic_bin_manifest, main_file, project};
 use std::env;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Once;
-
-use crate::support::{basic_bin_manifest, main_file, project};
 
 pub fn disabled() -> bool {
     // First, disable if `./configure` requested so.

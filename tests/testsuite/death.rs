@@ -4,7 +4,7 @@ use std::net::TcpListener;
 use std::process::{Child, Stdio};
 use std::thread;
 
-use crate::{support::project, support::slow_cpu_multiplier};
+use cargo_test_support::{project, slow_cpu_multiplier};
 
 #[cfg(unix)]
 fn enabled() -> bool {

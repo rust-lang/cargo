@@ -1,8 +1,8 @@
 use std;
 use std::fs::File;
 
-use crate::support::registry::Package;
-use crate::support::{
+use cargo_test_support::registry::Package;
+use cargo_test_support::{
     basic_manifest, cargo_process, git, paths, project, publish::validate_crate_contents,
 };
 

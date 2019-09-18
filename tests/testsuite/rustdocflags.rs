@@ -1,4 +1,4 @@
-use crate::support::project;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn parses_env() {

@@ -1,5 +1,5 @@
-use crate::support::registry::Package;
-use crate::support::{project, Project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{project, Project};
 
 static WARNING1: &str = "Hello! I'm a warning. :)";
 static WARNING2: &str = "And one more!";

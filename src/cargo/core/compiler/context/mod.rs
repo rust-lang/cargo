@@ -85,12 +85,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // all share the same jobserver.
         //
         // Note that if we don't have a jobserver in our environment then we
-        // create our own, and we create it with `n-1` tokens because one token
-        // is ourself, a running process.
+        // create our own, and we create it with `n` tokens, but immediately
+        // acquire one, because one token is ourself, a running process.
         let jobserver = match config.jobserver_from_env() {
             Some(c) => c.clone(),
-            None => Client::new(bcx.build_config.jobs as usize - 1)
-                .chain_err(|| "failed to create jobserver")?,
+            None => {
+                let client = Client::new(bcx.build_config.jobs as usize)
+                    .chain_err(|| "failed to create jobserver")?;
+                client.acquire_raw()?;
+                client
+            }
         };
 
         let pipelining = bcx
@@ -125,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
-        let mut queue = JobQueue::new(self.bcx);
+        let mut queue = JobQueue::new(self.bcx, units);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;
@@ -141,6 +145,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // parallelism.
             let force_rebuild = self.bcx.build_config.force_rebuild;
             super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+        }
+
+        // Now that we've got the full job queue and we've done all our
+        // fingerprint analysis to determine what to run, bust all the memoized
+        // fingerprint hashes to ensure that during the build they all get the
+        // most up-to-date values. In theory we only need to bust hashes that
+        // transitively depend on a dirty build script, but it shouldn't matter
+        // that much for performance anyway.
+        for fingerprint in self.fingerprints.values() {
+            fingerprint.clear_memoized();
         }
 
         // Now that we've figured out everything that we're going to do, do it!
@@ -506,6 +520,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns whether when `unit` is built whether it should emit metadata as
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
-        self.rmeta_required.contains(unit)
+        self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
     }
 }

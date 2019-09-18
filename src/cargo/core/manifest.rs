@@ -463,6 +463,9 @@ impl Manifest {
     pub fn targets(&self) -> &[Target] {
         &self.targets
     }
+    pub fn targets_mut(&mut self) -> &mut [Target] {
+        &mut self.targets
+    }
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
@@ -752,6 +755,9 @@ impl Target {
     pub fn kind(&self) -> &TargetKind {
         &self.kind
     }
+    pub fn kind_mut(&mut self) -> &mut TargetKind {
+        &mut self.kind
+    }
     pub fn tested(&self) -> bool {
         self.tested
     }
@@ -919,6 +925,19 @@ impl Target {
     pub fn set_doc(&mut self, doc: bool) -> &mut Target {
         self.doc = doc;
         self
+    }
+
+    pub fn description_named(&self) -> String {
+        match self.kind {
+            TargetKind::Lib(..) => "lib".to_string(),
+            TargetKind::Bin => format!("bin \"{}\"", self.name()),
+            TargetKind::Test => format!("test \"{}\"", self.name()),
+            TargetKind::Bench => format!("bench \"{}\"", self.name()),
+            TargetKind::ExampleLib(..) | TargetKind::ExampleBin => {
+                format!("example \"{}\"", self.name())
+            }
+            TargetKind::CustomBuild => "custom-build".to_string(),
+        }
     }
 }
 

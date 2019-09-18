@@ -2,12 +2,12 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use crate::support::cargo_process;
-use crate::support::git;
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::{self, registry_path, registry_url, Dependency, Package};
-use crate::support::{basic_manifest, project};
 use cargo::util::paths::remove_dir_all;
+use cargo_test_support::cargo_process;
+use cargo_test_support::git;
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::{self, registry_path, registry_url, Dependency, Package};
+use cargo_test_support::{basic_manifest, project, t};
 
 #[cargo_test]
 fn simple() {

@@ -1,4 +1,4 @@
-use crate::support::{clippy_is_available, project, registry::Package};
+use cargo_test_support::{clippy_is_available, project, registry::Package};
 
 #[cargo_test]
 // Clippy should never be considered fresh.

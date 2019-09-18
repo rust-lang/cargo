@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::support::paths::CargoPathExt;
-use crate::support::registry::Package;
-use crate::support::{basic_manifest, project};
+use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{basic_manifest, project, t};
 
 #[cargo_test]
 fn invalid1() {

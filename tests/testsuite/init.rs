@@ -1,13 +1,13 @@
-use crate::support;
+use cargo_test_support;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::process::Command;
 
-use crate::support::{paths, Execs};
+use cargo_test_support::{paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
-    let mut execs = support::cargo_process(s);
+    let mut execs = cargo_test_support::cargo_process(s);
     execs.cwd(&paths::root()).env("HOME", &paths::home());
     execs
 }

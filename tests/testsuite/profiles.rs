@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::support::project;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn profile_overrides() {

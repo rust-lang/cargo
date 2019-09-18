@@ -1,4 +1,4 @@
-use crate::support::{clippy_is_available, is_nightly, process, project, registry::Package};
+use cargo_test_support::{clippy_is_available, is_nightly, process, project, registry::Package};
 use std::path::Path;
 
 fn as_str(bytes: &[u8]) -> &str {

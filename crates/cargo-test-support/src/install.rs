@@ -1,7 +1,6 @@
+use crate::paths;
 use std::env::consts::EXE_SUFFIX;
 use std::path::{Path, PathBuf};
-
-use crate::support::paths;
 
 /// Used by `cargo install` tests to assert an executable binary
 /// has been installed. Example usage:

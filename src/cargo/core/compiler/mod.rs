@@ -11,6 +11,7 @@ mod layout;
 mod links;
 mod output_depinfo;
 pub mod standard_lib;
+mod timings;
 mod unit;
 pub mod unit_dependencies;
 
@@ -18,13 +19,12 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use failure::Error;
 use lazycell::LazyCell;
 use log::debug;
-use same_file::is_same_file;
 use serde::Serialize;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, ProfileKind};
@@ -300,7 +300,7 @@ fn rustc<'a, 'cfg>(
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
             .map_err(internal_if_simple_exit_code)
-            .chain_err(|| format!("Could not compile `{}`.", name))?;
+            .chain_err(|| format!("could not compile `{}`.", name))?;
         }
 
         if do_rename && real_name != crate_name {
@@ -442,12 +442,12 @@ fn link_targets<'a, 'cfg>(
                 }
             };
             destinations.push(dst.clone());
-            hardlink_or_copy(src, dst)?;
+            paths::link_or_copy(src, dst)?;
             if let Some(ref path) = output.export_path {
                 let export_dir = export_dir.as_ref().unwrap();
                 paths::create_dir_all(export_dir)?;
 
-                hardlink_or_copy(src, path)?;
+                paths::link_or_copy(src, path)?;
             }
         }
 
@@ -474,54 +474,6 @@ fn link_targets<'a, 'cfg>(
         }
         Ok(())
     }))
-}
-
-/// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
-fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
-    debug!("linking {} to {}", src.display(), dst.display());
-    if is_same_file(src, dst).unwrap_or(false) {
-        return Ok(());
-    }
-
-    // NB: we can't use dst.exists(), as if dst is a broken symlink,
-    // dst.exists() will return false. This is problematic, as we still need to
-    // unlink dst in this case. symlink_metadata(dst).is_ok() will tell us
-    // whether dst exists *without* following symlinks, which is what we want.
-    if fs::symlink_metadata(dst).is_ok() {
-        paths::remove_file(&dst)?;
-    }
-
-    let link_result = if src.is_dir() {
-        #[cfg(target_os = "redox")]
-        use std::os::redox::fs::symlink;
-        #[cfg(unix)]
-        use std::os::unix::fs::symlink;
-        #[cfg(windows)]
-        use std::os::windows::fs::symlink_dir as symlink;
-
-        let dst_dir = dst.parent().unwrap();
-        let src = if src.starts_with(dst_dir) {
-            src.strip_prefix(dst_dir).unwrap()
-        } else {
-            src
-        };
-        symlink(src, dst)
-    } else {
-        fs::hard_link(src, dst)
-    };
-    link_result
-        .or_else(|err| {
-            debug!("link failed {}. falling back to fs::copy", err);
-            fs::copy(src, dst).map(|_| ())
-        })
-        .chain_err(|| {
-            format!(
-                "failed to link or copy `{}` to `{}`",
-                src.display(),
-                dst.display()
-            )
-        })?;
-    Ok(())
 }
 
 // For all plugin dependencies, add their -L paths (now calculated and present

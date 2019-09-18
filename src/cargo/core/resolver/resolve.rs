@@ -3,8 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::FromIterator;
 
-use url::Url;
-
 use crate::core::dependency::Kind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
@@ -114,8 +112,8 @@ impl Resolve {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches(&mut self, patches: &HashMap<Url, Vec<Summary>>) {
-        for summary in patches.values().flat_map(|v| v) {
+    pub fn register_used_patches(&mut self, patches: &[Summary]) {
+        for summary in patches {
             if self.iter().any(|id| id == summary.package_id()) {
                 continue;
             }

@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::SystemTime;
 
-use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
-use crate::support::sleep_ms;
-use crate::support::{basic_manifest, is_coarse_mtime, project};
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::registry::Package;
+use cargo_test_support::sleep_ms;
+use cargo_test_support::{basic_manifest, is_coarse_mtime, project};
 
 #[cargo_test]
 fn modifying_and_moving() {
@@ -2046,6 +2046,77 @@ fn move_target_directory_with_path_deps() {
 
     p.cargo("build")
         .env("CARGO_TARGET_DIR", &new_target)
+        .with_stderr("[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test]
+fn rerun_if_changes() {
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-env-changed=FOO");
+                    if std::env::var("FOO").is_ok() {
+                        println!("cargo:rerun-if-env-changed=BAR");
+                    }
+                }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+
+    p.cargo("build -v")
+        .env("FOO", "1")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .env("FOO", "1")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
+    p.cargo("build -v")
+        .env("FOO", "1")
+        .env("BAR", "1")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .env("FOO", "1")
+        .env("BAR", "1")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
+    p.cargo("build -v")
+        .env("BAR", "2")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("build")
+        .env("BAR", "2")
         .with_stderr("[FINISHED] [..]")
         .run();
 }

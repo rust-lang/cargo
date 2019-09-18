@@ -1,5 +1,5 @@
-use crate::support::is_nightly;
-use crate::support::project;
+use cargo_test_support::is_nightly;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn probe_cfg_before_crate_type_discovery() {
