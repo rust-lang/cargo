@@ -320,13 +320,13 @@ fn clippy() {
         .file("src/lib.rs", "pub fn f() { assert!(true); }")
         .build();
 
-    p.cargo("clippy-preview -Zunstable-options -Zcache-messages")
+    p.cargo("clippy -Zcache-messages")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]")
         .run();
 
     // Again, reading from the cache.
-    p.cargo("clippy-preview -Zunstable-options -Zcache-messages")
+    p.cargo("clippy -Zcache-messages")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]")
         .run();

@@ -4,7 +4,7 @@ use cargo::ops;
 use cargo::util;
 
 pub fn cli() -> App {
-    subcommand("clippy-preview")
+    subcommand("clippy")
         .about("Checks a package to catch common mistakes and improve your Rust code.")
         .arg(Arg::with_name("args").multiple(true))
         .arg_package_spec(
@@ -62,13 +62,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mode = CompileMode::Check { test: false };
     let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
-
-    if !config.cli_unstable().unstable_options {
-        return Err(failure::format_err!(
-            "`clippy-preview` is unstable, pass `-Z unstable-options` to enable it"
-        )
-        .into());
-    }
 
     let mut wrapper = util::process(util::config::clippy_driver());
 

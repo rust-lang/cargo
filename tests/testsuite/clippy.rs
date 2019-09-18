@@ -26,13 +26,13 @@ fn clippy_force_rebuild() {
         .file("src/lib.rs", "pub fn f() { assert!(true); }")
         .build();
 
-    p.cargo("clippy-preview -Zunstable-options -v")
+    p.cargo("clippy -v")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]")
         .run();
 
     // Make sure it runs again.
-    p.cargo("clippy-preview -Zunstable-options -v")
+    p.cargo("clippy -v")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[FRESH] dep1 v0.1.0")
         .with_stderr_contains("[..]assert!(true)[..]")
@@ -61,13 +61,13 @@ fn clippy_passes_args() {
         .file("src/lib.rs", "pub fn f() { assert!(true); }")
         .build();
 
-    p.cargo("clippy-preview -Zunstable-options -v -- -Aclippy::assertions_on_constants")
+    p.cargo("clippy -v -- -Aclippy::assertions_on_constants")
         .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("[..]assert!(true)[..]")
         .run();
 
     // Make sure it runs again.
-    p.cargo("clippy-preview -Zunstable-options -v")
+    p.cargo("clippy -v")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]assert!(true)[..]")
         .run();
