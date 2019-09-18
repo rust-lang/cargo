@@ -1251,12 +1251,6 @@ fn fix_in_existing_repo_weird_ignore() {
 
 #[cargo_test]
 fn fix_with_clippy() {
-    if !is_nightly() {
-        // fix --clippy is unstable
-        eprintln!("skipping test: requires nightly");
-        return;
-    }
-
     if !clippy_is_available() {
         return;
     }
@@ -1279,7 +1273,7 @@ fn fix_with_clippy() {
 [FINISHED] [..]
 ";
 
-    p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
+    p.cargo("fix --clippy --allow-no-vcs")
         .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
         .with_stdout("")
