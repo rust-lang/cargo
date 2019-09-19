@@ -88,14 +88,15 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         }
         self.priority = out.into_iter().map(|(n, set)| (n, set.len())).collect();
 
-        fn depth<N: Hash + Eq + Clone, E: Hash + Eq + Clone>(
+        fn depth<'a, N: Hash + Eq + Clone, E: Hash + Eq + Clone>(
             key: &N,
             map: &HashMap<N, HashMap<E, HashSet<N>>>,
-            results: &mut HashMap<N, HashSet<N>>,
-        ) -> HashSet<N> {
-            if let Some(depth) = results.get(key) {
+            results: &'a mut HashMap<N, HashSet<N>>,
+        ) -> &'a HashSet<N> {
+            if results.contains_key(key) {
+                let depth = &results[key];
                 assert!(!depth.is_empty(), "cycle in DependencyQueue");
-                return depth.clone();
+                return depth;
             }
             results.insert(key.clone(), HashSet::new());
 
@@ -108,12 +109,12 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
                 .flat_map(|it| it.values())
                 .flat_map(|set| set)
             {
-                set.extend(depth(dep, map, results))
+                set.extend(depth(dep, map, results).iter().cloned())
             }
 
-            *results.get_mut(key).unwrap() = set.clone();
-
-            set
+            let slot = results.get_mut(key).unwrap();
+            *slot = set;
+            return &*slot;
         }
     }
 
