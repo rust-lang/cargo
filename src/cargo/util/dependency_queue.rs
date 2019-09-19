@@ -31,8 +31,8 @@ pub struct DependencyQueue<N: Hash + Eq, E: Hash + Eq, V> {
     /// easily indexable with just an `N`
     reverse_dep_map: HashMap<N, HashMap<E, HashSet<N>>>,
 
-    /// Topological depth of each key
-    depth: HashMap<N, usize>,
+    /// The total number of packages that are transitively waiting on this package
+    priority: HashMap<N, usize>,
 }
 
 impl<N: Hash + Eq, E: Hash + Eq, V> Default for DependencyQueue<N, E, V> {
@@ -47,12 +47,14 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
         DependencyQueue {
             dep_map: HashMap::new(),
             reverse_dep_map: HashMap::new(),
-            depth: HashMap::new(),
+            priority: HashMap::new(),
         }
     }
 }
 
-impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
+impl<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Eq + Hash + Clone, V>
+    DependencyQueue<N, E, V>
+{
     /// Adds a new ndoe and its dependencies to this queue.
     ///
     /// The `key` specified is a new node in the dependency graph, and the node
@@ -82,36 +84,39 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// All nodes have been added, calculate some internal metadata and prepare
     /// for `dequeue`.
     pub fn queue_finished(&mut self) {
+        let mut out = HashMap::new();
         for key in self.dep_map.keys() {
-            depth(key, &self.reverse_dep_map, &mut self.depth);
+            depth(key, &self.reverse_dep_map, &mut out);
         }
+        self.priority = out.into_iter().map(|(n, set)| (n, set.len())).collect();
 
-        fn depth<N: Hash + Eq + Clone, E: Hash + Eq + Clone>(
+        fn depth<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Hash + Eq + Clone>(
             key: &N,
             map: &HashMap<N, HashMap<E, HashSet<N>>>,
-            results: &mut HashMap<N, usize>,
-        ) -> usize {
-            const IN_PROGRESS: usize = !0;
-
-            if let Some(&depth) = results.get(key) {
-                assert_ne!(depth, IN_PROGRESS, "cycle in DependencyQueue");
-                return depth;
+            results: &mut HashMap<N, HashSet<N>>,
+        ) -> HashSet<N> {
+            let in_progress: HashSet<N> = HashSet::new();
+            if let Some(depth) = results.get(key) {
+                assert_ne!(depth, &in_progress, "cycle in DependencyQueue");
+                return depth.clone();
             }
+            results.insert(key.clone(), in_progress);
 
-            results.insert(key.clone(), IN_PROGRESS);
+            let mut set = HashSet::new();
+            set.insert(key.clone());
 
-            let depth = 1 + map
+            for dep in map
                 .get(key)
                 .into_iter()
                 .flat_map(|it| it.values())
                 .flat_map(|set| set)
-                .map(|dep| depth(dep, map, results))
-                .max()
-                .unwrap_or(0);
+            {
+                set.extend(depth(dep, map, results).into_iter())
+            }
 
-            *results.get_mut(key).unwrap() = depth;
+            *results.get_mut(key).unwrap() = set.clone();
 
-            depth
+            set
         }
     }
 
@@ -122,7 +127,7 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     pub fn dequeue(&mut self) -> Option<(N, V)> {
         // Look at all our crates and find everything that's ready to build (no
         // deps). After we've got that candidate set select the one which has
-        // the maximum depth in the dependency graph. This way we should
+        // the maximum priority in the dependency graph. This way we should
         // hopefully keep CPUs hottest the longest by ensuring that long
         // dependency chains are scheduled early on in the build process and the
         // leafs higher in the tree can fill in the cracks later.
@@ -135,7 +140,7 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
             .iter()
             .filter(|(_, (deps, _))| deps.is_empty())
             .map(|(key, _)| key.clone())
-            .max_by_key(|k| self.depth[k]);
+            .max_by_key(|k| self.priority[k]);
         let key = match next {
             Some(key) => key,
             None => return None,
