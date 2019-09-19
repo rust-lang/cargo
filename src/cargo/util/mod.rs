@@ -33,6 +33,7 @@ mod canonical_url;
 mod cfg;
 pub mod command_prelude;
 pub mod config;
+pub mod cpu;
 mod dependency_queue;
 pub mod diagnostic_server;
 pub mod errors;

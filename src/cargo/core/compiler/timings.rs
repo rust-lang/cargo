@@ -5,6 +5,7 @@
 use super::{CompileMode, Unit};
 use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
+use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
 use crate::util::{paths, CargoResult, Config};
 use std::collections::HashMap;
@@ -46,6 +47,13 @@ pub struct Timings<'a, 'cfg> {
     /// Concurrency-tracking information. This is periodically updated while
     /// compilation progresses.
     concurrency: Vec<Concurrency>,
+    /// Last recorded state of the system's CPUs and when it happened
+    last_cpu_state: Option<State>,
+    last_cpu_recording: Instant,
+    /// Recorded CPU states, stored as tuples. First element is when the
+    /// recording was taken and second element is percentage usage of the
+    /// system.
+    cpu_usage: Vec<(f64, f64)>,
 }
 
 /// Tracking information for an individual unit.
@@ -134,6 +142,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             unit_times: Vec::new(),
             active: HashMap::new(),
             concurrency: Vec::new(),
+            last_cpu_state: State::current().ok(),
+            last_cpu_recording: Instant::now(),
+            cpu_usage: Vec::new(),
         }
     }
 
@@ -251,6 +262,31 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     /// Mark that a dirty unit was encountered.
     pub fn add_dirty(&mut self) {
         self.total_dirty += 1;
+    }
+
+    /// Take a sample of CPU usage
+    pub fn record_cpu(&mut self) {
+        if !self.enabled {
+            return;
+        }
+        let prev = match &mut self.last_cpu_state {
+            Some(state) => state,
+            None => return,
+        };
+        // Don't take samples too too frequently, even if requested.
+        let now = Instant::now();
+        if self.last_cpu_recording.elapsed() < Duration::from_millis(100) {
+            return;
+        }
+        let current = match State::current() {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let pct_idle = current.idle_since(prev);
+        *prev = current;
+        self.last_cpu_recording = now;
+        let dur = d_as_f64(now.duration_since(self.start));
+        self.cpu_usage.push((dur, 100.0 - pct_idle));
     }
 
     /// Call this when all units are finished.
@@ -441,6 +477,11 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             f,
             "const CONCURRENCY_DATA = {};",
             serde_json::to_string_pretty(&self.concurrency)?
+        )?;
+        writeln!(
+            f,
+            "const CPU_USAGE = {};",
+            serde_json::to_string_pretty(&self.cpu_usage)?
         )?;
         Ok(())
     }
