@@ -52,9 +52,7 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
     }
 }
 
-impl<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Eq + Hash + Clone, V>
-    DependencyQueue<N, E, V>
-{
+impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// Adds a new ndoe and its dependencies to this queue.
     ///
     /// The `key` specified is a new node in the dependency graph, and the node
@@ -90,17 +88,16 @@ impl<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Eq + Hash + Clone, V
         }
         self.priority = out.into_iter().map(|(n, set)| (n, set.len())).collect();
 
-        fn depth<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Hash + Eq + Clone>(
+        fn depth<N: Hash + Eq + Clone, E: Hash + Eq + Clone>(
             key: &N,
             map: &HashMap<N, HashMap<E, HashSet<N>>>,
             results: &mut HashMap<N, HashSet<N>>,
         ) -> HashSet<N> {
-            let in_progress: HashSet<N> = HashSet::new();
             if let Some(depth) = results.get(key) {
-                assert_ne!(depth, &in_progress, "cycle in DependencyQueue");
+                assert!(!depth.is_empty(), "cycle in DependencyQueue");
                 return depth.clone();
             }
-            results.insert(key.clone(), in_progress);
+            results.insert(key.clone(), HashSet::new());
 
             let mut set = HashSet::new();
             set.insert(key.clone());
@@ -111,7 +108,7 @@ impl<N: Hash + Eq + Clone + std::fmt::Debug + PartialEq, E: Eq + Hash + Clone, V
                 .flat_map(|it| it.values())
                 .flat_map(|set| set)
             {
-                set.extend(depth(dep, map, results).into_iter())
+                set.extend(depth(dep, map, results))
             }
 
             *results.get_mut(key).unwrap() = set.clone();
