@@ -1,3 +1,4 @@
+use cargo_platform::Cfg;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -8,7 +9,6 @@ use crate::core::compiler::job_queue::JobState;
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::machine_message::{self, Message};
-use crate::util::Cfg;
 use crate::util::{self, internal, paths, profile};
 
 use super::job::{Freshness, Job, Work};
