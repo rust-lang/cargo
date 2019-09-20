@@ -444,15 +444,19 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
                     "todo"
                 }
                 .to_string();
+
+                // These filter on the unlocked units because not all unlocked
+                // units are actually "built". For example, Doctest mode units
+                // don't actually generate artifacts.
                 let unlocked_units: Vec<usize> = ut
                     .unlocked_units
                     .iter()
-                    .map(|unit| unit_map[unit])
+                    .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
                 let unlocked_rmeta_units: Vec<usize> = ut
                     .unlocked_rmeta_units
                     .iter()
-                    .map(|unit| unit_map[unit])
+                    .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
                 UnitData {
                     i,
