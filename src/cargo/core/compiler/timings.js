@@ -44,14 +44,14 @@ function render_pipeline_graph() {
   const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
 
   const graph_height = Y_TICK_DIST * units.length;
-  const {ctx, graph_width, width, height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
+  const {ctx, graph_width, canvas_width, canvas_height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
   const container = document.getElementById('pipeline-container');
-  container.style.width = width;
-  container.style.height = height;
+  container.style.width = canvas_width;
+  container.style.height = canvas_height;
 
   // Canvas for hover highlights. This is a separate layer to improve performance.
-  const linectx = setup_canvas('pipeline-graph-lines', width, height);
-  linectx.clearRect(0, 0, width, height);
+  const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
+  linectx.clearRect(0, 0, canvas_width, canvas_height);
 
   // Draw Y tick marks.
   for (let n=1; n<units.length; n++) {
@@ -112,7 +112,7 @@ function render_pipeline_graph() {
     ctx.font = '14px sans-serif';
     const label = `${unit.name}${unit.target} ${unit.duration}s`;
     const text_info = ctx.measureText(label);
-    const label_x = Math.min(x + 5.0, graph_width - text_info.width);
+    const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
     ctx.fillText(label, label_x, y + BOX_HEIGHT / 2 - 6);
     draw_dep_lines(ctx, unit.i, false);
   }
@@ -156,7 +156,7 @@ function render_timing_graph() {
   const TOP_MARGIN = 10;
   const GRAPH_HEIGHT = AXIS_HEIGHT - TOP_MARGIN;
 
-  const {width, graph_width, ctx} = draw_graph_axes('timing-graph', AXIS_HEIGHT);
+  const {canvas_width, graph_width, ctx} = draw_graph_axes('timing-graph', AXIS_HEIGHT);
 
   // Draw Y tick marks and labels.
   let max_v = 0;
@@ -235,7 +235,7 @@ function render_timing_graph() {
   // Draw a legend.
   ctx.restore();
   ctx.save();
-  ctx.translate(width-200, MARGIN);
+  ctx.translate(canvas_width-200, MARGIN);
   // background
   ctx.fillStyle = '#fff';
   ctx.strokeStyle = '#000';
@@ -300,11 +300,11 @@ function draw_graph_axes(id, graph_height) {
   // browsers, but should be ok for many desktop environments.
   const graph_width = Math.min(scale * DURATION, 4096);
   const px_per_sec = Math.floor(graph_width / DURATION);
-  const width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
-  const height = graph_height + MARGIN + Y_LINE;
-  let ctx = setup_canvas(id, width, height);
+  const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
+  const canvas_height = graph_height + MARGIN + Y_LINE;
+  let ctx = setup_canvas(id, canvas_width, canvas_height);
   ctx.fillStyle = '#f7f7f7';
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, canvas_width, canvas_height);
 
   ctx.lineWidth = 2;
   ctx.font = '16px sans-serif';
@@ -325,11 +325,11 @@ function draw_graph_axes(id, graph_height) {
   for (let n=0; n<num_ticks; n++) {
     const x = X_LINE + ((n + 1) * tick_dist);
     ctx.beginPath();
-    ctx.moveTo(x, height-Y_LINE);
-    ctx.lineTo(x, height-Y_LINE+5);
+    ctx.moveTo(x, canvas_height-Y_LINE);
+    ctx.lineTo(x, canvas_height-Y_LINE+5);
     ctx.stroke();
 
-    ctx.fillText(`${(n+1) * step}s`, x, height - Y_LINE + 20);
+    ctx.fillText(`${(n+1) * step}s`, x, canvas_height - Y_LINE + 20);
   }
 
   // Draw vertical lines.
@@ -344,7 +344,7 @@ function draw_graph_axes(id, graph_height) {
   }
   ctx.strokeStyle = '#000';
   ctx.setLineDash([]);
-  return {width, height, graph_width, graph_height, ctx, px_per_sec};
+  return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
 }
 
 function round_up(n, step) {
