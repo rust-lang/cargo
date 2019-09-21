@@ -295,7 +295,7 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self, profile_kind: &ProfileKind) -> CargoResult<Profile> {
         match self.by_name.get(profile_kind.name()) {
-            None => failure::bail!("Profile {} undefined", profile_kind.name()),
+            None => failure::bail!("Profile `{}` undefined", profile_kind.name()),
             Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
         }
     }
