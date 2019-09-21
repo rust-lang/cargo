@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::core::compiler::{CompileMode, ProfileKind};
 use crate::core::interning::InternedString;
-use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, CargoResult, Config};
@@ -53,33 +53,6 @@ impl Profiles {
         } else {
             BTreeMap::new()
         };
-
-        // Feature gating and name validation
-        for (profile_name, profile) in &profiles {
-            match profile_name.as_str() {
-                "dev" | "release" | "bench" | "test" | "doc" | "check" => {
-                    match &profile.dir_name {
-                        None => {}
-                        Some(dir_name) => {
-                            features.require(Feature::named_profiles())?;
-                            validate_name(&dir_name, "dir-name")?;
-                        }
-                    }
-
-                    match &profile.inherits {
-                        None => {}
-                        Some(inherits) => {
-                            features.require(Feature::named_profiles())?;
-                            validate_name(&inherits, "inherits")?;
-                        }
-                    }
-                }
-                _ => {
-                    features.require(Feature::named_profiles())?;
-                    break;
-                }
-            }
-        }
 
         // Merge with predefined profiles
         use std::collections::btree_map::Entry;
@@ -332,25 +305,6 @@ impl Profiles {
         }
         Ok(())
     }
-}
-
-/// Validate dir-names and profile names according to RFC 2678.
-pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
-    if let Some(ch) = name
-        .chars()
-        .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
-    {
-        failure::bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
-    }
-
-    match name {
-        "package" | "build" | "debug" => {
-            failure::bail!("Invalid {}: `{}`", what, name);
-        }
-        _ => {}
-    }
-
-    Ok(())
 }
 
 /// An object used for handling the profile override hierarchy.

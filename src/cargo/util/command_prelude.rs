@@ -1,9 +1,9 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
-use crate::core::{profiles, Workspace};
+use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::{paths, validate_package_name};
+use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_tests,
@@ -305,7 +305,7 @@ pub trait ArgMatchesExt {
             Some("dev") => Some(ProfileKind::Dev),
             Some("release") => Some(ProfileKind::Release),
             Some(name) => {
-                profiles::validate_name(name, "profile name")?;
+                TomlProfile::validate_name(name, "profile name")?;
                 Some(ProfileKind::Custom(name.to_string()))
             }
         };

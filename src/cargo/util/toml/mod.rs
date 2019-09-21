@@ -466,6 +466,39 @@ impl TomlProfile {
             }
         }
 
+        // Feature gate definition of named profiles
+        match name {
+            "dev" | "release" | "bench" | "test" | "doc" | "check" => {}
+            _ => {
+                features.require(Feature::named_profiles())?;
+            }
+        }
+
+        // Feature gate on uses of keys related to named profiles
+        if self.inherits.is_some() {
+            features.require(Feature::named_profiles())?;
+        }
+
+        if self.dir_name.is_some() { 
+            features.require(Feature::named_profiles())?;
+        }
+
+        // `dir-name` validation
+        match &self.dir_name {
+            None => {}
+            Some(dir_name) => {
+                Self::validate_name(&dir_name, "dir-name")?;
+            }
+        }
+
+        // `inherits` validation
+        match &self.inherits {
+            None => {}
+            Some(inherits) => {
+                Self::validate_name(&inherits, "inherits")?;
+            }
+        }
+
         match name {
             "doc" => {
                 warnings.push("profile `doc` is deprecated and has no effect".to_string());
@@ -487,6 +520,25 @@ impl TomlProfile {
                 );
             }
         }
+        Ok(())
+    }
+
+    /// Validate dir-names and profile names according to RFC 2678.
+    pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
+        if let Some(ch) = name
+            .chars()
+            .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
+        {
+            failure::bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
+        }
+
+        match name {
+            "package" | "build" | "debug" => {
+                failure::bail!("Invalid {}: `{}`", what, name);
+            }
+            _ => {}
+        }
+
         Ok(())
     }
 
