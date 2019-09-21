@@ -445,7 +445,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
-            self.timings.finished()?;
+            self.timings.finished(cx.bcx)?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
