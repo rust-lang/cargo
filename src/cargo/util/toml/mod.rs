@@ -536,8 +536,15 @@ impl TomlProfile {
         }
 
         match name {
-            "package" | "build" | "debug" => {
+            "package" | "build" => {
                 failure::bail!("Invalid {}: `{}`", what, name);
+            }
+            "debug" if what == "profile" => {
+                if what == "profile name" {
+                    // Allowed, but will emit warnings
+                } else {
+                    failure::bail!("Invalid {}: `{}`", what, name);
+                }
             }
             "doc" if what == "dir-name" => {
                 failure::bail!("Invalid {}: `{}`", what, name);
