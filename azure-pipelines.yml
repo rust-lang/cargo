@@ -61,6 +61,8 @@ jobs:
       displayName: "Check rustfmt (crates-io)"
     - bash: cd crates/resolver-tests && cargo fmt --all -- --check
       displayName: "Check rustfmt (resolver-tests)"
+    - bash: cd crates/cargo-platform && cargo fmt --all -- --check
+      displayName: "Check rustfmt (cargo-platform)"
   variables:
     TOOLCHAIN: stable
 

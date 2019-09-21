@@ -21,6 +21,7 @@ path = "src/cargo/lib.rs"
 [dependencies]
 atty = "0.2"
 bytesize = "1.0"
+cargo-platform = { path = "crates/cargo-platform", version = "0.1" }
 crates-io = { path = "crates/crates-io", version = "0.28" }
 crossbeam-utils = "0.6"
 crypto-hash = "0.3.1"
@@ -35,7 +36,7 @@ fs2 = "0.4"
 git2 = "0.10.0"
 git2-curl = "0.11.0"
 glob = "0.3.0"
-hex = "0.3"
+hex = "0.4"
 home = "0.5"
 humantime = "1.2.0"
 ignore = "0.4.7"

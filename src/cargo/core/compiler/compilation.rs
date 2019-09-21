@@ -3,13 +3,12 @@ use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
+use cargo_platform::CfgExpr;
 use semver::Version;
 
 use super::BuildContext;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
-use crate::util::{
-    self, join_paths, process, rustc::Rustc, CargoResult, CfgExpr, Config, ProcessBuilder,
-};
+use crate::util::{self, join_paths, process, rustc::Rustc, CargoResult, Config, ProcessBuilder};
 
 pub struct Doctest {
     /// The package being doc-tested.
@@ -163,7 +162,7 @@ impl<'cfg> Compilation<'cfg> {
         self.fill_env(process(cmd), pkg, true)
     }
 
-    fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
+    pub fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
         &self.target_runner
     }
 

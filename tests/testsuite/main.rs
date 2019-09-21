@@ -91,6 +91,7 @@ mod shell_quoting;
 mod small_fd_limits;
 mod standard_lib;
 mod test;
+mod timings;
 mod tool_paths;
 mod update;
 mod vendor;

@@ -1,21 +1,24 @@
+use crate::error::{ParseError, ParseErrorKind::*};
 use std::fmt;
 use std::iter;
 use std::str::{self, FromStr};
 
-use crate::util::CargoResult;
-
-#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
-pub enum Cfg {
-    Name(String),
-    KeyPair(String, String),
-}
-
+/// A cfg expression.
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum CfgExpr {
     Not(Box<CfgExpr>),
     All(Vec<CfgExpr>),
     Any(Vec<CfgExpr>),
     Value(Cfg),
+}
+
+/// A cfg value.
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
+pub enum Cfg {
+    /// A named cfg value, like `unix`.
+    Name(String),
+    /// A key/value cfg pair, like `target_os = "linux"`.
+    KeyPair(String, String),
 }
 
 #[derive(PartialEq)]
@@ -28,23 +31,27 @@ enum Token<'a> {
     String(&'a str),
 }
 
+#[derive(Clone)]
 struct Tokenizer<'a> {
     s: iter::Peekable<str::CharIndices<'a>>,
     orig: &'a str,
 }
 
 struct Parser<'a> {
-    t: iter::Peekable<Tokenizer<'a>>,
+    t: Tokenizer<'a>,
 }
 
 impl FromStr for Cfg {
-    type Err = failure::Error;
+    type Err = ParseError;
 
-    fn from_str(s: &str) -> CargoResult<Cfg> {
+    fn from_str(s: &str) -> Result<Cfg, Self::Err> {
         let mut p = Parser::new(s);
         let e = p.cfg()?;
-        if p.t.next().is_some() {
-            failure::bail!("malformed cfg value or key/value pair: `{}`", s)
+        if let Some(rest) = p.rest() {
+            return Err(ParseError::new(
+                p.t.orig,
+                UnterminatedExpression(rest.to_string()),
+            ));
         }
         Ok(e)
     }
@@ -85,16 +92,16 @@ impl CfgExpr {
 }
 
 impl FromStr for CfgExpr {
-    type Err = failure::Error;
+    type Err = ParseError;
 
-    fn from_str(s: &str) -> CargoResult<CfgExpr> {
+    fn from_str(s: &str) -> Result<CfgExpr, Self::Err> {
         let mut p = Parser::new(s);
         let e = p.expr()?;
-        if p.t.next().is_some() {
-            failure::bail!(
-                "can only have one cfg-expression, consider using all() or \
-                 any() explicitly"
-            )
+        if let Some(rest) = p.rest() {
+            return Err(ParseError::new(
+                p.t.orig,
+                UnterminatedExpression(rest.to_string()),
+            ));
         }
         Ok(e)
     }
@@ -131,14 +138,13 @@ impl<'a> Parser<'a> {
             t: Tokenizer {
                 s: s.char_indices().peekable(),
                 orig: s,
-            }
-            .peekable(),
+            },
         }
     }
 
-    fn expr(&mut self) -> CargoResult<CfgExpr> {
-        match self.t.peek() {
-            Some(&Ok(Token::Ident(op @ "all"))) | Some(&Ok(Token::Ident(op @ "any"))) => {
+    fn expr(&mut self) -> Result<CfgExpr, ParseError> {
+        match self.peek() {
+            Some(Ok(Token::Ident(op @ "all"))) | Some(Ok(Token::Ident(op @ "any"))) => {
                 self.t.next();
                 let mut e = Vec::new();
                 self.eat(&Token::LeftParen)?;
@@ -155,31 +161,41 @@ impl<'a> Parser<'a> {
                     Ok(CfgExpr::Any(e))
                 }
             }
-            Some(&Ok(Token::Ident("not"))) => {
+            Some(Ok(Token::Ident("not"))) => {
                 self.t.next();
                 self.eat(&Token::LeftParen)?;
                 let e = self.expr()?;
                 self.eat(&Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
             }
-            Some(&Ok(..)) => self.cfg().map(CfgExpr::Value),
-            Some(&Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
-            None => failure::bail!(
-                "expected start of a cfg expression, \
-                 found nothing"
-            ),
+            Some(Ok(..)) => self.cfg().map(CfgExpr::Value),
+            Some(Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
+            None => Err(ParseError::new(
+                self.t.orig,
+                IncompleteExpr("start of a cfg expression"),
+            )),
         }
     }
 
-    fn cfg(&mut self) -> CargoResult<Cfg> {
+    fn cfg(&mut self) -> Result<Cfg, ParseError> {
         match self.t.next() {
             Some(Ok(Token::Ident(name))) => {
                 let e = if self.r#try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
-                        Some(Ok(t)) => failure::bail!("expected a string, found {}", t.classify()),
+                        Some(Ok(t)) => {
+                            return Err(ParseError::new(
+                                self.t.orig,
+                                UnexpectedToken {
+                                    expected: "a string",
+                                    found: t.classify(),
+                                },
+                            ))
+                        }
                         Some(Err(e)) => return Err(e),
-                        None => failure::bail!("expected a string, found nothing"),
+                        None => {
+                            return Err(ParseError::new(self.t.orig, IncompleteExpr("a string")))
+                        }
                     };
                     Cfg::KeyPair(name.to_string(), val.to_string())
                 } else {
@@ -187,35 +203,66 @@ impl<'a> Parser<'a> {
                 };
                 Ok(e)
             }
-            Some(Ok(t)) => failure::bail!("expected identifier, found {}", t.classify()),
+            Some(Ok(t)) => Err(ParseError::new(
+                self.t.orig,
+                UnexpectedToken {
+                    expected: "identifier",
+                    found: t.classify(),
+                },
+            )),
             Some(Err(e)) => Err(e),
-            None => failure::bail!("expected identifier, found nothing"),
+            None => Err(ParseError::new(self.t.orig, IncompleteExpr("identifier"))),
         }
     }
 
+    fn peek(&mut self) -> Option<Result<Token<'a>, ParseError>> {
+        self.t.clone().next()
+    }
+
     fn r#try(&mut self, token: &Token<'a>) -> bool {
-        match self.t.peek() {
-            Some(&Ok(ref t)) if token == t => {}
+        match self.peek() {
+            Some(Ok(ref t)) if token == t => {}
             _ => return false,
         }
         self.t.next();
         true
     }
 
-    fn eat(&mut self, token: &Token<'a>) -> CargoResult<()> {
+    fn eat(&mut self, token: &Token<'a>) -> Result<(), ParseError> {
         match self.t.next() {
             Some(Ok(ref t)) if token == t => Ok(()),
-            Some(Ok(t)) => failure::bail!("expected {}, found {}", token.classify(), t.classify()),
+            Some(Ok(t)) => Err(ParseError::new(
+                self.t.orig,
+                UnexpectedToken {
+                    expected: token.classify(),
+                    found: t.classify(),
+                },
+            )),
             Some(Err(e)) => Err(e),
-            None => failure::bail!("expected {}, but cfg expr ended", token.classify()),
+            None => Err(ParseError::new(
+                self.t.orig,
+                IncompleteExpr(token.classify()),
+            )),
+        }
+    }
+
+    /// Returns the rest of the input from the current location.
+    fn rest(&self) -> Option<&str> {
+        let mut s = self.t.s.clone();
+        loop {
+            match s.next() {
+                Some((_, ' ')) => {}
+                Some((start, _ch)) => return Some(&self.t.orig[start..]),
+                None => return None,
+            }
         }
     }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = CargoResult<Token<'a>>;
+    type Item = Result<Token<'a>, ParseError>;
 
-    fn next(&mut self) -> Option<CargoResult<Token<'a>>> {
+    fn next(&mut self) -> Option<Result<Token<'a>, ParseError>> {
         loop {
             match self.s.next() {
                 Some((_, ' ')) => {}
@@ -229,7 +276,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             return Some(Ok(Token::String(&self.orig[start + 1..end])));
                         }
                     }
-                    return Some(Err(failure::format_err!("unterminated string in cfg")));
+                    return Some(Err(ParseError::new(self.orig, UnterminatedString)));
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
@@ -242,13 +289,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     return Some(Ok(Token::Ident(&self.orig[start..])));
                 }
                 Some((_, ch)) => {
-                    return Some(Err(failure::format_err!(
-                        "unexpected character in \
-                         cfg `{}`, expected parens, \
-                         a comma, an identifier, or \
-                         a string",
-                        ch
-                    )));
+                    return Some(Err(ParseError::new(self.orig, UnexpectedChar(ch))));
                 }
                 None => return None,
             }
@@ -265,7 +306,7 @@ fn is_ident_rest(ch: char) -> bool {
 }
 
 impl<'a> Token<'a> {
-    fn classify(&self) -> &str {
+    fn classify(&self) -> &'static str {
         match *self {
             Token::LeftParen => "`(`",
             Token::RightParen => "`)`",

@@ -5,6 +5,7 @@
 use super::{CompileMode, Unit};
 use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
+use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
 use crate::util::{paths, CargoResult, Config};
 use std::collections::HashMap;
@@ -26,8 +27,6 @@ pub struct Timings<'a, 'cfg> {
     start: Instant,
     /// A rendered string of when compilation started.
     start_str: String,
-    /// Some information to display about rustc.
-    rustc_info: String,
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descrptions)`.
@@ -46,6 +45,13 @@ pub struct Timings<'a, 'cfg> {
     /// Concurrency-tracking information. This is periodically updated while
     /// compilation progresses.
     concurrency: Vec<Concurrency>,
+    /// Last recorded state of the system's CPUs and when it happened
+    last_cpu_state: Option<State>,
+    last_cpu_recording: Instant,
+    /// Recorded CPU states, stored as tuples. First element is when the
+    /// recording was taken and second element is percentage usage of the
+    /// system.
+    cpu_usage: Vec<(f64, f64)>,
 }
 
 /// Tracking information for an individual unit.
@@ -110,7 +116,6 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             })
             .collect();
         let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
-        let rustc_info = render_rustc_info(bcx);
         let profile = bcx.build_config.profile_kind.name().to_owned();
 
         Timings {
@@ -121,7 +126,6 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             report_json,
             start: bcx.config.creation_time(),
             start_str,
-            rustc_info,
             root_targets,
             profile,
             total_fresh: 0,
@@ -129,6 +133,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             unit_times: Vec::new(),
             active: HashMap::new(),
             concurrency: Vec::new(),
+            last_cpu_state: State::current().ok(),
+            last_cpu_recording: Instant::now(),
+            cpu_usage: Vec::new(),
         }
     }
 
@@ -248,8 +255,33 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         self.total_dirty += 1;
     }
 
+    /// Take a sample of CPU usage
+    pub fn record_cpu(&mut self) {
+        if !self.enabled {
+            return;
+        }
+        let prev = match &mut self.last_cpu_state {
+            Some(state) => state,
+            None => return,
+        };
+        // Don't take samples too too frequently, even if requested.
+        let now = Instant::now();
+        if self.last_cpu_recording.elapsed() < Duration::from_millis(100) {
+            return;
+        }
+        let current = match State::current() {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let pct_idle = current.idle_since(prev);
+        *prev = current;
+        self.last_cpu_recording = now;
+        let dur = d_as_f64(now.duration_since(self.start));
+        self.cpu_usage.push((dur, 100.0 - pct_idle));
+    }
+
     /// Call this when all units are finished.
-    pub fn finished(&mut self) -> CargoResult<()> {
+    pub fn finished(&mut self, bcx: &BuildContext<'_, '_>) -> CargoResult<()> {
         if !self.enabled {
             return Ok(());
         }
@@ -257,13 +289,13 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html()?;
+            self.report_html(bcx)?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(&self) -> CargoResult<()> {
+    fn report_html(&self, bcx: &BuildContext<'_, '_>) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs() as u32 + 1;
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
@@ -274,7 +306,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration)?;
+        self.write_summary_table(&mut f, duration, bcx)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         writeln!(
@@ -309,7 +341,12 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Render the summary table.
-    fn write_summary_table(&self, f: &mut impl Write, duration: u32) -> CargoResult<()> {
+    fn write_summary_table(
+        &self,
+        f: &mut impl Write,
+        duration: u32,
+        bcx: &BuildContext<'_, '_>,
+    ) -> CargoResult<()> {
         let targets: Vec<String> = self
             .root_targets
             .iter()
@@ -323,6 +360,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         };
         let total_time = format!("{}s{}", duration, time_human);
         let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
+        let rustc_info = render_rustc_info(bcx);
         write!(
             f,
             r#"
@@ -343,7 +381,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     <td>Total units:</td><td>{}</td>
   </tr>
   <tr>
-    <td>Max concurrency:</td><td>{}</td>
+    <td>Max concurrency:</td><td>{} (jobs={} ncpu={})</td>
   </tr>
   <tr>
     <td>Build start:</td><td>{}</td>
@@ -363,9 +401,11 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             self.total_dirty,
             self.total_fresh + self.total_dirty,
             max_concurrency,
+            bcx.build_config.jobs,
+            num_cpus::get(),
             self.start_str,
             total_time,
-            self.rustc_info,
+            rustc_info,
         )?;
         Ok(())
     }
@@ -403,15 +443,19 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
                     "todo"
                 }
                 .to_string();
+
+                // These filter on the unlocked units because not all unlocked
+                // units are actually "built". For example, Doctest mode units
+                // don't actually generate artifacts.
                 let unlocked_units: Vec<usize> = ut
                     .unlocked_units
                     .iter()
-                    .map(|unit| unit_map[unit])
+                    .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
                 let unlocked_rmeta_units: Vec<usize> = ut
                     .unlocked_rmeta_units
                     .iter()
-                    .map(|unit| unit_map[unit])
+                    .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
                 UnitData {
                     i,
@@ -436,6 +480,11 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             f,
             "const CONCURRENCY_DATA = {};",
             serde_json::to_string_pretty(&self.concurrency)?
+        )?;
+        writeln!(
+            f,
+            "const CPU_USAGE = {};",
+            serde_json::to_string_pretty(&self.cpu_usage)?
         )?;
         Ok(())
     }

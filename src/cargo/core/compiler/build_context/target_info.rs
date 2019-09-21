@@ -6,8 +6,8 @@ use std::str::{self, FromStr};
 
 use crate::core::compiler::Kind;
 use crate::core::TargetKind;
-use crate::util::CfgExpr;
-use crate::util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
+use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
+use cargo_platform::{Cfg, CfgExpr};
 
 /// Information about the platform target gleaned from querying rustc.
 ///
@@ -171,7 +171,7 @@ impl TargetInfo {
         };
 
         let cfg = lines
-            .map(Cfg::from_str)
+            .map(|line| Ok(Cfg::from_str(line)?))
             .collect::<CargoResult<Vec<_>>>()
             .chain_err(|| {
                 format!(

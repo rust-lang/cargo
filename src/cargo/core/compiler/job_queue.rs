@@ -5,6 +5,7 @@ use std::marker;
 use std::mem;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
+use std::time::Duration;
 
 use crossbeam_utils::thread::Scope;
 use failure::format_err;
@@ -164,7 +165,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .filter(|unit| {
                 // Binaries aren't actually needed to *compile* tests, just to run
                 // them, so we don't include this dependency edge in the job graph.
-                !unit.target.is_test() || !unit.target.is_bin()
+                !unit.target.is_test() && !unit.target.is_bin()
             })
             .map(|dep| {
                 // Handle the case here where our `unit -> dep` dependency may
@@ -322,15 +323,26 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
+            // Record some timing information if `-Ztimings` is enabled, and
+            // this'll end up being a noop if we're not recording this
+            // information.
             self.timings
                 .mark_concurrency(self.active.len(), queue.len(), self.queue.len());
+            self.timings.record_cpu();
 
             // Drain all events at once to avoid displaying the progress bar
-            // unnecessarily.
+            // unnecessarily. If there's no events we actually block waiting for
+            // an event, but we keep a "heartbeat" going to allow `record_cpu`
+            // to run above to calculate CPU usage over time. To do this we
+            // listen for a message with a timeout, and on timeout we run the
+            // previous parts of the loop again.
             let events: Vec<_> = self.rx.try_iter().collect();
             let events = if events.is_empty() {
                 self.show_progress(finished, total);
-                vec![self.rx.recv().unwrap()]
+                match self.rx.recv_timeout(Duration::from_millis(500)) {
+                    Ok(message) => vec![message],
+                    Err(_) => continue,
+                }
             } else {
                 events
             };
@@ -434,7 +446,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
-            self.timings.finished()?;
+            self.timings.finished(cx.bcx)?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);

@@ -58,6 +58,21 @@ directory. Example:
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
+### doctest-xcompile
+* Tracking Issue: [#7040](https://github.com/rust-lang/cargo/issues/7040)
+* Tracking Rustc Issue: [#64245](https://github.com/rust-lang/rust/issues/64245)
+
+This flag changes `cargo test`'s behavior when handling doctests when
+a target is passed. Currently, if a target is passed that is different
+from the host cargo will simply skip testing doctests. If this flag is
+present, cargo will continue as normal, passing the tests to doctest,
+while also passing it a `--target` option, as well as enabling
+`-Zunstable-features --enable-per-target-ignores` and passing along
+information from `.cargo/config`. See the rustc issue for more information.
+
+```
+cargo test --target foo -Zdoctest-xcompile
+```
 
 ### Profile Overrides
 * Tracking Issue: [rust-lang/rust#48683](https://github.com/rust-lang/rust/issues/48683)

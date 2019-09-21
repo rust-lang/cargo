@@ -340,6 +340,7 @@ pub struct CliUnstable {
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
+    pub doctest_xcompile: bool,
 }
 
 impl CliUnstable {
@@ -398,6 +399,7 @@ impl CliUnstable {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
             "timings" => self.timings = Some(parse_timings(v)),
+            "doctest-xcompile" => self.doctest_xcompile = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
