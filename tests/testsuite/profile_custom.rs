@@ -297,6 +297,13 @@ fn clean_custom_dirname() {
 
     p.cargo("build --release")
         .masquerade_as_nightly_cargo()
+        .with_stdout("")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
         .run();
 
     p.cargo("clean -p foo").masquerade_as_nightly_cargo().run();
@@ -304,6 +311,11 @@ fn clean_custom_dirname() {
     p.cargo("build --release")
         .masquerade_as_nightly_cargo()
         .with_stdout("")
+        .with_stderr(
+            "\
+[FINISHED] release [optimized] target(s) in [..]
+",
+        )
         .run();
 
     p.cargo("clean -p foo --release")
@@ -320,7 +332,16 @@ fn clean_custom_dirname() {
         )
         .run();
 
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
 
     p.cargo("build -Z unstable-options --profile=other")
         .masquerade_as_nightly_cargo()
