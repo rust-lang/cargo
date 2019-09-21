@@ -54,19 +54,23 @@ impl Profiles {
             BTreeMap::new()
         };
 
-        // Feature gating
+        // Feature gating and name validation
         for (profile_name, profile) in &profiles {
             match profile_name.as_str() {
                 "dev" | "release" | "bench" | "test" | "doc" | "check" => {
-                    if profile.dir_name.is_some() {
-                        features.require(Feature::named_profiles())?;
-                        break;
-                    }
-
                     match &profile.dir_name {
                         None => {}
                         Some(dir_name) => {
+                            features.require(Feature::named_profiles())?;
                             validate_name(&dir_name, "dir-name")?;
+                        }
+                    }
+
+                    match &profile.inherits {
+                        None => {}
+                        Some(inherits) => {
+                            features.require(Feature::named_profiles())?;
+                            validate_name(&inherits, "inherits")?;
                         }
                     }
                 }
