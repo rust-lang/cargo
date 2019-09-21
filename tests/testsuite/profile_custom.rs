@@ -29,7 +29,7 @@ fn inherits_on_release() {
 
 Caused by:
   An 'inherits' must not specified root profile 'release'
-"
+",
         )
         .run();
 }
