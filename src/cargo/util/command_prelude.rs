@@ -236,6 +236,7 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
+// Determines whether or not to gate `--profile` as unstable when resolving it.
 pub enum ProfileChecking {
     Checked,
     Unchecked,
