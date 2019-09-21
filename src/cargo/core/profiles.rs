@@ -314,7 +314,7 @@ impl Profiles {
         shell: &mut Shell,
         packages: &PackageSet<'_>,
     ) -> CargoResult<()> {
-        for (_, profile) in &self.by_name {
+        for profile in self.by_name.values() {
             profile.validate_packages(shell, packages)?;
         }
         Ok(())
