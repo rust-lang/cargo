@@ -160,7 +160,7 @@ fn profile_selection_build_all_targets() {
     //   lib      dev+panic  build  (a normal lib target)
     //   lib      dev-panic  build  (used by tests/benches)
     //   lib      dev        dev
-    //   dev      dev        dev
+    //   test      dev        dev
     //   bench    dev        dev
     //   bin      dev        dev
     //   bin      dev        build
