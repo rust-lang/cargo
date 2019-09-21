@@ -474,6 +474,9 @@ impl TomlProfile {
             }
         }
 
+        // Profile name validation
+        Self::validate_name(name, "profile name")?;
+
         // Feature gate on uses of keys related to named profiles
         if self.inherits.is_some() {
             features.require(Feature::named_profiles())?;
