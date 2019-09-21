@@ -186,6 +186,15 @@ impl Profiles {
             }
             match name.as_str() {
                 "dev" | "release" => {
+                    match &profile.inherits {
+                        None => {}
+                        Some(_) => {
+                            failure::bail!(
+                                "An 'inherits' must not specified root profile '{}'",
+                                name
+                            );
+                        }
+                    }
                     continue;
                 }
                 _ => {}
