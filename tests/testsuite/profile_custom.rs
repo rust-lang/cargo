@@ -1,6 +1,40 @@
 use cargo_test_support::{basic_lib_manifest, project};
 
 #[cargo_test]
+fn inherits_on_release() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.release]
+            inherits = "dev"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  An 'inherits' must not specified root profile 'release'
+"
+        )
+        .run();
+}
+
+#[cargo_test]
 fn missing_inherits() {
     let p = project()
         .file(
