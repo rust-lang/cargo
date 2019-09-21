@@ -19,8 +19,6 @@ pub struct CleanOptions<'a> {
     /// The target arch triple to clean, or None for the host arch
     pub target: Option<String>,
     /// Whether to clean the release directory
-    pub release: bool,
-    /// Whether a certain build profile was specified
     pub profile_specified: bool,
     /// Whether to clean the directory of a certain build profile
     pub profile_kind: ProfileKind,
@@ -45,10 +43,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Check for whether the profile is defined.
     let _ = profiles.base_profile(&opts.profile_kind)?;
 
-    // If the release option is set, we set target to release directory
-    if opts.release {
-        target_dir = target_dir.join(profiles.get_dir_name(&ProfileKind::Release));
-    } else if opts.profile_specified {
+    if opts.profile_specified {
         // After parsing profiles we know the dir-name of the profile, if a profile
         // was passed from the command line. If so, delete only the directory of
         // that profile.
