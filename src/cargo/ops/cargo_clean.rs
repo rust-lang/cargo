@@ -42,6 +42,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let (packages, resolve) = ops::resolve_ws(ws)?;
     let profiles = ws.profiles();
 
+    // Check for whether the profile is defined.
+    let _ = profiles.base_profile(&opts.profile_kind)?;
+
     // If the release option is set, we set target to release directory
     if opts.release {
         target_dir = target_dir.join(profiles.get_dir_name(&ProfileKind::Release));
