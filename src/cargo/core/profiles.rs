@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::collections::HashSet;
 use std::{cmp, env, fmt, hash};
 
@@ -18,8 +18,8 @@ pub struct Profiles {
     /// - `CARGO_INCREMENTAL` environment variable.
     /// - `build.incremental` config value.
     incremental: Option<bool>,
-    dir_names: BTreeMap<String, String>,
-    by_name: BTreeMap<String, ProfileMaker>,
+    dir_names: HashMap<String, String>,
+    by_name: HashMap<String, ProfileMaker>,
 }
 
 impl Profiles {
@@ -43,7 +43,7 @@ impl Profiles {
         let mut profile_makers = Profiles {
             incremental,
             dir_names: Self::predefined_dir_names(),
-            by_name: BTreeMap::new(),
+            by_name: HashMap::new(),
         };
 
         Self::add_root_profiles(&mut profile_makers, profiles, config_profiles);
@@ -98,8 +98,8 @@ impl Profiles {
         Ok(profile_makers)
     }
 
-    fn predefined_dir_names() -> BTreeMap<String, String> {
-        let mut dir_names = BTreeMap::new();
+    fn predefined_dir_names() -> HashMap<String, String> {
+        let mut dir_names = HashMap::new();
         dir_names.insert("dev".to_owned(), "debug".to_owned());
         dir_names.insert("check".to_owned(), "debug".to_owned());
         dir_names.insert("test".to_owned(), "debug".to_owned());
