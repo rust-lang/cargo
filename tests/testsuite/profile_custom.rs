@@ -68,6 +68,109 @@ Caused by:
 }
 
 #[cargo_test]
+fn invalid_profile_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.'.release-lto']
+            inherits = "release"
+            codegen-units = 7
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  Invalid character `.` in profile name: `.release-lto`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_dir_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.'release-lto']
+            inherits = "release"
+            dir-name = ".subdir"
+            codegen-units = 7
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  Invalid character `.` in dir-name: `.subdir`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_inherits() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.'release-lto']
+            inherits = ".release"
+            codegen-units = 7
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  Invalid character `.` in inherits: `.release`",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn non_existent_inherits() {
     let p = project()
         .file(
