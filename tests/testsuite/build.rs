@@ -4207,8 +4207,7 @@ fn uplift_pdb_of_bin_on_windows() {
     p.cargo("build --bins --examples --tests").run();
     assert!(p.target_debug_dir().join("foo.pdb").is_file());
     assert!(p.target_debug_dir().join("b.pdb").is_file());
-    assert!(!p.target_debug_dir().join("examples/c.pdb").exists());
-    assert_eq!(p.glob("target/debug/examples/c-*.pdb").count(), 1);
+    assert!(p.target_debug_dir().join("examples/c.pdb").exists());
     assert!(!p.target_debug_dir().join("c.pdb").exists());
     assert!(!p.target_debug_dir().join("d.pdb").exists());
 }

@@ -495,7 +495,8 @@ fn compute_metadata<'a, 'cfg>(
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_executable() && unit.kind.short_name(bcx).starts_with("wasm32-")))
+            || (unit.target.is_executable() && unit.kind.short_name(bcx).starts_with("wasm32-"))
+            || (unit.target.is_executable() && unit.kind.short_name(bcx).contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {
