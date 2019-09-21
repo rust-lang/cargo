@@ -302,6 +302,9 @@ pub fn compile_ws<'a>(
 
     let profiles = ws.profiles();
 
+    // Early check for whether the profile is defined.
+    let _ = profiles.base_profile(&build_config.profile_kind)?;
+
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
@@ -633,8 +636,6 @@ fn generate_targets<'a>(
     resolve: &'a Resolve,
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
-    let _ = profiles.base_profile(&bcx.build_config.profile_kind)?;
-
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
         let unit_for = if bcx.build_config.mode.is_any_test() {
