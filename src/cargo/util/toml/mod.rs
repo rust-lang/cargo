@@ -479,7 +479,7 @@ impl TomlProfile {
             features.require(Feature::named_profiles())?;
         }
 
-        if self.dir_name.is_some() { 
+        if self.dir_name.is_some() {
             features.require(Feature::named_profiles())?;
         }
 
@@ -534,6 +534,9 @@ impl TomlProfile {
 
         match name {
             "package" | "build" | "debug" => {
+                failure::bail!("Invalid {}: `{}`", what, name);
+            }
+            "doc" if what == "dir-name" => {
                 failure::bail!("Invalid {}: `{}`", what, name);
             }
             _ => {}
