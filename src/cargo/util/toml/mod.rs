@@ -468,7 +468,7 @@ impl TomlProfile {
 
         // Feature gate definition of named profiles
         match name {
-            "dev" | "release" | "bench" | "test" | "doc" | "check" => {}
+            "dev" | "release" | "bench" | "test" | "doc" => {}
             _ => {
                 features.require(Feature::named_profiles())?;
             }
