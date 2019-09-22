@@ -12,6 +12,7 @@ Some unstable features will require you to specify the `cargo-features` key in
 
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
+* Tracking Issue: [#7404](https://github.com/rust-lang/cargo/issues/7404)
 
 The `-Z no-index-update` flag ensures that Cargo does not attempt to update
 the registry index. This is intended for tools such as Crater that issue many
@@ -353,6 +354,7 @@ the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
 ### timings
+* Tracking Issue: [#7405](https://github.com/rust-lang/cargo/issues/7405)
 
 The `timings` feature gives some information about how long each compilation
 takes, and tracks concurrency information over time.
@@ -411,3 +413,14 @@ Tips for addressing compile times:
 - Split large crates into smaller pieces.
 - If there are a large number of crates bottlenecked on a single crate, focus
   your attention on improving that one crate to improve parallelism.
+
+### binary-dep-depinfo
+* Tracking rustc issue: [#63012](https://github.com/rust-lang/rust/issues/63012)
+
+The `-Z binary-dep-depinfo` flag causes Cargo to forward the same flag to
+`rustc` which will then cause `rustc` to include the paths of all binary
+dependencies in the "dep info" file (with the `.d` extension). Cargo then uses
+that information for change-detection (if any binary dependency changes, then
+the crate will be rebuilt). The primary use case is for building the compiler
+itself, which has implicit dependencies on the standard library that would
+otherwise be untracked for change-detection.
