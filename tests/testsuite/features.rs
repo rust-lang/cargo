@@ -1959,3 +1959,32 @@ fn multi_multi_features() {
 
     p.cargo("build --features a --features").arg("b c").run();
 }
+
+#[cargo_test]
+fn cli_parse_ok() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                a = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+               #[cfg(feature = "a")]
+               fn main() {
+                    assert_eq!(std::env::args().nth(1).unwrap(), "b");
+               }
+            "#,
+        )
+        .build();
+
+    p.cargo("run --features a b").run();
+}
