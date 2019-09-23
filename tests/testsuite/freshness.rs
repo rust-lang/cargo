@@ -1151,23 +1151,24 @@ fn reuse_shared_build_dep() {
 fn changing_rustflags_is_cached() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("build").run();
-    p.cargo("build")
-        .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(
-            "\
+    // This isn't ever cached, we always have to recompile
+    for _ in 0..2 {
+        p.cargo("build")
+            .with_stderr(
+                "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
-        .run();
-    // This should not recompile!
-    p.cargo("build")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
-        .run();
-    p.cargo("build")
-        .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
-        .run();
+            )
+            .run();
+        p.cargo("build")
+            .env("RUSTFLAGS", "-C linker=cc")
+            .with_stderr(
+                "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+            )
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -1257,6 +1258,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
 
             [dependencies]
             bar = { path = "bar" }
+
+            [features]
+            a = []
         "#,
         )
         .file("src/lib.rs", "")
@@ -1267,12 +1271,10 @@ fn fingerprint_cleaner_does_not_rebuild() {
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
         .run();
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
@@ -1285,16 +1287,14 @@ fn fingerprint_cleaner_does_not_rebuild() {
         sleep_ms(1000);
     }
     // This does not make new files, but it does update the mtime.
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo()
-        .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
@@ -1302,7 +1302,6 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
