@@ -23,7 +23,7 @@ use url::Url;
 use self::ConfigValue as CV;
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
-use crate::core::{CliUnstable, Shell, SourceId, Workspace};
+use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
@@ -625,6 +625,12 @@ impl Config {
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
+
+        if nightly_features_allowed() {
+            if let Some(val) = self.get_bool("unstable.mtime_on_use")?.map(|t| t.val) {
+                self.cli_flags.mtime_on_use |= val;
+            }
+        }
 
         Ok(())
     }
