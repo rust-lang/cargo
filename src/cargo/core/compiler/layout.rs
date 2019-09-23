@@ -116,6 +116,10 @@ pub struct Layout {
     examples: PathBuf,
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
+    /// The local sysroot for the build-std feature.
+    sysroot: Option<PathBuf>,
+    /// The "lib" directory within `sysroot`.
+    sysroot_libdir: Option<PathBuf>,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
     _lock: FileLock,
@@ -139,18 +143,21 @@ impl Layout {
         // Flexible target specifications often point at json files, so interpret
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name in that case.
-        if let Some(triple) = triple {
-            let triple = Path::new(triple);
-            if triple.extension().and_then(|s| s.to_str()) == Some("json") {
-                root.push(
-                    triple
-                        .file_stem()
+        let triple_path = if let Some(s) = triple {
+            let p = Path::new(s);
+            let tp = if p.extension().and_then(|s| s.to_str()) == Some("json") {
+                Path::new(
+                    p.file_stem()
                         .ok_or_else(|| failure::format_err!("invalid target"))?,
-                );
+                )
             } else {
-                root.push(triple);
-            }
-        }
+                p
+            };
+            root.push(tp);
+            Some(tp)
+        } else {
+            None
+        };
         let dest = root.join(dest);
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the
@@ -167,6 +174,16 @@ impl Layout {
         let root = root.into_path_unlocked();
         let dest = dest.into_path_unlocked();
 
+        // Compute the sysroot path for the build-std feature.
+        let build_std = ws.config().cli_unstable().build_std.as_ref();
+        let (sysroot, sysroot_libdir) = if let Some(tp) = build_std.and(triple_path) {
+            let sysroot = dest.join(".sysroot");
+            let sysroot_libdir = sysroot.join("lib").join("rustlib").join(tp).join("lib");
+            (Some(sysroot), Some(sysroot_libdir))
+        } else {
+            (None, None)
+        };
+
         Ok(Layout {
             deps: dest.join("deps"),
             build: dest.join("build"),
@@ -176,6 +193,8 @@ impl Layout {
             doc: root.join("doc"),
             root,
             dest,
+            sysroot,
+            sysroot_libdir,
             _lock: lock,
         })
     }
@@ -222,6 +241,16 @@ impl Layout {
     /// Fetch the build script path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// The local sysroot for the build-std feature.
+    ///
+    /// Returns None if build-std is not enabled or this is the Host layout.
+    pub fn sysroot(&self) -> Option<&Path> {
+        self.sysroot.as_ref().map(|p| p.as_ref())
+    }
+    /// The "lib" directory within `sysroot`.
+    pub fn sysroot_libdir(&self) -> Option<&Path> {
+        self.sysroot_libdir.as_ref().map(|p| p.as_ref())
     }
 }
 

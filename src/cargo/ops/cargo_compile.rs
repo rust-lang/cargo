@@ -703,8 +703,15 @@ fn generate_targets<'a>(
             bcx.build_config.release,
         );
         let features = resolve.features_sorted(pkg.package_id());
-        bcx.units
-            .intern(pkg, target, profile, kind, target_mode, features)
+        bcx.units.intern(
+            pkg,
+            target,
+            profile,
+            kind,
+            target_mode,
+            features,
+            /*is_std*/ false,
+        )
     };
 
     // Create a list of proposed targets.

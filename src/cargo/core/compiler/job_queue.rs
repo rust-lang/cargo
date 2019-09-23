@@ -17,6 +17,7 @@ use super::job::{
     Freshness::{self, Dirty, Fresh},
     Job,
 };
+use super::standard_lib;
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
@@ -607,7 +608,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         id: u32,
         unit: &Unit<'a>,
         artifact: Artifact,
-        cx: &mut Context<'_, '_>,
+        cx: &mut Context<'a, '_>,
     ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
@@ -616,6 +617,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         match artifact {
             Artifact::All => self.timings.unit_finished(id, unlocked),
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+        }
+        if unit.is_std && unit.kind == super::Kind::Target && !cx.bcx.build_config.build_plan {
+            let rmeta = artifact == Artifact::Metadata;
+            standard_lib::add_sysroot_artifact(cx, unit, rmeta)?;
         }
         Ok(())
     }
