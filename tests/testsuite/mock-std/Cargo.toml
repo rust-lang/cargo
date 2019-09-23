@@ -1,9 +1,8 @@
 [workspace]
 members = [
+  "src/liballoc",
+  "src/libcore",
+  "src/libproc_macro",
+  "src/libstd",
   "src/libtest",
 ]
-
-[patch.crates-io]
-rustc-std-workspace-std = { path = 'src/tools/rustc-std-workspace-std' }
-rustc-std-workspace-core = { path = 'src/tools/rustc-std-workspace-core' }
-rustc-std-workspace-alloc = { path = 'src/tools/rustc-std-workspace-alloc' }

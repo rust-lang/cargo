@@ -8,4 +8,4 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
-core = { path = "../libcore" }
+registry-dep-using-core = { version = "*", features = ['mockbuild'] }
