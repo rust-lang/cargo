@@ -1,0 +1,84 @@
+= cargo-clippy(1)
+:idprefix: cargo_clippy_
+:doctype: manpage
+:actionverb: Clippy
+
+== NAME
+
+cargo-clippy - Check the current package with clippy
+
+== SYNOPSIS
+
+`cargo clippy [_OPTIONS_]`
+
+== DESCRIPTION
+
+Check a local package and all of its local dependencies for common mistakes
+with clippy.
+
+== OPTIONS
+
+=== Package Selection
+
+include::options-packages.adoc[]
+
+=== Target Selection
+
+When no target selection options are given, `cargo clippy` will check all
+binary and library targets of the selected packages. Binaries are skipped if
+they have `required-features` that are missing.
+
+include::options-targets.adoc[]
+
+include::options-features.adoc[]
+
+=== Compilation Options
+
+include::options-target-triple.adoc[]
+
+include::options-release.adoc[]
+
+include::options-profile.adoc[]
+
+=== Output Options
+
+include::options-target-dir.adoc[]
+
+=== Display Options
+
+include::options-display.adoc[]
+
+include::options-message-format.adoc[]
+
+=== Manifest Options
+
+include::options-manifest-path.adoc[]
+
+include::options-locked.adoc[]
+
+=== Common Options
+
+include::options-common.adoc[]
+
+=== Miscellaneous Options
+
+include::options-jobs.adoc[]
+
+include::section-profiles.adoc[]
+
+include::section-environment.adoc[]
+
+include::section-exit-status.adoc[]
+
+== EXAMPLES
+
+. Check the local package for common mistakes:
+
+    cargo clippy
+
+. Check all targets, including unit tests:
+
+    cargo clippy --all-targets --profile=test
+
+== SEE ALSO
+man:cargo[1], man:cargo-build[1], man:cargo-check[1]
