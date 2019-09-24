@@ -26,11 +26,36 @@ cargo\-clippy \- Check the current package with clippy
 .SH "DESCRIPTION"
 .sp
 Check a local package and all of its local dependencies for common mistakes
-with clippy. This will essentially compile the packages without performing the
-final step of code generation, which is faster than running \f[CR]cargo build\fP. The
-compiler will save metadata files to disk so that future runs will reuse them
-if the source has not been modified.
+with clippy.
 .SH "OPTIONS"
+.sp
+To allow or deny a lint from the command line you can use \f[CR]cargo clippy \-\-\fP
+with:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\-W \-\-warn OPT       Set lint warnings
+\-A \-\-allow OPT      Set lint allowed
+\-D \-\-deny OPT       Set lint denied
+\-F \-\-forbid OPT     Set lint forbidden
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+You can use tool lints to allow or deny lints from your code, eg.:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#[allow(clippy::needless_lifetimes)]
+.fi
+.if n \{\
+.RE
+.\}
 .SS "Package Selection"
 .sp
 By default, when no package selection options are given, the packages selected

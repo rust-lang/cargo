@@ -15,16 +15,33 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>Check a local package and all of its local dependencies for common mistakes
-with clippy. This will essentially compile the packages without performing the
-final step of code generation, which is faster than running <code>cargo build</code>. The
-compiler will save metadata files to disk so that future runs will reuse them
-if the source has not been modified.</p>
+with clippy.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="cargo_clippy_options">OPTIONS</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>To allow or deny a lint from the command line you can use <code>cargo clippy --</code>
+with:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>-W --warn OPT       Set lint warnings
+-A --allow OPT      Set lint allowed
+-D --deny OPT       Set lint denied
+-F --forbid OPT     Set lint forbidden</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can use tool lints to allow or deny lints from your code, eg.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>#[allow(clippy::needless_lifetimes)]</pre>
+</div>
+</div>
 <div class="sect2">
 <h3 id="cargo_clippy_package_selection">Package Selection</h3>
 <div class="paragraph">

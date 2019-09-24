@@ -37,6 +37,7 @@
         * [build](commands/cargo-build.md)
         * [check](commands/cargo-check.md)
         * [clean](commands/cargo-clean.md)
+        * [clippy](commands/cargo-clippy.md)
         * [doc](commands/cargo-doc.md)
         * [fetch](commands/cargo-fetch.md)
         * [fix](commands/cargo-fix.md)

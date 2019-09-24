@@ -18,6 +18,18 @@ with clippy.
 
 == OPTIONS
 
+To allow or deny a lint from the command line you can use `cargo clippy --`
+with:
+
+    -W --warn OPT       Set lint warnings
+    -A --allow OPT      Set lint allowed
+    -D --deny OPT       Set lint denied
+    -F --forbid OPT     Set lint forbidden
+
+You can use tool lints to allow or deny lints from your code, eg.:
+
+    #[allow(clippy::needless_lifetimes)]
+
 === Package Selection
 
 include::options-packages.adoc[]
