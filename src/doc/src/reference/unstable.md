@@ -19,6 +19,17 @@ the registry index. This is intended for tools such as Crater that issue many
 Cargo commands, and you want to avoid the network latency for updating the
 index each time.
 
+### mtime-on-use
+* Original Issue: [#6477](https://github.com/rust-lang/cargo/pull/6477)
+* Cache usage meta tracking issue: [#7150](https://github.com/rust-lang/cargo/issues/7150)
+
+The `-Z mtime-on-use` flag is an experiment to have Cargo update the mtime of 
+used files to make it easier for tools like cargo-sweep to detect which files 
+are stale. For many workflows this needs to be set on *all* invocations of cargo.
+To make this more practical setting the `unstable.mtime_on_use` flag in `.cargo/config`
+or the corresponding ENV variable will apply the `-Z mtime-on-use` to all 
+invocations of nightly cargo. (the config flag is ignored by stable)
+
 ### avoid-dev-deps
 * Original Issue: [#4988](https://github.com/rust-lang/cargo/issues/4988)
 * Stabilization Issue: [#5133](https://github.com/rust-lang/cargo/issues/5133)
