@@ -12,6 +12,10 @@
 //!     .rustc-info.json
 //!
 //!     # All final artifacts are linked into this directory from `deps`.
+//!     # Note that named profiles will soon be included as separate directories
+//!     # here. They have a restricted format, similar to Rust identifiers, so
+//!     # Cargo-specific directories added in the future should use some prefix
+//!     # like `.` to avoid name collisions.
 //!     debug/  # or release/
 //!
 //!         # File used to lock the directory to prevent multiple cargo processes
@@ -45,6 +49,11 @@
 //!         # Directory used to store incremental data for the compiler (when
 //!         # incremental is enabled.
 //!         incremental/
+//!
+//!         # The sysroot for -Zbuild-std builds. This only appears in
+//!         # target-triple directories (not host), and only if -Zbuild-std is
+//!         # enabled.
+//!         .sysroot/
 //!
 //!     # This is the location at which the output of all custom build
 //!     # commands are rooted.
@@ -177,6 +186,7 @@ impl Layout {
         // Compute the sysroot path for the build-std feature.
         let build_std = ws.config().cli_unstable().build_std.as_ref();
         let (sysroot, sysroot_libdir) = if let Some(tp) = build_std.and(triple_path) {
+            // This uses a leading dot to avoid collision with named profiles.
             let sysroot = dest.join(".sysroot");
             let sysroot_libdir = sysroot.join("lib").join("rustlib").join(tp).join("lib");
             (Some(sysroot), Some(sysroot_libdir))
