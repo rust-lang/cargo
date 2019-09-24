@@ -125,7 +125,7 @@ fn attach_std_deps<'a, 'cfg>(
 ) {
     // Attach the standard library as a dependency of every target unit.
     for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if unit.kind == Kind::Target && !unit.mode.is_run_custom_build() {
+        if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots.iter().map(|unit| UnitDep {
                 unit: *unit,
                 unit_for: UnitFor::new_normal(),
@@ -270,11 +270,8 @@ fn compute_deps<'a, 'cfg>(
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = unit_for.with_for_host(lib.for_host());
 
-        if bcx.config.cli_unstable().dual_proc_macros
-            && lib.proc_macro()
-            && unit.kind == Kind::Target
-        {
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Target, mode)?;
+        if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
+            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
             ret.push(unit_dep);
             let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Host, mode)?;
             ret.push(unit_dep);

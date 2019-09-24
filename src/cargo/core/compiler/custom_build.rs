@@ -158,13 +158,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
-        .env(
-            "TARGET",
-            &match unit.kind {
-                Kind::Host => bcx.host_triple(),
-                Kind::Target => bcx.target_triple(),
-            },
-        )
+        .env("TARGET", bcx.target_triple(unit.kind))
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
@@ -180,7 +174,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(ref linker) = bcx.target_config.linker {
+    if let Some(linker) = &bcx.target_config(unit.kind).linker {
         cmd.env("RUSTC_LINKER", linker);
     }
 

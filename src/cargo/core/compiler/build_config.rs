@@ -3,6 +3,7 @@ use std::path::Path;
 
 use serde::ser;
 
+use crate::core::InternedString;
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
@@ -11,7 +12,7 @@ use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 pub struct BuildConfig {
     /// The target arch triple.
     /// Default: host arch.
-    pub requested_target: Option<String>,
+    pub requested_target: Option<InternedString>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
     /// `true` if we are building for release.
@@ -91,7 +92,7 @@ impl BuildConfig {
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
 
         Ok(BuildConfig {
-            requested_target: target,
+            requested_target: target.as_ref().map(|s| s.into()),
             jobs,
             release: false,
             mode,

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 use crate::core::compiler::Kind;
+use crate::core::InternedString;
 use crate::core::TargetKind;
 use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
@@ -80,7 +81,7 @@ impl FileType {
 impl TargetInfo {
     pub fn new(
         config: &Config,
-        requested_target: &Option<String>,
+        requested_target: Option<InternedString>,
         rustc: &Rustc,
         kind: Kind,
     ) -> CargoResult<TargetInfo> {
@@ -101,12 +102,8 @@ impl TargetInfo {
             .args(&rustflags)
             .env_remove("RUSTC_LOG");
 
-        let target_triple = requested_target
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or(&rustc.host);
-        if kind == Kind::Target {
-            process.arg("--target").arg(target_triple);
+        if let Kind::Target(target) = kind {
+            process.arg("--target").arg(target);
         }
 
         let crate_type_process = process.clone();
@@ -148,10 +145,10 @@ impl TargetInfo {
                 }
                 rustlib
             }
-            Kind::Target => {
+            Kind::Target(target) => {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
-                rustlib.push(target_triple);
+                rustlib.push(target);
                 rustlib.push("lib");
                 rustlib
             }
@@ -381,7 +378,7 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 /// scripts, ...), even if it is the same as the target.
 fn env_args(
     config: &Config,
-    requested_target: &Option<String>,
+    requested_target: Option<InternedString>,
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: Kind,
@@ -407,9 +404,7 @@ fn env_args(
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
     let compiling_with_target = requested_target.is_some();
-    let is_target_kind = kind == Kind::Target;
-
-    if compiling_with_target && !is_target_kind {
+    if compiling_with_target && kind.is_host() {
         // This is probably a build script or plugin and we're
         // compiling with --target. In this scenario there are
         // no rustflags we can apply.

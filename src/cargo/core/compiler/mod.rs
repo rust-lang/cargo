@@ -43,7 +43,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::Feature;
-use crate::core::{PackageId, Target};
+use crate::core::{InternedString, PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::machine_message::Message;
 use crate::util::paths;
@@ -56,7 +56,16 @@ use crate::util::{internal, join_paths, profile};
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum Kind {
     Host,
-    Target,
+    Target(InternedString),
+}
+
+impl Kind {
+    pub fn is_host(&self) -> bool {
+        match self {
+            Kind::Host => true,
+            _ => false,
+        }
+    }
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
@@ -565,10 +574,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
-    if unit.kind != Kind::Host {
-        if let Some(ref target) = bcx.build_config.requested_target {
-            rustdoc.arg("--target").arg(target);
-        }
+    if let Kind::Target(target) = unit.kind {
+        rustdoc.arg("--target").arg(target);
     }
 
     let doc_dir = cx.files().out_dir(unit);
@@ -892,16 +899,8 @@ fn build_base_args<'a, 'cfg>(
         }
     }
 
-    if unit.kind == Kind::Target {
-        opt(
-            cmd,
-            "--target",
-            "",
-            bcx.build_config
-                .requested_target
-                .as_ref()
-                .map(|s| s.as_ref()),
-        );
+    if let Kind::Target(n) = unit.kind {
+        cmd.arg("--target").arg(n);
     }
 
     opt(cmd, "-C", "ar=", bcx.ar(unit.kind).map(|s| s.as_ref()));
@@ -942,7 +941,7 @@ fn build_deps_args<'a, 'cfg>(
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
-    if let Kind::Target = unit.kind {
+    if let Kind::Target(_) = unit.kind {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
             deps.push(cx.files().host_deps());
@@ -1073,8 +1072,8 @@ impl Kind {
         // that needs to be on the host we lift ourselves up to `Host`.
         match self {
             Kind::Host => Kind::Host,
-            Kind::Target if target.for_host() => Kind::Host,
-            Kind::Target => Kind::Target,
+            Kind::Target(_) if target.for_host() => Kind::Host,
+            Kind::Target(n) => Kind::Target(n),
         }
     }
 }

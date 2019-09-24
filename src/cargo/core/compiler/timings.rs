@@ -576,7 +576,8 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         .build_config
         .requested_target
         .as_ref()
-        .map_or("Host", String::as_str);
+        .map(|s| s.as_str())
+        .unwrap_or("Host");
     format!(
         "{}<br>Host: {}<br>Target: {}",
         version, bcx.rustc.host, requested_target

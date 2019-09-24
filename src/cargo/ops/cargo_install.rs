@@ -410,8 +410,8 @@ fn install_one(
             &successful_bins,
             vers.map(|s| s.to_string()),
             opts,
-            target,
-            rustc.verbose_version,
+            &target,
+            &rustc.verbose_version,
         );
 
         if let Err(e) = remove_orphaned_bins(&ws, &mut tracker, &duplicates, pkg, &dst) {

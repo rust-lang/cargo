@@ -113,6 +113,7 @@ pub fn generate_std_roots<'a>(
     bcx: &BuildContext<'a, '_>,
     crates: &[String],
     std_resolve: &'a Resolve,
+    kind: Kind,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
@@ -147,7 +148,7 @@ pub fn generate_std_roots<'a>(
                 pkg,
                 lib,
                 profile,
-                Kind::Target,
+                kind,
                 mode,
                 features,
                 /*is_std*/ true,

@@ -10,7 +10,7 @@ use log::info;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout};
 use crate::core::compiler::{CompileMode, Unit};
-use crate::core::{TargetKind, Workspace};
+use crate::core::{InternedString, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a build.
@@ -54,7 +54,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host).
-    pub(super) target: Option<Layout>,
+    pub(super) target: HashMap<InternedString, Layout>,
     /// Additional directory to include a copy of the outputs.
     export_dir: Option<PathBuf>,
     /// The root targets requested by the user on the command line (does not
@@ -93,7 +93,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
         roots: &[Unit<'a>],
         host: Layout,
-        target: Option<Layout>,
+        target: HashMap<InternedString, Layout>,
         export_dir: Option<PathBuf>,
         ws: &'a Workspace<'cfg>,
         cx: &Context<'a, 'cfg>,
@@ -122,7 +122,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub fn layout(&self, kind: Kind) -> &Layout {
         match kind {
             Kind::Host => &self.host,
-            Kind::Target => self.target.as_ref().unwrap_or(&self.host),
+            Kind::Target(name) => self.target.get(&name).unwrap_or(&self.host),
         }
     }
 
@@ -345,11 +345,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let out_dir = self.out_dir(unit);
         let link_stem = self.link_stem(unit);
-        let info = if unit.kind == Kind::Host {
-            &bcx.host_info
-        } else {
-            &bcx.target_info
-        };
+        let info = bcx.info(unit.kind);
         let file_stem = self.file_stem(unit);
 
         let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
@@ -358,8 +354,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             } else {
                 crate_type
             };
-            let file_types =
-                info.file_types(crate_type, flavor, unit.target.kind(), bcx.target_triple())?;
+            let file_types = info.file_types(
+                crate_type,
+                flavor,
+                unit.target.kind(),
+                &bcx.target_triple(unit.kind),
+            )?;
 
             match file_types {
                 Some(types) => {
@@ -432,14 +432,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                      does not support these crate types",
                     unsupported.join(", "),
                     unit.pkg,
-                    bcx.target_triple()
+                    bcx.target_triple(unit.kind),
                 )
             }
             failure::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                bcx.target_triple()
+                bcx.target_triple(unit.kind),
             );
         }
         Ok(ret)
@@ -495,7 +495,7 @@ fn compute_metadata<'a, 'cfg>(
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_executable() && bcx.target_triple().starts_with("wasm32-")))
+            || (unit.target.is_executable() && bcx.target_triple(unit.kind).starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {

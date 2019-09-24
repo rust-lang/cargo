@@ -66,6 +66,11 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     )?;
     let mut units = Vec::new();
 
+    let mut kinds = vec![Kind::Host];
+    if let Some(target) = build_config.requested_target {
+        kinds.push(Kind::Target(target));
+    }
+
     for spec in opts.spec.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
@@ -73,7 +78,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
-            for kind in [Kind::Host, Kind::Target].iter() {
+            for kind in kinds.iter() {
                 for mode in CompileMode::all_modes() {
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
@@ -105,7 +110,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     let unit_dependencies =
         unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
-    let mut cx = Context::new(config, &bcx, unit_dependencies)?;
+    let default_kind = kinds.last().cloned().unwrap();
+    let mut cx = Context::new(config, &bcx, unit_dependencies, default_kind)?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {

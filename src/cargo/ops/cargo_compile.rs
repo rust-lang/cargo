@@ -294,8 +294,8 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let default_arch_kind = if build_config.requested_target.is_some() {
-        Kind::Target
+    let default_arch_kind = if let Some(s) = build_config.requested_target {
+        Kind::Target(s)
     } else {
         Kind::Host
     };
@@ -408,7 +408,12 @@ pub fn compile_ws<'a>(
                 crates.push("test".to_string());
             }
         }
-        standard_lib::generate_std_roots(&bcx, &crates, std_resolve.as_ref().unwrap())?
+        standard_lib::generate_std_roots(
+            &bcx,
+            &crates,
+            std_resolve.as_ref().unwrap(),
+            default_arch_kind,
+        )?
     } else {
         Vec::new()
     };
@@ -442,7 +447,7 @@ pub fn compile_ws<'a>(
 
     let ret = {
         let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx, unit_dependencies)?;
+        let cx = Context::new(config, &bcx, unit_dependencies, default_arch_kind)?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
 
