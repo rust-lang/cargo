@@ -2,7 +2,6 @@ use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};
 use std::path::PathBuf;
-use std::process::Command;
 
 struct Setup {
     rustc_wrapper: PathBuf,
@@ -116,18 +115,9 @@ fn setup() -> Option<Setup> {
         .build();
     p.cargo("build").run();
 
-    let output = Command::new("rustc")
-        .arg("--print")
-        .arg("sysroot")
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    let real_sysroot = String::from_utf8(output.stdout).unwrap();
-    let real_sysroot = real_sysroot.trim();
-
     return Some(Setup {
         rustc_wrapper: p.bin("foo"),
-        real_sysroot: real_sysroot.to_string(),
+        real_sysroot: paths::sysroot(),
     });
 }
 
@@ -514,7 +504,7 @@ fn doctest() {
             r#"
                 /// Doc
                 /// ```
-                /// assert_eq!(1, 1);
+                /// std::custom_api();
                 /// ```
                 pub fn f() {}
             "#,
@@ -523,6 +513,59 @@ fn doctest() {
 
     p.cargo("test --doc -v")
         .build_std(&setup)
+        .with_stdout_contains("test src/lib.rs - f [..] ... ok")
         .target_host()
         .run();
+}
+
+#[cargo_test]
+fn no_implicit_alloc() {
+    // Demonstrate that alloc is not implicitly in scope.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn f() {
+                    let _: Vec<i32> = alloc::vec::Vec::new();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_contains("[..]use of undeclared [..]`alloc`")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn macro_expanded_shadow() {
+    // This tests a bug caused by the previous use of `--extern` to directly
+    // load sysroot crates. This necessitated the switch to `--sysroot` to
+    // retain existing behavior. See
+    // https://github.com/rust-lang/wg-cargo-std-aware/issues/40 for more
+    // detail.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                macro_rules! a {
+                    () => (extern crate std as alloc;)
+                }
+                a!();
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").build_std(&setup).target_host().run();
 }

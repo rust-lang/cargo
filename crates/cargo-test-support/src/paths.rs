@@ -6,6 +6,7 @@ use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
@@ -251,4 +252,15 @@ pub fn get_lib_extension(kind: &str) -> &str {
         }
         _ => unreachable!(),
     }
+}
+
+/// Returns the sysroot as queried from rustc.
+pub fn sysroot() -> String {
+    let output = Command::new("rustc")
+        .arg("--print=sysroot")
+        .output()
+        .expect("rustc to run");
+    assert!(output.status.success());
+    let sysroot = String::from_utf8(output.stdout).unwrap();
+    sysroot.trim().to_string()
 }
