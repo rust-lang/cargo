@@ -90,18 +90,7 @@ fn setup() -> Option<Setup> {
                 fn main() {
                     let mut args = env::args().skip(1).collect::<Vec<_>>();
 
-                    let crates = [
-                        "alloc",
-                        "compiler_builtins",
-                        "core",
-                        "panic_unwind",
-                        "proc_macro",
-                        "std",
-                        "test",
-                    ];
-                    let is_sysroot_crate = args.iter()
-                        .any(|a| a.starts_with("rustc_std_workspace") || crates.iter().any(|b| a == b));
-
+                    let is_sysroot_crate = env::var_os("RUSTC_BOOTSTRAP").is_some();
                     if is_sysroot_crate {
                         let arg = args.iter().position(|a| a == "--sysroot").unwrap();
                         args[arg + 1] = env::var("REAL_SYSROOT").unwrap();
