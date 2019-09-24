@@ -627,7 +627,7 @@ impl Config {
         self.cli_flags.parse(unstable_flags)?;
 
         if nightly_features_allowed() {
-            if let Some(val) = self.get_bool("unstable.mtime_on_use")?.map(|t| t.val) {
+            if let Some(val) = self.get::<Option<bool>>("unstable.mtime_on_use")? {
                 self.cli_flags.mtime_on_use |= val;
             }
         }
