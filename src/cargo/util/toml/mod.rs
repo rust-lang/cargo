@@ -62,8 +62,10 @@ fn do_read_manifest(
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
         let mut key = String::new();
-        stringify(&mut key, &path);
-        unused.insert(key);
+        if !is_plugin_path(&path) {
+            stringify(&mut key, &path);
+            unused.insert(key);
+        }
     })?;
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
@@ -93,6 +95,27 @@ fn do_read_manifest(
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
+
+    fn is_plugin_path(path: &serde_ignored::Path<'_>) -> bool {
+        use serde_ignored::Path;
+        match *path {
+            Path::Root => false,
+            Path::Seq {
+                parent: _,
+                index: _,
+            } => false,
+            Path::Map { parent, ref key } => {
+                if key.starts_with("@") {
+                    true
+                } else {
+                    is_plugin_path(parent)
+                }
+            }
+            Path::Some { parent }
+            | Path::NewtypeVariant { parent }
+            | Path::NewtypeStruct { parent } => is_plugin_path(parent),
+        }
+    }
 
     fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
         use serde_ignored::Path;

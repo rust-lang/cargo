@@ -436,3 +436,31 @@ fn shared_panic_abort_plugins() {
 
     p.cargo("build").run();
 }
+
+#[cargo_test]
+fn nowarn_plugin_keys() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+           [package]
+           name = "foo"
+           version = "0.1.0"
+           authors = []
+
+           [target.foo]
+           "@plugin.key" = "4"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
