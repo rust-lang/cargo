@@ -1145,14 +1145,14 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
@@ -1173,14 +1173,14 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
@@ -1557,7 +1557,7 @@ fn lto_build() {
         .with_stderr(
             "\
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/main.rs --color never --crate-type bin \
+[RUNNING] `rustc --crate-name test src/main.rs [..]--crate-type bin \
         --emit=[..]link \
         -C opt-level=3 \
         -C lto \
@@ -1577,7 +1577,7 @@ fn verbose_build() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -1595,7 +1595,7 @@ fn verbose_release_build() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -1644,7 +1644,7 @@ fn verbose_release_build_deps() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ([CWD]/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --color never \
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
         --emit=[..]link \
         -C prefer-dynamic \
@@ -1653,7 +1653,7 @@ fn verbose_release_build_deps() {
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -2996,29 +2996,6 @@ fn panic_abort_compiles_with_panic_abort() {
 }
 
 #[cargo_test]
-fn explicit_color_config_is_propagated_to_rustc() {
-    let p = project()
-        .file("Cargo.toml", &basic_manifest("test", "0.0.0"))
-        .file("src/lib.rs", "")
-        .build();
-    p.cargo("build -v --color always")
-        .with_stderr_contains("[..]rustc [..] src/lib.rs --color always[..]")
-        .run();
-
-    p.cargo("clean").run();
-
-    p.cargo("build -v --color never")
-        .with_stderr(
-            "\
-[COMPILING] test v0.0.0 ([..])
-[RUNNING] `rustc [..] --color never [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn compiler_json_error_format() {
     let p = project()
         .file(
@@ -3043,10 +3020,8 @@ fn compiler_json_error_format() {
         .file("bar/src/lib.rs", r#"fn dead() {}"#)
         .build();
 
-    // Use `jobs=1` to ensure that the order of messages is consistent.
-    p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(
-            r#"
+    let output = |fresh| {
+        r#"
     {
         "reason":"compiler-artifact",
         "package_id":"foo 0.5.0 ([..])",
@@ -3068,7 +3043,7 @@ fn compiler_json_error_format() {
         "executable": null,
         "features": [],
         "filenames": "{...}",
-        "fresh": false
+        "fresh": $FRESH
     }
 
     {
@@ -3109,7 +3084,7 @@ fn compiler_json_error_format() {
             "[..].rlib",
             "[..].rmeta"
         ],
-        "fresh": false
+        "fresh": $FRESH
     }
 
     {
@@ -3156,102 +3131,21 @@ fn compiler_json_error_format() {
         "executable": "[..]/foo/target/debug/foo[EXE]",
         "features": [],
         "filenames": "{...}",
-        "fresh": false
+        "fresh": $FRESH
     }
-"#,
-        )
+"#
+        .replace("$FRESH", fresh)
+    };
+
+    // Use `jobs=1` to ensure that the order of messages is consistent.
+    p.cargo("build -v --message-format=json --jobs=1")
+        .with_json(&output("false"))
         .run();
 
     // With fresh build, we should repeat the artifacts,
-    // but omit compiler warnings.
+    // and replay the cached compiler warnings.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(
-            r#"
-    {
-        "reason":"compiler-artifact",
-        "package_id":"foo 0.5.0 ([..])",
-        "target":{
-            "kind":["custom-build"],
-            "crate_types":["bin"],
-            "doctest": false,
-            "edition": "2015",
-            "name":"build-script-build",
-            "src_path":"[..]build.rs"
-        },
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
-        "executable": null,
-        "features": [],
-        "filenames": "{...}",
-        "fresh": true
-    }
-
-    {
-        "reason":"compiler-artifact",
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
-        "executable": null,
-        "features": [],
-        "package_id":"bar 0.5.0 ([..])",
-        "target":{
-            "kind":["lib"],
-            "crate_types":["lib"],
-            "doctest": true,
-            "edition": "2015",
-            "name":"bar",
-            "src_path":"[..]lib.rs"
-        },
-        "filenames":[
-            "[..].rlib",
-            "[..].rmeta"
-        ],
-        "fresh": true
-    }
-
-    {
-        "reason":"build-script-executed",
-        "package_id":"foo 0.5.0 ([..])",
-        "linked_libs":[],
-        "linked_paths":[],
-        "env":[],
-        "cfgs":["xyz"]
-    }
-
-    {
-        "reason":"compiler-artifact",
-        "package_id":"foo 0.5.0 ([..])",
-        "target":{
-            "kind":["bin"],
-            "crate_types":["bin"],
-            "doctest": false,
-            "edition": "2015",
-            "name":"foo",
-            "src_path":"[..]main.rs"
-        },
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
-        "executable": "[..]/foo/target/debug/foo[EXE]",
-        "features": [],
-        "filenames": "{...}",
-        "fresh": true
-    }
-"#,
-        )
+        .with_json(&output("true"))
         .run();
 }
 
@@ -4227,11 +4121,11 @@ fn build_filter_infer_profile() {
 
     p.cargo("build -v")
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+            "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
              --emit=[..]link[..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         .run();
@@ -4239,15 +4133,15 @@ fn build_filter_infer_profile() {
     p.root().join("target").rm_rf();
     p.cargo("build -v --test=t1")
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+            "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
              --emit=[..]link -C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name t1 tests/t1.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]--emit=[..]link \
              -C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link -C debuginfo=2 [..]",
         )
         .run();
@@ -4256,16 +4150,16 @@ fn build_filter_infer_profile() {
     // Bench uses test profile without `--release`.
     p.cargo("build -v --bench=b1")
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+            "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
              --emit=[..]link -C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name b1 benches/b1.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name b1 benches/b1.rs [..]--emit=[..]link \
              -C debuginfo=2 [..]",
         )
         .with_stderr_does_not_contain("opt-level")
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link -C debuginfo=2 [..]",
         )
         .run();
@@ -4277,17 +4171,17 @@ fn targets_selected_default() {
     p.cargo("build -v")
         // Binaries.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         // Benchmarks.
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // Unit tests.
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4299,12 +4193,12 @@ fn targets_selected_all() {
     p.cargo("build -v --all-targets")
         // Binaries.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4316,12 +4210,12 @@ fn all_targets_no_lib() {
     p.cargo("build -v --all-targets")
         // Binaries.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
              -C debuginfo=2 --test [..]",
         )
         .run();

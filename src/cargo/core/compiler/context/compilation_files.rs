@@ -553,6 +553,14 @@ fn compute_metadata<'a, 'cfg>(
 
     bcx.rustc.verbose_version.hash(&mut hasher);
 
+    if cx.is_primary_package(unit) {
+        // This is primarily here for clippy. This ensures that the clippy
+        // artifacts are separate from the `check` ones.
+        if let Some(proc) = &cx.bcx.build_config.primary_unit_rustc {
+            proc.get_program().hash(&mut hasher);
+        }
+    }
+
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
     if let Ok(ref channel) = __cargo_default_lib_metadata {

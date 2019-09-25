@@ -376,7 +376,7 @@ fn linker_and_ar() {
         .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/foo.rs --color never --crate-type bin \
+[RUNNING] `rustc --crate-name foo src/foo.rs [..]--crate-type bin \
     --emit=[..]link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
