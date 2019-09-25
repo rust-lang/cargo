@@ -12,11 +12,23 @@ Some unstable features will require you to specify the `cargo-features` key in
 
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
+* Tracking Issue: [#7404](https://github.com/rust-lang/cargo/issues/7404)
 
 The `-Z no-index-update` flag ensures that Cargo does not attempt to update
 the registry index. This is intended for tools such as Crater that issue many
 Cargo commands, and you want to avoid the network latency for updating the
 index each time.
+
+### mtime-on-use
+* Original Issue: [#6477](https://github.com/rust-lang/cargo/pull/6477)
+* Cache usage meta tracking issue: [#7150](https://github.com/rust-lang/cargo/issues/7150)
+
+The `-Z mtime-on-use` flag is an experiment to have Cargo update the mtime of 
+used files to make it easier for tools like cargo-sweep to detect which files 
+are stale. For many workflows this needs to be set on *all* invocations of cargo.
+To make this more practical setting the `unstable.mtime_on_use` flag in `.cargo/config`
+or the corresponding ENV variable will apply the `-Z mtime-on-use` to all 
+invocations of nightly cargo. (the config flag is ignored by stable)
 
 ### avoid-dev-deps
 * Original Issue: [#4988](https://github.com/rust-lang/cargo/issues/4988)
@@ -412,6 +424,7 @@ the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
 ### timings
+* Tracking Issue: [#7405](https://github.com/rust-lang/cargo/issues/7405)
 
 The `timings` feature gives some information about how long each compilation
 takes, and tracks concurrency information over time.
@@ -470,3 +483,14 @@ Tips for addressing compile times:
 - Split large crates into smaller pieces.
 - If there are a large number of crates bottlenecked on a single crate, focus
   your attention on improving that one crate to improve parallelism.
+
+### binary-dep-depinfo
+* Tracking rustc issue: [#63012](https://github.com/rust-lang/rust/issues/63012)
+
+The `-Z binary-dep-depinfo` flag causes Cargo to forward the same flag to
+`rustc` which will then cause `rustc` to include the paths of all binary
+dependencies in the "dep info" file (with the `.d` extension). Cargo then uses
+that information for change-detection (if any binary dependency changes, then
+the crate will be rebuilt). The primary use case is for building the compiler
+itself, which has implicit dependencies on the standard library that would
+otherwise be untracked for change-detection.

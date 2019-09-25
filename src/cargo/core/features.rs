@@ -390,6 +390,7 @@ impl CliUnstable {
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
             "dual-proc-macros" => self.dual_proc_macros = true,
+            // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = true,
             "install-upgrade" => self.install_upgrade = true,
             "cache-messages" => self.cache_messages = true,

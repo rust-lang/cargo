@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo;
@@ -3665,6 +3665,7 @@ fn test_dep_with_dev() {
 #[cargo_test]
 fn cargo_test_doctest_xcompile_ignores() {
     if !is_nightly() {
+        // -Zdoctest-xcompile is unstable
         return;
     }
     let p = project()
@@ -3686,18 +3687,14 @@ fn cargo_test_doctest_xcompile_ignores() {
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test")
         .with_stdout_contains(
-            "\
-             test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
-             ",
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
         )
         .run();
     #[cfg(target_arch = "x86_64")]
     p.cargo("test")
         .with_status(101)
         .with_stdout_contains(
-            "\
-             test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out\
-             ",
+            "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out",
         )
         .run();
 
@@ -3705,9 +3702,7 @@ fn cargo_test_doctest_xcompile_ignores() {
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains(
-            "\
-             test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
-             ",
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
         )
         .run();
 
@@ -3715,16 +3710,18 @@ fn cargo_test_doctest_xcompile_ignores() {
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains(
-            "\
-             test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out\
-             ",
+            "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out",
         )
         .run();
 }
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile() {
+    if cross_compile::disabled() {
+        return;
+    }
     if !is_nightly() {
+        // -Zdoctest-xcompile is unstable
         return;
     }
     let p = project()
@@ -3745,11 +3742,7 @@ fn cargo_test_doctest_xcompile() {
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains(
-            "\
-             running 0 tests\
-             ",
-        )
+        .with_stdout_contains("running 0 tests")
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
@@ -3757,17 +3750,18 @@ fn cargo_test_doctest_xcompile() {
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "\
-         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
-         ",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
     )
     .run();
 }
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile_runner() {
-    use std::fs;
+    if cross_compile::disabled() {
+        return;
+    }
     if !is_nightly() {
+        // -Zdoctest-xcompile is unstable
         return;
     }
 
@@ -3824,11 +3818,7 @@ runner = "{}"
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains(
-            "\
-             running 0 tests\
-             ",
-        )
+        .with_stdout_contains("running 0 tests")
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
@@ -3836,21 +3826,19 @@ runner = "{}"
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "\
-         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
-         ",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
     )
-    .with_stderr_contains(
-        "\
-         this is a runner\
-         ",
-    )
+    .with_stderr_contains("this is a runner")
     .run();
 }
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile_no_runner() {
+    if cross_compile::disabled() {
+        return;
+    }
     if !is_nightly() {
+        // -Zdoctest-xcompile is unstable
         return;
     }
 
@@ -3872,11 +3860,7 @@ fn cargo_test_doctest_xcompile_no_runner() {
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains(
-            "\
-             running 0 tests\
-             ",
-        )
+        .with_stdout_contains("running 0 tests")
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
@@ -3884,9 +3868,7 @@ fn cargo_test_doctest_xcompile_no_runner() {
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "\
-         test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\
-         ",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
     )
     .run();
 }

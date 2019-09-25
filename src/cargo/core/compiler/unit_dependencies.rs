@@ -573,7 +573,7 @@ fn new_unit_dep_with_profile<'a>(
     let unit = state
         .bcx
         .units
-        .intern(pkg, target, profile, kind, mode, features);
+        .intern(pkg, target, profile, kind, mode, features, state.is_std);
     Ok(UnitDep {
         unit,
         unit_for,

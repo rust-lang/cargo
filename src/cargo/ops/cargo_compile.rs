@@ -312,6 +312,11 @@ pub fn compile_ws<'a>(
     let (mut packages, resolve_with_overrides) = resolve;
 
     let std_resolve = if let Some(crates) = &config.cli_unstable().build_std {
+        if build_config.build_plan {
+            config
+                .shell()
+                .warn("-Zbuild-std does not currently fully support --build-plan")?;
+        }
         if build_config.requested_target.is_none() {
             // TODO: This should eventually be fixed. Unfortunately it is not
             // easy to get the host triple in BuildConfig. Consider changing
@@ -706,8 +711,15 @@ fn generate_targets<'a>(
             bcx.build_config.profile_kind.clone(),
         );
         let features = resolve.features_sorted(pkg.package_id());
-        bcx.units
-            .intern(pkg, target, profile, kind, target_mode, features)
+        bcx.units.intern(
+            pkg,
+            target,
+            profile,
+            kind,
+            target_mode,
+            features,
+            /*is_std*/ false,
+        )
     };
 
     // Create a list of proposed targets.
