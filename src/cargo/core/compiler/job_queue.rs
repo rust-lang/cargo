@@ -17,6 +17,7 @@ use super::job::{
     Freshness::{self, Dirty, Fresh},
     Job,
 };
+use super::standard_lib;
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
@@ -607,7 +608,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         id: u32,
         unit: &Unit<'a>,
         artifact: Artifact,
-        cx: &mut Context<'_, '_>,
+        cx: &mut Context<'a, '_>,
     ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
@@ -616,6 +617,23 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         match artifact {
             Artifact::All => self.timings.unit_finished(id, unlocked),
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+        }
+        if unit.is_std && unit.kind == super::Kind::Target && !cx.bcx.build_config.build_plan {
+            // This is a bit of an unusual place to copy files around, and
+            // ideally this would be somewhere like the Work closure
+            // (`link_targets`). The tricky issue is handling rmeta files for
+            // pipelining. Since those are emitted asynchronously, the code
+            // path (like `on_stderr_line`) does not have enough information
+            // to know where the sysroot is, and that it is an std unit. If
+            // possible, it might be nice to eventually move this to the
+            // worker thread, but may be tricky to have the paths available.
+            // Another possibility is to disable pipelining between std ->
+            // non-std. The pipelining opportunities are small, and are not a
+            // huge win (in a full build, only proc_macro overlaps for 2
+            // seconds out of a 90s build on my system). Care must also be
+            // taken to properly copy these artifacts for Fresh units.
+            let rmeta = artifact == Artifact::Metadata;
+            standard_lib::add_sysroot_artifact(cx, unit, rmeta)?;
         }
         Ok(())
     }

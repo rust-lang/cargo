@@ -19,6 +19,8 @@
 //! Otherwise the tests are skipped.
 
 use cargo_test_support::*;
+use std::env;
+use std::path::Path;
 
 fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
     e.env_remove("CARGO_HOME");
@@ -174,7 +176,21 @@ fn custom_test_framework() {
         )
         .build();
 
+    // This is a bit of a hack to use the rust-lld that ships with most toolchains.
+    let sysroot = paths::sysroot();
+    let sysroot = Path::new(&sysroot);
+    let sysroot_bin = sysroot
+        .join("lib")
+        .join("rustlib")
+        .join(rustc_host())
+        .join("bin");
+    let path = env::var_os("PATH").unwrap_or_default();
+    let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    paths.insert(0, sysroot_bin);
+    let new_path = env::join_paths(paths).unwrap();
+
     p.cargo("test --target target.json --no-run -v")
+        .env("PATH", new_path)
         .build_std_arg("core")
         .run();
 }

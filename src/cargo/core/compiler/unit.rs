@@ -51,6 +51,8 @@ pub struct UnitInner<'a> {
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
     pub features: Vec<&'a str>,
+    /// Whether this is a standard library unit.
+    pub is_std: bool,
 }
 
 impl UnitInner<'_> {
@@ -144,6 +146,7 @@ impl<'a> UnitInterner<'a> {
         kind: Kind,
         mode: CompileMode,
         features: Vec<&'a str>,
+        is_std: bool,
     ) -> Unit<'a> {
         let inner = self.intern_inner(&UnitInner {
             pkg,
@@ -152,6 +155,7 @@ impl<'a> UnitInterner<'a> {
             kind,
             mode,
             features,
+            is_std,
         });
         Unit { inner }
     }

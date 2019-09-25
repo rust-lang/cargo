@@ -9,8 +9,9 @@ path = "lib.rs"
 
 [dependencies]
 proc_macro = { path = "../libproc_macro" }
-registry-dep-using-std = { version = "1.0", features = ['mockbuild'] }
-std = { path = "../libstd" }
+panic_unwind = { path = "../libpanic_unwind" }
+compiler_builtins = { path = "../libcompiler_builtins" }
+registry-dep-using-std = { version = "*", features = ['mockbuild'] }
 
 [features]
 panic-unwind = []

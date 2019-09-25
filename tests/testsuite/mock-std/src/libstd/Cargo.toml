@@ -8,8 +8,4 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
-core = { path = "../libcore" }
-compiler_builtins = { path = "../libcompiler_builtins" }
-panic_unwind = { path = "../libpanic_unwind" }
-registry-dep-using-core = { version = "1.0", features = ['mockbuild'] }
-registry-dep-using-alloc = { version = "1.0", features = ['mockbuild'] }
+registry-dep-using-alloc = { version = "*", features = ['mockbuild'] }

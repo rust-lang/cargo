@@ -203,7 +203,13 @@ impl<'cfg> Compilation<'cfg> {
                 super::filter_dynamic_search_path(self.native_dirs.iter(), &self.root_output);
             search_path.push(self.deps_output.clone());
             search_path.push(self.root_output.clone());
-            search_path.push(self.target_dylib_path.clone());
+            // For build-std, we don't want to accidentally pull in any shared
+            // libs from the sysroot that ships with rustc. This may not be
+            // required (at least I cannot craft a situation where it
+            // matters), but is here to be safe.
+            if self.config.cli_unstable().build_std.is_none() {
+                search_path.push(self.target_dylib_path.clone());
+            }
             search_path
         };
 

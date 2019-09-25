@@ -18,6 +18,7 @@ use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
+use super::standard_lib;
 use super::unit_dependencies::{UnitDep, UnitGraph};
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
 
@@ -304,7 +305,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         let host_layout = Layout::new(self.bcx.ws, None, dest)?;
         let target_layout = match self.bcx.build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
+            Some(target) => {
+                let layout = Layout::new(self.bcx.ws, Some(target), dest)?;
+                standard_lib::prepare_sysroot(&layout)?;
+                Some(layout)
+            }
             None => None,
         };
         self.primary_packages

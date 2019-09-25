@@ -50,7 +50,7 @@ use crate::util::paths;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
 
-/// Indicates whether an object is for the host architcture or the target architecture.
+/// Indicates whether an object is for the host architecture or the target architecture.
 ///
 /// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
@@ -915,6 +915,16 @@ fn build_base_args<'a, 'cfg>(
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();
         opt(cmd, "-C", "incremental=", Some(dir));
     }
+
+    if unit.is_std {
+        // -Zforce-unstable-if-unmarked prevents the accidental use of
+        // unstable crates within the sysroot (such as "extern crate libc" or
+        // any non-public crate in the sysroot).
+        //
+        // RUSTC_BOOTSTRAP allows unstable features on stable.
+        cmd.arg("-Zforce-unstable-if-unmarked")
+            .env("RUSTC_BOOTSTRAP", "1");
+    }
     Ok(())
 }
 
@@ -968,7 +978,17 @@ fn build_deps_args<'a, 'cfg>(
 
     let mut unstable_opts = false;
 
+    if let Some(sysroot) = cx.files().layout(Kind::Target).sysroot() {
+        if unit.kind == Kind::Target {
+            cmd.arg("--sysroot").arg(sysroot);
+        }
+    }
+
     for dep in deps {
+        if !unit.is_std && dep.unit.is_std {
+            // Dependency to sysroot crate uses --sysroot.
+            continue;
+        }
         if dep.unit.mode.is_run_custom_build() {
             cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep.unit));
         }
