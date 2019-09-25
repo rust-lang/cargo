@@ -90,10 +90,13 @@ mod imp {
 mod imp {
     use std::io;
     use std::ptr;
-    use std::slice;
 
     type host_t = u32;
     type mach_port_t = u32;
+    type vm_map_t = mach_port_t;
+    type vm_offset_t = usize;
+    type vm_size_t = usize;
+    type vm_address_t = vm_offset_t;
     type processor_flavor_t = i32;
     type natural_t = u32;
     type processor_info_array_t = *mut i32;
@@ -105,8 +108,11 @@ mod imp {
     const CPU_STATE_SYSTEM: usize = 1;
     const CPU_STATE_IDLE: usize = 2;
     const CPU_STATE_NICE: usize = 3;
+    const CPU_STATE_MAX: usize = 4;
 
     extern "C" {
+        static mut mach_task_self_: mach_port_t;
+
         fn mach_host_self() -> mach_port_t;
         fn host_processor_info(
             host: host_t,
@@ -114,6 +120,11 @@ mod imp {
             out_processor_count: *mut natural_t,
             out_processor_info: *mut processor_info_array_t,
             out_processor_infoCnt: *mut mach_msg_type_number_t,
+        ) -> kern_return_t;
+        fn vm_deallocate(
+            target_task: vm_map_t,
+            address: vm_address_t,
+            size: vm_size_t,
         ) -> kern_return_t;
     }
 
@@ -124,34 +135,45 @@ mod imp {
         nice: u64,
     }
 
+    #[repr(C)]
+    struct processor_cpu_load_info_data_t {
+        cpu_ticks: [u32; CPU_STATE_MAX],
+    }
+
     pub fn current() -> io::Result<State> {
+        // There's scant little documentation on `host_processor_info`
+        // throughout the internet, so this is just modeled after what everyone
+        // else is doing. For now this is modeled largely after libuv.
+
         unsafe {
             let mut num_cpus_u = 0;
             let mut cpu_info = ptr::null_mut();
-            let mut cpu_info_cnt = 0;
+            let mut msg_type = 0;
             let err = host_processor_info(
                 mach_host_self(),
                 PROESSOR_CPU_LOAD_INFO,
                 &mut num_cpus_u,
                 &mut cpu_info,
-                &mut cpu_info_cnt,
+                &mut msg_type,
             );
             if err != 0 {
                 return Err(io::Error::last_os_error());
             }
-            let cpu_info = slice::from_raw_parts(cpu_info, cpu_info_cnt as usize);
             let mut ret = State {
                 user: 0,
                 system: 0,
                 idle: 0,
                 nice: 0,
             };
-            for chunk in cpu_info.chunks(num_cpus_u as usize) {
-                ret.user += chunk[CPU_STATE_USER] as u64;
-                ret.system += chunk[CPU_STATE_SYSTEM] as u64;
-                ret.idle += chunk[CPU_STATE_IDLE] as u64;
-                ret.nice += chunk[CPU_STATE_NICE] as u64;
+            let mut current = cpu_info as *const processor_cpu_load_info_data_t;
+            for _ in 0..num_cpus_u {
+                ret.user += (*current).cpu_ticks[CPU_STATE_USER] as u64;
+                ret.system += (*current).cpu_ticks[CPU_STATE_SYSTEM] as u64;
+                ret.idle += (*current).cpu_ticks[CPU_STATE_IDLE] as u64;
+                ret.nice += (*current).cpu_ticks[CPU_STATE_NICE] as u64;
+                current = current.offset(1);
             }
+            vm_deallocate(mach_task_self_, cpu_info as vm_address_t, msg_type as usize);
             Ok(ret)
         }
     }
