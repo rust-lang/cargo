@@ -138,7 +138,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             unit_times: Vec::new(),
             active: HashMap::new(),
             concurrency: Vec::new(),
-            last_cpu_state: State::current().ok(),
+            last_cpu_state: if enabled { State::current().ok() } else { None },
             last_cpu_recording: Instant::now(),
             cpu_usage: Vec::new(),
         }
