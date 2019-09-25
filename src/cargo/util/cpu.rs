@@ -94,6 +94,10 @@ mod imp {
 
     type host_t = u32;
     type mach_port_t = u32;
+    type vm_map_t = mach_port_t;
+    type vm_offset_t = usize;
+    type vm_size_t = usize;
+    type vm_address_t = vm_offset_t;
     type processor_flavor_t = i32;
     type natural_t = u32;
     type processor_info_array_t = *mut i32;
@@ -107,6 +111,8 @@ mod imp {
     const CPU_STATE_NICE: usize = 3;
 
     extern "C" {
+        static mut mach_task_self_: mach_port_t;
+
         fn mach_host_self() -> mach_port_t;
         fn host_processor_info(
             host: host_t,
@@ -114,6 +120,11 @@ mod imp {
             out_processor_count: *mut natural_t,
             out_processor_info: *mut processor_info_array_t,
             out_processor_infoCnt: *mut mach_msg_type_number_t,
+        ) -> kern_return_t;
+        fn vm_deallocate(
+            target_task: vm_map_t,
+            address: vm_address_t,
+            size: vm_size_t,
         ) -> kern_return_t;
     }
 
@@ -139,19 +150,24 @@ mod imp {
             if err != 0 {
                 return Err(io::Error::last_os_error());
             }
-            let cpu_info = slice::from_raw_parts(cpu_info, cpu_info_cnt as usize);
+            let cpu_info_slice = slice::from_raw_parts(cpu_info, cpu_info_cnt as usize);
             let mut ret = State {
                 user: 0,
                 system: 0,
                 idle: 0,
                 nice: 0,
             };
-            for chunk in cpu_info.chunks(num_cpus_u as usize) {
+            for chunk in cpu_info_slice.chunks(num_cpus_u as usize) {
                 ret.user += chunk[CPU_STATE_USER] as u64;
                 ret.system += chunk[CPU_STATE_SYSTEM] as u64;
                 ret.idle += chunk[CPU_STATE_IDLE] as u64;
                 ret.nice += chunk[CPU_STATE_NICE] as u64;
             }
+            vm_deallocate(
+                mach_task_self_,
+                cpu_info as vm_address_t,
+                cpu_info_cnt as usize,
+            );
             Ok(ret)
         }
     }
