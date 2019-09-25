@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileMode, Kind};
+use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::{profiles::Profile, Package, Target};
 use crate::util::hex::short_hash;
 use std::cell::RefCell;
@@ -45,7 +45,7 @@ pub struct UnitInner<'a> {
     /// cross compiling and using a custom build script, the build script needs to be compiled for
     /// the host architecture so the host rustc can use it (when compiling to the target
     /// architecture).
-    pub kind: Kind,
+    pub kind: CompileKind,
     /// The "mode" this unit is being compiled for. See [`CompileMode`] for more details.
     pub mode: CompileMode,
     /// The `cfg` features to enable for this unit.
@@ -143,7 +143,7 @@ impl<'a> UnitInterner<'a> {
         pkg: &'a Package,
         target: &'a Target,
         profile: Profile,
-        kind: Kind,
+        kind: CompileKind,
         mode: CompileMode,
         features: Vec<&'a str>,
         is_std: bool,

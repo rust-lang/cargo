@@ -7,7 +7,7 @@ use failure::{bail, format_err};
 use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;
-use crate::core::compiler::{DefaultExecutor, Executor};
+use crate::core::compiler::{CompileKind, DefaultExecutor, Executor};
 use crate::core::resolver::ResolveOpts;
 use crate::core::{Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Workspace};
 use crate::ops;
@@ -256,12 +256,10 @@ fn install_one(
     // anything if we're gonna throw it away anyway.
     let dst = root.join("bin").into_path_unlocked();
     let rustc = config.load_global_rustc(Some(&ws))?;
-    let target = opts
-        .build_config
-        .requested_target
-        .as_ref()
-        .unwrap_or(&rustc.host)
-        .clone();
+    let target = match &opts.build_config.requested_kind {
+        CompileKind::Host => rustc.host.as_str(),
+        CompileKind::Target(target) => target.short_name(),
+    };
 
     // Helper for --no-track flag to make sure it doesn't overwrite anything.
     let no_track_duplicates = || -> CargoResult<BTreeMap<String, Option<PackageId>>> {

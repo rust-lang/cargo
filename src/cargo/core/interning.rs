@@ -36,6 +36,12 @@ impl<'a> From<&'a String> for InternedString {
     }
 }
 
+impl From<String> for InternedString {
+    fn from(item: String) -> Self {
+        InternedString::new(&item)
+    }
+}
+
 impl PartialEq for InternedString {
     fn eq(&self, other: &InternedString) -> bool {
         ptr::eq(self.as_str(), other.as_str())

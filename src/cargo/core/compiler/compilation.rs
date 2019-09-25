@@ -7,7 +7,7 @@ use cargo_platform::CfgExpr;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::compiler::Kind;
+use crate::core::compiler::CompileKind;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, rustc::Rustc, CargoResult, Config, ProcessBuilder};
 
@@ -81,7 +81,7 @@ pub struct Compilation<'cfg> {
 impl<'cfg> Compilation<'cfg> {
     pub fn new<'a>(
         bcx: &BuildContext<'a, 'cfg>,
-        default_kind: Kind,
+        default_kind: CompileKind,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
@@ -101,7 +101,7 @@ impl<'cfg> Compilation<'cfg> {
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
-            host_dylib_path: bcx.info(Kind::Host).sysroot_libdir.clone(),
+            host_dylib_path: bcx.info(CompileKind::Host).sysroot_libdir.clone(),
             target_dylib_path: bcx.info(default_kind).sysroot_libdir.clone(),
             tests: Vec::new(),
             binaries: Vec::new(),
@@ -113,7 +113,7 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             primary_unit_rustc_process,
             host: bcx.host_triple().to_string(),
-            target: bcx.target_triple(default_kind).to_string(),
+            target: default_kind.short_name(bcx).to_string(),
             target_runner: target_runner(bcx, default_kind)?,
             supports_rustdoc_crate_type: supports_rustdoc_crate_type(bcx.config, &bcx.rustc)?,
         })
@@ -295,9 +295,9 @@ fn pre_version_component(v: &Version) -> String {
 
 fn target_runner(
     bcx: &BuildContext<'_, '_>,
-    kind: Kind,
+    kind: CompileKind,
 ) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
-    let target = bcx.target_triple(kind);
+    let target = kind.short_name(bcx);
 
     // try target.{}.runner
     let key = format!("target.{}.runner", target);

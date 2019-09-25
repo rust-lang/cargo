@@ -1,14 +1,10 @@
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-
-use failure::Fail;
-use opener;
-
 use crate::core::resolver::ResolveOpts;
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::CargoResult;
+use failure::Fail;
+use opener;
+use std::collections::HashMap;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -67,24 +63,19 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    ops::compile(ws, &options.compile_opts)?;
+    let compilation = ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
         let name = match names.first() {
             Some(s) => s.to_string(),
             None => return Ok(()),
         };
-
-        // Don't bother locking here as if this is getting deleted there's
-        // nothing we can do about it and otherwise if it's getting overwritten
-        // then that's also ok!
-        let mut target_dir = ws.target_dir();
-        if let Some(ref triple) = options.compile_opts.build_config.requested_target {
-            target_dir.push(Path::new(triple).file_stem().unwrap());
-        }
-        let path = target_dir.join("doc").join(&name).join("index.html");
-        let path = path.into_path_unlocked();
-        if fs::metadata(&path).is_ok() {
+        let path = compilation
+            .root_output
+            .with_file_name("doc")
+            .join(&name)
+            .join("index.html");
+        if path.exists() {
             let mut shell = options.compile_opts.config.shell();
             shell.status("Opening", path.display())?;
             if let Err(e) = opener::open(&path) {

@@ -16,7 +16,7 @@
 //! graph of `Unit`s, which capture these properties.
 
 use crate::core::compiler::Unit;
-use crate::core::compiler::{BuildContext, CompileMode, Kind};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
@@ -273,7 +273,8 @@ fn compute_deps<'a, 'cfg>(
         if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
             let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
             ret.push(unit_dep);
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Host, mode)?;
+            let unit_dep =
+                new_unit_dep(state, unit, pkg, lib, dep_unit_for, CompileKind::Host, mode)?;
             ret.push(unit_dep);
         } else {
             let unit_dep = new_unit_dep(
@@ -375,7 +376,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
         // builds.
         UnitFor::new_build(),
         // Build scripts always compiled for the host.
-        Kind::Host,
+        CompileKind::Host,
         CompileMode::Build,
     )?;
     Ok(vec![unit_dep])
@@ -534,7 +535,7 @@ fn new_unit_dep<'a>(
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
-    kind: Kind,
+    kind: CompileKind,
     mode: CompileMode,
 ) -> CargoResult<UnitDep<'a>> {
     let profile = state.bcx.profiles.get_profile(
@@ -553,7 +554,7 @@ fn new_unit_dep_with_profile<'a>(
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
-    kind: Kind,
+    kind: CompileKind,
     mode: CompileMode,
     profile: Profile,
 ) -> CargoResult<UnitDep<'a>> {

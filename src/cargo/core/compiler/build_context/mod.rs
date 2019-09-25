@@ -1,5 +1,6 @@
 use crate::core::compiler::unit::UnitInterner;
-use crate::core::compiler::{BuildConfig, BuildOutput, Kind, Unit};
+use crate::core::compiler::CompileTarget;
+use crate::core::compiler::{BuildConfig, BuildOutput, CompileKind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, InternedString, Workspace};
 use crate::core::{PackageId, PackageSet};
@@ -35,8 +36,8 @@ pub struct BuildContext<'a, 'cfg> {
     /// Build information for the host arch.
     host_config: TargetConfig,
     /// Build information for the target.
-    target_config: HashMap<InternedString, TargetConfig>,
-    target_info: HashMap<InternedString, TargetInfo>,
+    target_config: HashMap<CompileTarget, TargetConfig>,
+    target_info: HashMap<CompileTarget, TargetInfo>,
     host_info: TargetInfo,
     pub units: &'a UnitInterner<'a>,
 }
@@ -54,14 +55,24 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         let rustc = config.load_global_rustc(Some(ws))?;
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
-        let host_info = TargetInfo::new(config, build_config.requested_target, &rustc, Kind::Host)?;
+        let host_info = TargetInfo::new(
+            config,
+            build_config.requested_kind,
+            &rustc,
+            CompileKind::Host,
+        )?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        if let Some(target) = build_config.requested_target {
-            target_config.insert(target, TargetConfig::new(config, &target)?);
+        if let CompileKind::Target(target) = build_config.requested_kind {
+            target_config.insert(target, TargetConfig::new(config, target.short_name())?);
             target_info.insert(
                 target,
-                TargetInfo::new(config, Some(target), &rustc, Kind::Target(target))?,
+                TargetInfo::new(
+                    config,
+                    build_config.requested_kind,
+                    &rustc,
+                    CompileKind::Target(target),
+                )?,
             );
         }
 
@@ -82,30 +93,30 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     /// Whether a dependency should be compiled for the host or target platform,
-    /// specified by `Kind`.
-    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+    /// specified by `CompileKind`.
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
         let platform = match dep.platform() {
             Some(p) => p,
             None => return true,
         };
-        let name = self.target_triple(kind);
+        let name = kind.short_name(self);
         platform.matches(&name, self.cfg(kind))
     }
 
     /// Gets the user-specified linker for a particular host or target.
-    pub fn linker(&self, kind: Kind) -> Option<&Path> {
+    pub fn linker(&self, kind: CompileKind) -> Option<&Path> {
         self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
     }
 
     /// Gets the user-specified `ar` program for a particular host or target.
-    pub fn ar(&self, kind: Kind) -> Option<&Path> {
+    pub fn ar(&self, kind: CompileKind) -> Option<&Path> {
         self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
     }
 
     /// Gets the list of `cfg`s printed out from the compiler for the specified kind.
-    pub fn cfg(&self, kind: Kind) -> &[Cfg] {
+    pub fn cfg(&self, kind: CompileKind) -> &[Cfg] {
         self.info(kind).cfg()
     }
 
@@ -119,19 +130,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.rustc.host
     }
 
-    /// Returns the target triple associated with a `Kind`
-    pub fn target_triple(&self, kind: Kind) -> InternedString {
-        match kind {
-            Kind::Host => self.host_triple(),
-            Kind::Target(name) => name,
-        }
-    }
-
     /// Gets the target configuration for a particular host or target.
-    pub fn target_config(&self, kind: Kind) -> &TargetConfig {
+    pub fn target_config(&self, kind: CompileKind) -> &TargetConfig {
         match kind {
-            Kind::Host => &self.host_config,
-            Kind::Target(s) => &self.target_config[&s],
+            CompileKind::Host => &self.host_config,
+            CompileKind::Target(s) => &self.target_config[&s],
         }
     }
 
@@ -152,10 +155,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
-    pub fn info(&self, kind: Kind) -> &TargetInfo {
+    pub fn info(&self, kind: CompileKind) -> &TargetInfo {
         match kind {
-            Kind::Host => &self.host_info,
-            Kind::Target(s) => &self.target_info[&s],
+            CompileKind::Host => &self.host_info,
+            CompileKind::Target(s) => &self.target_info[&s],
         }
     }
 
@@ -167,7 +170,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     ///
     /// `lib_name` is the `links` library name and `kind` is whether it is for
     /// Host or Target.
-    pub fn script_override(&self, lib_name: &str, kind: Kind) -> Option<&BuildOutput> {
+    pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
         self.target_config(kind).overrides.get(lib_name)
     }
 }

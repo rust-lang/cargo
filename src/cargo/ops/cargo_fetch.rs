@@ -1,4 +1,4 @@
-use crate::core::compiler::{BuildConfig, CompileMode, Kind, TargetInfo};
+use crate::core::compiler::{BuildConfig, CompileMode, TargetInfo};
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
@@ -23,11 +23,12 @@ pub fn fetch<'a>(
     let config = ws.config();
     let build_config = BuildConfig::new(config, jobs, &options.target, CompileMode::Build)?;
     let rustc = config.load_global_rustc(Some(ws))?;
-    let kind = match build_config.requested_target {
-        Some(t) => Kind::Target(t),
-        None => Kind::Host,
-    };
-    let target_info = TargetInfo::new(config, build_config.requested_target, &rustc, kind)?;
+    let target_info = TargetInfo::new(
+        config,
+        build_config.requested_kind,
+        &rustc,
+        build_config.requested_kind,
+    )?;
     let mut fetched_packages = HashSet::new();
     let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
     let mut to_download = Vec::new();

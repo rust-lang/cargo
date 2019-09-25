@@ -99,6 +99,7 @@
 //! When cross-compiling, the layout is the same, except it appears in
 //! `target/$TRIPLE`.
 
+use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
 use crate::util::paths;
 use crate::util::{CargoResult, FileLock};
@@ -147,26 +148,15 @@ impl Layout {
     ///
     /// `dest` should be the final artifact directory name. Currently either
     /// "debug" or "release".
-    pub fn new(ws: &Workspace<'_>, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
+    pub fn new(
+        ws: &Workspace<'_>,
+        target: Option<CompileTarget>,
+        dest: &str,
+    ) -> CargoResult<Layout> {
         let mut root = ws.target_dir();
-        // Flexible target specifications often point at json files, so interpret
-        // the target triple as a Path and then just use the file stem as the
-        // component for the directory name in that case.
-        let triple_path = if let Some(s) = triple {
-            let p = Path::new(s);
-            let tp = if p.extension().and_then(|s| s.to_str()) == Some("json") {
-                Path::new(
-                    p.file_stem()
-                        .ok_or_else(|| failure::format_err!("invalid target"))?,
-                )
-            } else {
-                p
-            };
-            root.push(tp);
-            Some(tp)
-        } else {
-            None
-        };
+        if let Some(target) = target {
+            root.push(target.short_name());
+        }
         let dest = root.join(dest);
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the
@@ -185,10 +175,14 @@ impl Layout {
 
         // Compute the sysroot path for the build-std feature.
         let build_std = ws.config().cli_unstable().build_std.as_ref();
-        let (sysroot, sysroot_libdir) = if let Some(tp) = build_std.and(triple_path) {
+        let (sysroot, sysroot_libdir) = if let Some(target) = build_std.and(target) {
             // This uses a leading dot to avoid collision with named profiles.
             let sysroot = dest.join(".sysroot");
-            let sysroot_libdir = sysroot.join("lib").join("rustlib").join(tp).join("lib");
+            let sysroot_libdir = sysroot
+                .join("lib")
+                .join("rustlib")
+                .join(target.short_name())
+                .join("lib");
             (Some(sysroot), Some(sysroot_libdir))
         } else {
             (None, None)

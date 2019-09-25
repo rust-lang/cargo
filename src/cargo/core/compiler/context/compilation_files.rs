@@ -8,9 +8,9 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 use log::info;
 
-use super::{BuildContext, Context, FileFlavor, Kind, Layout};
-use crate::core::compiler::{CompileMode, Unit};
-use crate::core::{InternedString, TargetKind, Workspace};
+use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
+use crate::core::compiler::{CompileMode, CompileTarget, Unit};
+use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a build.
@@ -54,7 +54,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host).
-    pub(super) target: HashMap<InternedString, Layout>,
+    pub(super) target: HashMap<CompileTarget, Layout>,
     /// Additional directory to include a copy of the outputs.
     export_dir: Option<PathBuf>,
     /// The root targets requested by the user on the command line (does not
@@ -93,7 +93,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
         roots: &[Unit<'a>],
         host: Layout,
-        target: HashMap<InternedString, Layout>,
+        target: HashMap<CompileTarget, Layout>,
         export_dir: Option<PathBuf>,
         ws: &'a Workspace<'cfg>,
         cx: &Context<'a, 'cfg>,
@@ -119,10 +119,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout(&self, kind: Kind) -> &Layout {
+    pub fn layout(&self, kind: CompileKind) -> &Layout {
         match kind {
-            Kind::Host => &self.host,
-            Kind::Target(name) => self.target.get(&name).unwrap_or(&self.host),
+            CompileKind::Host => &self.host,
+            CompileKind::Target(target) => &self.target[&target],
         }
     }
 
@@ -200,7 +200,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         assert!(unit.target.is_custom_build());
         assert!(!unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(Kind::Host).build().join(dir)
+        self.layout(CompileKind::Host).build().join(dir)
     }
 
     /// Returns the directory where information about running a build script
@@ -358,7 +358,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 crate_type,
                 flavor,
                 unit.target.kind(),
-                &bcx.target_triple(unit.kind),
+                unit.kind.short_name(bcx),
             )?;
 
             match file_types {
@@ -432,14 +432,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                      does not support these crate types",
                     unsupported.join(", "),
                     unit.pkg,
-                    bcx.target_triple(unit.kind),
+                    unit.kind.short_name(bcx),
                 )
             }
             failure::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                bcx.target_triple(unit.kind),
+                unit.kind.short_name(bcx),
             );
         }
         Ok(ret)
@@ -495,7 +495,7 @@ fn compute_metadata<'a, 'cfg>(
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_executable() && bcx.target_triple(unit.kind).starts_with("wasm32-")))
+            || (unit.target.is_executable() && unit.kind.short_name(bcx).starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {

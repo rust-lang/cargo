@@ -31,7 +31,7 @@ use std::sync::Arc;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
-use crate::core::compiler::{CompileMode, Kind, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Resolve, ResolveOpts};
@@ -294,12 +294,6 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let default_arch_kind = if let Some(s) = build_config.requested_target {
-        Kind::Target(s)
-    } else {
-        Kind::Host
-    };
-
     let profiles = ws.profiles();
 
     let specs = spec.to_package_id_specs(ws)?;
@@ -314,7 +308,7 @@ pub fn compile_ws<'a>(
                 .shell()
                 .warn("-Zbuild-std does not currently fully support --build-plan")?;
         }
-        if build_config.requested_target.is_none() {
+        if build_config.requested_kind.is_host() {
             // TODO: This should eventually be fixed. Unfortunately it is not
             // easy to get the host triple in BuildConfig. Consider changing
             // requested_target to an enum, or some other approach.
@@ -390,7 +384,7 @@ pub fn compile_ws<'a>(
         profiles,
         &to_builds,
         filter,
-        default_arch_kind,
+        build_config.requested_kind,
         &resolve_with_overrides,
         &bcx,
     )?;
@@ -412,7 +406,7 @@ pub fn compile_ws<'a>(
             &bcx,
             &crates,
             std_resolve.as_ref().unwrap(),
-            default_arch_kind,
+            build_config.requested_kind,
         )?
     } else {
         Vec::new()
@@ -447,7 +441,7 @@ pub fn compile_ws<'a>(
 
     let ret = {
         let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx, unit_dependencies, default_arch_kind)?;
+        let cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
 
@@ -639,7 +633,7 @@ fn generate_targets<'a>(
     profiles: &Profiles,
     packages: &[&'a Package],
     filter: &CompileFilter,
-    default_arch_kind: Kind,
+    default_arch_kind: CompileKind,
     resolve: &'a Resolve,
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
@@ -699,12 +693,7 @@ fn generate_targets<'a>(
             CompileMode::Bench => CompileMode::Test,
             _ => target_mode,
         };
-        // Plugins or proc macros should be built for the host.
-        let kind = if target.for_host() {
-            Kind::Host
-        } else {
-            default_arch_kind
-        };
+        let kind = default_arch_kind.for_target(target);
         let profile = profiles.get_profile(
             pkg.package_id(),
             ws.is_member(pkg),

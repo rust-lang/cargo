@@ -20,7 +20,7 @@ use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::standard_lib;
 use super::unit_dependencies::{UnitDep, UnitGraph};
-use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
+use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
@@ -79,7 +79,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         bcx: &'a BuildContext<'a, 'cfg>,
         unit_dependencies: UnitGraph<'a>,
-        default_kind: Kind,
+        default_kind: CompileKind,
     ) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
@@ -305,8 +305,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         let host_layout = Layout::new(self.bcx.ws, None, dest)?;
         let mut targets = HashMap::new();
-        if let Some(target) = self.bcx.build_config.requested_target {
-            let layout = Layout::new(self.bcx.ws, Some(&target), dest)?);
+        if let CompileKind::Target(target) = self.bcx.build_config.requested_kind {
+            let layout = Layout::new(self.bcx.ws, Some(target), dest)?;
             standard_lib::prepare_sysroot(&layout)?;
             targets.insert(target, layout);
         }
@@ -339,10 +339,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.compilation.host_deps_output = self.files_mut().host.deps().to_path_buf();
 
         let files = self.files.as_ref().unwrap();
-        let layout = match self.bcx.build_config.requested_target {
-            Some(target) => &files.target[&target],
-            None => &files.host,
-        };
+        let layout = files.layout(self.bcx.build_config.requested_kind);
         self.compilation.root_output = layout.dest().to_path_buf();
         self.compilation.deps_output = layout.deps().to_path_buf();
         Ok(())
@@ -448,7 +445,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     suggestion,
                     crate::version(),
                     self.bcx.host_triple(),
-                    self.bcx.target_triple(unit.kind),
+                    unit.kind.short_name(self.bcx),
                     unit,
                     other_unit))
             }
