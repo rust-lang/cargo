@@ -413,14 +413,16 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
-    let ssl_version = config.get_string("http.ssl-version")?;
+    let has_ssl_version = config.get_string("http.ssl-version")?.is_some()
+        || config.get_string("http.ssl-version.min")?.is_some()
+        || config.get_string("http.ssl-version.max")?.is_some();
 
     Ok(proxy_exists
         || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
         || user_agent.is_some()
-        || ssl_version.is_some())
+        || has_ssl_version)
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -440,17 +442,48 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&version().to_string())?;
     }
 
-    if let Some(ssl_version) = config.get_string("http.ssl-version")? {
-        let version = match ssl_version.val.as_str() {
+    fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
+        let version = match s {
             "default" => SslVersion::Default,
             "tlsv1" => SslVersion::Tlsv1,
             "tlsv1.0" => SslVersion::Tlsv10,
             "tlsv1.1" => SslVersion::Tlsv11,
             "tlsv1.2" => SslVersion::Tlsv12,
             "tlsv1.3" => SslVersion::Tlsv13,
-            _ => bail!("Invalid ssl version `{}`, choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.", &ssl_version.val),
+            _ => bail!("Invalid ssl version `{}`,\
+                       choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
+                       s),
         };
-        handle.ssl_min_max_version(version, version)?;
+        Ok(version)
+    }
+    if config.get_string("http.ssl-version")?.is_some()
+        || config.get_string("http.ssl-version.min")?.is_some()
+        || config.get_string("http.ssl-version.max")?.is_some() {
+
+        let mut min_version = SslVersion::Default;
+        let mut max_version = SslVersion::Default;
+
+        // There are two ways to configure `ssl-version`:
+        //   1. set single `ssl-version`
+        //      [http]
+        //      ssl-version = "tlsv1.3"
+        if let Some(ssl_version) = config.get_string("http.ssl-version")? {
+            min_version = to_ssl_version(ssl_version.val.as_str())?;
+            max_version = min_version;
+        }
+
+        //   2. set min and max of ssl version respectively
+        //      [http]
+        //      ssl-version.min = "tlsv1.2"
+        //      ssl-version.max = "tlsv1.3"
+        if let Some(ssl_version) = config.get_string("http.ssl-version.min")? {
+            min_version = to_ssl_version(ssl_version.val.as_str())?;
+        }
+        if let Some(ssl_version) = config.get_string("http.ssl-version.max")? {
+            max_version = to_ssl_version(ssl_version.val.as_str())?;
+        }
+
+        handle.ssl_min_max_version(min_version, max_version)?;
     }
 
     if let Some(true) = config.get::<Option<bool>>("http.debug")? {
