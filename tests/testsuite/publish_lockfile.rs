@@ -396,3 +396,58 @@ dependencies = [
         )
         .run();
 }
+
+#[cargo_test]
+fn ignore_lockfile() {
+    // With an explicit `include` list, but Cargo.lock in .gitignore, don't
+    // complain about `Cargo.lock` being ignored. Note that it is still
+    // included in the packaged regardless.
+    let (p, _r) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+
+                include = [
+                    "src/main.rs"
+                ]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(".gitignore", "Cargo.lock")
+    });
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+src/main.rs
+",
+        )
+        .run();
+    p.cargo("generate-lockfile").run();
+    p.cargo("package -v")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
+[ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
+[VERIFYING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo src/main.rs [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
