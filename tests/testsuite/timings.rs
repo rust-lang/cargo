@@ -1,13 +1,8 @@
+use cargo_test_support::project;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{is_nightly, project};
 
 #[cargo_test]
 fn timings_works() {
-    if !is_nightly() {
-        // Requires --json flag, remove this check in 1.38.
-        return;
-    }
-
     Package::new("dep", "0.1.0").publish();
 
     let p = project()

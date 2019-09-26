@@ -4540,10 +4540,6 @@ Caused by:
 
 #[cargo_test]
 fn tricky_pipelining() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -4570,10 +4566,6 @@ fn tricky_pipelining() {
 
 #[cargo_test]
 fn pipelining_works() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -4605,10 +4597,6 @@ fn pipelining_works() {
 
 #[cargo_test]
 fn pipelining_big_graph() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     // Create a crate graph of the form {a,b}{0..29}, where {a,b}(n) depend on {a,b}(n+1)
     // Then have `foo`, a binary crate, depend on the whole thing.
     let mut project = project()
