@@ -100,9 +100,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let pipelining = bcx
             .config
-            .get_bool("build.pipelining")?
-            .map(|t| t.val)
-            .unwrap_or(bcx.host_info.supports_pipelining.unwrap());
+            .get::<Option<bool>>("build.pipelining")?
+            .unwrap_or(true);
 
         Ok(Self {
             bcx,
