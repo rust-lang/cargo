@@ -372,9 +372,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                             None
                         } else {
                             self.export_dir.as_ref().and_then(|export_dir| {
-                                hardlink.as_ref().and_then(|hardlink| {
-                                    Some(export_dir.join(hardlink.file_name().unwrap()))
-                                })
+                                hardlink
+                                    .as_ref()
+                                    .map(|hardlink| export_dir.join(hardlink.file_name().unwrap()))
                             })
                         };
                         ret.push(OutputFile {

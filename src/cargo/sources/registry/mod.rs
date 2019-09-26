@@ -604,7 +604,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
         let hash = self.index.hash(package, &mut *self.ops)?;
-        match self.ops.download(package, &hash)? {
+        match self.ops.download(package, hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
                 Ok(MaybePackage::Download { url, descriptor })
@@ -614,7 +614,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
-        let file = self.ops.finish_download(package, &hash, &data)?;
+        let file = self.ops.finish_download(package, hash, &data)?;
         self.get_pkg(package, &file)
     }
 

@@ -104,10 +104,10 @@ fn setup() -> Option<Setup> {
         .build();
     p.cargo("build").run();
 
-    return Some(Setup {
+    Some(Setup {
         rustc_wrapper: p.bin("foo"),
         real_sysroot: paths::sysroot(),
-    });
+    })
 }
 
 fn enable_build_std(e: &mut Execs, setup: &Setup, arg: Option<&str>) {

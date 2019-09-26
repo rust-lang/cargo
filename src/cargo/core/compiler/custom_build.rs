@@ -518,7 +518,7 @@ impl BuildOutput {
                 // common with tools like pkg-config
                 // e.g. -L/some/dir/local/lib or -licui18n
                 let (flag, mut value) = flag.split_at(2);
-                if value.len() == 0 {
+                if value.is_empty() {
                     value = match flags_iter.next() {
                         Some(v) => v,
                         None => failure::bail! {
