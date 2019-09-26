@@ -217,7 +217,7 @@ impl Layout {
         paths::create_dir_all(&self.examples)?;
         paths::create_dir_all(&self.build)?;
 
-        return Ok(());
+        Ok(())
     }
 
     /// Fetch the destination path for final artifacts  (`/…/target/debug`).

@@ -1158,9 +1158,7 @@ impl Execs {
 
         // It's easier to read tabs in outputs if they don't show up as literal
         // hidden characters
-        let matcher = matcher.replace("\t", "<tab>");
-
-        matcher
+        matcher.replace("\t", "<tab>")
     }
 
     fn match_std(
