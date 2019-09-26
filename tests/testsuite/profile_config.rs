@@ -1,4 +1,4 @@
-use cargo_test_support::{basic_lib_manifest, is_nightly, paths, project};
+use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
 fn profile_config_gated() {
@@ -230,11 +230,6 @@ found profile override specs: bar, bar:0.5.0",
 
 #[cargo_test]
 fn profile_config_all_options() {
-    if !is_nightly() {
-        // May be removed once 1.34 is stable (added support for incremental-LTO).
-        return;
-    }
-
     // Ensure all profile options are supported.
     let p = project()
         .file("src/main.rs", "fn main() {}")

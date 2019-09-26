@@ -2,10 +2,6 @@ use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn cannot_specify_two() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
@@ -26,10 +22,6 @@ fn cannot_specify_two() {
 
 #[cargo_test]
 fn double_json_works() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
@@ -51,10 +43,6 @@ fn double_json_works() {
 
 #[cargo_test]
 fn cargo_renders() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -87,10 +75,6 @@ error[..]`main`[..]
 
 #[cargo_test]
 fn cargo_renders_short() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "")
@@ -110,10 +94,6 @@ error[..]`main`[..]
 
 #[cargo_test]
 fn cargo_renders_ansi() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "")
