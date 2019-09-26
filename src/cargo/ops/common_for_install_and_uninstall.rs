@@ -283,8 +283,8 @@ impl InstallTracker {
         bins: &BTreeSet<String>,
         version_req: Option<String>,
         opts: &CompileOptions<'_>,
-        target: String,
-        rustc: String,
+        target: &str,
+        rustc: &str,
     ) {
         if self.unstable_upgrade {
             self.v2
@@ -430,8 +430,8 @@ impl CrateListingV2 {
         bins: &BTreeSet<String>,
         version_req: Option<String>,
         opts: &CompileOptions<'_>,
-        target: String,
-        rustc: String,
+        target: &str,
+        rustc: &str,
     ) {
         // Remove bins from any other packages.
         for info in &mut self.installs.values_mut() {
@@ -456,8 +456,8 @@ impl CrateListingV2 {
             info.all_features = opts.all_features;
             info.no_default_features = opts.no_default_features;
             info.profile = opts.build_config.profile_name().to_string();
-            info.target = Some(target);
-            info.rustc = Some(rustc);
+            info.target = Some(target.to_string());
+            info.rustc = Some(rustc.to_string());
         } else {
             self.installs.insert(
                 pkg.package_id(),
@@ -468,8 +468,8 @@ impl CrateListingV2 {
                     all_features: opts.all_features,
                     no_default_features: opts.no_default_features,
                     profile: opts.build_config.profile_name().to_string(),
-                    target: Some(target),
-                    rustc: Some(rustc),
+                    target: Some(target.to_string()),
+                    rustc: Some(rustc.to_string()),
                     other: BTreeMap::new(),
                 },
             );

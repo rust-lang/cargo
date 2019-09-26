@@ -1,17 +1,15 @@
+use crate::core::compiler::unit::UnitInterner;
+use crate::core::compiler::CompileTarget;
+use crate::core::compiler::{BuildConfig, BuildOutput, CompileKind, Unit};
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, InternedString, Workspace};
+use crate::core::{PackageId, PackageSet};
+use crate::util::errors::CargoResult;
+use crate::util::{Config, Rustc};
+use cargo_platform::Cfg;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str;
-
-use cargo_platform::Cfg;
-use log::debug;
-
-use crate::core::compiler::unit::UnitInterner;
-use crate::core::compiler::{BuildConfig, BuildOutput, Kind, Unit};
-use crate::core::profiles::Profiles;
-use crate::core::{Dependency, Workspace};
-use crate::core::{PackageId, PackageSet};
-use crate::util::errors::CargoResult;
-use crate::util::{profile, Config, Rustc};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
@@ -33,15 +31,24 @@ pub struct BuildContext<'a, 'cfg> {
     pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     pub packages: &'a PackageSet<'cfg>,
 
-    /// Information about the compiler.
-    pub rustc: Rustc,
-    /// Build information for the host arch.
-    pub host_config: TargetConfig,
-    /// Build information for the target.
-    pub target_config: TargetConfig,
-    pub target_info: TargetInfo,
-    pub host_info: TargetInfo,
+    /// Source of interning new units as they're created.
     pub units: &'a UnitInterner<'a>,
+
+    /// Information about the compiler that we've detected on the local system.
+    pub rustc: Rustc,
+
+    /// Build information for the "host", which is information about when
+    /// `rustc` is invoked without a `--target` flag. This is used for
+    /// procedural macros, build scripts, etc.
+    host_config: TargetConfig,
+    host_info: TargetInfo,
+
+    /// Build information for targets that we're building for. This will be
+    /// empty if the `--target` flag is not passed, and currently also only ever
+    /// has at most one entry, but eventually we'd like to support multi-target
+    /// builds with Cargo.
+    target_config: HashMap<CompileTarget, TargetConfig>,
+    target_info: HashMap<CompileTarget, TargetInfo>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -57,19 +64,26 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         let rustc = config.load_global_rustc(Some(ws))?;
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
-        let target_config = match build_config.requested_target.as_ref() {
-            Some(triple) => TargetConfig::new(config, triple)?,
-            None => host_config.clone(),
-        };
-        let (host_info, target_info) = {
-            let _p = profile::start("BuildContext::probe_target_info");
-            debug!("probe_target_info");
-            let host_info =
-                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Host)?;
-            let target_info =
-                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
-            (host_info, target_info)
-        };
+        let host_info = TargetInfo::new(
+            config,
+            build_config.requested_kind,
+            &rustc,
+            CompileKind::Host,
+        )?;
+        let mut target_config = HashMap::new();
+        let mut target_info = HashMap::new();
+        if let CompileKind::Target(target) = build_config.requested_kind {
+            target_config.insert(target, TargetConfig::new(config, target.short_name())?);
+            target_info.insert(
+                target,
+                TargetInfo::new(
+                    config,
+                    build_config.requested_kind,
+                    &rustc,
+                    CompileKind::Target(target),
+                )?,
+            );
+        }
 
         Ok(BuildContext {
             ws,
@@ -88,38 +102,31 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     /// Whether a dependency should be compiled for the host or target platform,
-    /// specified by `Kind`.
-    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+    /// specified by `CompileKind`.
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
         let platform = match dep.platform() {
             Some(p) => p,
             None => return true,
         };
-        let (name, info) = match kind {
-            Kind::Host => (self.host_triple(), &self.host_info),
-            Kind::Target => (self.target_triple(), &self.target_info),
-        };
-        platform.matches(name, info.cfg())
+        let name = kind.short_name(self);
+        platform.matches(&name, self.cfg(kind))
     }
 
     /// Gets the user-specified linker for a particular host or target.
-    pub fn linker(&self, kind: Kind) -> Option<&Path> {
+    pub fn linker(&self, kind: CompileKind) -> Option<&Path> {
         self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
     }
 
     /// Gets the user-specified `ar` program for a particular host or target.
-    pub fn ar(&self, kind: Kind) -> Option<&Path> {
+    pub fn ar(&self, kind: CompileKind) -> Option<&Path> {
         self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
     }
 
     /// Gets the list of `cfg`s printed out from the compiler for the specified kind.
-    pub fn cfg(&self, kind: Kind) -> &[Cfg] {
-        let info = match kind {
-            Kind::Host => &self.host_info,
-            Kind::Target => &self.target_info,
-        };
-        info.cfg()
+    pub fn cfg(&self, kind: CompileKind) -> &[Cfg] {
+        self.info(kind).cfg()
     }
 
     /// Gets the host architecture triple.
@@ -128,23 +135,15 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     /// - machine: x86_64,
     /// - hardware-platform: unknown,
     /// - operating system: linux-gnu.
-    pub fn host_triple(&self) -> &str {
-        &self.rustc.host
-    }
-
-    pub fn target_triple(&self) -> &str {
-        self.build_config
-            .requested_target
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or_else(|| self.host_triple())
+    pub fn host_triple(&self) -> InternedString {
+        self.rustc.host
     }
 
     /// Gets the target configuration for a particular host or target.
-    fn target_config(&self, kind: Kind) -> &TargetConfig {
+    pub fn target_config(&self, kind: CompileKind) -> &TargetConfig {
         match kind {
-            Kind::Host => &self.host_config,
-            Kind::Target => &self.target_config,
+            CompileKind::Host => &self.host_config,
+            CompileKind::Target(s) => &self.target_config[&s],
         }
     }
 
@@ -165,10 +164,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
-    fn info(&self, kind: Kind) -> &TargetInfo {
+    pub fn info(&self, kind: CompileKind) -> &TargetInfo {
         match kind {
-            Kind::Host => &self.host_info,
-            Kind::Target => &self.target_info,
+            CompileKind::Host => &self.host_info,
+            CompileKind::Target(s) => &self.target_info[&s],
         }
     }
 
@@ -180,11 +179,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     ///
     /// `lib_name` is the `links` library name and `kind` is whether it is for
     /// Host or Target.
-    pub fn script_override(&self, lib_name: &str, kind: Kind) -> Option<&BuildOutput> {
-        match kind {
-            Kind::Host => self.host_config.overrides.get(lib_name),
-            Kind::Target => self.target_config.overrides.get(lib_name),
-        }
+    pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
+        self.target_config(kind).overrides.get(lib_name)
     }
 }
 

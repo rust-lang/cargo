@@ -619,7 +619,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             Artifact::All => self.timings.unit_finished(id, unlocked),
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
         }
-        if unit.is_std && unit.kind == super::Kind::Target && !cx.bcx.build_config.build_plan {
+        if unit.is_std && !unit.kind.is_host() && !cx.bcx.build_config.build_plan {
             // This is a bit of an unusual place to copy files around, and
             // ideally this would be somewhere like the Work closure
             // (`link_targets`). The tricky issue is handling rmeta files for

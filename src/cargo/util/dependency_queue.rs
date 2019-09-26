@@ -107,14 +107,14 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
                 .get(key)
                 .into_iter()
                 .flat_map(|it| it.values())
-                .flat_map(|set| set)
+                .flatten()
             {
                 set.extend(depth(dep, map, results).iter().cloned())
             }
 
             let slot = results.get_mut(key).unwrap();
             *slot = set;
-            return &*slot;
+            &*slot
         }
     }
 

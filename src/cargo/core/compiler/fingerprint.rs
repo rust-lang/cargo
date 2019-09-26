@@ -47,7 +47,7 @@
 //! `cargo rustc` extra args                   | ✓           | ✓
 //! CompileMode                                | ✓           | ✓
 //! Target Name                                | ✓           | ✓
-//! Target Kind (bin/lib/etc.)                 | ✓           | ✓
+//! Target CompileKind (bin/lib/etc.)          | ✓           | ✓
 //! Enabled Features                           | ✓           | ✓
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓
 //! Target or Host mode                        |             | ✓

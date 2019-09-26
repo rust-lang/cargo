@@ -2,6 +2,7 @@ mod build_config;
 mod build_context;
 mod build_plan;
 mod compilation;
+mod compile_kind;
 mod context;
 mod custom_build;
 mod fingerprint;
@@ -25,12 +26,12 @@ use std::sync::Arc;
 use failure::Error;
 use lazycell::LazyCell;
 use log::debug;
-use serde::Serialize;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, ProfileKind};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
+pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::Context;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
@@ -49,15 +50,6 @@ use crate::util::machine_message::Message;
 use crate::util::paths;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
-
-/// Indicates whether an object is for the host architecture or the target architecture.
-///
-/// These will be the same unless cross-compiling.
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
-pub enum Kind {
-    Host,
-    Target,
-}
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
@@ -386,7 +378,7 @@ fn rustc<'a, 'cfg>(
         rustc: &mut ProcessBuilder,
         build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
-        kind: Kind,
+        kind: CompileKind,
     ) -> CargoResult<()> {
         let key = (current_id, kind);
         if let Some(output) = build_script_outputs.get(&key) {
@@ -490,7 +482,7 @@ fn add_plugin_deps(
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for &id in build_scripts.plugins.iter() {
         let output = build_script_outputs
-            .get(&(id, Kind::Host))
+            .get(&(id, CompileKind::Host))
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
@@ -565,10 +557,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
-    if unit.kind != Kind::Host {
-        if let Some(ref target) = bcx.build_config.requested_target {
-            rustdoc.arg("--target").arg(target);
-        }
+    if let CompileKind::Target(target) = unit.kind {
+        rustdoc.arg("--target").arg(target.rustc_target());
     }
 
     let doc_dir = cx.files().out_dir(unit);
@@ -892,16 +882,8 @@ fn build_base_args<'a, 'cfg>(
         }
     }
 
-    if unit.kind == Kind::Target {
-        opt(
-            cmd,
-            "--target",
-            "",
-            bcx.build_config
-                .requested_target
-                .as_ref()
-                .map(|s| s.as_ref()),
-        );
+    if let CompileKind::Target(n) = unit.kind {
+        cmd.arg("--target").arg(n.rustc_target());
     }
 
     opt(cmd, "-C", "ar=", bcx.ar(unit.kind).map(|s| s.as_ref()));
@@ -942,7 +924,7 @@ fn build_deps_args<'a, 'cfg>(
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
-    if let Kind::Target = unit.kind {
+    if !unit.kind.is_host() {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
             deps.push(cx.files().host_deps());
@@ -978,8 +960,8 @@ fn build_deps_args<'a, 'cfg>(
 
     let mut unstable_opts = false;
 
-    if let Some(sysroot) = cx.files().layout(Kind::Target).sysroot() {
-        if unit.kind == Kind::Target {
+    if let Some(sysroot) = cx.files().layout(unit.kind).sysroot() {
+        if !unit.kind.is_host() {
             cmd.arg("--sysroot").arg(sysroot);
         }
     }
@@ -1064,19 +1046,6 @@ fn envify(s: &str) -> String {
         .flat_map(|c| c.to_uppercase())
         .map(|c| if c == '-' { '_' } else { c })
         .collect()
-}
-
-impl Kind {
-    fn for_target(self, target: &Target) -> Kind {
-        // Once we start compiling for the `Host` kind we continue doing so, but
-        // if we are a `Target` kind and then we start compiling for a target
-        // that needs to be on the host we lift ourselves up to `Host`.
-        match self {
-            Kind::Host => Kind::Host,
-            Kind::Target if target.for_host() => Kind::Host,
-            Kind::Target => Kind::Target,
-        }
-    }
 }
 
 struct OutputOptions {

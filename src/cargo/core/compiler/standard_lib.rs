@@ -1,7 +1,7 @@
 //! Code for building the standard library.
 
 use super::layout::Layout;
-use crate::core::compiler::{BuildContext, CompileMode, Context, FileFlavor, Kind, Unit};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode, Context, FileFlavor, Unit};
 use crate::core::profiles::UnitFor;
 use crate::core::resolver::ResolveOpts;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
@@ -113,6 +113,7 @@ pub fn generate_std_roots<'a>(
     bcx: &BuildContext<'a, '_>,
     crates: &[String],
     std_resolve: &'a Resolve,
+    kind: CompileKind,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
@@ -144,13 +145,7 @@ pub fn generate_std_roots<'a>(
             );
             let features = std_resolve.features_sorted(pkg.package_id());
             Ok(bcx.units.intern(
-                pkg,
-                lib,
-                profile,
-                Kind::Target,
-                mode,
-                features,
-                /*is_std*/ true,
+                pkg, lib, profile, kind, mode, features, /*is_std*/ true,
             ))
         })
         .collect::<CargoResult<Vec<_>>>()
@@ -205,7 +200,7 @@ pub fn add_sysroot_artifact<'a>(
         .filter(|output| output.flavor == FileFlavor::Linkable { rmeta })
         .map(|output| &output.path);
     for path in outputs {
-        let libdir = cx.files().layout(Kind::Target).sysroot_libdir().unwrap();
+        let libdir = cx.files().layout(unit.kind).sysroot_libdir().unwrap();
         let dst = libdir.join(path.file_name().unwrap());
         paths::link_or_copy(path, dst)?;
     }

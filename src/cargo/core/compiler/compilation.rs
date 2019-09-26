@@ -7,6 +7,7 @@ use cargo_platform::CfgExpr;
 use semver::Version;
 
 use super::BuildContext;
+use crate::core::compiler::CompileKind;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, rustc::Rustc, CargoResult, Config, ProcessBuilder};
 
@@ -78,7 +79,10 @@ pub struct Compilation<'cfg> {
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
+    pub fn new<'a>(
+        bcx: &BuildContext<'a, 'cfg>,
+        default_kind: CompileKind,
+    ) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc.process();
 
         let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
@@ -97,8 +101,8 @@ impl<'cfg> Compilation<'cfg> {
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
-            host_dylib_path: bcx.host_info.sysroot_libdir.clone(),
-            target_dylib_path: bcx.target_info.sysroot_libdir.clone(),
+            host_dylib_path: bcx.info(CompileKind::Host).sysroot_libdir.clone(),
+            target_dylib_path: bcx.info(default_kind).sysroot_libdir.clone(),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -109,8 +113,8 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             primary_unit_rustc_process,
             host: bcx.host_triple().to_string(),
-            target: bcx.target_triple().to_string(),
-            target_runner: target_runner(bcx)?,
+            target: default_kind.short_name(bcx).to_string(),
+            target_runner: target_runner(bcx, default_kind)?,
             supports_rustdoc_crate_type: supports_rustdoc_crate_type(bcx.config, &bcx.rustc)?,
         })
     }
@@ -289,8 +293,11 @@ fn pre_version_component(v: &Version) -> String {
     ret
 }
 
-fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
-    let target = bcx.target_triple();
+fn target_runner(
+    bcx: &BuildContext<'_, '_>,
+    kind: CompileKind,
+) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
+    let target = kind.short_name(bcx);
 
     // try target.{}.runner
     let key = format!("target.{}.runner", target);
@@ -303,7 +310,7 @@ fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec
         let mut matching_runner = None;
 
         for key in table.val.keys() {
-            if CfgExpr::matches_key(key, bcx.target_info.cfg()) {
+            if CfgExpr::matches_key(key, bcx.info(kind).cfg()) {
                 let key = format!("target.{}.runner", key);
                 if let Some(runner) = bcx.config.get_path_and_args(&key)? {
                     // more than one match, error out

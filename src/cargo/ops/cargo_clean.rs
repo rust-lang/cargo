@@ -4,7 +4,9 @@ use std::path::Path;
 
 use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::UnitInterner;
-use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, ProfileKind};
+use crate::core::compiler::{
+    BuildConfig, BuildContext, CompileKind, CompileMode, Context, ProfileKind,
+};
 use crate::core::profiles::UnitFor;
 use crate::core::Workspace;
 use crate::ops;
@@ -82,7 +84,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
-            for kind in [Kind::Host, Kind::Target].iter() {
+            for kind in [CompileKind::Host, build_config.requested_kind].iter() {
                 for mode in CompileMode::all_modes() {
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
@@ -114,7 +116,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     let unit_dependencies =
         unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
-    let mut cx = Context::new(config, &bcx, unit_dependencies)?;
+    let mut cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {

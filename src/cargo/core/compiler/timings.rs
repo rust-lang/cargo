@@ -567,11 +567,7 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         .lines()
         .next()
         .expect("rustc version");
-    let requested_target = bcx
-        .build_config
-        .requested_target
-        .as_ref()
-        .map_or("Host", String::as_str);
+    let requested_target = bcx.build_config.requested_kind.short_name(bcx);
     format!(
         "{}<br>Host: {}<br>Target: {}",
         version, bcx.rustc.host, requested_target

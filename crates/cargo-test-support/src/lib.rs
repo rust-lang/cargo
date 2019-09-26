@@ -1158,9 +1158,7 @@ impl Execs {
 
         // It's easier to read tabs in outputs if they don't show up as literal
         // hidden characters
-        let matcher = matcher.replace("\t", "<tab>");
-
-        matcher
+        matcher.replace("\t", "<tab>")
     }
 
     fn match_std(
@@ -1680,7 +1678,7 @@ pub static RUSTC: Rustc = Rustc::new(
 
 /// The rustc host such as `x86_64-unknown-linux-gnu`.
 pub fn rustc_host() -> String {
-    RUSTC.with(|r| r.host.clone())
+    RUSTC.with(|r| r.host.to_string())
 }
 
 pub fn is_nightly() -> bool {

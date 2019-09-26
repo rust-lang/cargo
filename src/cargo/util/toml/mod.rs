@@ -1056,7 +1056,7 @@ impl TomlManifest {
                 .or_else(|| me.build_dependencies2.as_ref());
             process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
 
-            for (name, platform) in me.target.iter().flat_map(|t| t) {
+            for (name, platform) in me.target.iter().flatten() {
                 cx.platform = Some(name.parse()?);
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
                 let build_deps = platform
@@ -1312,7 +1312,7 @@ impl TomlManifest {
             bail!("cannot specify both [replace] and [patch]");
         }
         let mut replace = Vec::new();
-        for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
+        for (spec, replacement) in self.replace.iter().flatten() {
             let mut spec = PackageIdSpec::parse(spec).chain_err(|| {
                 format!(
                     "replacements must specify a valid semver \
@@ -1354,7 +1354,7 @@ impl TomlManifest {
 
     fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
         let mut patch = HashMap::new();
-        for (url, deps) in self.patch.iter().flat_map(|x| x) {
+        for (url, deps) in self.patch.iter().flatten() {
             let url = match &url[..] {
                 CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
                 _ => cx
@@ -1571,7 +1571,7 @@ impl DetailedTomlDependency {
             Some(id) => Dependency::parse(pkg_name, version, new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(pkg_name, version, new_source_id)?,
         };
-        dep.set_features(self.features.iter().flat_map(|x| x))
+        dep.set_features(self.features.iter().flatten())
             .set_default_features(
                 self.default_features
                     .or(self.default_features2)

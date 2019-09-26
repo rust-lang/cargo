@@ -252,7 +252,7 @@ pub(super) fn activation_error(
             // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
             // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
             let mut candidates = Vec::new();
-            if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.clone()), true) {
+            if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s), true) {
                 return to_resolve_err(e);
             };
             candidates.sort_unstable_by(|a, b| a.name().cmp(&b.name()));

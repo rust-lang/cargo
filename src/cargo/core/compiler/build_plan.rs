@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 use super::context::OutputFile;
-use super::{CompileMode, Context, Kind, Unit};
+use super::{CompileKind, CompileMode, Context, Unit};
 use crate::core::TargetKind;
 use crate::util::{internal, CargoResult, ProcessBuilder};
 
@@ -21,7 +21,7 @@ struct Invocation {
     package_name: String,
     package_version: semver::Version,
     target_kind: TargetKind,
-    kind: Kind,
+    kind: CompileKind,
     compile_mode: CompileMode,
     deps: Vec<usize>,
     outputs: Vec<PathBuf>,

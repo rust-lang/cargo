@@ -1,10 +1,10 @@
 use std::cell::RefCell;
-use std::path::Path;
 
 use serde::ser;
 
+use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::util::ProcessBuilder;
-use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
+use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 
 #[derive(Debug, Clone)]
 pub enum ProfileKind {
@@ -26,9 +26,8 @@ impl ProfileKind {
 /// Configuration information for a rustc build.
 #[derive(Debug)]
 pub struct BuildConfig {
-    /// The target arch triple.
-    /// Default: host arch.
-    pub requested_target: Option<String>,
+    /// The requested kind of compilation for this session
+    pub requested_kind: CompileKind,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
     /// Build profile
@@ -63,36 +62,21 @@ impl BuildConfig {
         requested_target: &Option<String>,
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
-        let requested_target = match requested_target {
-            &Some(ref target) if target.ends_with(".json") => {
-                let path = Path::new(target).canonicalize().chain_err(|| {
-                    failure::format_err!("Target path {:?} is not a valid file", target)
-                })?;
-                Some(
-                    path.into_os_string()
-                        .into_string()
-                        .map_err(|_| failure::format_err!("Target path is not valid unicode"))?,
-                )
-            }
-            other => other.clone(),
+        let requested_kind = match requested_target {
+            Some(s) => CompileKind::Target(CompileTarget::new(s)?),
+            None => match config.get_string("build.target")? {
+                Some(cfg) => {
+                    let value = if cfg.val.ends_with(".json") {
+                        let path = cfg.definition.root(config).join(&cfg.val);
+                        path.to_str().expect("must be utf-8 in toml").to_string()
+                    } else {
+                        cfg.val
+                    };
+                    CompileKind::Target(CompileTarget::new(&value)?)
+                }
+                None => CompileKind::Host,
+            },
         };
-        if let Some(ref s) = requested_target {
-            if s.trim().is_empty() {
-                failure::bail!("target was empty")
-            }
-        }
-        let cfg_target = match config.get_string("build.target")? {
-            Some(ref target) if target.val.ends_with(".json") => {
-                let path = target.definition.root(config).join(&target.val);
-                let path_string = path
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|_| failure::format_err!("Target path is not valid unicode"));
-                Some(path_string?)
-            }
-            other => other.map(|t| t.val),
-        };
-        let target = requested_target.or(cfg_target);
 
         if jobs == Some(0) {
             failure::bail!("jobs must be at least 1")
@@ -108,7 +92,7 @@ impl BuildConfig {
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
 
         Ok(BuildConfig {
-            requested_target: target,
+            requested_kind,
             jobs,
             profile_kind: ProfileKind::Dev,
             mode,

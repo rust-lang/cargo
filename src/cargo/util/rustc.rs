@@ -9,6 +9,7 @@ use std::sync::Mutex;
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
+use crate::core::InternedString;
 use crate::util::paths;
 use crate::util::{self, internal, profile, CargoResult, ProcessBuilder};
 
@@ -23,7 +24,7 @@ pub struct Rustc {
     /// Verbose version information (the output of `rustc -vV`)
     pub verbose_version: String,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
-    pub host: String,
+    pub host: InternedString,
     cache: Mutex<Cache>,
 }
 
@@ -58,7 +59,7 @@ impl Rustc {
                         verbose_version
                     )
                 })?;
-            triple.to_string()
+            InternedString::new(triple)
         };
 
         Ok(Rustc {
