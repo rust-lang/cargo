@@ -107,7 +107,11 @@ fn not_update() {
     use cargo::util::Config;
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
-    let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
+    let cfg = Config::new(
+        Shell::from_write(Box::new(Vec::new())),
+        paths::root(),
+        paths::home().join(".cargo"),
+    );
     let lock = cfg.acquire_package_cache_lock().unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();
