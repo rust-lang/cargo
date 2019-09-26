@@ -4,12 +4,21 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use serde::Serialize;
 use std::path::Path;
 
-/// Indicates whether an object is for the host architcture or the target architecture.
+/// Indicator for how a unit is being compiled.
 ///
-/// These will be the same unless cross-compiling.
+/// This is used primarily for organizing cross compilations vs host
+/// compilations, where cross compilations happen at the request of `--target`
+/// and host compilations happen for things like build scripts and procedural
+/// macros.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum CompileKind {
+    /// Attached to a unit that is compiled for the "host" system or otherwise
+    /// is compiled without a `--target` flag. This is used for procedural
+    /// macros and build scripts, or if the `--target` flag isn't passed.
     Host,
+
+    /// Attached to a unit to be compiled for a particular target. This is used
+    /// for units when the `--target` flag is passed.
     Target(CompileTarget),
 }
 
@@ -42,6 +51,23 @@ impl CompileKind {
     }
 }
 
+/// Abstraction for the representation of a compilation target that Cargo has.
+///
+/// Compilation targets are one of two things right now:
+///
+/// 1. A raw target string, like `x86_64-unknown-linux-gnu`.
+/// 2. The path to a JSON file, such as `/path/to/my-target.json`.
+///
+/// Raw target strings are typically dictated by `rustc` itself and represent
+/// built-in targets. Custom JSON files are somewhat unstable, but supported
+/// here in Cargo. Note that for JSON target files this `CompileTarget` stores a
+/// full canonicalized path to the target.
+///
+/// The main reason for this existence is to handle JSON target files where when
+/// we call rustc we pass full paths but when we use it for Cargo's purposes
+/// like naming directories or looking up configuration keys we only check the
+/// file stem of JSON target files. For built-in rustc targets this is just an
+/// uninterpreted string basically.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub struct CompileTarget {
     name: InternedString,
@@ -71,10 +97,22 @@ impl CompileTarget {
         Ok(CompileTarget { name: name.into() })
     }
 
+    /// Returns the full unqualified name of this target, suitable for passing
+    /// to `rustc` directly.
+    ///
+    /// Typically this is pretty much the same as `short_name`, but for the case
+    /// of JSON target files this will be a full canonicalized path name for the
+    /// current filesystem.
     pub fn rustc_target(&self) -> &str {
         &self.name
     }
 
+    /// Returns a "short" version of the target name suitable for usage within
+    /// Cargo for configuration and such.
+    ///
+    /// This is typically the same as `rustc_target`, or the full name, but for
+    /// JSON target files this returns just the file stem (e.g. `foo` out of
+    /// `foo.json`) instead of the full path.
     pub fn short_name(&self) -> &str {
         // Flexible target specifications often point at json files, so if it
         // looks like we've got one of those just use the file stem (the file

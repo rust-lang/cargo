@@ -924,7 +924,7 @@ fn build_deps_args<'a, 'cfg>(
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
-    if let CompileKind::Target(_) = unit.kind {
+    if !unit.kind.is_host() {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
             deps.push(cx.files().host_deps());

@@ -31,15 +31,24 @@ pub struct BuildContext<'a, 'cfg> {
     pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     pub packages: &'a PackageSet<'cfg>,
 
-    /// Information about the compiler.
+    /// Source of interning new units as they're created.
+    pub units: &'a UnitInterner<'a>,
+
+    /// Information about the compiler that we've detected on the local system.
     pub rustc: Rustc,
-    /// Build information for the host arch.
+
+    /// Build information for the "host", which is information about when
+    /// `rustc` is invoked without a `--target` flag. This is used for
+    /// procedural macros, build scripts, etc.
     host_config: TargetConfig,
-    /// Build information for the target.
+    host_info: TargetInfo,
+
+    /// Build information for targets that we're building for. This will be
+    /// empty if the `--target` flag is not passed, and currently also only ever
+    /// has at most one entry, but eventually we'd like to support multi-target
+    /// builds with Cargo.
     target_config: HashMap<CompileTarget, TargetConfig>,
     target_info: HashMap<CompileTarget, TargetInfo>,
-    host_info: TargetInfo,
-    pub units: &'a UnitInterner<'a>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
