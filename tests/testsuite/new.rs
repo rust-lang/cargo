@@ -264,7 +264,7 @@ fn finds_author_git() {
 
 #[cargo_test]
 fn finds_local_author_git() {
-    git_process("init").exec().unwrap();
+    git_process("init").exec_with_output().unwrap();
     git_process("config --global user.name foo").exec().unwrap();
     git_process("config --global user.email foo@bar")
         .exec()

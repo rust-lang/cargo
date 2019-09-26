@@ -92,8 +92,11 @@ where
         }
     }
 }
+
 #[test]
 fn with_retry_repeats_the_call_then_works() {
+    use crate::core::Shell;
+
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     let error1 = HttpNot200 {
         code: 501,
@@ -107,12 +110,15 @@ fn with_retry_repeats_the_call_then_works() {
     .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
+    *config.shell() = Shell::from_write(Box::new(Vec::new()));
     let result = with_retry(&config, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
 }
 
 #[test]
 fn with_retry_finds_nested_spurious_errors() {
+    use crate::core::Shell;
+
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious
     let error1 = failure::Error::from(HttpNot200 {
@@ -127,6 +133,7 @@ fn with_retry_finds_nested_spurious_errors() {
     let error2 = failure::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
+    *config.shell() = Shell::from_write(Box::new(Vec::new()));
     let result = with_retry(&config, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
 }

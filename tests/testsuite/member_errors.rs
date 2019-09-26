@@ -143,7 +143,11 @@ fn member_manifest_version_error() {
 
     // Prevent this test from accessing the network by setting up .cargo/config.
     registry::init();
-    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    let config = Config::new(
+        Shell::from_write(Box::new(Vec::new())),
+        cargo_home(),
+        cargo_home(),
+    );
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();
