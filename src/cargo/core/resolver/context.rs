@@ -11,7 +11,7 @@ use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
-use super::types::{ConflictMap, FeaturesSet, ResolveOpts};
+use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 
 pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -151,7 +151,11 @@ impl Context {
                     if dep.source_id() != id.source_id() {
                         let key = (id.name(), dep.source_id(), id.version().into());
                         let prev = self.activations.insert(key, (summary.clone(), age));
-                        assert!(prev.is_none());
+                        if let Some((previous_summary, _)) = prev {
+                            return Err(
+                                (previous_summary.package_id(), ConflictReason::Semver).into()
+                            );
+                        }
                     }
                 }
 
