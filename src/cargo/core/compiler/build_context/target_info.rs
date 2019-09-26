@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str::{self, FromStr};
 
-use crate::core::compiler::Kind;
+use crate::core::compiler::CompileKind;
 use crate::core::TargetKind;
 use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
@@ -80,18 +80,11 @@ impl FileType {
 impl TargetInfo {
     pub fn new(
         config: &Config,
-        requested_target: &Option<String>,
+        requested_kind: CompileKind,
         rustc: &Rustc,
-        kind: Kind,
+        kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(
-            config,
-            requested_target,
-            &rustc.host,
-            None,
-            kind,
-            "RUSTFLAGS",
-        )?;
+        let rustflags = env_args(config, requested_kind, &rustc.host, None, kind, "RUSTFLAGS")?;
         let mut process = rustc.process();
         process
             .arg("-")
@@ -101,12 +94,8 @@ impl TargetInfo {
             .args(&rustflags)
             .env_remove("RUSTC_LOG");
 
-        let target_triple = requested_target
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or(&rustc.host);
-        if kind == Kind::Target {
-            process.arg("--target").arg(target_triple);
+        if let CompileKind::Target(target) = kind {
+            process.arg("--target").arg(target.rustc_target());
         }
 
         let crate_type_process = process.clone();
@@ -140,7 +129,7 @@ impl TargetInfo {
         };
         let mut rustlib = PathBuf::from(line);
         let sysroot_libdir = match kind {
-            Kind::Host => {
+            CompileKind::Host => {
                 if cfg!(windows) {
                     rustlib.push("bin");
                 } else {
@@ -148,10 +137,10 @@ impl TargetInfo {
                 }
                 rustlib
             }
-            Kind::Target => {
+            CompileKind::Target(target) => {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
-                rustlib.push(target_triple);
+                rustlib.push(target.short_name());
                 rustlib.push("lib");
                 rustlib
             }
@@ -175,7 +164,7 @@ impl TargetInfo {
             // information
             rustflags: env_args(
                 config,
-                requested_target,
+                requested_kind,
                 &rustc.host,
                 Some(&cfg),
                 kind,
@@ -183,7 +172,7 @@ impl TargetInfo {
             )?,
             rustdocflags: env_args(
                 config,
-                requested_target,
+                requested_kind,
                 &rustc.host,
                 Some(&cfg),
                 kind,
@@ -381,10 +370,10 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 /// scripts, ...), even if it is the same as the target.
 fn env_args(
     config: &Config,
-    requested_target: &Option<String>,
+    requested_kind: CompileKind,
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
-    kind: Kind,
+    kind: CompileKind,
     name: &str,
 ) -> CargoResult<Vec<String>> {
     // We *want* to apply RUSTFLAGS only to builds for the
@@ -406,10 +395,7 @@ fn env_args(
     // This means that, e.g., even if the specified --target is the
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
-    let compiling_with_target = requested_target.is_some();
-    let is_target_kind = kind == Kind::Target;
-
-    if compiling_with_target && !is_target_kind {
+    if !requested_kind.is_host() && kind.is_host() {
         // This is probably a build script or plugin and we're
         // compiling with --target. In this scenario there are
         // no rustflags we can apply.
@@ -433,10 +419,10 @@ fn env_args(
         .flat_map(|c| c.to_lowercase())
         .collect::<String>();
     // Then the target.*.rustflags value...
-    let target = requested_target
-        .as_ref()
-        .map(|s| s.as_str())
-        .unwrap_or(host_triple);
+    let target = match &kind {
+        CompileKind::Host => host_triple,
+        CompileKind::Target(target) => target.short_name(),
+    };
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {
         let args = args.val.into_iter();

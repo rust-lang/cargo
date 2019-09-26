@@ -1,11 +1,12 @@
 use serde::{Serialize, Serializer};
-
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::path::Path;
 use std::ptr;
 use std::str;
 use std::sync::Mutex;
@@ -32,6 +33,12 @@ impl<'a> From<&'a str> for InternedString {
 impl<'a> From<&'a String> for InternedString {
     fn from(item: &'a String) -> Self {
         InternedString::new(item)
+    }
+}
+
+impl From<String> for InternedString {
+    fn from(item: String) -> Self {
+        InternedString::new(&item)
     }
 }
 
@@ -71,6 +78,18 @@ impl Deref for InternedString {
 impl AsRef<str> for InternedString {
     fn as_ref(&self) -> &str {
         self.as_str()
+    }
+}
+
+impl AsRef<OsStr> for InternedString {
+    fn as_ref(&self) -> &OsStr {
+        self.as_str().as_ref()
+    }
+}
+
+impl AsRef<Path> for InternedString {
+    fn as_ref(&self) -> &Path {
+        self.as_str().as_ref()
     }
 }
 

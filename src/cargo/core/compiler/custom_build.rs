@@ -12,7 +12,7 @@ use crate::util::machine_message::{self, Message};
 use crate::util::{self, internal, paths, profile};
 
 use super::job::{Freshness, Job, Work};
-use super::{fingerprint, Context, Kind, Unit};
+use super::{fingerprint, CompileKind, Context, Unit};
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -43,7 +43,7 @@ pub struct BuildOutput {
 /// This initially starts out as empty. Overridden build scripts get
 /// inserted during `build_map`. The rest of the entries are added
 /// immediately after each build script runs.
-pub type BuildScriptOutputs = HashMap<(PackageId, Kind), BuildOutput>;
+pub type BuildScriptOutputs = HashMap<(PackageId, CompileKind), BuildOutput>;
 
 /// Linking information for a `Unit`.
 ///
@@ -63,9 +63,9 @@ pub struct BuildScripts {
     /// usage here doesn't blow up too much.
     ///
     /// For more information, see #2354.
-    pub to_link: Vec<(PackageId, Kind)>,
+    pub to_link: Vec<(PackageId, CompileKind)>,
     /// This is only used while constructing `to_link` to avoid duplicates.
-    seen_to_link: HashSet<(PackageId, Kind)>,
+    seen_to_link: HashSet<(PackageId, CompileKind)>,
     /// Host-only dependencies that have build scripts.
     ///
     /// This is the set of transitive dependencies that are host-only
@@ -158,13 +158,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
-        .env(
-            "TARGET",
-            &match unit.kind {
-                Kind::Host => bcx.host_triple(),
-                Kind::Target => bcx.target_triple(),
-            },
-        )
+        .env("TARGET", unit.kind.short_name(bcx))
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
@@ -180,7 +174,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(ref linker) = bcx.target_config.linker {
+    if let Some(linker) = &bcx.target_config(unit.kind).linker {
         cmd.env("RUSTC_LINKER", linker);
     }
 
@@ -694,7 +688,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g., we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, kind: Kind) {
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, kind: CompileKind) {
         if scripts.seen_to_link.insert((pkg, kind)) {
             scripts.to_link.push((pkg, kind));
         }

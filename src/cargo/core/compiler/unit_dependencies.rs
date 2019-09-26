@@ -16,7 +16,7 @@
 //! graph of `Unit`s, which capture these properties.
 
 use crate::core::compiler::Unit;
-use crate::core::compiler::{BuildContext, CompileMode, Kind};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
@@ -125,7 +125,7 @@ fn attach_std_deps<'a, 'cfg>(
 ) {
     // Attach the standard library as a dependency of every target unit.
     for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if unit.kind == Kind::Target && !unit.mode.is_run_custom_build() {
+        if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots.iter().map(|unit| UnitDep {
                 unit: *unit,
                 unit_for: UnitFor::new_normal(),
@@ -270,13 +270,11 @@ fn compute_deps<'a, 'cfg>(
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = unit_for.with_for_host(lib.for_host());
 
-        if bcx.config.cli_unstable().dual_proc_macros
-            && lib.proc_macro()
-            && unit.kind == Kind::Target
-        {
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Target, mode)?;
+        if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
+            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
             ret.push(unit_dep);
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, Kind::Host, mode)?;
+            let unit_dep =
+                new_unit_dep(state, unit, pkg, lib, dep_unit_for, CompileKind::Host, mode)?;
             ret.push(unit_dep);
         } else {
             let unit_dep = new_unit_dep(
@@ -378,7 +376,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
         // builds.
         UnitFor::new_build(),
         // Build scripts always compiled for the host.
-        Kind::Host,
+        CompileKind::Host,
         CompileMode::Build,
     )?;
     Ok(vec![unit_dep])
@@ -537,7 +535,7 @@ fn new_unit_dep<'a>(
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
-    kind: Kind,
+    kind: CompileKind,
     mode: CompileMode,
 ) -> CargoResult<UnitDep<'a>> {
     let profile = state.bcx.profiles.get_profile(
@@ -556,7 +554,7 @@ fn new_unit_dep_with_profile<'a>(
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
-    kind: Kind,
+    kind: CompileKind,
     mode: CompileMode,
     profile: Profile,
 ) -> CargoResult<UnitDep<'a>> {
