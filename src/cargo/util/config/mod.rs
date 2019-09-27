@@ -94,8 +94,9 @@ pub struct Config {
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
-    /// HTTP configuration for Cargo
+    /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
+    net_config: LazyCell<CargoNetConfig>,
 }
 
 impl Config {
@@ -155,6 +156,7 @@ impl Config {
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
+            net_config: LazyCell::new(),
         }
     }
 
@@ -638,8 +640,9 @@ impl Config {
         self.locked = locked;
         self.offline = offline
             || self
-                .get::<Option<bool>>("net.offline")
-                .unwrap_or(None)
+                .net_config()
+                .ok()
+                .and_then(|n| n.offline)
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
@@ -927,6 +930,11 @@ impl Config {
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
         self.http_config
             .try_borrow_with(|| Ok(self.get::<CargoHttpConfig>("http")?))
+    }
+
+    pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
+        self.net_config
+            .try_borrow_with(|| Ok(self.get::<CargoNetConfig>("net")?))
     }
 
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
@@ -1456,4 +1464,12 @@ pub struct CargoHttpConfig {
 pub enum SslVersionConfig {
     Single(String),
     Range(SslVersionConfigRange),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CargoNetConfig {
+    pub retry: Option<u32>,
+    pub offline: Option<bool>,
+    #[serde(rename = "git-fetch-with-cli")]
+    pub git_fetch_with_cli: Option<bool>,
 }

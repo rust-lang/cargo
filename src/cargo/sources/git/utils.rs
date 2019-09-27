@@ -707,10 +707,8 @@ pub fn fetch(
     // repositories instead of `libgit2`-the-library. This should make more
     // flavors of authentication possible while also still giving us all the
     // speed and portability of using `libgit2`.
-    if let Some(val) = config.get_bool("net.git-fetch-with-cli")? {
-        if val.val {
-            return fetch_with_cli(repo, url, refspec, config);
-        }
+    if let Some(true) = config.net_config()?.git_fetch_with_cli {
+        return fetch_with_cli(repo, url, refspec, config);
     }
 
     debug!("doing a fetch for {}", url);
