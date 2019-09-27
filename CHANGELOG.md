@@ -1,9 +1,50 @@
 # Changelog
 
-## Cargo 1.39 (2019-11-07)
-[e853aa97...HEAD](https://github.com/rust-lang/cargo/compare/e853aa97...HEAD)
+## Cargo 1.40 (2019-12-19)
+[4b105b6a...HEAD](https://github.com/rust-lang/cargo/compare/4b105b6a...HEAD)
 
 ### Added
+- (Nightly only): The `mtime-on-use` feature may now be enabled via the
+  `unstable.mtime_on_use` config option.
+  [#7411](https://github.com/rust-lang/cargo/pull/7411)
+
+### Changed
+- Cargo's "platform" `cfg` parsing has been extracted into a separate crate
+  named `cargo-platform`.
+  [#7375](https://github.com/rust-lang/cargo/pull/7375)
+
+### Fixed
+- Fixed an issue where if a package had an `include` field, and `Cargo.lock`
+  in `.gitignore`, and a binary or example target, and the `Cargo.lock` exists
+  in the current project, it would fail to publish complaining the
+  `Cargo.lock` was dirty.
+  [#7448](https://github.com/rust-lang/cargo/pull/7448)
+- Fixed a panic in a particular combination of `[patch]` entries.
+  [#7452](https://github.com/rust-lang/cargo/pull/7452)
+
+## Cargo 1.39 (2019-11-07)
+[e853aa97...4b105b6a](https://github.com/rust-lang/cargo/compare/e853aa97...4b105b6a)
+
+### Added
+- Config files may now use the `.toml` filename extension.
+  [#7295](https://github.com/rust-lang/cargo/pull/7295)
+- (Nightly only): Basic support for building the standard library directly
+  from Cargo has been added.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std))
+  [#7216](https://github.com/rust-lang/cargo/pull/7216)
+- The `--workspace` flag has been added as an alias for `--all` to help avoid
+  confusion about the meaning of "all".
+  [#7241](https://github.com/rust-lang/cargo/pull/7241)
+- The `publish` field has been added to `cargo metadata`.
+  [#7354](https://github.com/rust-lang/cargo/pull/7354)
+- (Nightly only): Added `-Ztimings` feature to generate an HTML report
+  on the time spent on individual compilation steps. This also may output
+  completion steps on the console and JSON data.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#timings))
+  [#7311](https://github.com/rust-lang/cargo/pull/7311)
+- (Nightly only): Added ability to cross-compile doctests.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile))
+  [#6892](https://github.com/rust-lang/cargo/pull/6892)
 
 ### Changed
 - Display more information if parsing the output from `rustc` fails.
@@ -29,14 +70,62 @@
   `git` value will be stripped from the uploaded crate, matching the behavior
   of `path` dependencies.
   [#7237](https://github.com/rust-lang/cargo/pull/7237)
+- The behavior of workspace default-members has changed. The default-members
+  now only applies when running Cargo in the root of the workspace. Previously
+  it would always apply regardless of which directory Cargo is running in.
+  [#7270](https://github.com/rust-lang/cargo/pull/7270)
+- libgit2 updated pulling in all upstream changes.
+  [#7275](https://github.com/rust-lang/cargo/pull/7275)
+- Bump `home` dependency for locating home directories.
+  [#7277](https://github.com/rust-lang/cargo/pull/7277)
+- zsh completions have been updated.
+  [#7296](https://github.com/rust-lang/cargo/pull/7296)
+- SSL connect errors are now retried.
+  [#7318](https://github.com/rust-lang/cargo/pull/7318)
+- The jobserver has been changed to acquire N tokens (instead of N-1), and
+  then immediately acquires the extra token. This was changed to accommodate
+  the `cc` crate on Windows to allow it to release its implicit token.
+  [#7344](https://github.com/rust-lang/cargo/pull/7344)
+- The scheduling algorithm for choosing which crate to build next has been
+  changed. It now chooses the crate with the greatest number of transitive
+  crates waiting on it. Previously it used a maximum topological depth.
+  [#7390](https://github.com/rust-lang/cargo/pull/7390)
 
 ### Fixed
 - Git dependencies with submodules with shorthand SSH URLs (like
   `git@github.com/user/repo.git`) should now work.
   [#7238](https://github.com/rust-lang/cargo/pull/7238)
+- Handle broken symlinks when creating `.dSYM` symlinks on macOS.
+  [#7268](https://github.com/rust-lang/cargo/pull/7268)
+- Fixed issues with multiple versions of the same crate in a `[patch]` table.
+  [#7303](https://github.com/rust-lang/cargo/pull/7303)
+- Fixed issue with custom target `.json` files where a substring of the name
+  matches an unsupported crate type (like "bin").
+  [#7363](https://github.com/rust-lang/cargo/issues/7363)
+- Fixed issues with generating documentation for proc-macro crate types.
+  [#7159](https://github.com/rust-lang/cargo/pull/7159)
+- Fixed hang if Cargo panics within a build thread.
+  [#7366](https://github.com/rust-lang/cargo/pull/7366)
+- Fixed rebuild detection if a `build.rs` script issues different `rerun-if`
+  directives between builds. Cargo was erroneously causing a rebuild after the
+  change.
+  [#7373](https://github.com/rust-lang/cargo/pull/7373)
+- Properly handle canonical URLs for `[patch]` table entries, preventing
+  the patch from working after the first time it is used.
+  [#7368](https://github.com/rust-lang/cargo/pull/7368)
+- Fixed an issue where integration tests were waiting for the package binary
+  to finish building before starting their own build. They now may build
+  concurrently.
+  [#7394](https://github.com/rust-lang/cargo/pull/7394)
+- Fixed accidental change in the previous release on how `--features a b` flag
+  is interpreted, restoring the original behavior where this is interpreted as
+  `--features a` along with the argument `b` passed to the command. To pass
+  multiple features, use quotes around the features to pass multiple features
+  like `--features "a b"`, or use commas, or use multiple `--features` flags.
+  [#7419](https://github.com/rust-lang/cargo/pull/7419)
 
 ## Cargo 1.38 (2019-09-26)
-[4c1fa54d...e853aa97](https://github.com/rust-lang/cargo/compare/4c1fa54d...e853aa97)
+[4c1fa54d...23ef9a4e](https://github.com/rust-lang/cargo/compare/4c1fa54d...23ef9a4e)
 
 ### Added
 
@@ -127,7 +216,7 @@
   [#7162](https://github.com/rust-lang/cargo/pull/7162)
 
 ## Cargo 1.37 (2019-08-15)
-[c4fcfb72...4c1fa54d](https://github.com/rust-lang/cargo/compare/c4fcfb72...4c1fa54d)
+[c4fcfb72...9edd0891](https://github.com/rust-lang/cargo/compare/c4fcfb72...9edd0891)
 
 ### Added
 - Added `doctest` field to `cargo metadata` to determine if a target's
