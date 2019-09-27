@@ -593,13 +593,18 @@ impl Config {
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 { None } else { Some(true) };
 
+        #[derive(Deserialize, Default)]
+        struct TermConfig {
+            verbose: Option<bool>,
+            color: Option<String>,
+        }
+
         // Ignore errors in the configuration files.
-        let cfg_verbose = self.get_bool("term.verbose").unwrap_or(None).map(|v| v.val);
-        let cfg_color = self.get_string("term.color").unwrap_or(None).map(|v| v.val);
+        let cfg = self.get::<TermConfig>("term").unwrap_or_default();
 
-        let color = color.as_ref().or_else(|| cfg_color.as_ref());
+        let color = color.as_ref().or_else(|| cfg.color.as_ref());
 
-        let verbosity = match (verbose, cfg_verbose, quiet) {
+        let verbosity = match (verbose, cfg.verbose, quiet) {
             (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
 
             // Command line takes precedence over configuration, so ignore the
