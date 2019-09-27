@@ -376,9 +376,7 @@ impl<'cfg> PackageSet<'cfg> {
         // that it's buggy, and we've empirically seen that it's buggy with HTTP
         // proxies.
         let mut multi = Multi::new();
-        let multiplexing = config
-            .get::<Option<bool>>("http.multiplexing")?
-            .unwrap_or(true);
+        let multiplexing = config.http_config()?.multiplexing.unwrap_or(true);
         multi
             .pipelining(false, multiplexing)
             .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;

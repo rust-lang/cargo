@@ -94,6 +94,8 @@ pub struct Config {
     /// Lock, if held, of the global package cache along with the number of
     /// acquisitions so far.
     package_cache_lock: RefCell<Option<(Option<FileLock>, usize)>>,
+    /// HTTP configuration for Cargo
+    http_config: LazyCell<CargoHttpConfig>,
 }
 
 impl Config {
@@ -152,6 +154,7 @@ impl Config {
             profiles: LazyCell::new(),
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
+            http_config: LazyCell::new(),
         }
     }
 
@@ -916,6 +919,11 @@ impl Config {
         Ok(http)
     }
 
+    pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
+        self.http_config
+            .try_borrow_with(|| Ok(self.get::<CargoHttpConfig>("http")?))
+    }
+
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
     where
         F: FnMut() -> CargoResult<SourceId>,
@@ -1402,6 +1410,29 @@ pub fn clippy_driver() -> PathBuf {
         .into()
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct SslVersionConfigRange {
+    pub min: Option<String>,
+    pub max: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+pub struct CargoHttpConfig {
+    pub proxy: Option<String>,
+    #[serde(rename = "low-speed-limit")]
+    pub low_speed_limit: Option<u32>,
+    pub timeout: Option<u64>,
+    pub cainfo: Option<ConfigRelativePath>,
+    #[serde(rename = "check-revoke")]
+    pub check_revoke: Option<bool>,
+    #[serde(rename = "user-agent")]
+    pub user_agent: Option<String>,
+    pub debug: Option<bool>,
+    pub multiplexing: Option<bool>,
+    #[serde(rename = "ssl-version")]
+    pub ssl_version: Option<SslVersionConfig>,
+}
+
 /// Configuration for `ssl-version` in `http` section
 /// There are two ways to configure:
 ///
@@ -1420,10 +1451,4 @@ pub fn clippy_driver() -> PathBuf {
 pub enum SslVersionConfig {
     Single(String),
     Range(SslVersionConfigRange),
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct SslVersionConfigRange {
-    pub min: Option<String>,
-    pub max: Option<String>,
 }

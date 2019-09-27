@@ -2,8 +2,10 @@ use crate::util::config::Config;
 use serde::de;
 use std::fmt;
 use std::marker;
+use std::mem;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct Value<T> {
     pub val: T,
     pub definition: Definition,
@@ -28,6 +30,16 @@ impl Definition {
             Definition::Path(p) => p.parent().unwrap().parent().unwrap(),
             Definition::Environment(_) => config.cwd(),
         }
+    }
+}
+
+impl PartialEq for Definition {
+    fn eq(&self, other: &Definition) -> bool {
+        // configuration values are equivalent no matter where they're defined,
+        // but they need to be defined in the same location. For example if
+        // they're defined in the environment that's different than being
+        // defined in a file due to path interepretations.
+        mem::discriminant(self) == mem::discriminant(other)
     }
 }
 
