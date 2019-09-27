@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::core::compiler::{CompileMode, ProfileKind};
 use crate::core::interning::InternedString;
-use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, CargoResult, Config};
@@ -20,6 +20,7 @@ pub struct Profiles {
     incremental: Option<bool>,
     dir_names: HashMap<String, String>,
     by_name: HashMap<String, ProfileMaker>,
+    named_profiles_enabled: bool,
 }
 
 impl Profiles {
@@ -40,8 +41,85 @@ impl Profiles {
             None => config.get::<Option<bool>>("build.incremental")?,
         };
 
+        if !features.is_enabled(Feature::named_profiles()) {
+            let mut profile_makers = Profiles {
+                incremental,
+                named_profiles_enabled: false,
+                dir_names: Self::predefined_dir_names(),
+                by_name: HashMap::new(),
+            };
+
+            profile_makers.by_name.insert(
+                "dev".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("dev").cloned()),
+                    inherits: vec![],
+                    config: config_profiles.dev.clone(),
+                    default: Profile::default_dev(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("dev".to_owned(), "debug".to_owned());
+
+            profile_makers.by_name.insert(
+                "release".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("release").cloned()),
+                    inherits: vec![],
+                    config: config_profiles.release.clone(),
+                    default: Profile::default_release(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("release".to_owned(), "release".to_owned());
+
+            profile_makers.by_name.insert(
+                "test".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("test").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_test(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("test".to_owned(), "debug".to_owned());
+
+            profile_makers.by_name.insert(
+                "bench".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("bench").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_bench(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("bench".to_owned(), "release".to_owned());
+
+            profile_makers.by_name.insert(
+                "doc".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("doc").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_doc(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("doc".to_owned(), "debug".to_owned());
+
+            return Ok(profile_makers);
+        }
+
         let mut profile_makers = Profiles {
             incremental,
+            named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
         };
@@ -236,8 +314,47 @@ impl Profiles {
         mode: CompileMode,
         profile_kind: ProfileKind,
     ) -> Profile {
-        let maker = match self.by_name.get(profile_kind.name()) {
-            None => panic!("Profile {} undefined", profile_kind.name()),
+        let profile_name = if !self.named_profiles_enabled {
+            // With the feature disabled, we degrade `--profile` back to the
+            // `--release` and `--debug` predicates, and convert back from
+            // ProfileKind::Custom instantiation.
+
+            let release = match profile_kind {
+                ProfileKind::Release => true,
+                ProfileKind::Custom(ref s) if s == "bench" => true,
+                ProfileKind::Custom(ref s) if s == "test" => false,
+                _ => false,
+            };
+
+            match mode {
+                CompileMode::Test | CompileMode::Bench => {
+                    if release {
+                        "bench"
+                    } else {
+                        "test"
+                    }
+                }
+                CompileMode::Build
+                | CompileMode::Check { .. }
+                | CompileMode::Doctest
+                | CompileMode::RunCustomBuild => {
+                    // Note: `RunCustomBuild` doesn't normally use this code path.
+                    // `build_unit_profiles` normally ensures that it selects the
+                    // ancestor's profile. However, `cargo clean -p` can hit this
+                    // path.
+                    if release {
+                        "release"
+                    } else {
+                        "dev"
+                    }
+                }
+                CompileMode::Doc { .. } => "doc",
+            }
+        } else {
+            profile_kind.name()
+        };
+        let maker = match self.by_name.get(profile_name) {
+            None => panic!("Profile {} undefined", profile_name),
             Some(r) => r,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
@@ -663,6 +780,29 @@ impl Profile {
             root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
             ..Profile::default()
+        }
+    }
+
+    // NOTE: Remove the following three once `named_profiles` is default:
+
+    fn default_test() -> Profile {
+        Profile {
+            name: "test",
+            ..Profile::default_dev()
+        }
+    }
+
+    fn default_bench() -> Profile {
+        Profile {
+            name: "bench",
+            ..Profile::default_release()
+        }
+    }
+
+    fn default_doc() -> Profile {
+        Profile {
+            name: "doc",
+            ..Profile::default_dev()
         }
     }
 
