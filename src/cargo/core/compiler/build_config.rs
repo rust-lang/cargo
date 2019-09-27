@@ -62,15 +62,16 @@ impl BuildConfig {
         requested_target: &Option<String>,
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
+        let cfg = config.build_config()?;
         let requested_kind = match requested_target {
             Some(s) => CompileKind::Target(CompileTarget::new(s)?),
-            None => match config.get_string("build.target")? {
-                Some(cfg) => {
-                    let value = if cfg.val.ends_with(".json") {
-                        let path = cfg.definition.root(config).join(&cfg.val);
+            None => match &cfg.target {
+                Some(val) => {
+                    let value = if val.raw_value().ends_with(".json") {
+                        let path = val.clone().resolve_path(config);
                         path.to_str().expect("must be utf-8 in toml").to_string()
                     } else {
-                        cfg.val
+                        val.raw_value().to_string()
                     };
                     CompileKind::Target(CompileTarget::new(&value)?)
                 }
@@ -88,8 +89,7 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let cfg_jobs: Option<u32> = config.get("build.jobs")?;
-        let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
+        let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
 
         Ok(BuildConfig {
             requested_kind,

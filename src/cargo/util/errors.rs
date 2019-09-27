@@ -394,5 +394,5 @@ pub fn display_causes(error: &Error) -> String {
         .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
-        .join("\nCaused by:\n  ")
+        .join("\n\nCaused by:\n  ")
 }

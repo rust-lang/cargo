@@ -81,10 +81,10 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, cx, unit, &mut visited).is_ok();
     let basedir_string;
-    let basedir = match bcx.config.get_path("build.dep-info-basedir")? {
+    let basedir = match bcx.config.build_config()?.dep_info_basedir.clone() {
         Some(value) => {
             basedir_string = value
-                .val
+                .resolve_path(bcx.config)
                 .as_os_str()
                 .to_str()
                 .ok_or_else(|| internal("build.dep-info-basedir path not utf-8"))?

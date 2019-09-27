@@ -560,10 +560,13 @@ fn config_bad_toml() {
         config.get::<i32>("foo").unwrap_err(),
         "\
 could not load Cargo configuration
+
 Caused by:
   could not parse TOML configuration in `[..]/.cargo/config`
+
 Caused by:
   could not parse input as TOML
+
 Caused by:
   expected an equals, found eof at line 1 column 5",
     );
@@ -735,35 +738,35 @@ abs = '{}'
         config
             .get::<config::ConfigRelativePath>("p1")
             .unwrap()
-            .resolve(&config),
+            .resolve_path(&config),
         paths::root().join("foo/bar")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p2")
             .unwrap()
-            .resolve(&config),
+            .resolve_path(&config),
         paths::root().join("../abc")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p3")
             .unwrap()
-            .resolve(&config),
+            .resolve_path(&config),
         paths::root().join("d/e")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("abs")
             .unwrap()
-            .resolve(&config),
+            .resolve_path(&config),
         paths::home()
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("epath")
             .unwrap()
-            .resolve(&config),
+            .resolve_path(&config),
         paths::root().join("a/b")
     );
 }

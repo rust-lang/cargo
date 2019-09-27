@@ -420,7 +420,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.proxy(&proxy)?;
     }
     if let Some(cainfo) = http.cainfo.clone() {
-        let cainfo = cainfo.resolve(config);
+        let cainfo = cainfo.resolve_path(config);
         handle.cainfo(&cainfo)?;
     }
     if let Some(check) = http.check_revoke {

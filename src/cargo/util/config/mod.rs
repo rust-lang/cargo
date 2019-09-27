@@ -97,6 +97,7 @@ pub struct Config {
     /// Cached configuration parsed by Cargo
     http_config: LazyCell<CargoHttpConfig>,
     net_config: LazyCell<CargoNetConfig>,
+    build_config: LazyCell<CargoBuildConfig>,
 }
 
 impl Config {
@@ -157,6 +158,7 @@ impl Config {
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
             net_config: LazyCell::new(),
+            build_config: LazyCell::new(),
         }
     }
 
@@ -338,12 +340,12 @@ impl Config {
     }
 
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
-        if let Some(ref dir) = self.target_dir {
+        if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
-        } else if let Some(val) = self.get_path("build.target-dir")? {
-            let val = self.cwd.join(val.val);
+        } else if let Some(val) = &self.build_config()?.target_dir {
+            let val = val.resolve_path(self);
             Ok(Some(Filesystem::new(val)))
         } else {
             Ok(None)
@@ -469,7 +471,7 @@ impl Config {
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
             v.map(|v| Value {
-                val: v.val.resolve(self),
+                val: v.val.resolve_program(self),
                 definition: v.definition,
             })
         })
@@ -513,27 +515,13 @@ impl Config {
         }
     }
 
-    pub fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Target {
-            String(String),
-            List(Vec<String>),
-        }
-
-        match self.get::<Option<Value<Target>>>(key)? {
+    fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
+        match self.get::<Option<Value<StringList>>>(key)? {
             None => Ok(None),
-            Some(Value {
-                val: Target::String(s),
-                definition,
-            }) => Ok(Some(Value {
-                val: s.split(' ').map(str::to_string).collect(),
-                definition,
+            Some(val) => Ok(Some(Value {
+                val: val.val.list,
+                definition: val.definition,
             })),
-            Some(Value {
-                val: Target::List(val),
-                definition,
-            }) => Ok(Some(Value { val, definition })),
         }
     }
 
@@ -925,6 +913,11 @@ impl Config {
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
             .try_borrow_with(|| Ok(self.get::<CargoNetConfig>("net")?))
+    }
+
+    pub fn build_config(&self) -> CargoResult<&CargoBuildConfig> {
+        self.build_config
+            .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
     }
 
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
@@ -1462,4 +1455,47 @@ pub struct CargoNetConfig {
     pub offline: Option<bool>,
     #[serde(rename = "git-fetch-with-cli")]
     pub git_fetch_with_cli: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CargoBuildConfig {
+    pub pipelining: Option<bool>,
+    #[serde(rename = "dep-info-basedir")]
+    pub dep_info_basedir: Option<ConfigRelativePath>,
+    #[serde(rename = "target-dir")]
+    pub target_dir: Option<ConfigRelativePath>,
+    pub incremental: Option<bool>,
+    pub target: Option<ConfigRelativePath>,
+    pub jobs: Option<u32>,
+    pub rustflags: Option<StringList>,
+    pub rustdocflags: Option<StringList>,
+}
+
+#[derive(Debug)]
+pub struct StringList {
+    list: Vec<String>,
+}
+
+impl StringList {
+    pub fn as_slice(&self) -> &[String] {
+        &self.list
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for StringList {
+    fn deserialize<D: serde::de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Target {
+            String(String),
+            List(Vec<String>),
+        }
+
+        Ok(match Target::deserialize(d)? {
+            Target::String(s) => StringList {
+                list: s.split_whitespace().map(str::to_string).collect(),
+            },
+            Target::List(list) => StringList { list },
+        })
+    }
 }
