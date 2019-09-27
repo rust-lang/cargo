@@ -736,6 +736,63 @@ fn transitive_new_major() {
 }
 
 #[cargo_test]
+fn shared_by_transitive() {
+    Package::new("baz", "0.1.1").publish();
+
+    let baz = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("baz", "0.1.2"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = " 0.1.0"
+
+                    [dependencies]
+                    bar = {{ path = "bar" }}
+                    baz = "0.1"
+
+                    [patch.crates-io]
+                    baz = {{ git = "{}", version = "0.1" }}
+                "#,
+                baz.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                baz = "0.1.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]`
+[UPDATING] `[ROOT][..]` index
+[COMPILING] baz v0.1.2 [..]
+[COMPILING] bar v0.1.0 [..]
+[COMPILING] foo v0.1.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn remove_patch() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();

@@ -2,18 +2,16 @@ use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
-// "ensure" seems to require "bail" be in scope (macro hygiene issue?).
-#[allow(unused_imports)]
-use failure::{bail, ensure};
+use failure::format_err;
 use log::debug;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
-use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;
-use super::types::{ConflictMap, FeaturesSet, ResolveOpts};
+use super::errors::ActivateResult;
+use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 
 pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -109,7 +107,7 @@ impl Context {
         summary: &Summary,
         opts: &ResolveOpts,
         parent: Option<(&Summary, &Dependency)>,
-    ) -> CargoResult<bool> {
+    ) -> ActivateResult<bool> {
         let id = summary.package_id();
         let age: ContextAge = self.age();
         match self.activations.entry(id.as_activations_key()) {
@@ -122,12 +120,15 @@ impl Context {
             }
             im_rc::hashmap::Entry::Vacant(v) => {
                 if let Some(link) = summary.links() {
-                    ensure!(
-                        self.links.insert(link, id).is_none(),
-                        "Attempting to resolve a dependency with more then one crate with the \
-                         links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
-                        &*link
-                    );
+                    if self.links.insert(link, id).is_some() {
+                        return Err(format_err!(
+                            "Attempting to resolve a dependency with more then \
+                             one crate with links={}.\nThis will not build as \
+                             is. Consider rebuilding the .lock file.",
+                            &*link
+                        )
+                        .into());
+                    }
                 }
                 v.insert((summary.clone(), age));
 
@@ -150,7 +151,11 @@ impl Context {
                     if dep.source_id() != id.source_id() {
                         let key = (id.name(), dep.source_id(), id.version().into());
                         let prev = self.activations.insert(key, (summary.clone(), age));
-                        assert!(prev.is_none());
+                        if let Some((previous_summary, _)) = prev {
+                            return Err(
+                                (previous_summary.package_id(), ConflictReason::Semver).into()
+                            );
+                        }
                     }
                 }
 
