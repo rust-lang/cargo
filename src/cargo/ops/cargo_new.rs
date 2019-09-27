@@ -1,17 +1,18 @@
+use crate::core::{compiler, Workspace};
+use crate::util::errors::{self, CargoResult, CargoResultExt};
+use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use crate::util::{paths, validate_package_name, Config};
+use git2::Config as GitConfig;
+use git2::Repository as GitRepository;
+use serde::de;
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
 use std::fmt;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-
-use git2::Config as GitConfig;
-use git2::Repository as GitRepository;
-
-use crate::core::{compiler, Workspace};
-use crate::util::errors::{self, CargoResult, CargoResultExt};
-use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{paths, validate_package_name, Config};
+use std::str::FromStr;
 
 use toml;
 
@@ -22,6 +23,31 @@ pub enum VersionControl {
     Pijul,
     Fossil,
     NoVcs,
+}
+
+impl FromStr for VersionControl {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, failure::Error> {
+        match s {
+            "git" => Ok(VersionControl::Git),
+            "hg" => Ok(VersionControl::Hg),
+            "pijul" => Ok(VersionControl::Pijul),
+            "fossil" => Ok(VersionControl::Fossil),
+            "none" => Ok(VersionControl::NoVcs),
+            other => failure::bail!("unknown vcs specification: `{}`", other),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for VersionControl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
 }
 
 #[derive(Debug)]
@@ -102,9 +128,11 @@ impl NewOptions {
     }
 }
 
+#[derive(Deserialize)]
 struct CargoNewConfig {
     name: Option<String>,
     email: Option<String>,
+    #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
 }
 
@@ -543,7 +571,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
 fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
-    let cfg = global_config(config)?;
+    let cfg = config.get::<CargoNewConfig>("cargo-new")?;
 
     // Using the push method with two arguments ensures that the entries for
     // both `ignore` and `hgignore` are in sync.
@@ -751,31 +779,4 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     });
 
     Ok((name, email))
-}
-
-fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
-    let name = config.get_string("cargo-new.name")?.map(|s| s.val);
-    let email = config.get_string("cargo-new.email")?.map(|s| s.val);
-    let vcs = config.get_string("cargo-new.vcs")?;
-
-    let vcs = match vcs.as_ref().map(|p| (&p.val[..], &p.definition)) {
-        Some(("git", _)) => Some(VersionControl::Git),
-        Some(("hg", _)) => Some(VersionControl::Hg),
-        Some(("pijul", _)) => Some(VersionControl::Pijul),
-        Some(("none", _)) => Some(VersionControl::NoVcs),
-        Some((s, p)) => {
-            return Err(internal(format!(
-                "invalid configuration for key \
-                 `cargo-new.vcs`, unknown vcs `{}` \
-                 (found in {})",
-                s, p
-            )));
-        }
-        None => None,
-    };
-    Ok(CargoNewConfig {
-        name,
-        email,
-        version_control: vcs,
-    })
 }
