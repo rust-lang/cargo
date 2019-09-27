@@ -290,7 +290,16 @@ fn check_repo_state(
             .filter(|file| {
                 let relative = file.strip_prefix(workdir).unwrap();
                 if let Ok(status) = repo.status_file(relative) {
-                    status != git2::Status::CURRENT
+                    if status == git2::Status::CURRENT {
+                        false
+                    } else {
+                        if relative.to_str().unwrap_or("") == "Cargo.lock" {
+                            // It is OK to include this file even if it is ignored.
+                            status != git2::Status::IGNORED
+                        } else {
+                            true
+                        }
+                    }
                 } else {
                     submodule_dirty(file)
                 }
