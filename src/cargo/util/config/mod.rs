@@ -445,10 +445,6 @@ impl Config {
         }
     }
 
-    pub fn get_bool(&self, key: &str) -> CargoResult<OptValue<bool>> {
-        self.get::<Option<Value<bool>>>(key)
-    }
-
     fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
