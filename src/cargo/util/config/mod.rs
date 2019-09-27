@@ -33,6 +33,12 @@ use crate::util::{IntoUrl, IntoUrlWithBase};
 mod de;
 use de::Deserializer;
 
+mod value;
+pub use value::{Definition, OptValue, Value};
+
+mod key;
+use key::ConfigKey;
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 ///
@@ -380,10 +386,9 @@ impl Config {
         T: FromStr,
         <T as FromStr>::Err: fmt::Display,
     {
-        let key = key.to_env();
-        match self.env.get(&key) {
+        match self.env.get(key.as_env_key()) {
             Some(value) => {
-                let definition = Definition::Environment(key);
+                let definition = Definition::Environment(key.as_env_key().to_string());
                 Ok(Some(Value {
                     val: value
                         .parse()
@@ -396,15 +401,14 @@ impl Config {
     }
 
     fn has_key(&self, key: &ConfigKey) -> bool {
-        let env_key = key.to_env();
-        if self.env.get(&env_key).is_some() {
+        if self.env.get(key.as_env_key()).is_some() {
             return true;
         }
-        let env_pattern = format!("{}_", env_key);
+        let env_pattern = format!("{}_", key.as_env_key());
         if self.env.keys().any(|k| k.starts_with(&env_pattern)) {
             return true;
         }
-        if let Ok(o_cv) = self.get_cv(&key.to_config()) {
+        if let Ok(o_cv) = self.get_cv(key.as_config_key()) {
             if o_cv.is_some() {
                 return true;
             }
@@ -421,14 +425,13 @@ impl Config {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
-                let config_key = key.to_config();
-                let o_cv = self.get_cv(&config_key)?;
+                let o_cv = self.get_cv(key.as_config_key())?;
                 match o_cv {
                     Some(CV::String(s, path)) => Ok(Some(Value {
                         val: s,
                         definition: Definition::Path(path),
                     })),
-                    Some(cv) => Err(ConfigError::expected(&config_key, "a string", &cv)),
+                    Some(cv) => Err(ConfigError::expected(key.as_config_key(), "a string", &cv)),
                     None => Ok(None),
                 }
             }
@@ -444,14 +447,17 @@ impl Config {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
-                let config_key = key.to_config();
-                let o_cv = self.get_cv(&config_key)?;
+                let o_cv = self.get_cv(key.as_config_key())?;
                 match o_cv {
                     Some(CV::Boolean(b, path)) => Ok(Some(Value {
                         val: b,
                         definition: Definition::Path(path),
                     })),
-                    Some(cv) => Err(ConfigError::expected(&config_key, "true/false", &cv)),
+                    Some(cv) => Err(ConfigError::expected(
+                        key.as_config_key(),
+                        "true/false",
+                        &cv,
+                    )),
                     None => Ok(None),
                 }
             }
@@ -548,15 +554,18 @@ impl Config {
     }
 
     fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
-        let config_key = key.to_config();
         match self.get_env::<i64>(key)? {
             Some(v) => Ok(Some(v)),
-            None => match self.get_cv(&config_key)? {
+            None => match self.get_cv(key.as_config_key())? {
                 Some(CV::Integer(i, path)) => Ok(Some(Value {
                     val: i,
                     definition: Definition::Path(path),
                 })),
-                Some(cv) => Err(ConfigError::expected(&config_key, "an integer", &cv)),
+                Some(cv) => Err(ConfigError::expected(
+                    key.as_config_key(),
+                    "an integer",
+                    &cv,
+                )),
                 None => Ok(None),
             },
         }
@@ -1012,83 +1021,6 @@ impl Config {
     pub fn release_package_cache_lock(&self) {}
 }
 
-/// A segment of a config key.
-///
-/// Config keys are split on dots for regular keys, or underscores for
-/// environment keys.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-enum ConfigKeyPart {
-    /// Case-insensitive part (checks uppercase in environment keys).
-    Part(String),
-    /// Case-sensitive part (environment keys must match exactly).
-    CasePart(String),
-}
-
-impl ConfigKeyPart {
-    fn to_env(&self) -> String {
-        match self {
-            ConfigKeyPart::Part(s) => s.replace("-", "_").to_uppercase(),
-            ConfigKeyPart::CasePart(s) => s.clone(),
-        }
-    }
-
-    fn to_config(&self) -> String {
-        match self {
-            ConfigKeyPart::Part(s) => s.clone(),
-            ConfigKeyPart::CasePart(s) => s.clone(),
-        }
-    }
-}
-
-/// Key for a configuration variable.
-#[derive(Debug, Clone)]
-pub(crate) struct ConfigKey(Vec<ConfigKeyPart>);
-
-impl ConfigKey {
-    fn from_str(key: &str) -> ConfigKey {
-        ConfigKey(
-            key.split('.')
-                .map(|p| ConfigKeyPart::Part(p.to_string()))
-                .collect(),
-        )
-    }
-
-    fn join(&self, next: ConfigKeyPart) -> ConfigKey {
-        let mut res = self.clone();
-        res.0.push(next);
-        res
-    }
-
-    fn to_env(&self) -> String {
-        format!(
-            "CARGO_{}",
-            self.0
-                .iter()
-                .map(|p| p.to_env())
-                .collect::<Vec<_>>()
-                .join("_")
-        )
-    }
-
-    fn to_config(&self) -> String {
-        self.0
-            .iter()
-            .map(|p| p.to_config())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
-    fn last(&self) -> &ConfigKeyPart {
-        self.0.last().unwrap()
-    }
-}
-
-impl fmt::Display for ConfigKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.to_config().fmt(f)
-    }
-}
-
 /// Internal error for serde errors.
 #[derive(Debug)]
 pub struct ConfigError {
@@ -1116,16 +1048,20 @@ impl ConfigError {
         }
     }
 
-    fn missing(key: &str) -> ConfigError {
+    fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("missing config key `{}`", key),
+            error: failure::format_err!("missing config key `{}`", key.as_config_key()),
             definition: None,
         }
     }
 
-    fn with_key_context(self, key: &str, definition: Definition) -> ConfigError {
+    fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("could not load config key `{}`: {}", key, self),
+            error: failure::format_err!(
+                "could not load config key `{}`: {}",
+                key.as_config_key(),
+                self
+            ),
             definition: Some(definition),
         }
     }
@@ -1185,19 +1121,6 @@ pub enum ConfigValue {
     List(Vec<(String, PathBuf)>, PathBuf),
     Table(HashMap<String, ConfigValue>, PathBuf),
     Boolean(bool, PathBuf),
-}
-
-pub struct Value<T> {
-    pub val: T,
-    pub definition: Definition,
-}
-
-pub type OptValue<T> = Option<Value<T>>;
-
-#[derive(Clone, Debug)]
-pub enum Definition {
-    Path(PathBuf),
-    Environment(String),
 }
 
 impl fmt::Debug for ConfigValue {
@@ -1378,24 +1301,6 @@ impl ConfigValue {
             key,
             self.definition_path().display()
         )
-    }
-}
-
-impl Definition {
-    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
-        match *self {
-            Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) => config.cwd(),
-        }
-    }
-}
-
-impl fmt::Display for Definition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Definition::Path(ref p) => p.display().fmt(f),
-            Definition::Environment(ref key) => write!(f, "environment variable `{}`", key),
-        }
     }
 }
 
