@@ -548,12 +548,6 @@ impl Config {
         }
     }
 
-    // Recommended to use `get` if you want a specific type, such as an unsigned value.
-    // Example: `config.get::<Option<u32>>("some.key")?`.
-    pub fn get_i64(&self, key: &str) -> CargoResult<OptValue<i64>> {
-        self.get::<Option<Value<i64>>>(key)
-    }
-
     fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
         match self.get_env::<i64>(key)? {
             Some(v) => Ok(Some(v)),
