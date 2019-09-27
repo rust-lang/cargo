@@ -322,7 +322,6 @@ impl Profiles {
             let release = match profile_kind {
                 ProfileKind::Release => true,
                 ProfileKind::Custom(ref s) if s == "bench" => true,
-                ProfileKind::Custom(ref s) if s == "test" => false,
                 _ => false,
             };
 
@@ -397,7 +396,17 @@ impl Profiles {
     /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
     pub fn base_profile(&self, profile_kind: &ProfileKind) -> CargoResult<Profile> {
-        match self.by_name.get(profile_kind.name()) {
+        let profile_name = if !self.named_profiles_enabled {
+            match profile_kind {
+                ProfileKind::Release => "release",
+                ProfileKind::Custom(ref s) if s == "bench" => "bench",
+                _ => "dev",
+            }
+        } else {
+            profile_kind.name()
+        };
+
+        match self.by_name.get(profile_name) {
             None => failure::bail!("Profile `{}` undefined", profile_kind.name()),
             Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
         }
