@@ -60,9 +60,7 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
                 .collect(),
         ),
         Ok(None) => None,
-        Err(_) => config
-            .get_list(&alias_name)?
-            .map(|record| record.val.iter().map(|s| s.0.to_string()).collect()),
+        Err(_) => config.get::<Option<Vec<String>>>(&alias_name)?,
     };
     let result = user_alias.or_else(|| match command {
         "b" => Some(vec!["build".to_string()]),
