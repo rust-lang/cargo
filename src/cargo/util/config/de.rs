@@ -113,10 +113,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         V: de::Visitor<'de>,
     {
         if name == value::NAME && fields == value::FIELDS {
-            return visitor.visit_map(ValueDeserializer {
-                hits: 0,
-                deserializer: self,
-            });
+            return visitor.visit_map(ValueDeserializer { hits: 0, de: self });
         }
         visitor.visit_map(ConfigMapAccess::new_struct(self, fields)?)
     }
@@ -154,37 +151,11 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         visitor.visit_seq(ConfigSeqAccess::new(self)?)
     }
 
-    fn deserialize_newtype_struct<V>(
-        self,
-        name: &'static str,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'de>,
-    {
-        if name == "ConfigRelativePath" {
-            match self.config.get_string_priv(&self.key)? {
-                Some(v) => {
-                    let path = v
-                        .definition
-                        .root(self.config)
-                        .join(v.val)
-                        .display()
-                        .to_string();
-                    visitor.visit_newtype_struct(path.into_deserializer())
-                }
-                None => Err(ConfigError::missing(&self.key)),
-            }
-        } else {
-            visitor.visit_newtype_struct(self)
-        }
-    }
-
     // These aren't really supported, yet.
     serde::forward_to_deserialize_any! {
         f32 f64 char str bytes
         byte_buf unit unit_struct
-        enum identifier ignored_any
+        enum identifier ignored_any newtype_struct
     }
 }
 
@@ -371,7 +342,7 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 
 struct ValueDeserializer<'config> {
     hits: u32,
-    deserializer: Deserializer<'config>,
+    de: Deserializer<'config>,
 }
 
 impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
@@ -397,18 +368,80 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
     where
         V: de::DeserializeSeed<'de>,
     {
-        if self.hits == 1 {
-            seed.deserialize(Deserializer {
-                config: self.deserializer.config,
-                key: self.deserializer.key.clone(),
-            })
-        } else {
-            // let env = self.deserializer.key.to_env();
-            // if self.deserializer.config.env.contains_key(&env) {
-            // } else {
-            // }
-            // if let someself.deserializer.config.get_env(&self.deserializer.key)
-            panic!()
+        macro_rules! bail {
+            ($($t:tt)*) => (return Err(failure::format_err!($($t)*).into()))
         }
+
+        // If this is the first time around we deserialize the `value` field
+        // which is the actual deserializer
+        if self.hits == 1 {
+            return seed.deserialize(self.de.clone());
+        }
+
+        // ... otherwise we're deserializing the `definition` field, so we need
+        // to figure out where the field we just deserialized was defined at.
+        let env = self.de.key.as_env_key();
+        if self.de.config.env.contains_key(env) {
+            return seed.deserialize(Tuple2Deserializer(1i32, env));
+        }
+        let val = match self.de.config.get_cv(self.de.key.as_config_key())? {
+            Some(val) => val,
+            None => bail!("failed to find definition of `{}`", self.de.key),
+        };
+        let path = match val.definition_path().to_str() {
+            Some(s) => s,
+            None => bail!("failed to convert {:?} to utf-8", val.definition_path()),
+        };
+        seed.deserialize(Tuple2Deserializer(0i32, path))
+    }
+}
+
+struct Tuple2Deserializer<T, U>(T, U);
+
+impl<'de, T, U> de::Deserializer<'de> for Tuple2Deserializer<T, U>
+where
+    T: IntoDeserializer<'de, ConfigError>,
+    U: IntoDeserializer<'de, ConfigError>,
+{
+    type Error = ConfigError;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, ConfigError>
+    where
+        V: de::Visitor<'de>,
+    {
+        struct SeqVisitor<T, U> {
+            first: Option<T>,
+            second: Option<U>,
+        }
+        impl<'de, T, U> de::SeqAccess<'de> for SeqVisitor<T, U>
+        where
+            T: IntoDeserializer<'de, ConfigError>,
+            U: IntoDeserializer<'de, ConfigError>,
+        {
+            type Error = ConfigError;
+            fn next_element_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+            where
+                K: de::DeserializeSeed<'de>,
+            {
+                if let Some(first) = self.first.take() {
+                    return seed.deserialize(first.into_deserializer()).map(Some);
+                }
+                if let Some(second) = self.second.take() {
+                    return seed.deserialize(second.into_deserializer()).map(Some);
+                }
+                Ok(None)
+            }
+        }
+
+        visitor.visit_seq(SeqVisitor {
+            first: Some(self.0),
+            second: Some(self.1),
+        })
+    }
+
+    serde::forward_to_deserialize_any! {
+        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string seq
+        bytes byte_buf map struct option unit newtype_struct
+        ignored_any unit_struct tuple_struct tuple enum identifier
     }
 }

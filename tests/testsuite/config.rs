@@ -706,6 +706,7 @@ ns2 = 456
     let config = new_config(&[("CARGO_NSE", "987"), ("CARGO_NS2", "654")]);
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
+    #[serde(transparent)]
     struct NewS(i32);
     assert_eq!(config.get::<NewS>("ns").unwrap(), NewS(123));
     assert_eq!(config.get::<NewS>("ns2").unwrap(), NewS(654));
@@ -734,35 +735,35 @@ abs = '{}'
         config
             .get::<config::ConfigRelativePath>("p1")
             .unwrap()
-            .path(),
+            .resolve(&config),
         paths::root().join("foo/bar")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p2")
             .unwrap()
-            .path(),
+            .resolve(&config),
         paths::root().join("../abc")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p3")
             .unwrap()
-            .path(),
+            .resolve(&config),
         paths::root().join("d/e")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("abs")
             .unwrap()
-            .path(),
+            .resolve(&config),
         paths::home()
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("epath")
             .unwrap()
-            .path(),
+            .resolve(&config),
         paths::root().join("a/b")
     );
 }

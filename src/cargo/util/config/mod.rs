@@ -39,6 +39,9 @@ pub use value::{Definition, OptValue, Value};
 mod key;
 use key::ConfigKey;
 
+mod path;
+pub use path::ConfigRelativePath;
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 ///
@@ -417,8 +420,7 @@ impl Config {
     }
 
     pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
-        self.get_string_priv(&ConfigKey::from_str(key))
-            .map_err(|e| e.into())
+        self.get::<Option<Value<String>>>(key)
     }
 
     fn get_string_priv(&self, key: &ConfigKey) -> Result<OptValue<String>, ConfigError> {
@@ -439,8 +441,7 @@ impl Config {
     }
 
     pub fn get_bool(&self, key: &str) -> CargoResult<OptValue<bool>> {
-        self.get_bool_priv(&ConfigKey::from_str(key))
-            .map_err(|e| e.into())
+        self.get::<Option<Value<bool>>>(key)
     }
 
     fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
@@ -464,6 +465,15 @@ impl Config {
         }
     }
 
+    pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
+        self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
+            v.map(|v| Value {
+                val: v.val.resolve(self),
+                definition: v.definition,
+            })
+        })
+    }
+
     fn string_to_path(&self, value: String, definition: &Definition) -> PathBuf {
         let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
         if is_path {
@@ -471,17 +481,6 @@ impl Config {
         } else {
             // A pathless name.
             PathBuf::from(value)
-        }
-    }
-
-    pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
-        if let Some(val) = self.get_string(key)? {
-            Ok(Some(Value {
-                val: self.string_to_path(val.val, &val.definition),
-                definition: val.definition,
-            }))
-        } else {
-            Ok(None)
         }
     }
 
@@ -514,24 +513,26 @@ impl Config {
     }
 
     pub fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
-        if let Some(value) = self.get_env::<String>(&ConfigKey::from_str(key))? {
-            return Ok(Some(Value {
-                val: value.val.split(' ').map(str::to_string).collect(),
-                definition: value.definition,
-            }));
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Target {
+            String(String),
+            List(Vec<String>),
         }
 
-        match self.get_cv(key)? {
-            Some(CV::List(i, path)) => Ok(Some(Value {
-                val: i.into_iter().map(|(s, _)| s).collect(),
-                definition: Definition::Path(path),
-            })),
-            Some(CV::String(i, path)) => Ok(Some(Value {
-                val: i.split(' ').map(str::to_string).collect(),
-                definition: Definition::Path(path),
-            })),
-            Some(val) => self.expected("list or string", key, &val),
+        match self.get::<Option<Value<Target>>>(key)? {
             None => Ok(None),
+            Some(Value {
+                val: Target::String(s),
+                definition,
+            }) => Ok(Some(Value {
+                val: s.split(' ').map(str::to_string).collect(),
+                definition,
+            })),
+            Some(Value {
+                val: Target::List(val),
+                definition,
+            }) => Ok(Some(Value { val, definition })),
         }
     }
 
@@ -549,8 +550,7 @@ impl Config {
     // Recommended to use `get` if you want a specific type, such as an unsigned value.
     // Example: `config.get::<Option<u32>>("some.key")?`.
     pub fn get_i64(&self, key: &str) -> CargoResult<OptValue<i64>> {
-        self.get_integer(&ConfigKey::from_str(key))
-            .map_err(|e| e.into())
+        self.get::<Option<Value<i64>>>(key)
     }
 
     fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
@@ -1099,18 +1099,6 @@ impl From<failure::Error> for ConfigError {
             error,
             definition: None,
         }
-    }
-}
-
-/// Use with the `get` API to fetch a string that will be converted to a
-/// `PathBuf`. Relative paths are converted to absolute paths based on the
-/// location of the config file.
-#[derive(Debug, Eq, PartialEq, Clone, Deserialize)]
-pub struct ConfigRelativePath(PathBuf);
-
-impl ConfigRelativePath {
-    pub fn path(self) -> PathBuf {
-        self.0
     }
 }
 
