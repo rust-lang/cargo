@@ -1871,7 +1871,7 @@ pub fn clippy_driver() -> PathBuf {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum SslVersionConfig {
-    Exactly(String),
+    Single(String),
     Range(SslVersionConfigRange),
 }
 
@@ -1879,15 +1879,5 @@ pub enum SslVersionConfig {
 pub struct SslVersionConfigRange {
     pub min: Option<String>,
     pub max: Option<String>,
-}
-
-impl SslVersionConfig {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            SslVersionConfig::Exactly(_) => false,
-            SslVersionConfig::Range(SslVersionConfigRange{ min, max}) =>
-                min.is_none() && max.is_none(),
-        }
-    }
 }
 

@@ -852,7 +852,7 @@ hello = 'world'
 }
 
 #[cargo_test]
-fn config_get_ssl_version_exact() {
+fn config_get_ssl_version_single() {
     write_config(
         "\
 [http]
@@ -864,7 +864,7 @@ ssl-version = 'tlsv1.2'
 
     let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
     match a {
-        SslVersionConfig::Exactly(v) => assert_eq!(&v, "tlsv1.2"),
+        SslVersionConfig::Single(v) => assert_eq!(&v, "tlsv1.2"),
         SslVersionConfig::Range(_) => panic!("Did not expect ssl version min/max."),
     };
 }
@@ -883,7 +883,7 @@ ssl-version.max = 'tlsv1.3'
 
     let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
     match a {
-        SslVersionConfig::Exactly(_) => panic!("Did not expect exact ssl version."),
+        SslVersionConfig::Single(_) => panic!("Did not expect exact ssl version."),
         SslVersionConfig::Range(range) => {
             assert_eq!(range.min, Some(String::from("tlsv1.2")));
             assert_eq!(range.max, Some(String::from("tlsv1.3")));

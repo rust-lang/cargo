@@ -413,14 +413,14 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
-    let ssl_version = config.get::<SslVersionConfig>("http.ssl-version")?;
+    let ssl_version = config.get::<Option<SslVersionConfig>>("http.ssl-version")?;
 
     Ok(proxy_exists
         || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
         || user_agent.is_some()
-        || !ssl_version.is_empty())
+        || ssl_version.is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -456,7 +456,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     }
     if let Some(ssl_version) = config.get::<Option<SslVersionConfig>>("http.ssl-version")? {
         match ssl_version {
-            SslVersionConfig::Exactly(s) => {
+            SslVersionConfig::Single(s) => {
                 let version = to_ssl_version(s.as_str())?;
                 handle.ssl_version(version)?;
             },
