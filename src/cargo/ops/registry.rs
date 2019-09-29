@@ -18,7 +18,7 @@ use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
-use crate::util::config::{self, Config};
+use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::IntoUrl;
@@ -413,16 +413,14 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
-    let has_ssl_version = config.get_string("http.ssl-version")?.is_some()
-        || config.get_string("http.ssl-version.min")?.is_some()
-        || config.get_string("http.ssl-version.max")?.is_some();
+    let ssl_version = config.get::<SslVersionConfig>("http.ssl-version")?;
 
     Ok(proxy_exists
         || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
         || user_agent.is_some()
-        || has_ssl_version)
+        || !ssl_version.is_empty())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -456,34 +454,18 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         };
         Ok(version)
     }
-    if config.get_string("http.ssl-version")?.is_some()
-        || config.get_string("http.ssl-version.min")?.is_some()
-        || config.get_string("http.ssl-version.max")?.is_some() {
-
-        let mut min_version = SslVersion::Default;
-        let mut max_version = SslVersion::Default;
-
-        // There are two ways to configure `ssl-version`:
-        //   1. set single `ssl-version`
-        //      [http]
-        //      ssl-version = "tlsv1.3"
-        if let Some(ssl_version) = config.get_string("http.ssl-version")? {
-            min_version = to_ssl_version(ssl_version.val.as_str())?;
-            max_version = min_version;
+    if let Some(ssl_version) = config.get::<Option<SslVersionConfig>>("http.ssl-version")? {
+        match ssl_version {
+            SslVersionConfig::Exactly(s) => {
+                let version = to_ssl_version(s.as_str())?;
+                handle.ssl_version(version)?;
+            },
+            SslVersionConfig::Range(SslVersionConfigRange{ min, max}) => {
+                let min_version = min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                let max_version = max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                handle.ssl_min_max_version(min_version, max_version)?;
+            }
         }
-
-        //   2. set min and max of ssl version respectively
-        //      [http]
-        //      ssl-version.min = "tlsv1.2"
-        //      ssl-version.max = "tlsv1.3"
-        if let Some(ssl_version) = config.get_string("http.ssl-version.min")? {
-            min_version = to_ssl_version(ssl_version.val.as_str())?;
-        }
-        if let Some(ssl_version) = config.get_string("http.ssl-version.max")? {
-            max_version = to_ssl_version(ssl_version.val.as_str())?;
-        }
-
-        handle.ssl_min_max_version(min_version, max_version)?;
     }
 
     if let Some(true) = config.get::<Option<bool>>("http.debug")? {

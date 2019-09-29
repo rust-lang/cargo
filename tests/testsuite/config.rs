@@ -6,7 +6,7 @@ use std::os;
 use std::path::Path;
 
 use cargo::core::{enable_nightly_features, Shell};
-use cargo::util::config::{self, Config};
+use cargo::util::config::{self, Config, SslVersionConfig};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo_test_support::{paths, project, t};
 use serde::Deserialize;
@@ -833,3 +833,79 @@ i64max = 9223372036854775807
          invalid value: integer `123456789`, expected i8",
     );
 }
+
+#[cargo_test]
+fn config_get_ssl_version_missing() {
+    write_config(
+        "\
+[http]
+hello = 'world'
+",
+    );
+
+    let config = new_config(&[]);
+
+    assert!(config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().is_none());
+
+    let b =  config.get_string("http.ssl-version").unwrap();
+    println!("b: {:?}", if b.is_some() { "some" } else { "none" });
+}
+
+#[cargo_test]
+fn config_get_ssl_version_exact() {
+    write_config(
+        "\
+[http]
+ssl-version = 'tlsv1.2'
+",
+    );
+
+    let config = new_config(&[]);
+
+    let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
+    match a {
+        SslVersionConfig::Exactly(v) => assert_eq!(&v, "tlsv1.2"),
+        SslVersionConfig::Range(_) => panic!("Did not expect ssl version min/max."),
+    };
+}
+
+#[cargo_test]
+fn config_get_ssl_version_min_max() {
+    write_config(
+        "\
+[http]
+ssl-version.min = 'tlsv1.2'
+ssl-version.max = 'tlsv1.3'
+",
+    );
+
+    let config = new_config(&[]);
+
+    let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
+    match a {
+        SslVersionConfig::Exactly(_) => panic!("Did not expect exact ssl version."),
+        SslVersionConfig::Range(range) => {
+            assert_eq!(range.min, Some(String::from("tlsv1.2")));
+            assert_eq!(range.max, Some(String::from("tlsv1.3")));
+        }
+    };
+}
+
+#[cargo_test]
+fn config_get_ssl_version_both_forms_configured() {
+    // this is not allowed
+    write_config(
+        "\
+[http]
+ssl-version = 'tlsv1.1'
+ssl-version.min = 'tlsv1.2'
+ssl-version.max = 'tlsv1.3'
+",
+    );
+
+    let config = new_config(&[]);
+
+    assert!(config.get::<SslVersionConfig>("http.ssl-version").is_err());
+    assert!(config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().is_none());
+}
+

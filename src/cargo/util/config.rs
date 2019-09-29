@@ -1854,3 +1854,40 @@ pub fn clippy_driver() -> PathBuf {
         .unwrap_or_else(|_| "clippy-driver".into())
         .into()
 }
+
+/// Configuration for `ssl-version` in `http` section
+/// There are two ways to configure:
+///
+/// ```text
+/// [http]
+/// ssl-version = "tlsv.13"
+/// ```
+///
+/// ```text
+/// [http]
+/// ssl-version.min = "tlsv1.2"
+/// ssl-version.max = "tlsv1.3"
+/// ```
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum SslVersionConfig {
+    Exactly(String),
+    Range(SslVersionConfigRange),
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct SslVersionConfigRange {
+    pub min: Option<String>,
+    pub max: Option<String>,
+}
+
+impl SslVersionConfig {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            SslVersionConfig::Exactly(_) => false,
+            SslVersionConfig::Range(SslVersionConfigRange{ min, max}) =>
+                min.is_none() && max.is_none(),
+        }
+    }
+}
+
