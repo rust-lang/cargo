@@ -448,9 +448,11 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             "tlsv1.1" => SslVersion::Tlsv11,
             "tlsv1.2" => SslVersion::Tlsv12,
             "tlsv1.3" => SslVersion::Tlsv13,
-            _ => bail!("Invalid ssl version `{}`,\
-                       choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
-                       s),
+            _ => bail!(
+                "Invalid ssl version `{}`,\
+                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
+                s
+            ),
         };
         Ok(version)
     }
@@ -459,10 +461,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             SslVersionConfig::Single(s) => {
                 let version = to_ssl_version(s.as_str())?;
                 handle.ssl_version(version)?;
-            },
-            SslVersionConfig::Range(SslVersionConfigRange{ min, max}) => {
-                let min_version = min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
-                let max_version = max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+            }
+            SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
+                let min_version =
+                    min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                let max_version =
+                    max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
                 handle.ssl_min_max_version(min_version, max_version)?;
             }
         }

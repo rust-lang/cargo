@@ -1880,4 +1880,3 @@ pub struct SslVersionConfigRange {
     pub min: Option<String>,
     pub max: Option<String>,
 }
-

@@ -845,9 +845,12 @@ hello = 'world'
 
     let config = new_config(&[]);
 
-    assert!(config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().is_none());
+    assert!(config
+        .get::<Option<SslVersionConfig>>("http.ssl-version")
+        .unwrap()
+        .is_none());
 
-    let b =  config.get_string("http.ssl-version").unwrap();
+    let b = config.get_string("http.ssl-version").unwrap();
     println!("b: {:?}", if b.is_some() { "some" } else { "none" });
 }
 
@@ -862,7 +865,10 @@ ssl-version = 'tlsv1.2'
 
     let config = new_config(&[]);
 
-    let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
+    let a = config
+        .get::<Option<SslVersionConfig>>("http.ssl-version")
+        .unwrap()
+        .unwrap();
     match a {
         SslVersionConfig::Single(v) => assert_eq!(&v, "tlsv1.2"),
         SslVersionConfig::Range(_) => panic!("Did not expect ssl version min/max."),
@@ -881,7 +887,10 @@ ssl-version.max = 'tlsv1.3'
 
     let config = new_config(&[]);
 
-    let a = config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().unwrap();
+    let a = config
+        .get::<Option<SslVersionConfig>>("http.ssl-version")
+        .unwrap()
+        .unwrap();
     match a {
         SslVersionConfig::Single(_) => panic!("Did not expect exact ssl version."),
         SslVersionConfig::Range(range) => {
@@ -906,6 +915,8 @@ ssl-version.max = 'tlsv1.3'
     let config = new_config(&[]);
 
     assert!(config.get::<SslVersionConfig>("http.ssl-version").is_err());
-    assert!(config.get::<Option<SslVersionConfig>>("http.ssl-version").unwrap().is_none());
+    assert!(config
+        .get::<Option<SslVersionConfig>>("http.ssl-version")
+        .unwrap()
+        .is_none());
 }
-
