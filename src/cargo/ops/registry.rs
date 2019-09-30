@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use crates_io::{NewCrate, NewCrateDependency, Registry};
-use curl::easy::{Easy, InfoType, SslOpt};
+use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use failure::{bail, format_err};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
@@ -18,7 +18,7 @@ use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
-use crate::util::config::{self, Config};
+use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::IntoUrl;
@@ -413,12 +413,14 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
+    let ssl_version = config.get::<Option<SslVersionConfig>>("http.ssl-version")?;
 
     Ok(proxy_exists
         || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
-        || user_agent.is_some())
+        || user_agent.is_some()
+        || ssl_version.is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -436,6 +438,38 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&user_agent.val)?;
     } else {
         handle.useragent(&version().to_string())?;
+    }
+
+    fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
+        let version = match s {
+            "default" => SslVersion::Default,
+            "tlsv1" => SslVersion::Tlsv1,
+            "tlsv1.0" => SslVersion::Tlsv10,
+            "tlsv1.1" => SslVersion::Tlsv11,
+            "tlsv1.2" => SslVersion::Tlsv12,
+            "tlsv1.3" => SslVersion::Tlsv13,
+            _ => bail!(
+                "Invalid ssl version `{}`,\
+                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'.",
+                s
+            ),
+        };
+        Ok(version)
+    }
+    if let Some(ssl_version) = config.get::<Option<SslVersionConfig>>("http.ssl-version")? {
+        match ssl_version {
+            SslVersionConfig::Single(s) => {
+                let version = to_ssl_version(s.as_str())?;
+                handle.ssl_version(version)?;
+            }
+            SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
+                let min_version =
+                    min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                let max_version =
+                    max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                handle.ssl_min_max_version(min_version, max_version)?;
+            }
+        }
     }
 
     if let Some(true) = config.get::<Option<bool>>("http.debug")? {
