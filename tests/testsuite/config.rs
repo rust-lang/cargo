@@ -849,9 +849,6 @@ hello = 'world'
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .is_none());
-
-    let b = config.get_string("http.ssl-version").unwrap();
-    println!("b: {:?}", if b.is_some() { "some" } else { "none" });
 }
 
 #[cargo_test]

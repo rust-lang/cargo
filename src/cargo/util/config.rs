@@ -1860,7 +1860,7 @@ pub fn clippy_driver() -> PathBuf {
 ///
 /// ```text
 /// [http]
-/// ssl-version = "tlsv.13"
+/// ssl-version = "tlsv1.3"
 /// ```
 ///
 /// ```text
