@@ -161,7 +161,7 @@ fn deps_of_roots<'a, 'cfg>(roots: &[Unit<'a>], mut state: &mut State<'a, 'cfg>) 
             // without, once for `--test`). In particular, the lib included for
             // Doc tests and examples are `Build` mode here.
             let unit_for = if unit.mode.is_any_test() || state.bcx.build_config.test() {
-                UnitFor::new_test()
+                UnitFor::new_test(state.bcx.config)
             } else if unit.target.is_custom_build() {
                 // This normally doesn't happen, except `clean` aggressively
                 // generates all units.

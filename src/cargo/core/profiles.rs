@@ -357,9 +357,10 @@ impl Profiles {
             Some(r) => r,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
-        // `panic` should not be set for tests/benches, or any of their
-        // dependencies.
-        if !unit_for.is_panic_abort_ok() || mode.is_any_test() {
+        // `panic` may not be set for tests/benches, or any of their
+        // dependencies, so handle that here if that's what `UnitFor` tells us
+        // to do.
+        if !unit_for.is_panic_abort_ok() {
             profile.panic = PanicStrategy::Unwind;
         }
 
@@ -901,6 +902,8 @@ impl UnitFor {
     pub fn new_build() -> UnitFor {
         UnitFor {
             build: true,
+            // Force build scripts to always use `panic=unwind` for now to
+            // maximally share dependencies with procedural macros.
             panic_abort_ok: false,
         }
     }
@@ -909,22 +912,33 @@ impl UnitFor {
     pub fn new_compiler() -> UnitFor {
         UnitFor {
             build: false,
+            // Force plugins to use `panic=abort` so panics in the compiler do
+            // not abort the process but instead end with a reasonable error
+            // message that involves catching the panic in the compiler.
             panic_abort_ok: false,
         }
     }
 
     /// A unit for a test/bench target or their dependencies.
-    pub fn new_test() -> UnitFor {
+    ///
+    /// Note that `config` is taken here for unstable CLI features to detect
+    /// whether `panic=abort` is supported for tests. Historical versions of
+    /// rustc did not support this, but newer versions do with an unstable
+    /// compiler flag.
+    pub fn new_test(config: &Config) -> UnitFor {
         UnitFor {
             build: false,
-            panic_abort_ok: false,
+            panic_abort_ok: config.cli_unstable().panic_abort_tests,
         }
     }
 
     /// Creates a variant based on `for_host` setting.
     ///
-    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky fashion so
-    /// that all its dependencies also have `panic_abort_ok=false`.
+    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
+    /// fashion so that all its dependencies also have `panic_abort_ok=false`.
+    /// This'll help ensure that once we start compiling for the host platform
+    /// (build scripts, plugins, proc macros, etc) we'll share the same build
+    /// graph where everything is `panic=unwind`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             build: self.build || for_host,
@@ -938,7 +952,8 @@ impl UnitFor {
         self.build
     }
 
-    /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
+    /// Returns `true` if this unit is allowed to set the `panic=abort`
+    /// compiler flag.
     pub fn is_panic_abort_ok(self) -> bool {
         self.panic_abort_ok
     }

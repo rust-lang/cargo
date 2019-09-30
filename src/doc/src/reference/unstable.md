@@ -475,3 +475,17 @@ that information for change-detection (if any binary dependency changes, then
 the crate will be rebuilt). The primary use case is for building the compiler
 itself, which has implicit dependencies on the standard library that would
 otherwise be untracked for change-detection.
+
+### panic-abort-tests
+
+The `-Z panic-abort-tests` flag will enable nightly support to compile test
+harness crates with `-Cpanic=abort`. Without this flag Cargo will compile tests,
+and everything they depend on, with `-Cpanic=unwind` because it's the only way
+`test`-the-crate knows how to operate. As of [rust-lang/rust#64158], however,
+the `test` crate supports `-C panic=abort` with a test-per-process, and can help
+avoid compiling crate graphs multiple times.
+
+It's currently unclear how this feature will be stabilized in Cargo, but we'd
+like to stabilize it somehow!
+
+[rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158

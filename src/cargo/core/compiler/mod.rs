@@ -799,6 +799,17 @@ fn build_base_args<'a, 'cfg>(
 
     if test && unit.target.harness() {
         cmd.arg("--test");
+
+        // Cargo has historically never compiled `--test` binaries with
+        // `panic=abort` because the `test` crate itself didn't support it.
+        // Support is now upstream, however, but requires an unstable flag to be
+        // passed when compiling the test. We require, in Cargo, an unstable
+        // flag to pass to rustc, so register that here. Eventually this flag
+        // will simply not be needed when the behavior is stabilized in the Rust
+        // compiler itself.
+        if *panic == PanicStrategy::Abort {
+            cmd.arg("-Zpanic-abort-tests");
+        }
     } else if test {
         cmd.arg("--cfg").arg("test");
     }
