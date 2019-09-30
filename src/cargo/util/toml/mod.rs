@@ -68,7 +68,7 @@ fn do_read_manifest(
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
-            if key == "profile.debug" || key == "profiles.debug" {
+            if key == "profiles.debug" {
                 warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
             }
         }
@@ -270,30 +270,24 @@ pub struct TomlManifest {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles {
-    pub test: Option<TomlProfile>,
-    pub doc: Option<TomlProfile>,
-    pub bench: Option<TomlProfile>,
-    pub dev: Option<TomlProfile>,
-    pub release: Option<TomlProfile>,
-}
+pub struct TomlProfiles(BTreeMap<String, TomlProfile>);
 
 impl TomlProfiles {
+    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+        &self.0
+    }
+
+    pub fn get(&self, name: &'static str) -> Option<&TomlProfile> {
+        self.0.get(&String::from(name))
+    }
+
     pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
-        if let Some(ref test) = self.test {
-            test.validate("test", features, warnings)?;
-        }
-        if let Some(ref doc) = self.doc {
-            doc.validate("doc", features, warnings)?;
-        }
-        if let Some(ref bench) = self.bench {
-            bench.validate("bench", features, warnings)?;
-        }
-        if let Some(ref dev) = self.dev {
-            dev.validate("dev", features, warnings)?;
-        }
-        if let Some(ref release) = self.release {
-            release.validate("release", features, warnings)?;
+        for (name, profile) in &self.0 {
+            if name == "debug" {
+                warnings.push("use `[profile.dev]` to configure debug builds".to_string());
+            }
+
+            profile.validate(&name, features, warnings)?;
         }
         Ok(())
     }
@@ -416,6 +410,8 @@ pub struct TomlProfile {
     pub incremental: Option<bool>,
     pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
+    pub dir_name: Option<String>,
+    pub inherits: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -470,16 +466,39 @@ impl TomlProfile {
             }
         }
 
+        // Feature gate definition of named profiles
         match name {
-            "dev" | "release" => {}
+            "dev" | "release" | "bench" | "test" | "doc" => {}
             _ => {
-                if self.overrides.is_some() || self.build_override.is_some() {
-                    bail!(
-                        "Profile overrides may only be specified for \
-                         `dev` or `release` profile, not `{}`.",
-                        name
-                    );
-                }
+                features.require(Feature::named_profiles())?;
+            }
+        }
+
+        // Profile name validation
+        Self::validate_name(name, "profile name")?;
+
+        // Feature gate on uses of keys related to named profiles
+        if self.inherits.is_some() {
+            features.require(Feature::named_profiles())?;
+        }
+
+        if self.dir_name.is_some() {
+            features.require(Feature::named_profiles())?;
+        }
+
+        // `dir-name` validation
+        match &self.dir_name {
+            None => {}
+            Some(dir_name) => {
+                Self::validate_name(&dir_name, "dir-name")?;
+            }
+        }
+
+        // `inherits` validation
+        match &self.inherits {
+            None => {}
+            Some(inherits) => {
+                Self::validate_name(&inherits, "inherits")?;
             }
         }
 
@@ -507,6 +526,35 @@ impl TomlProfile {
         Ok(())
     }
 
+    /// Validate dir-names and profile names according to RFC 2678.
+    pub fn validate_name(name: &str, what: &str) -> CargoResult<()> {
+        if let Some(ch) = name
+            .chars()
+            .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
+        {
+            failure::bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
+        }
+
+        match name {
+            "package" | "build" => {
+                failure::bail!("Invalid {}: `{}`", what, name);
+            }
+            "debug" if what == "profile" => {
+                if what == "profile name" {
+                    // Allowed, but will emit warnings
+                } else {
+                    failure::bail!("Invalid {}: `{}`", what, name);
+                }
+            }
+            "doc" if what == "dir-name" => {
+                failure::bail!("Invalid {}: `{}`", what, name);
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
     fn validate_override(&self) -> CargoResult<()> {
         if self.overrides.is_some() || self.build_override.is_some() {
             bail!("Profile overrides cannot be nested.");
@@ -521,6 +569,60 @@ impl TomlProfile {
             bail!("`rpath` may not be specified in a profile override.")
         }
         Ok(())
+    }
+
+    pub fn merge(&mut self, profile: &TomlProfile) {
+        if let Some(v) = &profile.opt_level {
+            self.opt_level = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.lto {
+            self.lto = Some(v.clone());
+        }
+
+        if let Some(v) = profile.codegen_units {
+            self.codegen_units = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.debug {
+            self.debug = Some(v.clone());
+        }
+
+        if let Some(v) = profile.debug_assertions {
+            self.debug_assertions = Some(v.clone());
+        }
+
+        if let Some(v) = profile.rpath {
+            self.rpath = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.panic {
+            self.panic = Some(v.clone());
+        }
+
+        if let Some(v) = profile.overflow_checks {
+            self.overflow_checks = Some(v.clone());
+        }
+
+        if let Some(v) = profile.incremental {
+            self.incremental = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.overrides {
+            self.overrides = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.build_override {
+            self.build_override = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.inherits {
+            self.inherits = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.dir_name {
+            self.dir_name = Some(v.clone());
+        }
     }
 }
 

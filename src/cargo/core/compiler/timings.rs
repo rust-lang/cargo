@@ -116,12 +116,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             })
             .collect();
         let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
-        let profile = if bcx.build_config.release {
-            "release"
-        } else {
-            "dev"
-        }
-        .to_string();
+        let profile = bcx.build_config.profile_kind.name().to_owned();
 
         Timings {
             config: bcx.config,

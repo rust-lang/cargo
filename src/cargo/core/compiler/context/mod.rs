@@ -298,15 +298,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<()> {
-        let dest = if self.bcx.build_config.release {
-            "release"
-        } else {
-            "debug"
-        };
-        let host_layout = Layout::new(self.bcx.ws, None, dest)?;
+        let profile_kind = &self.bcx.build_config.profile_kind;
+        let dest = self.bcx.profiles.get_dir_name(profile_kind);
+        let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
         if let CompileKind::Target(target) = self.bcx.build_config.requested_kind {
-            let layout = Layout::new(self.bcx.ws, Some(target), dest)?;
+            let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
             standard_lib::prepare_sysroot(&layout)?;
             targets.insert(target, layout);
         }

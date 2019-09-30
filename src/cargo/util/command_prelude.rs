@@ -3,7 +3,7 @@ use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::{paths, validate_package_name};
+use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_tests,
@@ -15,7 +15,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::PathBuf;
 
-pub use crate::core::compiler::CompileMode;
+pub use crate::core::compiler::{CompileMode, ProfileKind};
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 
@@ -114,6 +114,10 @@ pub trait AppExt: Sized {
 
     fn arg_release(self, release: &'static str) -> Self {
         self._arg(opt("release", release))
+    }
+
+    fn arg_profile(self, profile: &'static str) -> Self {
+        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
     }
 
     fn arg_doc(self, doc: &'static str) -> Self {
@@ -232,6 +236,12 @@ pub fn subcommand(name: &'static str) -> App {
     ])
 }
 
+// Determines whether or not to gate `--profile` as unstable when resolving it.
+pub enum ProfileChecking {
+    Checked,
+    Unchecked,
+}
+
 pub trait ArgMatchesExt {
     fn value_of_u32(&self, name: &str) -> CargoResult<Option<u32>> {
         let arg = match self._value_of(name) {
@@ -284,11 +294,54 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
+    fn get_profile_kind(
+        &self,
+        config: &Config,
+        default: ProfileKind,
+        profile_checking: ProfileChecking,
+    ) -> CargoResult<ProfileKind> {
+        let specified_profile = match self._value_of("profile") {
+            None => None,
+            Some("dev") => Some(ProfileKind::Dev),
+            Some("release") => Some(ProfileKind::Release),
+            Some(name) => {
+                TomlProfile::validate_name(name, "profile name")?;
+                Some(ProfileKind::Custom(name.to_string()))
+            }
+        };
+
+        match profile_checking {
+            ProfileChecking::Unchecked => {}
+            ProfileChecking::Checked => {
+                if specified_profile.is_some() {
+                    if !config.cli_unstable().unstable_options {
+                        failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
+                    }
+                }
+            }
+        }
+
+        if self._is_present("release") {
+            match specified_profile {
+                None | Some(ProfileKind::Release) => Ok(ProfileKind::Release),
+                _ => failure::bail!("Conflicting usage of --profile and --release"),
+            }
+        } else if self._is_present("debug") {
+            match specified_profile {
+                None | Some(ProfileKind::Dev) => Ok(ProfileKind::Dev),
+                _ => failure::bail!("Conflicting usage of --profile and --debug"),
+            }
+        } else {
+            Ok(specified_profile.unwrap_or(default))
+        }
+    }
+
     fn compile_options<'a>(
         &self,
         config: &'a Config,
         mode: CompileMode,
         workspace: Option<&Workspace<'a>>,
+        profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
             // TODO Integrate into 'workspace'
@@ -361,7 +414,8 @@ pub trait ArgMatchesExt {
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.release = self._is_present("release");
+        build_config.profile_kind =
+            self.get_profile_kind(config, ProfileKind::Dev, profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
             config
@@ -406,8 +460,9 @@ pub trait ArgMatchesExt {
         config: &'a Config,
         mode: CompileMode,
         workspace: Option<&Workspace<'a>>,
+        profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode, workspace)?;
+        let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
         Ok(compile_opts)
     }

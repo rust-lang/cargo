@@ -1,11 +1,12 @@
 use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap};
 use std::{cmp, env, fmt, hash};
 
 use serde::Deserialize;
 
-use crate::core::compiler::CompileMode;
+use crate::core::compiler::{CompileMode, ProfileKind};
 use crate::core::interning::InternedString;
-use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, CargoResult, Config};
@@ -13,15 +14,13 @@ use crate::util::{closest_msg, CargoResult, Config};
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
 pub struct Profiles {
-    dev: ProfileMaker,
-    release: ProfileMaker,
-    test: ProfileMaker,
-    bench: ProfileMaker,
-    doc: ProfileMaker,
     /// Incremental compilation can be overridden globally via:
     /// - `CARGO_INCREMENTAL` environment variable.
     /// - `build.incremental` config value.
     incremental: Option<bool>,
+    dir_names: HashMap<String, String>,
+    by_name: HashMap<String, ProfileMaker>,
+    named_profiles_enabled: bool,
 }
 
 impl Profiles {
@@ -42,34 +41,266 @@ impl Profiles {
             None => config.get::<Option<bool>>("build.incremental")?,
         };
 
-        Ok(Profiles {
-            dev: ProfileMaker {
-                default: Profile::default_dev(),
-                toml: profiles.and_then(|p| p.dev.clone()),
-                config: config_profiles.dev.clone(),
-            },
-            release: ProfileMaker {
-                default: Profile::default_release(),
-                toml: profiles.and_then(|p| p.release.clone()),
-                config: config_profiles.release.clone(),
-            },
-            test: ProfileMaker {
-                default: Profile::default_test(),
-                toml: profiles.and_then(|p| p.test.clone()),
-                config: None,
-            },
-            bench: ProfileMaker {
-                default: Profile::default_bench(),
-                toml: profiles.and_then(|p| p.bench.clone()),
-                config: None,
-            },
-            doc: ProfileMaker {
-                default: Profile::default_doc(),
-                toml: profiles.and_then(|p| p.doc.clone()),
-                config: None,
-            },
+        if !features.is_enabled(Feature::named_profiles()) {
+            let mut profile_makers = Profiles {
+                incremental,
+                named_profiles_enabled: false,
+                dir_names: Self::predefined_dir_names(),
+                by_name: HashMap::new(),
+            };
+
+            profile_makers.by_name.insert(
+                "dev".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("dev").cloned()),
+                    inherits: vec![],
+                    config: config_profiles.dev.clone(),
+                    default: Profile::default_dev(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("dev".to_owned(), "debug".to_owned());
+
+            profile_makers.by_name.insert(
+                "release".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("release").cloned()),
+                    inherits: vec![],
+                    config: config_profiles.release.clone(),
+                    default: Profile::default_release(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("release".to_owned(), "release".to_owned());
+
+            profile_makers.by_name.insert(
+                "test".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("test").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_test(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("test".to_owned(), "debug".to_owned());
+
+            profile_makers.by_name.insert(
+                "bench".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("bench").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_bench(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("bench".to_owned(), "release".to_owned());
+
+            profile_makers.by_name.insert(
+                "doc".to_owned(),
+                ProfileMaker {
+                    toml: profiles.and_then(|p| p.get("doc").cloned()),
+                    inherits: vec![],
+                    config: None,
+                    default: Profile::default_doc(),
+                },
+            );
+            profile_makers
+                .dir_names
+                .insert("doc".to_owned(), "debug".to_owned());
+
+            return Ok(profile_makers);
+        }
+
+        let mut profile_makers = Profiles {
             incremental,
-        })
+            named_profiles_enabled: true,
+            dir_names: Self::predefined_dir_names(),
+            by_name: HashMap::new(),
+        };
+
+        Self::add_root_profiles(&mut profile_makers, profiles, config_profiles);
+
+        let mut profiles = if let Some(profiles) = profiles {
+            profiles.get_all().clone()
+        } else {
+            BTreeMap::new()
+        };
+
+        // Merge with predefined profiles
+        use std::collections::btree_map::Entry;
+        for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
+            match profiles.entry(predef_name.to_owned()) {
+                Entry::Vacant(vac) => {
+                    vac.insert(predef_prof);
+                }
+                Entry::Occupied(mut oc) => {
+                    // Override predefined with the user-provided Toml.
+                    let r = oc.get_mut();
+                    predef_prof.merge(r);
+                    *r = predef_prof;
+                }
+            }
+        }
+
+        profile_makers.process_customs(&profiles)?;
+
+        Ok(profile_makers)
+    }
+
+    fn predefined_dir_names() -> HashMap<String, String> {
+        let mut dir_names = HashMap::new();
+        dir_names.insert("dev".to_owned(), "debug".to_owned());
+        dir_names.insert("check".to_owned(), "debug".to_owned());
+        dir_names.insert("test".to_owned(), "debug".to_owned());
+        dir_names.insert("bench".to_owned(), "release".to_owned());
+        dir_names
+    }
+
+    fn add_root_profiles(
+        profile_makers: &mut Profiles,
+        profiles: Option<&TomlProfiles>,
+        config_profiles: &ConfigProfiles,
+    ) {
+        let profile_name = "dev";
+        profile_makers.by_name.insert(
+            profile_name.to_owned(),
+            ProfileMaker {
+                default: Profile::default_dev(),
+                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
+                config: config_profiles.dev.clone(),
+                inherits: vec![],
+            },
+        );
+
+        let profile_name = "release";
+        profile_makers.by_name.insert(
+            profile_name.to_owned(),
+            ProfileMaker {
+                default: Profile::default_release(),
+                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
+                config: config_profiles.release.clone(),
+                inherits: vec![],
+            },
+        );
+    }
+
+    fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
+        vec![
+            (
+                "bench",
+                TomlProfile {
+                    inherits: Some(String::from("release")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
+                "test",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
+                "check",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
+                "doc",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
+        ]
+    }
+
+    fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>) -> CargoResult<()> {
+        for (name, profile) in profiles {
+            let mut set = HashSet::new();
+            let mut result = Vec::new();
+
+            set.insert(name.as_str().to_owned());
+            match &profile.dir_name {
+                None => {}
+                Some(dir_name) => {
+                    self.dir_names.insert(name.clone(), dir_name.to_owned());
+                }
+            }
+            match name.as_str() {
+                "dev" | "release" => {
+                    match &profile.inherits {
+                        None => {}
+                        Some(_) => {
+                            failure::bail!(
+                                "An 'inherits' must not specified root profile '{}'",
+                                name
+                            );
+                        }
+                    }
+                    continue;
+                }
+                _ => {}
+            };
+
+            let mut maker = self.process_chain(name, &profile, &mut set, &mut result, profiles)?;
+            result.reverse();
+            maker.inherits = result;
+
+            self.by_name.insert(name.as_str().to_owned(), maker);
+        }
+
+        Ok(())
+    }
+
+    fn process_chain(
+        &mut self,
+        name: &String,
+        profile: &TomlProfile,
+        set: &mut HashSet<String>,
+        result: &mut Vec<TomlProfile>,
+        profiles: &BTreeMap<String, TomlProfile>,
+    ) -> CargoResult<ProfileMaker> {
+        result.push(profile.clone());
+        match profile.inherits.as_ref().map(|x| x.as_str()) {
+            Some(name @ "dev") | Some(name @ "release") => {
+                // These are the root profiles
+                return Ok(self.by_name.get(name).unwrap().clone());
+            }
+            Some(name) => {
+                let name = name.to_owned();
+                if set.get(&name).is_some() {
+                    failure::bail!(
+                        "Inheritance loop of profiles cycles with profile '{}'",
+                        name
+                    );
+                }
+
+                set.insert(name.clone());
+                match profiles.get(&name) {
+                    None => {
+                        failure::bail!("Profile '{}' not found in Cargo.toml", name);
+                    }
+                    Some(parent) => self.process_chain(&name, parent, set, result, profiles),
+                }
+            }
+            None => {
+                failure::bail!(
+                    "An 'inherits' directive is needed for all \
+                     profiles that are not 'dev' or 'release'. Here \
+                     it is missing from '{}'",
+                    name
+                );
+            }
+        }
     }
 
     /// Retrieves the profile for a target.
@@ -81,31 +312,49 @@ impl Profiles {
         is_member: bool,
         unit_for: UnitFor,
         mode: CompileMode,
-        release: bool,
+        profile_kind: ProfileKind,
     ) -> Profile {
-        let maker = match mode {
-            CompileMode::Test | CompileMode::Bench => {
-                if release {
-                    &self.bench
-                } else {
-                    &self.test
+        let profile_name = if !self.named_profiles_enabled {
+            // With the feature disabled, we degrade `--profile` back to the
+            // `--release` and `--debug` predicates, and convert back from
+            // ProfileKind::Custom instantiation.
+
+            let release = match profile_kind {
+                ProfileKind::Release => true,
+                ProfileKind::Custom(ref s) if s == "bench" => true,
+                _ => false,
+            };
+
+            match mode {
+                CompileMode::Test | CompileMode::Bench => {
+                    if release {
+                        "bench"
+                    } else {
+                        "test"
+                    }
                 }
-            }
-            CompileMode::Build
-            | CompileMode::Check { .. }
-            | CompileMode::Doctest
-            | CompileMode::RunCustomBuild => {
-                // Note: `RunCustomBuild` doesn't normally use this code path.
-                // `build_unit_profiles` normally ensures that it selects the
-                // ancestor's profile. However, `cargo clean -p` can hit this
-                // path.
-                if release {
-                    &self.release
-                } else {
-                    &self.dev
+                CompileMode::Build
+                | CompileMode::Check { .. }
+                | CompileMode::Doctest
+                | CompileMode::RunCustomBuild => {
+                    // Note: `RunCustomBuild` doesn't normally use this code path.
+                    // `build_unit_profiles` normally ensures that it selects the
+                    // ancestor's profile. However, `cargo clean -p` can hit this
+                    // path.
+                    if release {
+                        "release"
+                    } else {
+                        "dev"
+                    }
                 }
+                CompileMode::Doc { .. } => "doc",
             }
-            CompileMode::Doc { .. } => &self.doc,
+        } else {
+            profile_kind.name()
+        };
+        let maker = match self.by_name.get(profile_name) {
+            None => panic!("Profile {} undefined", profile_name),
+            Some(r) => r,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
         // `panic` should not be set for tests/benches, or any of their
@@ -137,19 +386,37 @@ impl Profiles {
     /// times).
     pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
         let mut result = Profile::default();
+        result.root = for_unit_profile.root;
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
         result
     }
 
-    /// This returns a generic base profile. This is currently used for the
+    /// This returns the base profile. This is currently used for the
     /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
-    pub fn base_profile(&self, release: bool) -> Profile {
-        if release {
-            self.release.get_profile(None, true, UnitFor::new_normal())
+    pub fn base_profile(&self, profile_kind: &ProfileKind) -> CargoResult<Profile> {
+        let profile_name = if !self.named_profiles_enabled {
+            match profile_kind {
+                ProfileKind::Release => "release",
+                ProfileKind::Custom(ref s) if s == "bench" => "bench",
+                _ => "dev",
+            }
         } else {
-            self.dev.get_profile(None, true, UnitFor::new_normal())
+            profile_kind.name()
+        };
+
+        match self.by_name.get(profile_name) {
+            None => failure::bail!("Profile `{}` undefined", profile_kind.name()),
+            Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
+        }
+    }
+
+    pub fn get_dir_name(&self, profile_kind: &ProfileKind) -> String {
+        let dest = profile_kind.name();
+        match self.dir_names.get(dest) {
+            None => dest.to_owned(),
+            Some(s) => s.clone(),
         }
     }
 
@@ -159,11 +426,9 @@ impl Profiles {
         shell: &mut Shell,
         packages: &PackageSet<'_>,
     ) -> CargoResult<()> {
-        self.dev.validate_packages(shell, packages)?;
-        self.release.validate_packages(shell, packages)?;
-        self.test.validate_packages(shell, packages)?;
-        self.bench.validate_packages(shell, packages)?;
-        self.doc.validate_packages(shell, packages)?;
+        for profile in self.by_name.values() {
+            profile.validate_packages(shell, packages)?;
+        }
         Ok(())
     }
 }
@@ -184,6 +449,11 @@ struct ProfileMaker {
     default: Profile,
     /// The profile from the `Cargo.toml` manifest.
     toml: Option<TomlProfile>,
+
+    /// Profiles from which we inherit, in the order from which
+    /// we inherit.
+    inherits: Vec<TomlProfile>,
+
     /// Profile loaded from `.cargo/config` files.
     config: Option<TomlProfile>,
 }
@@ -196,12 +466,31 @@ impl ProfileMaker {
         unit_for: UnitFor,
     ) -> Profile {
         let mut profile = self.default;
+
+        let mut tomls = vec![];
         if let Some(ref toml) = self.toml {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            tomls.push(toml);
         }
+        for toml in &self.inherits {
+            tomls.push(toml);
+        }
+
+        // First merge the profiles
+        for toml in &tomls {
+            merge_profile(&mut profile, toml);
+        }
+
+        // Then their overrides
+        for toml in &tomls {
+            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
+        }
+
+        // '.cargo/config' can still overrides everything we had so far.
         if let Some(ref toml) = self.config {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_profile(&mut profile, toml);
+            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
         }
+
         profile
     }
 
@@ -308,14 +597,13 @@ impl ProfileMaker {
     }
 }
 
-fn merge_toml(
+fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
     is_member: bool,
     unit_for: UnitFor,
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    merge_profile(profile, toml);
     if unit_for.is_build() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
@@ -394,12 +682,19 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialOrd, Ord, PartialEq, Debug)]
+pub enum ProfileRoot {
+    Release,
+    Debug,
+}
+
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
 #[derive(Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
+    pub root: ProfileRoot,
     pub lto: Lto,
     // `None` means use rustc default.
     pub codegen_units: Option<u32>,
@@ -416,6 +711,7 @@ impl Default for Profile {
         Profile {
             name: "",
             opt_level: InternedString::new("0"),
+            root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
             codegen_units: None,
             debuginfo: None,
@@ -434,15 +730,13 @@ compact_debug! {
             let (default, default_name) = match self.name {
                 "dev" => (Profile::default_dev(), "default_dev()"),
                 "release" => (Profile::default_release(), "default_release()"),
-                "test" => (Profile::default_test(), "default_test()"),
-                "bench" => (Profile::default_bench(), "default_bench()"),
-                "doc" => (Profile::default_doc(), "default_doc()"),
                 _ => (Profile::default(), "default()"),
             };
             [debug_the_fields(
                 name
                 opt_level
                 lto
+                root
                 codegen_units
                 debuginfo
                 debug_assertions
@@ -480,6 +774,7 @@ impl Profile {
     fn default_dev() -> Profile {
         Profile {
             name: "dev",
+            root: ProfileRoot::Debug,
             debuginfo: Some(2),
             debug_assertions: true,
             overflow_checks: true,
@@ -491,10 +786,13 @@ impl Profile {
     fn default_release() -> Profile {
         Profile {
             name: "release",
+            root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
             ..Profile::default()
         }
     }
+
+    // NOTE: Remove the following three once `named_profiles` is default:
 
     fn default_test() -> Profile {
         Profile {

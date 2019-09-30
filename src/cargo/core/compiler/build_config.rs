@@ -6,6 +6,23 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 
+#[derive(Debug, Clone)]
+pub enum ProfileKind {
+    Dev,
+    Release,
+    Custom(String),
+}
+
+impl ProfileKind {
+    pub fn name(&self) -> &str {
+        match self {
+            ProfileKind::Dev => "dev",
+            ProfileKind::Release => "release",
+            ProfileKind::Custom(name) => &name,
+        }
+    }
+}
+
 /// Configuration information for a rustc build.
 #[derive(Debug)]
 pub struct BuildConfig {
@@ -13,8 +30,8 @@ pub struct BuildConfig {
     pub requested_kind: CompileKind,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
-    /// `true` if we are building for release.
-    pub release: bool,
+    /// Build profile
+    pub profile_kind: ProfileKind,
     /// The mode we are compiling in.
     pub mode: CompileMode,
     /// `true` to print stdout in JSON format (for machine reading).
@@ -77,7 +94,7 @@ impl BuildConfig {
         Ok(BuildConfig {
             requested_kind,
             jobs,
-            release: false,
+            profile_kind: ProfileKind::Dev,
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
@@ -100,6 +117,10 @@ impl BuildConfig {
             MessageFormat::Json { .. } => true,
             _ => false,
         }
+    }
+
+    pub fn profile_name(&self) -> &str {
+        self.profile_kind.name()
     }
 
     pub fn test(&self) -> bool {

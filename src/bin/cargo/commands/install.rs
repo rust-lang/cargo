@@ -51,6 +51,7 @@ pub fn cli() -> App {
             "Do not save tracking information (unstable)",
         ))
         .arg_features()
+        .arg_profile("Install artifacts with from the specified profile")
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
             "Install only the specified binary",
@@ -115,9 +116,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     }
 
     let workspace = args.workspace(config).ok();
-    let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
+    let mut compile_opts = args.compile_options(
+        config,
+        CompileMode::Build,
+        workspace.as_ref(),
+        ProfileChecking::Checked,
+    )?;
 
-    compile_opts.build_config.release = !args.is_present("debug");
+    compile_opts.build_config.profile_kind =
+        args.get_profile_kind(config, ProfileKind::Release, ProfileChecking::Checked)?;
 
     let krates = args
         .values_of("crate")

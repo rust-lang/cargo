@@ -231,7 +231,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
 ",
@@ -247,7 +247,7 @@ fn changing_profiles_caches_targets() {
     p.cargo("test foo")
         .with_stderr(
             "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 ",
         )
@@ -572,7 +572,7 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

@@ -18,6 +18,7 @@ pub fn cli() -> App {
         .arg_package("Package with the target to run")
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
@@ -40,7 +41,12 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Build, Some(&ws))?;
+    let mut compile_opts = args.compile_options(
+        config,
+        CompileMode::Build,
+        Some(&ws),
+        ProfileChecking::Checked,
+    )?;
 
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts

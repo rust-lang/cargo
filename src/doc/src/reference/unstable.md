@@ -119,7 +119,66 @@ opt-level = 2
 opt-level = 3
 ```
 
-Overrides can only be specified for dev and release profiles.
+Overrides can be specified for any profile, including custom named profiles.
+
+
+### Custom named profiles
+
+* Tracking Issue: [rust-lang/cargo#6988](https://github.com/rust-lang/cargo/issues/6988)
+* RFC: [#2678](https://github.com/rust-lang/rfcs/pull/2678)
+
+With this feature you can define custom profiles having new names. With the
+custom profile enabled, build artifacts can be emitted by default to
+directories other than `release` or `debug`, based on the custom profile's
+name.
+
+For example:
+
+```toml
+cargo-features = ["named-profiles"]
+
+[profile.release-lto]
+inherits = "release"
+lto = true
+````
+
+An `inherits` key is used in order to receive attributes from other profiles,
+so that a new custom profile can be based on the standard `dev` or `release`
+profile presets. Cargo emits errors in case `inherits` loops are detected. When
+considering inheritance hierarchy, all profiles directly or indirectly inherit
+from either from `release` or from `dev`.
+
+Valid profile names are: must not be empty, use only alphanumeric characters or
+`-` or `_`.
+
+Passing `--profile` with the profile's name to various Cargo commands, directs
+operations to use the profile's attributes. Overrides that are specified in the
+profiles from which the custom profile inherits are inherited too.
+
+For example, using `cargo build` with `--profile` and the manifest from above:
+
+```
+cargo +nightly build --profile release-lto -Z unstable-options
+```
+
+When a custom profile is used, build artifcats go to a different target by
+default. In the example above, you can expect to see the outputs under
+`target/release-lto`.
+
+
+#### New `dir-name` attribute
+
+Some of the paths generated under `target/` have resulted in a de-facto "build
+protocol", where `cargo` is invoked as a part of a larger project build. So, to
+preserve the existing behavior, there is also a new attribute `dir-name`, which
+when left unspecified, defaults to the name of the profile. For example:
+
+```toml
+[profile.release-lto]
+inherits = "release"
+dir-name = "lto"  # Emits to target/lto instead of target/release-lto
+lto = true
+```
 
 
 ### Config Profiles

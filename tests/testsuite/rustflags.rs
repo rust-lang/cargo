@@ -1096,7 +1096,7 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1108,7 +1108,7 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -1178,7 +1178,7 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1190,7 +1190,7 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
 [RUNNING] `rustc [..] --cfg bar[..]`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 ",
         )
         .run();

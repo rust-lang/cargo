@@ -296,6 +296,9 @@ pub fn compile_ws<'a>(
 
     let profiles = ws.profiles();
 
+    // Early check for whether the profile is defined.
+    let _ = profiles.base_profile(&build_config.profile_kind)?;
+
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
@@ -699,7 +702,7 @@ fn generate_targets<'a>(
             ws.is_member(pkg),
             unit_for,
             target_mode,
-            bcx.build_config.release,
+            bcx.build_config.profile_kind.clone(),
         );
         let features = resolve.features_sorted(pkg.package_id());
         bcx.units.intern(

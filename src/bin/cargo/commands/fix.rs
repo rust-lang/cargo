@@ -25,7 +25,7 @@ pub fn cli() -> App {
             "Fix all targets (default)",
         )
         .arg_release("Fix artifacts in release mode, with optimizations")
-        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Fix for the target triple")
         .arg_target_dir()
@@ -132,7 +132,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
-    let mut opts = args.compile_options(config, mode, Some(&ws))?;
+    let mut opts = args.compile_options(config, mode, Some(&ws), ProfileChecking::Unchecked)?;
 
     let use_clippy = args.is_present("clippy");
 

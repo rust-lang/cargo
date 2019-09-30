@@ -24,6 +24,7 @@ pub fn cli() -> App {
             "Document all binaries",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
@@ -52,7 +53,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),
     };
-    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    let mut compile_opts =
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
     compile_opts.local_rustdoc_args = if args.is_present("document-private-items") {
         Some(vec!["--document-private-items".to_string()])
     } else {

@@ -150,42 +150,6 @@ fn profile_override_warnings() {
 }
 
 #[cargo_test]
-fn profile_override_dev_release_only() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["profile-overrides"]
-
-            [package]
-            name = "foo"
-            version = "0.0.1"
-
-            [dependencies]
-            bar = {path = "bar"}
-
-            [profile.test.overrides.bar]
-            opt-level = 3
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
-        .file("bar/src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr_contains(
-            "\
-Caused by:
-  Profile overrides may only be specified for `dev` or `release` profile, not `test`.
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn profile_override_bad_settings() {
     let bad_values = [
         (

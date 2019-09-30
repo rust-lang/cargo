@@ -543,7 +543,7 @@ fn new_unit_dep<'a>(
         state.bcx.ws.is_member(pkg),
         unit_for,
         mode,
-        state.bcx.build_config.release,
+        state.bcx.build_config.profile_kind.clone(),
     );
     new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
 }

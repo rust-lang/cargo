@@ -20,6 +20,7 @@ use super::job::{
 use super::standard_lib;
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use crate::core::compiler::ProfileKind;
 use crate::core::{PackageId, TargetKind};
 use crate::handle_error;
 use crate::util;
@@ -41,10 +42,10 @@ pub struct JobQueue<'a, 'cfg> {
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
-    is_release: bool,
     progress: Progress<'cfg>,
     next_id: u32,
     timings: Timings<'a, 'cfg>,
+    profile_kind: ProfileKind,
 }
 
 pub struct JobState<'a> {
@@ -145,10 +146,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             compiled: HashSet::new(),
             documented: HashSet::new(),
             counts: HashMap::new(),
-            is_release: bcx.build_config.release,
             progress,
             next_id: 0,
             timings,
+            profile_kind: bcx.build_config.profile_kind.clone(),
         }
     }
 
@@ -416,7 +417,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
         self.progress.clear();
 
-        let build_type = if self.is_release { "release" } else { "dev" };
+        let build_type = self.profile_kind.name();
         // NOTE: this may be a bit inaccurate, since this may not display the
         // profile for what was actually built. Profile overrides can change
         // these settings, and in some cases different targets are built with
@@ -424,7 +425,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // list of Units built, and maybe display a list of the different
         // profiles used. However, to keep it simple and compatible with old
         // behavior, we just display what the base profile is.
-        let profile = cx.bcx.profiles.base_profile(self.is_release);
+        let profile = cx.bcx.profiles.base_profile(&self.profile_kind)?;
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
             "unoptimized"
         } else {

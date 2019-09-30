@@ -141,7 +141,7 @@ pub fn generate_std_roots<'a>(
                 /*is_member*/ false,
                 unit_for,
                 mode,
-                bcx.build_config.release,
+                bcx.build_config.profile_kind.clone(),
             );
             let features = std_resolve.features_sorted(pkg.package_id());
             Ok(bcx.units.intern(

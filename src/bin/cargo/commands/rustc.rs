@@ -23,7 +23,7 @@ pub fn cli() -> App {
             "Build all targets",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
-        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Target triple which compiles will be for")
         .arg_target_dir()
@@ -63,7 +63,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
-    let mut compile_opts = args.compile_options_for_single_package(config, mode, Some(&ws))?;
+    let mut compile_opts = args.compile_options_for_single_package(
+        config,
+        mode,
+        Some(&ws),
+        ProfileChecking::Unchecked,
+    )?;
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {
         None

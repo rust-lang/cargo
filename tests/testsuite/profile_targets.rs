@@ -1,4 +1,4 @@
-use cargo_test_support::{basic_manifest, project, Project};
+use cargo_test_support::{basic_manifest, is_nightly, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every target.
 
@@ -8,16 +8,19 @@ fn all_target_project() -> Project {
     project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
+            cargo-features = [{named_profiles}]
+
             [package]
             name = "foo"
             version = "0.0.1"
 
             [dependencies]
-            bar = { path = "bar" }
+            bar = {{ path = "bar" }}
 
             [build-dependencies]
-            bdep = { path = "bdep" }
+            bdep = {{ path = "bdep" }}
 
             [profile.dev]
             codegen-units = 1
@@ -30,6 +33,12 @@ fn all_target_project() -> Project {
             [profile.bench]
             codegen-units = 4
         "#,
+                named_profiles = if is_nightly() {
+                    "\"named-profiles\", "
+                } else {
+                    ""
+                }
+            ),
         )
         .file("src/lib.rs", "extern crate bar;")
         .file("src/main.rs", "extern crate foo; fn main() {}")
@@ -76,7 +85,7 @@ fn profile_selection_build() {
     // NOTES:
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
     // - build_script_build is built without panic because it thinks `build.rs` is a plugin.
-    p.cargo("build -vv").with_stderr_unordered("\
+    p.cargo("build -vv").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
@@ -91,6 +100,7 @@ fn profile_selection_build() {
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ").run();
     p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -107,7 +117,7 @@ fn profile_selection_build_release() {
     let p = all_target_project();
 
     // `build --release`
-    p.cargo("build --release -vv").with_stderr_unordered("\
+    p.cargo("build --release -vv").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
@@ -122,6 +132,7 @@ fn profile_selection_build_release() {
 [FINISHED] release [optimized] [..]
 ").run();
     p.cargo("build --release -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -136,6 +147,7 @@ fn profile_selection_build_release() {
 #[cargo_test]
 fn profile_selection_build_all_targets() {
     let p = all_target_project();
+    let affected = if is_nightly() { 1 } else { 3 };
     // `build`
     // NOTES:
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
@@ -157,13 +169,13 @@ fn profile_selection_build_all_targets() {
     //   ------   -------    ----
     //   lib      dev+panic  build  (a normal lib target)
     //   lib      dev-panic  build  (used by tests/benches)
-    //   lib      test       test
-    //   test     test       test
-    //   bench    test       test
-    //   bin      test       test
+    //   lib      dev        dev
+    //   test     dev        dev
+    //   bench    dev        dev
+    //   bin      dev        dev
     //   bin      dev        build
     //   example  dev        build
-    p.cargo("build --all-targets -vv").with_stderr_unordered("\
+    p.cargo("build --all-targets -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
@@ -174,16 +186,17 @@ fn profile_selection_build_all_targets() {
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C codegen-units={affected} -C debuginfo=2 --test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C codegen-units={affected} -C debuginfo=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C codegen-units={affected} -C debuginfo=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C codegen-units={affected} -C debuginfo=2 --test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] dev [unoptimized + debuginfo] [..]
-").run();
+", affected=affected)).run();
     p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -198,6 +211,7 @@ fn profile_selection_build_all_targets() {
 #[cargo_test]
 fn profile_selection_build_all_targets_release() {
     let p = all_target_project();
+    let affected = if is_nightly() { 2 } else { 4 };
     // `build --all-targets --release`
     // NOTES:
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
@@ -222,13 +236,13 @@ fn profile_selection_build_all_targets_release() {
     //   ------   -------        ----
     //   lib      release+panic  build  (a normal lib target)
     //   lib      release-panic  build  (used by tests/benches)
-    //   lib      bench          test   (bench/test de-duped)
-    //   test     bench          test
-    //   bench    bench          test
-    //   bin      bench          test   (bench/test de-duped)
+    //   lib      release        test   (bench/test de-duped)
+    //   test     release        test
+    //   bench    release        test
+    //   bin      release        test   (bench/test de-duped)
     //   bin      release        build
     //   example  release        build
-    p.cargo("build --all-targets --release -vv").with_stderr_unordered("\
+    p.cargo("build --all-targets --release -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
@@ -239,16 +253,17 @@ fn profile_selection_build_all_targets_release() {
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]`
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]`
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]`
+[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]`
+[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]`
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [FINISHED] release [optimized] [..]
-").run();
+", affected=affected)).run();
     p.cargo("build --all-targets --release -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -263,58 +278,60 @@ fn profile_selection_build_all_targets_release() {
 #[cargo_test]
 fn profile_selection_test() {
     let p = all_target_project();
+    let affected = if is_nightly() { 3 } else { 1 };
     // `test`
     // NOTES:
     // - Dependency profiles:
     //   Pkg  Target  Profile    Reason
     //   ---  ------  -------    ------
-    //   bar  lib     dev        For foo-bin
-    //   bar  lib     dev-panic  For tests/benches and bdep
-    //   bdep lib     dev-panic  For foo build.rs
-    //   foo  custom  dev-panic
+    //   bar  lib     test        For foo-bin
+    //   bar  lib     test-panic  For tests/benches and bdep
+    //   bdep lib     test-panic  For foo build.rs
+    //   foo  custom  test-panic
     //
     // - `foo` target list is:
     //   Target   Profile        Mode
     //   ------   -------        ----
-    //   lib      dev-panic      build (for tests)
-    //   lib      dev            build (for bins)
+    //   lib      test-panic     build (for tests)
+    //   lib      test           build (for bins)
     //   lib      test           test
     //   test     test           test
-    //   example  dev-panic      build
+    //   example  test-panic     build
     //   bin      test           test
-    //   bin      dev            build
+    //   bin      test           build
     //
-    p.cargo("test -vv").with_stderr_unordered("\
+    p.cargo("test -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units={affected} -C debuginfo=2 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C codegen-units={affected} -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]
 [RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C codegen-units=3 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort -C codegen-units={affected} -C debuginfo=2 [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test [..]
-").run();
+", affected=affected)).run();
     p.cargo("test -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -328,6 +345,8 @@ fn profile_selection_test() {
 #[cargo_test]
 fn profile_selection_test_release() {
     let p = all_target_project();
+    let affected = if is_nightly() { 2 } else { 4 };
+
     // `test --release`
     // NOTES:
     // - Dependency profiles:
@@ -343,13 +362,13 @@ fn profile_selection_test_release() {
     //   ------   -------        ----
     //   lib      release-panic  build  (for tests)
     //   lib      release        build  (for bins)
-    //   lib      bench          test
-    //   test     bench          test
+    //   lib      release        test
+    //   test     release        test
     //   example  release-panic  build
-    //   bin      bench          test
+    //   bin      release        test
     //   bin      release        build
     //
-    p.cargo("test --release -vv").with_stderr_unordered("\
+    p.cargo("test --release -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
@@ -361,9 +380,9 @@ fn profile_selection_test_release() {
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]
+[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units={affected} --test [..]
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
@@ -372,8 +391,9 @@ fn profile_selection_test_release() {
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test [..]`
-").run();
+", affected=affected)).run();
     p.cargo("test --release -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -393,55 +413,57 @@ fn profile_selection_test_release() {
 #[cargo_test]
 fn profile_selection_bench() {
     let p = all_target_project();
+    let affected = if is_nightly() { 4 } else { 2 };
 
     // `bench`
     // NOTES:
     // - Dependency profiles:
     //   Pkg  Target  Profile        Reason
     //   ---  ------  -------        ------
-    //   bar  lib     release        For foo-bin
-    //   bar  lib     release-panic  For tests/benches and bdep
-    //   bdep lib     release-panic  For foo build.rs
-    //   foo  custom  release-panic
+    //   bar  lib     bench          For foo-bin
+    //   bar  lib     bench-panic    For tests/benches and bdep
+    //   bdep lib     bench-panic    For foo build.rs
+    //   foo  custom  bench-panic
     //
     // - `foo` target list is:
     //   Target   Profile        Mode
     //   ------   -------        ----
-    //   lib      release-panic  build (for benches)
-    //   lib      release        build (for bins)
+    //   lib      bench-panic    build (for benches)
+    //   lib      bench          build (for bins)
     //   lib      bench          test(bench)
     //   bench    bench          test(bench)
     //   bin      bench          test(bench)
-    //   bin      release        build
+    //   bin      bench          build
     //
-    p.cargo("bench -vv").with_stderr_unordered("\
+    p.cargo("bench -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units={affected} [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units={affected} [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units={affected} [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C codegen-units={affected} [..]
 [RUNNING] `[..]target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units={affected} [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units={affected} [..]
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3 -C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
-[FINISHED] release [optimized] [..]
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort -C codegen-units={affected} [..]
+[FINISHED] bench [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
-").run();
+", affected=affected)).run();
     p.cargo("bench -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] bench [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
@@ -478,7 +500,7 @@ fn profile_selection_check_all_targets() {
     //   bin      dev            check
     //   bin      dev-panic      check-test (checking bin as a unittest)
     //
-    p.cargo("check --all-targets -vv").with_stderr_unordered("\
+    p.cargo("check --all-targets -vv").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C codegen-units=1 -C debuginfo=2 [..]
@@ -504,6 +526,7 @@ fn profile_selection_check_all_targets() {
     // rechecked.
     // See PR rust-lang/rust#49289 and issue rust-lang/cargo#3624.
     p.cargo("check --all-targets -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -523,7 +546,7 @@ fn profile_selection_check_all_targets_release() {
     // This is a pretty straightforward variant of
     // `profile_selection_check_all_targets` that uses `release` instead of
     // `dev` for all targets.
-    p.cargo("check --all-targets --release -vv").with_stderr_unordered("\
+    p.cargo("check --all-targets --release -vv").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3 -C codegen-units=2 [..]
@@ -546,6 +569,7 @@ fn profile_selection_check_all_targets_release() {
 ").run();
 
     p.cargo("check --all-targets --release -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
@@ -560,56 +584,56 @@ fn profile_selection_check_all_targets_release() {
 #[cargo_test]
 fn profile_selection_check_all_targets_test() {
     let p = all_target_project();
+    let affected = if is_nightly() { 3 } else { 1 };
+
     // `check --profile=test`
-    // NOTES:
-    // - This doesn't actually use the "test" profile. Everything uses "dev".
-    //   It should probably use "test", although it probably doesn't really matter.
     // - Dependency profiles:
     //   Pkg  Target  Profile    Action   Reason
     //   ---  ------  -------    ------   ------
-    //   bar  lib     dev*       link     For bdep
-    //   bar  lib     dev-panic  metadata For tests/benches
-    //   bdep lib     dev*       link     For foo build.rs
-    //   foo  custom  dev*       link     For build.rs
+    //   bar  lib     test*       link     For bdep
+    //   bar  lib     test-panic  metdata  For tests/benches
+    //   bdep lib     test*       link     For foo build.rs
+    //   foo  custom  test*       link     For build.rs
     //
     //   `*` = wants panic, but it is cleared when args are built.
     //
     // - foo target list is:
-    //   Target   Profile    Mode
-    //   ------   -------    ----
-    //   lib      dev-panic  check-test (for tests/benches)
-    //   lib      dev-panic  check-test (checking lib as a unittest)
-    //   example  dev-panic  check-test
-    //   test     dev-panic  check-test
-    //   bench    dev-panic  check-test
-    //   bin      dev-panic  check-test
+    //   Target   Profile     Mode
+    //   ------   -------     ----
+    //   lib      test-panic  check-test (for tests/benches)
+    //   lib      test-panic  check-test (checking lib as a unittest)
+    //   example  test-panic  check-test
+    //   test     test-panic  check-test
+    //   bench    test-panic  check-test
+    //   bin      test-panic  check-test
     //
-    p.cargo("check --all-targets --profile=test -vv").with_stderr_unordered("\
+    p.cargo("check --all-targets --profile=test -vv").masquerade_as_nightly_cargo().with_stderr_unordered(format!("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 [..]
 [COMPILING] bdep[..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link -C codegen-units={affected} -C debuginfo=2 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--emit=[..]metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
-").run();
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 --test [..]
+[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 --test [..]
+[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 --test [..]
+[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 --test [..]
+[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--emit=[..]metadata -C codegen-units={affected} -C debuginfo=2 --test [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
+", affected=affected)).run();
 
     p.cargo("check --all-targets --profile=test -vv")
+        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] test [unoptimized + debuginfo] [..]
 ",
         )
         .run();
@@ -629,7 +653,7 @@ fn profile_selection_doc() {
     //   foo  custom  dev*       link     For build.rs
     //
     //   `*` = wants panic, but it is cleared when args are built.
-    p.cargo("doc -vv").with_stderr_unordered("\
+    p.cargo("doc -vv").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C codegen-units=1 -C debuginfo=2 [..]

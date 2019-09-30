@@ -27,6 +27,7 @@ pub fn cli() -> App {
             "Build all targets",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
@@ -55,6 +56,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         CompileMode::Doc { deps: false },
         Some(&ws),
+        ProfileChecking::Checked,
     )?;
     let target_args = values(args, "args");
     compile_opts.target_rustdoc_args = if target_args.is_empty() {

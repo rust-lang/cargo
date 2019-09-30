@@ -26,6 +26,7 @@ pub fn cli() -> App {
             "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
+        .arg_profile("Check artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()
@@ -61,7 +62,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mode = CompileMode::Check { test: false };
-    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    let mut compile_opts =
+        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
 
     if !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(

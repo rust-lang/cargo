@@ -203,6 +203,9 @@ features! {
 
         // Specifying the 'public' attribute on dependencies
         [unstable] public_dependency: bool,
+
+        // Allow to specify profiles other than 'dev', 'release', 'test', etc.
+        [unstable] named_profiles: bool,
     }
 }
 
@@ -333,6 +336,7 @@ pub struct CliUnstable {
     pub mtime_on_use: bool,
     pub install_upgrade: bool,
     pub cache_messages: bool,
+    pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
@@ -390,6 +394,7 @@ impl CliUnstable {
             "mtime-on-use" => self.mtime_on_use = true,
             "install-upgrade" => self.install_upgrade = true,
             "cache-messages" => self.cache_messages = true,
+            "named-profiles" => self.named_profiles = true,
             "binary-dep-depinfo" => self.binary_dep_depinfo = true,
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
