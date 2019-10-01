@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use log::trace;
 
-use super::types::{ConflictMap, ConflictReason};
+use super::types::ConflictMap;
 use crate::core::resolver::Context;
 use crate::core::{Dependency, PackageId};
 
@@ -194,7 +194,7 @@ impl ConflictCache {
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated.
     pub fn insert(&mut self, dep: &Dependency, con: &ConflictMap) {
-        if con.values().any(|c| *c == ConflictReason::PublicDependency) {
+        if con.values().any(|c| c.is_public_dependency()) {
             // TODO: needs more info for back jumping
             // for now refuse to cache it.
             return;
