@@ -287,7 +287,7 @@ fn install_one(
     } else {
         let tracker = InstallTracker::load(config, root)?;
         let (freshness, _duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
+            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
         if freshness == Freshness::Fresh {
             let msg = format!(
                 "package `{}` is already installed, use --force to override",
@@ -341,7 +341,7 @@ fn install_one(
     } else {
         let tracker = InstallTracker::load(config, root)?;
         let (_freshness, duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
+            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
         (Some(tracker), duplicates)
     };
 
@@ -408,7 +408,7 @@ fn install_one(
             &successful_bins,
             vers.map(|s| s.to_string()),
             opts,
-            &target,
+            target,
             &rustc.verbose_version,
         );
 
