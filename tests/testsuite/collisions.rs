@@ -1,4 +1,6 @@
-use cargo_test_support::{basic_manifest, project};
+#[cfg(not(target_env = "msvc"))]
+use cargo_test_support::basic_manifest;
+use cargo_test_support::project;
 use std::env;
 
 #[cargo_test]
@@ -54,6 +56,7 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 }
 
 #[cargo_test]
+#[cfg(not(target_env = "msvc"))]
 fn collision_example() {
     // Examples in a workspace can easily collide.
     let p = project()
@@ -83,6 +86,7 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 }
 
 #[cargo_test]
+#[cfg(not(target_env = "msvc"))]
 fn collision_export() {
     // `--out-dir` combines some things which can cause conflicts.
     let p = project()

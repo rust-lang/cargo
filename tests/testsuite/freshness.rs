@@ -423,6 +423,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 }
 
 #[cargo_test]
+#[cfg(not(target_env = "msvc"))]
 fn changing_bin_features_caches_targets() {
     let p = project()
         .file(
