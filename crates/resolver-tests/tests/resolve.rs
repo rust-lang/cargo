@@ -1451,3 +1451,21 @@ fn conflict_store_more_then_one_match() {
     let reg = registry(input);
     let _ = resolve_and_validated(vec![dep("nA")], &reg, None);
 }
+
+#[test]
+fn cyclic_good_error_message() {
+    let input = vec![
+        pkg!(("A", "0.0.0") => [dep("C")]),
+        pkg!(("B", "0.0.0") => [dep("C")]),
+        pkg!(("C", "0.0.0") => [dep("A")]),
+    ];
+    let reg = registry(input);
+    let error = resolve(vec![dep("A"), dep("B")], &reg).unwrap_err();
+    println!("{}", error);
+    assert_eq!("\
+cyclic package dependency: package `A v0.0.0 (registry `https://example.com/`)` depends on itself. Cycle:
+package `A v0.0.0 (registry `https://example.com/`)`
+    ... which is depended on by `C v0.0.0 (registry `https://example.com/`)`
+    ... which is depended on by `A v0.0.0 (registry `https://example.com/`)`\
+", error.to_string());
+}

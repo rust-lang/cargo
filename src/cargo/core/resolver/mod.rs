@@ -993,9 +993,11 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     let mut all_packages: Vec<_> = resolve.iter().collect();
     all_packages.sort_unstable();
     let mut checked = HashSet::new();
+    let mut path = Vec::new();
+    let mut visited = HashSet::new();
     for pkg in all_packages {
         if !checked.contains(&pkg) {
-            visit(resolve, pkg, &mut HashSet::new(), &mut checked)?
+            visit(resolve, pkg, &mut visited, &mut path, &mut checked)?
         }
     }
     return Ok(());
@@ -1004,14 +1006,16 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
         resolve: &Resolve,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
+        path: &mut Vec<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
+        path.push(id);
         // See if we visited ourselves
         if !visited.insert(id) {
             failure::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(&resolve.path_to_top(&id))
+                errors::describe_path(&path.iter().rev().collect::<Vec<_>>()),
             );
         }
 
@@ -1023,23 +1027,25 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
         // visitation list as we can't induce a cycle through transitive
         // dependencies.
         if checked.insert(id) {
+            let mut empty_set = HashSet::new();
+            let mut empty_vec = Vec::new();
             for (dep, listings) in resolve.deps_not_replaced(id) {
                 let is_transitive = listings.iter().any(|d| d.is_transitive());
-                let mut empty = HashSet::new();
-                let visited = if is_transitive {
-                    &mut *visited
+                let (visited, path) = if is_transitive {
+                    (&mut *visited, &mut *path)
                 } else {
-                    &mut empty
+                    (&mut empty_set, &mut empty_vec)
                 };
-                visit(resolve, dep, visited, checked)?;
+                visit(resolve, dep, visited, path, checked)?;
 
                 if let Some(id) = resolve.replacement(dep) {
-                    visit(resolve, id, visited, checked)?;
+                    visit(resolve, id, visited, path, checked)?;
                 }
             }
         }
 
         // Ok, we're done, no longer visiting our node any more
+        path.pop();
         visited.remove(&id);
         Ok(())
     }

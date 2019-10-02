@@ -1187,6 +1187,7 @@ fn cycle() {
 error: cyclic package dependency: [..]
 package `[..]`
     ... which is depended on by `[..]`
+    ... which is depended on by `[..]`
 ",
         )
         .run();
