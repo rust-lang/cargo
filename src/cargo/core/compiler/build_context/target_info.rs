@@ -42,6 +42,8 @@ pub struct TargetInfo {
 pub enum FileFlavor {
     /// Not a special file type.
     Normal,
+    /// Like `Normal`, but not directly executable
+    Auxiliary,
     /// Something you can link against (e.g., a library).
     Linkable { rmeta: bool },
     /// Piece of external debug information (e.g., `.dSYM`/`.pdb` file).
@@ -253,10 +255,15 @@ impl TargetInfo {
 
         // See rust-lang/cargo#4535.
         if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
+            let flavor = if target_triple.contains("emscripten") {
+                FileFlavor::Auxiliary
+            } else {
+                FileFlavor::Normal
+            };
             ret.push(FileType {
                 suffix: ".wasm".to_string(),
                 prefix: prefix.clone(),
-                flavor: FileFlavor::Normal,
+                flavor,
                 should_replace_hyphens: true,
             })
         }
