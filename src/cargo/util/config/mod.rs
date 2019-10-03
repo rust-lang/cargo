@@ -1406,12 +1406,6 @@ pub fn clippy_driver() -> PathBuf {
         .into()
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct SslVersionConfigRange {
-    pub min: Option<String>,
-    pub max: Option<String>,
-}
-
 #[derive(Debug, Default, Deserialize, PartialEq)]
 pub struct CargoHttpConfig {
     pub proxy: Option<String>,
@@ -1442,11 +1436,17 @@ pub struct CargoHttpConfig {
 /// ssl-version.min = "tlsv1.2"
 /// ssl-version.max = "tlsv1.3"
 /// ```
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum SslVersionConfig {
     Single(String),
     Range(SslVersionConfigRange),
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct SslVersionConfigRange {
+    pub min: Option<String>,
+    pub max: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

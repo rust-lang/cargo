@@ -448,17 +448,19 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         };
         Ok(version)
     }
-    if let Some(ssl_version) = &http_config.ssl_version {
+    if let Some(ssl_version) = &http.ssl_version {
         match ssl_version {
             SslVersionConfig::Single(s) => {
                 let version = to_ssl_version(s.as_str())?;
                 handle.ssl_version(version)?;
             }
             SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
-                let min_version =
-                    min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
-                let max_version =
-                    max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                let min_version = min
+                    .as_ref()
+                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
+                let max_version = max
+                    .as_ref()
+                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
                 handle.ssl_min_max_version(min_version, max_version)?;
             }
         }
