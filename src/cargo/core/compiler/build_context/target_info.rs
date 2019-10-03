@@ -6,8 +6,8 @@ use std::str::{self, FromStr};
 
 use crate::core::compiler::CompileKind;
 use crate::core::TargetKind;
-use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
 use crate::util::config::StringList;
+use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
 
 /// Information about the platform target gleaned from querying rustc.
@@ -469,7 +469,7 @@ fn env_args(
         &build.rustdocflags
     };
     if let Some(list) = list {
-        return Ok(list.as_slice().to_vec())
+        return Ok(list.as_slice().to_vec());
     }
 
     Ok(Vec::new())
