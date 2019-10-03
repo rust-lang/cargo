@@ -167,8 +167,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         for unit in units.iter() {
             for output in self.outputs(unit)?.iter() {
-                if output.flavor == FileFlavor::DebugInfo ||
-                    output.flavor == FileFlavor::Auxiliary {
+                if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary
+                {
                     continue;
                 }
 
