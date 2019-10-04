@@ -41,6 +41,8 @@ pub struct TargetInfo {
 pub enum FileFlavor {
     /// Not a special file type.
     Normal,
+    /// Like `Normal`, but not directly executable
+    Auxiliary,
     /// Something you can link against (e.g., a library).
     Linkable { rmeta: bool },
     /// Piece of external debug information (e.g., `.dSYM`/`.pdb` file).
@@ -231,7 +233,7 @@ impl TargetInfo {
             ret.push(FileType {
                 suffix: ".wasm".to_string(),
                 prefix: prefix.clone(),
-                flavor: FileFlavor::Normal,
+                flavor: FileFlavor::Auxiliary,
                 should_replace_hyphens: true,
             })
         }
