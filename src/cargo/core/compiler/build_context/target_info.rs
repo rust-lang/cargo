@@ -255,15 +255,10 @@ impl TargetInfo {
 
         // See rust-lang/cargo#4535.
         if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
-            let flavor = if target_triple.contains("emscripten") {
-                FileFlavor::Auxiliary
-            } else {
-                FileFlavor::Normal
-            };
             ret.push(FileType {
                 suffix: ".wasm".to_string(),
                 prefix: prefix.clone(),
-                flavor,
+                flavor: FileFlavor::Auxiliary,
                 should_replace_hyphens: true,
             })
         }
