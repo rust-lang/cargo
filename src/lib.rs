@@ -105,6 +105,8 @@ pub fn cargo_home() -> io::Result<PathBuf> {
     cargo_home_with_cwd(&cwd)
 }
 
+/// Returns the storage directory used by Cargo within `cwd`.
+/// For more details, see [`cargo_home`](fn.cargo_home.html).
 pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     match env::var_os("CARGO_HOME") {
         Some(home) if !home.is_empty() => {
@@ -153,6 +155,8 @@ pub fn rustup_home() -> io::Result<PathBuf> {
     rustup_home_with_cwd(&cwd)
 }
 
+/// Returns the storage directory used by rustup within `cwd`.
+/// For more details, see [`rustup_home`](fn.rustup_home.html).
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     match env::var_os("RUSTUP_HOME") {
         Some(home) if !home.is_empty() => {
