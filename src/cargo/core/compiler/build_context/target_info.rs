@@ -28,8 +28,12 @@ pub struct TargetInfo {
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
-    /// Path to the "lib" directory in the sysroot.
-    pub sysroot_libdir: PathBuf,
+    /// Path to the "lib" or "bin" directory that rustc uses for its dynamic
+    /// libraries.
+    pub sysroot_host_libdir: PathBuf,
+    /// Path to the "lib" directory in the sysroot which rustc uses for linking
+    /// target libraries.
+    pub sysroot_target_libdir: PathBuf,
     /// Extra flags to pass to `rustc`, see `env_args`.
     pub rustflags: Vec<String>,
     /// Extra flags to pass to `rustdoc`, see `env_args`.
@@ -129,24 +133,20 @@ impl TargetInfo {
                 output_err_info(&process, &output, &error)
             ),
         };
-        let mut rustlib = PathBuf::from(line);
-        let sysroot_libdir = match kind {
-            CompileKind::Host => {
-                if cfg!(windows) {
-                    rustlib.push("bin");
-                } else {
-                    rustlib.push("lib");
-                }
-                rustlib
-            }
-            CompileKind::Target(target) => {
-                rustlib.push("lib");
-                rustlib.push("rustlib");
-                rustlib.push(target.short_name());
-                rustlib.push("lib");
-                rustlib
-            }
-        };
+        let mut sysroot_host_libdir = PathBuf::from(line);
+        if cfg!(windows) {
+            sysroot_host_libdir.push("bin");
+        } else {
+            sysroot_host_libdir.push("lib");
+        }
+        let mut sysroot_target_libdir = PathBuf::from(line);
+        sysroot_target_libdir.push("lib");
+        sysroot_target_libdir.push("rustlib");
+        sysroot_target_libdir.push(match &kind {
+            CompileKind::Host => rustc.host.as_str(),
+            CompileKind::Target(target) => target.short_name(),
+        });
+        sysroot_target_libdir.push("lib");
 
         let cfg = lines
             .map(|line| Ok(Cfg::from_str(line)?))
@@ -161,7 +161,8 @@ impl TargetInfo {
         Ok(TargetInfo {
             crate_type_process,
             crate_types: RefCell::new(map),
-            sysroot_libdir,
+            sysroot_host_libdir,
+            sysroot_target_libdir,
             // recalculate `rustflags` from above now that we have `cfg`
             // information
             rustflags: env_args(
