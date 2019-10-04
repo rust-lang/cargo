@@ -287,7 +287,7 @@ impl TomlProfiles {
                 warnings.push("use `[profile.dev]` to configure debug builds".to_string());
             }
 
-            profile.validate(&name, features, warnings)?;
+            profile.validate(name, features, warnings)?;
         }
         Ok(())
     }
@@ -490,7 +490,7 @@ impl TomlProfile {
         match &self.dir_name {
             None => {}
             Some(dir_name) => {
-                Self::validate_name(&dir_name, "dir-name")?;
+                Self::validate_name(dir_name, "dir-name")?;
             }
         }
 
@@ -498,7 +498,7 @@ impl TomlProfile {
         match &self.inherits {
             None => {}
             Some(inherits) => {
-                Self::validate_name(&inherits, "inherits")?;
+                Self::validate_name(inherits, "inherits")?;
             }
         }
 
@@ -581,7 +581,7 @@ impl TomlProfile {
         }
 
         if let Some(v) = profile.codegen_units {
-            self.codegen_units = Some(v.clone());
+            self.codegen_units = Some(v);
         }
 
         if let Some(v) = &profile.debug {
@@ -589,11 +589,11 @@ impl TomlProfile {
         }
 
         if let Some(v) = profile.debug_assertions {
-            self.debug_assertions = Some(v.clone());
+            self.debug_assertions = Some(v);
         }
 
         if let Some(v) = profile.rpath {
-            self.rpath = Some(v.clone());
+            self.rpath = Some(v);
         }
 
         if let Some(v) = &profile.panic {
@@ -601,11 +601,11 @@ impl TomlProfile {
         }
 
         if let Some(v) = profile.overflow_checks {
-            self.overflow_checks = Some(v.clone());
+            self.overflow_checks = Some(v);
         }
 
         if let Some(v) = profile.incremental {
-            self.incremental = Some(v.clone());
+            self.incremental = Some(v);
         }
 
         if let Some(v) = &profile.overrides {

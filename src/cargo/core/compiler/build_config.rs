@@ -18,7 +18,7 @@ impl ProfileKind {
         match self {
             ProfileKind::Dev => "dev",
             ProfileKind::Release => "release",
-            ProfileKind::Custom(name) => &name,
+            ProfileKind::Custom(name) => name,
         }
     }
 }

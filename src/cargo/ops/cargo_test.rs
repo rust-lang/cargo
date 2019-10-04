@@ -170,12 +170,12 @@ fn run_doc_tests(
             p.arg("--enable-per-target-ignores");
         }
 
-        runtool.as_ref().map(|(runtool, runtool_args)| {
+        if let Some((runtool, runtool_args)) = runtool {
             p.arg("--runtool").arg(runtool);
             for arg in runtool_args {
                 p.arg("--runtool-arg").arg(arg);
             }
-        });
+        }
 
         for &rust_dep in &[&compilation.deps_output] {
             let mut arg = OsString::from("dependency=");

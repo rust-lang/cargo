@@ -527,7 +527,7 @@ impl InstallInfo {
         self.features == feature_set(&opts.features)
             && self.all_features == opts.all_features
             && self.no_default_features == opts.no_default_features
-            && self.profile == opts.build_config.profile_name().to_string()
+            && self.profile == opts.build_config.profile_name()
             && (self.target.is_none() || self.target.as_ref().map(|t| t.as_ref()) == Some(target))
             && &self.bins == exes
     }
