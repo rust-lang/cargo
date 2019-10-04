@@ -254,7 +254,7 @@ categories = ["...", "..."]
 # This is an SPDX 2.1 license expression for this package. Currently
 # crates.io will validate the license provided against a whitelist of
 # known license and exception identifiers from the SPDX license list
-# 2.4. Parentheses are not currently supported.
+# 3.6. Parentheses are not currently supported.
 #
 # Multiple licenses can be separated with a `/`, although that usage
 # is deprecated. Instead, use a license expression with AND and OR
@@ -345,8 +345,8 @@ published crate.
 
 SPDX 2.1 license expressions are documented
 [here][spdx-2.1-license-expressions]. The current version of the
-license list is available [here][spdx-license-list], and version 2.4
-is available [here][spdx-license-list-2.4].
+license list is available [here][spdx-license-list], and version 3.6
+is available [here][spdx-license-list-3.6].
 
 #### The `metadata` table (optional)
 
@@ -1010,5 +1010,5 @@ dependencies][replace] section of the documentation.
 [`cargo run`]: ../commands/cargo-run.md
 [`cargo test`]: ../commands/cargo-test.md
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
-[spdx-license-list-2.4]: https://github.com/spdx/license-list-data/tree/v2.4
+[spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [spdx-license-list]: https://spdx.org/licenses/
