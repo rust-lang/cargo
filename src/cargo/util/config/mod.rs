@@ -1407,19 +1407,16 @@ pub fn clippy_driver() -> PathBuf {
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
 pub struct CargoHttpConfig {
     pub proxy: Option<String>,
-    #[serde(rename = "low-speed-limit")]
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
     pub cainfo: Option<ConfigRelativePath>,
-    #[serde(rename = "check-revoke")]
     pub check_revoke: Option<bool>,
-    #[serde(rename = "user-agent")]
     pub user_agent: Option<String>,
     pub debug: Option<bool>,
     pub multiplexing: Option<bool>,
-    #[serde(rename = "ssl-version")]
     pub ssl_version: Option<SslVersionConfig>,
 }
 
@@ -1450,19 +1447,18 @@ pub struct SslVersionConfigRange {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct CargoNetConfig {
     pub retry: Option<u32>,
     pub offline: Option<bool>,
-    #[serde(rename = "git-fetch-with-cli")]
     pub git_fetch_with_cli: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct CargoBuildConfig {
     pub pipelining: Option<bool>,
-    #[serde(rename = "dep-info-basedir")]
     pub dep_info_basedir: Option<ConfigRelativePath>,
-    #[serde(rename = "target-dir")]
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<ConfigRelativePath>,
