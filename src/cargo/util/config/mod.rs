@@ -1467,6 +1467,16 @@ pub struct CargoBuildConfig {
     pub rustdocflags: Option<StringList>,
 }
 
+/// A type to deserialize a list of strings from a toml file.
+///
+/// Supports deserializing either a whitespace-separated list of arguments in a
+/// single string or a string list itself. For example these deserialize to
+/// equivalent values:
+///
+/// ```
+/// a = 'a b c'
+/// b = ['a', 'b', 'c']
+/// ```
 #[derive(Debug)]
 pub struct StringList {
     list: Vec<String>,
