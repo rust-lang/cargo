@@ -251,7 +251,7 @@ impl Profiles {
                 _ => {}
             };
 
-            let mut maker = self.process_chain(name, &profile, &mut set, &mut result, profiles)?;
+            let mut maker = self.process_chain(name, profile, &mut set, &mut result, profiles)?;
             result.reverse();
             maker.inherits = result;
 
@@ -263,7 +263,7 @@ impl Profiles {
 
     fn process_chain(
         &mut self,
-        name: &String,
+        name: &str,
         profile: &TomlProfile,
         set: &mut HashSet<String>,
         result: &mut Vec<TomlProfile>,
@@ -273,7 +273,7 @@ impl Profiles {
         match profile.inherits.as_ref().map(|x| x.as_str()) {
             Some(name @ "dev") | Some(name @ "release") => {
                 // These are the root profiles
-                return Ok(self.by_name.get(name).unwrap().clone());
+                Ok(self.by_name.get(name).unwrap().clone())
             }
             Some(name) => {
                 let name = name.to_owned();

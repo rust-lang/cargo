@@ -111,7 +111,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             None => return true,
         };
         let name = kind.short_name(self);
-        platform.matches(&name, self.cfg(kind))
+        platform.matches(name, self.cfg(kind))
     }
 
     /// Gets the user-specified linker for a particular host or target.

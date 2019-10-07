@@ -313,10 +313,8 @@ pub trait ArgMatchesExt {
         match profile_checking {
             ProfileChecking::Unchecked => {}
             ProfileChecking::Checked => {
-                if specified_profile.is_some() {
-                    if !config.cli_unstable().unstable_options {
-                        failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
-                    }
+                if specified_profile.is_some() && !config.cli_unstable().unstable_options {
+                    failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
                 }
             }
         }
