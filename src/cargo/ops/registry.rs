@@ -419,7 +419,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
-    if let Some(cainfo) = http.cainfo.clone() {
+    if let Some(cainfo) = &http.cainfo {
         let cainfo = cainfo.resolve_path(config);
         handle.cainfo(&cainfo)?;
     }
