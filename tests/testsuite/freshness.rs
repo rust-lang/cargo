@@ -423,7 +423,6 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 }
 
 #[cargo_test]
-#[cfg(not(target_env = "msvc"))]
 fn changing_bin_features_caches_targets() {
     let p = project()
         .file(
@@ -471,22 +470,23 @@ fn changing_bin_features_caches_targets() {
 
     /* Targets should be cached from the first build */
 
-    p.cargo("build")
-        .with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+    let mut e = p.cargo("build");
+    // MSVC does not include hash in binary filename, so it gets recompiled.
+    if cfg!(target_env = "msvc") {
+        e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
+    } else {
+        e.with_stderr("[FINISHED] dev[..]");
+    }
+    e.run();
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
-    p.cargo("build --features foo")
-        .with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+    let mut e = p.cargo("build --features foo");
+    if cfg!(target_env = "msvc") {
+        e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
+    } else {
+        e.with_stderr("[FINISHED] dev[..]");
+    }
+    e.run();
     p.rename_run("foo", "on2").with_stdout("feature on").run();
 }
 

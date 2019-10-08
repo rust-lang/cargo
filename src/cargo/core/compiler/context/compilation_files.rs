@@ -476,6 +476,8 @@ fn compute_metadata<'a, 'cfg>(
     //
     // No metadata for bin because of an issue:
     // - wasm32 rustc/emcc encodes the `.wasm` name in the `.js` (rust-lang/cargo#4535).
+    // - msvc: The path to the PDB is embedded in the executable, and we don't
+    //   want the PDB path to include the hash in it.
     //
     // Two exceptions:
     // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict),
