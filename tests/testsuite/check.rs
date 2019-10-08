@@ -337,8 +337,10 @@ fn rustc_check() {
     foo.cargo("rustc --profile check -- --emit=metadata").run();
 
     // Verify compatible usage of --profile with --release, issue #7488
-    foo.cargo("rustc --profile check --release -- --emit=metadata").run();
-    foo.cargo("rustc --profile test --release -- --emit=metadata").run();
+    foo.cargo("rustc --profile check --release -- --emit=metadata")
+        .run();
+    foo.cargo("rustc --profile test --release -- --emit=metadata")
+        .run();
 }
 
 #[cargo_test]
