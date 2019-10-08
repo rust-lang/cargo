@@ -1795,15 +1795,81 @@ fn deps_with_bin_only() {
         .file("bdep/src/main.rs", "fn main() {}")
         .build();
 
-    let output = p
-        .cargo("metadata")
-        .exec_with_output()
-        .expect("cargo metadata failed");
-    let stdout = std::str::from_utf8(&output.stdout).unwrap();
-    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
-    let nodes = &meta["resolve"]["nodes"];
-    assert!(nodes[0]["deps"].as_array().unwrap().is_empty());
-    assert!(nodes[1]["deps"].as_array().unwrap().is_empty());
+    p.cargo("metadata")
+        .with_json(
+            r#"
+{
+  "packages": [
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "foo 0.1.0 ([..])",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "bdep",
+          "source": null,
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[..]/foo/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    }
+  ],
+  "workspace_members": [
+    "foo 0.1.0 ([..])"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "foo 0.1.0 ([..])",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 ([..])"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]foo"
+}
+"#,
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -1818,22 +1884,22 @@ fn filter_platform() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            normal-dep = "0.0.1"
+                [dependencies]
+                normal-dep = "0.0.1"
 
-            [target.{}.dependencies]
-            host-dep = "0.0.1"
+                [target.{}.dependencies]
+                host-dep = "0.0.1"
 
-            [target.{}.dependencies]
-            alt-dep = "0.0.1"
+                [target.{}.dependencies]
+                alt-dep = "0.0.1"
 
-            [target.'cfg(foobar)'.dependencies]
-            cfg-dep = "0.0.1"
-            "#,
+                [target.'cfg(foobar)'.dependencies]
+                cfg-dep = "0.0.1"
+                "#,
                 rustc_host(),
                 alternate()
             ),
@@ -1841,11 +1907,7 @@ fn filter_platform() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("metadata")
-        .with_json(
-            &r#"
-{
-  "packages": [
+    let alt_dep = r#"
     {
       "name": "alt-dep",
       "version": "0.0.1",
@@ -1881,6 +1943,9 @@ fn filter_platform() {
       "edition": "2015",
       "links": null
     },
+    "#;
+
+    let cfg_dep = r#"
     {
       "name": "cfg-dep",
       "version": "0.0.1",
@@ -1916,6 +1981,9 @@ fn filter_platform() {
       "edition": "2015",
       "links": null
     },
+    "#;
+
+    let host_dep = r#"
     {
       "name": "host-dep",
       "version": "0.0.1",
@@ -1951,6 +2019,9 @@ fn filter_platform() {
       "edition": "2015",
       "links": null
     },
+    "#;
+
+    let normal_dep = r#"
     {
       "name": "normal-dep",
       "version": "0.0.1",
@@ -1986,6 +2057,9 @@ fn filter_platform() {
       "edition": "2015",
       "links": null
     },
+    "#;
+
+    let foo = r#"
     {
       "name": "foo",
       "version": "0.1.0",
@@ -2070,6 +2144,21 @@ fn filter_platform() {
       "edition": "2015",
       "links": null
     }
+    "#
+    .replace("$ALT", &alternate())
+    .replace("$HOST", &rustc_host());
+
+    // Normal metadata, no filtering, returns *everything*.
+    p.cargo("metadata")
+        .with_json(
+            &r#"
+{
+  "packages": [
+    $ALT_DEP
+    $CFG_DEP
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
   ],
   "workspace_members": [
     "foo 0.1.0 (path+file:[..]foo)"
@@ -2136,28 +2225,30 @@ fn filter_platform() {
   "workspace_root": "[..]/foo"
 }
 "#
-            .replace("$ALT", &alternate())
-            .replace("$HOST", &rustc_host()),
+            .replace("$ALT_DEP", alt_dep)
+            .replace("$CFG_DEP", cfg_dep)
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
         )
         .run();
 
+    // Filter on alternate, removes cfg and host.
     p.cargo("metadata --filter-platform")
         .arg(alternate())
         .with_json(
-            r#"
+            &r#"
 {
-  "packages": "{...}",
+  "packages": [
+    $ALT_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
   "workspace_members": "{...}",
   "resolve": {
     "nodes": [
       {
         "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
-      {
-        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
         "dependencies": [],
         "deps": [],
         "features": []
@@ -2181,12 +2272,6 @@ fn filter_platform() {
         "features": []
       },
       {
-        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
-      {
         "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
         "dependencies": [],
         "deps": [],
@@ -2199,28 +2284,27 @@ fn filter_platform() {
   "version": 1,
   "workspace_root": "[..]foo"
 }
-"#,
+"#
+            .replace("$ALT_DEP", alt_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
         )
         .run();
 
-    let host_json = r#"
+    // Filter on host, removes alt and cfg.
+    p.cargo("metadata --filter-platform")
+        .arg(rustc_host())
+        .with_json(
+            &r#"
 {
-  "packages": "{...}",
+  "packages": [
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
   "workspace_members": "{...}",
   "resolve": {
     "nodes": [
-      {
-        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
-      {
-        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
       {
         "id": "foo 0.1.0 (path+file:[..]foo)",
         "dependencies": [
@@ -2258,31 +2342,29 @@ fn filter_platform() {
   "version": 1,
   "workspace_root": "[..]foo"
 }
-"#;
-
-    p.cargo("metadata --filter-platform=host")
-        .with_json(host_json)
+"#
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
+        )
         .run();
+
+    // Filter host with cfg, removes alt only
     p.cargo("metadata --filter-platform")
         .arg(rustc_host())
-        .with_json(host_json)
-        .run();
-
-    p.cargo("metadata --filter-platform=host")
         .env("RUSTFLAGS", "--cfg=foobar")
         .with_json(
-            r#"
+            &r#"
 {
-  "packages": "{...}",
+  "packages": [
+    $CFG_DEP
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
   "workspace_members": "{...}",
   "resolve": {
     "nodes": [
-      {
-        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
       {
         "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
         "dependencies": [],
@@ -2331,7 +2413,11 @@ fn filter_platform() {
   "version": 1,
   "workspace_root": "[..]/foo"
 }
-"#,
+"#
+            .replace("$CFG_DEP", cfg_dep)
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
         )
         .run();
 }
