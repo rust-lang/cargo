@@ -112,6 +112,10 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
+        // Match on the magical struct name/field names that are passed in to
+        // detect when we're deserializing `Value<T>`.
+        //
+        // See more comments in `value.rs` for the protocol used here.
         if name == value::NAME && fields == value::FIELDS {
             return visitor.visit_map(ValueDeserializer { hits: 0, de: self });
         }
@@ -340,6 +344,13 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
     }
 }
 
+/// This is a deserializer that deserializes into a `Value<T>` for
+/// configuration.
+///
+/// This is a special deserializer because it deserializes one of its struct
+/// fields into the location that this configuration value was defined in.
+///
+/// See more comments in `value.rs` for the protocol used here.
 struct ValueDeserializer<'config> {
     hits: u32,
     de: Deserializer<'config>,
@@ -396,6 +407,9 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
     }
 }
 
+/// A deserializer which takes two values and deserializes into a tuple of those
+/// two values. This is similar to types like `StrDeserializer` in upstream
+/// serde itself.
 struct Tuple2Deserializer<T, U>(T, U);
 
 impl<'de, T, U> de::Deserializer<'de> for Tuple2Deserializer<T, U>

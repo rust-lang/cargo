@@ -1,3 +1,13 @@
+//! Deserialization of a `Value<T>` type which tracks where it was deserialized
+//! from.
+//!
+//! Often Cargo wants to report semantic error information or other sorts of
+//! error information about configuration keys but it also may wish to indicate
+//! as an error context where the key was defined as well (to help user
+//! debugging). The `Value<T>` type here can be used to deserialize a `T` value
+//! from configuration, but also record where it was deserialized from when it
+//! was read.
+
 use crate::util::config::Config;
 use serde::de;
 use std::fmt;
@@ -5,13 +15,36 @@ use std::marker;
 use std::mem;
 use std::path::{Path, PathBuf};
 
+/// A type which can be deserialized as a configuration value which records
+/// where it was deserialized from.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value<T> {
+    /// The inner value that was deserialized.
     pub val: T,
+    /// The location where `val` was defined in configuration (e.g. file it was
+    /// defined in, env var etc).
     pub definition: Definition,
 }
 
 pub type OptValue<T> = Option<Value<T>>;
+
+// Deserializing `Value<T>` is pretty special, and serde doesn't have built-in
+// support for this operation. To implement this we extend serde's "data model"
+// a bit. We configure deserialization of `Value<T>` to basically only work with
+// our one deserializer using configuration.
+//
+// We define that `Value<T>` deserialization asks the deserializer for a very
+// special struct name and struct field names. In doing so the deserializer will
+// recognize this and synthesize a magical value for the `definition` field when
+// we deserialize it. This protocol is how we're able to have a channel of
+// information flowing from the configuration deserializer into the
+// deserialization implementation here.
+//
+// You'll want to also check out the implementation of `ValueDeserializer` in
+// `de.rs`. Also note that the names below are intended to be invalid Rust
+// identifiers to avoid how they might conflict with other valid structures.
+// Finally the `definition` field is transmitted as a tuple of i32/string, which
+// is effectively a tagged union of `Definition` itself.
 
 pub(crate) const VALUE_FIELD: &str = "$__cargo_private_value";
 pub(crate) const DEFINITION_FIELD: &str = "$__cargo_private_definition";
