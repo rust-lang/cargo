@@ -130,6 +130,8 @@ debug = false
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"           # the rust compiler tool
+rustc-wrapper = ".."      # run this wrapper instead of `rustc`; useful to set up a
+                          # build cache tool such as `sccache`
 rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple (ignored by `cargo install`)
 target-dir = "target"     # path of where to place all generated artifacts

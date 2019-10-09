@@ -20,7 +20,8 @@ system:
   compiler instead.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
   specified wrapper instead, passing as its commandline arguments the rustc
-  invocation, with the first argument being rustc.
+  invocation, with the first argument being `rustc`. Useful to set up a build
+  cache tool such as `sccache`.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`
