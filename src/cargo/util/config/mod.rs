@@ -1473,7 +1473,7 @@ pub struct CargoBuildConfig {
 /// single string or a string list itself. For example these deserialize to
 /// equivalent values:
 ///
-/// ```
+/// ```toml
 /// a = 'a b c'
 /// b = ['a', 'b', 'c']
 /// ```

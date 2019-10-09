@@ -13,7 +13,7 @@ pub struct ConfigKey {
     // updated with `push` methods and looks like `CARGO_FOO_BAR` for pushing
     // `foo` and then `bar`.
     env: String,
-    // The current environment variable this configuration key maps to. This is
+    // The current toml key this configuration key maps to. This is
     // updated with `push` methods and looks like `foo.bar` for pushing
     // `foo` and then `bar`.
     config: String,
