@@ -6,6 +6,7 @@ use std::str::{self, FromStr};
 
 use crate::core::compiler::CompileKind;
 use crate::core::TargetKind;
+use crate::util::config::StringList;
 use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
 use cargo_platform::{Cfg, CfgExpr};
 
@@ -427,9 +428,8 @@ fn env_args(
         CompileKind::Target(target) => target.short_name(),
     };
     let key = format!("target.{}.{}", target, name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        rustflags.extend(args);
+    if let Some(args) = config.get::<Option<StringList>>(&key)? {
+        rustflags.extend(args.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
@@ -450,9 +450,8 @@ fn env_args(
 
             for n in cfgs {
                 let key = format!("target.{}.{}", n, name);
-                if let Some(args) = config.get_list_or_split_string(&key)? {
-                    let args = args.val.into_iter();
-                    rustflags.extend(args);
+                if let Some(args) = config.get::<Option<StringList>>(&key)? {
+                    rustflags.extend(args.as_slice().iter().cloned());
                 }
             }
         }
@@ -463,10 +462,14 @@ fn env_args(
     }
 
     // Then the `build.rustflags` value.
-    let key = format!("build.{}", name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        return Ok(args.collect());
+    let build = config.build_config()?;
+    let list = if name == "rustflags" {
+        &build.rustflags
+    } else {
+        &build.rustdocflags
+    };
+    if let Some(list) = list {
+        return Ok(list.as_slice().to_vec());
     }
 
     Ok(Vec::new())

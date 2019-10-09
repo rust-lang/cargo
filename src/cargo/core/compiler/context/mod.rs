@@ -99,10 +99,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         };
 
-        let pipelining = bcx
-            .config
-            .get::<Option<bool>>("build.pipelining")?
-            .unwrap_or(true);
+        let pipelining = bcx.config.build_config()?.pipelining.unwrap_or(true);
 
         Ok(Self {
             bcx,

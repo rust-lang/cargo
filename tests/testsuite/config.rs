@@ -560,10 +560,13 @@ fn config_bad_toml() {
         config.get::<i32>("foo").unwrap_err(),
         "\
 could not load Cargo configuration
+
 Caused by:
   could not parse TOML configuration in `[..]/.cargo/config`
+
 Caused by:
   could not parse input as TOML
+
 Caused by:
   expected an equals, found eof at line 1 column 5",
     );
@@ -643,7 +646,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid number at line 1 column 10",
+         could not parse TOML list: invalid number at line 1 column 8",
     );
 
     // Try some other sequence-like types.
@@ -706,6 +709,7 @@ ns2 = 456
     let config = new_config(&[("CARGO_NSE", "987"), ("CARGO_NS2", "654")]);
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
+    #[serde(transparent)]
     struct NewS(i32);
     assert_eq!(config.get::<NewS>("ns").unwrap(), NewS(123));
     assert_eq!(config.get::<NewS>("ns2").unwrap(), NewS(654));
@@ -734,35 +738,35 @@ abs = '{}'
         config
             .get::<config::ConfigRelativePath>("p1")
             .unwrap()
-            .path(),
+            .resolve_path(&config),
         paths::root().join("foo/bar")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p2")
             .unwrap()
-            .path(),
+            .resolve_path(&config),
         paths::root().join("../abc")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("p3")
             .unwrap()
-            .path(),
+            .resolve_path(&config),
         paths::root().join("d/e")
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("abs")
             .unwrap()
-            .path(),
+            .resolve_path(&config),
         paths::home()
     );
     assert_eq!(
         config
             .get::<config::ConfigRelativePath>("epath")
             .unwrap()
-            .path(),
+            .resolve_path(&config),
         paths::root().join("a/b")
     );
 }

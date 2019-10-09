@@ -408,34 +408,26 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
 }
 
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
-    let proxy_exists = http_proxy_exists(config)?;
-    let timeout = HttpTimeout::new(config)?.is_non_default();
-    let cainfo = config.get_path("http.cainfo")?;
-    let check_revoke = config.get_bool("http.check-revoke")?;
-    let user_agent = config.get_string("http.user-agent")?;
-    let ssl_version = config.get::<Option<SslVersionConfig>>("http.ssl-version")?;
-
-    Ok(proxy_exists
-        || timeout
-        || cainfo.is_some()
-        || check_revoke.is_some()
-        || user_agent.is_some()
-        || ssl_version.is_some())
+    Ok(http_proxy_exists(config)?
+        || *config.http_config()? != Default::default()
+        || env::var_os("HTTP_TIMEOUT").is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
 pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
+    let http = config.http_config()?;
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
-    if let Some(cainfo) = config.get_path("http.cainfo")? {
-        handle.cainfo(&cainfo.val)?;
+    if let Some(cainfo) = &http.cainfo {
+        let cainfo = cainfo.resolve_path(config);
+        handle.cainfo(&cainfo)?;
     }
-    if let Some(check) = config.get_bool("http.check-revoke")? {
-        handle.ssl_options(SslOpt::new().no_revoke(!check.val))?;
+    if let Some(check) = http.check_revoke {
+        handle.ssl_options(SslOpt::new().no_revoke(!check))?;
     }
-    if let Some(user_agent) = config.get_string("http.user-agent")? {
-        handle.useragent(&user_agent.val)?;
+    if let Some(user_agent) = &http.user_agent {
+        handle.useragent(user_agent)?;
     } else {
         handle.useragent(&version().to_string())?;
     }
@@ -456,23 +448,25 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         };
         Ok(version)
     }
-    if let Some(ssl_version) = config.get::<Option<SslVersionConfig>>("http.ssl-version")? {
+    if let Some(ssl_version) = &http.ssl_version {
         match ssl_version {
             SslVersionConfig::Single(s) => {
                 let version = to_ssl_version(s.as_str())?;
                 handle.ssl_version(version)?;
             }
             SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
-                let min_version =
-                    min.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
-                let max_version =
-                    max.map_or(Ok(SslVersion::Default), |s| to_ssl_version(s.as_str()))?;
+                let min_version = min
+                    .as_ref()
+                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
+                let max_version = max
+                    .as_ref()
+                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
                 handle.ssl_min_max_version(min_version, max_version)?;
             }
         }
     }
 
-    if let Some(true) = config.get::<Option<bool>>("http.debug")? {
+    if let Some(true) = http.debug {
         handle.verbose(true)?;
         handle.debug_function(|kind, data| {
             let (prefix, level) = match kind {
@@ -513,21 +507,16 @@ pub struct HttpTimeout {
 
 impl HttpTimeout {
     pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
-        let low_speed_limit = config
-            .get::<Option<u32>>("http.low-speed-limit")?
-            .unwrap_or(10);
+        let config = config.http_config()?;
+        let low_speed_limit = config.low_speed_limit.unwrap_or(10);
         let seconds = config
-            .get::<Option<u64>>("http.timeout")?
+            .timeout
             .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
             .unwrap_or(30);
         Ok(HttpTimeout {
             dur: Duration::new(seconds, 0),
             low_speed_limit,
         })
-    }
-
-    fn is_non_default(&self) -> bool {
-        self.dur != Duration::new(30, 0) || self.low_speed_limit != 10
     }
 
     pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
@@ -548,8 +537,9 @@ impl HttpTimeout {
 /// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
-    if let Some(s) = config.get_string("http.proxy")? {
-        return Ok(Some(s.val));
+    let http = config.http_config()?;
+    if let Some(s) = &http.proxy {
+        return Ok(Some(s.clone()));
     }
     if let Ok(cfg) = git2::Config::open_default() {
         if let Ok(s) = cfg.get_str("http.proxy") {

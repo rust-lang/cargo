@@ -38,7 +38,7 @@ impl Profiles {
 
         let incremental = match env::var_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
-            None => config.get::<Option<bool>>("build.incremental")?,
+            None => config.build_config()?.incremental,
         };
 
         if !features.is_enabled(Feature::named_profiles()) {

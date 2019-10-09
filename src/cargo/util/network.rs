@@ -15,7 +15,7 @@ impl<'a> Retry<'a> {
     pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
         Ok(Retry {
             config,
-            remaining: config.get::<Option<u32>>("net.retry")?.unwrap_or(2),
+            remaining: config.net_config()?.retry.unwrap_or(2),
         })
     }
 
