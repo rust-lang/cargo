@@ -39,7 +39,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
-    let (packages, resolve) = ops::resolve_ws(ws)?;
     let profiles = ws.profiles();
 
     // Check for whether the profile is defined.
@@ -61,6 +60,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     if opts.spec.is_empty() {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
+    let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
