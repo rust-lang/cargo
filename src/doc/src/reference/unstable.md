@@ -23,11 +23,11 @@ index each time.
 * Original Issue: [#6477](https://github.com/rust-lang/cargo/pull/6477)
 * Cache usage meta tracking issue: [#7150](https://github.com/rust-lang/cargo/issues/7150)
 
-The `-Z mtime-on-use` flag is an experiment to have Cargo update the mtime of 
-used files to make it easier for tools like cargo-sweep to detect which files 
+The `-Z mtime-on-use` flag is an experiment to have Cargo update the mtime of
+used files to make it easier for tools like cargo-sweep to detect which files
 are stale. For many workflows this needs to be set on *all* invocations of cargo.
 To make this more practical setting the `unstable.mtime_on_use` flag in `.cargo/config`
-or the corresponding ENV variable will apply the `-Z mtime-on-use` to all 
+or the corresponding ENV variable will apply the `-Z mtime-on-use` to all
 invocations of nightly cargo. (the config flag is ignored by stable)
 
 ### avoid-dev-deps
@@ -104,12 +104,12 @@ opt-level = 0
 debug = true
 
 # the `image` crate will be compiled with -Copt-level=3
-[profile.dev.overrides.image]
+[profile.dev.package.image]
 opt-level = 3
 
 # All dependencies (but not this crate itself or any workspace member)
 # will be compiled with -Copt-level=2 . This includes build dependencies.
-[profile.dev.overrides."*"]
+[profile.dev.package."*"]
 opt-level = 2
 
 # Build scripts or proc-macros and their dependencies will be compiled with

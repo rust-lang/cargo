@@ -408,7 +408,10 @@ pub struct TomlProfile {
     pub panic: Option<String>,
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
+    // `overrides` has been renamed to `package`, this should be removed when
+    // stabilized.
     pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
+    pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<String>,
     pub inherits: Option<String>,
@@ -457,12 +460,23 @@ impl TomlProfile {
     ) -> CargoResult<()> {
         if let Some(ref profile) = self.build_override {
             features.require(Feature::profile_overrides())?;
-            profile.validate_override()?;
+            profile.validate_override("build-override")?;
         }
         if let Some(ref override_map) = self.overrides {
+            warnings.push(
+                "profile key `overrides` has been renamed to `package`, \
+                 please update the manifest to the new key name"
+                    .to_string(),
+            );
             features.require(Feature::profile_overrides())?;
             for profile in override_map.values() {
-                profile.validate_override()?;
+                profile.validate_override("package")?;
+            }
+        }
+        if let Some(ref packages) = self.package {
+            features.require(Feature::profile_overrides())?;
+            for profile in packages.values() {
+                profile.validate_override("package")?;
             }
         }
 
@@ -555,18 +569,21 @@ impl TomlProfile {
         Ok(())
     }
 
-    fn validate_override(&self) -> CargoResult<()> {
-        if self.overrides.is_some() || self.build_override.is_some() {
-            bail!("Profile overrides cannot be nested.");
+    fn validate_override(&self, which: &str) -> CargoResult<()> {
+        if self.overrides.is_some() || self.package.is_some() {
+            bail!("package-specific profiles cannot be nested");
+        }
+        if self.build_override.is_some() {
+            bail!("build-override profiles cannot be nested");
         }
         if self.panic.is_some() {
-            bail!("`panic` may not be specified in a profile override.")
+            bail!("`panic` may not be specified in a `{}` profile", which)
         }
         if self.lto.is_some() {
-            bail!("`lto` may not be specified in a profile override.")
+            bail!("`lto` may not be specified in a `{}` profile", which)
         }
         if self.rpath.is_some() {
-            bail!("`rpath` may not be specified in a profile override.")
+            bail!("`rpath` may not be specified in a `{}` profile", which)
         }
         Ok(())
     }
@@ -610,6 +627,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.overrides {
             self.overrides = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.package {
+            self.package = Some(v.clone());
         }
 
         if let Some(v) = &profile.build_override {

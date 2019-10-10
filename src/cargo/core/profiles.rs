@@ -433,12 +433,12 @@ impl Profiles {
     }
 }
 
-/// An object used for handling the profile override hierarchy.
+/// An object used for handling the profile hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
 /// - Profiles in `.cargo/config` files (using same order as below).
-/// - [profile.dev.overrides.name] -- a named package.
-/// - [profile.dev.overrides."*"] -- this cannot apply to workspace members.
+/// - [profile.dev.package.name] -- a named package.
+/// - [profile.dev.package."*"] -- this cannot apply to workspace members.
 /// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
 ///   and their dependencies.
 /// - [profile.dev]
@@ -511,8 +511,8 @@ impl ProfileMaker {
             Some(ref toml) => toml,
             None => return Ok(()),
         };
-        let overrides = match toml.overrides {
-            Some(ref overrides) => overrides,
+        let overrides = match toml.package.as_ref().or(toml.overrides.as_ref()) {
+            Some(overrides) => overrides,
             None => return Ok(()),
         };
         // Verify that a package doesn't match multiple spec overrides.
@@ -543,8 +543,8 @@ impl ProfileMaker {
                         .collect::<Vec<_>>()
                         .join(", ");
                     failure::bail!(
-                        "multiple profile overrides in profile `{}` match package `{}`\n\
-                         found profile override specs: {}",
+                        "multiple package overrides in profile `{}` match package `{}`\n\
+                         found package specs: {}",
                         self.default.name,
                         pkg_id,
                         specs
@@ -581,12 +581,12 @@ impl ProfileMaker {
                 let suggestion =
                     closest_msg(&spec.name(), packages.package_ids(), |p| p.name().as_str());
                 shell.warn(format!(
-                    "profile override spec `{}` did not match any packages{}",
+                    "package profile spec `{}` did not match any packages{}",
                     spec, suggestion
                 ))?;
             } else {
                 shell.warn(format!(
-                    "version or URL in profile override spec `{}` does not \
+                    "version or URL in package profile spec `{}` does not \
                      match any of the packages: {}",
                     spec,
                     name_matches.join(", ")
@@ -609,7 +609,7 @@ fn merge_toml_overrides(
             merge_profile(profile, build_override);
         }
     }
-    if let Some(ref overrides) = toml.overrides {
+    if let Some(overrides) = toml.package.as_ref().or(toml.overrides.as_ref()) {
         if !is_member {
             if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
                 merge_profile(profile, all);
@@ -634,7 +634,7 @@ fn merge_toml_overrides(
                 // no additional matches.
                 assert!(
                     matches.next().is_none(),
-                    "package `{}` matched multiple profile overrides",
+                    "package `{}` matched multiple package profile overrides",
                     pkg_id
                 );
             }

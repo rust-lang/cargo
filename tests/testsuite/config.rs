@@ -302,7 +302,7 @@ incremental = true
 [profile.dev.build-override]
 opt-level = 1
 
-[profile.dev.overrides.bar]
+[profile.dev.package.bar]
 codegen-units = 9
 
 [profile.no-lto]
@@ -315,26 +315,26 @@ lto = false
     let config = new_config(&[
         ("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5"),
         ("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11"),
-        ("CARGO_PROFILE_DEV_OVERRIDES_env_CODEGEN_UNITS", "13"),
-        ("CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL", "2"),
+        ("CARGO_PROFILE_DEV_PACKAGE_env_CODEGEN_UNITS", "13"),
+        ("CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL", "2"),
     ]);
 
     // TODO: don't use actual `tomlprofile`.
     let p: toml::TomlProfile = config.get("profile.dev").unwrap();
-    let mut overrides = collections::BTreeMap::new();
+    let mut packages = collections::BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
     let o_profile = toml::TomlProfile {
         opt_level: Some(toml::TomlOptLevel("2".to_string())),
         codegen_units: Some(9),
         ..Default::default()
     };
-    overrides.insert(key, o_profile);
+    packages.insert(key, o_profile);
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
     let o_profile = toml::TomlProfile {
         codegen_units: Some(13),
         ..Default::default()
     };
-    overrides.insert(key, o_profile);
+    packages.insert(key, o_profile);
 
     assert_eq!(
         p,
@@ -348,7 +348,7 @@ lto = false
             panic: Some("abort".to_string()),
             overflow_checks: Some(true),
             incremental: Some(true),
-            overrides: Some(overrides),
+            package: Some(packages),
             build_override: Some(Box::new(toml::TomlProfile {
                 opt_level: Some(toml::TomlOptLevel("1".to_string())),
                 codegen_units: Some(11),

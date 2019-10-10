@@ -53,7 +53,7 @@ fn profile_config_validate_warnings() {
             [profile.dev.build-override]
             bad-key-bo = true
 
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             bad-key-bar = true
         "#,
         )
@@ -66,7 +66,7 @@ fn profile_config_validate_warnings() {
 [WARNING] unused key `profile.asdf` in config file `[..].cargo/config`
 [WARNING] unused key `profile.test` in config file `[..].cargo/config`
 [WARNING] unused key `profile.dev.bad-key` in config file `[..].cargo/config`
-[WARNING] unused key `profile.dev.overrides.bar.bad-key-bar` in config file `[..].cargo/config`
+[WARNING] unused key `profile.dev.package.bar.bad-key-bar` in config file `[..].cargo/config`
 [WARNING] unused key `profile.dev.build-override.bad-key-bo` in config file `[..].cargo/config`
 [COMPILING] foo [..]
 [FINISHED] [..]
@@ -127,7 +127,7 @@ fn profile_config_validate_errors() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.overrides.foo]
+            [profile.dev.package.foo]
             panic = "abort"
         "#,
         )
@@ -141,7 +141,7 @@ fn profile_config_validate_errors() {
 [ERROR] config profile `profile.dev` is not valid
 
 Caused by:
-  `panic` may not be specified in a profile override.
+  `panic` may not be specified in a `package` profile
 ",
         )
         .run();
@@ -194,10 +194,10 @@ fn profile_config_override_spec_multiple() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             opt-level = 3
 
-            [profile.dev.overrides."bar:0.5.0"]
+            [profile.dev.package."bar:0.5.0"]
             opt-level = 3
         "#,
         )
@@ -222,8 +222,8 @@ fn profile_config_override_spec_multiple() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found profile override specs: bar, bar:0.5.0",
+[ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
+found package specs: bar, bar:0.5.0",
         )
         .run();
 }
@@ -291,7 +291,7 @@ fn profile_config_override_precedence() {
             [profile.dev]
             codegen-units = 2
 
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             opt-level = 3
         "#,
         )
@@ -310,7 +310,7 @@ fn profile_config_override_precedence() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             opt-level = 2
         "#,
         )
@@ -346,7 +346,7 @@ fn profile_config_no_warn_unknown_override() {
         .file(
             ".cargo/config",
             r#"
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             codegen-units = 4
         "#,
         )

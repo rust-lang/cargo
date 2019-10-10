@@ -296,16 +296,16 @@ fn overrides_with_custom() {
             [profile.dev]
             codegen-units = 7
 
-            [profile.dev.overrides.xxx]
+            [profile.dev.package.xxx]
             codegen-units = 5
-            [profile.dev.overrides.yyy]
+            [profile.dev.package.yyy]
             codegen-units = 3
 
             [profile.other]
             inherits = "dev"
             codegen-units = 2
 
-            [profile.other.overrides.yyy]
+            [profile.other.package.yyy]
             codegen-units = 6
         "#,
         )
