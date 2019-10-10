@@ -873,9 +873,17 @@ impl Config {
             return Ok(Some(path));
         }
 
-        let var = format!("build.{}", tool);
-        if let Some(tool_path) = self.get_path(&var)? {
-            return Ok(Some(tool_path.val));
+        // For backwards compatibility we allow both snake_case config paths as well as the
+        // idiomatic kebab-case paths.
+        let config_paths = [
+            format!("build.{}", tool),
+            format!("build.{}", tool.replace('_', "-")),
+        ];
+
+        for config_path in &config_paths {
+            if let Some(tool_path) = self.get_path(&config_path)? {
+                return Ok(Some(tool_path.val));
+            }
         }
 
         Ok(None)
