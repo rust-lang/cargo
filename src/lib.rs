@@ -25,7 +25,7 @@
 //!
 //! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
-#![doc(html_root_url = "https://docs.rs/home/0.5.0")]
+#![doc(html_root_url = "https://docs.rs/home/0.5.1")]
 #![deny(rust_2018_idioms)]
 
 mod windows;
