@@ -8,8 +8,9 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/brson/home"
 description = "Shared definitions of home directories"
 
-[target."cfg(windows)".dependencies]
-scopeguard = "1"
+[target."cfg(windows)".dependencies.scopeguard]
+version = "1"
+default-features = false
 
 [target."cfg(windows)".dependencies.winapi]
 version = "0.3"
