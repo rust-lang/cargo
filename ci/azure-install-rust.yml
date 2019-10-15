@@ -4,7 +4,6 @@ steps:
       if command -v rustup; then
         echo `command -v rustup` `rustup -V` already installed
         rustup self update
-        rustup set profile minimal
       elif [ "$AGENT_OS" = "Windows_NT" ]; then
         curl -sSf -o rustup-init.exe https://win.rustup.rs
         rustup-init.exe -y --default-toolchain $TOOLCHAIN --profile=minimal
@@ -17,6 +16,7 @@ steps:
 
   - bash: |
       set -e
+      rustup set profile minimal
       rustup update $TOOLCHAIN
       rustup default $TOOLCHAIN
     displayName: Install rust
