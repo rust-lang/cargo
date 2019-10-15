@@ -77,7 +77,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
                     Ok(git2::Repository::init_opts(&path, &opts)
-                        .chain_err(|| "failed to initialized index git repository")?)
+                        .chain_err(|| "failed to initialize index git repository")?)
                 }
             }
         })
