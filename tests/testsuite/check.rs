@@ -3,7 +3,7 @@ use std::fmt::{self, Write};
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn check_success() {
@@ -681,6 +681,11 @@ fn check_artifacts() {
 
 #[cargo_test]
 fn short_message_format() {
+    if !is_nightly() {
+        // This relies on a bug fix https://github.com/rust-lang/rust/pull/64753.
+        // This check may be removed once 1.40 is stable.
+        return;
+    }
     let foo = project()
         .file("src/lib.rs", "fn foo() { let _x: bool = 'a'; }")
         .build();

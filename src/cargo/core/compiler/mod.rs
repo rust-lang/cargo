@@ -136,9 +136,7 @@ fn compile<'a, 'cfg: 'a>(
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if cx.bcx.build_config.cache_messages()
-                && cx.bcx.show_warnings(unit.pkg.package_id())
-            {
+            let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
                 replay_output_cache(
                     unit.pkg.package_id(),
                     unit.target,
@@ -663,79 +661,31 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessB
 
 /// Add error-format flags to the command.
 ///
-/// This is somewhat odd right now, but the general overview is that if
-/// `-Zcache-messages` or `pipelined` is enabled then Cargo always uses JSON
-/// output. This has several benefits, such as being easier to parse, handles
-/// changing formats (for replaying cached messages), ensures atomic output (so
-/// messages aren't interleaved), etc.
-///
-/// It is intended in the future that Cargo *always* uses the JSON output (by
-/// turning on cache-messages by default), and this function can be simplified.
+/// Cargo always uses JSON output. This has several benefits, such as being
+/// easier to parse, handles changing formats (for replaying cached messages),
+/// ensures atomic output (so messages aren't interleaved), allows for
+/// intercepting messages like rmeta artifacts, etc. rustc includes a
+/// "rendered" field in the JSON message with the message properly formatted,
+/// which Cargo will extract and display to the user.
 fn add_error_format_and_color(
     cx: &Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     pipelined: bool,
 ) -> CargoResult<()> {
-    // If this unit is producing a required rmeta file then we need to know
-    // when the rmeta file is ready so we can signal to the rest of Cargo that
-    // it can continue dependent compilations. To do this we are currently
-    // required to switch the compiler into JSON message mode, but we still
-    // want to present human readable errors as well. (this rabbit hole just
-    // goes and goes)
-    //
-    // All that means is that if we're not already in JSON mode we need to
-    // switch to JSON mode, ensure that rustc error messages can be rendered
-    // prettily, and then when parsing JSON messages from rustc we need to
-    // internally understand that we should extract the `rendered` field and
-    // present it if we can.
-    if cx.bcx.build_config.cache_messages() || pipelined {
-        cmd.arg("--error-format=json");
-        let mut json = String::from("--json=diagnostic-rendered-ansi");
-        if pipelined {
-            json.push_str(",artifacts");
-        }
-        match cx.bcx.build_config.message_format {
-            MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
-                json.push_str(",diagnostic-short");
-            }
-            _ => {}
-        }
-        cmd.arg(json);
-    } else {
-        let mut color = true;
-        match cx.bcx.build_config.message_format {
-            MessageFormat::Human => (),
-            MessageFormat::Json {
-                ansi,
-                short,
-                render_diagnostics,
-            } => {
-                cmd.arg("--error-format").arg("json");
-                // If ansi is explicitly requested, enable it. If we're
-                // rendering diagnostics ourselves then also enable it because
-                // we'll figure out what to do with the colors later.
-                if ansi || render_diagnostics {
-                    cmd.arg("--json=diagnostic-rendered-ansi");
-                }
-                if short {
-                    cmd.arg("--json=diagnostic-short");
-                }
-                color = false;
-            }
-            MessageFormat::Short => {
-                cmd.arg("--error-format").arg("short");
-            }
-        }
-
-        if color {
-            let color = if cx.bcx.config.shell().supports_color() {
-                "always"
-            } else {
-                "never"
-            };
-            cmd.args(&["--color", color]);
-        }
+    cmd.arg("--error-format=json");
+    let mut json = String::from("--json=diagnostic-rendered-ansi");
+    if pipelined {
+        // Pipelining needs to know when rmeta files are finished. Tell rustc
+        // to emit a message that cargo will intercept.
+        json.push_str(",artifacts");
     }
+    match cx.bcx.build_config.message_format {
+        MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
+            json.push_str(",diagnostic-short");
+        }
+        _ => {}
+    }
+    cmd.arg(json);
     Ok(())
 }
 
@@ -1058,7 +1008,8 @@ struct OutputOptions {
     color: bool,
     /// Where to write the JSON messages to support playback later if the unit
     /// is fresh. The file is created lazily so that in the normal case, lots
-    /// of empty files are not created. This is None if caching is disabled.
+    /// of empty files are not created. If this is None, the output will not
+    /// be cached (such as when replaying cached messages).
     cache_cell: Option<(PathBuf, LazyCell<File>)>,
 }
 
@@ -1066,14 +1017,10 @@ impl OutputOptions {
     fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
         let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().supports_color();
-        let cache_cell = if cx.bcx.build_config.cache_messages() {
-            let path = cx.files().message_cache_path(unit);
-            // Remove old cache, ignore ENOENT, which is the common case.
-            drop(fs::remove_file(&path));
-            Some((path, LazyCell::new()))
-        } else {
-            None
-        };
+        let path = cx.files().message_cache_path(unit);
+        // Remove old cache, ignore ENOENT, which is the common case.
+        drop(fs::remove_file(&path));
+        let cache_cell = Some((path, LazyCell::new()));
         OutputOptions {
             format: cx.bcx.build_config.message_format,
             look_for_metadata_directive,
@@ -1100,15 +1047,27 @@ fn on_stderr_line(
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<()> {
-    // Check if caching is enabled.
-    if let Some((path, cell)) = &mut options.cache_cell {
-        // Cache the output, which will be replayed later when Fresh.
-        let f = cell.try_borrow_mut_with(|| File::create(path))?;
-        debug_assert!(!line.contains('\n'));
-        f.write_all(line.as_bytes())?;
-        f.write_all(&[b'\n'])?;
+    if on_stderr_line_inner(state, line, package_id, target, options)? {
+        // Check if caching is enabled.
+        if let Some((path, cell)) = &mut options.cache_cell {
+            // Cache the output, which will be replayed later when Fresh.
+            let f = cell.try_borrow_mut_with(|| File::create(path))?;
+            debug_assert!(!line.contains('\n'));
+            f.write_all(line.as_bytes())?;
+            f.write_all(&[b'\n'])?;
+        }
     }
+    Ok(())
+}
 
+/// Returns true if the line should be cached.
+fn on_stderr_line_inner(
+    state: &JobState<'_>,
+    line: &str,
+    package_id: PackageId,
+    target: &Target,
+    options: &mut OutputOptions,
+) -> CargoResult<bool> {
     // We primarily want to use this function to process JSON messages from
     // rustc. The compiler should always print one JSON message per line, and
     // otherwise it may have other output intermingled (think RUST_LOG or
@@ -1116,7 +1075,7 @@ fn on_stderr_line(
     // JSON message.
     if !line.starts_with('{') {
         state.stderr(line.to_string());
-        return Ok(());
+        return Ok(true);
     }
 
     let mut compiler_message: Box<serde_json::value::RawValue> = match serde_json::from_str(line) {
@@ -1128,7 +1087,7 @@ fn on_stderr_line(
         Err(e) => {
             debug!("failed to parse json: {:?}", e);
             state.stderr(line.to_string());
-            return Ok(());
+            return Ok(true);
         }
     };
 
@@ -1164,14 +1123,13 @@ fn on_stderr_line(
                         .expect("strip should never fail")
                 };
                 state.stderr(rendered);
-                return Ok(());
+                return Ok(true);
             }
         }
 
-        // Remove color information from the rendered string. When pipelining is
-        // enabled and/or when cached messages are enabled we're always asking
-        // for ANSI colors from rustc, so unconditionally postprocess here and
-        // remove ansi color codes.
+        // Remove color information from the rendered string if color is not
+        // enabled. Cargo always asks for ANSI colors from rustc. This allows
+        // cached replay to enable/disable colors without re-invoking rustc.
         MessageFormat::Json { ansi: false, .. } => {
             #[derive(serde::Deserialize, serde::Serialize)]
             struct CompilerMessage {
@@ -1213,7 +1171,7 @@ fn on_stderr_line(
                 log::debug!("looks like metadata finished early!");
                 state.rmeta_produced();
             }
-            return Ok(());
+            return Ok(false);
         }
     }
 
@@ -1231,7 +1189,7 @@ fn on_stderr_line(
     // instead. We want the stdout of Cargo to always be machine parseable as
     // stderr has our colorized human-readable messages.
     state.stdout(msg);
-    Ok(())
+    Ok(true)
 }
 
 fn replay_output_cache(
@@ -1244,7 +1202,7 @@ fn replay_output_cache(
     let target = target.clone();
     let mut options = OutputOptions {
         format,
-        look_for_metadata_directive: false,
+        look_for_metadata_directive: true,
         color,
         cache_cell: None,
     };

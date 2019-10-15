@@ -43,8 +43,6 @@ pub struct BuildConfig {
     /// An optional override of the rustc path for primary units only
     pub primary_unit_rustc: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
-    /// Whether or not Cargo should cache compiler output on disk.
-    cache_messages: bool,
 }
 
 impl BuildConfig {
@@ -101,13 +99,7 @@ impl BuildConfig {
             build_plan: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
-            cache_messages: config.cli_unstable().cache_messages,
         })
-    }
-
-    /// Whether or not Cargo should cache compiler messages on disk.
-    pub fn cache_messages(&self) -> bool {
-        self.cache_messages
     }
 
     /// Whether or not the *user* wants JSON output. Whether or not rustc

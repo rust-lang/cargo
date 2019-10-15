@@ -11,7 +11,7 @@ fn build_lib_only() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
         --emit=[..]link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \

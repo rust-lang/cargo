@@ -1,4 +1,6 @@
-use cargo_test_support::{clippy_is_available, is_nightly, process, project, registry::Package};
+use cargo_test_support::{
+    clippy_is_available, is_coarse_mtime, process, project, registry::Package, sleep_ms,
+};
 use std::path::Path;
 
 fn as_str(bytes: &[u8]) -> &str {
@@ -7,10 +9,6 @@ fn as_str(bytes: &[u8]) -> &str {
 
 #[cargo_test]
 fn simple() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // A simple example that generates two warnings (unused functions).
     let p = project()
         .file(
@@ -38,16 +36,14 @@ fn simple() {
 
     // -q so the output is the same as rustc (no "Compiling" or "Finished").
     let cargo_output1 = p
-        .cargo("check -Zcache-messages -q --color=never")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --color=never")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output1.stderr));
     assert!(cargo_output1.stdout.is_empty());
     // Check that the cached version is exactly the same.
     let cargo_output2 = p
-        .cargo("check -Zcache-messages -q")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output2.stderr));
@@ -57,10 +53,6 @@ fn simple() {
 // same as `simple`, except everything is using the short format
 #[cargo_test]
 fn simple_short() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
@@ -84,15 +76,13 @@ fn simple_short() {
     assert!(rustc_output.status.success());
 
     let cargo_output1 = p
-        .cargo("check -Zcache-messages -q --color=never --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --color=never --message-format=short")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(as_str(&rustc_output.stderr), as_str(&cargo_output1.stderr));
     // assert!(cargo_output1.stdout.is_empty());
     let cargo_output2 = p
-        .cargo("check -Zcache-messages -q --message-format=short")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --message-format=short")
         .exec_with_output()
         .expect("cargo to run");
     println!("{}", String::from_utf8_lossy(&cargo_output2.stdout));
@@ -102,10 +92,6 @@ fn simple_short() {
 
 #[cargo_test]
 fn color() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Check enabling/disabling color.
     let p = project().file("src/lib.rs", "fn a() {}").build();
 
@@ -132,24 +118,21 @@ fn color() {
 
     // First pass, non-cached, with color, should be the same.
     let cargo_output1 = p
-        .cargo("check -Zcache-messages -q --color=always")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(rustc_color, as_str(&cargo_output1.stderr));
 
     // Replay cached, with color.
     let cargo_output2 = p
-        .cargo("check -Zcache-messages -q --color=always")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(rustc_color, as_str(&cargo_output2.stderr));
 
     // Replay cached, no color.
     let cargo_output_nocolor = p
-        .cargo("check -Zcache-messages -q --color=never")
-        .masquerade_as_nightly_cargo()
+        .cargo("check -q --color=never")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
@@ -157,10 +140,6 @@ fn color() {
 
 #[cargo_test]
 fn cached_as_json() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Check that cached JSON output is the same.
     let p = project().file("src/lib.rs", "fn a() {}").build();
 
@@ -177,16 +156,14 @@ fn cached_as_json() {
 
     // Check JSON output, not fresh.
     let cargo_output1 = p
-        .cargo("check -Zcache-messages --message-format=json")
-        .masquerade_as_nightly_cargo()
+        .cargo("check --message-format=json")
         .exec_with_output()
         .expect("cargo to run");
     assert_eq!(as_str(&cargo_output1.stdout), orig_cargo_out);
 
     // Check JSON output, fresh.
     let cargo_output2 = p
-        .cargo("check -Zcache-messages --message-format=json")
-        .masquerade_as_nightly_cargo()
+        .cargo("check --message-format=json")
         .exec_with_output()
         .expect("cargo to run");
     // The only difference should be this field.
@@ -196,17 +173,10 @@ fn cached_as_json() {
 
 #[cargo_test]
 fn clears_cache_after_fix() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Make sure the cache is invalidated when there is no output.
     let p = project().file("src/lib.rs", "fn asdf() {}").build();
     // Fill the cache.
-    p.cargo("check -Zcache-messages")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[..]asdf[..]")
-        .run();
+    p.cargo("check").with_stderr_contains("[..]asdf[..]").run();
     let cpath = p
         .glob("target/debug/.fingerprint/foo-*/output")
         .next()
@@ -215,10 +185,12 @@ fn clears_cache_after_fix() {
     assert!(std::fs::read_to_string(cpath).unwrap().contains("asdf"));
 
     // Fix it.
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
     p.change_file("src/lib.rs", "");
 
-    p.cargo("check -Zcache-messages")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stdout("")
         .with_stderr(
             "\
@@ -230,8 +202,7 @@ fn clears_cache_after_fix() {
     assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
 
     // And again, check the cache is correct.
-    p.cargo("check -Zcache-messages")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check")
         .with_stdout("")
         .with_stderr(
             "\
@@ -243,10 +214,6 @@ fn clears_cache_after_fix() {
 
 #[cargo_test]
 fn rustdoc() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Create a warning in rustdoc.
     let p = project()
         .file(
@@ -262,24 +229,19 @@ fn rustdoc() {
         )
         .build();
 
-    // At this time, rustdoc does not support --json-rendered=termcolor. So it
-    // will always be uncolored with -Zcache-messages.
     let rustdoc_output = p
-        .cargo("doc -Zcache-messages -q")
-        .masquerade_as_nightly_cargo()
+        .cargo("doc -q --color=always")
         .exec_with_output()
         .expect("rustdoc to run");
     assert!(rustdoc_output.status.success());
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
     assert!(rustdoc_stderr.contains("private"));
-    // Invert this when --json-rendered is added.
-    assert!(!rustdoc_stderr.contains("\x1b["));
+    assert!(rustdoc_stderr.contains("\x1b["));
     assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
 
     // Check the cached output.
     let rustdoc_output = p
-        .cargo("doc -Zcache-messages -q")
-        .masquerade_as_nightly_cargo()
+        .cargo("doc -q --color=always")
         .exec_with_output()
         .expect("rustdoc to run");
     assert_eq!(as_str(&rustdoc_output.stderr), rustdoc_stderr);
@@ -287,28 +249,16 @@ fn rustdoc() {
 
 #[cargo_test]
 fn fix() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Make sure `fix` is not broken by caching.
     let p = project().file("src/lib.rs", "pub fn try() {}").build();
 
-    p.cargo("fix --edition --allow-no-vcs -Zcache-messages")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("fix --edition --allow-no-vcs").run();
 
     assert_eq!(p.read_file("src/lib.rs"), "pub fn r#try() {}");
 }
 
 #[cargo_test]
 fn clippy() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        eprintln!("skipping test: requires nightly");
-        return;
-    }
-
     if !clippy_is_available() {
         return;
     }
@@ -317,34 +267,48 @@ fn clippy() {
     // This is just a random clippy lint (assertions_on_constants) that
     // hopefully won't change much in the future.
     let p = project()
-        .file("src/lib.rs", "pub fn f() { assert!(true); }")
+        .file(
+            "src/lib.rs",
+            "pub fn f() { assert!(true); }\n\
+             fn unused_func() {}",
+        )
         .build();
 
-    p.cargo("clippy-preview -Zunstable-options -Zcache-messages")
+    p.cargo("clippy-preview -Zunstable-options -v")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[RUNNING] `clippy[..]")
         .with_stderr_contains("[..]assert!(true)[..]")
+        .run();
+
+    // `check` should be separate from clippy.
+    p.cargo("check -v")
+        .with_stderr_contains(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc[..]
+[WARNING] [..]unused_func[..]
+",
+        )
+        .with_stderr_does_not_contain("[..]assert!(true)[..]")
         .run();
 
     // Again, reading from the cache.
-    p.cargo("clippy-preview -Zunstable-options -Zcache-messages")
+    p.cargo("clippy-preview -Zunstable-options -v")
         .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[FRESH] foo [..]")
         .with_stderr_contains("[..]assert!(true)[..]")
         .run();
 
-    // FIXME: Unfortunately clippy is sharing the same hash with check. This
-    // causes the cache to be reused when it shouldn't.
-    p.cargo("check -Zcache-messages")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[..]assert!(true)[..]") // This should not be here.
+    // And `check` should also be fresh, reading from cache.
+    p.cargo("check -v")
+        .with_stderr_contains("[FRESH] foo [..]")
+        .with_stderr_contains("[WARNING] [..]unused_func[..]")
+        .with_stderr_does_not_contain("[..]assert!(true)[..]")
         .run();
 }
 
 #[cargo_test]
 fn very_verbose() {
-    if !is_nightly() {
-        // --json-rendered is unstable
-        return;
-    }
     // Handle cap-lints in dependencies.
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "fn not_used() {}")
@@ -365,18 +329,48 @@ fn very_verbose() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcache-messages -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
         .with_stderr_contains("[..]not_used[..]")
         .run();
 
-    p.cargo("check -Zcache-messages")
-        .masquerade_as_nightly_cargo()
-        .with_stderr("[FINISHED] [..]")
-        .run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
-    p.cargo("check -Zcache-messages -vv")
-        .masquerade_as_nightly_cargo()
+    p.cargo("check -vv")
         .with_stderr_contains("[..]not_used[..]")
         .run();
+}
+
+#[cargo_test]
+fn doesnt_create_extra_files() {
+    // Ensure it doesn't create `output` files when not needed.
+    Package::new("dep", "1.0.0")
+        .file("src/lib.rs", "fn unused() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                dep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").run();
+
+    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
+    assert_eq!(p.glob("target/debug/.fingerprint/dep-*/output").count(), 0);
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    p.change_file("src/lib.rs", "fn unused() {}");
+    p.cargo("build").run();
+    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
 }

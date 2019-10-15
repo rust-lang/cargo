@@ -26,7 +26,7 @@ fn profile_overrides() {
         .with_stderr(
             "\
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=1 \
         -C debug-assertions=on \
@@ -62,7 +62,7 @@ fn opt_level_override_0() {
         .with_stderr(
             "\
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C debuginfo=2 \
         -C metadata=[..] \
@@ -95,7 +95,7 @@ fn debug_override_1() {
         .with_stderr(
             "\
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C debuginfo=1 \
         -C metadata=[..] \
@@ -131,7 +131,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level={level} \
         -C debuginfo=2 \
@@ -204,7 +204,7 @@ fn top_level_overrides_deps() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ([CWD]/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --color never \
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
         --emit=[..]link \
         -C prefer-dynamic \
@@ -214,7 +214,7 @@ fn top_level_overrides_deps() {
         --out-dir [CWD]/target/release/deps \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=1 \
         -C debuginfo=2 \

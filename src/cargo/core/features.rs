@@ -335,7 +335,6 @@ pub struct CliUnstable {
     pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
     pub install_upgrade: bool,
-    pub cache_messages: bool,
     pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
@@ -393,7 +392,6 @@ impl CliUnstable {
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = true,
             "install-upgrade" => self.install_upgrade = true,
-            "cache-messages" => self.cache_messages = true,
             "named-profiles" => self.named_profiles = true,
             "binary-dep-depinfo" => self.binary_dep_depinfo = true,
             "build-std" => {
