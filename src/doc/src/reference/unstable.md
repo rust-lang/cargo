@@ -104,12 +104,12 @@ opt-level = 0
 debug = true
 
 # the `image` crate will be compiled with -Copt-level=3
-[profile.dev.overrides.image]
+[profile.dev.package.image]
 opt-level = 3
 
 # All dependencies (but not this crate itself or any workspace member)
 # will be compiled with -Copt-level=2 . This includes build dependencies.
-[profile.dev.overrides."*"]
+[profile.dev.package."*"]
 opt-level = 2
 
 # Build scripts or proc-macros and their dependencies will be compiled with

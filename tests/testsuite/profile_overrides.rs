@@ -43,7 +43,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
             version = "0.0.1"
             authors = []
 
-            [profile.dev.overrides."*"]
+            [profile.dev.package."*"]
             opt-level = 3
         "#,
         )
@@ -85,7 +85,7 @@ fn profile_override_basic() {
             [profile.dev]
             opt-level = 1
 
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             opt-level = 3
         "#,
         )
@@ -121,13 +121,13 @@ fn profile_override_warnings() {
             [dependencies]
             bar = {path = "bar"}
 
-            [profile.dev.overrides.bart]
+            [profile.dev.package.bart]
             opt-level = 3
 
-            [profile.dev.overrides.no-suggestion]
+            [profile.dev.package.no-suggestion]
             opt-level = 3
 
-            [profile.dev.overrides."bar:1.2.3"]
+            [profile.dev.package."bar:1.2.3"]
             opt-level = 3
         "#,
         )
@@ -138,11 +138,11 @@ fn profile_override_warnings() {
 
     p.cargo("build").masquerade_as_nightly_cargo().with_stderr_contains(
             "\
-[WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
-[WARNING] profile override spec `bart` did not match any packages
+[WARNING] version or URL in package profile spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
+[WARNING] package profile spec `bart` did not match any packages
 
 <tab>Did you mean `bar`?
-[WARNING] profile override spec `no-suggestion` did not match any packages
+[WARNING] package profile spec `no-suggestion` did not match any packages
 [COMPILING] [..]
 ",
         )
@@ -154,17 +154,20 @@ fn profile_override_bad_settings() {
     let bad_values = [
         (
             "panic = \"abort\"",
-            "`panic` may not be specified in a profile override.",
+            "`panic` may not be specified in a `package` profile",
         ),
         (
             "lto = true",
-            "`lto` may not be specified in a profile override.",
+            "`lto` may not be specified in a `package` profile",
         ),
         (
             "rpath = true",
-            "`rpath` may not be specified in a profile override.",
+            "`rpath` may not be specified in a `package` profile",
         ),
-        ("overrides = {}", "Profile overrides cannot be nested."),
+        (
+            "overrides = {}",
+            "package-specific profiles cannot be nested",
+        ),
     ];
     for &(snippet, expected) in bad_values.iter() {
         let p = project()
@@ -181,7 +184,7 @@ fn profile_override_bad_settings() {
                 [dependencies]
                 bar = {{path = "bar"}}
 
-                [profile.dev.overrides.bar]
+                [profile.dev.package.bar]
                 {}
             "#,
                     snippet
@@ -215,10 +218,10 @@ fn profile_override_hierarchy() {
             [profile.dev]
             codegen-units = 1
 
-            [profile.dev.overrides.m2]
+            [profile.dev.package.m2]
             codegen-units = 2
 
-            [profile.dev.overrides."*"]
+            [profile.dev.package."*"]
             codegen-units = 3
 
             [profile.dev.build-override]
@@ -276,10 +279,10 @@ fn profile_override_hierarchy() {
     // Profiles should be:
     // m3: 4 (as build.rs dependency)
     // m3: 1 (as [profile.dev] as workspace member)
-    // dep: 3 (as [profile.dev.overrides."*"] as non-workspace member)
+    // dep: 3 (as [profile.dev.package."*"] as non-workspace member)
     // m1 build.rs: 4 (as [profile.dev.build-override])
-    // m2 build.rs: 2 (as [profile.dev.overrides.m2])
-    // m2: 2 (as [profile.dev.overrides.m2])
+    // m2 build.rs: 2 (as [profile.dev.package.m2])
+    // m2: 2 (as [profile.dev.package.m2])
     // m1: 1 (as [profile.dev])
 
     p.cargo("build -v").masquerade_as_nightly_cargo().with_stderr_unordered("\
@@ -317,10 +320,10 @@ fn profile_override_spec_multiple() {
             [dependencies]
             bar = { path = "bar" }
 
-            [profile.dev.overrides.bar]
+            [profile.dev.package.bar]
             opt-level = 3
 
-            [profile.dev.overrides."bar:0.5.0"]
+            [profile.dev.package."bar:0.5.0"]
             opt-level = 3
             "#,
         )
@@ -334,8 +337,8 @@ fn profile_override_spec_multiple() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found profile override specs: bar, bar:0.5.0",
+[ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
+found package specs: bar, bar:0.5.0",
         )
         .run();
 }
@@ -351,10 +354,10 @@ fn profile_override_spec() {
             [workspace]
             members = ["m1", "m2"]
 
-            [profile.dev.overrides."dep:1.0.0"]
+            [profile.dev.package."dep:1.0.0"]
             codegen-units = 1
 
-            [profile.dev.overrides."dep:2.0.0"]
+            [profile.dev.package."dep:2.0.0"]
             codegen-units = 2
             "#,
         )
@@ -469,5 +472,43 @@ fn override_proc_macro() {
             &["[RUNNING] `rustc [..]--crate-name foo"],
             &["-C codegen-units"],
         )
+        .run();
+}
+
+#[cargo_test]
+fn override_package_rename() {
+    // backwards-compatibility test
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {path = "bar"}
+
+            [profile.dev]
+            opt-level = 1
+
+            [profile.dev.overrides.bar]
+            opt-level = 3
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("\
+[WARNING] profile key `overrides` has been renamed to `package`, please update the manifest to the new key name
+[CHECKING] bar [..]
+[CHECKING] foo [..]
+[FINISHED] [..]
+")
         .run();
 }
