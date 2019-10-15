@@ -23,7 +23,7 @@ matrix:
       install:
         - rustup component add rustfmt
       script:
-        - cargo fmt --all -- --check
+        - cargo fmt -- --check
 
 before_install:
   - curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain=stable --profile=minimal
