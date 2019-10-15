@@ -1,7 +1,5 @@
 dist: xenial
-language: rust
-rust:
-  - stable
+language: minimal
 
 git:
   depth: 1
@@ -18,7 +16,7 @@ matrix:
       env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
 
     - os: windows
-      env: TARGET=x86_64-pc-windows-msvc EXE_EXT=.exe
+      env: TARGET=x86_64-pc-windows-msvc
       services: nil
 
     - name: rustfmt
@@ -26,6 +24,10 @@ matrix:
         - rustup component add rustfmt
       script:
         - cargo fmt --all -- --check
+
+before_install:
+  - curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain=stable --profile=minimal
+  - export PATH="$HOME/.cargo/bin:$PATH"
 
 script:
   - cargo build --verbose
