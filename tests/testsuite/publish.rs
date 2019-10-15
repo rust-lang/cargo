@@ -1178,3 +1178,84 @@ fn publish_git_with_version() {
         ],
     );
 }
+
+#[cargo_test]
+fn publish_dev_dep_no_version() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+
+            [dev-dependencies]
+            bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[UPLOADING] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": "foo",
+          "features": {},
+          "homepage": "foo",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": "foo",
+          "vers": "0.1.0"
+        }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"[..]
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+description = "foo"
+homepage = "foo"
+documentation = "foo"
+license = "MIT"
+repository = "foo"
+
+[dev-dependencies]
+"#,
+        )],
+    );
+}

@@ -21,6 +21,7 @@ steps:
 . Load and check the current workspace, performing some basic checks.
     - Path dependencies are not allowed unless they have a version key. Cargo
       will ignore the path key for dependencies in published packages.
+      `dev-dependencies` do not have this restriction.
 . Create the compressed `.crate` file.
     - The original `Cargo.toml` file is rewritten and normalized.
     - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
