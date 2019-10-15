@@ -1988,3 +1988,72 @@ fn cli_parse_ok() {
 
     p.cargo("run --features a b").run();
 }
+
+#[cargo_test]
+fn virtual_ws_flags() {
+    // Reject features flags in the root of a virtual workspace.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+
+                [features]
+                f1 = []
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("build --features=f1")
+        .with_stderr("[ERROR] --features is not allowed in the root of a virtual workspace")
+        .with_status(101)
+        .run();
+
+    p.cargo("build --no-default-features")
+        .with_stderr(
+            "[ERROR] --no-default-features is not allowed in the root of a virtual workspace",
+        )
+        .with_status(101)
+        .run();
+
+    p.cargo("build --all-features")
+        .with_stderr("[ERROR] --all-features is not allowed in the root of a virtual workspace")
+        .with_status(101)
+        .run();
+
+    // It's OK if cwd is in a member.
+    p.cargo("check --features=f1 -v")
+        .cwd("a")
+        .with_stderr(
+            "\
+[CHECKING] a [..]
+[RUNNING] `rustc --crate-name a a/src/lib.rs [..]--cfg [..]feature[..]f1[..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+
+    p.cargo("clean").run();
+
+    // And -Zpackage-features is OK because it is designed to support this.
+    p.cargo("check --features=f1 -p a -Z package-features -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] a [..]
+[RUNNING] `rustc --crate-name a a/src/lib.rs [..]--cfg [..]feature[..]f1[..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}

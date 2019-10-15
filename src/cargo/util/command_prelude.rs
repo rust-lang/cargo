@@ -283,6 +283,16 @@ pub trait ArgMatchesExt {
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
+        if ws.is_virtual() && !config.cli_unstable().package_features {
+            for flag in &["features", "all-features", "no-default-features"] {
+                if self._is_present(flag) {
+                    bail!(
+                        "--{} is not allowed in the root of a virtual workspace",
+                        flag
+                    );
+                }
+            }
+        }
         Ok(ws)
     }
 
