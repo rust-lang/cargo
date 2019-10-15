@@ -17,6 +17,7 @@ steps:
   - bash: |
       set -e
       rustup set profile minimal
+      rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
       rustup update $TOOLCHAIN
       rustup default $TOOLCHAIN
     displayName: Install rust
