@@ -5,6 +5,7 @@ use std::io::SeekFrom;
 use std::path::{self, Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
@@ -443,6 +444,12 @@ fn tar(
             header.set_path(&path)?;
             header.set_entry_type(EntryType::file());
             header.set_mode(0o644);
+            header.set_mtime(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+            );
             header.set_size(toml.len() as u64);
             header.set_cksum();
             ar.append(&header, toml.as_bytes()).chain_err(|| {
@@ -479,6 +486,12 @@ fn tar(
         header.set_path(&path)?;
         header.set_entry_type(EntryType::file());
         header.set_mode(0o644);
+        header.set_mtime(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        );
         header.set_size(json.len() as u64);
         header.set_cksum();
         ar.append(&header, json.as_bytes())
@@ -501,6 +514,12 @@ fn tar(
         header.set_path(&path)?;
         header.set_entry_type(EntryType::file());
         header.set_mode(0o644);
+        header.set_mtime(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        );
         header.set_size(new_lock.len() as u64);
         header.set_cksum();
         ar.append(&header, new_lock.as_bytes())
