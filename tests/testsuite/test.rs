@@ -3954,14 +3954,13 @@ fn panic_abort_only_test() {
         .build();
 
     p.cargo("test -Z panic-abort-tests -v")
-        .with_stderr_does_not_contain("[..]--crate-name a [..]-C panic=abort[..]")
-        .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]--test[..]")
+        .with_stderr_contains("warning: `panic` setting is ignored for `test` profile")
         .masquerade_as_nightly_cargo()
         .run();
 }
 
 #[cargo_test]
-fn panic_abort_invalid() {
+fn panic_abort_test_profile_inherits() {
     if !is_nightly() {
         // -Zpanic-abort-tests in rustc is unstable
         return;
@@ -3997,7 +3996,6 @@ fn panic_abort_invalid() {
 
     p.cargo("test -Z panic-abort-tests -v")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr_contains("[..]incompatible with this crate's strategy[..]")
+        .with_status(0)
         .run();
 }
