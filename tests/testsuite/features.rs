@@ -2026,11 +2026,6 @@ fn virtual_ws_flags() {
         .with_status(101)
         .run();
 
-    p.cargo("build --all-features")
-        .with_stderr("[ERROR] --all-features is not allowed in the root of a virtual workspace")
-        .with_status(101)
-        .run();
-
     // It's OK if cwd is in a member.
     p.cargo("check --features=f1 -v")
         .cwd("a")
@@ -2055,5 +2050,89 @@ fn virtual_ws_flags() {
 [FINISHED] dev [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn all_features_virtual_ws() {
+    // What happens with `--all-features` in the root of a virtual workspace.
+    // Some of this behavior is a little strange (member dependencies also
+    // have all features enabled, one might expect `f4` to be disabled).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                b = {path="../b", optional=true}
+
+                [features]
+                default = ["f1"]
+                f1 = []
+                f2 = []
+            "#,
+        )
+        .file(
+            "a/src/main.rs",
+            r#"
+                fn main() {
+                    if cfg!(feature="f1") {
+                        println!("f1");
+                    }
+                    if cfg!(feature="f2") {
+                        println!("f2");
+                    }
+                    #[cfg(feature="b")]
+                    b::f();
+                }
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+
+                [features]
+                default = ["f3"]
+                f3 = []
+                f4 = []
+            "#,
+        )
+        .file(
+            "b/src/lib.rs",
+            r#"
+                pub fn f() {
+                    if cfg!(feature="f3") {
+                        println!("f3");
+                    }
+                    if cfg!(feature="f4") {
+                        println!("f4");
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("run").with_stdout("f1\n").run();
+    p.cargo("run --all-features")
+        .with_stdout("f1\nf2\nf3\nf4\n")
+        .run();
+    // In `a`, it behaves differently. :(
+    p.cargo("run --all-features")
+        .cwd("a")
+        .with_stdout("f1\nf2\nf3\n")
         .run();
 }
