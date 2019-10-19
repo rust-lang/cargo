@@ -1,7 +1,9 @@
 use std::env;
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, git, main_file, project};
+use cargo_test_support::{
+    basic_bin_manifest, basic_manifest, git, main_file, project, symlink_supported,
+};
 
 #[cargo_test]
 fn cargo_clean_simple() {
@@ -15,6 +17,59 @@ fn cargo_clean_simple() {
 
     p.cargo("clean").run();
     assert!(!p.build_dir().is_dir());
+}
+
+#[cargo_test]
+fn cargo_clean_leaves_symlinks() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let p = project();
+
+    let _ = std::fs::remove_dir_all(p.root().join("real-target"));
+    let _ = std::fs::remove_dir_all(p.root().join("real-debug"));
+
+    let p = p
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", &main_file(r#""i am foo""#, &[]))
+        .symlink_dir("real-target", "target")
+        .symlink_dir("real-debug", "real-target/debug")
+        .build();
+
+    let _ = std::fs::remove_dir_all(p.root().join("real-debug"));
+    std::fs::create_dir_all(p.root().join("real-debug")).unwrap();
+
+    p.cargo("build").run();
+    assert!(p.build_dir().is_dir());
+
+    p.cargo("clean").run();
+    assert!(p.build_dir().is_dir());
+    assert!(p.target_debug_dir().is_dir());
+    assert!(!p.target_debug_dir().join("build").is_dir());
+}
+
+#[cargo_test]
+fn cargo_clean_detects_symlink_loops() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let p = project();
+
+    let p = p
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", &main_file(r#""i am foo""#, &[]))
+        .symlink_dir("target", "target/debug")
+        .build();
+
+    p.cargo("build").run();
+    assert!(p.build_dir().is_dir());
+
+    p.cargo("clean")
+        .with_status(101)
+        .with_stderr_contains("  symlink recursion depth limit reached")
+        .run();
 }
 
 #[cargo_test]

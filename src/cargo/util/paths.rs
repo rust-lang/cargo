@@ -279,13 +279,15 @@ fn _create_dir_all(p: &Path) -> CargoResult<()> {
 }
 
 pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
-    _remove_dir_all(p.as_ref())
+    _remove_dir_all(p.as_ref(), 16)
 }
 
-fn _remove_dir_all(p: &Path) -> CargoResult<()> {
-    if p.symlink_metadata()?.file_type().is_symlink() {
-        return remove_file(p);
+fn _remove_dir_all(p: &Path, follow_link_limit: usize) -> CargoResult<()> {
+    if follow_link_limit == 0 {
+        // Too many chained symlinks -- we're probably in a symlink loop!
+        return Err(failure::format_err!("symlink recursion depth limit reached",).into());
     }
+
     let entries = p
         .read_dir()
         .chain_err(|| format!("failed to read directory `{}`", p.display()))?;
@@ -293,12 +295,34 @@ fn _remove_dir_all(p: &Path) -> CargoResult<()> {
         let entry = entry?;
         let path = entry.path();
         if entry.file_type()?.is_dir() {
-            remove_dir_all(&path)?;
+            _remove_dir_all(&path, follow_link_limit)?;
+        } else if entry.file_type()?.is_symlink() {
+            if path.metadata()?.is_dir() {
+                _remove_dir_all(&path, follow_link_limit - 1)?;
+            }
         } else {
             remove_file(&path)?;
         }
     }
-    remove_dir(&p)
+    if !p.symlink_metadata()?.file_type().is_symlink() {
+        // We allow this call to fail, because _if_ there are symlink left within a directory,
+        // deleting the directory would fail. But we also don't care about that failure. Keeping
+        // track of whether we did this intentionally would be pretty painful, so we just let the
+        // OS do the checking for us.
+        //
+        // If ErrorKind::NotEmpty was available to us, we would only ignore the relevant error, but
+        // sadly, it is not.
+        //
+        // Note that we intentionally do not propagate other errors (PermissionDenied in
+        // particular) because the top-level directory *may* be in a shared directory the user does
+        // not have write permissions to. In that case, the user will want to leave the target dir
+        // there so they can keep using it in the future, and will not expect a removal error for
+        // that directory. PermissionDenied *will* still be raised when trying to remove the
+        // *contents* of the directory, so this shouldn't be hiding errors that are relevant to the
+        // user.
+        let _ = remove_dir(&p);
+    }
+    Ok(())
 }
 
 pub fn remove_dir<P: AsRef<Path>>(p: P) -> CargoResult<()> {
