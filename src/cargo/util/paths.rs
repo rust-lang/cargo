@@ -285,7 +285,7 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
 fn _remove_dir_all(p: &Path, follow_link_limit: usize) -> CargoResult<()> {
     if follow_link_limit == 0 {
         // Too many chained symlinks -- we're probably in a symlink loop!
-        return Err(failure::format_err!("symlink recursion depth limit reached",).into());
+        return Err(failure::format_err!("symlink recursion depth limit reached").into());
     }
 
     let entries = p
