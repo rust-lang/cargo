@@ -203,12 +203,13 @@ fn plugin_deps() {
 
             extern crate rustc_driver;
             extern crate syntax;
+            extern crate syntax_expand;
 
             use rustc_driver::plugin::Registry;
             use syntax::tokenstream::TokenStream;
             use syntax::source_map::Span;
             use syntax::ast::*;
-            use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
+            use syntax_expand::base::{ExtCtxt, MacEager, MacResult};
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
@@ -298,13 +299,14 @@ fn plugin_to_the_max() {
 
             extern crate rustc_driver;
             extern crate syntax;
+            extern crate syntax_expand;
             extern crate baz;
 
             use rustc_driver::plugin::Registry;
             use syntax::tokenstream::TokenStream;
             use syntax::source_map::Span;
             use syntax::ast::*;
-            use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
+            use syntax_expand::base::{ExtCtxt, MacEager, MacResult};
             use syntax::ptr::P;
 
             #[plugin_registrar]
