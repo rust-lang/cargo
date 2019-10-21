@@ -1,5 +1,5 @@
 dist: xenial
-language: minimal
+language: shell
 
 git:
   depth: 1
@@ -30,5 +30,5 @@ before_install:
   - export PATH="$HOME/.cargo/bin:$PATH"
 
 script:
-  - cargo build --verbose
-  - cargo test --verbose
+  - cargo build
+  - cargo test
