@@ -642,7 +642,7 @@ fn generate_targets<'a>(
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
-        let unit_for = if bcx.build_config.mode.is_any_test() {
+        let unit_for = if target_mode.is_any_test() {
             // NOTE: the `UnitFor` here is subtle. If you have a profile
             // with `panic` set, the `panic` flag is cleared for
             // tests/benchmarks and their dependencies. If this
@@ -661,7 +661,7 @@ fn generate_targets<'a>(
             //
             // Forcing the lib to be compiled three times during `cargo
             // test` is probably also not desirable.
-            UnitFor::new_test()
+            UnitFor::new_test(bcx.config)
         } else if target.for_host() {
             // Proc macro / plugin should not have `panic` set.
             UnitFor::new_compiler()

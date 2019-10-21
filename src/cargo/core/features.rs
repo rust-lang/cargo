@@ -340,6 +340,7 @@ pub struct CliUnstable {
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
+    pub panic_abort_tests: bool,
 }
 
 impl CliUnstable {
@@ -399,6 +400,7 @@ impl CliUnstable {
             }
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = true,
+            "panic-abort-tests" => self.panic_abort_tests = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 

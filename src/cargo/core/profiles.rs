@@ -314,7 +314,7 @@ impl Profiles {
         mode: CompileMode,
         profile_kind: ProfileKind,
     ) -> Profile {
-        let profile_name = if !self.named_profiles_enabled {
+        let (profile_name, inherits) = if !self.named_profiles_enabled {
             // With the feature disabled, we degrade `--profile` back to the
             // `--release` and `--debug` predicates, and convert back from
             // ProfileKind::Custom instantiation.
@@ -328,9 +328,9 @@ impl Profiles {
             match mode {
                 CompileMode::Test | CompileMode::Bench => {
                     if release {
-                        "bench"
+                        ("bench", Some("release"))
                     } else {
-                        "test"
+                        ("test", Some("dev"))
                     }
                 }
                 CompileMode::Build
@@ -342,25 +342,33 @@ impl Profiles {
                     // ancestor's profile. However, `cargo clean -p` can hit this
                     // path.
                     if release {
-                        "release"
+                        ("release", None)
                     } else {
-                        "dev"
+                        ("dev", None)
                     }
                 }
-                CompileMode::Doc { .. } => "doc",
+                CompileMode::Doc { .. } => ("doc", None),
             }
         } else {
-            profile_kind.name()
+            (profile_kind.name(), None)
         };
         let maker = match self.by_name.get(profile_name) {
             None => panic!("Profile {} undefined", profile_name),
             Some(r) => r,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
-        // `panic` should not be set for tests/benches, or any of their
-        // dependencies.
-        if !unit_for.is_panic_abort_ok() || mode.is_any_test() {
-            profile.panic = PanicStrategy::Unwind;
+
+        // Dealing with `panic=abort` and `panic=unwind` requires some special
+        // treatment. Be sure to process all the various options here.
+        match unit_for.panic_setting() {
+            PanicSetting::AlwaysUnwind => profile.panic = PanicStrategy::Unwind,
+            PanicSetting::ReadProfile => {}
+            PanicSetting::Inherit => {
+                if let Some(inherits) = inherits {
+                    let maker = self.by_name.get(inherits).unwrap();
+                    profile.panic = maker.get_profile(Some(pkg_id), is_member, unit_for).panic;
+                }
+            }
         }
 
         // Incremental can be globally overridden.
@@ -880,11 +888,25 @@ pub struct UnitFor {
     /// any of its dependencies. This enables `build-override` profiles for
     /// these targets.
     build: bool,
-    /// This is true if it is *allowed* to set the `panic=abort` flag. Currently
-    /// this is false for test/bench targets and all their dependencies, and
-    /// "for_host" units such as proc macro and custom build scripts and their
-    /// dependencies.
-    panic_abort_ok: bool,
+    /// How Cargo processes the `panic` setting or profiles. This is done to
+    /// handle test/benches inheriting from dev/release, as well as forcing
+    /// `for_host` units to always unwind.
+    panic_setting: PanicSetting,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+enum PanicSetting {
+    /// Used to force a unit to always be compiled with the `panic=unwind`
+    /// strategy, notably for build scripts, proc macros, etc.
+    AlwaysUnwind,
+
+    /// Indicates that this unit will read its `profile` setting and use
+    /// whatever is configured there.
+    ReadProfile,
+
+    /// This unit will ignore its `panic` setting in its profile and will
+    /// instead inherit it from the `dev` or `release` profile, as appropriate.
+    Inherit,
 }
 
 impl UnitFor {
@@ -893,7 +915,7 @@ impl UnitFor {
     pub fn new_normal() -> UnitFor {
         UnitFor {
             build: false,
-            panic_abort_ok: true,
+            panic_setting: PanicSetting::ReadProfile,
         }
     }
 
@@ -901,7 +923,9 @@ impl UnitFor {
     pub fn new_build() -> UnitFor {
         UnitFor {
             build: true,
-            panic_abort_ok: false,
+            // Force build scripts to always use `panic=unwind` for now to
+            // maximally share dependencies with procedural macros.
+            panic_setting: PanicSetting::AlwaysUnwind,
         }
     }
 
@@ -909,26 +933,49 @@ impl UnitFor {
     pub fn new_compiler() -> UnitFor {
         UnitFor {
             build: false,
-            panic_abort_ok: false,
+            // Force plugins to use `panic=abort` so panics in the compiler do
+            // not abort the process but instead end with a reasonable error
+            // message that involves catching the panic in the compiler.
+            panic_setting: PanicSetting::AlwaysUnwind,
         }
     }
 
     /// A unit for a test/bench target or their dependencies.
-    pub fn new_test() -> UnitFor {
+    ///
+    /// Note that `config` is taken here for unstable CLI features to detect
+    /// whether `panic=abort` is supported for tests. Historical versions of
+    /// rustc did not support this, but newer versions do with an unstable
+    /// compiler flag.
+    pub fn new_test(config: &Config) -> UnitFor {
         UnitFor {
             build: false,
-            panic_abort_ok: false,
+            // We're testing out an unstable feature (`-Zpanic-abort-tests`)
+            // which inherits the panic setting from the dev/release profile
+            // (basically avoid recompiles) but historical defaults required
+            // that we always unwound.
+            panic_setting: if config.cli_unstable().panic_abort_tests {
+                PanicSetting::Inherit
+            } else {
+                PanicSetting::AlwaysUnwind
+            },
         }
     }
 
     /// Creates a variant based on `for_host` setting.
     ///
-    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky fashion so
-    /// that all its dependencies also have `panic_abort_ok=false`.
+    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
+    /// fashion so that all its dependencies also have `panic_abort_ok=false`.
+    /// This'll help ensure that once we start compiling for the host platform
+    /// (build scripts, plugins, proc macros, etc) we'll share the same build
+    /// graph where everything is `panic=unwind`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             build: self.build || for_host,
-            panic_abort_ok: self.panic_abort_ok && !for_host,
+            panic_setting: if for_host {
+                PanicSetting::AlwaysUnwind
+            } else {
+                self.panic_setting
+            },
         }
     }
 
@@ -938,28 +985,32 @@ impl UnitFor {
         self.build
     }
 
-    /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
-    pub fn is_panic_abort_ok(self) -> bool {
-        self.panic_abort_ok
+    /// Returns how `panic` settings should be handled for this profile
+    fn panic_setting(self) -> PanicSetting {
+        self.panic_setting
     }
 
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
-        static ALL: [UnitFor; 3] = [
+        static ALL: &[UnitFor] = &[
             UnitFor {
                 build: false,
-                panic_abort_ok: true,
+                panic_setting: PanicSetting::ReadProfile,
             },
             UnitFor {
                 build: true,
-                panic_abort_ok: false,
+                panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
                 build: false,
-                panic_abort_ok: false,
+                panic_setting: PanicSetting::AlwaysUnwind,
+            },
+            UnitFor {
+                build: false,
+                panic_setting: PanicSetting::Inherit,
             },
         ];
-        &ALL
+        ALL
     }
 }
 
