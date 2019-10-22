@@ -51,7 +51,7 @@ pub fn cli() -> App {
             "Do not save tracking information (unstable)",
         ))
         .arg_features()
-        .arg_profile("Install artifacts with from the specified profile")
+        .arg_profile("Install artifacts with the specified profile")
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
             "Install only the specified binary",
