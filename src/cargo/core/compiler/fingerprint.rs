@@ -1100,22 +1100,12 @@ fn calculate_normal<'a, 'cfg>(
     // Fill out a bunch more information that we'll be tracking typically
     // hashed to take up less space on disk as we just need to know when things
     // change.
-    let mut extra_flags = if unit.mode.is_doc() {
+    let extra_flags = if unit.mode.is_doc() {
         cx.bcx.rustdocflags_args(unit)
     } else {
         cx.bcx.rustflags_args(unit)
     }
     .to_vec();
-    if cx.is_primary_package(unit) {
-        // This is primarily here for clippy arguments.
-        if let Some(proc) = &cx.bcx.build_config.primary_unit_rustc {
-            let args = proc
-                .get_args()
-                .iter()
-                .map(|s| s.to_string_lossy().to_string());
-            extra_flags.extend(args);
-        }
-    }
 
     let profile_hash = util::hash_u64((&unit.profile, unit.mode, cx.bcx.extra_args_for(unit)));
     // Include metadata since it is exposed as environment variables.

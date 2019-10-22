@@ -53,9 +53,10 @@ use rustfix::{self, CodeFix};
 
 use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
+use crate::util;
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::{self, paths};
+use crate::util::ProcessBuilder;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
@@ -63,7 +64,6 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
-const CLIPPY_FIX_ARGS: &str = "__CARGO_FIX_CLIPPY_ARGS";
 
 pub struct FixOptions<'a> {
     pub edition: bool,
@@ -74,7 +74,6 @@ pub struct FixOptions<'a> {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
-    pub clippy_args: Option<Vec<String>>,
 }
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
@@ -99,19 +98,6 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     }
     if opts.idioms {
         wrapper.env(IDIOMS_ENV, "1");
-    }
-
-    if opts.clippy_args.is_some() {
-        if let Err(e) = util::process("clippy-driver").arg("-V").exec_with_output() {
-            eprintln!("Warning: clippy-driver not found: {:?}", e);
-        }
-
-        let clippy_args = opts
-            .clippy_args
-            .as_ref()
-            .map_or_else(String::new, |args| serde_json::to_string(&args).unwrap());
-
-        wrapper.env(CLIPPY_FIX_ARGS, clippy_args);
     }
 
     *opts
@@ -222,12 +208,17 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
 
     let args = FixArgs::get();
     trace!("cargo-fix as rustc got file {:?}", args.file);
+
     let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
+    let workspace_rustc = std::env::var("RUSTC_WORKSPACE_WRAPPER")
+        .map(PathBuf::from)
+        .ok();
+    let rustc = util::process(rustc).wrapped(workspace_rustc.as_ref());
 
     let mut fixes = FixedCrate::default();
     if let Some(path) = &args.file {
         trace!("start rustfixing {:?}", path);
-        fixes = rustfix_crate(&lock_addr, rustc.as_ref(), path, &args)?;
+        fixes = rustfix_crate(&lock_addr, &rustc, path, &args)?;
     }
 
     // Ok now we have our final goal of testing out the changes that we applied.
@@ -239,7 +230,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // new rustc, and otherwise we capture the output to hide it in the scenario
     // that we have to back it all out.
     if !fixes.files.is_empty() {
-        let mut cmd = Command::new(&rustc);
+        let mut cmd = rustc.build_command();
         args.apply(&mut cmd);
         cmd.arg("--error-format=json");
         let output = cmd.output().context("failed to spawn rustc")?;
@@ -279,7 +270,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // - If the fix failed, show the original warnings and suggestions.
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
-    let mut cmd = Command::new(&rustc);
+    let mut cmd = rustc.build_command();
     args.apply(&mut cmd);
     for arg in args.format_args {
         // Add any json/error format arguments that Cargo wants. This allows
@@ -302,7 +293,7 @@ struct FixedFile {
 
 fn rustfix_crate(
     lock_addr: &str,
-    rustc: &Path,
+    rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
 ) -> Result<FixedCrate, Error> {
@@ -402,7 +393,7 @@ fn rustfix_crate(
 /// and any errors encountered while fixing files.
 fn rustfix_and_fix(
     fixes: &mut FixedCrate,
-    rustc: &Path,
+    rustc: &ProcessBuilder,
     filename: &Path,
     args: &FixArgs,
 ) -> Result<(), Error> {
@@ -410,12 +401,15 @@ fn rustfix_and_fix(
     // TODO: implement a way to specify this.
     let only = HashSet::new();
 
-    let mut cmd = Command::new(rustc);
+    let mut cmd = rustc.build_command();
     cmd.arg("--error-format=json");
     args.apply(&mut cmd);
-    let output = cmd
-        .output()
-        .with_context(|| format!("failed to execute `{}`", rustc.display()))?;
+    let output = cmd.output().with_context(|| {
+        format!(
+            "failed to execute `{}`",
+            rustc.get_program().to_string_lossy()
+        )
+    })?;
 
     // If rustc didn't succeed for whatever reasons then we're very likely to be
     // looking at otherwise broken code. Let's not make things accidentally
@@ -491,7 +485,7 @@ fn rustfix_and_fix(
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
         // going.
-        let code = match paths::read(file.as_ref()) {
+        let code = match util::paths::read(file.as_ref()) {
             Ok(s) => s,
             Err(e) => {
                 warn!("failed to read `{}`: {}", file, e);
@@ -591,7 +585,6 @@ struct FixArgs {
     enabled_edition: Option<String>,
     other: Vec<OsString>,
     rustc: Option<PathBuf>,
-    clippy_args: Vec<String>,
     format_args: Vec<String>,
 }
 
@@ -611,12 +604,7 @@ impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
 
-        if let Ok(clippy_args) = env::var(CLIPPY_FIX_ARGS) {
-            ret.clippy_args = serde_json::from_str(&clippy_args).unwrap();
-            ret.rustc = Some(util::config::clippy_driver());
-        } else {
-            ret.rustc = env::args_os().nth(1).map(PathBuf::from);
-        }
+        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
 
         for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
@@ -652,10 +640,6 @@ impl FixArgs {
     fn apply(&self, cmd: &mut Command) {
         if let Some(path) = &self.file {
             cmd.arg(path);
-        }
-
-        if !self.clippy_args.is_empty() {
-            cmd.args(&self.clippy_args);
         }
 
         cmd.args(&self.other).arg("--cap-lints=warn");

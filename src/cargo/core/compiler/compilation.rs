@@ -73,8 +73,14 @@ pub struct Compilation<'cfg> {
     pub target: String,
 
     config: &'cfg Config,
+
+    /// Rustc process to be used by default
     rustc_process: ProcessBuilder,
-    primary_unit_rustc_process: Option<ProcessBuilder>,
+    /// Rustc process to be used for workspace crates instead of rustc_process
+    rustc_workspace_wrapper_process: ProcessBuilder,
+    /// Optional rustc process to be used for primary crates instead of either rustc_process or
+    /// rustc_workspace_wrapper_process
+    primary_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
 }
@@ -85,13 +91,14 @@ impl<'cfg> Compilation<'cfg> {
         default_kind: CompileKind,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc().process();
-
-        let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
+        let mut primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
+        let mut rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
 
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
+            rustc_workspace_wrapper_process.display_env_vars();
 
-            if let Some(rustc) = primary_unit_rustc_process.as_mut() {
+            if let Some(rustc) = primary_rustc_process.as_mut() {
                 rustc.display_env_vars();
             }
         }
@@ -120,7 +127,8 @@ impl<'cfg> Compilation<'cfg> {
             rustdocflags: HashMap::new(),
             config: bcx.config,
             rustc_process: rustc,
-            primary_unit_rustc_process,
+            rustc_workspace_wrapper_process,
+            primary_rustc_process,
             host: bcx.host_triple().to_string(),
             target: bcx.target_data.short_name(&default_kind).to_string(),
             target_runner: target_runner(bcx, default_kind)?,
@@ -128,11 +136,16 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package, is_primary: bool) -> CargoResult<ProcessBuilder> {
-        let rustc = if is_primary {
-            self.primary_unit_rustc_process
-                .clone()
-                .unwrap_or_else(|| self.rustc_process.clone())
+    pub fn rustc_process(
+        &self,
+        pkg: &Package,
+        is_primary: bool,
+        is_workspace: bool,
+    ) -> CargoResult<ProcessBuilder> {
+        let rustc = if is_primary && self.primary_rustc_process.is_some() {
+            self.primary_rustc_process.clone().unwrap()
+        } else if is_workspace {
+            self.rustc_workspace_wrapper_process.clone()
         } else {
             self.rustc_process.clone()
         };

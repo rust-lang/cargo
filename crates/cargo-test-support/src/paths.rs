@@ -264,3 +264,22 @@ pub fn sysroot() -> String {
     let sysroot = String::from_utf8(output.stdout).unwrap();
     sysroot.trim().to_string()
 }
+
+#[cfg(unix)]
+pub fn echo_wrapper() -> std::io::Result<std::path::PathBuf> {
+    use std::os::unix::fs::PermissionsExt;
+    let wrapper_path = root().join("rustc-echo-wrapper");
+    std::fs::write(
+        &wrapper_path,
+        r#"#! /bin/bash
+
+       echo "WRAPPER CALLED: $*"
+       "$@""#,
+    )?;
+
+    let mut perms = std::fs::metadata(&wrapper_path)?.permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&wrapper_path, perms)?;
+
+    Ok(wrapper_path)
+}

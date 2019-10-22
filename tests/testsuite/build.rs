@@ -3701,6 +3701,42 @@ fn rustc_wrapper_from_path() {
 }
 
 #[cargo_test]
+// NOTE: we don't have `/usr/bin/env` on Windows.
+#[cfg(not(windows))]
+fn rustc_workspace_wrapper() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))]
+fn rustc_workspace_wrapper_relative() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", "./sccache")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(not(windows))]
+fn rustc_workspace_wrapper_from_path() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", "wannabe_sccache")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]`wannabe_sccache rustc [..]")
+        .run();
+}
+
+#[cargo_test]
 fn cdylib_not_lifted() {
     let p = project()
         .file(

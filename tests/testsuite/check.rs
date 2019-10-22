@@ -753,6 +753,15 @@ fn does_not_use_empty_rustc_wrapper() {
 }
 
 #[cargo_test]
+fn does_not_use_empty_rustc_workspace_wrapper() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTC_WORKSPACE_WRAPPER", "")
+        .run();
+}
+
+#[cargo_test]
 fn error_from_deep_recursion() -> Result<(), fmt::Error> {
     let mut big_macro = String::new();
     writeln!(big_macro, "macro_rules! m {{")?;
@@ -771,4 +780,129 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
         .run();
 
     Ok(())
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn rustc_workspace_wrapper_affects_all_workspace_members() {
+    use cargo_test_support::paths;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("check -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn rustc_workspace_wrapper_includes_path_deps() {
+    use cargo_test_support::paths;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["bar"]
+
+            [dependencies]
+            baz = { path = "baz" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("check --workspace -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn rustc_workspace_wrapper_respects_primary_units() {
+    use cargo_test_support::paths;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("check -p bar -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn rustc_workspace_wrapper_excludes_published_deps() {
+    use cargo_test_support::paths;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["bar"]
+
+            [dependencies]
+            baz = "1.0.0"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    Package::new("baz", "1.0.0").publish();
+
+    p.cargo("check --workspace -v -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
+        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("[CHECKING] baz [..]")
+        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .run();
 }

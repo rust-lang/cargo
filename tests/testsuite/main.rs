@@ -28,7 +28,6 @@ mod cargo_targets;
 mod cfg;
 mod check;
 mod clean;
-mod clippy;
 mod collisions;
 mod concurrent;
 mod config;
