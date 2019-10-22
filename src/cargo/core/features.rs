@@ -50,7 +50,7 @@ use std::env;
 use std::fmt;
 use std::str::FromStr;
 
-use failure::Error;
+use failure::{bail, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
@@ -82,7 +82,7 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s => failure::bail!(
+            s => bail!(
                 "supported edition values are `2015` or `2018`, but `{}` \
                  is unknown",
                 s
@@ -227,11 +227,11 @@ impl Features {
     fn add(&mut self, feature: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
         let (slot, status) = match self.status(feature) {
             Some(p) => p,
-            None => failure::bail!("unknown cargo feature `{}`", feature),
+            None => bail!("unknown cargo feature `{}`", feature),
         };
 
         if *slot {
-            failure::bail!("the cargo feature `{}` has already been activated", feature);
+            bail!("the cargo feature `{}` has already been activated", feature);
         }
 
         match status {
@@ -244,7 +244,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !nightly_features_allowed() => failure::bail!(
+            Status::Unstable if !nightly_features_allowed() => bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel\n\
                  {}",
@@ -288,7 +288,7 @@ impl Features {
                 );
                 msg.push_str(&s);
             }
-            failure::bail!("{}", msg);
+            bail!("{}", msg);
         }
     }
 
@@ -346,7 +346,7 @@ pub struct CliUnstable {
 impl CliUnstable {
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
-            failure::bail!(
+            bail!(
                 "the `-Z` flag is only accepted on the nightly channel of Cargo, \
                  but this is the `{}` channel\n\
                  {}",
@@ -365,11 +365,11 @@ impl CliUnstable {
         let k = parts.next().unwrap();
         let v = parts.next();
 
-        fn parse_bool(value: Option<&str>) -> CargoResult<bool> {
+        fn parse_bool(key: &str, value: Option<&str>) -> CargoResult<bool> {
             match value {
                 None | Some("yes") => Ok(true),
                 Some("no") => Ok(false),
-                Some(s) => failure::bail!("expected `no` or `yes`, found: {}", s),
+                Some(s) => bail!("flag -Z{} expected `no` or `yes`, found: `{}`", key, s),
             }
         }
 
@@ -380,28 +380,36 @@ impl CliUnstable {
             }
         }
 
+        // Asserts that there is no argument to the flag.
+        fn parse_empty(key: &str, value: Option<&str>) -> CargoResult<bool> {
+            if let Some(v) = value {
+                bail!("flag -Z{} does not take a value, found: `{}`", key, v);
+            }
+            Ok(true)
+        };
+
         match k {
-            "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
-            "unstable-options" => self.unstable_options = true,
-            "no-index-update" => self.no_index_update = true,
-            "avoid-dev-deps" => self.avoid_dev_deps = true,
-            "minimal-versions" => self.minimal_versions = true,
-            "package-features" => self.package_features = true,
-            "advanced-env" => self.advanced_env = true,
-            "config-profile" => self.config_profile = true,
-            "dual-proc-macros" => self.dual_proc_macros = true,
+            "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
+            "unstable-options" => self.unstable_options = parse_empty(k, v)?,
+            "no-index-update" => self.no_index_update = parse_empty(k, v)?,
+            "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
+            "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
+            "package-features" => self.package_features = parse_empty(k, v)?,
+            "advanced-env" => self.advanced_env = parse_empty(k, v)?,
+            "config-profile" => self.config_profile = parse_empty(k, v)?,
+            "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
-            "mtime-on-use" => self.mtime_on_use = true,
-            "install-upgrade" => self.install_upgrade = true,
-            "named-profiles" => self.named_profiles = true,
-            "binary-dep-depinfo" => self.binary_dep_depinfo = true,
+            "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
+            "install-upgrade" => self.install_upgrade = parse_empty(k, v)?,
+            "named-profiles" => self.named_profiles = parse_empty(k, v)?,
+            "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
             "timings" => self.timings = Some(parse_timings(v)),
-            "doctest-xcompile" => self.doctest_xcompile = true,
-            "panic-abort-tests" => self.panic_abort_tests = true,
-            _ => failure::bail!("unknown `-Z` flag specified: {}", k),
+            "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
+            "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
+            _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
         Ok(())
@@ -418,14 +426,14 @@ impl CliUnstable {
                 issue, flag
             );
             if nightly_features_allowed() {
-                failure::bail!(
+                bail!(
                     "the `{}` flag is unstable, pass `-Z unstable-options` to enable it\n\
                      {}",
                     flag,
                     see
                 );
             } else {
-                failure::bail!(
+                bail!(
                     "the `{}` flag is unstable, and only available on the nightly channel \
                      of Cargo, but this is the `{}` channel\n\
                      {}\n\
