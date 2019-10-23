@@ -45,7 +45,7 @@ use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::Feature;
 use crate::core::{PackageId, Target};
-use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::errors::{self, CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::machine_message::Message;
 use crate::util::paths;
 use crate::util::{self, machine_message, ProcessBuilder};
@@ -271,7 +271,7 @@ fn rustc<'a, 'cfg>(
                 .as_ref()
                 .and_then(|perr| perr.exit.and_then(|e| e.code()))
             {
-                Some(n) if n < 128 => Internal::new(err).into(),
+                Some(n) if errors::is_simple_exit_code(n) => Internal::new(err).into(),
                 _ => err,
             }
         }
