@@ -1,8 +1,4 @@
-use std::fs::{self, File};
-use std::io::prelude::*;
-
 use cargo;
-
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -10,6 +6,7 @@ use cargo_test_support::{
 };
 use cargo_test_support::{cross_compile, is_nightly, paths};
 use cargo_test_support::{rustc_host, sleep_ms};
+use std::fs;
 
 #[cargo_test]
 fn cargo_test_simple() {
@@ -2421,10 +2418,7 @@ fn bin_does_not_rebuild_tests() {
     p.cargo("test -v").run();
 
     sleep_ms(1000);
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(b"fn main() { 3; }")
-        .unwrap();
+    fs::write(p.root().join("src/main.rs"), "fn main() { 3; }").unwrap();
 
     p.cargo("test -v --no-run")
         .with_stderr(
@@ -3787,19 +3781,19 @@ fn cargo_test_doctest_xcompile_runner() {
     let config = paths::root().join(".cargo/config");
 
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(config)
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
+    // Escape Windows backslashes for TOML config.
+    let runner_str = runner_path.to_str().unwrap().replace('\\', "\\\\");
+    fs::write(
+        config,
+        format!(
+            r#"
 [target.'cfg(target_arch = "x86")']
 runner = "{}"
 "#,
-                runner_path.to_str().unwrap()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+            runner_str
+        ),
+    )
+    .unwrap();
 
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
