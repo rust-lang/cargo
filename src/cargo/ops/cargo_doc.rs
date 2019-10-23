@@ -24,14 +24,13 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         options.compile_opts.all_features,
         !options.compile_opts.no_default_features,
     );
-    let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
-    let (packages, resolve_with_overrides) = resolve;
+    let ws_resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
 
     let ids = specs
         .iter()
-        .map(|s| s.query(resolve_with_overrides.iter()))
+        .map(|s| s.query(ws_resolve.targeted_resolve.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
-    let pkgs = packages.get_many(ids)?;
+    let pkgs = ws_resolve.pkg_set.get_many(ids)?;
 
     let mut lib_names = HashMap::new();
     let mut bin_names = HashMap::new();

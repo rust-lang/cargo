@@ -24,6 +24,20 @@ use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
 
+/// Result for `resolve_ws_with_opts`.
+pub struct WorkspaceResolve<'a> {
+    /// Packages to be downloaded.
+    pub pkg_set: PackageSet<'a>,
+    /// The resolve for the entire workspace.
+    ///
+    /// This may be `None` for things like `cargo install` and `-Zavoid-dev-deps`.
+    /// This does not include `paths` overrides.
+    pub workspace_resolve: Option<Resolve>,
+    /// The narrowed resolve, with the specific features enabled, and only the
+    /// given package specs requested.
+    pub targeted_resolve: Resolve,
+}
+
 const UNUSED_PATCH_WARNING: &str = "\
 Check that the patched package version and available features are compatible
 with the dependency requirements. If the patch has a different version from
@@ -60,7 +74,7 @@ pub fn resolve_ws_with_opts<'a>(
     ws: &Workspace<'a>,
     opts: ResolveOpts,
     specs: &[PackageIdSpec],
-) -> CargoResult<(PackageSet<'a>, Resolve)> {
+) -> CargoResult<WorkspaceResolve<'a>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
 
@@ -106,9 +120,13 @@ pub fn resolve_ws_with_opts<'a>(
         add_patches,
     )?;
 
-    let packages = get_resolved_packages(&resolved_with_overrides, registry)?;
+    let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
-    Ok((packages, resolved_with_overrides))
+    Ok(WorkspaceResolve {
+        pkg_set,
+        workspace_resolve: resolve,
+        targeted_resolve: resolved_with_overrides,
+    })
 }
 
 fn resolve_with_registry<'cfg>(

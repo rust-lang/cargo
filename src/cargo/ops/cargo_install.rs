@@ -491,14 +491,14 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
     // It would be best if `source` could be passed in here to avoid a
     // duplicate "Updating", but since `source` is taken by value, then it
     // wouldn't be available for `compile_ws`.
-    let (pkg_set, resolve) = ops::resolve_ws_with_opts(ws, ResolveOpts::everything(), &specs)?;
-    let mut sources = pkg_set.sources_mut();
+    let ws_resolve = ops::resolve_ws_with_opts(ws, ResolveOpts::everything(), &specs)?;
+    let mut sources = ws_resolve.pkg_set.sources_mut();
 
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
     let _lock = ws.config().acquire_package_cache_lock()?;
 
-    for pkg_id in resolve.iter() {
+    for pkg_id in ws_resolve.targeted_resolve.iter() {
         if let Some(source) = sources.get_mut(pkg_id.source_id()) {
             if source.is_yanked(pkg_id)? {
                 ws.config().shell().warn(format!(

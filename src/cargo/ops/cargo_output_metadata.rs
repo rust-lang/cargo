@@ -56,9 +56,12 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
         opt.all_features,
         !opt.no_default_features,
     );
-    let (package_set, resolve) = ops::resolve_ws_with_opts(ws, opts, &specs)?;
+    let ws_resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
     let mut packages = HashMap::new();
-    for pkg in package_set.get_many(package_set.package_ids())? {
+    for pkg in ws_resolve
+        .pkg_set
+        .get_many(ws_resolve.pkg_set.package_ids())?
+    {
         packages.insert(pkg.package_id(), pkg.clone());
     }
 
@@ -66,7 +69,7 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
         packages: packages.values().map(|p| (*p).clone()).collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: Some(MetadataResolve {
-            resolve: (packages, resolve),
+            resolve: (packages, ws_resolve.targeted_resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
         target_directory: ws.target_dir().into_path_unlocked(),
