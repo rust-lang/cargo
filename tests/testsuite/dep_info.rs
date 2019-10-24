@@ -275,7 +275,7 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo-*", host),
+        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo*", host),
         &[
             (1, "src/main.rs"),
             (
@@ -403,7 +403,7 @@ fn relative_depinfo_paths_no_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-bin-foo-*",
+        "target/debug/.fingerprint/foo-*/dep-bin-foo*",
         &[
             (1, "src/main.rs"),
             (
