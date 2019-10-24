@@ -512,3 +512,35 @@ fn override_package_rename() {
 ")
         .run();
 }
+
+#[cargo_test]
+fn no_warning_ws() {
+    // https://github.com/rust-lang/cargo/issues/7378, avoid warnings in a workspace.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+            [workspace]
+            members = ["a", "b"]
+
+            [profile.dev.package.a]
+            codegen-units = 3
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -p b")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] b [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}

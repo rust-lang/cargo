@@ -38,6 +38,7 @@ use crate::core::resolver::{Resolve, ResolveOpts};
 use crate::core::{LibKind, Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
+use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
 use crate::util::{closest_msg, profile, CargoResult};
 
@@ -303,7 +304,11 @@ pub fn compile_ws<'a>(
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
     let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
-    let (mut packages, resolve_with_overrides) = resolve;
+    let WorkspaceResolve {
+        mut pkg_set,
+        workspace_resolve,
+        targeted_resolve: resolve,
+    } = resolve;
 
     let std_resolve = if let Some(crates) = &config.cli_unstable().build_std {
         if build_config.build_plan {
@@ -319,7 +324,7 @@ pub fn compile_ws<'a>(
         }
         let (mut std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
         remove_dylib_crate_type(&mut std_package_set)?;
-        packages.add_set(std_package_set);
+        pkg_set.add_set(std_package_set);
         Some(std_resolve)
     } else {
         None
@@ -330,12 +335,12 @@ pub fn compile_ws<'a>(
     // Vec<PackageIdSpec> to a Vec<&PackageId>.
     let to_build_ids = specs
         .iter()
-        .map(|s| s.query(resolve_with_overrides.iter()))
+        .map(|s| s.query(resolve.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
     // Dependencies will be downloaded during build_unit_dependencies.
-    let mut to_builds = packages.get_many(to_build_ids)?;
+    let mut to_builds = pkg_set.get_many(to_build_ids)?;
 
     // The ordering here affects some error messages coming out of cargo, so
     // let's be test and CLI friendly by always printing in the same order if
@@ -370,12 +375,15 @@ pub fn compile_ws<'a>(
         );
     }
 
-    profiles.validate_packages(&mut config.shell(), &packages)?;
+    profiles.validate_packages(
+        &mut config.shell(),
+        workspace_resolve.as_ref().unwrap_or(&resolve),
+    )?;
 
     let interner = UnitInterner::new();
     let mut bcx = BuildContext::new(
         ws,
-        &packages,
+        &pkg_set,
         config,
         build_config,
         profiles,
@@ -388,7 +396,7 @@ pub fn compile_ws<'a>(
         &to_builds,
         filter,
         build_config.requested_kind,
-        &resolve_with_overrides,
+        &resolve,
         &bcx,
     )?;
 
@@ -434,13 +442,8 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let unit_dependencies = build_unit_dependencies(
-        &bcx,
-        &resolve_with_overrides,
-        std_resolve.as_ref(),
-        &units,
-        &std_roots,
-    )?;
+    let unit_dependencies =
+        build_unit_dependencies(&bcx, &resolve, std_resolve.as_ref(), &units, &std_roots)?;
 
     let ret = {
         let _p = profile::start("compiling");

@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::core::compiler::{CompileMode, ProfileKind};
 use crate::core::interning::InternedString;
-use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, CargoResult, Config};
@@ -429,13 +429,9 @@ impl Profiles {
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(
-        &self,
-        shell: &mut Shell,
-        packages: &PackageSet<'_>,
-    ) -> CargoResult<()> {
+    pub fn validate_packages(&self, shell: &mut Shell, resolve: &Resolve) -> CargoResult<()> {
         for profile in self.by_name.values() {
-            profile.validate_packages(shell, packages)?;
+            profile.validate_packages(shell, resolve)?;
         }
         Ok(())
     }
@@ -502,16 +498,16 @@ impl ProfileMaker {
         profile
     }
 
-    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet<'_>) -> CargoResult<()> {
-        self.validate_packages_toml(shell, packages, &self.toml, true)?;
-        self.validate_packages_toml(shell, packages, &self.config, false)?;
+    fn validate_packages(&self, shell: &mut Shell, resolve: &Resolve) -> CargoResult<()> {
+        self.validate_packages_toml(shell, resolve, &self.toml, true)?;
+        self.validate_packages_toml(shell, resolve, &self.config, false)?;
         Ok(())
     }
 
     fn validate_packages_toml(
         &self,
         shell: &mut Shell,
-        packages: &PackageSet<'_>,
+        resolve: &Resolve,
         toml: &Option<TomlProfile>,
         warn_unmatched: bool,
     ) -> CargoResult<()> {
@@ -525,7 +521,7 @@ impl ProfileMaker {
         };
         // Verify that a package doesn't match multiple spec overrides.
         let mut found = HashSet::new();
-        for pkg_id in packages.package_ids() {
+        for pkg_id in resolve.iter() {
             let matches: Vec<&PackageIdSpec> = overrides
                 .keys()
                 .filter_map(|key| match *key {
@@ -575,8 +571,8 @@ impl ProfileMaker {
         });
         for spec in missing_specs {
             // See if there is an exact name match.
-            let name_matches: Vec<String> = packages
-                .package_ids()
+            let name_matches: Vec<String> = resolve
+                .iter()
                 .filter_map(|pkg_id| {
                     if pkg_id.name() == spec.name() {
                         Some(pkg_id.to_string())
@@ -586,8 +582,7 @@ impl ProfileMaker {
                 })
                 .collect();
             if name_matches.is_empty() {
-                let suggestion =
-                    closest_msg(&spec.name(), packages.package_ids(), |p| p.name().as_str());
+                let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
                 shell.warn(format!(
                     "package profile spec `{}` did not match any packages{}",
                     spec, suggestion

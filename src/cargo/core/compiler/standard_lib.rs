@@ -103,7 +103,7 @@ pub fn resolve_std<'cfg>(
         /*uses_default_features*/ true,
     );
     let resolve = ops::resolve_ws_with_opts(&std_ws, opts, &specs)?;
-    Ok(resolve)
+    Ok((resolve.pkg_set, resolve.targeted_resolve))
 }
 
 /// Generate a list of root `Unit`s for the standard library.
