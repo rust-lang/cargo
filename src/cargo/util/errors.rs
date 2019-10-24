@@ -381,6 +381,17 @@ pub fn process_error(
     }
 }
 
+pub fn is_simple_exit_code(code: i32) -> bool {
+    // Typical unix exit codes are 0 to 127.
+    // Windows doesn't have anything "typical", and is a
+    // 32-bit number (which appears signed here, but is really
+    // unsigned). However, most of the interesting NTSTATUS
+    // codes are very large. This is just a rough
+    // approximation of which codes are "normal" and which
+    // ones are abnormal termination.
+    code >= 0 && code <= 127
+}
+
 pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
     _internal(&error)
 }
