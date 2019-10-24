@@ -7,7 +7,7 @@ steps:
 - bash: rustup target add $OTHER_TARGET
   displayName: "Install cross-compile target"
 
-- bash: sudo apt install gcc-multilib
+- bash: sudo apt update -y && sudo apt install gcc-multilib -y
   displayName: "Install gcc-multilib (linux)"
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
 
