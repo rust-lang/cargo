@@ -15,8 +15,7 @@ pub fn cli() -> App {
         .arg(
             opt(
                 "filter-platform",
-                "Only include resolve dependencies matching the given target-triple \
-                 (\"host\" for current host)",
+                "Only include resolve dependencies matching the given target-triple",
             )
             .value_name("TRIPLE"),
         )

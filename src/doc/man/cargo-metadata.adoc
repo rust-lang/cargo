@@ -202,6 +202,9 @@ The output has the following format:
     /* The resolved dependency graph, with the concrete versions and features
        selected. The set depends on the enabled features.
        This is null if --no-deps is specified.
+       By default, this includes all dependencies for all target platforms.
+       The `--filter-platform` flag may be used to narrow to a specific
+       target triple.
     */
     "resolve": {
         /* Array of nodes within the dependency graph.
@@ -264,6 +267,14 @@ The output has the following format:
 *--format-version* _VERSION_::
     Specify the version of the output format to use. Currently `1` is the only
     possible value.
+
+*--filter-platform* _TRIPLE_::
+    This filters the `resolve` output to only include dependencies for the
+    given target triple. Without this flag, the resolve includes all targets.
++
+Note that the dependencies listed in the "packages" array still includes all
+dependencies. Each package definition is intended to be an unaltered
+reproduction of the information within `Cargo.toml`.
 
 include::options-features.adoc[]
 

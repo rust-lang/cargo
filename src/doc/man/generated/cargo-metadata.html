@@ -209,6 +209,9 @@ for a Rust API for reading the metadata.</p>
     /* The resolved dependency graph, with the concrete versions and features
        selected. The set depends on the enabled features.
        This is null if --no-deps is specified.
+       By default, this includes all dependencies for all target platforms.
+       The `--filter-platform` flag may be used to narrow to a specific
+       target triple.
     */
     "resolve": {
         /* Array of nodes within the dependency graph.
@@ -278,6 +281,16 @@ dependencies.</p>
 <dd>
 <p>Specify the version of the output format to use. Currently <code>1</code> is the only
 possible value.</p>
+</dd>
+<dt class="hdlist1"><strong>--filter-platform</strong> <em>TRIPLE</em></dt>
+<dd>
+<p>This filters the <code>resolve</code> output to only include dependencies for the
+given target triple. Without this flag, the resolve includes all targets.</p>
+<div class="paragraph">
+<p>Note that the dependencies listed in the "packages" array still includes all
+dependencies. Each package definition is intended to be an unaltered
+reproduction of the information within <code>Cargo.toml</code>.</p>
+</div>
 </dd>
 </dl>
 </div>

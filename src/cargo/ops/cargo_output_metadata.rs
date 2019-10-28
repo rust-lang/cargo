@@ -54,6 +54,9 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
     })
 }
 
+/// This is the structure that is serialized and displayed to the user.
+///
+/// See cargo-metadata.adoc for detailed documentation of the format.
 #[derive(Serialize)]
 pub struct ExportInfo {
     packages: Vec<Package>,
@@ -84,6 +87,7 @@ struct Dep {
     pkg: PackageId,
 }
 
+/// Builds the resolve graph as it will be displayed to the user.
 fn build_resolve_graph(
     ws: &Workspace<'_>,
     resolve_opts: ResolveOpts,
