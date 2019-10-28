@@ -71,6 +71,7 @@ latest edition. Setting the `edition` key in `[package]` will affect all
 targets/crates in the package, including test suites, benchmarks, binaries,
 examples, etc.
 
+<a id="package-build"></a>
 #### The `build` field (optional)
 
 This field specifies a file in the package root which is a [build script] for
@@ -85,6 +86,11 @@ guide][build script].
 build = "build.rs"
 ```
 
+The default is `"build.rs"`, which loads the script from a file named
+`build.rs` in the root of the package. Use `build = "custom_build_name.rs"` to
+specify a path to a different file or `build = false` to disable automatic
+detection of the build script.
+
 #### The `links` field (optional)
 
 This field specifies the name of a native library that is being linked to.
@@ -97,7 +103,6 @@ script guide.
 [package]
 # ...
 links = "foo"
-build = "build.rs"
 ```
 
 #### The `documentation` field (optional)

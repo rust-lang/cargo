@@ -76,6 +76,13 @@ runner = ".."
 # this value overrides build.rustflags when both are present
 rustflags = ["..", ".."]
 
+# A package with the `links` key can override the build script with a
+# table with the name of the `links` library.
+[target.$triple.$links]
+# Any build script outputs may be included here as separate keys.
+rustc-link-search = ["/path/to/foo"]
+rustc-link-lib = ["foo"]
+
 [target.'cfg(...)']
 # Similar for the $triple configuration, but using the `cfg` syntax.
 # If several `cfg` and $triple targets are candidates, then the rustflags
