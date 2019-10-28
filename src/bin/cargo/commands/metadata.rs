@@ -12,6 +12,13 @@ pub fn cli() -> App {
         )
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_features()
+        .arg(
+            opt(
+                "filter-platform",
+                "Only include resolve dependencies matching the given target-triple",
+            )
+            .value_name("TRIPLE"),
+        )
         .arg(opt(
             "no-deps",
             "Output information only about the root package \
@@ -44,6 +51,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
         no_deps: args.is_present("no-deps"),
+        filter_platform: args.value_of("filter-platform").map(|s| s.to_string()),
         version,
     };
 

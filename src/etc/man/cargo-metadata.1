@@ -2,12 +2,12 @@
 .\"     Title: cargo-metadata
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-17
+.\"      Date: 2019-10-28
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-METADATA" "1" "2019-09-17" "\ \&" "\ \&"
+.TH "CARGO\-METADATA" "1" "2019-10-28" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -223,6 +223,9 @@ The output has the following format:
     /* The resolved dependency graph, with the concrete versions and features
        selected. The set depends on the enabled features.
        This is null if \-\-no\-deps is specified.
+       By default, this includes all dependencies for all target platforms.
+       The `\-\-filter\-platform` flag may be used to narrow to a specific
+       target triple.
     */
     "resolve": {
         /* Array of nodes within the dependency graph.
@@ -287,6 +290,16 @@ dependencies.
 .RS 4
 Specify the version of the output format to use. Currently \fB1\fP is the only
 possible value.
+.RE
+.sp
+\fB\-\-filter\-platform\fP \fITRIPLE\fP
+.RS 4
+This filters the \fBresolve\fP output to only include dependencies for the
+given target triple. Without this flag, the resolve includes all targets.
+.sp
+Note that the dependencies listed in the "packages" array still includes all
+dependencies. Each package definition is intended to be an unaltered
+reproduction of the information within \fBCargo.toml\fP.
 .RE
 .SS "Feature Selection"
 .sp

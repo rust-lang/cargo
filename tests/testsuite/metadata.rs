@@ -1,5 +1,6 @@
+use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 
 #[cargo_test]
 fn cargo_metadata_simple() {
@@ -1794,13 +1795,629 @@ fn deps_with_bin_only() {
         .file("bdep/src/main.rs", "fn main() {}")
         .build();
 
-    let output = p
-        .cargo("metadata")
-        .exec_with_output()
-        .expect("cargo metadata failed");
-    let stdout = std::str::from_utf8(&output.stdout).unwrap();
-    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
-    let nodes = &meta["resolve"]["nodes"];
-    assert!(nodes[0]["deps"].as_array().unwrap().is_empty());
-    assert!(nodes[1]["deps"].as_array().unwrap().is_empty());
+    p.cargo("metadata")
+        .with_json(
+            r#"
+{
+  "packages": [
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "foo 0.1.0 ([..])",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "bdep",
+          "source": null,
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[..]/foo/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    }
+  ],
+  "workspace_members": [
+    "foo 0.1.0 ([..])"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "foo 0.1.0 ([..])",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 ([..])"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]foo"
+}
+"#,
+        )
+        .run();
+}
+
+#[cargo_test]
+fn filter_platform() {
+    // Testing the --filter-platform flag.
+    Package::new("normal-dep", "0.0.1").publish();
+    Package::new("host-dep", "0.0.1").publish();
+    Package::new("alt-dep", "0.0.1").publish();
+    Package::new("cfg-dep", "0.0.1").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                normal-dep = "0.0.1"
+
+                [target.{}.dependencies]
+                host-dep = "0.0.1"
+
+                [target.{}.dependencies]
+                alt-dep = "0.0.1"
+
+                [target.'cfg(foobar)'.dependencies]
+                cfg-dep = "0.0.1"
+                "#,
+                rustc_host(),
+                alternate()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let alt_dep = r#"
+    {
+      "name": "alt-dep",
+      "version": "0.0.1",
+      "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "alt-dep",
+          "src_path": "[..]/alt-dep-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/alt-dep-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    },
+    "#;
+
+    let cfg_dep = r#"
+    {
+      "name": "cfg-dep",
+      "version": "0.0.1",
+      "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "cfg-dep",
+          "src_path": "[..]/cfg-dep-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/cfg-dep-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    },
+    "#;
+
+    let host_dep = r#"
+    {
+      "name": "host-dep",
+      "version": "0.0.1",
+      "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "host-dep",
+          "src_path": "[..]/host-dep-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/host-dep-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    },
+    "#;
+
+    let normal_dep = r#"
+    {
+      "name": "normal-dep",
+      "version": "0.0.1",
+      "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "normal-dep",
+          "src_path": "[..]/normal-dep-0.0.1/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/normal-dep-0.0.1/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    },
+    "#;
+
+    let foo = r#"
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "foo 0.1.0 (path+file:[..]foo)",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "normal-dep",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        },
+        {
+          "name": "cfg-dep",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": "cfg(foobar)",
+          "registry": null
+        },
+        {
+          "name": "alt-dep",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": "$ALT",
+          "registry": null
+        },
+        {
+          "name": "host-dep",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^0.0.1",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": "$HOST",
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[..]/foo/src/lib.rs",
+          "edition": "2015",
+          "doctest": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "edition": "2015",
+      "links": null
+    }
+    "#
+    .replace("$ALT", &alternate())
+    .replace("$HOST", &rustc_host());
+
+    // Normal metadata, no filtering, returns *everything*.
+    p.cargo("metadata")
+        .with_json(
+            &r#"
+{
+  "packages": [
+    $ALT_DEP
+    $CFG_DEP
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
+  "workspace_members": [
+    "foo 0.1.0 (path+file:[..]foo)"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "dependencies": [
+          "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "name": "alt_dep",
+            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "cfg_dep",
+            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "host_dep",
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "normal_dep",
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 (path+file:[..]foo)"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]/foo"
+}
+"#
+            .replace("$ALT_DEP", alt_dep)
+            .replace("$CFG_DEP", cfg_dep)
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
+        )
+        .run();
+
+    // Filter on alternate, removes cfg and host.
+    p.cargo("metadata --filter-platform")
+        .arg(alternate())
+        .with_json(
+            &r#"
+{
+  "packages": [
+    $ALT_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
+  "workspace_members": "{...}",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "dependencies": [
+          "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "name": "alt_dep",
+            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "normal_dep",
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 (path+file:[..]foo)"
+  },
+  "target_directory": "[..]foo/target",
+  "version": 1,
+  "workspace_root": "[..]foo"
+}
+"#
+            .replace("$ALT_DEP", alt_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
+        )
+        .run();
+
+    // Filter on host, removes alt and cfg.
+    p.cargo("metadata --filter-platform")
+        .arg(rustc_host())
+        .with_json(
+            &r#"
+{
+  "packages": [
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
+  "workspace_members": "{...}",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "dependencies": [
+          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "name": "host_dep",
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "normal_dep",
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 (path+file:[..]foo)"
+  },
+  "target_directory": "[..]foo/target",
+  "version": 1,
+  "workspace_root": "[..]foo"
+}
+"#
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
+        )
+        .run();
+
+    // Filter host with cfg, removes alt only
+    p.cargo("metadata --filter-platform")
+        .arg(rustc_host())
+        .env("RUSTFLAGS", "--cfg=foobar")
+        .with_json(
+            &r#"
+{
+  "packages": [
+    $CFG_DEP
+    $HOST_DEP
+    $NORMAL_DEP
+    $FOO
+  ],
+  "workspace_members": "{...}",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "foo 0.1.0 (path+file:[..]/foo)",
+        "dependencies": [
+          "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+        ],
+        "deps": [
+          {
+            "name": "cfg_dep",
+            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "host_dep",
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          },
+          {
+            "name": "normal_dep",
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 (path+file:[..]/foo)"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]/foo"
+}
+"#
+            .replace("$CFG_DEP", cfg_dep)
+            .replace("$HOST_DEP", host_dep)
+            .replace("$NORMAL_DEP", normal_dep)
+            .replace("$FOO", &foo),
+        )
+        .run();
 }
