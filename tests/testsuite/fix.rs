@@ -1289,3 +1289,22 @@ fn fix_with_clippy() {
     "
     );
 }
+
+#[cargo_test]
+fn fix_color_message() {
+    // Check that color appears in diagnostics.
+    let p = project()
+        .file("src/lib.rs", "std::compile_error!{\"color test\"}")
+        .build();
+
+    p.cargo("fix --allow-no-vcs --color=always")
+        .with_stderr_contains("[..]\x1b[[..]")
+        .with_status(101)
+        .run();
+
+    p.cargo("fix --allow-no-vcs --color=never")
+        .with_stderr_contains("error: color test")
+        .with_stderr_does_not_contain("[..]\x1b[[..]")
+        .with_status(101)
+        .run();
+}
