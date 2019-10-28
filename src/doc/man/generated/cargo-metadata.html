@@ -167,6 +167,11 @@ for a Rust API for reading the metadata.</p>
                     }
                 }
             },
+            /* List of registries to which this package may be published.
+               Publishing is unrestricted if null, and forbidden if an empty array. */
+            "publish": [
+                "crates-io"
+            ],
             /* Array of authors from the manifest.
                Empty array if no authors specified.
             */
@@ -351,8 +356,8 @@ terminal.</p>
 <dl>
 <dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
 <dd>
-<p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches in the current
-directory or any parent directory for the <code>Cargo.toml</code> file.</p>
+<p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
+<code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
 <dt class="hdlist1"><strong>--frozen</strong></dt>
 <dt class="hdlist1"><strong>--locked</strong></dt>
