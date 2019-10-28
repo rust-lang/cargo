@@ -281,6 +281,11 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // - If the fix succeeded, show any remaining warnings.
     let mut cmd = Command::new(&rustc);
     args.apply(&mut cmd);
+    for arg in args.format_args {
+        // Add any json/error format arguments that Cargo wants. This allows
+        // things like colored output to work correctly.
+        cmd.arg(arg);
+    }
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
@@ -587,6 +592,7 @@ struct FixArgs {
     other: Vec<OsString>,
     rustc: Option<PathBuf>,
     clippy_args: Vec<String>,
+    format_args: Vec<String>,
 }
 
 enum PrepareFor {
@@ -627,6 +633,7 @@ impl FixArgs {
                 if s.starts_with("--error-format=") || s.starts_with("--json=") {
                     // Cargo may add error-format in some cases, but `cargo
                     // fix` wants to add its own.
+                    ret.format_args.push(s.to_string());
                     continue;
                 }
             }
