@@ -2,9 +2,6 @@
 
 The goal of this tool is to read and apply the suggestions made by rustc.
 
-[![Build Status](https://travis-ci.com/rust-lang-nursery/rustfix.svg?branch=master)](https://travis-ci.com/rust-lang-nursery/rustfix)
-[![Build status](https://ci.appveyor.com/api/projects/status/g8ljreo9ryu3s6ee/branch/master?svg=true)](https://ci.appveyor.com/project/rust-lang-libs/rustfix/branch/master)
-
 ## Current status
 
 Currently, rustfix is split into two crates:
