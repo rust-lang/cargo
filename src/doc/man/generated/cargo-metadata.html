@@ -206,17 +206,14 @@ for a Rust API for reading the metadata.</p>
     "workspace_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
-    /* The resolved dependency graph, with the concrete versions and features
-       selected. The set depends on the enabled features.
-
-       All platform-specific dependencies are listed regardless of the current
-       target.
-
-       This is null if --no-deps is specified.
-       By default, this includes all dependencies for all target platforms.
-       The `--filter-platform` flag may be used to narrow to a specific
-       target triple.
-    */
+    // The resolved dependency graph, with the concrete versions and features
+    // selected. The set depends on the enabled features.
+    //
+    // This is null if --no-deps is specified.
+    //
+    // By default, this includes all dependencies for all target platforms.
+    // The `--filter-platform` flag may be used to narrow to a specific
+    // target triple.
     "resolve": {
         /* Array of nodes within the dependency graph.
            Each node is a package.
