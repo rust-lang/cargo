@@ -164,8 +164,8 @@ may change over time! The owner of a crate is the only person allowed to publish
 new versions of the crate, but an owner may designate additional owners.
 
 ```console
-$ cargo owner --add my-buddy
-$ cargo owner --remove my-buddy
+$ cargo owner --add github-handle
+$ cargo owner --remove github-handle
 $ cargo owner --add github:rust-lang:owners
 $ cargo owner --remove github:rust-lang:owners
 ```
