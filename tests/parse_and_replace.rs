@@ -6,14 +6,12 @@ use env_logger;
 extern crate log;
 use rustfix;
 
-
 #[macro_use]
 extern crate failure;
 
-
 use std::collections::HashSet;
-use std::ffi::OsString;
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
@@ -123,7 +121,8 @@ fn diff(expected: &str, actual: &str) -> String {
             write!(
                 &mut res,
                 "differences found (+ == actual, - == expected):\n"
-            ).unwrap();
+            )
+            .unwrap();
             different = true;
         }
         for diff in diff.lines() {

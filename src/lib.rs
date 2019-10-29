@@ -94,10 +94,12 @@ pub struct Replacement {
 
 fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     // unindent the snippet
-    let indent = span.text
+    let indent = span
+        .text
         .iter()
         .map(|line| {
-            let indent = line.text
+            let indent = line
+                .text
                 .chars()
                 .take_while(|&c| char::is_whitespace(c))
                 .count();
@@ -127,7 +129,11 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
 
     if span.text.len() > 1 {
         body.push('\n');
-        body.push_str(&last_slice[indent..last_tail_index].iter().collect::<String>());
+        body.push_str(
+            &last_slice[indent..last_tail_index]
+                .iter()
+                .collect::<String>(),
+        );
     }
     tail.push_str(&last_slice[last_tail_index..].iter().collect::<String>());
     Some(Snippet {
@@ -150,7 +156,10 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     let snippet = parse_snippet(span)?;
     let replacement = span.suggested_replacement.clone()?;
-    Some(Replacement { snippet, replacement })
+    Some(Replacement {
+        snippet,
+        replacement,
+    })
 }
 
 pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
@@ -184,8 +193,8 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
                 .spans
                 .iter()
                 .filter(|span| {
-                    use crate::Filter::*;
                     use crate::diagnostics::Applicability::*;
+                    use crate::Filter::*;
 
                     match (filter, &span.suggestion_applicability) {
                         (MachineApplicableOnly, Some(MachineApplicable)) => true,

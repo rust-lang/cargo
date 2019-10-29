@@ -43,13 +43,11 @@ impl Data {
     pub fn new(data: &[u8]) -> Self {
         Data {
             original: data.into(),
-            parts: vec![
-                Span {
-                    data: State::Initial,
-                    start: 0,
-                    end: data.len().saturating_sub(1),
-                },
-            ],
+            parts: vec![Span {
+                data: State::Initial,
+                start: 0,
+                end: data.len().saturating_sub(1),
+            }],
         }
     }
 
@@ -105,7 +103,8 @@ impl Data {
         // the whole chunk. As an optimization and without loss of generality we
         // don't add empty parts.
         let new_parts = {
-            let index_of_part_to_split = self.parts
+            let index_of_part_to_split = self
+                .parts
                 .iter()
                 .position(|p| {
                     !p.data.is_inserted() && p.start <= from && p.end >= up_to_and_including
@@ -113,7 +112,8 @@ impl Data {
                 .ok_or_else(|| {
                     use log::Level::Debug;
                     if log_enabled!(Debug) {
-                        let slices = self.parts
+                        let slices = self
+                            .parts
                             .iter()
                             .map(|p| {
                                 (
@@ -154,7 +154,7 @@ impl Data {
             if part_to_split.start == from && part_to_split.end == up_to_and_including {
                 if let State::Replaced(ref replacement) = part_to_split.data {
                     if &**replacement == data {
-                        return Ok(())
+                        return Ok(());
                     }
                 }
             }
