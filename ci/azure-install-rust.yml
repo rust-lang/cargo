@@ -4,12 +4,8 @@ steps:
       if command -v rustup; then
         echo `command -v rustup` `rustup -V` already installed
         rustup self update
-      elif [ "$AGENT_OS" = "Windows_NT" ]; then
-        curl -sSf -o rustup-init.exe https://win.rustup.rs
-        rustup-init.exe -y --default-toolchain $TOOLCHAIN --profile=minimal
-        echo "##vso[task.prependpath]$USERPROFILE/.cargo/bin"
       else
-        curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $TOOLCHAIN --profile=minimal
+        curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain="$TOOLCHAIN" --profile=minimal
         echo "##vso[task.prependpath]$HOME/.cargo/bin"
       fi
     displayName: Install rustup
