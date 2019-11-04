@@ -37,6 +37,20 @@ crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
 be used as well.
 
+If the package is already installed, Cargo will reinstall it if the installed
+version does not appear to be up-to-date. If any of the following values
+change, then Cargo will reinstall the package:
+
+- The package version and source.
+- The set of binary names installed.
+- The chosen features.
+- The release mode (`--debug`).
+- The target (`--target`).
+
+Installing with `--path` will always build and install, unless there are
+conflicting binaries from another package. The `--force` flag may be used to
+force Cargo to always reinstall the package.
+
 If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
 specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
@@ -63,7 +77,13 @@ available.
 
 *--vers* _VERSION_::
 *--version* _VERSION_::
-    Specify a version to install.
+    Specify a version to install. This may be a
+    linkcargo:reference/specifying-dependencies.md[version requirement], like
+    `~1.2`, to have Cargo select the newest version from the given
+    requirement. If the version does not have a requirement operator (such as
+    `^` or `~`), then it must be in the form _MAJOR.MINOR.PATCH_, and will
+    install exactly that version; it is *not* treated as a caret requirement
+    like Cargo dependencies are.
 
 *--git* _URL_::
     Git URL to install the specified crate from.
@@ -85,9 +105,18 @@ available.
 
 *-f*::
 *--force*::
-    Force overwriting existing crates or binaries. This can be used to
-    reinstall or upgrade a crate.
+    Force overwriting existing crates or binaries. This can be used if a
+    package has installed a binary with the same name as another package. This
+    is also useful if something has changed on the system that you want to
+    rebuild with, such as a newer version of `rustc`.
 
+*--no-track*::
+    By default, Cargo keeps track of the installed packages with a metadata
+    file stored in the installation root directory. This flag tells Cargo not
+    to use or create that file. With this flag, Cargo will refuse to overwrite
+    any existing files unless the `--force` flag is used. This also disables
+    Cargo's ability to protect against multiple concurrent invocations of
+    Cargo installing at the same time.
 
 *--bin* _NAME_...::
     Install only the specified binary.
@@ -137,13 +166,17 @@ include::section-exit-status.adoc[]
 
 == EXAMPLES
 
-. Install a package from crates.io:
+. Install or upgrade a package from crates.io:
 
     cargo install ripgrep
 
-. Reinstall or upgrade a package:
+. Install or reinstall the package in the current directory:
 
-    cargo install ripgrep --force
+    cargo install --path .
+
+. View the list of installed packages:
+
+    cargo install --list
 
 == SEE ALSO
 man:cargo[1], man:cargo-uninstall[1], man:cargo-search[1], man:cargo-publish[1]

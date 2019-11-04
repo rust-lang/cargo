@@ -334,7 +334,6 @@ pub struct CliUnstable {
     pub config_profile: bool,
     pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
-    pub install_upgrade: bool,
     pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
@@ -400,7 +399,6 @@ impl CliUnstable {
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
-            "install-upgrade" => self.install_upgrade = parse_empty(k, v)?,
             "named-profiles" => self.named_profiles = parse_empty(k, v)?,
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "build-std" => {

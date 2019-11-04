@@ -251,12 +251,15 @@ fn install_path() {
 
     cargo_process("install --path").arg(p.root()).run();
     assert_has_installed_exe(cargo_home(), "foo");
+    // path-style installs force a reinstall
     p.cargo("install --path .")
-        .with_status(101)
         .with_stderr(
             "\
-[ERROR] binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
-Add --force to overwrite
+[INSTALLING] foo v0.0.1 [..]
+[FINISHED] release [..]
+[REPLACING] [..]/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v0.0.1 [..]` with `foo v0.0.1 [..]` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
 ",
         )
         .run();
@@ -448,27 +451,6 @@ fn examples() {
         .arg("--example=foo")
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
-}
-
-#[cargo_test]
-fn install_twice() {
-    let p = project()
-        .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}")
-        .build();
-
-    cargo_process("install --path").arg(p.root()).run();
-    cargo_process("install --path")
-        .arg(p.root())
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.0.1 ([..])`
-binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
-Add --force to overwrite
-",
-        )
-        .run();
 }
 
 #[cargo_test]
@@ -1108,22 +1090,6 @@ fn not_both_vers_and_version() {
             "\
 error: The argument '--version <VERSION>' was provided more than once, \
 but cannot be used multiple times
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn legacy_version_requirement() {
-    pkg("foo", "0.1.1");
-
-    cargo_process("install foo --vers 0.1")
-        .with_stderr_contains(
-            "\
-warning: the `--vers` provided, `0.1`, is not a valid semver version
-
-historically Cargo treated this as a semver version requirement accidentally
-and will continue to do so, but this behavior will be removed eventually
 ",
         )
         .run();

@@ -99,20 +99,8 @@ fn one_install_should_be_bad() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    let (bad, good) = if a.status.code() == Some(101) {
-        (a, b)
-    } else {
-        (b, a)
-    };
-    execs()
-        .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] binary `foo[..]` already exists in destination as part of `[..]`",
-        )
-        .run_output(&bad);
-    execs()
-        .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]")
-        .run_output(&good);
+    execs().run_output(&a);
+    execs().run_output(&b);
 
     assert_has_installed_exe(cargo_home(), "foo");
 }
