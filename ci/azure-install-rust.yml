@@ -15,7 +15,9 @@ steps:
       rustup set profile minimal
       rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
       rustup update --no-self-update $TOOLCHAIN
-      rustup component add --toolchain=$TOOLCHAIN rustc-dev
+      if [ "$TOOLCHAIN" = "nightly" ]; then
+        rustup component add --toolchain=$TOOLCHAIN rustc-dev
+      fi
       rustup default $TOOLCHAIN
     displayName: Install rust
 
