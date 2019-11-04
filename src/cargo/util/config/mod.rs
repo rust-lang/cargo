@@ -342,7 +342,7 @@ impl Config {
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
-        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR").filter(|dir| !dir.is_empty()) {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = &self.build_config()?.target_dir {
             let val = val.resolve_path(self);
