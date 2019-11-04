@@ -4,19 +4,20 @@ steps:
       if command -v rustup; then
         echo `command -v rustup` `rustup -V` already installed
         rustup self update
-      elif [ "$AGENT_OS" = "Windows_NT" ]; then
-        curl -sSf -o rustup-init.exe https://win.rustup.rs
-        rustup-init.exe -y --default-toolchain $TOOLCHAIN
-        echo "##vso[task.prependpath]$USERPROFILE/.cargo/bin"
       else
-        curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $TOOLCHAIN
+        curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain="$TOOLCHAIN" --profile=minimal
         echo "##vso[task.prependpath]$HOME/.cargo/bin"
       fi
     displayName: Install rustup
 
   - bash: |
       set -e
-      rustup update $TOOLCHAIN
+      rustup set profile minimal
+      rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
+      rustup update --no-self-update $TOOLCHAIN
+      if [ "$TOOLCHAIN" = "nightly" ]; then
+        rustup component add --toolchain=$TOOLCHAIN rustc-dev
+      fi
       rustup default $TOOLCHAIN
     displayName: Install rust
 
