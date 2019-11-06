@@ -90,23 +90,22 @@ configuration). The stderr output is also saved in that same directory.
 The following is a summary of the instructions that Cargo recognizes, with each
 one detailed below.
 
-* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) — Used to tell Cargo when
+* [`cargo:rerun-if-changed=PATH`](#rerun-if-changed) — Tells Cargo when to
+  re-run the script.
+* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Tells Cargo when
   to re-run the script.
-* [`cargo:rerun-if-env-changed=VAR`](#rerun-if-env-changed) — Used to tell
-  Cargo when to re-run the script.
-* [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Used to link a
-  library.
-* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Used to add to
-  the library search path.
-* [`cargo:rustc-flags=FLAGS`](#rustc-flags) — Used to pass certain flags to
-  the compiler.
-* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) — Used to enable compile-time
-  `cfg` settings.
-* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) — Used to set an environment
-  variable.
-* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) — Used to pass
-  custom flags to a linker for cdylib crates.
-* [`cargo:warning=MESSAGE`](#cargo-warning) — Used to display a warning on the
+* [`cargo:rustc-link-lib=[KIND=]NAME`](#rustc-link-lib) — Adds a library to
+  link.
+* [`cargo:rustc-link-search=[KIND=]PATH`](#rustc-link-search) — Adds to the
+  library search path.
+* [`cargo:rustc-flags=FLAGS`](#rustc-flags) — Passes certain flags to the
+  compiler.
+* [`cargo:rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) — Enables compile-time `cfg`
+  settings.
+* [`cargo:rustc-env=VAR=VALUE`](#rustc-env) — Sets an environment variable.
+* [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) — Passes custom
+  flags to a linker for cdylib crates.
+* [`cargo:warning=MESSAGE`](#cargo-warning) — Displays a warning on the
   terminal.
 * [`cargo:KEY=VALUE`](#the-links-manifest-key) — Metadata, used by `links`
   scripts.
