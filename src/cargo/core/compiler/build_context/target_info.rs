@@ -403,7 +403,16 @@ fn env_args(
         // This is probably a build script or plugin and we're
         // compiling with --target. In this scenario there are
         // no rustflags we can apply.
-        return Ok(Vec::new());
+        // However, musl host need this rustflags to compile
+        // plugin dynamically.
+        if cfg!(target_env = "musl") {
+            let mut rustflags = Vec::new();
+            rustflags.push("-C".into());
+            rustflags.push("target-feature=-crt-static".into());
+            return Ok(rustflags);
+        } else {
+            return Ok(Vec::new());
+        }
     }
 
     // First try RUSTFLAGS from the environment
