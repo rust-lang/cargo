@@ -24,6 +24,7 @@
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)
     * [Build Scripts](reference/build-scripts.md)
+        * [Build Script Examples](reference/build-script-examples.md)
     * [Publishing on crates.io](reference/publishing.md)
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)

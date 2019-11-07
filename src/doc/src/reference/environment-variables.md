@@ -45,8 +45,9 @@ configuration values, as described in [that documentation][config-env]
 ### Environment variables Cargo sets for crates
 
 Cargo exposes these environment variables to your crate when it is compiled.
-Note that this applies for test binaries as well.
-To get the value of any of these variables in a Rust program, do this:
+Note that this applies for running binaries with `cargo run` and `cargo test`
+as well. To get the value of any of these variables in a Rust program, do
+this:
 
 ```rust
 let version = env!("CARGO_PKG_VERSION");
@@ -68,6 +69,34 @@ let version = env!("CARGO_PKG_VERSION");
 * `CARGO_PKG_REPOSITORY` - The repository from the manifest of your package.
 * `OUT_DIR` - If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
+              (Only set during compilation.)
+
+#### Dynamic library paths
+
+Cargo also sets the dynamic library path when compiling and running binaries
+with commands like `cargo run` and `cargo test`. This helps with locating
+shared libraries that are part of the build process. The variable name depends
+on the platform:
+
+* Windows: `PATH`
+* macOS: `DYLD_FALLBACK_LIBRARY_PATH`
+* Unix: `LD_LIBRARY_PATH`
+
+The value is extended from the existing value when Cargo starts. macOS has
+special consideration where if `DYLD_FALLBACK_LIBRARY_PATH` is not already
+set, it will add the default `$HOME/lib:/usr/local/lib:/usr/lib`.
+
+Cargo includes the following paths:
+
+* Search paths included from any build script with the [`rustc-link-search`
+  instruction](build-scripts.md#rustc-link-search). Paths outside of the
+  `target` directory are removed. It is the responsibility of the user running
+  Cargo to properly set the environment if additional libraries on the system
+  are needed in the search path.
+* The base output directory, such as `target/debug`, and the "deps" directory.
+  This is mostly for legacy support of `rustc` compiler plugins.
+* The rustc sysroot library path. This generally is not important to most
+  users.
 
 ### Environment variables Cargo sets for build scripts
 
