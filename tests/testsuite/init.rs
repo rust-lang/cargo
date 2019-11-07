@@ -59,7 +59,7 @@ fn simple_bin() {
 
 #[cargo_test]
 fn simple_git_ignore_exists() {
-    // write a .gitignore file with one entry
+    // write a .gitignore file with two entries
     fs::create_dir_all(paths::root().join("foo")).unwrap();
     fs::write(
         paths::root().join("foo/.gitignore"),
