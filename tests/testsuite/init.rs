@@ -89,7 +89,7 @@ fn simple_git_ignore_exists() {
          **/some.file\n\n\
          #Added by cargo\n\
          #\n\
-         #already existing elements are commented out\n\
+         #already existing elements were commented out\n\
          \n\
          #/target\n\
          **/*.rs.bk\n\

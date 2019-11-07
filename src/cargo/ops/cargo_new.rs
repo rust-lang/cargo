@@ -492,7 +492,7 @@ impl IgnoreList {
             .iter()
             .any(|item| existing_items.contains(item))
         {
-            out.push_str("#\n#already existing elements are commented out\n");
+            out.push_str("#\n#already existing elements were commented out\n");
         }
         out.push('\n');
 
