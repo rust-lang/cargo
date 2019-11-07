@@ -1,17 +1,78 @@
 # Changelog
 
+## Cargo 1.41 (2019-01-30)
+[5da4b4d4...HEAD](https://github.com/rust-lang/cargo/compare/5da4b4d4...HEAD)
+
+### Added
+### Changed
+### Fixed
+
 ## Cargo 1.40 (2019-12-19)
-[4b105b6a...HEAD](https://github.com/rust-lang/cargo/compare/4b105b6a...HEAD)
+[1c6ec66d...rust-1.40.0](https://github.com/rust-lang/cargo/compare/1c6ec66d...rust-1.40.0)
 
 ### Added
 - (Nightly only): The `mtime-on-use` feature may now be enabled via the
   `unstable.mtime_on_use` config option.
   [#7411](https://github.com/rust-lang/cargo/pull/7411)
+- Added `http.ssl-version` config option to control the version of TLS,
+  along with min/max versions.
+  [#7308](https://github.com/rust-lang/cargo/pull/7308)
+- (Nightly only): Added support for named profiles.
+  [#6989](https://github.com/rust-lang/cargo/pull/6989)
+- 🔥 Compiler warnings are now cached on disk. If a build generates warnings,
+  re-running the build will now re-display the warnings.
+  [#7450](https://github.com/rust-lang/cargo/pull/7450)
+- (Nightly only): Added `-Zpanic-abort-tests` to allow building and running
+  tests with the "abort" panic strategy.
+  [#7460](https://github.com/rust-lang/cargo/pull/7460)
+- Added `--filter-platform` option to `cargo metadata` to narrow the nodes
+  shown in the resolver graph to only packages included for the given target
+  triple.
+  [#7376](https://github.com/rust-lang/cargo/pull/7376)
 
 ### Changed
 - Cargo's "platform" `cfg` parsing has been extracted into a separate crate
   named `cargo-platform`.
   [#7375](https://github.com/rust-lang/cargo/pull/7375)
+- (Nightly only): Changed `build-std` to use `--sysroot`.
+  [#7421](https://github.com/rust-lang/cargo/pull/7421)
+- (Nightly only): Various fixes and enhancements to `-Ztimings`.
+  [#7395](https://github.com/rust-lang/cargo/pull/7395)
+  [#7398](https://github.com/rust-lang/cargo/pull/7398)
+  [#7397](https://github.com/rust-lang/cargo/pull/7397)
+  [#7403](https://github.com/rust-lang/cargo/pull/7403)
+  [#7428](https://github.com/rust-lang/cargo/pull/7428)
+  [#7429](https://github.com/rust-lang/cargo/pull/7429)
+- Dependencies extracted into Cargo's cache no longer preserve mtimes to
+  reduce syscall overhead.
+  [#7465](https://github.com/rust-lang/cargo/pull/7465)
+- Windows: EXE files no longer include a metadata hash in the filename.
+  This helps with debuggers correlating the filename with the PDB file.
+  [#7400](https://github.com/rust-lang/cargo/pull/7400)
+- Wasm32: `.wasm` files are no longer treated as an "executable", allowing
+  `cargo test` and `cargo run` to work properly with the generated `.js` file.
+  [#7476](https://github.com/rust-lang/cargo/pull/7476)
+- crates.io now supports SPDX 3.6 licenses.
+  [#7481](https://github.com/rust-lang/cargo/pull/7481)
+- Improved cyclic dependency error message.
+  [#7470](https://github.com/rust-lang/cargo/pull/7470)
+- Bare `cargo clean` no longer locks the package cache.
+  [#7502](https://github.com/rust-lang/cargo/pull/7502)
+- `cargo publish` now allows dev-dependencies without a version key to be
+  published. A git or path-only dev-dependency will be removed from the
+  package manifest before uploading.
+  [#7333](https://github.com/rust-lang/cargo/pull/7333)
+- (Nightly only): Profile overrides have renamed the syntax to be
+  `[profile.dev.package.NAME]`.
+  [#7504](https://github.com/rust-lang/cargo/pull/7504)
+- `--features` and `--no-default-features` in the root of a virtual workspace
+  will now generate an error instead of being ignored.
+  [#7507](https://github.com/rust-lang/cargo/pull/7507)
+- Generated files (like `Cargo.toml` and `Cargo.lock`) in a package archive
+  now have their timestamp set to the current time instead of the epoch.
+  [#7523](https://github.com/rust-lang/cargo/pull/7523)
+- The `-Z` flag parser is now more strict, rejecting more invalid syntax.
+  [#7531](https://github.com/rust-lang/cargo/pull/7531)
 
 ### Fixed
 - Fixed an issue where if a package had an `include` field, and `Cargo.lock`
@@ -21,9 +82,14 @@
   [#7448](https://github.com/rust-lang/cargo/pull/7448)
 - Fixed a panic in a particular combination of `[patch]` entries.
   [#7452](https://github.com/rust-lang/cargo/pull/7452)
+- Windows: Better error message when `cargo test` or `rustc` crashes in an
+  abnormal way, such as a signal or seg fault.
+  [#7535](https://github.com/rust-lang/cargo/pull/7535)
+- (Nightly only): Fixed warnings for unused profile overrides in a workspace.
+  [#7536](https://github.com/rust-lang/cargo/pull/7536)
 
 ## Cargo 1.39 (2019-11-07)
-[e853aa97...4b105b6a](https://github.com/rust-lang/cargo/compare/e853aa97...4b105b6a)
+[e853aa97...1c6ec66d](https://github.com/rust-lang/cargo/compare/e853aa97...1c6ec66d)
 
 ### Added
 - Config files may now use the `.toml` filename extension.
@@ -90,6 +156,10 @@
   changed. It now chooses the crate with the greatest number of transitive
   crates waiting on it. Previously it used a maximum topological depth.
   [#7390](https://github.com/rust-lang/cargo/pull/7390)
+- RUSTFLAGS are no longer incorporated in the metadata and filename hash,
+  reversing the change from 1.33 that added it. This means that any change to
+  RUSTFLAGS will cause a recompile, and will not affect symbol munging.
+  [#7459](https://github.com/rust-lang/cargo/pull/7459)
 
 ### Fixed
 - Git dependencies with submodules with shorthand SSH URLs (like
