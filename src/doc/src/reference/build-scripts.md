@@ -230,6 +230,12 @@ The build script **does not** have access to the dependencies listed in the
 build dependencies are not available to the package itself unless also
 explicitly added in the `[dependencies]` table.
 
+It is recommended to carefully consider each dependency you add, weighing
+against the impact on compile time, licensing, maintenance, etc. Cargo will
+attempt to reuse a dependency if it is shared between build dependencies and
+normal dependencies. However, this is not always possible, for example when
+cross-compiling, so keep that in consideration of the impact on compile time.
+
 ### Change Detection
 
 When rebuilding a package, Cargo does not necessarily know if the build script

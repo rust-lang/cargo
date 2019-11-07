@@ -5,7 +5,7 @@ The following sections illustrate some examples of writing build scripts.
 Some common build script functionality can be found via crates on [crates.io].
 Check out the [`build-dependencies`
 keyword](https://crates.io/keywords/build-dependencies) to see what is
-available. Some popular crates are:
+available. The following is a sample of some popular crates[^†]:
 
 * [`bindgen`](https://crates.io/crates/bindgen) — Automatically generate Rust
   FFI bindings to C libraries.
@@ -13,10 +13,14 @@ available. Some popular crates are:
 * [`pkg-config`](https://crates.io/crates/pkg-config) — Detect system
   libraries using the `pkg-config` utility.
 * [`cmake`](https://crates.io/crates/cmake) — Runs the `cmake` build tool to build a native library.
-* [`rustc_version`](https://crates.io/crates/rustc_version),
+* [`autocfg`](https://crates.io/crates/autocfg),
+  [`rustc_version`](https://crates.io/crates/rustc_version),
   [`version_check`](https://crates.io/crates/version_check) — These crates
   provide ways to implement conditional compilation based on the current
-  version of `rustc`.
+  `rustc` such as the version of the compiler.
+
+[^†]: This list is not an endorsement. Evaluate your dependencies to see which
+is right for your project.
 
 ### Code generation
 
