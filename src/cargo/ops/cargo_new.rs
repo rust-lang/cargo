@@ -487,10 +487,14 @@ impl IgnoreList {
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n#Added by cargo\n\
-                       #\n\
-                       #already existing elements are commented out\n\n"
-            .to_string();
+        let mut out = "\n\n#Added by cargo\n".to_string();
+        if ignore_items
+            .iter()
+            .any(|item| existing_items.contains(item))
+        {
+            out.push_str("#\n#already existing elements are commented out\n");
+        }
+        out.push('\n');
 
         for item in ignore_items {
             if existing_items.contains(item) {
