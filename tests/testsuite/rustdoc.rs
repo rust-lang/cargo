@@ -1,4 +1,4 @@
-use cargo_test_support::{basic_manifest, is_nightly, project};
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn rustdoc_simple() {
@@ -163,11 +163,6 @@ fn features() {
 
 #[cargo_test]
 fn proc_macro_crate_type() {
-    // NOTE - Remove this once 'rustdoc --crate-type'
-    // rides to stable
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",

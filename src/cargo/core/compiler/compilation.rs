@@ -9,7 +9,7 @@ use semver::Version;
 use super::BuildContext;
 use crate::core::compiler::CompileKind;
 use crate::core::{Edition, InternedString, Package, PackageId, Target};
-use crate::util::{self, join_paths, process, rustc::Rustc, CargoResult, Config, ProcessBuilder};
+use crate::util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 pub struct Doctest {
     /// The package being doc-tested.
@@ -75,7 +75,6 @@ pub struct Compilation<'cfg> {
     primary_unit_rustc_process: Option<ProcessBuilder>,
 
     target_runner: Option<(PathBuf, Vec<String>)>,
-    supports_rustdoc_crate_type: bool,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -115,7 +114,6 @@ impl<'cfg> Compilation<'cfg> {
             host: bcx.host_triple().to_string(),
             target: default_kind.short_name(bcx).to_string(),
             target_runner: target_runner(bcx, default_kind)?,
-            supports_rustdoc_crate_type: supports_rustdoc_crate_type(bcx.config, &bcx.rustc)?,
         })
     }
 
@@ -148,10 +146,8 @@ impl<'cfg> Compilation<'cfg> {
             p.arg(format!("--edition={}", target.edition()));
         }
 
-        if self.supports_rustdoc_crate_type {
-            for crate_type in target.rustc_crate_types() {
-                p.arg("--crate-type").arg(crate_type);
-            }
+        for crate_type in target.rustc_crate_types() {
+            p.arg("--crate-type").arg(crate_type);
         }
 
         Ok(p)
@@ -330,15 +326,4 @@ fn target_runner(
     }
 
     Ok(None)
-}
-
-fn supports_rustdoc_crate_type(config: &Config, rustc: &Rustc) -> CargoResult<bool> {
-    // NOTE: Unconditionally return 'true' once support for
-    // rustdoc '--crate-type' rides to stable
-    let mut crate_type_test = process(config.rustdoc()?);
-    // If '--crate-type' is not supported by rustcoc, this command
-    // will exit with an error. Otherwise, it will print a help message,
-    // and exit successfully
-    crate_type_test.args(&["--crate-type", "proc-macro", "--help"]);
-    Ok(rustc.cached_output(&crate_type_test).is_ok())
 }

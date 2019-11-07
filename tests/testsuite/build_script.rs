@@ -2276,11 +2276,6 @@ fn flags_go_into_tests() {
 
 #[cargo_test]
 fn diamond_passes_args_only_once() {
-    // FIXME: when pipelining rides to stable, enable this test on all channels.
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
