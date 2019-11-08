@@ -1171,7 +1171,7 @@ fn publish_git_with_version() {
                  name = \"foo\"\n\
                  version = \"0.1.0\"\n\
                  dependencies = [\n\
-                 \x20\"dep1 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)\",\n\
+                 \x20\"dep1\",\n\
                  ]\n\
                  [..]",
             ),

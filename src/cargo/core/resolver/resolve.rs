@@ -15,7 +15,6 @@ use super::encode::Metadata;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package.
-#[derive(PartialEq)]
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
     /// from `Cargo.toml`. We need a `Vec` here because the same package
@@ -358,6 +357,26 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 }
 
+impl PartialEq for Resolve {
+    fn eq(&self, other: &Resolve) -> bool {
+        macro_rules! compare {
+            ($($fields:ident)* | $($ignored:ident)*) => {
+                let Resolve { $($fields,)* $($ignored,)* } = self;
+                $(drop($ignored);)*
+                $($fields == &other.$fields)&&*
+            }
+        }
+        compare! {
+            // fields to compare
+            graph replacements reverse_replacements empty_features features
+            checksums metadata unused_patches public_dependencies
+            |
+            // fields to ignore
+            version
+        }
+    }
+}
+
 impl fmt::Debug for Resolve {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "graph: {:?}", self.graph)?;
@@ -376,7 +395,7 @@ impl ResolveVersion {
     /// previous `Cargo.lock` files, and generally matches with what we want to
     /// encode.
     pub fn default() -> ResolveVersion {
-        ResolveVersion::V1
+        ResolveVersion::V2
     }
 
     /// Returns whether this encoding version is "from the future".
@@ -385,7 +404,7 @@ impl ResolveVersion {
     /// intended to become the default "soon".
     pub fn from_the_future(&self) -> bool {
         match self {
-            ResolveVersion::V2 => true,
+            ResolveVersion::V2 => false,
             ResolveVersion::V1 => false,
         }
     }
