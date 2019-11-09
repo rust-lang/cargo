@@ -515,7 +515,7 @@ impl ProfileMaker {
             Some(ref toml) => toml,
             None => return Ok(()),
         };
-        let overrides = match toml.package.as_ref().or(toml.overrides.as_ref()) {
+        let overrides = match toml.package.as_ref().or_else(|| toml.overrides.as_ref()) {
             Some(overrides) => overrides,
             None => return Ok(()),
         };
@@ -612,7 +612,7 @@ fn merge_toml_overrides(
             merge_profile(profile, build_override);
         }
     }
-    if let Some(overrides) = toml.package.as_ref().or(toml.overrides.as_ref()) {
+    if let Some(overrides) = toml.package.as_ref().or_else(|| toml.overrides.as_ref()) {
         if !is_member {
             if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
                 merge_profile(profile, all);
