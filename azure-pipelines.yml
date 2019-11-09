@@ -66,6 +66,28 @@ jobs:
   variables:
     TOOLCHAIN: stable
 
+- job: clippy
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+    - template: ci/azure-install-rust.yml
+    - bash: rustup component add clippy
+      displayName: "Install clippy"
+    - bash: cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (cargo)"
+    - bash: cd crates/cargo-test-macro && cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (cargo-test-macro)"
+    - bash: cd crates/cargo-test-support && cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (cargo-test-support)"
+    - bash: cd crates/crates-io && cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (crates-io)"
+    - bash: cd crates/resolver-tests && cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (resolver-tests)"
+    - bash: cd crates/cargo-platform && cargo clippy --all-targets -- -D warnings
+      displayName: "Check clippy (cargo-platform)"
+  variables:
+    TOOLCHAIN: beta
+
 - job: resolver
   pool:
     vmImage: ubuntu-16.04
