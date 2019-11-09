@@ -46,7 +46,7 @@ impl ConfigKey {
         for part in key.split('.') {
             cfg.push(part);
         }
-        return cfg;
+        cfg
     }
 
     /// Pushes a new sub-key on this `ConfigKey`. This sub-key should be

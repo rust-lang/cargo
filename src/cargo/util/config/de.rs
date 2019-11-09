@@ -254,7 +254,7 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
                 };
                 let result = seed.deserialize(name.into_deserializer()).map(Some);
                 self.next = Some(key);
-                return result;
+                result
             }
             None => Ok(None),
         }
@@ -273,7 +273,7 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
             key: self.de.key.clone(),
         });
         self.de.key.pop();
-        return result;
+        result
     }
 }
 
