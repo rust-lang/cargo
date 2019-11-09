@@ -570,7 +570,7 @@ impl<'a> EncodeState<'a> {
             for id in resolve.iter() {
                 let slot = map
                     .entry(id.name())
-                    .or_insert(HashMap::new())
+                    .or_insert_with(HashMap::new)
                     .entry(id.version())
                     .or_insert(0);
                 *slot += 1;
