@@ -564,8 +564,7 @@ pub struct EncodeState<'a> {
 
 impl<'a> EncodeState<'a> {
     pub fn new(resolve: &'a Resolve) -> EncodeState<'a> {
-        let mut counts = None;
-        if *resolve.version() == ResolveVersion::V2 {
+        let counts = if *resolve.version() == ResolveVersion::V2 {
             let mut map = HashMap::new();
             for id in resolve.iter() {
                 let slot = map
@@ -575,8 +574,10 @@ impl<'a> EncodeState<'a> {
                     .or_insert(0);
                 *slot += 1;
             }
-            counts = Some(map);
-        }
+            Some(map)
+        } else {
+            None
+        };
         EncodeState { counts }
     }
 }
