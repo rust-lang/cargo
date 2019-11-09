@@ -4,7 +4,7 @@
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -115,11 +115,8 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
 
 /// List all runnable aliases
 fn list_aliases(config: &Config) -> Vec<String> {
-    match config.get_table("alias") {
-        Ok(table) => match table {
-            Some(aliases) => aliases.val.keys().map(|a| a.to_string()).collect(),
-            None => Vec::new(),
-        },
+    match config.get::<BTreeMap<String, String>>("alias") {
+        Ok(aliases) => aliases.keys().map(|a| a.to_string()).collect(),
         Err(_) => Vec::new(),
     }
 }
