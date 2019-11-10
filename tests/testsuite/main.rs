@@ -3,6 +3,7 @@
 #![allow(clippy::blacklisted_name)]
 #![allow(clippy::explicit_iter_loop)]
 #![allow(clippy::redundant_closure)]
+#![allow(clippy::block_in_if_condition_stmt)] // clippy doesn't agree with rustfmt 😂
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 
