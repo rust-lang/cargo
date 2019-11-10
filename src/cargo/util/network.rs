@@ -112,7 +112,7 @@ fn with_retry_repeats_the_call_then_works() {
     let config = Config::default().unwrap();
     *config.shell() = Shell::from_write(Box::new(Vec::new()));
     let result = with_retry(&config, || results.pop().unwrap());
-    assert_eq!(result.unwrap(), ())
+    assert!(result.is_ok())
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn with_retry_finds_nested_spurious_errors() {
     let config = Config::default().unwrap();
     *config.shell() = Shell::from_write(Box::new(Vec::new()));
     let result = with_retry(&config, || results.pop().unwrap());
-    assert_eq!(result.unwrap(), ())
+    assert!(result.is_ok())
 }
 
 #[test]
