@@ -1,10 +1,13 @@
 use crate::core::resolver::ResolveOpts;
-use crate::core::Workspace;
+use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
 use failure::Fail;
 use opener;
 use std::collections::HashMap;
+use std::error::Error;
+use std::path::Path;
+use std::process::Command;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -77,6 +80,25 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         if path.exists() {
             let mut shell = options.compile_opts.config.shell();
             shell.status("Opening", path.display())?;
+            open_docs(&path, &mut shell)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
+    match std::env::var_os("BROWSER") {
+        Some(browser) => {
+            if let Err(e) = Command::new(&browser).arg(path).status() {
+                shell.warn(format!(
+                    "Couldn't open docs with {}: {}",
+                    browser.to_string_lossy(),
+                    e.description()
+                ))?;
+            }
+        }
+        None => {
             if let Err(e) = opener::open(&path) {
                 shell.warn(format!("Couldn't open docs: {}", e))?;
                 for cause in (&e as &dyn Fail).iter_chain() {
@@ -84,7 +106,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
                 }
             }
         }
-    }
+    };
 
     Ok(())
 }
