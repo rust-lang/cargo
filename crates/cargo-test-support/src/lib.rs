@@ -105,6 +105,8 @@ dependency.
 
 */
 
+#![allow(clippy::needless_doctest_main)] // according to @ehuss this lint is fussy
+
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
