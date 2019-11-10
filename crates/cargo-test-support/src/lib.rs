@@ -1141,9 +1141,9 @@ impl Execs {
 
         // Do the template replacements on the expected string.
         let matcher = match &self.process_builder {
-            None => matcher.to_string(),
+            None => matcher,
             Some(p) => match p.get_cwd() {
-                None => matcher.to_string(),
+                None => matcher,
                 Some(cwd) => replace_path(&matcher, cwd, "[CWD]"),
             },
         };
