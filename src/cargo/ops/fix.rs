@@ -15,7 +15,7 @@
 //! to print at the same time).
 //!
 //! Cargo begins a normal `cargo check` operation with itself set as a proxy
-//! for rustc by setting `rustc_wrapper` in the build config. When
+//! for rustc by setting `primary_unit_rustc` in the build config. When
 //! cargo launches rustc to check a crate, it is actually launching itself.
 //! The `FIX_ENV` environment variable is set so that cargo knows it is in
 //! fix-proxy-mode.
