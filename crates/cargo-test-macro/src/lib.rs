@@ -52,7 +52,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
         ))));
     }
 
-    return ret;
+    ret
 }
 
 fn contains_ident(t: &TokenStream, ident: &str) -> bool {
