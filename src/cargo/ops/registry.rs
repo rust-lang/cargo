@@ -371,13 +371,18 @@ fn registry(
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
         let cfg = src.config();
-        let cfg = if force_update || cfg.is_err() {
+        let mut updated_cfg = || {
             src.update()
                 .chain_err(|| format!("failed to update {}", sid))?;
-            cfg.or_else(|_| src.config())?
-        } else {
-            cfg.unwrap()
+            src.config()
         };
+
+        let cfg = if force_update {
+            updated_cfg()?
+        } else {
+            cfg.or_else(|_| updated_cfg())?
+        };
+
         cfg.and_then(|cfg| cfg.api)
             .ok_or_else(|| format_err!("{} does not support API commands", sid))?
     };
