@@ -10,5 +10,6 @@ src/registry/target
 rustc
 __pycache__
 .idea/
+.vscode/
 *.iml
 *.swp
