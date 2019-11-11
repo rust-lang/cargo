@@ -4,7 +4,7 @@
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -111,6 +111,14 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
     commands
 }
 
+/// List all runnable aliases
+fn list_aliases(config: &Config) -> Vec<String> {
+    match config.get::<BTreeMap<String, String>>("alias") {
+        Ok(aliases) => aliases.keys().map(|a| a.to_string()).collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
@@ -120,8 +128,13 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let command = match path {
         Some(command) => command,
         None => {
-            let cmds = list_commands(config);
-            let did_you_mean = closest_msg(cmd, cmds.iter(), |c| c.name());
+            let commands: Vec<String> = list_commands(config)
+                .iter()
+                .map(|c| c.name().to_string())
+                .collect();
+            let aliases = list_aliases(config);
+            let suggestions = commands.iter().chain(aliases.iter());
+            let did_you_mean = closest_msg(cmd, suggestions, |c| c);
             let err = failure::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }
