@@ -33,7 +33,9 @@ option.
 === Documentation Options
 
 *--open*::
-    Open the docs in a browser after building them.
+    Open the docs in a browser after building them. This will use your default
+    browser unless you define another one in the `BROWSER` environment
+    variable.
 
 === Package Selection
 
