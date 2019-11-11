@@ -59,7 +59,7 @@ fn simple_bin() {
 
 #[cargo_test]
 fn simple_git_ignore_exists() {
-    // write a .gitignore file with one entry
+    // write a .gitignore file with two entries
     fs::create_dir_all(paths::root().join("foo")).unwrap();
     fs::write(
         paths::root().join("foo/.gitignore"),
@@ -89,7 +89,7 @@ fn simple_git_ignore_exists() {
          **/some.file\n\n\
          #Added by cargo\n\
          #\n\
-         #already existing elements are commented out\n\
+         #already existing elements were commented out\n\
          \n\
          #/target\n\
          **/*.rs.bk\n\
@@ -97,6 +97,33 @@ fn simple_git_ignore_exists() {
     );
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
+#[cargo_test]
+fn git_ignore_exists_no_conflicting_entries() {
+    // write a .gitignore file with one entry
+    fs::create_dir_all(paths::root().join("foo")).unwrap();
+    fs::write(paths::root().join("foo/.gitignore"), "**/some.file").unwrap();
+
+    cargo_process("init --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(
+        contents,
+        "**/some.file\n\n\
+         #Added by cargo\n\
+         \n\
+         /target\n\
+         **/*.rs.bk\n\
+         Cargo.lock\n",
+    );
 }
 
 #[cargo_test]
