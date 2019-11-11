@@ -40,14 +40,14 @@ Here are some more examples of caret requirements and the versions that would
 be allowed with them:
 
 ```notrust
-^1.2.3  :=  >=1.2.3 <2.0.0
-^1.2    :=  >=1.2.0 <2.0.0
-^1      :=  >=1.0.0 <2.0.0
-^0.2.3  :=  >=0.2.3 <0.3.0
-^0.2    :=  >=0.2.0 <0.3.0
-^0.0.3  :=  >=0.0.3 <0.0.4
-^0.0    :=  >=0.0.0 <0.1.0
-^0      :=  >=0.0.0 <1.0.0
+^1.2.3  :=  >=1.2.3, <2.0.0
+^1.2    :=  >=1.2.0, <2.0.0
+^1      :=  >=1.0.0, <2.0.0
+^0.2.3  :=  >=0.2.3, <0.3.0
+^0.2    :=  >=0.2.0, <0.3.0
+^0.0.3  :=  >=0.0.3, <0.0.4
+^0.0    :=  >=0.0.0, <0.1.0
+^0      :=  >=0.0.0, <1.0.0
 ```
 
 This compatibility convention is different from SemVer in the way it treats
@@ -65,9 +65,9 @@ version, then minor- and patch-level changes are allowed.
 `~1.2.3` is an example of a tilde requirement.
 
 ```notrust
-~1.2.3  := >=1.2.3 <1.3.0
-~1.2    := >=1.2.0 <1.3.0
-~1      := >=1.0.0 <2.0.0
+~1.2.3  := >=1.2.3, <1.3.0
+~1.2    := >=1.2.0, <1.3.0
+~1      := >=1.0.0, <2.0.0
 ```
 
 ### Wildcard requirements
@@ -79,8 +79,8 @@ positioned.
 
 ```notrust
 *     := >=0.0.0
-1.*   := >=1.0.0 <2.0.0
-1.2.* := >=1.2.0 <1.3.0
+1.*   := >=1.0.0, <2.0.0
+1.2.* := >=1.2.0, <1.3.0
 ```
 
 ### Comparison requirements
@@ -99,8 +99,8 @@ Here are some examples of comparison requirements:
 
 ### Multiple requirements
 
-Multiple version requirements can also be separated with a comma, e.g., `>= 1.2,
-< 1.5`.
+As shown in the examples above, multiple version requirements can be
+separated with a comma, e.g., `>= 1.2, < 1.5`.
 
 ### Specifying dependencies from other registries
 
