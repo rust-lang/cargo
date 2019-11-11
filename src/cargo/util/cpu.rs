@@ -45,26 +45,26 @@ mod imp {
     pub fn current() -> io::Result<State> {
         let mut state = String::new();
         File::open("/proc/stat")?.read_to_string(&mut state)?;
-        let mut parts = state.lines().next().unwrap().split_whitespace();
-        if parts.next() != Some("cpu") {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "cannot parse /proc/stat",
-            ));
-        }
 
-        Ok(State {
-            user: parts.next().unwrap().parse::<u64>().unwrap(),
-            nice: parts.next().unwrap().parse::<u64>().unwrap(),
-            system: parts.next().unwrap().parse::<u64>().unwrap(),
-            idle: parts.next().unwrap().parse::<u64>().unwrap(),
-            iowait: parts.next().unwrap().parse::<u64>().unwrap(),
-            irq: parts.next().unwrap().parse::<u64>().unwrap(),
-            softirq: parts.next().unwrap().parse::<u64>().unwrap(),
-            steal: parts.next().unwrap().parse::<u64>().unwrap(),
-            guest: parts.next().unwrap().parse::<u64>().unwrap(),
-            guest_nice: parts.next().unwrap().parse::<u64>().unwrap(),
-        })
+        (|| {
+            let mut parts = state.lines().next()?.split_whitespace();
+            if parts.next()? != "cpu" {
+                return None;
+            }
+            Some(State {
+                user: parts.next()?.parse::<u64>().ok()?,
+                nice: parts.next()?.parse::<u64>().ok()?,
+                system: parts.next()?.parse::<u64>().ok()?,
+                idle: parts.next()?.parse::<u64>().ok()?,
+                iowait: parts.next()?.parse::<u64>().ok()?,
+                irq: parts.next()?.parse::<u64>().ok()?,
+                softirq: parts.next()?.parse::<u64>().ok()?,
+                steal: parts.next()?.parse::<u64>().ok()?,
+                guest: parts.next()?.parse::<u64>().ok()?,
+                guest_nice: parts.next()?.parse::<u64>().ok()?,
+            })
+        })()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "first line of /proc/stat malformed"))
     }
 
     pub fn pct_idle(prev: &State, next: &State) -> f64 {
