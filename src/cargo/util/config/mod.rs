@@ -216,7 +216,7 @@ impl Config {
     /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
-            .try_borrow_with(|| self.get_tool("rustdoc"))
+            .try_borrow_with(|| Ok(self.get_tool("rustdoc", &self.build_config()?.rustdoc)))
             .map(AsRef::as_ref)
     }
 
@@ -227,9 +227,9 @@ impl Config {
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
-        let wrapper = self.maybe_get_tool("rustc_wrapper")?;
+        let wrapper = self.maybe_get_tool("rustc_wrapper", &self.build_config()?.rustc_wrapper);
         Rustc::new(
-            self.get_tool("rustc")?,
+            self.get_tool("rustc", &self.build_config()?.rustc),
             wrapper,
             &self
                 .home()
@@ -853,47 +853,34 @@ impl Config {
         Ok(())
     }
 
-    /// Looks for a path for `tool` in an environment variable or config path, and returns `None`
-    /// if it's not present.
-    fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
-        let var = tool
-            .chars()
-            .flat_map(|c| c.to_uppercase())
-            .collect::<String>();
-        if let Some(tool_path) = env::var_os(&var) {
-            let maybe_relative = match tool_path.to_str() {
-                Some(s) => s.contains('/') || s.contains('\\'),
-                None => false,
-            };
-            let path = if maybe_relative {
-                self.cwd.join(tool_path)
-            } else {
-                PathBuf::from(tool_path)
-            };
-            return Ok(Some(path));
-        }
+    /// Looks for a path for `tool` in an environment variable or the given config, and returns
+    /// `None` if it's not present.
+    fn maybe_get_tool(&self, tool: &str, from_config: &Option<PathBuf>) -> Option<PathBuf> {
+        let var = tool.to_uppercase();
 
-        // For backwards compatibility we allow both snake_case config paths as well as the
-        // idiomatic kebab-case paths.
-        let config_paths = [
-            format!("build.{}", tool),
-            format!("build.{}", tool.replace('_', "-")),
-        ];
-
-        for config_path in &config_paths {
-            if let Some(tool_path) = self.get_path(&config_path)? {
-                return Ok(Some(tool_path.val));
+        match env::var_os(&var) {
+            Some(tool_path) => {
+                let maybe_relative = match tool_path.to_str() {
+                    Some(s) => s.contains('/') || s.contains('\\'),
+                    None => false,
+                };
+                let path = if maybe_relative {
+                    self.cwd.join(tool_path)
+                } else {
+                    PathBuf::from(tool_path)
+                };
+                Some(path)
             }
-        }
 
-        Ok(None)
+            None => from_config.clone(),
+        }
     }
 
     /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
-    pub fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
-        self.maybe_get_tool(tool)
-            .map(|t| t.unwrap_or_else(|| PathBuf::from(tool)))
+    fn get_tool(&self, tool: &str, from_config: &Option<PathBuf>) -> PathBuf {
+        self.maybe_get_tool(tool, from_config)
+            .unwrap_or_else(|| PathBuf::from(tool))
     }
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
@@ -1473,6 +1460,9 @@ pub struct CargoBuildConfig {
     pub jobs: Option<u32>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
+    pub rustc_wrapper: Option<PathBuf>,
+    pub rustc: Option<PathBuf>,
+    pub rustdoc: Option<PathBuf>,
 }
 
 /// A type to deserialize a list of strings from a toml file.
