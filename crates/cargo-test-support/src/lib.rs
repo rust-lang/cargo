@@ -106,6 +106,7 @@ dependency.
 */
 
 #![allow(clippy::needless_doctest_main)] // according to @ehuss this lint is fussy
+#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
 
 use std::env;
 use std::ffi::OsStr;
