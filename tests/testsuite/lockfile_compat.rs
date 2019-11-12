@@ -27,14 +27,16 @@ fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
 name = "bar"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "[..]"
 
 [[package]]
 name = "foo"
 version = "0.0.1"
 dependencies = [
- "bar",
+ "bar [..]",
 ]
+
+[metadata]
+"[..]" = "[..]"
 "#;
 
     let old_lockfile = r#"
@@ -171,14 +173,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "bar"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "[..]"
 
 [[package]]
 name = "foo"
 version = "0.0.1"
 dependencies = [
- "bar",
+ "bar [..]",
 ]
+
+[metadata]
+"[..]" = "[..]"
 "#,
         &lock,
     );

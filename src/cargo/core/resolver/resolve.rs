@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::FromIterator;
@@ -58,9 +59,12 @@ pub struct Resolve {
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub enum ResolveVersion {
+    // Historical baseline for when this abstraction was added.
     V1,
+    // Update around 2019 where `dependencies` arrays got compressed and
+    // checksums are listed inline.
     V2,
 }
 
@@ -209,21 +213,35 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         // Be sure to just copy over any unknown metadata.
         self.metadata = previous.metadata.clone();
 
-        // The goal of Cargo is largely to preserve the encoding of
-        // `Cargo.lock` that it finds on the filesystem. Sometimes `Cargo.lock`
-        // changes are in the works where they haven't been set as the default
-        // yet but will become the default soon. We want to preserve those
-        // features if we find them.
+        // The goal of Cargo is largely to preserve the encoding of `Cargo.lock`
+        // that it finds on the filesystem. Sometimes `Cargo.lock` changes are
+        // in the works where they haven't been set as the default yet but will
+        // become the default soon.
         //
-        // For this reason if the previous `Cargo.lock` is from the future, or
-        // otherwise it looks like it's produced with future features we
-        // understand, then the new resolve will be encoded with the same
-        // version. Note that new instances of `Resolve` always use the default
-        // encoding, and this is where we switch it to a future encoding if the
-        // future encoding isn't yet the default.
-        if previous.version.from_the_future() {
-            self.version = previous.version.clone();
-        }
+        // The scenarios we could be in are:
+        //
+        // * This is a brand new lock file with nothing previous. In that case
+        //   this method isn't actually called at all, but instead
+        //   `default_for_new_lockfiles` called below was encoded during the
+        //   resolution step, so that's what we're gonna use.
+        //
+        // * We have an old lock file. In this case we want to switch the
+        //   version to `default_for_old_lockfiles`. That puts us in one of
+        //   three cases:
+        //
+        //   * Our version is older than the default. This means that we're
+        //     migrating someone forward, so we switch the encoding.
+        //   * Our version is equal to the default, nothing to do!
+        //   * Our version is *newer* than the default. This is where we
+        //     critically keep the new version of encoding.
+        //
+        // This strategy should get new lockfiles into the pipeline more quickly
+        // while ensuring that any time an old cargo sees a future lock file it
+        // keeps the future lockfile encoding.
+        self.version = cmp::max(
+            previous.version,
+            ResolveVersion::default_for_old_lockfiles(),
+        );
 
         Ok(())
     }
@@ -389,23 +407,26 @@ impl fmt::Debug for Resolve {
 }
 
 impl ResolveVersion {
-    /// The default way to encode `Cargo.lock`.
+    /// The default way to encode new `Cargo.lock` files.
     ///
-    /// This is used for new `Cargo.lock` files that are generated without a
-    /// previous `Cargo.lock` files, and generally matches with what we want to
-    /// encode.
-    pub fn default() -> ResolveVersion {
+    /// It's important that if a new version of `ResolveVersion` is added that
+    /// this is not updated until *at least* the support for the version is in
+    /// the stable release of Rust. It's ok for this to be newer than
+    /// `default_for_old_lockfiles` below.
+    pub fn default_for_new_lockfiles() -> ResolveVersion {
         ResolveVersion::V2
     }
 
-    /// Returns whether this encoding version is "from the future".
+    /// The default way to encode old preexisting `Cargo.lock` files. This is
+    /// often trailing the new lockfiles one above to give older projects a
+    /// longer time to catch up.
     ///
-    /// This means that this encoding version is not currently the default but
-    /// intended to become the default "soon".
-    pub fn from_the_future(&self) -> bool {
-        match self {
-            ResolveVersion::V2 => false,
-            ResolveVersion::V1 => false,
-        }
+    /// It's important that this trails behind `default_for_new_lockfiles` for
+    /// quite some time. This gives projects a quite large window to update in
+    /// where we don't force updates, so if projects span many versions of Cargo
+    /// all those versions of Cargo will have support for a new version of the
+    /// lock file.
+    pub fn default_for_old_lockfiles() -> ResolveVersion {
+        ResolveVersion::V1
     }
 }
