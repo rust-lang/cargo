@@ -76,7 +76,7 @@ im-rc = "13.0.0"
 rustc-workspace-hack = "1.0.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.7.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.3.1"
