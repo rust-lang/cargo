@@ -434,6 +434,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(check) = http.check_revoke {
         handle.ssl_options(SslOpt::new().no_revoke(!check))?;
     }
+    
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;
     } else {
@@ -598,6 +599,7 @@ pub fn registry_login(
                 .read_line(&mut line)
                 .chain_err(|| "failed to read stdin")
                 .map_err(failure::Error::from)?;
+            // Automatically remove `cargo login` from an inputted token to allow direct pastes from `registry.host()`/me. 
             line.replace("cargo login", "").trim().to_string()
         }
     };
