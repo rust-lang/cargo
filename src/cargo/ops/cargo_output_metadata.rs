@@ -1,9 +1,9 @@
 use crate::core::compiler::{CompileKind, CompileTarget, TargetInfo};
 use crate::core::resolver::{Resolve, ResolveOpts};
-use crate::core::{Package, PackageId, Workspace};
+use crate::core::{dependency, Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
-
+use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -85,6 +85,22 @@ struct MetadataResolveNode {
 struct Dep {
     name: String,
     pkg: PackageId,
+    dep_kinds: Vec<DepKindInfo>,
+}
+
+#[derive(Serialize)]
+struct DepKindInfo {
+    kind: dependency::Kind,
+    target: Option<Platform>,
+}
+
+impl From<&Dependency> for DepKindInfo {
+    fn from(dep: &Dependency) -> DepKindInfo {
+        DepKindInfo {
+            kind: dep.kind(),
+            target: dep.platform().cloned(),
+        }
+    }
 }
 
 /// Builds the resolve graph as it will be displayed to the user.
@@ -167,12 +183,16 @@ fn build_resolve_graph_r(
             }),
             None => true,
         })
-        .filter_map(|(dep_id, _deps)| {
+        .filter_map(|(dep_id, deps)| {
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
                 .and_then(|lib_target| resolve.extern_crate_name(pkg_id, dep_id, lib_target).ok())
-                .map(|name| Dep { name, pkg: dep_id })
+                .map(|name| Dep {
+                    name,
+                    pkg: dep_id,
+                    dep_kinds: deps.iter().map(DepKindInfo::from).collect(),
+                })
         })
         .collect();
     let dumb_deps: Vec<PackageId> = deps.iter().map(|dep| dep.pkg).collect();

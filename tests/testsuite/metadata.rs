@@ -486,10 +486,22 @@ fn cargo_metadata_with_deps_and_version() {
                     ],
                     "deps": [
                         {
+                            "dep_kinds": [
+                              {
+                                "kind": null,
+                                "target": null
+                              }
+                            ],
                             "name": "bar",
                             "pkg": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                         },
                         {
+                            "dep_kinds": [
+                              {
+                                "kind": "dev",
+                                "target": null
+                              }
+                            ],
                             "name": "foobar",
                             "pkg": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                         }
@@ -503,6 +515,12 @@ fn cargo_metadata_with_deps_and_version() {
                     ],
                     "deps": [
                         {
+                            "dep_kinds": [
+                              {
+                                "kind": null,
+                                "target": null
+                              }
+                            ],
                             "name": "baz",
                             "pkg": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                         }
@@ -1660,10 +1678,22 @@ fn rename_dependency() {
                 ],
                 "deps": [
                     {
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          }
+                        ],
                         "name": "bar",
                         "pkg": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
                     },
                     {
+                        "dep_kinds": [
+                          {
+                            "kind": null,
+                            "target": null
+                          }
+                        ],
                         "name": "baz",
                         "pkg": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
                     }
@@ -2102,7 +2132,7 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$ALT",
+          "target": "$ALT_TRIPLE",
           "registry": null
         },
         {
@@ -2114,7 +2144,7 @@ fn filter_platform() {
           "optional": false,
           "uses_default_features": true,
           "features": [],
-          "target": "$HOST",
+          "target": "$HOST_TRIPLE",
           "registry": null
         }
       ],
@@ -2145,8 +2175,8 @@ fn filter_platform() {
       "links": null
     }
     "#
-    .replace("$ALT", &alternate())
-    .replace("$HOST", &rustc_host());
+    .replace("$ALT_TRIPLE", &alternate())
+    .replace("$HOST_TRIPLE", &rustc_host());
 
     // Normal metadata, no filtering, returns *everything*.
     p.cargo("metadata")
@@ -2188,19 +2218,43 @@ fn filter_platform() {
         "deps": [
           {
             "name": "alt_dep",
-            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "$ALT_TRIPLE"
+              }
+            ]
           },
           {
             "name": "cfg_dep",
-            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "cfg(foobar)"
+              }
+            ]
           },
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "$HOST_TRIPLE"
+              }
+            ]
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
           }
         ],
         "features": []
@@ -2225,6 +2279,8 @@ fn filter_platform() {
   "workspace_root": "[..]/foo"
 }
 "#
+            .replace("$ALT_TRIPLE", &alternate())
+            .replace("$HOST_TRIPLE", &rustc_host())
             .replace("$ALT_DEP", alt_dep)
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
@@ -2262,11 +2318,23 @@ fn filter_platform() {
         "deps": [
           {
             "name": "alt_dep",
-            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "$ALT_TRIPLE"
+              }
+            ]
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
           }
         ],
         "features": []
@@ -2285,6 +2353,7 @@ fn filter_platform() {
   "workspace_root": "[..]foo"
 }
 "#
+            .replace("$ALT_TRIPLE", &alternate())
             .replace("$ALT_DEP", alt_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
@@ -2314,11 +2383,23 @@ fn filter_platform() {
         "deps": [
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "$HOST_TRIPLE"
+              }
+            ]
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
           }
         ],
         "features": []
@@ -2343,6 +2424,7 @@ fn filter_platform() {
   "workspace_root": "[..]foo"
 }
 "#
+            .replace("$HOST_TRIPLE", &rustc_host())
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
@@ -2381,15 +2463,33 @@ fn filter_platform() {
         "deps": [
           {
             "name": "cfg_dep",
-            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "cfg(foobar)"
+              }
+            ]
           },
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "$HOST_TRIPLE"
+              }
+            ]
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
           }
         ],
         "features": []
@@ -2414,10 +2514,110 @@ fn filter_platform() {
   "workspace_root": "[..]/foo"
 }
 "#
+            .replace("$HOST_TRIPLE", &rustc_host())
             .replace("$CFG_DEP", cfg_dep)
             .replace("$HOST_DEP", host_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn dep_kinds() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("winapi", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [dev-dependencies]
+            bar = "0.1"
+
+            [build-dependencies]
+            bar = "0.1"
+
+            [target.'cfg(windows)'.dependencies]
+            winapi = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"
+{
+  "packages": "{...}",
+  "workspace_members": "{...}",
+  "target_directory": "{...}",
+  "version": 1,
+  "workspace_root": "{...}",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "bar 0.1.0 [..]",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "foo 0.1.0 [..]",
+        "dependencies": [
+          "bar 0.1.0 [..]",
+          "winapi 0.1.0 [..]"
+        ],
+        "deps": [
+          {
+            "name": "bar",
+            "pkg": "bar 0.1.0 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              },
+              {
+                "kind": "dev",
+                "target": null
+              },
+              {
+                "kind": "build",
+                "target": null
+              }
+            ]
+          },
+          {
+            "name": "winapi",
+            "pkg": "winapi 0.1.0 [..]",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": "cfg(windows)"
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "winapi 0.1.0 [..]",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "foo 0.1.0 [..]"
+  }
+}
+"#,
         )
         .run();
 }
