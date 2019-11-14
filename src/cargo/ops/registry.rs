@@ -598,7 +598,7 @@ pub fn registry_login(
                 .read_line(&mut line)
                 .chain_err(|| "failed to read stdin")
                 .map_err(failure::Error::from)?;
-            line.replace("cargo login", "").trim().to_string();
+            line.replace("cargo login", "").trim().to_string()
         }
     };
 
