@@ -391,83 +391,9 @@ information on the `[dependencies]`, `[dev-dependencies]`,
 
 ### The `[profile.*]` sections
 
-Cargo supports custom configuration of how rustc is invoked through profiles at
-the top level. Any manifest may declare a profile, but only the top level
-package’s profiles are actually read. All dependencies’ profiles will be
-overridden. This is done so the top-level package has control over how its
-dependencies are compiled.
-
-There are four currently supported profile names, all of which have the same
-configuration available to them. Listed below is the configuration available,
-along with the defaults for each profile.
-
-```toml
-# The development profile, used for `cargo build`.
-[profile.dev]
-opt-level = 0      # controls the `--opt-level` the compiler builds with.
-                   # 0-1 is good for debugging. 2 is well-optimized. Max is 3.
-                   # 's' attempts to reduce size, 'z' reduces size even more.
-debug = true       # (u32 or bool) Include debug information (debug symbols).
-                   # Equivalent to `-C debuginfo=2` compiler flag.
-rpath = false      # controls whether compiler should set loader paths.
-                   # If true, passes `-C rpath` flag to the compiler.
-lto = false        # Link Time Optimization usually reduces size of binaries
-                   # and static libraries. Increases compilation time.
-                   # If true, passes `-C lto` flag to the compiler, and if a
-                   # string is specified like 'thin' then `-C lto=thin` will
-                   # be passed.
-debug-assertions = true # controls whether debug assertions are enabled
-                   # (e.g., debug_assert!() and arithmetic overflow checks)
-codegen-units = 16 # if > 1 enables parallel code generation which improves
-                   # compile times, but prevents some optimizations.
-                   # Passes `-C codegen-units`.
-panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
-incremental = true # whether or not incremental compilation is enabled
-                   # This can be overridden globally with the CARGO_INCREMENTAL
-                   # environment variable or `build.incremental` config
-                   # variable. Incremental is only used for path sources.
-overflow-checks = true # use overflow checks for integer arithmetic.
-                   # Passes the `-C overflow-checks=...` flag to the compiler.
-
-# The release profile, used for `cargo build --release` (and the dependencies
-# for `cargo test --release`, including the local library or binary).
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = false
-debug-assertions = false
-codegen-units = 16
-panic = 'unwind'
-incremental = false
-overflow-checks = false
-
-# The testing profile, used for `cargo test` (for `cargo test --release` see
-# the `release` and `bench` profiles).
-[profile.test]
-opt-level = 0
-debug = 2
-rpath = false
-lto = false
-debug-assertions = true
-codegen-units = 16
-panic = 'unwind'
-incremental = true
-overflow-checks = true
-
-# The benchmarking profile, used for `cargo bench` (and the test targets and
-# unit tests for `cargo test --release`).
-[profile.bench]
-opt-level = 3
-debug = false
-rpath = false
-lto = false
-debug-assertions = false
-codegen-units = 16
-panic = 'unwind'
-incremental = false
-overflow-checks = false
-```
+The `[profile]` tables provide a way to customize compiler settings such as
+optimizations and debug settings. See [the Profiles chapter](profiles.md) for
+more detail.
 
 ### The `[features]` section
 

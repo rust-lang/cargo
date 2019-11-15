@@ -21,6 +21,7 @@
 * [Cargo Reference](reference/index.md)
     * [Specifying Dependencies](reference/specifying-dependencies.md)
     * [The Manifest Format](reference/manifest.md)
+    * [Profiles](reference/profiles.md)
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)
     * [Build Scripts](reference/build-scripts.md)

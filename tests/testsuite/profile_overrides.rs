@@ -2,78 +2,11 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
 
 #[cargo_test]
-fn profile_override_gated() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [profile.dev.build-override]
-            opt-level = 3
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  feature `profile-overrides` is required
-
-consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
-",
-        )
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [profile.dev.package."*"]
-            opt-level = 3
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  feature `profile-overrides` is required
-
-consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn profile_override_basic() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -95,7 +28,6 @@ fn profile_override_basic() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "[COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
@@ -112,8 +44,6 @@ fn profile_override_warnings() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -136,7 +66,7 @@ fn profile_override_warnings() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").masquerade_as_nightly_cargo().with_stderr_contains(
+    p.cargo("build").with_stderr_contains(
             "\
 [WARNING] version or URL in package profile spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
 [WARNING] package profile spec `bart` did not match any packages
@@ -175,8 +105,6 @@ fn profile_override_bad_settings() {
                 "Cargo.toml",
                 &format!(
                     r#"
-                cargo-features = ["profile-overrides"]
-
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -196,7 +124,6 @@ fn profile_override_bad_settings() {
             .build();
 
         p.cargo("build")
-            .masquerade_as_nightly_cargo()
             .with_status(101)
             .with_stderr_contains(format!("Caused by:\n  {}", expected))
             .run();
@@ -210,8 +137,6 @@ fn profile_override_hierarchy() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
-
             [workspace]
             members = ["m1", "m2", "m3"]
 
@@ -285,7 +210,7 @@ fn profile_override_hierarchy() {
     // m2: 2 (as [profile.dev.package.m2])
     // m1: 1 (as [profile.dev])
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().with_stderr_unordered("\
+    p.cargo("build -v").with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
 [RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link -C codegen-units=4 [..]
@@ -311,8 +236,6 @@ fn profile_override_spec_multiple() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -333,7 +256,6 @@ fn profile_override_spec_multiple() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -349,8 +271,6 @@ fn profile_override_spec() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
-
             [workspace]
             members = ["m1", "m2"]
 
@@ -402,7 +322,6 @@ fn profile_override_spec() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
         .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
@@ -415,7 +334,6 @@ fn override_proc_macro() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
             [package]
             name = "foo"
             version = "0.1.0"
@@ -459,7 +377,6 @@ fn override_proc_macro() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         // Shared built for the proc-macro.
         .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
         // Shared built for the library.
@@ -482,7 +399,6 @@ fn override_package_rename() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
             [package]
             name = "foo"
             version = "0.1.0"
@@ -503,7 +419,6 @@ fn override_package_rename() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo()
         .with_stderr("\
 [WARNING] profile key `overrides` has been renamed to `package`, please update the manifest to the new key name
 [CHECKING] bar [..]
@@ -520,7 +435,6 @@ fn no_warning_ws() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides"]
             [workspace]
             members = ["a", "b"]
 
@@ -535,7 +449,6 @@ fn no_warning_ws() {
         .build();
 
     p.cargo("build -p b")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] b [..]

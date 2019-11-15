@@ -2,7 +2,7 @@
 
 Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-linkcargo:reference/manifest.html#the-profile-sections[the reference]
+linkcargo:reference/profiles.html[the reference]
 for more details.
 
 Profile selection depends on the target and crate being built. By default the
