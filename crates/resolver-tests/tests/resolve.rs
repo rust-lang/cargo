@@ -234,7 +234,7 @@ fn pub_fail() {
         pkg!(("e", "0.0.6") => [dep_req_kind("a", "<= 0.0.4", Kind::Normal, true),]),
         pkg!(("kB", "0.0.3") => [dep_req("a", ">= 0.0.5"),dep("e"),]),
     ];
-    let reg = registry(input.clone());
+    let reg = registry(input);
     assert!(resolve_and_validated(vec![dep("kB")], &reg, None).is_err());
 }
 

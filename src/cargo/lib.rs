@@ -17,6 +17,7 @@
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
 #![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
 #![allow(clippy::write_with_newline)] // too pedantic
+#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]
 // Unit is now interned, and would probably be better as pass-by-copy, but

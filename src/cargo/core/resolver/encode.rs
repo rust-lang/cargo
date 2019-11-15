@@ -564,19 +564,20 @@ pub struct EncodeState<'a> {
 
 impl<'a> EncodeState<'a> {
     pub fn new(resolve: &'a Resolve) -> EncodeState<'a> {
-        let mut counts = None;
-        if *resolve.version() == ResolveVersion::V2 {
+        let counts = if *resolve.version() == ResolveVersion::V2 {
             let mut map = HashMap::new();
             for id in resolve.iter() {
                 let slot = map
                     .entry(id.name())
-                    .or_insert(HashMap::new())
+                    .or_insert_with(HashMap::new)
                     .entry(id.version())
                     .or_insert(0);
                 *slot += 1;
             }
-            counts = Some(map);
-        }
+            Some(map)
+        } else {
+            None
+        };
         EncodeState { counts }
     }
 }

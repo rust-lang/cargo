@@ -1,5 +1,4 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::redundant_closure)] // there's a false positive
 #![warn(clippy::needless_borrow)]
 #![warn(clippy::redundant_clone)]

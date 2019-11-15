@@ -105,6 +105,9 @@ dependency.
 
 */
 
+#![allow(clippy::needless_doctest_main)] // according to @ehuss this lint is fussy
+#![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
+
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
@@ -1141,9 +1144,9 @@ impl Execs {
 
         // Do the template replacements on the expected string.
         let matcher = match &self.process_builder {
-            None => matcher.to_string(),
+            None => matcher,
             Some(p) => match p.get_cwd() {
-                None => matcher.to_string(),
+                None => matcher,
                 Some(cwd) => replace_path(&matcher, cwd, "[CWD]"),
             },
         };
