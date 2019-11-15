@@ -66,6 +66,9 @@ pub struct CompileOptions<'a> {
     pub target_rustc_args: Option<Vec<String>>,
     /// Extra arguments passed to all selected targets for rustdoc.
     pub local_rustdoc_args: Option<Vec<String>>,
+    /// Whether the `--document-private-items` flags was specified and should
+    /// be forwarded to `rustdoc`.
+    pub rustdoc_document_private_items: bool,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -89,6 +92,7 @@ impl<'a> CompileOptions<'a> {
             target_rustdoc_args: None,
             target_rustc_args: None,
             local_rustdoc_args: None,
+            rustdoc_document_private_items: false,
             export_dir: None,
         })
     }
@@ -271,6 +275,7 @@ pub fn compile_ws<'a>(
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref local_rustdoc_args,
+        rustdoc_document_private_items,
         ref export_dir,
     } = *options;
 
@@ -434,9 +439,20 @@ pub fn compile_ws<'a>(
         }
         bcx.extra_compiler_args.insert(units[0], args);
     }
-    if let Some(args) = local_rustdoc_args {
-        for unit in &units {
-            if unit.mode.is_doc() || unit.mode.is_doc_test() {
+    for unit in &units {
+        if unit.mode.is_doc() || unit.mode.is_doc_test() {
+            let mut extra_args = local_rustdoc_args.clone();
+
+            // Add `--document-private-items` rustdoc flag if requested or if
+            // the target is a binary. Binary crates get their private items
+            // documented by default.
+            if rustdoc_document_private_items || unit.target.is_bin() {
+                let mut args = extra_args.take().unwrap_or(vec![]);
+                args.push("--document-private-items".into());
+                extra_args = Some(args);
+            }
+
+            if let Some(args) = extra_args {
                 bcx.extra_compiler_args.insert(*unit, args.clone());
             }
         }
