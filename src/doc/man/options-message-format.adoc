@@ -4,7 +4,9 @@
 +
 - `human` (default): Display in a human-readable text format.
 - `short`: Emit shorter, human-readable text messages.
-- `json`: Emit JSON messages to stdout.
+- `json`: Emit JSON messages to stdout. See
+  linkcargo:reference/external-tools.html#json-messages[the reference]
+  for more details.
 - `json-diagnostic-short`: Ensure the `rendered` field of JSON messages contains
   the "short" rendering from rustc.
 - `json-diagnostic-rendered-ansi`: Ensure the `rendered` field of JSON messages
