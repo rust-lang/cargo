@@ -22,7 +22,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     let resolve = (|| -> CargoResult<Option<Resolve>> {
         let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
         let v: resolver::EncodableResolve = resolve.try_into()?;
-        Ok(Some(v.into_resolve(ws)?))
+        Ok(Some(v.into_resolve(&s, ws)?))
     })()
     .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
@@ -172,7 +172,7 @@ fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> b
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(&orig)?;
             let new: resolver::EncodableResolve = toml::from_str(current)?;
-            Ok(old.into_resolve(ws)? == new.into_resolve(ws)?)
+            Ok(old.into_resolve(&orig, ws)? == new.into_resolve(current, ws)?)
         })();
         if let Ok(true) = res {
             return true;

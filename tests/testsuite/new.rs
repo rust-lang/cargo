@@ -527,3 +527,14 @@ fn new_with_reference_link() {
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(contents.contains("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"))
 }
+
+#[cargo_test]
+fn lockfile_constant_during_new() {
+    cargo_process("new foo").env("USER", "foo").run();
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+    let before = fs::read_to_string(paths::root().join("foo/Cargo.lock")).unwrap();
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+    let after = fs::read_to_string(paths::root().join("foo/Cargo.lock")).unwrap();
+    assert_eq!(before, after);
+}
