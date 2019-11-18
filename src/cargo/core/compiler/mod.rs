@@ -251,14 +251,17 @@ fn rustc<'a, 'cfg>(
             add_custom_env(&mut rustc, &script_outputs, current_id, kind)?;
         }
 
-        for output in outputs.iter() {
-            // If there is both an rmeta and rlib, rustc will prefer to use the
-            // rlib, even if it is older. Therefore, we must delete the rlib to
-            // force using the new rmeta.
-            if output.path.extension() == Some(OsStr::new("rmeta")) {
-                let dst = root.join(&output.path).with_extension("rlib");
-                if dst.exists() {
-                    paths::remove_file(&dst)?;
+        // Don't touch any file when we are generating build-plan
+        if !build_plan {
+            for output in outputs.iter() {
+                // If there is both an rmeta and rlib, rustc will prefer to use the
+                // rlib, even if it is older. Therefore, we must delete the rlib to
+                // force using the new rmeta.
+                if output.path.extension() == Some(OsStr::new("rmeta")) {
+                    let dst = root.join(&output.path).with_extension("rlib");
+                    if dst.exists() {
+                        paths::remove_file(&dst)?;
+                    }
                 }
             }
         }
@@ -277,9 +280,10 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
-        let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
-        if build_plan {
+        let timestamp = if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
+            //  Build plan should not touch the timestamp
+            None
         } else {
             exec.exec(
                 rustc,
@@ -291,7 +295,8 @@ fn rustc<'a, 'cfg>(
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`.", name))?;
-        }
+            Some(paths::set_invocation_time(&fingerprint_dir)?)
+        };
 
         if do_rename && real_name != crate_name {
             let dst = &outputs[0].path;
@@ -324,7 +329,10 @@ fn rustc<'a, 'cfg>(
                     rustc_dep_info_loc.display()
                 ))
             })?;
-            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
+
+            if let Some(timestamp) = timestamp {
+                filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
+            }
         }
 
         Ok(())
