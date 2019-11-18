@@ -285,6 +285,7 @@ fn rustc<'a, 'cfg>(
             //  Build plan should not touch the timestamp
             None
         } else {
+            let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
             exec.exec(
                 rustc,
                 package_id,
@@ -295,7 +296,7 @@ fn rustc<'a, 'cfg>(
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`.", name))?;
-            Some(paths::set_invocation_time(&fingerprint_dir)?)
+            Some(timestamp)
         };
 
         if do_rename && real_name != crate_name {
