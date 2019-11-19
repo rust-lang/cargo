@@ -151,7 +151,7 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
-        ResolveVersion::default(),
+        ResolveVersion::default_for_new_lockfiles(),
     );
 
     check_cycles(&resolve)?;

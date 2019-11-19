@@ -30,5 +30,5 @@ fn minimal_version_cli() {
 
     let lock = p.read_lockfile();
 
-    assert!(lock.contains("dep 1.0.0"));
+    assert!(!lock.contains("1.1.0"));
 }

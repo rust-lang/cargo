@@ -132,7 +132,7 @@ impl EncodableResolve {
     /// `features`. Care should be taken when using this Resolve. One of the
     /// primary uses is to be used with `resolve_with_previous` to guide the
     /// resolver to create a complete Resolve.
-    pub fn into_resolve(self, ws: &Workspace<'_>) -> CargoResult<Resolve> {
+    pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
         let mut checksums = HashMap::new();
 
@@ -331,6 +331,30 @@ impl EncodableResolve {
                 None => continue,
             };
             unused_patches.push(id);
+        }
+
+        // We have a curious issue where in the "v1 format" we buggily had a
+        // trailing blank line at the end of lock files under some specific
+        // conditions.
+        //
+        // Cargo is trying to write new lockfies in the "v2 format" but if you
+        // have no dependencies, for example, then the lockfile encoded won't
+        // really have any indicator that it's in the new format (no
+        // dependencies or checksums listed). This means that if you type `cargo
+        // new` followed by `cargo build` it will generate a "v2 format" lock
+        // file since none previously existed. When reading this on the next
+        // `cargo build`, however, it generates a new lock file because when
+        // reading in that lockfile we think it's the v1 format.
+        //
+        // To help fix this issue we special case here. If our lockfile only has
+        // one trailing newline, not two, *and* it only has one package, then
+        // this is actually the v2 format.
+        if original.ends_with("\n")
+            && !original.ends_with("\n\n")
+            && version == ResolveVersion::V1
+            && g.iter().count() == 1
+        {
+            version = ResolveVersion::V2;
         }
 
         Ok(Resolve::new(
