@@ -7,6 +7,8 @@ use fs2::{lock_contended_error, FileExt};
 #[allow(unused_imports)]
 use libc;
 use termcolor::Color::Cyan;
+#[cfg(windows)]
+use winapi::shared::winerror::ERROR_INVALID_FUNCTION;
 
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
@@ -310,6 +312,9 @@ fn acquire(
 
         #[cfg(target_os = "linux")]
         Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => return Ok(()),
+
+        #[cfg(windows)]
+        Err(ref e) if e.raw_os_error() == Some(ERROR_INVALID_FUNCTION as i32) => return Ok(()),
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
