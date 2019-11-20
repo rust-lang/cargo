@@ -350,6 +350,12 @@ fn rustc<'a, 'cfg>(
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
+            if pass_cdylib_link_args {
+                for arg in output.linker_args.iter() {
+                    let link_arg = format!("link-arg={}", arg);
+                    rustc.arg("-C").arg(link_arg);
+                }
+            }
             if key.0 == current_id {
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
@@ -357,12 +363,6 @@ fn rustc<'a, 'cfg>(
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
-                    }
-                }
-                if pass_cdylib_link_args {
-                    for arg in output.linker_args.iter() {
-                        let link_arg = format!("link-arg={}", arg);
-                        rustc.arg("-C").arg(link_arg);
                     }
                 }
             }
