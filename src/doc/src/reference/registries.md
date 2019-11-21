@@ -159,12 +159,23 @@ directories:
 > package names in `Cargo.toml` and the index JSON data are case-sensitive and
 > may contain upper and lower case characters.
 
-Registries may want to consider enforcing limitations on package names added
-to their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`
-character. For example, [crates.io] imposes relatively strict limitations,
-such as requiring it to be a valid Rust identifier, only allowing ASCII
-characters, under a specific length, and rejects reserved names such as
-Windows special filenames like "nul".
+Registries should consider enforcing limitations on package names added to
+their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`
+characters. [crates.io] imposes its own limitations, including the following:
+
+- Only allows ASCII characters.
+- Only alphanumeric, `-`, and `_` characters.
+- First character must be alphabetic.
+- Case-insensitive collision detection.
+- Prevent differences of `-` vs `_`.
+- Under a specific length (max 64).
+- Rejects reserved names, such as Windows special filenames like "nul".
+
+Registries should consider incorporating similar restrictions, and consider
+the security implications, such as [IDN homograph
+attacks](https://en.wikipedia.org/wiki/IDN_homograph_attack) and other
+concerns in [UTR36](https://www.unicode.org/reports/tr36/) and
+[UTS39](https://www.unicode.org/reports/tr39/).
 
 Each line in a package file contains a JSON object that describes a published
 version of the package. The following is a pretty-printed example with comments
