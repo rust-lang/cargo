@@ -1401,3 +1401,108 @@ fn doc_example() {
         .join("fn.x.html")
         .exists());
 }
+
+#[cargo_test]
+fn bin_private_items() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "
+            pub fn foo_pub() {}
+            fn foo_priv() {}
+            struct FooStruct;
+            enum FooEnum {}
+            trait FooTrait {}
+            type FooType = u32;
+            mod foo_mod {}
+
+        ",
+        )
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
+    assert!(p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
+    assert!(p
+        .root()
+        .join("target/doc/foo/struct.FooStruct.html")
+        .is_file());
+    assert!(p.root().join("target/doc/foo/enum.FooEnum.html").is_file());
+    assert!(p
+        .root()
+        .join("target/doc/foo/trait.FooTrait.html")
+        .is_file());
+    assert!(p.root().join("target/doc/foo/type.FooType.html").is_file());
+    assert!(p.root().join("target/doc/foo/foo_mod/index.html").is_file());
+}
+
+#[cargo_test]
+fn bin_private_items_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "
+            fn foo_priv() {}
+            pub fn foo_pub() {}
+        ",
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "bar/src/lib.rs",
+            "
+            #[allow(dead_code)]
+            fn bar_priv() {}
+            pub fn bar_pub() {}
+        ",
+        )
+        .build();
+
+    p.cargo("doc")
+        .with_stderr_unordered(
+            "\
+[DOCUMENTING] bar v0.0.1 ([..])
+[CHECKING] bar v0.0.1 ([..])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
+    assert!(p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
+
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/fn.bar_pub.html").is_file());
+    assert!(!p.root().join("target/doc/bar/fn.bar_priv.html").exists());
+}

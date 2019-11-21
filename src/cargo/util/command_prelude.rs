@@ -463,6 +463,7 @@ pub trait ArgMatchesExt {
             target_rustdoc_args: None,
             target_rustc_args: None,
             local_rustdoc_args: None,
+            rustdoc_document_private_items: false,
             export_dir: None,
         };
 
