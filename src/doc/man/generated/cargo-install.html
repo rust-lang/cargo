@@ -60,6 +60,35 @@ one of them, and if you&#8217;d rather install examples the <code>--example</cod
 be used as well.</p>
 </div>
 <div class="paragraph">
+<p>If the package is already installed, Cargo will reinstall it if the installed
+version does not appear to be up-to-date. If any of the following values
+change, then Cargo will reinstall the package:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The package version and source.</p>
+</li>
+<li>
+<p>The set of binary names installed.</p>
+</li>
+<li>
+<p>The chosen features.</p>
+</li>
+<li>
+<p>The release mode (<code>--debug</code>).</p>
+</li>
+<li>
+<p>The target (<code>--target</code>).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Installing with <code>--path</code> will always build and install, unless there are
+conflicting binaries from another package. The <code>--force</code> flag may be used to
+force Cargo to always reinstall the package.</p>
+</div>
+<div class="paragraph">
 <p>If the source is crates.io or <code>--git</code> then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
 specified by setting the <code>CARGO_TARGET_DIR</code> environment variable to a relative
@@ -93,7 +122,13 @@ available.</p>
 <dt class="hdlist1"><strong>--vers</strong> <em>VERSION</em></dt>
 <dt class="hdlist1"><strong>--version</strong> <em>VERSION</em></dt>
 <dd>
-<p>Specify a version to install.</p>
+<p>Specify a version to install. This may be a
+<a href="../reference/specifying-dependencies.md">version requirement</a>, like
+<code>~1.2</code>, to have Cargo select the newest version from the given
+requirement. If the version does not have a requirement operator (such as
+<code>^</code> or <code>~</code>), then it must be in the form <em>MAJOR.MINOR.PATCH</em>, and will
+install exactly that version; it is <strong>not</strong> treated as a caret requirement
+like Cargo dependencies are.</p>
 </dd>
 <dt class="hdlist1"><strong>--git</strong> <em>URL</em></dt>
 <dd>
@@ -122,8 +157,19 @@ available.</p>
 <dt class="hdlist1"><strong>-f</strong></dt>
 <dt class="hdlist1"><strong>--force</strong></dt>
 <dd>
-<p>Force overwriting existing crates or binaries. This can be used to
-reinstall or upgrade a crate.</p>
+<p>Force overwriting existing crates or binaries. This can be used if a
+package has installed a binary with the same name as another package. This
+is also useful if something has changed on the system that you want to
+rebuild with, such as a newer version of <code>rustc</code>.</p>
+</dd>
+<dt class="hdlist1"><strong>--no-track</strong></dt>
+<dd>
+<p>By default, Cargo keeps track of the installed packages with a metadata
+file stored in the installation root directory. This flag tells Cargo not
+to use or create that file. With this flag, Cargo will refuse to overwrite
+any existing files unless the <code>--force</code> flag is used. This also disables
+Cargo&#8217;s ability to protect against multiple concurrent invocations of
+Cargo installing at the same time.</p>
 </dd>
 <dt class="hdlist1"><strong>--bin</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
@@ -346,7 +392,7 @@ details on environment variables that Cargo reads.</p>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Install a package from crates.io:</p>
+<p>Install or upgrade a package from crates.io:</p>
 <div class="literalblock">
 <div class="content">
 <pre>cargo install ripgrep</pre>
@@ -354,10 +400,18 @@ details on environment variables that Cargo reads.</p>
 </div>
 </li>
 <li>
-<p>Reinstall or upgrade a package:</p>
+<p>Install or reinstall the package in the current directory:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo install ripgrep --force</pre>
+<pre>cargo install --path .</pre>
+</div>
+</div>
+</li>
+<li>
+<p>View the list of installed packages:</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo install --list</pre>
 </div>
 </div>
 </li>

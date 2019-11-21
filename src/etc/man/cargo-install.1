@@ -2,12 +2,12 @@
 .\"     Title: cargo-install
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-10-09
+.\"      Date: 2019-11-04
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INSTALL" "1" "2019-10-09" "\ \&" "\ \&"
+.TH "CARGO\-INSTALL" "1" "2019-11-04" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -116,6 +116,69 @@ crate has multiple binaries, the \fB\-\-bin\fP argument can selectively install 
 one of them, and if you\(cqd rather install examples the \fB\-\-example\fP argument can
 be used as well.
 .sp
+If the package is already installed, Cargo will reinstall it if the installed
+version does not appear to be up\-to\-date. If any of the following values
+change, then Cargo will reinstall the package:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+The package version and source.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+The set of binary names installed.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+The chosen features.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+The release mode (\fB\-\-debug\fP).
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+The target (\fB\-\-target\fP).
+.RE
+.sp
+Installing with \fB\-\-path\fP will always build and install, unless there are
+conflicting binaries from another package. The \fB\-\-force\fP flag may be used to
+force Cargo to always reinstall the package.
+.sp
 If the source is crates.io or \fB\-\-git\fP then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
 specified by setting the \fBCARGO_TARGET_DIR\fP environment variable to a relative
@@ -140,7 +203,14 @@ available.
 .sp
 \fB\-\-vers\fP \fIVERSION\fP, \fB\-\-version\fP \fIVERSION\fP
 .RS 4
-Specify a version to install.
+Specify a version to install. This may be a
+.URL "https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.md" "version requirement" ","
+like
+\fB~1.2\fP, to have Cargo select the newest version from the given
+requirement. If the version does not have a requirement operator (such as
+\fB^\fP or \fB~\fP), then it must be in the form \fIMAJOR.MINOR.PATCH\fP, and will
+install exactly that version; it is \fBnot\fP treated as a caret requirement
+like Cargo dependencies are.
 .RE
 .sp
 \fB\-\-git\fP \fIURL\fP
@@ -175,8 +245,20 @@ List all installed packages and their versions.
 .sp
 \fB\-f\fP, \fB\-\-force\fP
 .RS 4
-Force overwriting existing crates or binaries. This can be used to
-reinstall or upgrade a crate.
+Force overwriting existing crates or binaries. This can be used if a
+package has installed a binary with the same name as another package. This
+is also useful if something has changed on the system that you want to
+rebuild with, such as a newer version of \fBrustc\fP.
+.RE
+.sp
+\fB\-\-no\-track\fP
+.RS 4
+By default, Cargo keeps track of the installed packages with a metadata
+file stored in the installation root directory. This flag tells Cargo not
+to use or create that file. With this flag, Cargo will refuse to overwrite
+any existing files unless the \fB\-\-force\fP flag is used. This also disables
+Cargo\(cqs ability to protect against multiple concurrent invocations of
+Cargo installing at the same time.
 .RE
 .sp
 \fB\-\-bin\fP \fINAME\fP...
@@ -385,7 +467,7 @@ Cargo failed to complete.
 .  sp -1
 .  IP " 1." 4.2
 .\}
-Install a package from crates.io:
+Install or upgrade a package from crates.io:
 .sp
 .if n .RS 4
 .nf
@@ -402,11 +484,28 @@ cargo install ripgrep
 .  sp -1
 .  IP " 2." 4.2
 .\}
-Reinstall or upgrade a package:
+Install or reinstall the package in the current directory:
 .sp
 .if n .RS 4
 .nf
-cargo install ripgrep \-\-force
+cargo install \-\-path .
+.fi
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 3." 4.2
+.\}
+View the list of installed packages:
+.sp
+.if n .RS 4
+.nf
+cargo install \-\-list
 .fi
 .if n .RE
 .RE

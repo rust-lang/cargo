@@ -118,8 +118,7 @@ fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
 fn registry_upgrade() {
     // Installing and upgrading from a registry.
     pkg("foo", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -137,8 +136,7 @@ fn registry_upgrade() {
     installed_process("foo").with_stdout("1.0.0").run();
     validate_trackers("foo", "1.0.0", &["foo"]);
 
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -150,8 +148,7 @@ fn registry_upgrade() {
 
     pkg("foo", "1.0.1");
 
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -170,22 +167,19 @@ fn registry_upgrade() {
     installed_process("foo").with_stdout("1.0.1").run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 
-    cargo_process("install foo --version=1.0.0 -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --version=1.0.0")
         .with_stderr_contains("[COMPILING] foo v1.0.0")
         .run();
     installed_process("foo").with_stdout("1.0.0").run();
     validate_trackers("foo", "1.0.0", &["foo"]);
 
-    cargo_process("install foo --version=^1.0 -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --version=^1.0")
         .with_stderr_contains("[COMPILING] foo v1.0.1")
         .run();
     installed_process("foo").with_stdout("1.0.1").run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 
-    cargo_process("install foo --version=^1.0 -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --version=^1.0")
         .with_stderr_contains("[IGNORED] package `foo v1.0.1` is already installed[..]")
         .run();
 }
@@ -194,12 +188,8 @@ fn registry_upgrade() {
 fn uninstall() {
     // Basic uninstall test.
     pkg("foo", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
-    cargo_process("uninstall foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
+    cargo_process("uninstall foo").run();
     let data = load_crates2();
     assert_eq!(data["installs"].as_object().unwrap().len(), 0);
     let v1_table = load_crates1();
@@ -209,11 +199,8 @@ fn uninstall() {
 #[cargo_test]
 fn upgrade_force() {
     pkg("foo", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
-    cargo_process("install foo -Z install-upgrade --force")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo").run();
+    cargo_process("install foo --force")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -233,8 +220,7 @@ fn upgrade_force() {
 fn ambiguous_version_no_longer_allowed() {
     // Non-semver-requirement is not allowed for `--version`.
     pkg("foo", "1.0.0");
-    cargo_process("install foo --version=1.0 -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --version=1.0")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -251,11 +237,8 @@ if you want to specify semver range, add an explicit qualifier, like ^1.0
 fn path_is_always_dirty() {
     // --path should always reinstall.
     let p = project().file("src/main.rs", "fn main() {}").build();
-    p.cargo("install --path . -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
-    p.cargo("install --path . -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    p.cargo("install --path .").run();
+    p.cargo("install --path .")
         .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
         .run();
 }
@@ -267,8 +250,7 @@ fn fails_for_conflicts_unknown() {
     let exe = installed_exe("foo");
     exe.parent().unwrap().mkdir_p();
     fs::write(exe, "").unwrap();
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo")
         .with_stderr_contains("[ERROR] binary `foo[EXE]` already exists in destination")
         .with_status(101)
         .run();
@@ -281,11 +263,8 @@ fn fails_for_conflicts_known() {
     Package::new("bar", "1.0.0")
         .file("src/bin/foo.rs", "fn main() {}")
         .publish();
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
-    cargo_process("install bar -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo").run();
+    cargo_process("install bar")
         .with_stderr_contains(
             "[ERROR] binary `foo[EXE]` already exists in destination as part of `foo v1.0.0`",
         )
@@ -301,33 +280,23 @@ fn supports_multiple_binary_names() {
         .file("src/bin/a.rs", r#"fn main() { println!("a"); }"#)
         .file("examples/ex1.rs", r#"fn main() { println!("ex1"); }"#)
         .publish();
-    cargo_process("install foo -Z install-upgrade --bin foo")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --bin foo").run();
     installed_process("foo").with_stdout("foo").run();
     assert!(!installed_exe("a").exists());
     assert!(!installed_exe("ex1").exists());
     validate_trackers("foo", "1.0.0", &["foo"]);
-    cargo_process("install foo -Z install-upgrade --bin a")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --bin a").run();
     installed_process("a").with_stdout("a").run();
     assert!(!installed_exe("ex1").exists());
     validate_trackers("foo", "1.0.0", &["a", "foo"]);
-    cargo_process("install foo -Z install-upgrade --example ex1")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --example ex1").run();
     installed_process("ex1").with_stdout("ex1").run();
     validate_trackers("foo", "1.0.0", &["a", "ex1", "foo"]);
-    cargo_process("uninstall foo -Z install-upgrade --bin foo")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("uninstall foo --bin foo").run();
     assert!(!installed_exe("foo").exists());
     assert!(installed_exe("ex1").exists());
     validate_trackers("foo", "1.0.0", &["a", "ex1"]);
-    cargo_process("uninstall foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("uninstall foo").run();
     assert!(!installed_exe("ex1").exists());
     assert!(!installed_exe("a").exists());
 }
@@ -337,9 +306,8 @@ fn v1_already_installed_fresh() {
     // Install with v1, then try to install again with v2.
     pkg("foo", "1.0.0");
     cargo_process("install foo").run();
-    cargo_process("install foo -Z install-upgrade")
+    cargo_process("install foo")
         .with_stderr_contains("[IGNORED] package `foo v1.0.0` is already installed[..]")
-        .masquerade_as_nightly_cargo()
         .run();
 }
 
@@ -349,10 +317,9 @@ fn v1_already_installed_dirty() {
     pkg("foo", "1.0.0");
     cargo_process("install foo").run();
     pkg("foo", "1.0.1");
-    cargo_process("install foo -Z install-upgrade")
+    cargo_process("install foo")
         .with_stderr_contains("[COMPILING] foo v1.0.1")
         .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
-        .masquerade_as_nightly_cargo()
         .run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 }
@@ -385,37 +352,25 @@ fn change_features_rebuilds() {
             "#,
         )
         .publish();
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
     installed_process("foo").with_stdout("f1").run();
-    cargo_process("install foo -Z install-upgrade --no-default-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --no-default-features").run();
     installed_process("foo").with_stdout("").run();
-    cargo_process("install foo -Z install-upgrade --all-features")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --all-features").run();
     installed_process("foo").with_stdout("f1\nf2").run();
-    cargo_process("install foo -Z install-upgrade --no-default-features --features=f1")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --no-default-features --features=f1").run();
     installed_process("foo").with_stdout("f1").run();
 }
 
 #[cargo_test]
 fn change_profile_rebuilds() {
     pkg("foo", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
-    cargo_process("install foo -Z install-upgrade --debug")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo").run();
+    cargo_process("install foo --debug")
         .with_stderr_contains("[COMPILING] foo v1.0.0")
         .with_stderr_contains("[REPLACING] [..]foo[EXE]")
         .run();
-    cargo_process("install foo -Z install-upgrade --debug")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --debug")
         .with_stderr_contains("[IGNORED] package `foo v1.0.0` is already installed[..]")
         .run();
 }
@@ -426,13 +381,10 @@ fn change_target_rebuilds() {
         return;
     }
     pkg("foo", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
     let target = cross_compile::alternate();
-    cargo_process("install foo -v -Z install-upgrade --target")
+    cargo_process("install foo -v --target")
         .arg(&target)
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo v1.0.0")
         .with_stderr_contains("[REPLACING] [..]foo[EXE]")
         .with_stderr_contains(&format!("[..]--target {}[..]", target))
@@ -447,23 +399,19 @@ fn change_bin_sets_rebuilds() {
         .file("src/bin/x.rs", "fn main() { }")
         .file("src/bin/y.rs", "fn main() { }")
         .publish();
-    cargo_process("install foo -Z install-upgrade --bin x")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --bin x").run();
     assert!(installed_exe("x").exists());
     assert!(!installed_exe("y").exists());
     assert!(!installed_exe("foo").exists());
     validate_trackers("foo", "1.0.0", &["x"]);
-    cargo_process("install foo -Z install-upgrade --bin y")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo --bin y")
         .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `y[EXE]`)")
         .run();
     assert!(installed_exe("x").exists());
     assert!(installed_exe("y").exists());
     assert!(!installed_exe("foo").exists());
     validate_trackers("foo", "1.0.0", &["x", "y"]);
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install foo")
         .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)")
         .with_stderr_contains(
             "[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `x[EXE]`, `y[EXE]`)",
@@ -480,18 +428,14 @@ fn forwards_compatible() {
     // Unknown fields should be preserved.
     pkg("foo", "1.0.0");
     pkg("bar", "1.0.0");
-    cargo_process("install foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
     let key = "foo 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)";
     let v2 = cargo_home().join(".crates2.json");
     let mut data = load_crates2();
     data["newfield"] = serde_json::Value::Bool(true);
     data["installs"][key]["moreinfo"] = serde_json::Value::String("shazam".to_string());
     fs::write(&v2, serde_json::to_string(&data).unwrap()).unwrap();
-    cargo_process("install bar -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install bar").run();
     let data: serde_json::Value = serde_json::from_str(&fs::read_to_string(&v2).unwrap()).unwrap();
     assert_eq!(data["newfield"].as_bool().unwrap(), true);
     assert_eq!(
@@ -510,21 +454,15 @@ fn v2_syncs() {
         .file("src/bin/x.rs", "fn main() {}")
         .file("src/bin/y.rs", "fn main() {}")
         .build();
-    cargo_process("install one -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install one").run();
     validate_trackers("one", "1.0.0", &["one"]);
-    p.cargo("install -Z install-upgrade --path .")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("install --path .").run();
     validate_trackers("foo", "1.0.0", &["x", "y"]);
     // v1 add/remove
     cargo_process("install two").run();
     cargo_process("uninstall one").run();
     // This should pick up that `two` was added, `one` was removed.
-    cargo_process("install three -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install three").run();
     validate_trackers("three", "1.0.0", &["three"]);
     cargo_process("install --list")
         .with_stdout(
@@ -539,13 +477,10 @@ two v1.0.0:
 ",
         )
         .run();
-    cargo_process("install one -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install one").run();
     installed_process("one").with_stdout("1.0.0").run();
     validate_trackers("one", "1.0.0", &["one"]);
-    cargo_process("install two -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install two")
         .with_stderr_contains("[IGNORED] package `two v1.0.0` is already installed[..]")
         .run();
     // v1 remove
@@ -553,13 +488,10 @@ two v1.0.0:
     pkg("x", "1.0.0");
     pkg("y", "1.0.0");
     // This should succeed because `x` was removed in V1.
-    cargo_process("install x -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install x").run();
     validate_trackers("x", "1.0.0", &["x"]);
     // This should fail because `y` still exists in a different package.
-    cargo_process("install y -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install y")
         .with_stderr_contains(
             "[ERROR] binary `y[EXE]` already exists in destination \
              as part of `foo v0.0.1 ([..])`",
@@ -572,14 +504,12 @@ two v1.0.0:
 fn upgrade_git() {
     let git_project = git::new("foo", |project| project.file("src/main.rs", "fn main() {}"));
     // install
-    cargo_process("install -Z install-upgrade --git")
+    cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .masquerade_as_nightly_cargo()
         .run();
     // Check install stays fresh.
-    cargo_process("install -Z install-upgrade --git")
+    cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "[IGNORED] package `foo v0.0.1 (file://[..]/foo#[..])` is \
              already installed,[..]",
@@ -591,17 +521,15 @@ fn upgrade_git() {
     git::add(&repo);
     git::commit(&repo);
     // Install should reinstall.
-    cargo_process("install -Z install-upgrade --git")
+    cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
         .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
         .run();
     installed_process("foo").with_stdout("onomatopoeia").run();
     // Check install stays fresh.
-    cargo_process("install -Z install-upgrade --git")
+    cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "[IGNORED] package `foo v0.0.1 (file://[..]/foo#[..])` is \
              already installed,[..]",
@@ -627,21 +555,14 @@ fn switch_sources() {
         project.file("src/main.rs", r#"fn main() { println!("git"); }"#)
     });
 
-    cargo_process("install -Z install-upgrade foo")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo").run();
     installed_process("foo").with_stdout("1.0.0").run();
-    cargo_process("install -Z install-upgrade foo --registry alternative")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install foo --registry alternative").run();
     installed_process("foo").with_stdout("alt").run();
-    p.cargo("install -Z install-upgrade --path .")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("install --path .").run();
     installed_process("foo").with_stdout("local").run();
-    cargo_process("install -Z install-upgrade --git")
+    cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .masquerade_as_nightly_cargo()
         .run();
     installed_process("foo").with_stdout("git").run();
 }
@@ -659,8 +580,7 @@ fn multiple_report() {
             .publish();
     }
     three("1.0.0");
-    cargo_process("install -Z install-upgrade one two three")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install one two three")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -695,8 +615,7 @@ fn multiple_report() {
     pkg("foo", "1.0.1");
     pkg("bar", "1.0.1");
     three("1.0.1");
-    cargo_process("install -Z install-upgrade one two three")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install one two three")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -716,8 +635,7 @@ fn multiple_report() {
 ",
         )
         .run();
-    cargo_process("uninstall -Z install-upgrade three")
-        .masquerade_as_nightly_cargo()
+    cargo_process("uninstall three")
         .with_stderr(
             "\
 [REMOVING] [..]/.cargo/bin/three[EXE]
@@ -726,8 +644,7 @@ fn multiple_report() {
 ",
         )
         .run();
-    cargo_process("install -Z install-upgrade three --bin x")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install three --bin x")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -740,8 +657,7 @@ fn multiple_report() {
 ",
         )
         .run();
-    cargo_process("install -Z install-upgrade three")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install three")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -760,26 +676,12 @@ fn multiple_report() {
 }
 
 #[cargo_test]
-fn no_track_gated() {
-    cargo_process("install --no-track foo")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(
-            "[ERROR] `--no-track` flag is unstable, pass `-Z install-upgrade` to enable it",
-        )
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn no_track() {
     pkg("foo", "1.0.0");
-    cargo_process("install --no-track foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("install --no-track foo").run();
     assert!(!v1_path().exists());
     assert!(!v2_path().exists());
-    cargo_process("install --no-track foo -Z install-upgrade")
-        .masquerade_as_nightly_cargo()
+    cargo_process("install --no-track foo")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -807,9 +709,7 @@ fn deletes_orphaned() {
         .file("src/bin/other.rs", "fn main() {}")
         .file("examples/ex1.rs", "fn main() {}")
         .build();
-    p.cargo("install -Z install-upgrade --path . --bins --examples")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("install --path . --bins --examples").run();
     assert!(installed_exe("other").exists());
 
     // Remove a binary, add a new one, and bump the version.
@@ -823,8 +723,7 @@ fn deletes_orphaned() {
         version = "0.2.0"
         "#,
     );
-    p.cargo("install -Z install-upgrade --path . --bins --examples")
-        .masquerade_as_nightly_cargo()
+    p.cargo("install --path . --bins --examples")
         .with_stderr(
             "\
 [INSTALLING] foo v0.2.0 [..]

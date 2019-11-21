@@ -18,33 +18,31 @@ use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
 ///
-/// v1 is an older style, v2 is a new (experimental) style that tracks more
-/// information. The new style is only enabled with the `-Z install-upgrade`
-/// flag (which sets the `unstable_upgrade` flag). v1 is still considered the
-/// source of truth. When v2 is used, it will sync with any changes with v1,
-/// and will continue to update v1.
+/// v1 is an older style, v2 is a new style that tracks more information, and
+/// is both backwards and forwards compatible. Cargo keeps both files in sync,
+/// updating both v1 and v2 at the same time. Additionally, if it detects
+/// changes in v1 that are not in v2 (such as when an older version of Cargo
+/// is used), it will automatically propagate those changes to v2.
 ///
 /// This maintains a filesystem lock, preventing other instances of Cargo from
 /// modifying at the same time. Drop the value to unlock.
 ///
-/// If/when v2 is stabilized, it is intended that v1 is retained for a while
-/// during a longish transition period, and then v1 can be removed.
+/// It is intended that v1 should be retained for a while during a longish
+/// transition period, and then v1 can be removed.
 pub struct InstallTracker {
     v1: CrateListingV1,
     v2: CrateListingV2,
     v1_lock: FileLock,
-    v2_lock: Option<FileLock>,
-    unstable_upgrade: bool,
+    v2_lock: FileLock,
 }
 
 /// Tracking information for the set of installed packages.
-///
-/// This v2 format is unstable and requires the `-Z unstable-upgrade` option
-/// to enable.
 #[derive(Default, Deserialize, Serialize)]
 struct CrateListingV2 {
+    /// Map of every installed package.
     installs: BTreeMap<PackageId, InstallInfo>,
-    /// Forwards compatibility.
+    /// Forwards compatibility. Unknown keys from future versions of Cargo
+    /// will be stored here and retained when the file is saved.
     #[serde(flatten)]
     other: BTreeMap<String, serde_json::Value>,
 }
@@ -56,7 +54,7 @@ struct CrateListingV2 {
 /// determine if it needs to be rebuilt/reinstalled. If nothing has changed,
 /// then Cargo will inform the user that it is "up to date".
 ///
-/// This is only used for the (unstable) v2 format.
+/// This is only used for the v2 format.
 #[derive(Debug, Deserialize, Serialize)]
 struct InstallInfo {
     /// Version requested via `--version`.
@@ -87,19 +85,15 @@ struct InstallInfo {
 /// Tracking information for the set of installed packages.
 #[derive(Default, Deserialize, Serialize)]
 pub struct CrateListingV1 {
+    /// Map of installed package id to the set of binary names for that package.
     v1: BTreeMap<PackageId, BTreeSet<String>>,
 }
 
 impl InstallTracker {
     /// Create an InstallTracker from information on disk.
     pub fn load(config: &Config, root: &Filesystem) -> CargoResult<InstallTracker> {
-        let unstable_upgrade = config.cli_unstable().install_upgrade;
         let v1_lock = root.open_rw(Path::new(".crates.toml"), config, "crate metadata")?;
-        let v2_lock = if unstable_upgrade {
-            Some(root.open_rw(Path::new(".crates2.json"), config, "crate metadata")?)
-        } else {
-            None
-        };
+        let v2_lock = root.open_rw(Path::new(".crates2.json"), config, "crate metadata")?;
 
         let v1 = (|| -> CargoResult<_> {
             let mut contents = String::new();
@@ -119,26 +113,21 @@ impl InstallTracker {
         })?;
 
         let v2 = (|| -> CargoResult<_> {
-            match &v2_lock {
-                Some(lock) => {
-                    let mut contents = String::new();
-                    lock.file().read_to_string(&mut contents)?;
-                    let mut v2 = if contents.is_empty() {
-                        CrateListingV2::default()
-                    } else {
-                        serde_json::from_str(&contents)
-                            .chain_err(|| format_err!("invalid JSON found for metadata"))?
-                    };
-                    v2.sync_v1(&v1)?;
-                    Ok(v2)
-                }
-                None => Ok(CrateListingV2::default()),
-            }
+            let mut contents = String::new();
+            v2_lock.file().read_to_string(&mut contents)?;
+            let mut v2 = if contents.is_empty() {
+                CrateListingV2::default()
+            } else {
+                serde_json::from_str(&contents)
+                    .chain_err(|| format_err!("invalid JSON found for metadata"))?
+            };
+            v2.sync_v1(&v1)?;
+            Ok(v2)
         })()
         .chain_err(|| {
             format_err!(
                 "failed to parse crate metadata at `{}`",
-                v2_lock.as_ref().unwrap().path().to_string_lossy()
+                v2_lock.path().to_string_lossy()
             )
         })?;
 
@@ -147,7 +136,6 @@ impl InstallTracker {
             v2,
             v1_lock,
             v2_lock,
-            unstable_upgrade,
         })
     }
 
@@ -204,7 +192,7 @@ impl InstallTracker {
 
         // If both sets are the same length, that means all duplicates come
         // from packages with the same name.
-        if self.unstable_upgrade && matching_duplicates.len() == duplicates.len() {
+        if matching_duplicates.len() == duplicates.len() {
             // Determine if it is dirty or fresh.
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
@@ -265,11 +253,8 @@ impl InstallTracker {
             .filter_map(|name| {
                 if !dst.join(&name).exists() {
                     None
-                } else if self.unstable_upgrade {
-                    let p = self.v2.package_for_bin(name);
-                    Some((name.clone(), p))
                 } else {
-                    let p = self.v1.package_for_bin(name);
+                    let p = self.v2.package_for_bin(name);
                     Some((name.clone(), p))
                 }
             })
@@ -286,10 +271,8 @@ impl InstallTracker {
         target: &str,
         rustc: &str,
     ) {
-        if self.unstable_upgrade {
-            self.v2
-                .mark_installed(package, bins, version_req, opts, target, rustc)
-        }
+        self.v2
+            .mark_installed(package, bins, version_req, opts, target, rustc);
         self.v1.mark_installed(package, bins);
     }
 
@@ -302,14 +285,12 @@ impl InstallTracker {
             )
         })?;
 
-        if self.unstable_upgrade {
-            self.v2.save(self.v2_lock.as_ref().unwrap()).chain_err(|| {
-                format_err!(
-                    "failed to write crate metadata at `{}`",
-                    self.v2_lock.as_ref().unwrap().path().to_string_lossy()
-                )
-            })?;
-        }
+        self.v2.save(&self.v2_lock).chain_err(|| {
+            format_err!(
+                "failed to write crate metadata at `{}`",
+                self.v2_lock.path().to_string_lossy()
+            )
+        })?;
         Ok(())
     }
 
@@ -329,20 +310,11 @@ impl InstallTracker {
     /// Remove a package from the tracker.
     pub fn remove(&mut self, pkg_id: PackageId, bins: &BTreeSet<String>) {
         self.v1.remove(pkg_id, bins);
-        if self.unstable_upgrade {
-            self.v2.remove(pkg_id, bins);
-        }
+        self.v2.remove(pkg_id, bins);
     }
 }
 
 impl CrateListingV1 {
-    fn package_for_bin(&self, bin_name: &str) -> Option<PackageId> {
-        self.v1
-            .iter()
-            .find(|(_, bins)| bins.contains(bin_name))
-            .map(|(pkg_id, _)| *pkg_id)
-    }
-
     fn mark_installed(&mut self, pkg: &Package, bins: &BTreeSet<String>) {
         // Remove bins from any other packages.
         for other_bins in self.v1.values_mut() {
@@ -600,24 +572,11 @@ where
                 match v.to_semver() {
                     Ok(v) => Some(format!("={}", v)),
                     Err(e) => {
-                        let mut msg = if config.cli_unstable().install_upgrade {
-                            format!(
-                                "the `--vers` provided, `{}`, is \
-                                 not a valid semver version: {}\n",
-                                v, e
-                            )
-                        } else {
-                            format!(
-                                "the `--vers` provided, `{}`, is \
-                                 not a valid semver version\n\n\
-                                 historically Cargo treated this \
-                                 as a semver version requirement \
-                                 accidentally\nand will continue \
-                                 to do so, but this behavior \
-                                 will be removed eventually",
-                                v
-                            )
-                        };
+                        let mut msg = format!(
+                            "the `--vers` provided, `{}`, is \
+                             not a valid semver version: {}\n",
+                            v, e
+                        );
 
                         // If it is not a valid version but it is a valid version
                         // requirement, add a note to the warning
@@ -628,12 +587,7 @@ where
                                 v
                             ));
                         }
-                        if config.cli_unstable().install_upgrade {
-                            bail!(msg);
-                        } else {
-                            config.shell().warn(&msg)?;
-                        }
-                        Some(v.to_string())
+                        bail!(msg);
                     }
                 }
             }

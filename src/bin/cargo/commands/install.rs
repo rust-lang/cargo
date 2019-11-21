@@ -46,10 +46,7 @@ pub fn cli() -> App {
         ))
         .arg_jobs()
         .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
-        .arg(opt(
-            "no-track",
-            "Do not save tracking information (unstable)",
-        ))
+        .arg(opt("no-track", "Do not save tracking information"))
         .arg_features()
         .arg_profile("Install artifacts with the specified profile")
         .arg(opt("debug", "Build in debug mode instead of release mode"))
@@ -90,13 +87,9 @@ crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
 be used as well.
 
-By default cargo will refuse to overwrite existing binaries. The `--force` flag
-enables overwriting existing binaries. Thus you can reinstall a crate with
-`cargo install --force <crate>`.
-
-Omitting the <crate> specification entirely will install the crate in the
-current directory. This behaviour is deprecated, and it no longer works in the
-Rust 2018 edition. Use the more explicit `install --path .` instead.
+If the package is already installed, Cargo will reinstall it if the installed
+version does not appear to be up-to-date. Installing with `--path` will always
+build and install, unless there are conflicting binaries from another package.
 
 If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
@@ -158,13 +151,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let version = args.value_of("version");
     let root = args.value_of("root");
-
-    if args.is_present("no-track") && !config.cli_unstable().install_upgrade {
-        return Err(failure::format_err!(
-            "`--no-track` flag is unstable, pass `-Z install-upgrade` to enable it"
-        )
-        .into());
-    };
 
     if args.is_present("list") {
         ops::install_list(root, config)?;
