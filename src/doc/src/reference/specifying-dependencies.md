@@ -483,20 +483,16 @@ winhttp = "0.4.0"
 openssl = "1.0.1"
 ```
 
-If you’re using a custom target specification, quote the full path and file
-name:
+If you’re using a custom target specification (such as `--target
+foo/bar.json`), use the base filename without the `.json` extension:
 
 ```toml
-[target."x86_64/windows.json".dependencies]
+[target.bar.dependencies]
 winhttp = "0.4.0"
 
-[target."i686/linux.json".dependencies]
+[target.my-special-i686-platform.dependencies]
 openssl = "1.0.1"
 native = { path = "native/i686" }
-
-[target."x86_64/linux.json".dependencies]
-openssl = "1.0.1"
-native = { path = "native/x86_64" }
 ```
 
 ### Development dependencies
