@@ -114,7 +114,24 @@ fn basic() {
 #[cargo_test(build_std)]
 fn cross_custom() {
     let p = project()
-        .file("src/lib.rs", "#![no_std] pub fn f() {}")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [target.custom-target.dependencies]
+                dep = { path = "dep" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "#![no_std] pub fn f() -> u32 { dep::answer() }",
+        )
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.1.0"))
+        .file("dep/src/lib.rs", "#![no_std] pub fn answer() -> u32 { 42 }")
         .file(
             "custom-target.json",
             r#"
