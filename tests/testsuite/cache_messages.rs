@@ -95,6 +95,20 @@ fn color() {
     // Check enabling/disabling color.
     let p = project().file("src/lib.rs", "fn a() {}").build();
 
+    // Hack for issue in fwdansi 1.1. It is squashing multiple resets
+    // into a single reset.
+    // https://github.com/kennytm/fwdansi/issues/2
+    fn normalize(s: &str) -> String {
+        #[cfg(windows)]
+        return s.replace("\x1b[0m\x1b[0m", "\x1b[0m");
+        #[cfg(not(windows))]
+        return s.to_string();
+    };
+
+    let compare = |a, b| {
+        assert_eq!(normalize(a), normalize(b));
+    };
+
     let agnostic_path = Path::new("src").join("lib.rs");
     let agnostic_path_s = agnostic_path.to_str().unwrap();
     // Capture the original color output.
@@ -121,21 +135,21 @@ fn color() {
         .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(rustc_color, as_str(&cargo_output1.stderr));
+    compare(rustc_color, as_str(&cargo_output1.stderr));
 
     // Replay cached, with color.
     let cargo_output2 = p
         .cargo("check -q --color=always")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(rustc_color, as_str(&cargo_output2.stderr));
+    compare(rustc_color, as_str(&cargo_output2.stderr));
 
     // Replay cached, no color.
     let cargo_output_nocolor = p
         .cargo("check -q --color=never")
         .exec_with_output()
         .expect("cargo to run");
-    assert_eq!(rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
+    compare(rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
 }
 
 #[cargo_test]
