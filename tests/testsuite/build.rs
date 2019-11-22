@@ -3095,7 +3095,8 @@ fn compiler_json_error_format() {
         "linked_libs":[],
         "linked_paths":[],
         "env":[],
-        "cfgs":["xyz"]
+        "cfgs":["xyz"],
+        "out_dir": "[..]target/debug/build/foo-[..]/out"
     }
 
     {
