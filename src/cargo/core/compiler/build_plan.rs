@@ -113,9 +113,9 @@ impl BuildPlan {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx
-            .dep_targets(unit)
+            .unit_deps(unit)
             .iter()
-            .map(|dep| self.invocation_map[&dep.buildkey()])
+            .map(|dep| self.invocation_map[&dep.unit.buildkey()])
             .collect();
         let invocation = Invocation::new(unit, deps);
         self.plan.invocations.push(invocation);

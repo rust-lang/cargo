@@ -157,8 +157,9 @@ fn compile<'a, 'cfg: 'a>(
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in cx.dep_targets(unit).iter() {
-        compile(cx, jobs, plan, unit, exec, false)?;
+    let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
+    for dep in deps {
+        compile(cx, jobs, plan, &dep.unit, exec, false)?;
     }
     if build_plan {
         plan.add(cx, unit)?;

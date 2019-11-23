@@ -187,18 +187,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             // If the unit has a build script, add `OUT_DIR` to the
             // environment variables.
-            for dep in self.dep_targets(unit).iter() {
-                if !unit.target.is_lib() {
-                    continue;
-                }
-
-                if dep.mode.is_run_custom_build() {
-                    let out_dir = self.files().build_script_out_dir(dep).display().to_string();
-                    self.compilation
-                        .extra_env
-                        .entry(dep.pkg.package_id())
-                        .or_insert_with(Vec::new)
-                        .push(("OUT_DIR".to_string(), out_dir));
+            if unit.target.is_lib() {
+                for dep in &self.unit_dependencies[unit] {
+                    if dep.unit.mode.is_run_custom_build() {
+                        let out_dir = self
+                            .files()
+                            .build_script_out_dir(&dep.unit)
+                            .display()
+                            .to_string();
+                        self.compilation
+                            .extra_env
+                            .entry(dep.unit.pkg.package_id())
+                            .or_insert_with(Vec::new)
+                            .push(("OUT_DIR".to_string(), out_dir));
+                    }
                 }
             }
 
@@ -359,18 +361,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the filenames that the given unit will generate.
     pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
-    }
-
-    /// For a package, return all targets which are registered as dependencies
-    /// for that package.
-    /// NOTE: This is deprecated, use `unit_deps` instead.
-    //
-    // TODO: this ideally should be `-> &[Unit<'a>]`.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
-        self.unit_dependencies[unit]
-            .iter()
-            .map(|dep| dep.unit)
-            .collect()
     }
 
     /// Direct dependencies for the given unit.

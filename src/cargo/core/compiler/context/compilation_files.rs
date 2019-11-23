@@ -458,8 +458,8 @@ fn metadata_of<'a, 'cfg>(
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
         metas.insert(*unit, meta);
-        for unit in cx.dep_targets(unit) {
-            metadata_of(&unit, cx, metas);
+        for dep in cx.unit_deps(unit) {
+            metadata_of(&dep.unit, cx, metas);
         }
     }
     metas[unit].clone()
@@ -532,15 +532,13 @@ fn compute_metadata<'a, 'cfg>(
     unit.features.hash(&mut hasher);
 
     // Mix in the target-metadata of all the dependencies of this target.
-    {
-        let mut deps_metadata = cx
-            .dep_targets(unit)
-            .iter()
-            .map(|dep| metadata_of(dep, cx, metas))
-            .collect::<Vec<_>>();
-        deps_metadata.sort();
-        deps_metadata.hash(&mut hasher);
-    }
+    let mut deps_metadata = cx
+        .unit_deps(unit)
+        .iter()
+        .map(|dep| metadata_of(&dep.unit, cx, metas))
+        .collect::<Vec<_>>();
+    deps_metadata.sort();
+    deps_metadata.hash(&mut hasher);
 
     // Throw in the profile we're compiling with. This helps caching
     // `panic=abort` and `panic=unwind` artifacts, additionally with various

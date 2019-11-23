@@ -159,26 +159,25 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         unit: &Unit<'a>,
         job: Job,
     ) -> CargoResult<()> {
-        let dependencies = cx.dep_targets(unit);
+        let dependencies = cx.unit_deps(unit);
         let mut queue_deps = dependencies
             .iter()
-            .cloned()
-            .filter(|unit| {
+            .filter(|dep| {
                 // Binaries aren't actually needed to *compile* tests, just to run
                 // them, so we don't include this dependency edge in the job graph.
-                !unit.target.is_test() && !unit.target.is_bin()
+                !dep.unit.target.is_test() && !dep.unit.target.is_bin()
             })
             .map(|dep| {
                 // Handle the case here where our `unit -> dep` dependency may
                 // only require the metadata, not the full compilation to
                 // finish. Use the tables in `cx` to figure out what kind
                 // of artifact is associated with this dependency.
-                let artifact = if cx.only_requires_rmeta(unit, &dep) {
+                let artifact = if cx.only_requires_rmeta(unit, &dep.unit) {
                     Artifact::Metadata
                 } else {
                     Artifact::All
                 };
-                (dep, artifact)
+                (dep.unit, artifact)
             })
             .collect::<HashMap<_, _>>();
 
@@ -205,7 +204,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // transitively contains the `Metadata` edge.
         if unit.requires_upstream_objects() {
             for dep in dependencies {
-                depend_on_deps_of_deps(cx, &mut queue_deps, dep);
+                depend_on_deps_of_deps(cx, &mut queue_deps, dep.unit);
             }
 
             fn depend_on_deps_of_deps<'a>(
@@ -213,9 +212,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 deps: &mut HashMap<Unit<'a>, Artifact>,
                 unit: Unit<'a>,
             ) {
-                for dep in cx.dep_targets(&unit) {
-                    if deps.insert(dep, Artifact::All).is_none() {
-                        depend_on_deps_of_deps(cx, deps, dep);
+                for dep in cx.unit_deps(&unit) {
+                    if deps.insert(dep.unit, Artifact::All).is_none() {
+                        depend_on_deps_of_deps(cx, deps, dep.unit);
                     }
                 }
             }
