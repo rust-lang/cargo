@@ -163,7 +163,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             plan.output_plan();
         }
 
+        // Collect the result of the build into `self.compilation`.
         for unit in units.iter() {
+            // Collect tests and executables.
             for output in self.outputs(unit)?.iter() {
                 if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary
                 {
@@ -183,6 +185,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
 
+            // If the unit has a build script, add `OUT_DIR` to the
+            // environment variables.
             for dep in self.dep_targets(unit).iter() {
                 if !unit.target.is_lib() {
                     continue;
@@ -198,6 +202,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }
 
+            // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
                 // Note that we can *only* doc-test rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
@@ -231,6 +236,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 });
             }
 
+            // Collect the enabled features.
             let feats = &unit.features;
             if !feats.is_empty() {
                 self.compilation
@@ -243,6 +249,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .collect()
                     });
             }
+
+            // Collect rustdocflags.
             let rustdocflags = self.bcx.rustdocflags_args(unit);
             if !rustdocflags.is_empty() {
                 self.compilation
