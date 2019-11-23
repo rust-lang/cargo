@@ -106,7 +106,12 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRe
     }
 }
 
-fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: PackageId) {
+fn emit_build_output(
+    state: &JobState<'_>,
+    output: &BuildOutput,
+    out_dir: &Path,
+    package_id: PackageId,
+) {
     let library_paths = output
         .library_paths
         .iter()
@@ -119,6 +124,7 @@ fn emit_build_output(state: &JobState<'_>, output: &BuildOutput, package_id: Pac
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
         env: &output.env,
+        out_dir,
     }
     .to_json_string();
     state.stdout(msg);
@@ -349,7 +355,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
 
         if json_messages {
-            emit_build_output(state, &parsed_output, id);
+            emit_build_output(state, &parsed_output, script_out_dir.as_path(), id);
         }
         build_script_outputs
             .lock()
@@ -374,7 +380,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         };
 
         if json_messages {
-            emit_build_output(state, &output, id);
+            emit_build_output(state, &output, script_out_dir.as_path(), id);
         }
 
         build_script_outputs

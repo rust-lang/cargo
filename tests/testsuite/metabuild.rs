@@ -711,6 +711,7 @@ fn metabuild_json_artifact() {
   "linked_libs": [],
   "linked_paths": [],
   "package_id": "foo [..]",
+  "out_dir": "[..]",
   "reason": "build-script-executed"
 }
 "#,

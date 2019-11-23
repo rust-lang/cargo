@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::ser;
 use serde::Serialize;
@@ -66,6 +66,7 @@ pub struct BuildScript<'a> {
     pub linked_paths: &'a [String],
     pub cfgs: &'a [String],
     pub env: &'a [(String, String)],
+    pub out_dir: &'a Path,
 }
 
 impl<'a> Message for BuildScript<'a> {
