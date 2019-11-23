@@ -50,6 +50,8 @@ impl fmt::Display for Metadata {
     }
 }
 
+/// Collection of information about the files emitted by the compiler, and the
+/// output directory structure.
 pub struct CompilationFiles<'a, 'cfg> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
@@ -66,6 +68,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
 }
 
+/// Info about a single file emitted by the compiler.
 #[derive(Debug)]
 pub struct OutputFile {
     /// Absolute path to the file that will be produced by the build process.
@@ -227,6 +230,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
+    /// Returns the filenames that the given unit will generate.
     pub(super) fn outputs(
         &self,
         unit: &Unit<'a>,
