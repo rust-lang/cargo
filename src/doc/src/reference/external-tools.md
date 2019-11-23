@@ -209,7 +209,7 @@ may be found in [the chapter on build scripts](build-scripts.md).
     "env": [
         ["SOME_KEY", "some value"],
         ["ANOTHER_KEY", "another value"]
-    ]
+    ],
     /* A path which is used as a value of `OUT_DIR` environmental variable
        when compiling current package.
     */
