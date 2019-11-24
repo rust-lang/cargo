@@ -1,7 +1,6 @@
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::hash_map::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
@@ -14,6 +13,7 @@ use std::sync::Once;
 use std::time::Instant;
 
 use curl::easy::Easy;
+use failure::bail;
 use lazycell::LazyCell;
 use serde::Deserialize;
 use url::Url;
@@ -25,10 +25,8 @@ use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Worksp
 use crate::ops;
 use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
-use crate::util::Filesystem;
-use crate::util::Rustc;
-use crate::util::{paths, validate_package_name, FileLock};
-use crate::util::{IntoUrl, IntoUrlWithBase};
+use crate::util::{paths, validate_package_name};
+use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 
 mod de;
 use de::Deserializer;
@@ -40,12 +38,13 @@ mod key;
 use key::ConfigKey;
 
 mod path;
-pub use path::ConfigRelativePath;
+pub use path::{ConfigRelativePath, PathAndArgs};
+
+mod target;
+pub use target::{TargetCfgConfig, TargetConfig};
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
-///
-/// This struct implements `Default`: all fields can be inferred.
 #[derive(Debug)]
 pub struct Config {
     /// The location of the user's 'home' directory. OS-dependent.
@@ -98,9 +97,17 @@ pub struct Config {
     http_config: LazyCell<CargoHttpConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
+    target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
 }
 
 impl Config {
+    /// Creates a new config instance.
+    ///
+    /// This is typically used for tests or other special cases. `default` is
+    /// preferred otherwise.
+    ///
+    /// This does only minimal initialization. In particular, it does not load
+    /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
         static INIT: Once = Once::new();
@@ -159,9 +166,14 @@ impl Config {
             http_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
+            target_cfgs: LazyCell::new(),
         }
     }
 
+    /// Creates a new Config instance, with all default settings.
+    ///
+    /// This does only minimal initialization. In particular, it does not load
+    /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn default() -> CargoResult<Config> {
         let shell = Shell::new();
         let cwd =
@@ -314,18 +326,18 @@ impl Config {
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         match self.values.borrow_mut() {
             Some(map) => Ok(map),
-            None => failure::bail!("config values not loaded yet"),
+            None => bail!("config values not loaded yet"),
         }
     }
 
     // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            failure::bail!("config values already found")
+            bail!("config values already found")
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => failure::bail!("could not fill values"),
+            Err(_) => bail!("could not fill values"),
         }
     }
 
@@ -352,9 +364,13 @@ impl Config {
         }
     }
 
-    fn get_cv(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+    /// Get a configuration value by key.
+    ///
+    /// This does NOT look at environment variables, the caller is responsible
+    /// for that.
+    fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
         let vals = self.values()?;
-        let mut parts = key.split('.').enumerate();
+        let mut parts = key.parts().enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
             Some(val) => val,
             None => return Ok(None),
@@ -371,12 +387,12 @@ impl Config {
                 | CV::String(_, ref path)
                 | CV::List(_, ref path)
                 | CV::Boolean(_, ref path) => {
-                    let idx = key.split('.').take(i).fold(0, |n, s| n + s.len()) + i - 1;
-                    let key_so_far = &key[..idx];
-                    failure::bail!(
+                    let key_so_far: Vec<&str> = key.parts().take(i).collect();
+                    bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
-                        key_so_far,
+                        // This join doesn't handle quoting properly.
+                        key_so_far.join("."),
                         val.desc(),
                         path.display()
                     )
@@ -418,7 +434,7 @@ impl Config {
         if self.env.keys().any(|k| k.starts_with(&env_pattern)) {
             return true;
         }
-        if let Ok(o_cv) = self.get_cv(key.as_config_key()) {
+        if let Ok(o_cv) = self.get_cv(key) {
             if o_cv.is_some() {
                 return true;
             }
@@ -426,48 +442,50 @@ impl Config {
         false
     }
 
+    /// Get a string config value.
+    ///
+    /// See `get` for more details.
     pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
         self.get::<Option<Value<String>>>(key)
     }
 
+    /// Low-level private method for getting a config value as OptValue<String>.
     fn get_string_priv(&self, key: &ConfigKey) -> Result<OptValue<String>, ConfigError> {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
-                let o_cv = self.get_cv(key.as_config_key())?;
+                let o_cv = self.get_cv(key)?;
                 match o_cv {
                     Some(CV::String(s, path)) => Ok(Some(Value {
                         val: s,
                         definition: Definition::Path(path),
                     })),
-                    Some(cv) => Err(ConfigError::expected(key.as_config_key(), "a string", &cv)),
+                    Some(cv) => Err(ConfigError::expected(key, "a string", &cv)),
                     None => Ok(None),
                 }
             }
         }
     }
 
+    /// Low-level private method for getting a config value as OptValue<bool>.
     fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
-                let o_cv = self.get_cv(key.as_config_key())?;
+                let o_cv = self.get_cv(key)?;
                 match o_cv {
                     Some(CV::Boolean(b, path)) => Ok(Some(Value {
                         val: b,
                         definition: Definition::Path(path),
                     })),
-                    Some(cv) => Err(ConfigError::expected(
-                        key.as_config_key(),
-                        "true/false",
-                        &cv,
-                    )),
+                    Some(cv) => Err(ConfigError::expected(key, "true/false", &cv)),
                     None => Ok(None),
                 }
             }
         }
     }
 
+    /// Get a config value that is expected to be a
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
             v.map(|v| Value {
@@ -487,25 +505,20 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(&self, key: &str) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
-        if let Some(mut val) = self.get_list_or_split_string(key)? {
-            if !val.val.is_empty() {
-                return Ok(Some(Value {
-                    val: (
-                        self.string_to_path(val.val.remove(0), &val.definition),
-                        val.val,
-                    ),
-                    definition: val.definition,
-                }));
-            }
-        }
-        Ok(None)
+    /// Get a list of strings.
+    ///
+    /// DO NOT USE outside of the config module. `pub` will be removed in the
+    /// future.
+    ///
+    /// NOTE: this does **not** support environment variables. Use `get` instead
+    /// if you want that.
+    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
+        let key = ConfigKey::from_str(key);
+        self._get_list(&key)
     }
 
-    // NOTE: this does **not** support environment variables. Use `get` instead
-    // if you want that.
-    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
-        match self.get_cv(key)? {
+    fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
+        match self.get_cv(&key)? {
             Some(CV::List(i, path)) => Ok(Some(Value {
                 val: i,
                 definition: Definition::Path(path),
@@ -515,17 +528,10 @@ impl Config {
         }
     }
 
-    fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
-        match self.get::<Option<Value<StringList>>>(key)? {
-            None => Ok(None),
-            Some(val) => Ok(Some(Value {
-                val: val.val.list,
-                definition: val.definition,
-            })),
-        }
-    }
-
-    pub fn get_table(&self, key: &str) -> CargoResult<OptValue<HashMap<String, CV>>> {
+    /// Low-level method for getting a config value as a `OptValue<HashMap<String, CV>>`.
+    ///
+    /// NOTE: This does not read from env. The caller is responsible for that.
+    fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.get_cv(key)? {
             Some(CV::Table(i, path)) => Ok(Some(Value {
                 val: i,
@@ -536,34 +542,36 @@ impl Config {
         }
     }
 
+    /// Low-level private method for getting a config value as OptValue<i64>.
     fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
         match self.get_env::<i64>(key)? {
             Some(v) => Ok(Some(v)),
-            None => match self.get_cv(key.as_config_key())? {
+            None => match self.get_cv(key)? {
                 Some(CV::Integer(i, path)) => Ok(Some(Value {
                     val: i,
                     definition: Definition::Path(path),
                 })),
-                Some(cv) => Err(ConfigError::expected(
-                    key.as_config_key(),
-                    "an integer",
-                    &cv,
-                )),
+                Some(cv) => Err(ConfigError::expected(key, "an integer", &cv)),
                 None => Ok(None),
             },
         }
     }
 
-    fn expected<T>(&self, ty: &str, key: &str, val: &CV) -> CargoResult<T> {
-        val.expected(ty, key)
+    fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
+        val.expected(ty, &key.to_string())
             .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
 
+    /// Update the Config instance based on settings typically passed in on
+    /// the command-line.
+    ///
+    /// This may also load the config from disk if it hasn't already been
+    /// loaded.
     pub fn configure(
         &mut self,
         verbose: u32,
         quiet: Option<bool>,
-        color: &Option<String>,
+        color: Option<&str>,
         frozen: bool,
         locked: bool,
         offline: bool,
@@ -580,11 +588,11 @@ impl Config {
         }
 
         // Ignore errors in the configuration files.
-        let cfg = self.get::<TermConfig>("term").unwrap_or_default();
+        let term = self.get::<TermConfig>("term").unwrap_or_default();
 
-        let color = color.as_ref().or_else(|| cfg.color.as_ref());
+        let color = color.or_else(|| term.color.as_ref().map(|s| s.as_ref()));
 
-        let verbosity = match (verbose, cfg.verbose, quiet) {
+        let verbosity = match (verbose, term.verbose, quiet) {
             (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
 
             // Command line takes precedence over configuration, so ignore the
@@ -594,7 +602,7 @@ impl Config {
             // Can't pass both at the same time on the command line regardless
             // of configuration.
             (Some(true), _, Some(true)) => {
-                failure::bail!("cannot set both --verbose and --quiet");
+                bail!("cannot set both --verbose and --quiet");
             }
 
             // Can't actually get `Some(false)` as a value from the command
@@ -664,6 +672,8 @@ impl Config {
     }
 
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
+        // This definition path is ignored, this is just a temporary container
+        // representing the entire file.
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
@@ -770,7 +780,7 @@ impl Config {
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
                 Some(index) => self.resolve_registry_index(index)?,
-                None => failure::bail!("No index found for registry: `{}`", registry),
+                None => bail!("No index found for registry: `{}`", registry),
             },
         )
     }
@@ -792,7 +802,7 @@ impl Config {
         let _parsed = index.val.into_url()?;
         let url = index.val.into_url_with_base(Some(&*base))?;
         if url.password().is_some() {
-            failure::bail!("Registry URLs may not contain passwords");
+            bail!("Registry URLs may not contain passwords");
         }
         Ok(url)
     }
@@ -915,6 +925,14 @@ impl Config {
             .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
     }
 
+    /// Returns a list of [target.'cfg()'] tables.
+    ///
+    /// The list is sorted by the table name.
+    pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
+        self.target_cfgs
+            .try_borrow_with(|| target::load_target_cfgs(self))
+    }
+
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
     where
         F: FnMut() -> CargoResult<SourceId>,
@@ -926,13 +944,20 @@ impl Config {
         self.creation_time
     }
 
-    // Retrieves a config variable.
-    //
-    // This supports most serde `Deserialize` types. Examples:
-    //
-    //     let v: Option<u32> = config.get("some.nested.key")?;
-    //     let v: Option<MyStruct> = config.get("some.key")?;
-    //     let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    /// Retrieves a config variable.
+    ///
+    /// This supports most serde `Deserialize` types. Examples:
+    ///
+    /// ```rust,ignore
+    /// let v: Option<u32> = config.get("some.nested.key")?;
+    /// let v: Option<MyStruct> = config.get("some.key")?;
+    /// let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    /// ```
+    ///
+    /// The key may be a dotted key, but this does NOT support TOML key
+    /// quoting. Avoid key components that may have dots. For example,
+    /// `foo.'a.b'.bar" does not work if you try to fetch `foo.'a.b'". You can
+    /// fetch `foo` if it is a map, though.
     pub fn get<'de, T: serde::de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
         let d = Deserializer {
             config: self,
@@ -1035,7 +1060,7 @@ impl ConfigError {
         }
     }
 
-    fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
+    fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
             error: failure::format_err!(
                 "`{}` expected {}, but found a {}",
@@ -1049,18 +1074,14 @@ impl ConfigError {
 
     fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("missing config key `{}`", key.as_config_key()),
+            error: failure::format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
-            error: failure::format_err!(
-                "could not load config key `{}`: {}",
-                key.as_config_key(),
-                self
-            ),
+            error: failure::format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
@@ -1141,7 +1162,7 @@ impl ConfigValue {
                 val.into_iter()
                     .map(|toml| match toml {
                         toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => failure::bail!("expected string but found {} in list", v.type_str()),
+                        v => bail!("expected string but found {} in list", v.type_str()),
                     })
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
@@ -1156,7 +1177,7 @@ impl ConfigValue {
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
             )),
-            v => failure::bail!(
+            v => bail!(
                 "found TOML configuration value of unknown type `{}`",
                 v.type_str()
             ),
@@ -1177,6 +1198,14 @@ impl ConfigValue {
         }
     }
 
+    /// Merge the given value into self.
+    ///
+    /// If `force` is true, primitive (non-container) types will override existing values.
+    /// If false, the original will be kept and the new value ignored.
+    ///
+    /// Container types (tables and arrays) are merged with existing values.
+    ///
+    /// Container and non-container types cannot be mixed.
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
@@ -1281,7 +1310,7 @@ impl ConfigValue {
     }
 
     fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        failure::bail!(
+        bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
             self.desc(),
@@ -1501,7 +1530,19 @@ impl<'de> serde::de::Deserialize<'de> for StringList {
             List(Vec<String>),
         }
 
-        Ok(match Target::deserialize(d)? {
+        // Add some context to the error. Serde gives a vague message for
+        // untagged enums. See https://github.com/serde-rs/serde/issues/773
+        let result = match Target::deserialize(d) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(serde::de::Error::custom(format!(
+                    "failed to deserialize, expected a string or array of strings: {}",
+                    e
+                )))
+            }
+        };
+
+        Ok(match result {
             Target::String(s) => StringList {
                 list: s.split_whitespace().map(str::to_string).collect(),
             },

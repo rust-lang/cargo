@@ -165,7 +165,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         } else {
             None
         },
-        &args.value_of("color").map(|s| s.to_string()),
+        args.value_of("color"),
         args.is_present("frozen"),
         args.is_present("locked"),
         args.is_present("offline"),

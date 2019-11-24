@@ -12,7 +12,7 @@ let git_project = git::new("dep1", |project| {
     project
         .file("Cargo.toml", &basic_manifest("dep1"))
         .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
-}).unwrap();
+});
 
 // Use the `url()` method to get the file url to the new repository.
 let p = project()

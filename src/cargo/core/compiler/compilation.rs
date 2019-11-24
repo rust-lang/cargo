@@ -9,7 +9,7 @@ use semver::Version;
 use super::BuildContext;
 use crate::core::compiler::CompileKind;
 use crate::core::{Edition, Package, PackageId, Target};
-use crate::util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
+use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 pub struct Doctest {
     /// The package being doc-tested.
@@ -289,33 +289,35 @@ fn target_runner(
 
     // try target.{}.runner
     let key = format!("target.{}.runner", target);
-    if let Some(v) = bcx.config.get_path_and_args(&key)? {
-        return Ok(Some(v.val));
+    if let Some(v) = bcx.config.get::<Option<config::PathAndArgs>>(&key)? {
+        let path = v.path.resolve_program(bcx.config);
+        return Ok(Some((path, v.args)));
     }
 
     // try target.'cfg(...)'.runner
-    if let Some(table) = bcx.config.get_table("target")? {
-        let mut matching_runner = None;
-
-        for key in table.val.keys() {
-            if CfgExpr::matches_key(key, bcx.info(kind).cfg()) {
-                let key = format!("target.{}.runner", key);
-                if let Some(runner) = bcx.config.get_path_and_args(&key)? {
-                    // more than one match, error out
-                    if matching_runner.is_some() {
-                        failure::bail!(
-                            "several matching instances of `target.'cfg(..)'.runner` \
-                             in `.cargo/config`"
-                        )
-                    }
-
-                    matching_runner = Some(runner.val);
-                }
-            }
-        }
-
-        return Ok(matching_runner);
+    let target_cfg = bcx.info(kind).cfg();
+    let mut cfgs = bcx
+        .config
+        .target_cfgs()?
+        .iter()
+        .filter_map(|(key, cfg)| cfg.runner.as_ref().map(|runner| (key, runner)))
+        .filter(|(key, _runner)| CfgExpr::matches_key(key, target_cfg));
+    let matching_runner = cfgs.next();
+    if let Some((key, runner)) = cfgs.next() {
+        failure::bail!(
+            "several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`\n\
+             first match `{}` located in {}\n\
+             second match `{}` located in {}",
+            matching_runner.unwrap().0,
+            matching_runner.unwrap().1.definition,
+            key,
+            runner.definition
+        );
     }
-
-    Ok(None)
+    Ok(matching_runner.map(|(_k, runner)| {
+        (
+            runner.val.path.clone().resolve_program(bcx.config),
+            runner.val.args.clone(),
+        )
+    }))
 }

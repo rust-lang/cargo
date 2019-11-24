@@ -113,7 +113,7 @@ fn new_config(env: &[(&str, &str)]) -> Config {
         .configure(
             0,
             None,
-            &None,
+            None,
             false,
             false,
             false,

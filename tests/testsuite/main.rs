@@ -11,6 +11,7 @@
 #[macro_use]
 extern crate cargo_test_macro;
 
+mod advanced_env;
 mod alt_registry;
 mod bad_config;
 mod bad_manifest_path;

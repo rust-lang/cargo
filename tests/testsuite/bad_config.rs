@@ -1,7 +1,7 @@
 //! Tests for some invalid .cargo/config files.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, rustc_host};
 
 #[cargo_test]
 fn bad1() {
@@ -865,7 +865,7 @@ fn bad_source_config1() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr("error: no source URL specified for `source.foo`, need [..]")
+        .with_stderr("error: no source location specified for `source.foo`, need [..]")
         .run();
 }
 
@@ -1100,8 +1100,11 @@ fn bad_source_config6() {
         )
         .build();
 
-    p.cargo("build").with_status(101).with_stderr(
-            "error: expected a string, but found a array for `source.crates-io.replace-with` in [..]",
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] error in [..]/foo/.cargo/config: `source.crates-io.replace-with` \
+             expected a string, but found a array",
         )
         .run();
 }
@@ -1164,7 +1167,41 @@ fn bad_source_config7() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr("error: more than one source URL specified for `source.foo`")
+        .with_stderr("error: more than one source location specified for `source.foo`")
+        .run();
+}
+
+#[cargo_test]
+fn bad_source_config8() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [source.foo]
+            branch = "somebranch"
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] source definition `source.foo` specifies `branch`, \
+             but that requires a `git` key to be specified (in [..]/foo/.cargo/config)",
+        )
         .run();
 }
 
@@ -1278,5 +1315,82 @@ fn warn_semver_metadata() {
         .build();
     p.cargo("check")
         .with_stderr_contains("[WARNING] version requirement `1.0.0+1234` for dependency `bar`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn bad_target_cfg() {
+    // Invalid type in a StringList.
+    //
+    // The error message is a bit unfortunate here. The type here ends up
+    // being essentially Value<Value<StringList>>, and each layer of "Value"
+    // adds some context to the error message. Also, untagged enums provide
+    // strange error messages. Hopefully most users will be able to untangle
+    // the message.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_os = "none"))']
+            runner = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] error in [..]/foo/.cargo/config: \
+could not load config key `target.cfg(not(target_os = \"none\")).runner`: \
+error in [..]/foo/.cargo/config: \
+could not load config key `target.cfg(not(target_os = \"none\")).runner`: \
+failed to deserialize, expected a string or array of strings: \
+data did not match any variant of untagged enum Target
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bad_target_links_overrides() {
+    // Invalid parsing of links overrides.
+    //
+    // This error message is terrible. Nothing in the deserialization path is
+    // using config::Value<>, so nothing is able to report the location. I
+    // think this illustrates how the way things break down with how it
+    // currently is designed with serde.
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}.somelib]
+                rustc-flags = 'foo'
+                "#,
+                rustc_host()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr("[ERROR] Only `-l` and `-L` flags are allowed in target config: `foo`")
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            "[target.{}.somelib]
+            warning = \"foo\"
+            ",
+            rustc_host(),
+        ),
+    );
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr("[ERROR] `warning` is not supported in build script overrides")
         .run();
 }

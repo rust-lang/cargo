@@ -62,7 +62,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             });
         }
 
-        let o_cv = self.config.get_cv(self.key.as_config_key())?;
+        let o_cv = self.config.get_cv(&self.key)?;
         if let Some(cv) = o_cv {
             let res: (Result<V::Value, ConfigError>, PathBuf) = match cv {
                 CV::Integer(i, path) => (visitor.visit_i64(i), path),
@@ -117,7 +117,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         //
         // See more comments in `value.rs` for the protocol used here.
         if name == value::NAME && fields == value::FIELDS {
-            return visitor.visit_map(ValueDeserializer { hits: 0, de: self });
+            return visitor.visit_map(ValueDeserializer::new(self)?);
         }
         visitor.visit_map(ConfigMapAccess::new_struct(self, fields)?)
     }
@@ -169,7 +169,7 @@ struct ConfigMapAccess<'config> {
     next: Option<KeyKind>,
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 enum KeyKind {
     Normal(String),
     CaseSensitive(String),
@@ -178,18 +178,18 @@ enum KeyKind {
 impl<'config> ConfigMapAccess<'config> {
     fn new_map(de: Deserializer<'config>) -> Result<ConfigMapAccess<'config>, ConfigError> {
         let mut set = HashSet::new();
-        if let Some(mut v) = de.config.get_table(de.key.as_config_key())? {
+        if let Some(mut v) = de.config.get_table(&de.key)? {
             // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 set.insert(KeyKind::CaseSensitive(key));
             }
         }
         if de.config.cli_unstable().advanced_env {
-            // `CARGO_PROFILE_DEV_OVERRIDES_`
+            // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_pattern = format!("{}_", de.key.as_env_key());
             for env_key in de.config.env.keys() {
                 if env_key.starts_with(&env_pattern) {
-                    // `CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3`
+                    // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
                     let rest = &env_key[env_pattern.len()..];
                     // `rest = bar_OPT_LEVEL`
                     let part = rest.splitn(2, '_').next().unwrap();
@@ -218,14 +218,14 @@ impl<'config> ConfigMapAccess<'config> {
         // possible fields on this key that we're *supposed* to use, so take
         // this opportunity to warn about any keys that aren't recognized as
         // fields and warn about them.
-        if let Some(mut v) = de.config.get_table(de.key.as_config_key())? {
+        if let Some(mut v) = de.config.get_table(&de.key)? {
             for (t_key, value) in v.val.drain() {
                 if set.contains(&KeyKind::Normal(t_key.to_string())) {
                     continue;
                 }
                 de.config.shell().warn(format!(
                     "unused key `{}.{}` in config file `{}`",
-                    de.key.as_config_key(),
+                    de.key,
                     t_key,
                     value.definition_path().display()
                 ))?;
@@ -284,7 +284,7 @@ struct ConfigSeqAccess {
 impl ConfigSeqAccess {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
-        if let Some(v) = de.config.get_list(de.key.as_config_key())? {
+        if let Some(v) = de.config._get_list(&de.key)? {
             for (s, path) in v.val {
                 res.push((s, Definition::Path(path)));
             }
@@ -353,7 +353,36 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 /// See more comments in `value.rs` for the protocol used here.
 struct ValueDeserializer<'config> {
     hits: u32,
+    definition: Definition,
     de: Deserializer<'config>,
+}
+
+impl<'config> ValueDeserializer<'config> {
+    fn new(de: Deserializer<'config>) -> Result<ValueDeserializer<'config>, ConfigError> {
+        // Figure out where this key is defined.
+        let definition = {
+            let env = de.key.as_env_key();
+            if de.config.env.contains_key(env) {
+                Definition::Environment(env.to_string())
+            } else {
+                match de.config.get_cv(&de.key)? {
+                    Some(val) => Definition::Path(val.definition_path().to_path_buf()),
+                    None => {
+                        return Err(failure::format_err!(
+                            "failed to find definition of `{}`",
+                            de.key
+                        )
+                        .into())
+                    }
+                }
+            }
+        };
+        Ok(ValueDeserializer {
+            hits: 0,
+            definition,
+            de,
+        })
+    }
 }
 
 impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
@@ -379,31 +408,24 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
     where
         V: de::DeserializeSeed<'de>,
     {
-        macro_rules! bail {
-            ($($t:tt)*) => (return Err(failure::format_err!($($t)*).into()))
-        }
-
         // If this is the first time around we deserialize the `value` field
         // which is the actual deserializer
         if self.hits == 1 {
-            return seed.deserialize(self.de.clone());
+            return seed.deserialize(self.de.clone()).map_err(|e| {
+                ConfigError::from(e).with_key_context(&self.de.key, self.definition.clone())
+            });
         }
 
         // ... otherwise we're deserializing the `definition` field, so we need
         // to figure out where the field we just deserialized was defined at.
-        let env = self.de.key.as_env_key();
-        if self.de.config.env.contains_key(env) {
-            return seed.deserialize(Tuple2Deserializer(1i32, env));
+        match &self.definition {
+            Definition::Environment(env) => {
+                seed.deserialize(Tuple2Deserializer(1i32, env.as_ref()))
+            }
+            Definition::Path(path) => {
+                seed.deserialize(Tuple2Deserializer(0i32, path.to_string_lossy()))
+            }
         }
-        let val = match self.de.config.get_cv(self.de.key.as_config_key())? {
-            Some(val) => val,
-            None => bail!("failed to find definition of `{}`", self.de.key),
-        };
-        let path = match val.definition_path().to_str() {
-            Some(s) => s,
-            None => bail!("failed to convert {:?} to utf-8", val.definition_path()),
-        };
-        seed.deserialize(Tuple2Deserializer(0i32, path))
     }
 }
 
