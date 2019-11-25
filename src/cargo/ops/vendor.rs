@@ -240,7 +240,7 @@ fn sync(
     config.insert(
         merged_source_name.to_string(),
         VendorSource::Directory {
-            directory: canonical_destination.to_path_buf(),
+            directory: opts.destination.to_path_buf(),
         },
     );
 
