@@ -1,3 +1,5 @@
+//! Tests for build.rs rerun-if-env-changed.
+
 use std::fs::File;
 
 use cargo_test_support::project;

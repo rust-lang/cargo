@@ -1,3 +1,5 @@
+//! Tests for some invalid .cargo/config files.
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project};
 

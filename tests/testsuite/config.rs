@@ -1,3 +1,5 @@
+//! Tests for config settings.
+
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;

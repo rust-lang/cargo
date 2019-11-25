@@ -1,3 +1,5 @@
+//! Tests for invalid --manifest-path arguments.
+
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {

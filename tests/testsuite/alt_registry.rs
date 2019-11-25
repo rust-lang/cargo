@@ -1,3 +1,5 @@
+//! Tests for alternative registries.
+
 use cargo::util::IntoUrl;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package};

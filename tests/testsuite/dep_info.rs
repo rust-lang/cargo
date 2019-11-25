@@ -1,3 +1,6 @@
+//! Tests for dep-info files. This includes the dep-info file Cargo creates in
+//! the output directory, and the ones stored in the fingerprint.
+
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{

@@ -1,3 +1,5 @@
+//! Tests for local-registry sources.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 

@@ -1,3 +1,5 @@
+//! Tests for caching compiler diagnostics.
+
 use cargo_test_support::{
     clippy_is_available, is_coarse_mtime, process, project, registry::Package, sleep_ms,
 };

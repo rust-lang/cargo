@@ -1,3 +1,5 @@
+//! Tests for the `cargo fix` command.
+
 use std::fs::File;
 
 use cargo_test_support::git;

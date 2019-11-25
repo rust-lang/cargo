@@ -1,3 +1,5 @@
+//! Tests for the `cargo login` command.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;

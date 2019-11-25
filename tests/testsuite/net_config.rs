@@ -1,3 +1,5 @@
+//! Tests for network configuration.
+
 use cargo_test_support::project;
 
 #[cargo_test]

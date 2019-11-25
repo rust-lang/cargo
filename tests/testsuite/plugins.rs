@@ -1,3 +1,5 @@
+//! Tests for rustc plugins.
+
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{is_nightly, rustc_host};
 

@@ -1,3 +1,5 @@
+//! Tests for the `cargo update` command.
+
 use std::fs::File;
 use std::io::prelude::*;
 

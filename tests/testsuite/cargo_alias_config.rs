@@ -1,3 +1,5 @@
+//! Tests for `[alias]` config command aliases.
+
 use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]

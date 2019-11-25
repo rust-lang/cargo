@@ -1,3 +1,5 @@
+//! Tests for the `cargo verify-project` command.
+
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 fn verify_project_success_output() -> String {

@@ -1,3 +1,5 @@
+//! Tests for running multiple `cargo` processes at the same time.
+
 use std::fs::{self, File};
 use std::io::Write;
 use std::net::TcpListener;

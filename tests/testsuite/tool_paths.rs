@@ -1,3 +1,5 @@
+//! Tests for configuration values that point to programs.
+
 use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_lib_manifest, project};
 

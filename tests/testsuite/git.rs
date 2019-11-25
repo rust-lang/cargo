@@ -1,3 +1,5 @@
+//! Tests for git support.
+
 use git2;
 use std::env;
 use std::fs::{self, File};

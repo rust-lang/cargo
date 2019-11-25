@@ -1,3 +1,5 @@
+//! Tests for fingerprinting (rebuild detection).
+
 use filetime::FileTime;
 use std::fs::{self, File, OpenOptions};
 use std::io;

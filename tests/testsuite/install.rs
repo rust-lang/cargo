@@ -1,3 +1,5 @@
+//! Tests for the `cargo install` command.
+
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 

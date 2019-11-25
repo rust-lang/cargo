@@ -1,3 +1,5 @@
+//! Tests for custom cargo commands and other global command features.
+
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;

@@ -1,3 +1,5 @@
+//! Tests for the `cargo package` command.
+
 use std;
 use std::fs::File;
 use std::io::prelude::*;

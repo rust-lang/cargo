@@ -1,3 +1,5 @@
+//! Tests for the `cargo check` command.
+
 use std::fmt::{self, Write};
 
 use cargo_test_support::install::exe;

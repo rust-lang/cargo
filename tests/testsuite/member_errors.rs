@@ -1,3 +1,5 @@
+//! Tests for workspace member errors.
+
 use cargo::core::resolver::ResolveError;
 use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};

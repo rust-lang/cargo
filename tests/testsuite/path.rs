@@ -1,3 +1,5 @@
+//! Tests for `path` dependencies.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 
@@ -1014,33 +1016,4 @@ fn workspace_produces_rlib() {
 
     assert!(p.root().join("target/debug/libtop.rlib").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
-}
-
-#[cargo_test]
-fn thin_lto_works() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "top"
-            version = "0.5.0"
-            authors = []
-
-            [profile.release]
-            lto = 'thin'
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build --release -v")
-        .with_stderr(
-            "\
-[COMPILING] top [..]
-[RUNNING] `rustc [..] -C lto=thin [..]`
-[FINISHED] [..]
-",
-        )
-        .run();
 }

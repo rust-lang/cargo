@@ -1,3 +1,5 @@
+//! Tests for setting custom rustdoc flags.
+
 use cargo_test_support::project;
 
 #[cargo_test]

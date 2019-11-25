@@ -1,3 +1,5 @@
+//! Tests for setting custom rustc flags.
+
 use std::fs::{self, File};
 use std::io::Write;
 

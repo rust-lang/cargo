@@ -1,3 +1,5 @@
+//! Tests for profiles defined in config files.
+
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]

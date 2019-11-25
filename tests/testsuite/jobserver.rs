@@ -1,3 +1,5 @@
+//! Tests for the jobserver protocol.
+
 use std::net::TcpListener;
 use std::process::Command;
 use std::thread;
