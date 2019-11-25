@@ -1,3 +1,5 @@
+//! Tests for the `cargo test` command.
+
 use cargo;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;

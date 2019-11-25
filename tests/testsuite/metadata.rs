@@ -1,3 +1,5 @@
+//! Tests for the `cargo metadata` command.
+
 use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};

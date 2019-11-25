@@ -1,3 +1,7 @@
+//! Tests for cross compiling with --target.
+//!
+//! See `cargo_test_support::cross_compile` for more detail.
+
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 use cargo_test_support::{is_nightly, rustc_host};
 

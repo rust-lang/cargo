@@ -1,3 +1,5 @@
+//! Tests for --offline flag.
+
 use cargo_test_support::{basic_manifest, git, main_file, path2url, project, registry::Package};
 use std::fs;
 

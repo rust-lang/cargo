@@ -1,3 +1,5 @@
+//! Tests for including `Cargo.lock` when publishing/packaging.
+
 use std;
 use std::fs::File;
 

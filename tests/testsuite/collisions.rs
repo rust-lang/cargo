@@ -1,3 +1,8 @@
+//! Tests for when multiple artifacts have the same output filename.
+//! See https://github.com/rust-lang/cargo/issues/6313 for more details.
+//! Ideally these should never happen, but I don't think we'll ever be able to
+//! prevent all collisions.
+
 use cargo_test_support::basic_manifest;
 use cargo_test_support::project;
 use std::env;

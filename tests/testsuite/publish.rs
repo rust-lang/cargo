@@ -1,3 +1,5 @@
+//! Tests for the `cargo publish` command.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 

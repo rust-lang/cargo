@@ -1,6 +1,8 @@
-use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+//! Tests for checking exactly how profiles correspond with each unit. For
+//! example, the `test` profile applying to test targets, but not other
+//! targets, etc.
 
-// These tests try to exercise exactly which profiles are selected for every target.
+use cargo_test_support::{basic_manifest, is_nightly, project, Project};
 
 fn all_target_project() -> Project {
     // This abuses the `codegen-units` setting so that we can verify exactly

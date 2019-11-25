@@ -1,3 +1,5 @@
+//! Tests for public/private dependencies.
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{is_nightly, project};
 

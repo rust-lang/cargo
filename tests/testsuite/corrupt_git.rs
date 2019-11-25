@@ -1,3 +1,5 @@
+//! Tests for corrupt git repos.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

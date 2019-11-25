@@ -1,3 +1,5 @@
+//! Tests for the `cargo init` command.
+
 use cargo_test_support;
 use std::env;
 use std::fs::{self, File};

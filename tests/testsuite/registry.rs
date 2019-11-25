@@ -1,3 +1,5 @@
+//! Tests for normal registry dependencies.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;

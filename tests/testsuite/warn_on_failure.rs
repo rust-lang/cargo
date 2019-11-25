@@ -1,3 +1,5 @@
+//! Tests for whether or not warnings are displayed for build scripts.
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{project, Project};
 

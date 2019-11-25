@@ -1,3 +1,5 @@
+//! Tests for proc-macros.
+
 use cargo_test_support::is_nightly;
 use cargo_test_support::project;
 

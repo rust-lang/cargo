@@ -1,3 +1,5 @@
+//! Tests for `[features]` table.
+
 use std::fs::File;
 use std::io::prelude::*;
 

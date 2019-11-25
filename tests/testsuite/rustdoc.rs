@@ -1,3 +1,5 @@
+//! Tests for the `cargo rustdoc` command.
+
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]

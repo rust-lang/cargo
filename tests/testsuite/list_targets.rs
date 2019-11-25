@@ -1,3 +1,5 @@
+//! Tests for target filter flags giving suggestions on which targets are available.
+
 use cargo_test_support::project;
 
 const EXAMPLE: u8 = 0x1;

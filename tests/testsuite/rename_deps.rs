@@ -1,3 +1,5 @@
+//! Tests for renaming dependencies.
+
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;

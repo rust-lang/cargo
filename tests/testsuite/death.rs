@@ -1,3 +1,5 @@
+//! Tests for ctrl-C handling.
+
 use std::fs;
 use std::io::{self, Read};
 use std::net::TcpListener;

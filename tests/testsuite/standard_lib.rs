@@ -1,3 +1,9 @@
+//! Tests for building the standard library (-Zbuild-std).
+//!
+//! These tests all use a "mock" standard library so that we don't have to
+//! rebuild the real one. There is a separate integration test `build-std`
+//! which builds the real thing, but that should be avoided if possible.
+
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::{is_nightly, paths, project, rustc_host, Execs};

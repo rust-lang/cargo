@@ -1,3 +1,7 @@
+//! Tests for minimal-version resolution.
+//!
+//! Note: Some tests are located in the resolver-tests package.
+
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 

@@ -1,3 +1,5 @@
+//! Tests for the cache file for the rustc version info.
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_manifest, project};
 use std::env;

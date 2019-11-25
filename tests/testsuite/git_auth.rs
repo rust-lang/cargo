@@ -1,3 +1,5 @@
+//! Tests for git authentication.
+
 use std::collections::HashSet;
 use std::io::prelude::*;
 use std::io::BufReader;

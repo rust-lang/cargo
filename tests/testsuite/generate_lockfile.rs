@@ -1,3 +1,5 @@
+//! Tests for the `cargo generate-lockfile` command.
+
 use std::fs::{self, File};
 use std::io::prelude::*;
 

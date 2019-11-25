@@ -1,3 +1,5 @@
+//! Tests for profiles.
+
 use std::env;
 
 use cargo_test_support::project;
@@ -433,6 +435,35 @@ fn debug_0_report() {
 [COMPILING] foo v0.1.0 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]-C debuginfo=0 [..]
 [FINISHED] dev [unoptimized] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn thin_lto_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "top"
+            version = "0.5.0"
+            authors = []
+
+            [profile.release]
+            lto = 'thin'
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr(
+            "\
+[COMPILING] top [..]
+[RUNNING] `rustc [..] -C lto=thin [..]`
+[FINISHED] [..]
 ",
         )
         .run();

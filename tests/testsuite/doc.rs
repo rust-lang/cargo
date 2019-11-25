@@ -1,3 +1,5 @@
+//! Tests for the `cargo doc` command.
+
 use std::fs::{self, File};
 use std::io::Read;
 use std::str;

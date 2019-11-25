@@ -1,3 +1,5 @@
+//! Tests for the `cargo clean` command.
+
 use std::env;
 
 use cargo_test_support::registry::Package;

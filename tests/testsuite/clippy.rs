@@ -1,3 +1,5 @@
+//! Tests for the `cargo clippy` command.
+
 use cargo_test_support::{clippy_is_available, project, registry::Package};
 
 #[cargo_test]
