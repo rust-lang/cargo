@@ -133,10 +133,11 @@ fn emit_build_output(
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
-    let dependencies = cx.dep_targets(unit);
+    let dependencies = cx.unit_deps(unit);
     let build_script_unit = dependencies
         .iter()
-        .find(|d| !d.mode.is_run_custom_build() && d.target.is_custom_build())
+        .find(|d| !d.unit.mode.is_run_custom_build() && d.unit.target.is_custom_build())
+        .map(|d| &d.unit)
         .expect("running a script not depending on an actual script");
     let script_dir = cx.files().build_script_dir(build_script_unit);
     let script_out_dir = cx.files().build_script_out_dir(unit);
@@ -225,21 +226,19 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     //
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
-    let lib_deps = {
-        dependencies
-            .iter()
-            .filter_map(|unit| {
-                if unit.mode.is_run_custom_build() {
-                    Some((
-                        unit.pkg.manifest().links().unwrap().to_string(),
-                        unit.pkg.package_id(),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
-    };
+    let lib_deps = dependencies
+        .iter()
+        .filter_map(|dep| {
+            if dep.unit.mode.is_run_custom_build() {
+                Some((
+                    dep.unit.pkg.manifest().links().unwrap().to_string(),
+                    dep.unit.pkg.package_id(),
+                ))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
     let pkg_name = unit.pkg.to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let id = unit.pkg.package_id();
@@ -563,15 +562,15 @@ fn prepare_metabuild<'a, 'cfg>(
     deps: &[String],
 ) -> CargoResult<()> {
     let mut output = Vec::new();
-    let available_deps = cx.dep_targets(unit);
+    let available_deps = cx.unit_deps(unit);
     // Filter out optional dependencies, and look up the actual lib name.
     let meta_deps: Vec<_> = deps
         .iter()
         .filter_map(|name| {
             available_deps
                 .iter()
-                .find(|u| u.pkg.name().as_str() == name.as_str())
-                .map(|dep| dep.target.crate_name())
+                .find(|d| d.unit.pkg.name().as_str() == name.as_str())
+                .map(|d| d.unit.target.crate_name())
         })
         .collect();
     for dep in &meta_deps {
@@ -669,7 +668,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut dependencies = cx.dep_targets(unit);
+        let mut dependencies: Vec<Unit<'_>> = cx.unit_deps(unit).iter().map(|d| d.unit).collect();
         dependencies.sort_by_key(|u| u.pkg.package_id());
 
         for dep_unit in dependencies.iter() {
