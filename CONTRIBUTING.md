@@ -85,8 +85,8 @@ working on.
 * [Commit as you go][githelp].
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
-sandbox-environment. The internal module `testsuite/support` provides a vast amount
-of helpers to minimize boilerplate. See [`testsuite/support/mod.rs`] for an
+sandbox-environment. The internal module `crates/cargo-test-support` provides a vast amount
+of helpers to minimize boilerplate. See [`crates/cargo-test-support/src/lib.rs`] for an
 introduction to writing tests.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
 installed locally, install them using the instructions returned by
@@ -197,6 +197,6 @@ adding labels to triage issues:
 [I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [Discord]: https://discordapp.com/invite/rust-lang
-[`testsuite/support/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/support/mod.rs
+[`crates/cargo-test-support/src/lib.rs`]: https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs
 [irlo]: https://internals.rust-lang.org/
 [subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
