@@ -28,6 +28,12 @@ pub fn cli() -> App {
                 .multiple(true),
         )
         .arg(
+            Arg::with_name("explicit-version")
+                .short("-x")
+                .long("explicit-version")
+                .help("Always include version in subdir name"),
+        )
+        .arg(
             Arg::with_name("no-merge-sources")
                 .long("no-merge-sources")
                 .hidden(true),
@@ -40,12 +46,6 @@ pub fn cli() -> App {
         .arg(
             Arg::with_name("only-git-deps")
                 .long("only-git-deps")
-                .hidden(true),
-        )
-        .arg(
-            Arg::with_name("explicit-version")
-                .short("-x")
-                .long("explicit-version")
                 .hidden(true),
         )
         .arg(
@@ -85,8 +85,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some("--relative-path")
     } else if args.is_present("only-git-deps") {
         Some("--only-git-deps")
-    } else if args.is_present("explicit-version") {
-        Some("--explicit-version")
     } else if args.is_present("disallow-duplicates") {
         Some("--disallow-duplicates")
     } else {
@@ -116,6 +114,7 @@ https://github.com/rust-lang/cargo/issues/new
         &ops::VendorOptions {
             no_delete: args.is_present("no-delete"),
             destination: &path,
+            explicit_version: args.is_present("explicit-version"),
             extra: args
                 .values_of_os("tomls")
                 .unwrap_or_default()
