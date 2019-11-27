@@ -57,6 +57,14 @@ Don\(cqt delete the "vendor" directory when vendoring, but rather keep all
 existing contents of the vendor directory
 .RE
 .sp
+\fB\-\-explicit\-version\fP
+.RS 4
+Normally versions are only added to disambiguate multiple versions of the same package.
+This option causes all directories in the "vendor" directory to be explicitly versioned,
+which makes it easier to track the history of vendored packages over time, and can help
+with the performance of re-vendoring when only a subset of the packages have changed.
+.RE
+.sp
 \fB\-\-respect\-source\-config\fP
 .RS 4
 Instead of ignoring \fB[source]\fP configuration by default in \fB.cargo/config\fP
