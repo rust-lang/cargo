@@ -1,7 +1,7 @@
 //! Tests for config settings.
 
 use std::borrow::Borrow;
-use std::collections;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::os;
@@ -10,8 +10,61 @@ use std::path::Path;
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo::CargoResult;
 use cargo_test_support::{paths, project, t};
 use serde::Deserialize;
+
+/// Helper for constructing a `Config` object.
+pub struct ConfigBuilder {
+    env: HashMap<String, String>,
+    unstable: Vec<String>,
+}
+
+impl ConfigBuilder {
+    pub fn new() -> ConfigBuilder {
+        ConfigBuilder {
+            env: HashMap::new(),
+            unstable: Vec::new(),
+        }
+    }
+
+    /// Passes a `-Z` flag.
+    pub fn unstable_flag(&mut self, s: impl Into<String>) -> &mut Self {
+        self.unstable.push(s.into());
+        self
+    }
+
+    /// Sets an environment variable.
+    pub fn env(&mut self, key: impl Into<String>, val: impl Into<String>) -> &mut Self {
+        self.env.insert(key.into(), val.into());
+        self
+    }
+
+    /// Creates the `Config`.
+    pub fn build(&self) -> Config {
+        self.build_err().unwrap()
+    }
+
+    /// Creates the `Config`, returning a Result.
+    pub fn build_err(&self) -> CargoResult<Config> {
+        if !self.unstable.is_empty() {
+            // This is unfortunately global. Some day that should be fixed.
+            enable_nightly_features();
+        }
+        let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
+        let shell = Shell::from_write(output);
+        let cwd = paths::root();
+        let homedir = paths::home();
+        let mut config = Config::new(shell, cwd, homedir);
+        config.set_env(self.env.clone());
+        config.configure(0, None, None, false, false, false, &None, &self.unstable)?;
+        Ok(config)
+    }
+}
+
+fn new_config() -> Config {
+    ConfigBuilder::new().build()
+}
 
 fn lines_match(a: &str, b: &str) -> bool {
     // Perform a small amount of normalization for filesystem paths before we
@@ -47,7 +100,7 @@ fn read_env_vars_for_config() {
     p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
 }
 
-fn write_config(config: &str) {
+pub fn write_config(config: &str) {
     let path = paths::root().join(".cargo/config");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, config).unwrap();
@@ -97,33 +150,6 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
-fn new_config(env: &[(&str, &str)]) -> Config {
-    enable_nightly_features(); // -Z advanced-env
-    let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
-    let shell = Shell::from_write(output);
-    let cwd = paths::root();
-    let homedir = paths::home();
-    let env = env
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect();
-    let mut config = Config::new(shell, cwd, homedir);
-    config.set_env(env);
-    config
-        .configure(
-            0,
-            None,
-            None,
-            false,
-            false,
-            false,
-            &None,
-            &["advanced-env".into()],
-        )
-        .unwrap();
-    config
-}
-
 fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
@@ -148,7 +174,7 @@ f1 = 123
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct S {
@@ -156,7 +182,7 @@ f1 = 123
     }
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(123) });
-    let config = new_config(&[("CARGO_S_F1", "456")]);
+    let config = ConfigBuilder::new().env("CARGO_S_F1", "456").build();
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(456) });
 }
@@ -170,7 +196,7 @@ f1 = 1
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 }
@@ -192,7 +218,7 @@ f1 = 1
 
     symlink_config_to_config_toml();
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
@@ -227,7 +253,7 @@ f1 = 2
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     // It should use the value from the one without the extension for
     // backwards compatibility.
@@ -257,7 +283,10 @@ unused = 456
 ",
     );
 
-    let config = new_config(&[("CARGO_S_UNUSED2", "1"), ("CARGO_S2_UNUSED", "2")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_S_UNUSED2", "1")
+        .env("CARGO_S2_UNUSED", "2")
+        .build();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct S {
@@ -314,16 +343,17 @@ lto = false
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5"),
-        ("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11"),
-        ("CARGO_PROFILE_DEV_PACKAGE_env_CODEGEN_UNITS", "13"),
-        ("CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL", "2"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5")
+        .env("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11")
+        .env("CARGO_PROFILE_DEV_PACKAGE_env_CODEGEN_UNITS", "13")
+        .env("CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL", "2")
+        .build();
 
     // TODO: don't use actual `tomlprofile`.
     let p: toml::TomlProfile = config.get("profile.dev").unwrap();
-    let mut packages = collections::BTreeMap::new();
+    let mut packages = BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
     let o_profile = toml::TomlProfile {
         opt_level: Some(toml::TomlOptLevel("2".to_string())),
@@ -384,11 +414,12 @@ c = ['c']
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_ENVB", "false"),
-        ("CARGO_C", "['d']"),
-        ("CARGO_ENVL", "['a', 'b']"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_ENVB", "false")
+        .env("CARGO_C", "['d']")
+        .env("CARGO_ENVL", "['a', 'b']")
+        .build();
 
     let a = config.get::<VSOB>("a").unwrap();
     match a {
@@ -426,7 +457,7 @@ opt-level = 'foo'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
@@ -435,7 +466,9 @@ opt-level = 'foo'
          must be an integer, `z`, or `s`, but found: foo",
     );
 
-    let config = new_config(&[("CARGO_PROFILE_DEV_OPT_LEVEL", "asdf")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_PROFILE_DEV_OPT_LEVEL", "asdf")
+        .build();
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
@@ -457,22 +490,23 @@ asdf = 3
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_NEST_foo_f2", "3"),
-        ("CARGO_NESTE_foo_f1", "1"),
-        ("CARGO_NESTE_foo_f2", "3"),
-        ("CARGO_NESTE_bar_asdf", "3"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_NEST_foo_f2", "3")
+        .env("CARGO_NESTE_foo_f1", "1")
+        .env("CARGO_NESTE_foo_f2", "3")
+        .env("CARGO_NESTE_bar_asdf", "3")
+        .build();
 
-    type Nested = collections::HashMap<String, collections::HashMap<String, u8>>;
+    type Nested = HashMap<String, HashMap<String, u8>>;
 
     let n: Nested = config.get("nest").unwrap();
-    let mut expected = collections::HashMap::new();
-    let mut foo = collections::HashMap::new();
+    let mut expected = HashMap::new();
+    let mut foo = HashMap::new();
     foo.insert("f1".to_string(), 1);
     foo.insert("f2".to_string(), 3);
     expected.insert("foo".to_string(), foo);
-    let mut bar = collections::HashMap::new();
+    let mut bar = HashMap::new();
     bar.insert("asdf".to_string(), 3);
     expected.insert("bar".to_string(), bar);
     assert_eq!(n, expected);
@@ -492,7 +526,10 @@ big = 123456789
 ",
     );
 
-    let config = new_config(&[("CARGO_E_S", "asdf"), ("CARGO_E_BIG", "123456789")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_E_S", "asdf")
+        .env("CARGO_E_BIG", "123456789")
+        .build();
     assert_error(
         config.get::<i64>("foo").unwrap_err(),
         "missing config key `foo`",
@@ -545,7 +582,7 @@ f1 = 1
 ",
     );
 
-    let config = new_config(&[("CARGO_BAR_ASDF", "3")]);
+    let config = ConfigBuilder::new().env("CARGO_BAR_ASDF", "3").build();
 
     assert_eq!(config.get::<Option<i32>>("a").unwrap(), None);
     assert_eq!(config.get::<Option<i32>>("a.b").unwrap(), None);
@@ -557,7 +594,7 @@ f1 = 1
 #[cargo_test]
 fn config_bad_toml() {
     write_config("asdf");
-    let config = new_config(&[]);
+    let config = new_config();
     assert_error(
         config.get::<i32>("foo").unwrap_err(),
         "\
@@ -595,19 +632,20 @@ l = ['y']
 
     type L = Vec<String>;
 
-    let config = new_config(&[
-        ("CARGO_L4", "['three', 'four']"),
-        ("CARGO_L5", "['a']"),
-        ("CARGO_ENV_EMPTY", "[]"),
-        ("CARGO_ENV_BLANK", ""),
-        ("CARGO_ENV_NUM", "1"),
-        ("CARGO_ENV_NUM_LIST", "[1]"),
-        ("CARGO_ENV_TEXT", "asdf"),
-        ("CARGO_LEPAIR", "['a', 'b']"),
-        ("CARGO_NESTED2_L", "['z']"),
-        ("CARGO_NESTEDE_L", "['env']"),
-        ("CARGO_BAD_ENV", "[zzz]"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_L4", "['three', 'four']")
+        .env("CARGO_L5", "['a']")
+        .env("CARGO_ENV_EMPTY", "[]")
+        .env("CARGO_ENV_BLANK", "")
+        .env("CARGO_ENV_NUM", "1")
+        .env("CARGO_ENV_NUM_LIST", "[1]")
+        .env("CARGO_ENV_TEXT", "asdf")
+        .env("CARGO_LEPAIR", "['a', 'b']")
+        .env("CARGO_NESTED2_L", "['z']")
+        .env("CARGO_NESTEDE_L", "['env']")
+        .env("CARGO_BAD_ENV", "[zzz]")
+        .build();
 
     assert_eq!(config.get::<L>("unset").unwrap(), vec![] as Vec<String>);
     assert_eq!(config.get::<L>("l1").unwrap(), vec![] as Vec<String>);
@@ -708,7 +746,10 @@ ns2 = 456
 ",
     );
 
-    let config = new_config(&[("CARGO_NSE", "987"), ("CARGO_NS2", "654")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_NSE", "987")
+        .env("CARGO_NS2", "654")
+        .build();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     #[serde(transparent)]
@@ -734,7 +775,10 @@ abs = '{}'
         paths::home().display(),
     ));
 
-    let config = new_config(&[("CARGO_EPATH", "a/b"), ("CARGO_P3", "d/e")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_EPATH", "a/b")
+        .env("CARGO_P3", "d/e")
+        .build();
 
     assert_eq!(
         config
@@ -783,11 +827,11 @@ i64max = 9223372036854775807
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_EPOS", "123456789"),
-        ("CARGO_ENEG", "-1"),
-        ("CARGO_EI64MAX", "9223372036854775807"),
-    ]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_EPOS", "123456789")
+        .env("CARGO_ENEG", "-1")
+        .env("CARGO_EI64MAX", "9223372036854775807")
+        .build();
 
     assert_eq!(
         config.get::<u64>("i64max").unwrap(),
@@ -841,7 +885,7 @@ hello = 'world'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -858,7 +902,7 @@ ssl-version = 'tlsv1.2'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     let a = config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -880,7 +924,7 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     let a = config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -907,9 +951,24 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
-    assert!(config.get::<SslVersionConfig>("http.ssl-version").is_err());
+    assert_error(
+        config
+            .get::<SslVersionConfig>("http.ssl-version")
+            .unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]/.cargo/config`
+
+Caused by:
+  could not parse input as TOML
+
+Caused by:
+  dotted key attempted to extend non-table type at line 2 column 15",
+    );
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
