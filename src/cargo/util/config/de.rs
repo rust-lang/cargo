@@ -5,7 +5,6 @@ use crate::util::config::{Config, ConfigError, ConfigKey};
 use crate::util::config::{ConfigValue as CV, Definition, Value};
 use serde::{de, de::IntoDeserializer};
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::vec;
 
 /// Serde deserializer used to convert config values to a target type using
@@ -64,18 +63,18 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
 
         let o_cv = self.config.get_cv(&self.key)?;
         if let Some(cv) = o_cv {
-            let res: (Result<V::Value, ConfigError>, PathBuf) = match cv {
-                CV::Integer(i, path) => (visitor.visit_i64(i), path),
-                CV::String(s, path) => (visitor.visit_string(s), path),
-                CV::List(_, path) => (visitor.visit_seq(ConfigSeqAccess::new(self.clone())?), path),
-                CV::Table(_, path) => (
+            let res: (Result<V::Value, ConfigError>, Definition) = match cv {
+                CV::Integer(i, def) => (visitor.visit_i64(i), def),
+                CV::String(s, def) => (visitor.visit_string(s), def),
+                CV::List(_, def) => (visitor.visit_seq(ConfigSeqAccess::new(self.clone())?), def),
+                CV::Table(_, def) => (
                     visitor.visit_map(ConfigMapAccess::new_map(self.clone())?),
-                    path,
+                    def,
                 ),
-                CV::Boolean(b, path) => (visitor.visit_bool(b), path),
+                CV::Boolean(b, def) => (visitor.visit_bool(b), def),
             };
-            let (res, path) = res;
-            return res.map_err(|e| e.with_key_context(&self.key, Definition::Path(path)));
+            let (res, def) = res;
+            return res.map_err(|e| e.with_key_context(&self.key, def));
         }
         Err(ConfigError::missing(&self.key))
     }
@@ -224,10 +223,10 @@ impl<'config> ConfigMapAccess<'config> {
                     continue;
                 }
                 de.config.shell().warn(format!(
-                    "unused key `{}.{}` in config file `{}`",
+                    "unused key `{}.{}` in config `{}`",
                     de.key,
                     t_key,
-                    value.definition_path().display()
+                    value.definition()
                 ))?;
             }
         }
@@ -285,9 +284,7 @@ impl ConfigSeqAccess {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
         if let Some(v) = de.config._get_list(&de.key)? {
-            for (s, path) in v.val {
-                res.push((s, Definition::Path(path)));
-            }
+            res.extend(v.val);
         }
 
         if de.config.cli_unstable().advanced_env {
@@ -366,7 +363,7 @@ impl<'config> ValueDeserializer<'config> {
                 Definition::Environment(env.to_string())
             } else {
                 match de.config.get_cv(&de.key)? {
-                    Some(val) => Definition::Path(val.definition_path().to_path_buf()),
+                    Some(val) => val.definition().clone(),
                     None => {
                         return Err(failure::format_err!(
                             "failed to find definition of `{}`",

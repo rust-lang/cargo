@@ -305,7 +305,7 @@ unused = 456
     let path = paths::root().join("shell.out");
     let output = fs::read_to_string(path).unwrap();
     let expected = "\
-warning: unused key `S.unused` in config file `[..]/.cargo/config`
+warning: unused key `S.unused` in config `[..]/.cargo/config`
 ";
     if !lines_match(expected, &output) {
         panic!(

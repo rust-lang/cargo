@@ -376,17 +376,17 @@ impl Config {
             None => return Ok(None),
         };
         for (i, part) in parts {
-            match *val {
-                CV::Table(ref map, _) => {
+            match val {
+                CV::Table(map, _) => {
                     val = match map.get(part) {
                         Some(val) => val,
                         None => return Ok(None),
                     }
                 }
-                CV::Integer(_, ref path)
-                | CV::String(_, ref path)
-                | CV::List(_, ref path)
-                | CV::Boolean(_, ref path) => {
+                CV::Integer(_, def)
+                | CV::String(_, def)
+                | CV::List(_, def)
+                | CV::Boolean(_, def) => {
                     let key_so_far: Vec<&str> = key.parts().take(i).collect();
                     bail!(
                         "expected table for configuration key `{}`, \
@@ -394,7 +394,7 @@ impl Config {
                         // This join doesn't handle quoting properly.
                         key_so_far.join("."),
                         val.desc(),
-                        path.display()
+                        def
                     )
                 }
             }
@@ -456,10 +456,7 @@ impl Config {
             None => {
                 let o_cv = self.get_cv(key)?;
                 match o_cv {
-                    Some(CV::String(s, path)) => Ok(Some(Value {
-                        val: s,
-                        definition: Definition::Path(path),
-                    })),
+                    Some(CV::String(val, definition)) => Ok(Some(Value { val, definition })),
                     Some(cv) => Err(ConfigError::expected(key, "a string", &cv)),
                     None => Ok(None),
                 }
@@ -474,10 +471,7 @@ impl Config {
             None => {
                 let o_cv = self.get_cv(key)?;
                 match o_cv {
-                    Some(CV::Boolean(b, path)) => Ok(Some(Value {
-                        val: b,
-                        definition: Definition::Path(path),
-                    })),
+                    Some(CV::Boolean(val, definition)) => Ok(Some(Value { val, definition })),
                     Some(cv) => Err(ConfigError::expected(key, "true/false", &cv)),
                     None => Ok(None),
                 }
@@ -512,17 +506,14 @@ impl Config {
     ///
     /// NOTE: this does **not** support environment variables. Use `get` instead
     /// if you want that.
-    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
+    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
         let key = ConfigKey::from_str(key);
         self._get_list(&key)
     }
 
-    fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
+    fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
         match self.get_cv(&key)? {
-            Some(CV::List(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
-            })),
+            Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("list", key, &val),
             None => Ok(None),
         }
@@ -533,10 +524,7 @@ impl Config {
     /// NOTE: This does not read from env. The caller is responsible for that.
     fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.get_cv(key)? {
-            Some(CV::Table(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
-            })),
+            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("table", key, &val),
             None => Ok(None),
         }
@@ -547,10 +535,7 @@ impl Config {
         match self.get_env::<i64>(key)? {
             Some(v) => Ok(Some(v)),
             None => match self.get_cv(key)? {
-                Some(CV::Integer(i, path)) => Ok(Some(Value {
-                    val: i,
-                    definition: Definition::Path(path),
-                })),
+                Some(CV::Integer(val, definition)) => Ok(Some(Value { val, definition })),
                 Some(cv) => Err(ConfigError::expected(key, "an integer", &cv)),
                 None => Ok(None),
             },
@@ -674,7 +659,7 @@ impl Config {
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
-        let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
+        let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
@@ -685,13 +670,14 @@ impl Config {
             let toml = cargo_toml::parse(&contents, path, self).chain_err(|| {
                 format!("could not parse TOML configuration in `{}`", path.display())
             })?;
-            let value = CV::from_toml(path, toml).chain_err(|| {
-                format!(
-                    "failed to load TOML configuration from `{}`",
-                    path.display()
-                )
-            })?;
-            cfg.merge(value)
+            let value =
+                CV::from_toml(Definition::Path(path.to_path_buf()), toml).chain_err(|| {
+                    format!(
+                        "failed to load TOML configuration from `{}`",
+                        path.display()
+                    )
+                })?;
+            cfg.merge(value, false)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
         })
@@ -832,33 +818,32 @@ impl Config {
             )
         })?;
 
-        let mut value = CV::from_toml(&credentials, toml).chain_err(|| {
-            format!(
-                "failed to load TOML configuration from `{}`",
-                credentials.display()
-            )
-        })?;
+        let mut value =
+            CV::from_toml(Definition::Path(credentials.clone()), toml).chain_err(|| {
+                format!(
+                    "failed to load TOML configuration from `{}`",
+                    credentials.display()
+                )
+            })?;
 
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
-            let value = match value {
-                CV::Table(ref mut value, _) => value,
+            let (value_map, def) = match value {
+                CV::Table(ref mut value, ref def) => (value, def),
                 _ => unreachable!(),
             };
 
-            if let Some(token) = value.remove("token") {
-                if let Vacant(entry) = value.entry("registry".into()) {
+            if let Some(token) = value_map.remove("token") {
+                if let Vacant(entry) = value_map.entry("registry".into()) {
                     let mut map = HashMap::new();
                     map.insert("token".into(), token);
-                    let table = CV::Table(map, PathBuf::from("."));
+                    let table = CV::Table(map, def.clone());
                     entry.insert(table);
                 }
             }
         }
 
-        // We want value to override `cfg`, so swap these.
-        mem::swap(cfg, &mut value);
-        cfg.merge(value)?;
+        cfg.merge(value, true)?;
 
         Ok(())
     }
@@ -1068,7 +1053,7 @@ impl ConfigError {
                 expected,
                 found.desc()
             ),
-            definition: Some(Definition::Path(found.definition_path().to_path_buf())),
+            definition: Some(found.definition().clone()),
         }
     }
 
@@ -1124,58 +1109,58 @@ impl From<failure::Error> for ConfigError {
 
 #[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
-    Integer(i64, PathBuf),
-    String(String, PathBuf),
-    List(Vec<(String, PathBuf)>, PathBuf),
-    Table(HashMap<String, ConfigValue>, PathBuf),
-    Boolean(bool, PathBuf),
+    Integer(i64, Definition),
+    String(String, Definition),
+    List(Vec<(String, Definition)>, Definition),
+    Table(HashMap<String, ConfigValue>, Definition),
+    Boolean(bool, Definition),
 }
 
 impl fmt::Debug for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            CV::Integer(i, ref path) => write!(f, "{} (from {})", i, path.display()),
-            CV::Boolean(b, ref path) => write!(f, "{} (from {})", b, path.display()),
-            CV::String(ref s, ref path) => write!(f, "{} (from {})", s, path.display()),
-            CV::List(ref list, ref path) => {
+        match self {
+            CV::Integer(i, def) => write!(f, "{} (from {})", i, def),
+            CV::Boolean(b, def) => write!(f, "{} (from {})", b, def),
+            CV::String(s, def) => write!(f, "{} (from {})", s, def),
+            CV::List(list, def) => {
                 write!(f, "[")?;
-                for (i, &(ref s, ref path)) in list.iter().enumerate() {
+                for (i, (s, def)) in list.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{} (from {})", s, path.display())?;
+                    write!(f, "{} (from {})", s, def)?;
                 }
-                write!(f, "] (from {})", path.display())
+                write!(f, "] (from {})", def)
             }
-            CV::Table(ref table, _) => write!(f, "{:?}", table),
+            CV::Table(table, _) => write!(f, "{:?}", table),
         }
     }
 }
 
 impl ConfigValue {
-    fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
+    fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
-            toml::Value::String(val) => Ok(CV::String(val, path.to_path_buf())),
-            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.to_path_buf())),
-            toml::Value::Integer(i) => Ok(CV::Integer(i, path.to_path_buf())),
+            toml::Value::String(val) => Ok(CV::String(val, def)),
+            toml::Value::Boolean(b) => Ok(CV::Boolean(b, def)),
+            toml::Value::Integer(i) => Ok(CV::Integer(i, def)),
             toml::Value::Array(val) => Ok(CV::List(
                 val.into_iter()
                     .map(|toml| match toml {
-                        toml::Value::String(val) => Ok((val, path.to_path_buf())),
+                        toml::Value::String(val) => Ok((val, def.clone())),
                         v => bail!("expected string but found {} in list", v.type_str()),
                     })
                     .collect::<CargoResult<_>>()?,
-                path.to_path_buf(),
+                def,
             )),
             toml::Value::Table(val) => Ok(CV::Table(
                 val.into_iter()
                     .map(|(key, value)| {
-                        let value = CV::from_toml(path, value)
+                        let value = CV::from_toml(def.clone(), value)
                             .chain_err(|| format!("failed to parse key `{}`", key))?;
                         Ok((key, value))
                     })
                     .collect::<CargoResult<_>>()?,
-                path.to_path_buf(),
+                def,
             )),
             v => bail!(
                 "found TOML configuration value of unknown type `{}`",
@@ -1206,7 +1191,7 @@ impl ConfigValue {
     /// Container types (tables and arrays) are merged with existing values.
     ///
     /// Container and non-container types cannot be mixed.
-    fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
+    fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
                 let new = mem::replace(new, Vec::new());
@@ -1217,17 +1202,15 @@ impl ConfigValue {
                 for (key, value) in new {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
-                            let path = value.definition_path().to_path_buf();
+                            let new_def = value.definition().clone();
                             let entry = entry.get_mut();
-                            entry.merge(value).chain_err(|| {
+                            entry.merge(value, force).chain_err(|| {
                                 format!(
                                     "failed to merge key `{}` between \
-                                     files:\n  \
-                                     file 1: {}\n  \
-                                     file 2: {}",
+                                     {} and {}",
                                     key,
-                                    entry.definition_path().display(),
-                                    path.display()
+                                    entry.definition(),
+                                    new_def,
                                 )
                             })?;
                         }
@@ -1248,43 +1231,47 @@ impl ConfigValue {
                     found.desc()
                 )));
             }
-            _ => {}
+            (old, mut new) => {
+                if force || new.definition().is_higher_priority(old.definition()) {
+                    mem::swap(old, &mut new);
+                }
+            }
         }
 
         Ok(())
     }
 
-    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Path)> {
-        match *self {
-            CV::Integer(i, ref p) => Ok((i, p)),
+    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Definition)> {
+        match self {
+            CV::Integer(i, def) => Ok((*i, def)),
             _ => self.expected("integer", key),
         }
     }
 
-    pub fn string(&self, key: &str) -> CargoResult<(&str, &Path)> {
-        match *self {
-            CV::String(ref s, ref p) => Ok((s, p)),
+    pub fn string(&self, key: &str) -> CargoResult<(&str, &Definition)> {
+        match self {
+            CV::String(s, def) => Ok((s, def)),
             _ => self.expected("string", key),
         }
     }
 
-    pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
-        match *self {
-            CV::Table(ref table, ref p) => Ok((table, p)),
+    pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Definition)> {
+        match self {
+            CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
         }
     }
 
-    pub fn list(&self, key: &str) -> CargoResult<&[(String, PathBuf)]> {
-        match *self {
-            CV::List(ref list, _) => Ok(list),
+    pub fn list(&self, key: &str) -> CargoResult<&[(String, Definition)]> {
+        match self {
+            CV::List(list, _) => Ok(list),
             _ => self.expected("list", key),
         }
     }
 
-    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Path)> {
-        match *self {
-            CV::Boolean(b, ref p) => Ok((b, p)),
+    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Definition)> {
+        match self {
+            CV::Boolean(b, def) => Ok((*b, def)),
             _ => self.expected("bool", key),
         }
     }
@@ -1299,13 +1286,13 @@ impl ConfigValue {
         }
     }
 
-    pub fn definition_path(&self) -> &Path {
-        match *self {
-            CV::Boolean(_, ref p)
-            | CV::Integer(_, ref p)
-            | CV::String(_, ref p)
-            | CV::List(_, ref p)
-            | CV::Table(_, ref p) => p,
+    pub fn definition(&self) -> &Definition {
+        match self {
+            CV::Boolean(_, def)
+            | CV::Integer(_, def)
+            | CV::String(_, def)
+            | CV::List(_, def)
+            | CV::Table(_, def) => def,
         }
     }
 
@@ -1315,7 +1302,7 @@ impl ConfigValue {
             wanted,
             self.desc(),
             key,
-            self.definition_path().display()
+            self.definition()
         )
     }
 }
@@ -1345,17 +1332,17 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let (key, mut value) = {
         let key = "token".to_string();
-        let value = ConfigValue::String(token, file.path().to_path_buf());
+        let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
         let mut map = HashMap::new();
         map.insert(key, value);
-        let table = CV::Table(map, file.path().to_path_buf());
+        let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
         if let Some(registry) = registry.clone() {
             let mut map = HashMap::new();
             map.insert(registry, table);
             (
                 "registries".into(),
-                CV::Table(map, file.path().to_path_buf()),
+                CV::Table(map, Definition::Path(file.path().to_path_buf())),
             )
         } else {
             ("registry".into(), table)

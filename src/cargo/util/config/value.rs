@@ -51,7 +51,7 @@ pub(crate) const DEFINITION_FIELD: &str = "$__cargo_private_definition";
 pub(crate) const NAME: &str = "$__cargo_private_Value";
 pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub enum Definition {
     Path(PathBuf),
     Environment(String),
@@ -64,6 +64,14 @@ impl Definition {
             Definition::Environment(_) => config.cwd(),
         }
     }
+
+    pub fn is_higher_priority(&self, other: &Definition) -> bool {
+        // environment > path
+        match (self, other) {
+            (Definition::Environment(_), Definition::Path(_)) => true,
+            _ => false,
+        }
+    }
 }
 
 impl PartialEq for Definition {
@@ -71,7 +79,7 @@ impl PartialEq for Definition {
         // configuration values are equivalent no matter where they're defined,
         // but they need to be defined in the same location. For example if
         // they're defined in the environment that's different than being
-        // defined in a file due to path interepretations.
+        // defined in a file due to path interpretations.
         mem::discriminant(self) == mem::discriminant(other)
     }
 }

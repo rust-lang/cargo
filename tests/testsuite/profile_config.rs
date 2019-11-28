@@ -56,11 +56,11 @@ fn profile_config_validate_warnings() {
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
-[WARNING] unused key `profile.asdf` in config file `[..].cargo/config`
-[WARNING] unused key `profile.test` in config file `[..].cargo/config`
-[WARNING] unused key `profile.dev.bad-key` in config file `[..].cargo/config`
-[WARNING] unused key `profile.dev.package.bar.bad-key-bar` in config file `[..].cargo/config`
-[WARNING] unused key `profile.dev.build-override.bad-key-bo` in config file `[..].cargo/config`
+[WARNING] unused key `profile.asdf` in config `[..].cargo/config`
+[WARNING] unused key `profile.test` in config `[..].cargo/config`
+[WARNING] unused key `profile.dev.bad-key` in config `[..].cargo/config`
+[WARNING] unused key `profile.dev.package.bar.bad-key-bar` in config `[..].cargo/config`
+[WARNING] unused key `profile.dev.build-override.bad-key-bo` in config `[..].cargo/config`
 [COMPILING] foo [..]
 [FINISHED] [..]
 ",
