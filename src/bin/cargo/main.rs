@@ -35,7 +35,6 @@ fn main() {
     let result = match cargo::ops::fix_maybe_exec_rustc() {
         Ok(true) => Ok(()),
         Ok(false) => {
-            init_git_transports(&config);
             let _token = cargo::util::job::setup();
             cli::main(&mut config)
         }

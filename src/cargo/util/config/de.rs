@@ -37,32 +37,47 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        // Future note: If you ever need to deserialize a non-self describing
-        // map type, this should implement a starts_with check (similar to how
-        // ConfigMapAccess does).
-        if let Some(v) = self.config.env.get(self.key.as_env_key()) {
-            let res: Result<V::Value, ConfigError> = if v == "true" || v == "false" {
-                visitor.visit_bool(v.parse().unwrap())
-            } else if let Ok(v) = v.parse::<i64>() {
-                visitor.visit_i64(v)
+        // Determine if value comes from env, cli, or file, and merge env if
+        // possible.
+        let cv = self.config.get_cv(&self.key)?;
+        let env = self.config.env.get(self.key.as_env_key());
+        let env_def = Definition::Environment(self.key.as_env_key().to_string());
+        let use_env = match (&cv, env) {
+            (Some(cv), Some(_)) => env_def.is_higher_priority(cv.definition()),
+            (None, Some(_)) => true,
+            _ => false,
+        };
+        if use_env {
+            // Future note: If you ever need to deserialize a non-self describing
+            // map type, this should implement a starts_with check (similar to how
+            // ConfigMapAccess does).
+            let env = env.unwrap();
+            let res: Result<V::Value, ConfigError> = if env == "true" || env == "false" {
+                visitor.visit_bool(env.parse().unwrap())
+            } else if let Ok(env) = env.parse::<i64>() {
+                visitor.visit_i64(env)
             } else if self.config.cli_unstable().advanced_env
-                && v.starts_with('[')
-                && v.ends_with(']')
+                && env.starts_with('[')
+                && env.ends_with(']')
             {
                 visitor.visit_seq(ConfigSeqAccess::new(self.clone())?)
             } else {
-                visitor.visit_string(v.clone())
+                // Try to merge if possible.
+                match cv {
+                    Some(CV::List(_cv_list, _cv_def)) => {
+                        visitor.visit_seq(ConfigSeqAccess::new(self.clone())?)
+                    }
+                    _ => {
+                        // Note: CV::Table merging is not implemented, as env
+                        // vars do not support table values.
+                        visitor.visit_str(env)
+                    }
+                }
             };
-            return res.map_err(|e| {
-                e.with_key_context(
-                    &self.key,
-                    Definition::Environment(self.key.as_env_key().to_string()),
-                )
-            });
+            return res.map_err(|e| e.with_key_context(&self.key, env_def));
         }
 
-        let o_cv = self.config.get_cv(&self.key)?;
-        if let Some(cv) = o_cv {
+        if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),
                 CV::String(s, def) => (visitor.visit_string(s), def),
@@ -79,7 +94,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         Err(ConfigError::missing(&self.key))
     }
 
-    deserialize_method!(deserialize_bool, visit_bool, get_bool_priv);
+    deserialize_method!(deserialize_bool, visit_bool, get_bool);
     deserialize_method!(deserialize_i8, visit_i64, get_integer);
     deserialize_method!(deserialize_i16, visit_i64, get_integer);
     deserialize_method!(deserialize_i32, visit_i64, get_integer);
@@ -223,7 +238,7 @@ impl<'config> ConfigMapAccess<'config> {
                     continue;
                 }
                 de.config.shell().warn(format!(
-                    "unused key `{}.{}` in config `{}`",
+                    "unused config key `{}.{}` in `{}`",
                     de.key,
                     t_key,
                     value.definition()
@@ -287,16 +302,11 @@ impl ConfigSeqAccess {
             res.extend(v.val);
         }
 
-        if de.config.cli_unstable().advanced_env {
-            // Parse an environment string as a TOML array.
-            if let Some(v) = de.config.env.get(de.key.as_env_key()) {
-                let def = Definition::Environment(de.key.as_env_key().to_string());
-                if !(v.starts_with('[') && v.ends_with(']')) {
-                    return Err(ConfigError::new(
-                        format!("should have TOML list syntax, found `{}`", v),
-                        def,
-                    ));
-                }
+        // Check environment.
+        if let Some(v) = de.config.env.get(de.key.as_env_key()) {
+            let def = Definition::Environment(de.key.as_env_key().to_string());
+            if de.config.cli_unstable().advanced_env && v.starts_with('[') && v.ends_with(']') {
+                // Parse an environment string as a TOML array.
                 let toml_s = format!("value={}", v);
                 let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
                     ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
@@ -318,8 +328,11 @@ impl ConfigSeqAccess {
                     })?;
                     res.push((s.to_string(), def.clone()));
                 }
+            } else {
+                res.extend(v.split_whitespace().map(|s| (s.to_string(), def.clone())));
             }
         }
+
         Ok(ConfigSeqAccess {
             list_iter: res.into_iter(),
         })
@@ -359,18 +372,22 @@ impl<'config> ValueDeserializer<'config> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
-            if de.config.env.contains_key(env) {
-                Definition::Environment(env.to_string())
-            } else {
-                match de.config.get_cv(&de.key)? {
-                    Some(val) => val.definition().clone(),
-                    None => {
-                        return Err(failure::format_err!(
-                            "failed to find definition of `{}`",
-                            de.key
-                        )
-                        .into())
+            let env_def = Definition::Environment(env.to_string());
+            match (de.config.env.contains_key(env), de.config.get_cv(&de.key)?) {
+                (true, Some(cv)) => {
+                    // Both, pick highest priority.
+                    if env_def.is_higher_priority(cv.definition()) {
+                        env_def
+                    } else {
+                        cv.definition().clone()
                     }
+                }
+                (true, None) => env_def,
+                (false, Some(cv)) => cv.definition().clone(),
+                (false, None) => {
+                    return Err(
+                        failure::format_err!("failed to find definition of `{}`", de.key).into(),
+                    )
                 }
             }
         };
@@ -416,12 +433,13 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
         // ... otherwise we're deserializing the `definition` field, so we need
         // to figure out where the field we just deserialized was defined at.
         match &self.definition {
-            Definition::Environment(env) => {
-                seed.deserialize(Tuple2Deserializer(1i32, env.as_ref()))
-            }
             Definition::Path(path) => {
                 seed.deserialize(Tuple2Deserializer(0i32, path.to_string_lossy()))
             }
+            Definition::Environment(env) => {
+                seed.deserialize(Tuple2Deserializer(1i32, env.as_ref()))
+            }
+            Definition::Cli => seed.deserialize(Tuple2Deserializer(2i32, "")),
         }
     }
 }

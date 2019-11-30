@@ -43,6 +43,30 @@ pub use path::{ConfigRelativePath, PathAndArgs};
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
 
+// Helper macro for creating typed access methods.
+macro_rules! get_value_typed {
+    ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
+        /// Low-level private method for getting a config value as an OptValue.
+        fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
+            let cv = self.get_cv(key)?;
+            let env = self.get_env::<$ty>(key)?;
+            match (cv, env) {
+                (Some(CV::$variant(val, definition)), Some(env)) => {
+                    if definition.is_higher_priority(&env.definition) {
+                        Ok(Some(Value { val, definition }))
+                    } else {
+                        Ok(Some(env))
+                    }
+                }
+                (Some(CV::$variant(val, definition)), None) => Ok(Some(Value { val, definition })),
+                (Some(cv), _) => Err(ConfigError::expected(key, $expected, &cv)),
+                (None, Some(env)) => Ok(Some(env)),
+                (None, None) => Ok(None),
+            }
+        }
+    };
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -53,6 +77,8 @@ pub struct Config {
     shell: RefCell<Shell>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
+    /// CLI config values, passed in via `configure`.
+    cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
     cwd: PathBuf,
     /// The location of the cargo executable (path to current process)
@@ -73,7 +99,7 @@ pub struct Config {
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
     /// Cli flags of the form "-Z something"
-    cli_flags: CliUnstable,
+    unstable_flags: CliUnstable,
     /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
@@ -140,6 +166,7 @@ impl Config {
             shell: RefCell::new(shell),
             cwd,
             values: LazyCell::new(),
+            cli_config: None,
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
             extra_verbose: false,
@@ -153,7 +180,7 @@ impl Config {
                     Some((*GLOBAL_JOBSERVER).clone())
                 }
             },
-            cli_flags: CliUnstable::default(),
+            unstable_flags: CliUnstable::default(),
             easy: LazyCell::new(),
             crates_io_source_id: LazyCell::new(),
             cache_rustc_info,
@@ -344,6 +371,7 @@ impl Config {
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
+        self.merge_cli_args()?;
         Ok(())
     }
 
@@ -449,36 +477,6 @@ impl Config {
         self.get::<Option<Value<String>>>(key)
     }
 
-    /// Low-level private method for getting a config value as OptValue<String>.
-    fn get_string_priv(&self, key: &ConfigKey) -> Result<OptValue<String>, ConfigError> {
-        match self.get_env(key)? {
-            Some(v) => Ok(Some(v)),
-            None => {
-                let o_cv = self.get_cv(key)?;
-                match o_cv {
-                    Some(CV::String(val, definition)) => Ok(Some(Value { val, definition })),
-                    Some(cv) => Err(ConfigError::expected(key, "a string", &cv)),
-                    None => Ok(None),
-                }
-            }
-        }
-    }
-
-    /// Low-level private method for getting a config value as OptValue<bool>.
-    fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
-        match self.get_env(key)? {
-            Some(v) => Ok(Some(v)),
-            None => {
-                let o_cv = self.get_cv(key)?;
-                match o_cv {
-                    Some(CV::Boolean(val, definition)) => Ok(Some(Value { val, definition })),
-                    Some(cv) => Err(ConfigError::expected(key, "true/false", &cv)),
-                    None => Ok(None),
-                }
-            }
-        }
-    }
-
     /// Get a config value that is expected to be a
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
@@ -512,7 +510,7 @@ impl Config {
     }
 
     fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
-        match self.get_cv(&key)? {
+        match self.get_cv(key)? {
             Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("list", key, &val),
             None => Ok(None),
@@ -530,17 +528,9 @@ impl Config {
         }
     }
 
-    /// Low-level private method for getting a config value as OptValue<i64>.
-    fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
-        match self.get_env::<i64>(key)? {
-            Some(v) => Ok(Some(v)),
-            None => match self.get_cv(key)? {
-                Some(CV::Integer(val, definition)) => Ok(Some(Value { val, definition })),
-                Some(cv) => Err(ConfigError::expected(key, "an integer", &cv)),
-                None => Ok(None),
-            },
-        }
-    }
+    get_value_typed! {get_integer, i64, Integer, "an integer"}
+    get_value_typed! {get_bool, bool, Boolean, "true/false"}
+    get_value_typed! {get_string_priv, String, String, "a string"}
 
     fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
         val.expected(ty, &key.to_string())
@@ -562,7 +552,14 @@ impl Config {
         offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
+        cli_config: &[&str],
     ) -> CargoResult<()> {
+        self.unstable_flags.parse(unstable_flags)?;
+        if !cli_config.is_empty() {
+            self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
+            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
+            self.merge_cli_args()?;
+        }
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 { None } else { Some(true) };
 
@@ -616,11 +613,10 @@ impl Config {
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
-        self.cli_flags.parse(unstable_flags)?;
 
         if nightly_features_allowed() {
             if let Some(val) = self.get::<Option<bool>>("unstable.mtime_on_use")? {
-                self.cli_flags.mtime_on_use |= val;
+                self.unstable_flags.mtime_on_use |= val;
             }
         }
 
@@ -628,7 +624,7 @@ impl Config {
     }
 
     pub fn cli_unstable(&self) -> &CliUnstable {
-        &self.cli_flags
+        &self.unstable_flags
     }
 
     pub fn extra_verbose(&self) -> bool {
@@ -688,6 +684,49 @@ impl Config {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
+    }
+
+    /// Add config arguments passed on the command line.
+    fn merge_cli_args(&mut self) -> CargoResult<()> {
+        // The clone here is a bit unfortunate, but needed due to mutable
+        // borrow, and desire to show the entire arg in the error message.
+        let cli_args = match self.cli_config.clone() {
+            Some(cli_args) => cli_args,
+            None => return Ok(()),
+        };
+        // Force values to be loaded.
+        let _ = self.values()?;
+        let values = self.values_mut()?;
+        for arg in cli_args {
+            // TODO: This should probably use a more narrow parser, reject
+            // comments, blank lines, [headers], etc.
+            let toml_v: toml::Value = toml::de::from_str(&arg)
+                .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
+            let table = match toml_v {
+                toml::Value::Table(table) => table,
+                _ => unreachable!(),
+            };
+            if table.len() != 1 {
+                bail!(
+                    "--config argument `{}` expected exactly one key=value pair, got: {:?}",
+                    arg,
+                    table
+                );
+            }
+            let (key, value) = table.into_iter().next().unwrap();
+            let value = CV::from_toml(Definition::Cli, value)
+                .chain_err(|| format!("failed to convert --config argument `{}`", arg))?;
+            match values.entry(key) {
+                Vacant(entry) => {
+                    entry.insert(value);
+                }
+                Occupied(mut entry) => entry
+                    .get_mut()
+                    .merge(value, true)
+                    .chain_err(|| format!("failed to merge --config argument `{}`", arg))?,
+            };
+        }
+        Ok(())
     }
 
     /// The purpose of this function is to aid in the transition to using

@@ -1123,45 +1123,10 @@ impl Execs {
     }
 
     fn normalize_matcher(&self, matcher: &str) -> String {
-        // Let's not deal with / vs \ (windows...)
-        let matcher = matcher.replace("\\\\", "/").replace("\\", "/");
-
-        // Weirdness for paths on Windows extends beyond `/` vs `\` apparently.
-        // Namely paths like `c:\` and `C:\` are equivalent and that can cause
-        // issues. The return value of `env::current_dir()` may return a
-        // lowercase drive name, but we round-trip a lot of values through `Url`
-        // which will auto-uppercase the drive name. To just ignore this
-        // distinction we try to canonicalize as much as possible, taking all
-        // forms of a path and canonicalizing them to one.
-        let replace_path = |s: &str, path: &Path, with: &str| {
-            let path_through_url = Url::from_file_path(path).unwrap().to_file_path().unwrap();
-            let path1 = path.display().to_string().replace("\\", "/");
-            let path2 = path_through_url.display().to_string().replace("\\", "/");
-            s.replace(&path1, with)
-                .replace(&path2, with)
-                .replace(with, &path1)
-        };
-
-        // Do the template replacements on the expected string.
-        let matcher = match &self.process_builder {
-            None => matcher,
-            Some(p) => match p.get_cwd() {
-                None => matcher,
-                Some(cwd) => replace_path(&matcher, cwd, "[CWD]"),
-            },
-        };
-
-        // Similar to cwd above, perform similar treatment to the root path
-        // which in theory all of our paths should otherwise get rooted at.
-        let root = paths::root();
-        let matcher = replace_path(&matcher, &root, "[ROOT]");
-
-        // Let's not deal with \r\n vs \n on windows...
-        let matcher = matcher.replace("\r", "");
-
-        // It's easier to read tabs in outputs if they don't show up as literal
-        // hidden characters
-        matcher.replace("\t", "<tab>")
+        normalize_matcher(
+            matcher,
+            self.process_builder.as_ref().and_then(|p| p.get_cwd()),
+        )
     }
 
     fn match_std(
@@ -1427,6 +1392,52 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
         }
     }
     actual.is_empty() || expected.ends_with("[..]")
+}
+
+/// Variant of `lines_match` that applies normalization to the strings.
+pub fn normalized_lines_match(expected: &str, actual: &str, cwd: Option<&Path>) -> bool {
+    let expected = normalize_matcher(expected, cwd);
+    let actual = normalize_matcher(actual, cwd);
+    lines_match(&expected, &actual)
+}
+
+fn normalize_matcher(matcher: &str, cwd: Option<&Path>) -> String {
+    // Let's not deal with / vs \ (windows...)
+    let matcher = matcher.replace("\\\\", "/").replace("\\", "/");
+
+    // Weirdness for paths on Windows extends beyond `/` vs `\` apparently.
+    // Namely paths like `c:\` and `C:\` are equivalent and that can cause
+    // issues. The return value of `env::current_dir()` may return a
+    // lowercase drive name, but we round-trip a lot of values through `Url`
+    // which will auto-uppercase the drive name. To just ignore this
+    // distinction we try to canonicalize as much as possible, taking all
+    // forms of a path and canonicalizing them to one.
+    let replace_path = |s: &str, path: &Path, with: &str| {
+        let path_through_url = Url::from_file_path(path).unwrap().to_file_path().unwrap();
+        let path1 = path.display().to_string().replace("\\", "/");
+        let path2 = path_through_url.display().to_string().replace("\\", "/");
+        s.replace(&path1, with)
+            .replace(&path2, with)
+            .replace(with, &path1)
+    };
+
+    // Do the template replacements on the expected string.
+    let matcher = match cwd {
+        None => matcher,
+        Some(p) => replace_path(&matcher, p, "[CWD]"),
+    };
+
+    // Similar to cwd above, perform similar treatment to the root path
+    // which in theory all of our paths should otherwise get rooted at.
+    let root = paths::root();
+    let matcher = replace_path(&matcher, &root, "[ROOT]");
+
+    // Let's not deal with \r\n vs \n on windows...
+    let matcher = matcher.replace("\r", "");
+
+    // It's easier to read tabs in outputs if they don't show up as literal
+    // hidden characters
+    matcher.replace("\t", "<tab>")
 }
 
 #[test]

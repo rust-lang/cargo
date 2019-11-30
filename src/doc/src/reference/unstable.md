@@ -427,3 +427,37 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
+
+### config-cli
+* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+
+The `--config` CLI option allows arbitrary config values to be passed
+in via the command-line. The argument should be in TOML syntax of KEY=VALUE:
+
+```console
+cargo +nightly -Zunstable-options --config net.git-fetch-with-cli=true fetch
+```
+
+The `--config` option may be specified multiple times, in which case the
+values are merged in left-to-right order, using the same merging logic that
+multiple config files use. CLI values take precedence over environment
+variables, which take precedence over config files.
+
+Some examples of what it looks like using Bourne shell syntax:
+
+```sh
+# Most shells will require escaping.
+cargo --config http.proxy=\"http://example.com\" …
+
+# Spaces may be used.
+cargo --config "net.git-fetch-with-cli = true" …
+
+# TOML array example. Single quotes make it easier to read and write.
+cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
+
+# Example of a complex TOML key.
+cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
+
+# Example of overriding a profile setting.
+cargo --config profile.dev.package.image.opt-level=3 …
+```

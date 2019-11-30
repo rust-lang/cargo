@@ -68,6 +68,7 @@ proptest! {
                 false,
                 &None,
                 &["minimal-versions".to_string()],
+                &[],
             )
             .unwrap();
 
@@ -571,6 +572,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
             false,
             &None,
             &["minimal-versions".to_string()],
+            &[],
         )
         .unwrap();
 

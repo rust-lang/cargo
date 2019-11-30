@@ -55,19 +55,24 @@ pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 pub enum Definition {
     Path(PathBuf),
     Environment(String),
+    Cli,
 }
 
 impl Definition {
     pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
         match self {
             Definition::Path(p) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) => config.cwd(),
+            Definition::Environment(_) | Definition::Cli => config.cwd(),
         }
     }
 
+    /// Returns true if self is a higher priority to other.
+    ///
+    /// CLI is preferred over environment, which is preferred over files.
     pub fn is_higher_priority(&self, other: &Definition) -> bool {
-        // environment > path
         match (self, other) {
+            (Definition::Cli, Definition::Environment(_)) => true,
+            (Definition::Cli, Definition::Path(_)) => true,
             (Definition::Environment(_), Definition::Path(_)) => true,
             _ => false,
         }
@@ -89,6 +94,7 @@ impl fmt::Display for Definition {
         match self {
             Definition::Path(p) => p.display().fmt(f),
             Definition::Environment(key) => write!(f, "environment variable `{}`", key),
+            Definition::Cli => write!(f, "--config cli option"),
         }
     }
 }
@@ -201,10 +207,11 @@ impl<'de> de::Deserialize<'de> for Definition {
         D: de::Deserializer<'de>,
     {
         let (discr, value) = <(u32, String)>::deserialize(deserializer)?;
-        if discr == 0 {
-            Ok(Definition::Path(value.into()))
-        } else {
-            Ok(Definition::Environment(value))
+        match discr {
+            0 => Ok(Definition::Path(value.into())),
+            1 => Ok(Definition::Environment(value)),
+            2 => Ok(Definition::Cli),
+            _ => panic!("unexpected discriminant {} value {}", discr, value),
         }
     }
 }

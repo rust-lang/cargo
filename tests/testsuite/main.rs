@@ -31,6 +31,7 @@ mod clippy;
 mod collisions;
 mod concurrent;
 mod config;
+mod config_cli;
 mod corrupt_git;
 mod cross_compile;
 mod cross_publish;

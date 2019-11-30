@@ -775,19 +775,19 @@ impl<'de> serde::Deserialize<'de> for BuildOutput {
 
         let lo = LinksOverride::deserialize(deserializer)?;
         if lo.warning.is_some() {
-            return Err(Error::custom(format!(
-                "`warning` is not supported in build script overrides"
-            )));
+            return Err(Error::custom(
+                "`warning` is not supported in build script overrides",
+            ));
         }
         if lo.rerun_if_changed.is_some() {
-            return Err(Error::custom(format!(
-                "`rerun-if-changed` is not supported in build script overrides"
-            )));
+            return Err(Error::custom(
+                "`rerun-if-changed` is not supported in build script overrides",
+            ));
         }
         if lo.rerun_if_env_changed.is_some() {
-            return Err(Error::custom(format!(
-                "`rerun-if-env-changed` is not supported in build script overrides"
-            )));
+            return Err(Error::custom(
+                "`rerun-if-env-changed` is not supported in build script overrides",
+            ));
         }
         let mut library_paths = lo.rustc_link_search;
         let mut library_links = lo.rustc_link_lib;

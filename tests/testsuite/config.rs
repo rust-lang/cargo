@@ -5,19 +5,21 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::os;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
-use cargo_test_support::{paths, project, t};
+use cargo_test_support::{normalized_lines_match, paths, project, t};
 use serde::Deserialize;
 
 /// Helper for constructing a `Config` object.
 pub struct ConfigBuilder {
     env: HashMap<String, String>,
     unstable: Vec<String>,
+    config_args: Vec<String>,
+    cwd: Option<PathBuf>,
 }
 
 impl ConfigBuilder {
@@ -25,6 +27,8 @@ impl ConfigBuilder {
         ConfigBuilder {
             env: HashMap::new(),
             unstable: Vec::new(),
+            config_args: Vec::new(),
+            cwd: None,
         }
     }
 
@@ -37,6 +41,22 @@ impl ConfigBuilder {
     /// Sets an environment variable.
     pub fn env(&mut self, key: impl Into<String>, val: impl Into<String>) -> &mut Self {
         self.env.insert(key.into(), val.into());
+        self
+    }
+
+    /// Passes a `--config` flag.
+    pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
+        if !self.unstable.iter().any(|s| s == "unstable-options") {
+            // --config is current unstable
+            self.unstable_flag("unstable-options");
+        }
+        self.config_args.push(arg.into());
+        self
+    }
+
+    /// Sets the current working directory where config files will be loaded.
+    pub fn cwd(&mut self, path: impl Into<PathBuf>) -> &mut Self {
+        self.cwd = Some(path.into());
         self
     }
 
@@ -53,23 +73,28 @@ impl ConfigBuilder {
         }
         let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
-        let cwd = paths::root();
+        let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
         config.set_env(self.env.clone());
-        config.configure(0, None, None, false, false, false, &None, &self.unstable)?;
+        let config_args: Vec<&str> = self.config_args.iter().map(AsRef::as_ref).collect();
+        config.configure(
+            0,
+            None,
+            None,
+            false,
+            false,
+            false,
+            &None,
+            &self.unstable,
+            &config_args,
+        )?;
         Ok(config)
     }
 }
 
 fn new_config() -> Config {
     ConfigBuilder::new().build()
-}
-
-fn lines_match(a: &str, b: &str) -> bool {
-    // Perform a small amount of normalization for filesystem paths before we
-    // send this to the `lines_match` function.
-    cargo_test_support::lines_match(&a.replace("\\", "/"), &b.replace("\\", "/"))
 }
 
 #[cargo_test]
@@ -157,7 +182,7 @@ fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    if !lines_match(msgs, &causes) {
+    if !normalized_lines_match(msgs, &causes, None) {
         panic!(
             "Did not find expected:\n{}\nActual error:\n{}\n",
             msgs, causes
@@ -229,7 +254,7 @@ f1 = 1
     let unexpected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    if lines_match(unexpected, &output) {
+    if normalized_lines_match(unexpected, &output, None) {
         panic!(
             "Found unexpected:\n{}\nActual error:\n{}\n",
             unexpected, output
@@ -266,7 +291,7 @@ f1 = 2
     let expected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    if !lines_match(expected, &output) {
+    if !normalized_lines_match(expected, &output, None) {
         panic!(
             "Did not find expected:\n{}\nActual error:\n{}\n",
             expected, output
@@ -305,9 +330,9 @@ unused = 456
     let path = paths::root().join("shell.out");
     let output = fs::read_to_string(path).unwrap();
     let expected = "\
-warning: unused key `S.unused` in config `[..]/.cargo/config`
+warning: unused config key `S.unused` in `[..]/.cargo/config`
 ";
-    if !lines_match(expected, &output) {
+    if !normalized_lines_match(expected, &output, None) {
         panic!(
             "Did not find expected:\n{}\nActual error:\n{}\n",
             expected, output
@@ -414,38 +439,88 @@ c = ['c']
 ",
     );
 
+    // advanced-env
     let config = ConfigBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_ENVB", "false")
         .env("CARGO_C", "['d']")
         .env("CARGO_ENVL", "['a', 'b']")
         .build();
+    assert_eq!(config.get::<VSOB>("a").unwrap(), VSOB::Bool(true));
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec!["b".to_string()])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec!["c".to_string(), "d".to_string()])
+    );
+    assert_eq!(config.get::<VSOB>("envb").unwrap(), VSOB::Bool(false));
+    assert_eq!(
+        config.get::<VSOB>("envl").unwrap(),
+        VSOB::VecString(vec!["a".to_string(), "b".to_string()])
+    );
 
-    let a = config.get::<VSOB>("a").unwrap();
-    match a {
-        VSOB::VecString(_) => panic!("expected bool"),
-        VSOB::Bool(b) => assert_eq!(b, true),
-    }
-    let b = config.get::<VSOB>("b").unwrap();
-    match b {
-        VSOB::VecString(l) => assert_eq!(l, vec!["b".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
-    let c = config.get::<VSOB>("c").unwrap();
-    match c {
-        VSOB::VecString(l) => assert_eq!(l, vec!["c".to_string(), "d".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
-    let envb = config.get::<VSOB>("envb").unwrap();
-    match envb {
-        VSOB::VecString(_) => panic!("expected bool"),
-        VSOB::Bool(b) => assert_eq!(b, false),
-    }
-    let envl = config.get::<VSOB>("envl").unwrap();
-    match envl {
-        VSOB::VecString(l) => assert_eq!(l, vec!["a".to_string(), "b".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
+    // Demonstrate where merging logic isn't very smart. This could be improved.
+    let config = ConfigBuilder::new().env("CARGO_A", "x y").build();
+    assert_error(
+        config.get::<VSOB>("a").unwrap_err(),
+        "error in environment variable `CARGO_A`: \
+         could not load config key `a`: \
+         invalid type: string \"x y\", expected a boolean or vector of strings",
+    );
+
+    // Normal env.
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_B", "d e")
+        .env("CARGO_C", "f g")
+        .build();
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec!["b".to_string(), "d".to_string(), "e".to_string()])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec!["c".to_string(), "f".to_string(), "g".to_string()])
+    );
+
+    // config-cli
+    // This test demonstrates that ConfigValue::merge isn't very smart.
+    // It would be nice if it was smarter.
+    let config = ConfigBuilder::new().config_arg("a = ['a']").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "failed to merge --config argument `a = ['a']`\n\
+         expected boolean, but found array",
+    );
+
+    // config-cli and advanced-env
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .config_arg("b=['clib']")
+        .config_arg("c=['clic']")
+        .env("CARGO_B", "env1 env2")
+        .env("CARGO_C", "['e1', 'e2']")
+        .build();
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec![
+            "b".to_string(),
+            "clib".to_string(),
+            "env1".to_string(),
+            "env2".to_string()
+        ])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec![
+            "c".to_string(),
+            "clic".to_string(),
+            "e1".to_string(),
+            "e2".to_string()
+        ])
+    );
 }
 
 #[cargo_test]
@@ -662,25 +737,16 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     );
     assert_eq!(config.get::<L>("l5").unwrap(), vec!["a"]);
     assert_eq!(config.get::<L>("env-empty").unwrap(), vec![] as Vec<String>);
-    assert_error(
-        config.get::<L>("env-blank").unwrap_err(),
-        "error in environment variable `CARGO_ENV_BLANK`: \
-         should have TOML list syntax, found ``",
-    );
-    assert_error(
-        config.get::<L>("env-num").unwrap_err(),
-        "error in environment variable `CARGO_ENV_NUM`: \
-         should have TOML list syntax, found `1`",
-    );
+    assert_eq!(config.get::<L>("env-blank").unwrap(), vec![] as Vec<String>);
+    assert_eq!(config.get::<L>("env-num").unwrap(), vec!["1".to_string()]);
     assert_error(
         config.get::<L>("env-num-list").unwrap_err(),
         "error in environment variable `CARGO_ENV_NUM_LIST`: \
          expected string, found integer",
     );
-    assert_error(
-        config.get::<L>("env-text").unwrap_err(),
-        "error in environment variable `CARGO_ENV_TEXT`: \
-         should have TOML list syntax, found `asdf`",
+    assert_eq!(
+        config.get::<L>("env-text").unwrap(),
+        vec!["asdf".to_string()]
     );
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
