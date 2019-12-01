@@ -3,6 +3,9 @@
 use cargo_test_support::{paths, project, registry::Package};
 
 #[cargo_test]
+// I don't know why, but `Command` forces all env keys to be upper case on
+// Windows. Seems questionable, since I think Windows is case-preserving.
+#[cfg_attr(windows, ignore)]
 fn source_config_env() {
     // Try to define [source] with environment variables.
     let p = project()

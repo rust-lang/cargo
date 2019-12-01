@@ -279,7 +279,7 @@ fn custom_runner_env() {
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `nonexistent-runner --foo target/debug/foo`")
+        .with_stderr_contains("[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`")
         .run();
 }
 

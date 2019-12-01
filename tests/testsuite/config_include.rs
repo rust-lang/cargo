@@ -3,6 +3,7 @@
 use super::config::{
     assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
 };
+use cargo_test_support::NO_SUCH_FILE_ERR_MSG;
 
 #[cargo_test]
 fn gated() {
@@ -78,7 +79,8 @@ fn missing_file() {
     let config = ConfigBuilder::new().unstable_flag("config-include").build();
     assert_error(
         config.get::<i32>("whatever").unwrap_err(),
-        "\
+        &format!(
+            "\
 could not load Cargo configuration
 
 Caused by:
@@ -88,7 +90,9 @@ Caused by:
   failed to read configuration file `[..]/.cargo/missing`
 
 Caused by:
-  No such file or directory (os error 2)",
+  {}",
+            NO_SUCH_FILE_ERR_MSG
+        ),
     );
 }
 
@@ -162,11 +166,14 @@ fn cli_include_failed() {
         .build_err();
     assert_error(
         config.unwrap_err(),
-        "\
+        &format!(
+            "\
 failed to load --config include
 failed to load config include `foobar` from `--config cli option`
 failed to read configuration file `[..]/foobar`
-No such file or directory (os error 2)",
+{}",
+            NO_SUCH_FILE_ERR_MSG
+        ),
     );
 }
 

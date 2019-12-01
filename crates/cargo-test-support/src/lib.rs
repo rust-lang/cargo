@@ -1846,3 +1846,12 @@ pub fn symlink_supported() -> bool {
 pub fn symlink_supported() -> bool {
     true
 }
+
+/// The error message for ENOENT.
+///
+/// It's generally not good to match against OS error messages, but I think
+/// this one is relatively stable.
+#[cfg(windows)]
+pub const NO_SUCH_FILE_ERR_MSG: &str = "The system cannot find the file specified. (os error 2)";
+#[cfg(not(windows))]
+pub const NO_SUCH_FILE_ERR_MSG: &str = "No such file or directory (os error 2)";
