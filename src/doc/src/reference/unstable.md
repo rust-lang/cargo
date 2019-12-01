@@ -461,3 +461,27 @@ cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.r
 # Example of overriding a profile setting.
 cargo --config profile.dev.package.image.opt-level=3 …
 ```
+
+### config-include
+* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+
+The `include` key in a config file can be used to load another config file. It
+takes a string for a path to another file relative to the config file, or a
+list of strings. It requires the `-Zconfig-include` command-line option.
+
+```toml
+# .cargo/config
+include = '../../some-common-config.toml'
+```
+
+The config values are first loaded from the include path, and then the config
+file's own values are merged on top of it.
+
+This can be paired with [config-cli](#config-cli) to specify a file to load
+from the command-line:
+
+```console
+cargo +nightly -Zunstable-options -Zconfig-include --config 'include="somefile.toml"' build
+```
+
+CLI paths are relative to the current working directory.

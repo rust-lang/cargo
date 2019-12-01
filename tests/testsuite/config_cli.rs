@@ -1,8 +1,8 @@
 //! Tests for the --config CLI option.
 
-use super::config::{write_config, ConfigBuilder};
+use super::config::{assert_error, assert_match, read_output, write_config, ConfigBuilder};
 use cargo::util::config::Definition;
-use cargo_test_support::{normalized_lines_match, paths, project};
+use cargo_test_support::{paths, project};
 use std::fs;
 
 #[cargo_test]
@@ -231,18 +231,11 @@ fn unused_key() {
         .build();
 
     config.build_config().unwrap();
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let expected = "\
 warning: unused config key `build.unused` in `--config cli option`
 ";
-    if !normalized_lines_match(expected, &output, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            expected, output
-        );
-    }
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -272,4 +265,66 @@ fn rerooted_remains() {
     assert_eq!(config.get::<Option<String>>("a").unwrap(), None);
     assert_eq!(config.get::<String>("b").unwrap(), "cli1");
     assert_eq!(config.get::<String>("c").unwrap(), "cli2");
+}
+
+#[cargo_test]
+fn bad_parse() {
+    // Fail to TOML parse.
+    let config = ConfigBuilder::new().config_arg("abc").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to parse --config argument `abc`
+expected an equals, found eof at line 1 column 4",
+    );
+}
+
+#[cargo_test]
+fn too_many_values() {
+    // Currently restricted to only 1 value.
+    let config = ConfigBuilder::new().config_arg("a=1\nb=2").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+--config argument `a=1
+b=2` expected exactly one key=value pair, got 2 keys",
+    );
+
+    let config = ConfigBuilder::new().config_arg("").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+         --config argument `` expected exactly one key=value pair, got 0 keys",
+    );
+}
+
+#[cargo_test]
+fn bad_cv_convert() {
+    // ConfigValue does not support all TOML types.
+    let config = ConfigBuilder::new().config_arg("a=2019-12-01").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to convert --config argument `a=2019-12-01`
+failed to parse key `a`
+found TOML configuration value of unknown type `datetime`",
+    );
+}
+
+#[cargo_test]
+fn fail_to_merge_multiple_args() {
+    // Error message when multiple args fail to merge.
+    let config = ConfigBuilder::new()
+        .config_arg("foo='a'")
+        .config_arg("foo=['a']")
+        .build_err();
+    // This is a little repetitive, but hopefully the user can figure it out.
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to merge --config argument `foo=['a']`
+failed to merge key `foo` between --config cli option and --config cli option
+failed to merge config value from `--config cli option` into `--config cli option`: \
+expected string, but found array",
+    );
 }

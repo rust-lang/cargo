@@ -659,20 +659,7 @@ impl Config {
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
-            let mut contents = String::new();
-            let mut file = File::open(&path)?;
-            file.read_to_string(&mut contents)
-                .chain_err(|| format!("failed to read configuration file `{}`", path.display()))?;
-            let toml = cargo_toml::parse(&contents, path, self).chain_err(|| {
-                format!("could not parse TOML configuration in `{}`", path.display())
-            })?;
-            let value =
-                CV::from_toml(Definition::Path(path.to_path_buf()), toml).chain_err(|| {
-                    format!(
-                        "failed to load TOML configuration from `{}`",
-                        path.display()
-                    )
-                })?;
+            let value = self.load_file(path)?;
             cfg.merge(value, false)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
@@ -686,44 +673,124 @@ impl Config {
         }
     }
 
+    fn load_file(&self, path: &Path) -> CargoResult<ConfigValue> {
+        let mut seen = HashSet::new();
+        self._load_file(path, &mut seen)
+    }
+
+    fn _load_file(&self, path: &Path, seen: &mut HashSet<PathBuf>) -> CargoResult<ConfigValue> {
+        if !seen.insert(path.to_path_buf()) {
+            bail!(
+                "config `include` cycle detected with path `{}`",
+                path.display()
+            );
+        }
+        let contents = fs::read_to_string(path)
+            .chain_err(|| format!("failed to read configuration file `{}`", path.display()))?;
+        let toml = cargo_toml::parse(&contents, path, self)
+            .chain_err(|| format!("could not parse TOML configuration in `{}`", path.display()))?;
+        let value = CV::from_toml(Definition::Path(path.to_path_buf()), toml).chain_err(|| {
+            format!(
+                "failed to load TOML configuration from `{}`",
+                path.display()
+            )
+        })?;
+        let value = self.load_includes(value, seen)?;
+        Ok(value)
+    }
+
+    /// Load any `include` files listed in the given `value`.
+    ///
+    /// Returns `value` with the given include files merged into it.
+    ///
+    /// `seen` is used to check for cyclic includes.
+    fn load_includes(&self, mut value: CV, seen: &mut HashSet<PathBuf>) -> CargoResult<CV> {
+        // Get the list of files to load.
+        let (includes, def) = match &mut value {
+            CV::Table(table, _def) => match table.remove("include") {
+                Some(CV::String(s, def)) => (vec![(s, def.clone())], def),
+                Some(CV::List(list, def)) => (list, def),
+                Some(other) => bail!(
+                    "`include` expected a string or list, but found {} in `{}`",
+                    other.desc(),
+                    other.definition()
+                ),
+                None => {
+                    return Ok(value);
+                }
+            },
+            _ => unreachable!(),
+        };
+        // Check unstable.
+        if !self.cli_unstable().config_include {
+            self.shell().warn(format!("config `include` in `{}` ignored, the -Zconfig-include command-line flag is required",
+                def))?;
+            return Ok(value);
+        }
+        // Accumulate all values here.
+        let mut root = CV::Table(HashMap::new(), value.definition().clone());
+        for (path, def) in includes {
+            let abs_path = match &def {
+                Definition::Path(p) => p.parent().unwrap().join(&path),
+                Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
+            };
+            self._load_file(&abs_path, seen)
+                .and_then(|include| root.merge(include, true))
+                .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
+        }
+        root.merge(value, true)?;
+        Ok(root)
+    }
+
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        // The clone here is a bit unfortunate, but needed due to mutable
-        // borrow, and desire to show the entire arg in the error message.
-        let cli_args = match self.cli_config.clone() {
+        let cli_args = match &self.cli_config {
             Some(cli_args) => cli_args,
             None => return Ok(()),
         };
-        // Force values to be loaded.
-        let _ = self.values()?;
-        let values = self.values_mut()?;
+        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
         for arg in cli_args {
             // TODO: This should probably use a more narrow parser, reject
             // comments, blank lines, [headers], etc.
             let toml_v: toml::Value = toml::de::from_str(&arg)
                 .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
-            let table = match toml_v {
-                toml::Value::Table(table) => table,
-                _ => unreachable!(),
-            };
-            if table.len() != 1 {
+            let toml_table = toml_v.as_table().unwrap();
+            if toml_table.len() != 1 {
                 bail!(
-                    "--config argument `{}` expected exactly one key=value pair, got: {:?}",
+                    "--config argument `{}` expected exactly one key=value pair, got {} keys",
                     arg,
-                    table
+                    toml_table.len()
                 );
             }
-            let (key, value) = table.into_iter().next().unwrap();
-            let value = CV::from_toml(Definition::Cli, value)
+            let tmp_table = CV::from_toml(Definition::Cli, toml_v)
                 .chain_err(|| format!("failed to convert --config argument `{}`", arg))?;
+            let mut seen = HashSet::new();
+            let tmp_table = self
+                .load_includes(tmp_table, &mut seen)
+                .chain_err(|| format!("failed to load --config include"))?;
+            loaded_args
+                .merge(tmp_table, true)
+                .chain_err(|| format!("failed to merge --config argument `{}`", arg))?;
+        }
+        // Force values to be loaded.
+        let _ = self.values()?;
+        let values = self.values_mut()?;
+        let loaded_map = match loaded_args {
+            CV::Table(table, _def) => table,
+            _ => unreachable!(),
+        };
+        for (key, value) in loaded_map.into_iter() {
             match values.entry(key) {
                 Vacant(entry) => {
                     entry.insert(value);
                 }
-                Occupied(mut entry) => entry
-                    .get_mut()
-                    .merge(value, true)
-                    .chain_err(|| format!("failed to merge --config argument `{}`", arg))?,
+                Occupied(mut entry) => entry.get_mut().merge(value, true).chain_err(|| {
+                    format!(
+                        "failed to merge --config key `{}` into `{}`",
+                        entry.key(),
+                        entry.get().definition(),
+                    )
+                })?,
             };
         }
         Ok(())
@@ -841,30 +908,7 @@ impl Config {
             None => return Ok(()),
         };
 
-        let mut contents = String::new();
-        let mut file = File::open(&credentials)?;
-        file.read_to_string(&mut contents).chain_err(|| {
-            format!(
-                "failed to read configuration file `{}`",
-                credentials.display()
-            )
-        })?;
-
-        let toml = cargo_toml::parse(&contents, &credentials, self).chain_err(|| {
-            format!(
-                "could not parse TOML configuration in `{}`",
-                credentials.display()
-            )
-        })?;
-
-        let mut value =
-            CV::from_toml(Definition::Path(credentials.clone()), toml).chain_err(|| {
-                format!(
-                    "failed to load TOML configuration from `{}`",
-                    credentials.display()
-                )
-            })?;
-
+        let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let (value_map, def) = match value {
@@ -1265,7 +1309,9 @@ impl ConfigValue {
             | (expected, found @ CV::List(_, _))
             | (expected, found @ CV::Table(_, _)) => {
                 return Err(internal(format!(
-                    "expected {}, but found {}",
+                    "failed to merge config value from `{}` into `{}`: expected {}, but found {}",
+                    found.definition(),
+                    expected.definition(),
                     expected.desc(),
                     found.desc()
                 )));

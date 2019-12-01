@@ -8,7 +8,7 @@ use std::os;
 use std::path::{Path, PathBuf};
 
 use cargo::core::{enable_nightly_features, Shell};
-use cargo::util::config::{self, Config, SslVersionConfig};
+use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::{normalized_lines_match, paths, project, t};
@@ -55,8 +55,8 @@ impl ConfigBuilder {
     }
 
     /// Sets the current working directory where config files will be loaded.
-    pub fn cwd(&mut self, path: impl Into<PathBuf>) -> &mut Self {
-        self.cwd = Some(path.into());
+    pub fn cwd(&mut self, path: impl AsRef<Path>) -> &mut Self {
+        self.cwd = Some(paths::root().join(path.as_ref()));
         self
     }
 
@@ -97,6 +97,13 @@ fn new_config() -> Config {
     ConfigBuilder::new().build()
 }
 
+/// Read the output from Config.
+pub fn read_output(config: Config) -> String {
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    fs::read_to_string(path).unwrap()
+}
+
 #[cargo_test]
 fn read_env_vars_for_config() {
     let p = project()
@@ -126,15 +133,17 @@ fn read_env_vars_for_config() {
 }
 
 pub fn write_config(config: &str) {
-    let path = paths::root().join(".cargo/config");
+    write_config_at(paths::root().join(".cargo/config"), config);
+}
+
+pub fn write_config_at(path: impl AsRef<Path>, contents: &str) {
+    let path = paths::root().join(path.as_ref());
     fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, config).unwrap();
+    fs::write(path, contents).unwrap();
 }
 
 fn write_config_toml(config: &str) {
-    let path = paths::root().join(".cargo/config.toml");
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, config).unwrap();
+    write_config_at(paths::root().join(".cargo/config.toml"), config);
 }
 
 // Several test fail on windows if the user does not have permission to
@@ -175,17 +184,21 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
-fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
+pub fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
         .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    if !normalized_lines_match(msgs, &causes, None) {
+    assert_match(msgs, &causes);
+}
+
+pub fn assert_match(expected: &str, actual: &str) {
+    if !normalized_lines_match(expected, actual, None) {
         panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            msgs, causes
+            "Did not find expected:\n{}\nActual:\n{}\n",
+            expected, actual
         );
     }
 }
@@ -248,9 +261,7 @@ f1 = 1
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let unexpected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
@@ -285,18 +296,11 @@ f1 = 2
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // But it also should have warned.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let expected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    if !normalized_lines_match(expected, &output, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            expected, output
-        );
-    }
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -326,18 +330,11 @@ unused = 456
     assert_eq!(s, S { f1: None });
 
     // Verify the warnings.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let expected = "\
 warning: unused config key `S.unused` in `[..]/.cargo/config`
 ";
-    if !normalized_lines_match(expected, &output, None) {
-        panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            expected, output
-        );
-    }
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -491,8 +488,10 @@ c = ['c']
     let config = ConfigBuilder::new().config_arg("a = ['a']").build_err();
     assert_error(
         config.unwrap_err(),
-        "failed to merge --config argument `a = ['a']`\n\
-         expected boolean, but found array",
+        "\
+failed to merge --config key `a` into `[..]/.cargo/config`
+failed to merge config value from `--config cli option` into `[..]/.cargo/config`: \
+expected boolean, but found array",
     );
 
     // config-cli and advanced-env
@@ -1039,4 +1038,68 @@ Caused by:
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .is_none());
+}
+
+#[cargo_test]
+fn table_merge_failure() {
+    // Config::merge fails to merge entries in two tables.
+    write_config_at(
+        "foo/.cargo/config",
+        "
+        [table]
+        key = ['foo']
+        ",
+    );
+    write_config_at(
+        ".cargo/config",
+        "
+        [table]
+        key = 'bar'
+        ",
+    );
+
+    #[derive(Debug, Deserialize)]
+    struct Table {
+        key: StringList,
+    }
+    let config = ConfigBuilder::new().cwd("foo").build();
+    assert_error(
+        config.get::<Table>("table").unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  failed to merge configuration at `[..]/.cargo/config`
+
+Caused by:
+  failed to merge key `table` between [..]/foo/.cargo/config and [..]/.cargo/config
+
+Caused by:
+  failed to merge key `key` between [..]/foo/.cargo/config and [..]/.cargo/config
+
+Caused by:
+  failed to merge config value from `[..]/.cargo/config` into `[..]/foo/.cargo/config`: \
+  expected array, but found string",
+    );
+}
+
+#[cargo_test]
+fn non_string_in_array() {
+    // Currently only strings are supported.
+    write_config("foo = [1, 2, 3]");
+    let config = new_config();
+    assert_error(
+        config.get::<Vec<i32>>("foo").unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[..]/.cargo/config`
+
+Caused by:
+  failed to parse key `foo`
+
+Caused by:
+  expected string but found integer in list",
+    );
 }
