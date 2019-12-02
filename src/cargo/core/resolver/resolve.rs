@@ -52,19 +52,20 @@ pub struct Resolve {
     version: ResolveVersion,
 }
 
-/// A version to indicate how a `Cargo.lock` should be serialized. Currently V1
-/// is the default and dates back to the origins of Cargo. A V2 is currently
-/// being proposed which provides a much more compact representation of
-/// dependency edges and also moves checksums out of `[metadata]`.
+/// A version to indicate how a `Cargo.lock` should be serialized. Currently
+/// V2 is the default when creating a new lockfile. If a V1 lockfile already
+/// exists, it will stay as V1.
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub enum ResolveVersion {
-    // Historical baseline for when this abstraction was added.
+    /// Historical baseline for when this abstraction was added.
     V1,
-    // Update around 2019 where `dependencies` arrays got compressed and
-    // checksums are listed inline.
+    /// A more compact format, more amenable to avoiding source-control merge
+    /// conflicts. The `dependencies` arrays are compressed and checksums are
+    /// listed inline. Introduced in 2019 in version 1.38. New lockfiles use
+    /// V2 by default starting in 1.41.
     V2,
 }
 
