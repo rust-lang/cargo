@@ -85,21 +85,61 @@ working on.
 * [Commit as you go][githelp].
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
-sandbox-environment. The internal module `testsuite/support` provides a vast amount
-of helpers to minimize boilerplate. See [`testsuite/support/mod.rs`] for an
+sandbox-environment. The internal module `crates/cargo-test-support` provides a vast amount
+of helpers to minimize boilerplate. See [`crates/cargo-test-support/src/lib.rs`] for an
 introduction to writing tests.
-* Make sure `cargo test` passes. If you do not have the cross-compilers
-installed locally, install them using the instructions returned by
-`cargo test cross_compile::cross_tests` (twice, with `--toolchain nightly`
-added to get the nightly cross target too); alternatively just
-ignore the cross-compile test failures or disable them by
-using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
-only on `nightly` toolchain. If you can, test both toolchains.
+* Make sure `cargo test` passes. See [Running tests](#running-tests) below
+for details on running tests.
 * All code changes are expected to comply with the formatting suggested by `rustfmt`.
-You can use `rustup component add --toolchain nightly rustfmt` to install `rustfmt` and use
-`rustfmt +nightly --unstable-features --skip-children` on the changed files to automatically format your code.
+You can use `rustup component add rustfmt` to install `rustfmt` and use
+`cargo fmt` to automatically format your code.
 * Push your commits to GitHub and create a pull request against Cargo's
 `master` branch.
+
+## Running tests
+
+Most of the tests are found in the `testsuite` integration test. This can be
+run with a simple `cargo test`.
+
+Some tests only run on the nightly toolchain, and will be ignored on other
+channels. It is recommended that you run tests with both nightly and stable to
+ensure everything is working as expected.
+
+Some tests exercise cross compiling to a different target. This will require
+you to install the appropriate target. This typically is the 32-bit target of
+your host platform. For example, if your host is a 64-bit
+`x86_64-unknown-linux-gnu`, then you should install the 32-bit target with
+`rustup target add i686-unknown-linux-gnu`. If you don't have the alternate
+target installed, there should be an error message telling you what to do. You
+may also need to install additional tools for the target. For example, on Ubuntu
+you should install the `gcc-multilib` package.
+
+If you can't install an alternate target, you can set the
+`CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests.
+Unfortunately 32-bit support on macOS is going away, so you may not be able to
+run these tests on macOS. The Windows cross tests only support the MSVC
+toolchain.
+
+Some of the nightly tests require the `rustc-dev` component installed. This
+component includes the compiler as a library. This may already be installed
+with your nightly toolchain, but it if isn't, run `rustup component add
+rustc-dev --toolchain=nightly`.
+
+There are several other packages in the repo for running specialized tests,
+and you will need to run these tests separately by changing into its directory
+and running `cargo test`:
+
+* [`crates/resolver-tests`] – This package runs tests on the dependency resolver.
+* [`crates/cargo-platform`] – This is a standalone `cfg()` expression parser.
+
+The `build-std` tests are disabled by default, but you can run them by setting
+the `CARGO_RUN_BUILD_STD_TESTS=1` environment variable and running `cargo test
+--test build-std`. This requires the nightly channel, and also requires the
+`rust-src` component installed with `rustup component add rust-src
+--toolchain=nightly`.
+
+[`crates/resolver-tests`]: crates/resolver-tests
+[`crates/cargo-platform`]: crates/cargo-platform
 
 ## Pull requests
 
@@ -124,18 +164,8 @@ and [merges][mergequeue] it into Cargo's `master` branch.
 
 ## Contributing to the documentation
 
-To contribute to the documentation, all you need to do is change the markdown
-files in the `src/doc` directory. To view the rendered version of changes you
-have made locally, make sure you have `mdbook` installed and run:
-
-```sh
-cd src/doc
-mdbook build
-open book/index.html
-```
-
-To install `mdbook` run `cargo install mdbook`.
-
+See the [documentation README](src/doc/README.md) for details on building the
+documentation.
 
 ## Issue Triage
 
@@ -184,6 +214,7 @@ adding labels to triage issues:
 * The light orange **relnotes** label marks issues that should be documented in
   the release notes of the next release.
 
+* Dark blue, **Z**-prefixed labels are for unstable, nightly features.
 
 [githelp]: https://dont-be-afraid-to-commit.readthedocs.io/en/latest/git/commandlinegit.html
 [development-models]: https://help.github.com/articles/about-collaborative-development-models/
@@ -197,6 +228,6 @@ adding labels to triage issues:
 [I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [Discord]: https://discordapp.com/invite/rust-lang
-[`testsuite/support/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/support/mod.rs
+[`crates/cargo-test-support/src/lib.rs`]: crates/cargo-test-support/src/lib.rs
 [irlo]: https://internals.rust-lang.org/
 [subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
