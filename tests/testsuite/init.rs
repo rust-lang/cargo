@@ -94,7 +94,6 @@ fn simple_git_ignore_exists() {
          #already existing elements were commented out\n\
          \n\
          #/target\n\
-         **/*.rs.bk\n\
          Cargo.lock\n",
     );
 
@@ -123,7 +122,6 @@ fn git_ignore_exists_no_conflicting_entries() {
          #Added by cargo\n\
          \n\
          /target\n\
-         **/*.rs.bk\n\
          Cargo.lock\n",
     );
 }
