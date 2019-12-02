@@ -581,7 +581,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
-    ignore.push("**/*.rs.bk", "glob:*.rs.bk");
     if !opts.bin {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
