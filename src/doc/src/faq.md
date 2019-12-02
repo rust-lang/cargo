@@ -81,9 +81,9 @@ packages using Cargo.
 
 ### Does Cargo support environments, like `production` or `test`?
 
-We support environments through the use of [profiles][profile] to support:
+We support environments through the use of [profiles] to support:
 
-[profile]: reference/manifest.md#the-profile-sections
+[profiles]: reference/profiles.md
 
 * environment-specific flags (like `-g --opt-level=0` for development
   and `--opt-level=3` for production).

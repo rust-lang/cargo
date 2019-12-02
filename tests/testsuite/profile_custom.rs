@@ -284,7 +284,7 @@ fn overrides_with_custom() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["profile-overrides", "named-profiles"]
+            cargo-features = ["named-profiles"]
 
             [package]
             name = "foo"

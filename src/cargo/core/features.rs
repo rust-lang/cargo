@@ -190,7 +190,7 @@ features! {
         [unstable] publish_lockfile: bool,
 
         // Overriding profiles for dependencies.
-        [unstable] profile_overrides: bool,
+        [stable] profile_overrides: bool,
 
         // Separating the namespaces for features and dependencies
         [unstable] namespaced_features: bool,
