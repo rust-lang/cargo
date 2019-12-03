@@ -56,8 +56,9 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
             "--frozen"
         };
         failure::bail!(
-            "the lock file {} needs to be updated but {} was passed to \
-             prevent this",
+            "the lock file {} needs to be updated but {} was passed to prevent this\n\
+             If you want to try to generate the lock file without accessing the network, \
+             use the --offline flag.",
             ws.root().to_path_buf().join("Cargo.lock").display(),
             flag
         );
