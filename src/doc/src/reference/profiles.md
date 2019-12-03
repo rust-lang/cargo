@@ -165,11 +165,11 @@ Incremental compilation is only used for workspace members and "path"
 dependencies.
 
 The incremental value can be overridden globally with the `CARGO_INCREMENTAL`
-[environment variable] or the `build.incremental` [config variable].
+[environment variable] or the [`build.incremental`] config variable.
 
 [`-C incremental` flag]: ../../rustc/codegen-options/index.html#incremental
 [environment variable]: environment-variables.md
-[config variable]: config.md
+[`build.incremental`]: config.md#buildincremental
 
 #### codegen-units
 

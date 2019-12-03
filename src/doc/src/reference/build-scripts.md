@@ -363,21 +363,22 @@ Cargo [configuration location](config.md).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
-rustc-link-search = ["/path/to/foo"]
 rustc-link-lib = ["foo"]
-root = "/path/to/foo"
-key = "value"
+rustc-link-search = ["/path/to/foo"]
+rustc-flags = "-L /some/path"
+rustc-cfg = ['key="value"']
+rustc-env = {key = "value"}
+rustc-cdylib-link-arg = ["…"]
+metadata_key1 = "value"
+metadata_key2 = "value"
 ```
-
-This section states that for the target `x86_64-unknown-linux-gnu` the library
-named `foo` has the metadata specified. This metadata is the same as the
-metadata generated as if the build script had run, providing a number of
-key/value pairs where the `rustc-flags`, `rustc-link-search`, and
-`rustc-link-lib` keys are slightly special.
 
 With this configuration, if a package declares that it links to `foo` then the
 build script will **not** be compiled or run, and the metadata specified will
-instead be used.
+be used instead.
+
+The `warning`, `rerun-if-changed`, and `rerun-if-env-changed` keys should not
+be used and will be ignored.
 
 ### Jobserver
 

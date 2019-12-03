@@ -9,38 +9,135 @@ with them:
 You can override these environment variables to change Cargo's behavior on your
 system:
 
-* `CARGO_HOME` — Cargo maintains a local cache of the registry index and of git
-  checkouts of crates. By default these are stored under `$HOME/.cargo`, but
-  this variable overrides the location of this directory. Once a crate is cached
-  it is not removed by the clean command.
+* `CARGO_HOME` — Cargo maintains a local cache of the registry index and of
+  git checkouts of crates. By default these are stored under `$HOME/.cargo`
+  (`%USERPROFILE%\.cargo` on Windows), but this variable overrides the
+  location of this directory. Once a crate is cached it is not removed by the
+  clean command.
   For more details refer to the [guide](../guide/cargo-home.md).
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
-  relative to the current working directory.
+  relative to the current working directory. See [`build.target-dir`] to set
+  via config.
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
-  compiler instead.
+  compiler instead. See [`build.rustc`] to set via config.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
   specified wrapper instead, passing as its commandline arguments the rustc
   invocation, with the first argument being `rustc`. Useful to set up a build
-  cache tool such as `sccache`.
+  cache tool such as `sccache`. See [`build.rustc-wrapper`] to set via config.
 * `RUSTDOC` — Instead of running `rustdoc`, Cargo will execute this specified
-  `rustdoc` instance instead.
+  `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` — A space-separated list of custom flags to pass to all `rustdoc`
-  invocations that Cargo performs. In contrast with `cargo rustdoc`, this is
-  useful for passing a flag to *all* `rustdoc` instances.
+  invocations that Cargo performs. In contrast with [`cargo rustdoc`], this is
+  useful for passing a flag to *all* `rustdoc` instances. See
+  [`build.rustdocflags`] for some more ways to set flags.
 * `RUSTFLAGS` — A space-separated list of custom flags to pass to all compiler
-  invocations that Cargo performs. In contrast with `cargo rustc`, this is
-  useful for passing a flag to *all* compiler instances.
-* `CARGO_INCREMENTAL` — If this is set to 1 then Cargo will force incremental
-  compilation to be enabled for the current compilation, and when set to 0 it
+  invocations that Cargo performs. In contrast with [`cargo rustc`], this is
+  useful for passing a flag to *all* compiler instances. See
+  [`build.rustflags`] for some more ways to set flags.
+* `CARGO_INCREMENTAL` — If this is set to 1 then Cargo will force [incremental
+  compilation] to be enabled for the current compilation, and when set to 0 it
   will force disabling it. If this env var isn't present then cargo's defaults
-  will otherwise be used.
+  will otherwise be used. See also [`build.incremental`] config value.
 * `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
+* `CARGO_NAME` — The author name to use for [`cargo new`].
+* `CARGO_EMAIL` — The author email to use for [`cargo new`].
+* `HTTPS_PROXY` or `https_proxy` or `http_proxy` — The HTTP proxy to use, see
+  [`http.proxy`] for more detail.
+* `HTTP_TIMEOUT` — The HTTP timeout in seconds, see [`http.timeout`] for more
+  detail.
+* `TERM` — If this is set to `dumb`, it disables the progress bar.
+* `BROWSER` — The web browser to execute to open documentation with [`cargo
+  doc`]'s' `--open` flag.
 
-Note that Cargo will also read environment variables for `.cargo/config`
-configuration values, as described in [that documentation][config-env]
+#### Configuration environment variables
 
+Cargo reads environment variables for configuration values. See the
+[configuration chapter][config-env] for more details. In summary, the
+supported environment variables are:
+
+* `CARGO_ALIAS_<name>` — Command aliases, see [`alias`].
+* `CARGO_BUILD_JOBS` — Number of parallel jobs, see [`build.jobs`].
+* `CARGO_BUILD_RUSTC` — The `rustc` executable, see [`build.rustc`].
+* `CARGO_BUILD_RUSTC_WRAPPER` — The `rustc` wrapper, see [`build.rustc-wrapper`].
+* `CARGO_BUILD_RUSTDOC` — The `rustdoc` executable, see [`build.rustdoc`].
+* `CARGO_BUILD_TARGET` — The default target platform, see [`build.target`].
+* `CARGO_BUILD_TARGET_DIR` — The default output directory, see [`build.target-dir`].
+* `CARGO_BUILD_RUSTFLAGS` — Extra `rustc` flags, see [`build.rustflags`].
+* `CARGO_BUILD_RUSTDOCFLAGS` — Extra `rustdoc` flags, see [`build.rustdocflags`].
+* `CARGO_BUILD_INCREMENTAL` — Incremental compilation, see [`build.incremental`].
+* `CARGO_BUILD_DEP_INFO_BASEDIR` — Dep-info relative directory, see [`build.dep-info-basedir`].
+* `CARGO_BUILD_PIPELINING` — Whether or not to use `rustc` pipelining, see [`build.pipelining`].
+* `CARGO_CARGO_NEW_NAME` — The author name to use with [`cargo new`], see [`cargo-new.name`].
+* `CARGO_CARGO_NEW_EMAIL` — The author email to use with [`cargo new`], see [`cargo-new.email`].
+* `CARGO_CARGO_NEW_VCS` — The default source control system with [`cargo new`], see [`cargo-new.vcs`].
+* `CARGO_HTTP_DEBUG` — Enables HTTP debugging, see [`http.debug`].
+* `CARGO_HTTP_PROXY` — Enables HTTP proxy, see [`http.proxy`].
+* `CARGO_HTTP_TIMEOUT` — The HTTP timeout, see [`http.timeout`].
+* `CARGO_HTTP_CAINFO` — The TLS certificate Certificate Authority file, see [`http.cainfo`].
+* `CARGO_HTTP_CHECK_REVOKE` — Disables TLS certificate revocation checks, see [`http.check-revoke`].
+* `CARGO_HTTP_SSL_VERSION` — The TLS version to use, see [`http.ssl-version`].
+* `CARGO_HTTP_LOW_SPEED_LIMIT` — The HTTP low-speed limit, see [`http.low-speed-limit`].
+* `CARGO_HTTP_MULTIPLEXING` — Whether HTTP/2 multiplexing is used, see [`http.multiplexing`].
+* `CARGO_HTTP_USER_AGENT` — The HTTP user-agent header, see [`http.user-agent`].
+* `CARGO_INSTALL_ROOT` — The default directory for [`cargo install`], see [`install.root`].
+* `CARGO_NET_RETRY` — Number of times to retry network errors, see [`net.retry`].
+* `CARGO_NET_GIT_FETCH_WITH_CLI` — Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
+* `CARGO_NET_OFFLINE` — Offline mode, see [`net.offline`].
+* `CARGO_REGISTRIES_<name>_INDEX` — URL of a registry index, see [`registries.<name>.index`].
+* `CARGO_REGISTRIES_<name>_TOKEN` — Authentication token of a registry, see [`registries.<name>.token`].
+* `CARGO_REGISTRY_DEFAULT` — Default registry for the `--registry` flag, see [`registry.default`].
+* `CARGO_REGISTRY_TOKEN` — Authentication token for [crates.io], see [`registry.token`].
+* `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`].
+* `CARGO_TARGET_<triple>_RUNNER` — The executable runner, see [`target.<triple>.runner`].
+* `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
+* `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].
+* `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
+
+[`cargo doc`]: ../commands/cargo-doc.md
+[`cargo install`]: ../commands/cargo-install.md
+[`cargo new`]: ../commands/cargo-new.md
+[`cargo rustc`]: ../commands/cargo-rustc.md
 [config-env]: config.md#environment-variables
+[crates.io]: https://crates.io/
+[incremental compilation]: profiles.md#incremental
+[`alias`]: config.md#alias
+[`build.jobs`]: config.md#buildjobs
+[`build.rustc`]: config.md#buildrustc
+[`build.rustc-wrapper`]: config.md#buildrustc-wrapper
+[`build.rustdoc`]: config.md#buildrustdoc
+[`build.target`]: config.md#buildtarget
+[`build.target-dir`]: config.md#buildtarget-dir
+[`build.rustflags`]: config.md#buildrustflags
+[`build.rustdocflags`]: config.md#buildrustdocflags
+[`build.incremental`]: config.md#buildincremental
+[`build.dep-info-basedir`]: config.md#builddep-info-basedir
+[`build.pipelining`]: config.md#buildpipelining
+[`cargo-new.name`]: config.md#cargo-newname
+[`cargo-new.email`]: config.md#cargo-newemail
+[`cargo-new.vcs`]: config.md#cargo-newvcs
+[`http.debug`]: config.md#httpdebug
+[`http.proxy`]: config.md#httpproxy
+[`http.timeout`]: config.md#httptimeout
+[`http.cainfo`]: config.md#httpcainfo
+[`http.check-revoke`]: config.md#httpcheck-revoke
+[`http.ssl-version`]: config.md#httpssl-version
+[`http.low-speed-limit`]: config.md#httplow-speed-limit
+[`http.multiplexing`]: config.md#httpmultiplexing
+[`http.user-agent`]: config.md#httpuser-agent
+[`install.root`]: config.md#installroot
+[`net.retry`]: config.md#netretry
+[`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
+[`net.offline`]: config.md#netoffline
+[`registries.<name>.index`]: config.md#registriesnameindex
+[`registries.<name>.token`]: config.md#registriesnametoken
+[`registry.default`]: config.md#registrydefault
+[`registry.token`]: config.md#registrytoken
+[`target.<triple>.linker`]: config.md#targettriplelinker
+[`target.<triple>.runner`]: config.md#targettriplerunner
+[`target.<triple>.rustflags`]: config.md#targettriplerustflags
+[`term.verbose`]: config.md#termverbose
+[`term.color`]: config.md#termcolor
 
 ### Environment variables Cargo sets for crates
 
@@ -123,14 +220,24 @@ let out_dir = env::var("OUT_DIR").unwrap();
                            where `<name>` is the name of the feature uppercased
                            and having `-` translated to `_`.
 * `CARGO_CFG_<cfg>` - For each [configuration option][configuration] of the
-                      package being built, this environment variable will
-                      contain the value of the configuration, where `<cfg>` is
-                      the name of the configuration uppercased and having `-`
-                      translated to `_`.
-                      Boolean configurations are present if they are set, and
-                      not present otherwise.
-                      Configurations with multiple values are joined to a
-                      single variable with the values delimited by `,`.
+  package being built, this environment variable will contain the value of the
+  configuration, where `<cfg>` is the name of the configuration uppercased and
+  having `-` translated to `_`. Boolean configurations are present if they are
+  set, and not present otherwise. Configurations with multiple values are
+  joined to a single variable with the values delimited by `,`. This includes
+  values built-in to the compiler (which can be seen with `rustc --print=cfg`)
+  and values set by build scripts and extra flags passed to `rustc` (such as
+  those defined in `RUSTFLAGS`). Some examples of what these variables are:
+    * `CARGO_CFG_UNIX` — Set on [unix-like platforms].
+    * `CARGO_CFG_WINDOWS` — Set on [windows-like platforms].
+    * `CARGO_CFG_TARGET_FAMILY=unix` — The [target family], either `unix` or `windows`.
+    * `CARGO_CFG_TARGET_OS=macos` — The [target operating system].
+    * `CARGO_CFG_TARGET_ARCH=x86_64` — The CPU [target architecture].
+    * `CARGO_CFG_TARGET_VENDOR=apple` — The [target vendor].
+    * `CARGO_CFG_TARGET_ENV=gnu` — The [target environment] ABI.
+    * `CARGO_CFG_TARGET_POINTER_WIDTH=64` — The CPU [pointer width].
+    * `CARGO_CFG_TARGET_ENDIAN=little` — The CPU [target endianess].
+    * `CARGO_CFG_TARGET_FEATURE=mmx,sse` — List of CPU [target features] enabled.
 * `OUT_DIR` - the folder in which all output should be placed. This folder is
               inside the build directory for the package being built, and it is
               unique for the package in question.
@@ -161,6 +268,16 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    about [cargo configuration][cargo-config] for more
                    information.
 
+[unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
+[windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
+[target family]: ../../reference/conditional-compilation.html#target_family
+[target operating system]: ../../reference/conditional-compilation.html#target_os
+[target architecture]: ../../reference/conditional-compilation.html#target_arch
+[target vendor]: ../../reference/conditional-compilation.html#target_vendor
+[target environment]: ../../reference/conditional-compilation.html#target_env
+[pointer width]: ../../reference/conditional-compilation.html#target_pointer_width
+[target endianess]: ../../reference/conditional-compilation.html#target_endian
+[target features]: ../../reference/conditional-compilation.html#target_feature
 [links]: build-scripts.md#the-links-manifest-key
 [configuration]: ../../reference/conditional-compilation.html
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
