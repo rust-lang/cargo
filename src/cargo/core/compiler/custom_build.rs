@@ -773,7 +773,12 @@ impl<'de> serde::Deserialize<'de> for BuildOutput {
         // require an intermediate step to translate LinksOverride to
         // BuildOutput, converting the ConfigRelativePath values to PathBuf.
 
-        let lo = LinksOverride::deserialize(deserializer)?;
+        let lo = LinksOverride::deserialize(deserializer).map_err(|e| {
+            serde::de::Error::custom(format!(
+                "failed to load config [target] links override table: {}",
+                e
+            ))
+        })?;
         if lo.warning.is_some() {
             return Err(Error::custom(
                 "`warning` is not supported in build script overrides",
