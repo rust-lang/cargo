@@ -27,7 +27,7 @@ pub struct TargetConfig {
     pub rustflags: OptValue<StringList>,
     /// The path of the linker for this target.
     pub linker: OptValue<ConfigRelativePath>,
-    /// The path of archiver (lib builder) for this target.
+    /// The path of archiver (lib builder) for this target. DEPRECATED/UNUSED
     pub ar: OptValue<ConfigRelativePath>,
     /// Build script override for the given library name.
     ///

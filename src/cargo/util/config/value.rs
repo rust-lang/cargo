@@ -59,6 +59,10 @@ pub enum Definition {
 }
 
 impl Definition {
+    /// Root directory where this is defined.
+    ///
+    /// If from a file, it is the directory above `.cargo/config`.
+    /// CLI and env are the current working directory.
     pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
         match self {
             Definition::Path(p) => p.parent().unwrap().parent().unwrap(),

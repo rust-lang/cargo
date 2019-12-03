@@ -1,3 +1,48 @@
+//! Cargo's config system.
+//!
+//! The `Config` object contains general information about the environment,
+//! and provides access to Cargo's configuration files.
+//!
+//! ## Config value API
+//!
+//! The primary API for fetching user-defined config values is the
+//! `Config::get` method. It uses `serde` to translate config values to a
+//! target type.
+//!
+//! There are a variety of helper types for deserializing some common formats:
+//!
+//! - `value::Value`: This type provides access to the location where the
+//!   config value was defined.
+//! - `ConfigRelativePath`: For a path that is relative to where it is
+//!   defined.
+//! - `PathAndArgs`: Similar to `ConfigRelativePath`, but also supports a list
+//!   of arguments, useful for programs to execute.
+//! - `StringList`: Get a value that is either a list or a whitespace split
+//!   string.
+//!
+//! ## Map key recommendations
+//!
+//! Handling tables that have arbitrary keys can be tricky, particularly if it
+//! should support environment variables. In general, if possible, the caller
+//! should pass the full key path into the `get()` method so that the config
+//! deserializer can properly handle environment variables (which need to be
+//! uppercased, and dashes converted to underscores).
+//!
+//! A good example is the `[target]` table. The code will request
+//! `target.$TRIPLE` and the config system can then appropriately fetch
+//! environment variables like `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER`.
+//! Conversely, it is not possible do the same thing for the `cfg()` target
+//! tables (because Cargo must fetch all of them), so those do not support
+//! environment variables.
+//!
+//! ## Internal API
+//!
+//! Internally config values are stored with the `ConfigValue` type after they
+//! have been loaded from disk. This is similar to the `toml::Value` type, but
+//! includes the definition location. The `get()` method uses serde to
+//! translate from `ConfigValue` and environment variables to the caller's
+//! desired type.
+
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
@@ -321,6 +366,7 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
+    /// Gets profiles defined in config files.
     pub fn profiles(&self) -> CargoResult<&ConfigProfiles> {
         self.profiles.try_borrow_with(|| {
             let ocp = self.get::<Option<ConfigProfiles>>("profile")?;
@@ -340,16 +386,28 @@ impl Config {
         })
     }
 
+    /// Which package sources have been updated, used to ensure it is only done once.
     pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
         self.updated_sources
             .borrow_with(|| RefCell::new(HashSet::new()))
             .borrow_mut()
     }
 
+    /// Gets all config values from disk.
+    ///
+    /// This will lazy-load the values as necessary. Callers are responsible
+    /// for checking environment variables. Callers outside of the `config`
+    /// module should avoid using this.
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.values.try_borrow_with(|| self.load_values())
     }
 
+    /// Gets a mutable copy of the on-disk config values.
+    ///
+    /// This requires the config values to already have been loaded. This
+    /// currently only exists for `cargo vendor` to remove the `source`
+    /// entries. This doesn't respect environment variables. You should avoid
+    /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         match self.values.borrow_mut() {
             Some(map) => Ok(map),
@@ -368,6 +426,8 @@ impl Config {
         }
     }
 
+    /// Reloads on-disk configuration values, starting at the given path and
+    /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
@@ -375,10 +435,16 @@ impl Config {
         Ok(())
     }
 
+    /// The current working directory.
     pub fn cwd(&self) -> &Path {
         &self.cwd
     }
 
+    /// The `target` output directory to use.
+    ///
+    /// Returns `None` if the user has not chosen an explicit directory.
+    ///
+    /// Callers should prefer `Workspace::target_dir` instead.
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
@@ -430,7 +496,7 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
-    // Helper primarily for testing.
+    /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env;
     }
@@ -477,7 +543,11 @@ impl Config {
         self.get::<Option<Value<String>>>(key)
     }
 
-    /// Get a config value that is expected to be a
+    /// Get a config value that is expected to be a path.
+    ///
+    /// This returns a relative path if the value does not contain any
+    /// directory separators. See `ConfigRelativePath::resolve_program` for
+    /// more details.
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
             v.map(|v| Value {
@@ -532,6 +602,7 @@ impl Config {
     get_value_typed! {get_bool, bool, Boolean, "true/false"}
     get_value_typed! {get_string_priv, String, String, "a string"}
 
+    /// Generate an error when the given value is the wrong type.
     fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
         val.expected(ty, &key.to_string())
             .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
