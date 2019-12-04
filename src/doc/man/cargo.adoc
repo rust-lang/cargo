@@ -74,6 +74,9 @@ man:cargo-pkgid[1]::
 man:cargo-update[1]::
     Update dependencies as recorded in the local lock file.
 
+man:cargo-vendor[1]::
+    Vendor all dependencies locally.
+
 man:cargo-verify-project[1]::
     Check correctness of crate manifest.
 
