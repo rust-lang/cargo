@@ -538,7 +538,9 @@ indexes and git dependencies. If `false`, then it uses a built-in `git`
 library.
 
 Setting this to `true` can be helpful if you have special authentication
-requirements that Cargo does not support.
+requirements that Cargo does not support. See [Git
+Authentication](../appendix/git-authentication.md) for more information about
+setting up git authentication.
 
 ##### `net.offline`
 * Type: boolean

@@ -72,3 +72,4 @@
 
 * [FAQ](faq.md)
 * [Appendix: Glossary](appendix/glossary.md)
+* [Appendix: Git Authentication](appendix/git-authentication.md)
