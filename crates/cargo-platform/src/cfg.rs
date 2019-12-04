@@ -369,14 +369,20 @@ fn cfg_validate_as_target() {
     assert!(p("target_family = \"abc\"").validate_as_target().is_ok());
     assert!(p("target_env = \"abc\"").validate_as_target().is_ok());
     assert!(p("target_endian = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_pointer_width = \"abc\"").validate_as_target().is_ok());
+    assert!(p("target_pointer_width = \"abc\"")
+        .validate_as_target()
+        .is_ok());
     assert!(p("target_vendor = \"abc\"").validate_as_target().is_ok());
 
     assert!(p("debug_assertions").validate_as_target().is_err());
     assert!(p("foo").validate_as_target().is_err());
-    assert!(p("any(not(debug_assertions), windows)").validate_as_target().is_err());
+    assert!(p("any(not(debug_assertions), windows)")
+        .validate_as_target()
+        .is_err());
 
     assert!(p("feature = \"abc\"").validate_as_target().is_err());
     assert!(p("bar = \"def\"").validate_as_target().is_err());
-    assert!(p("any(not(feature = \"def\"))").validate_as_target().is_err());
+    assert!(p("any(not(feature = \"def\"))")
+        .validate_as_target()
+        .is_err());
 }
