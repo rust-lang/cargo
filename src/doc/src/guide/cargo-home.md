@@ -56,7 +56,7 @@ To be able to make these binaries accessible, add the path of the directory to y
 To avoid redownloading all crate dependencies during continuous integration, you can cache the `$CARGO_HOME` directory.
 However, caching the entire directory is often inefficient as it will contain downloaded sources twice.
 If we depend on a crate such as `serde 1.0.92` and cache the entire `$CARGO_HOME` we would actually cache the sources twice, the `serde-1.0.92.crate` inside `registry/cache` and the extracted `.rs` files of serde inside `registry/src`.
-The can unnecessarily slow down the build as downloading, extracting, recompressing and reuploading the cache to the CI servers can take some time.
+That can unnecessarily slow down the build as downloading, extracting, recompressing and reuploading the cache to the CI servers can take some time.
 
 It should be sufficient to only cache the following directories across builds:
 
