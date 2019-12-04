@@ -144,6 +144,8 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
 #[cargo_test]
 fn cargo_compile_offline_not_try_update() {
+    // When --offline needs to download the registry, provide a reasonable
+    // error hint to run without --offline.
     let p = project()
         .at("bar")
         .file(
@@ -160,28 +162,23 @@ fn cargo_compile_offline_not_try_update() {
         .file("src/lib.rs", "")
         .build();
 
+    let msg = "\
+[ERROR] no matching package named `not_cached_dep` found
+location searched: registry `https://github.com/rust-lang/crates.io-index`
+required by package `bar v0.1.0 ([..]/bar)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause \
+surprising resolution failures, if this error is too confusing you may wish to \
+retry without the offline flag.
+";
+
     p.cargo("build --offline")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to load source for a dependency on `not_cached_dep`
-
-Caused by:
-  Unable to update registry `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  unable to fetch registry `https://github.com/rust-lang/crates.io-index` in offline mode
-Try running without the offline flag, or try running `cargo fetch` within your \
-project directory before going offline.
-",
-        )
+        .with_stderr(msg)
         .run();
 
+    // While we're here, also check the config works.
     p.change_file(".cargo/config", "net.offline = true");
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr_contains("[..]Unable to update registry[..]")
-        .run();
+    p.cargo("build").with_status(101).with_stderr(msg).run();
 }
 
 #[cargo_test]
@@ -535,4 +532,30 @@ surprising resolution failures, if this error is too confusing you may wish to \
 retry without the offline flag.
 ")
         .run();
+}
+
+#[cargo_test]
+fn offline_with_all_patched() {
+    // Offline works if everything is patched.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = "1.0"
+
+            [patch.crates-io]
+            dep = {path = "dep"}
+            "#,
+        )
+        .file("src/lib.rs", "pub fn f() { dep::foo(); }")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "1.0.0"))
+        .file("dep/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("check --offline").run();
 }
