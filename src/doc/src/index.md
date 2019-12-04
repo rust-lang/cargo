@@ -27,4 +27,4 @@ The reference covers the details of various areas of Cargo.
 
 [rust]: https://www.rust-lang.org/
 [crates.io]: https://crates.io/
-[GitHub]: https://github.com/rust-lang/cargo/tree/master/src/doc/src
+[GitHub]: https://github.com/rust-lang/cargo/tree/master/src/doc
