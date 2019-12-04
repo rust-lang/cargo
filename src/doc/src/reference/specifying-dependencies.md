@@ -142,6 +142,10 @@ the latest commit on a branch named `next`:
 rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 ```
 
+See [Git Authentication] for help with git authentication for private repos.
+
+[Git Authentication]: ../appendix/git-authentication.md
+
 ### Specifying path dependencies
 
 Over time, our `hello_world` package from [the guide](../guide/index.md) has
