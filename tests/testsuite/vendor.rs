@@ -121,7 +121,7 @@ fn two_explicit_versions() {
     Package::new("bitflags", "0.7.0").publish();
     Package::new("bitflags", "0.8.0").publish();
 
-    p.cargo("vendor --respect-source-config --explicit-version")
+    p.cargo("vendor --respect-source-config --versioned-dirs")
         .run();
 
     let lock = p.read_file("vendor/bitflags-0.8.0/Cargo.toml");

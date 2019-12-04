@@ -28,9 +28,8 @@ pub fn cli() -> App {
                 .multiple(true),
         )
         .arg(
-            Arg::with_name("explicit-version")
-                .short("-x")
-                .long("explicit-version")
+            Arg::with_name("versioned-dirs")
+                .long("versioned-dirs")
                 .help("Always include version in subdir name"),
         )
         .arg(
@@ -114,7 +113,7 @@ https://github.com/rust-lang/cargo/issues/new
         &ops::VendorOptions {
             no_delete: args.is_present("no-delete"),
             destination: &path,
-            explicit_version: args.is_present("explicit-version"),
+            versioned_dirs: args.is_present("versioned-dirs"),
             extra: args
                 .values_of_os("tomls")
                 .unwrap_or_default()

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
-    pub explicit_version: bool,
+    pub versioned_dirs: bool,
     pub destination: &'a Path,
     pub extra: Vec<PathBuf>,
 }
@@ -187,7 +187,7 @@ fn sync(
             .parent()
             .expect("manifest_path should point to a file");
         let max_version = *versions[&id.name()].iter().rev().next().unwrap().0;
-        let dir_has_version_suffix = opts.explicit_version || id.version() != max_version;
+        let dir_has_version_suffix = opts.versioned_dirs || id.version() != max_version;
         let dst_name = if dir_has_version_suffix {
             // Eg vendor/futures-0.1.13
             format!("{}-{}", id.name(), id.version())
