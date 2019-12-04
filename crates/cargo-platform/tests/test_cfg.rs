@@ -155,6 +155,16 @@ fn bad_target_name() {
         "failed to parse `!foo` as a cfg expression: \
          invalid target specifier: unexpected character ! in target name",
     );
+    bad::<Platform>(
+        "cfg(debug_assertions)",
+        "failed to parse `debug_assertions` as a cfg expression: \
+         invalid name in target cfg: debug_assertions",
+    );
+    bad::<Platform>(
+        "cfg(feature = \"abc\")",
+        "failed to parse `feature = \"abc\"` as a cfg expression: \
+         invalid key in target cfg: feature",
+    );
 }
 
 #[test]

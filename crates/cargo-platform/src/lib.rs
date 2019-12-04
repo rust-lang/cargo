@@ -88,7 +88,10 @@ impl FromStr for Platform {
     fn from_str(s: &str) -> Result<Platform, ParseError> {
         if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len() - 1];
-            s.parse().map(Platform::Cfg)
+            let cfg: CfgExpr = s.parse()?;
+            cfg.validate_as_target()
+                .map_err(|kind| ParseError::new(s, kind))?;
+            Ok(Platform::Cfg(cfg))
         } else {
             Platform::validate_named_platform(s)?;
             Ok(Platform::Name(s.to_string()))

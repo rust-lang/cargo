@@ -476,6 +476,9 @@ dependencies based on optional crate features.
 Use [the `[features]` section](manifest.md#the-features-section)
 instead.
 
+The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(prog_macro)`.
+There is currently no way to add dependencies based on these configuration values.
+
 In addition to `#[cfg]` syntax, Cargo also supports listing out the full target
 the dependencies would apply to:
 
