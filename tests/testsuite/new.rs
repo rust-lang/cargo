@@ -287,7 +287,7 @@ fn finds_local_author_git() {
 }
 
 #[cargo_test]
-fn finds_git_email() {
+fn finds_git_author() {
     cargo_process("new foo")
         .env("GIT_AUTHOR_NAME", "foo")
         .env("GIT_AUTHOR_EMAIL", "gitfoo")
@@ -303,11 +303,12 @@ fn finds_git_email() {
 }
 
 #[cargo_test]
-fn finds_git_author() {
+fn finds_git_committer() {
     create_empty_gitconfig();
     cargo_process("new foo")
         .env_remove("USER")
-        .env("GIT_COMMITTER_NAME", "gitfoo")
+        .env("GIT_COMMITTER_NAME", "foo")
+        .env("GIT_COMMITTER_EMAIL", "gitfoo")
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -316,7 +317,7 @@ fn finds_git_author() {
         .unwrap()
         .read_to_string(&mut contents)
         .unwrap();
-    assert!(contents.contains(r#"authors = ["gitfoo"]"#));
+    assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#));
 }
 
 #[cargo_test]
