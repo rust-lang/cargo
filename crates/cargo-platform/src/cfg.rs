@@ -45,19 +45,12 @@ impl Cfg {
     pub(crate) fn validate_as_target(&self) -> Result<(), ParseErrorKind> {
         match self {
             Cfg::Name(name) => match name.as_str() {
-                "unix" | "windows" => Ok(()),
-                _ => Err(InvalidCfgName(name.to_string())),
+                "test" | "debug_assertions" | "proc_macro" => Err(InvalidCfgName(name.to_string())),
+                _ => Ok(()),
             },
             Cfg::KeyPair(name, _) => match name.as_str() {
-                "target_arch"
-                | "target_feature"
-                | "target_os"
-                | "target_family"
-                | "target_env"
-                | "target_endian"
-                | "target_pointer_width"
-                | "target_vendor" => Ok(()),
-                _ => Err(InvalidCfgKey(name.to_string())),
+                "feature" => Err(InvalidCfgKey(name.to_string())),
+                _ => Ok(()),
             },
         }
     }
@@ -362,6 +355,7 @@ fn cfg_validate_as_target() {
     assert!(p("unix").validate_as_target().is_ok());
     assert!(p("windows").validate_as_target().is_ok());
     assert!(p("any(not(unix), windows)").validate_as_target().is_ok());
+    assert!(p("foo").validate_as_target().is_ok());
 
     assert!(p("target_arch = \"abc\"").validate_as_target().is_ok());
     assert!(p("target_feature = \"abc\"").validate_as_target().is_ok());
@@ -373,16 +367,17 @@ fn cfg_validate_as_target() {
         .validate_as_target()
         .is_ok());
     assert!(p("target_vendor = \"abc\"").validate_as_target().is_ok());
+    assert!(p("bar = \"def\"").validate_as_target().is_ok());
 
+    assert!(p("test").validate_as_target().is_err());
     assert!(p("debug_assertions").validate_as_target().is_err());
-    assert!(p("foo").validate_as_target().is_err());
+    assert!(p("proc_macro").validate_as_target().is_err());
     assert!(p("any(not(debug_assertions), windows)")
         .validate_as_target()
         .is_err());
 
     assert!(p("feature = \"abc\"").validate_as_target().is_err());
-    assert!(p("bar = \"def\"").validate_as_target().is_err());
-    assert!(p("any(not(feature = \"def\"))")
+    assert!(p("any(not(feature = \"def\"), target_arch = \"abc\")")
         .validate_as_target()
         .is_err());
 }
