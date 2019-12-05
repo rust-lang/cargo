@@ -116,6 +116,10 @@ pub trait AppExt: Sized {
         self._arg(opt("release", release))
     }
 
+    fn arg_pgo(self, pgo: &'static str) -> Self {
+        self._arg(opt("pgo", pgo))
+    }
+
     fn arg_profile(self, profile: &'static str) -> Self {
         self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
     }
