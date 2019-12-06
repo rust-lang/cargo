@@ -46,7 +46,7 @@ Windows uses Pageant for SSH authentication.
 > **Note:** Cargo does not support git's shorthand SSH URLs like
 > `git@example.com/user/repo.git`. Use a full SSH URL like
 > `ssh://git@example.com/user/repo.git`.
->
+
 > **Note:** SSH configuration files (like OpenSSH's `~/.ssh/config`) are not
 > used by Cargo's built-in SSH library. More advanced requirements should use
 > [`net.git-fetch-with-cli`].
