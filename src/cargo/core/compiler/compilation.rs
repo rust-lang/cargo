@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
@@ -8,7 +8,7 @@ use semver::Version;
 
 use super::BuildContext;
 use crate::core::compiler::CompileKind;
-use crate::core::{Edition, InternedString, Package, PackageId, Target};
+use crate::core::{Edition, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -16,9 +16,10 @@ pub struct Doctest {
     pub package: Package,
     /// The target being tested (currently always the package's lib).
     pub target: Target,
-    /// Extern dependencies needed by `rustdoc`. The path is the location of
-    /// the compiled lib.
-    pub deps: Vec<(InternedString, PathBuf)>,
+    /// Arguments needed to pass to rustdoc to run this test.
+    pub args: Vec<OsString>,
+    /// Whether or not -Zunstable-options is needed.
+    pub unstable_opts: bool,
 }
 
 /// A structure returning the result of a compilation.

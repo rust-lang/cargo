@@ -41,6 +41,8 @@ pub struct UnitDep<'a> {
     pub extern_crate_name: InternedString,
     /// Whether or not this is a public dependency.
     pub public: bool,
+    /// If `true`, the dependency should not be added to Rust's prelude.
+    pub noprelude: bool,
 }
 
 /// Collection of stuff used while creating the `UnitGraph`.
@@ -132,6 +134,7 @@ fn attach_std_deps<'a, 'cfg>(
                 extern_crate_name: unit.pkg.name(),
                 // TODO: Does this `public` make sense?
                 public: true,
+                noprelude: true,
             }));
         }
     }
@@ -577,6 +580,7 @@ fn new_unit_dep_with_profile<'a>(
         unit_for,
         extern_crate_name,
         public,
+        noprelude: false,
     })
 }
 

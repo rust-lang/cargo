@@ -155,7 +155,8 @@ fn run_doc_tests(
         let Doctest {
             package,
             target,
-            deps,
+            args,
+            unstable_opts,
         } = doctest_info;
         config.shell().status("Doc-tests", target.name())?;
         let mut p = compilation.rustdoc_process(package, target)?;
@@ -203,11 +204,12 @@ fn run_doc_tests(
             }
         }
 
-        for &(ref extern_crate_name, ref lib) in deps.iter() {
-            let mut arg = OsString::from(extern_crate_name.as_str());
-            arg.push("=");
-            arg.push(lib);
-            p.arg("--extern").arg(&arg);
+        for arg in args {
+            p.arg(arg);
+        }
+
+        if *unstable_opts {
+            p.arg("-Zunstable-options");
         }
 
         if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {

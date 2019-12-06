@@ -1,13 +1,11 @@
 //! Code for building the standard library.
 
-use super::layout::Layout;
-use crate::core::compiler::{BuildContext, CompileKind, CompileMode, Context, FileFlavor, Unit};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode, Unit};
 use crate::core::profiles::UnitFor;
 use crate::core::resolver::ResolveOpts;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
-use crate::util::paths;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
@@ -175,34 +173,4 @@ fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
         );
     }
     Ok(src_path)
-}
-
-/// Prepare the output directory for the local sysroot.
-pub fn prepare_sysroot(layout: &Layout) -> CargoResult<()> {
-    if let Some(libdir) = layout.sysroot_libdir() {
-        if libdir.exists() {
-            paths::remove_dir_all(libdir)?;
-        }
-        paths::create_dir_all(libdir)?;
-    }
-    Ok(())
-}
-
-/// Copy an artifact to the sysroot.
-pub fn add_sysroot_artifact<'a>(
-    cx: &Context<'a, '_>,
-    unit: &Unit<'a>,
-    rmeta: bool,
-) -> CargoResult<()> {
-    let outputs = cx.outputs(unit)?;
-    let outputs = outputs
-        .iter()
-        .filter(|output| output.flavor == FileFlavor::Linkable { rmeta })
-        .map(|output| &output.path);
-    for path in outputs {
-        let libdir = cx.files().layout(unit.kind).sysroot_libdir().unwrap();
-        let dst = libdir.join(path.file_name().unwrap());
-        paths::link_or_copy(path, dst)?;
-    }
-    Ok(())
 }

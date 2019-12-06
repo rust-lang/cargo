@@ -1,14 +1,12 @@
 #![allow(deprecated)]
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
 use jobserver::Client;
 
-use crate::core::compiler::compilation;
-use crate::core::compiler::Unit;
+use crate::core::compiler::{self, compilation, Unit};
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{internal, profile, Config};
@@ -18,7 +16,6 @@ use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
-use super::standard_lib;
 use super::unit_dependencies::{UnitDep, UnitGraph};
 use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
@@ -206,35 +203,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
-                // Note that we can *only* doc-test rlib outputs here. A
-                // staticlib output cannot be linked by the compiler (it just
-                // doesn't do that). A dylib output, however, can be linked by
-                // the compiler, but will always fail. Currently all dylibs are
-                // built as "static dylibs" where the standard library is
-                // statically linked into the dylib. The doc tests fail,
-                // however, for now as they try to link the standard library
-                // dynamically as well, causing problems. As a result we only
-                // pass `--extern` for rlib deps and skip out on all other
-                // artifacts.
-                let mut doctest_deps = Vec::new();
-                for dep in self.unit_deps(unit) {
-                    if dep.unit.target.is_lib() && dep.unit.mode == CompileMode::Build {
-                        let outputs = self.outputs(&dep.unit)?;
-                        let outputs = outputs.iter().filter(|output| {
-                            output.path.extension() == Some(OsStr::new("rlib"))
-                                || dep.unit.target.for_host()
-                        });
-                        for output in outputs {
-                            doctest_deps.push((dep.extern_crate_name, output.path.clone()));
-                        }
-                    }
-                }
-                // Help with tests to get a stable order with renamed deps.
-                doctest_deps.sort();
+                let mut unstable_opts = false;
+                let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     package: unit.pkg.clone(),
                     target: unit.target.clone(),
-                    deps: doctest_deps,
+                    args,
+                    unstable_opts,
                 });
             }
 
@@ -312,7 +287,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut targets = HashMap::new();
         if let CompileKind::Target(target) = self.bcx.build_config.requested_kind {
             let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
-            standard_lib::prepare_sysroot(&layout)?;
             targets.insert(target, layout);
         }
         self.primary_packages
