@@ -1420,3 +1420,51 @@ fn gitignore_negate() {
          ",
     );
 }
+
+#[cargo_test]
+fn include_dotfile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+        "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(".hidden", "") // should be included when packaging
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+.hidden
+Cargo.lock
+Cargo.toml
+src/main.rs
+",
+        )
+        .run();
+
+        let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+        validate_crate_contents(
+            f,
+            "foo-0.0.1.crate",
+            &[".hidden", "Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+            &[],
+        );
+}
