@@ -355,6 +355,10 @@ impl<'cfg> PathSource<'cfg> {
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
             return Ok(());
         }
+        // Skip dotfile directories.
+        if path.file_name().and_then(|s| s.to_str()).map(|s| s.starts_with('.')) == Some(true) {
+            return Ok(());
+        }
 
         // For package integration tests, we need to sort the paths in a deterministic order to
         // be able to match stdout warnings in the same order.
@@ -368,10 +372,6 @@ impl<'cfg> PathSource<'cfg> {
         entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
         for path in entries {
             let name = path.file_name().and_then(|s| s.to_str());
-            // Skip dotfile directories.
-            if name.map(|s| s.starts_with('.')) == Some(true) {
-                continue;
-            }
             if is_root && name == Some("target") {
                 // Skip Cargo artifacts.
                 continue;
