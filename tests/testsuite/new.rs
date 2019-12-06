@@ -422,9 +422,6 @@ fn subpackage_no_git() {
     assert!(!paths::root()
         .join("foo/components/subcomponent/.git")
         .is_file());
-    assert!(!paths::root()
-        .join("foo/components/subcomponent/.gitignore")
-        .is_file());
 }
 
 #[cargo_test]

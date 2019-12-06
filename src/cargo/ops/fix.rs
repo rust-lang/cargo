@@ -52,7 +52,7 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 
 use crate::core::Workspace;
-use crate::ops::{self, CompileOptions};
+use crate::ops::{self, CompileOptions, VersionControl};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
 use crate::util::{self, paths};
@@ -146,7 +146,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
         return Ok(());
     }
     let config = opts.compile_opts.config;
-    if !existing_vcs_repo(config.cwd(), config.cwd()) {
+    if VersionControl::NoVcs == existing_vcs_repo(config.cwd(), config.cwd()) {
         failure::bail!(
             "no VCS found for this package and `cargo fix` can potentially \
              perform destructive changes; if you'd like to suppress this \

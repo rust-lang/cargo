@@ -538,7 +538,13 @@ fn write_ignore_file(
 }
 
 /// Initializes the correct VCS system based on the provided config.
-fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
+fn init_vcs(
+    path: &Path,
+    vcs: VersionControl,
+    config: &Config,
+    in_existing_vcs: bool,
+    explicit: bool,
+) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
@@ -546,22 +552,30 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
                 // directory in the root of a posix filesystem.
                 // See: https://github.com/libgit2/libgit2/issues/5130
                 paths::create_dir_all(path)?;
-                GitRepo::init(path, config.cwd())?;
+                if explicit || !in_existing_vcs {
+                    GitRepo::init(path, config.cwd())?;
+                }
             }
         }
         VersionControl::Hg => {
             if !path.join(".hg").exists() {
-                HgRepo::init(path, config.cwd())?;
+                if explicit || !in_existing_vcs {
+                    HgRepo::init(path, config.cwd())?;
+                }
             }
         }
         VersionControl::Pijul => {
             if !path.join(".pijul").exists() {
-                PijulRepo::init(path, config.cwd())?;
+                if explicit || !in_existing_vcs {
+                    PijulRepo::init(path, config.cwd())?;
+                }
             }
         }
         VersionControl::Fossil => {
             if !path.join(".fossil").exists() {
-                FossilRepo::init(path, config.cwd())?;
+                if explicit || !in_existing_vcs {
+                    FossilRepo::init(path, config.cwd())?;
+                }
             }
         }
         VersionControl::NoVcs => {
@@ -585,16 +599,25 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
 
-    let vcs = opts.version_control.unwrap_or_else(|| {
-        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
-        match (cfg.version_control, in_existing_vcs) {
-            (None, false) => VersionControl::Git,
-            (Some(opt), false) => opt,
-            (_, true) => VersionControl::NoVcs,
+    let existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
+    let in_existing_vcs = existing_vcs != VersionControl::NoVcs;
+    let mut explicit = false;
+    let vcs = match opts.version_control {
+        Some(opt) => {
+            explicit = true;
+            opt
         }
-    });
+        None => match (cfg.version_control, in_existing_vcs) {
+            (None, false) => VersionControl::Git,
+            (Some(opt), _) => {
+                explicit = true;
+                opt
+            }
+            (None, true) => existing_vcs,
+        },
+    };
 
-    init_vcs(path, vcs, config)?;
+    init_vcs(path, vcs, config, in_existing_vcs, explicit)?;
     write_ignore_file(path, &ignore, vcs)?;
 
     let (author_name, email) = discover_author()?;

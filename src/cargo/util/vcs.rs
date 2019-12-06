@@ -1,3 +1,4 @@
+use crate::ops::VersionControl;
 use crate::util::paths;
 use crate::util::{process, CargoResult};
 use git2;
@@ -8,7 +9,7 @@ use std::path::Path;
 // 1. We are in a git repo and the path to the new package is not an ignored
 //    path in that repo.
 // 2. We are in an HG repo.
-pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
+pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> VersionControl {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
             // Don't check if the working directory itself is ignored.
@@ -22,7 +23,12 @@ pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
         }
     }
 
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+    if in_git_repo(path, cwd) {
+        return VersionControl::Git;
+    } else if HgRepo::discover(path, cwd).is_ok() {
+        return VersionControl::Hg;
+    }
+    VersionControl::NoVcs
 }
 
 pub struct HgRepo;
