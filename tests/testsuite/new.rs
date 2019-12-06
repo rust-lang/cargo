@@ -213,6 +213,23 @@ fn finds_author_username() {
 }
 
 #[cargo_test]
+fn finds_author_name() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env_remove("USERNAME")
+        .env("NAME", "foo")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert!(contents.contains(r#"authors = ["foo"]"#));
+}
+
+#[cargo_test]
 fn finds_author_priority() {
     cargo_process("new foo")
         .env("USER", "bar2")
