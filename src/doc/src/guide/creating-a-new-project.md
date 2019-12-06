@@ -86,6 +86,6 @@ $ cargo build --release
 `cargo build --release` puts the resulting binary in `target/release` instead of
 `target/debug`.
 
-Compiling in debug mode is the default for development-- compilation time is
+Compiling in debug mode is the default for development. Compilation time is
 shorter since the compiler doesn't do optimizations, but the code will run
 slower. Release mode takes longer to compile, but the code will run faster.
