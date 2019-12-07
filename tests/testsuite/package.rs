@@ -1460,11 +1460,17 @@ src/main.rs
         )
         .run();
 
-        let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-        validate_crate_contents(
-            f,
-            "foo-0.0.1.crate",
-            &[".hidden", "Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
-            &[],
-        );
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            ".hidden",
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+        ],
+        &[],
+    );
 }

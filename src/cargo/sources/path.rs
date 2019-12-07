@@ -356,7 +356,12 @@ impl<'cfg> PathSource<'cfg> {
             return Ok(());
         }
         // Skip dotfile directories.
-        if path.file_name().and_then(|s| s.to_str()).map(|s| s.starts_with('.')) == Some(true) {
+        if path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.starts_with('.'))
+            == Some(true)
+        {
             return Ok(());
         }
 
