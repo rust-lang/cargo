@@ -34,6 +34,7 @@ pub struct PackageOpts<'cfg> {
     pub list: bool,
     pub check_metadata: bool,
     pub allow_dirty: bool,
+    pub allow_incomplete_manifest: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
@@ -58,7 +59,8 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     src.update()?;
 
     if opts.check_metadata {
-        if !check_metadata(pkg, config)? {
+        let valid_metadata = check_metadata(pkg, config)?;
+        if !valid_metadata && !opts.allow_incomplete_manifest {
             failure::bail!(
                 "to proceed despite this incomplete manifest pass the `--allow-incomplete-manifest` flag"
             )

@@ -42,6 +42,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             list: args.is_present("list"),
             check_metadata: !args.is_present("no-metadata"),
             allow_dirty: args.is_present("allow-dirty"),
+            // incomplete manifest always allowed calling `cargo package`
+            // calling `cargo publish` it may be denied
+            allow_incomplete_manifest: true,
             target: args.target(),
             jobs: args.jobs()?,
             features: args._values_of("features"),

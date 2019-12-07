@@ -16,6 +16,10 @@ pub fn cli() -> App {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
+        .arg(opt(
+            "allow-incomplete-manifest",
+            "Allow incomplete manifests to be published",
+        ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
@@ -38,6 +42,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             index,
             verify: !args.is_present("no-verify"),
             allow_dirty: args.is_present("allow-dirty"),
+            allow_incomplete_manifest: args.is_present("allow-incomplete-manifest"),
             target: args.target(),
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),
