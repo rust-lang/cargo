@@ -212,7 +212,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<bool> {
              See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
         ))?;
-        return Ok(false)
+        return Ok(false);
     }
     Ok(true)
 }
