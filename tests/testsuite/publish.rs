@@ -1261,3 +1261,34 @@ repository = "foo"
         )],
     );
 }
+
+#[cargo_test]
+fn dont_publish_incomplete_manifest() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+warning: manifest has no description, documentation, homepage or repository.
+See [..]
+error: to proceed despite this incomplete manifest pass the `--allow-incomplete-manifest` flag
+",
+        )
+        .run();
+}
