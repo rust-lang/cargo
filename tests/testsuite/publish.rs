@@ -1292,3 +1292,34 @@ error: to proceed despite this incomplete manifest pass the `--allow-incomplete-
         )
         .run();
 }
+
+#[cargo_test]
+fn allow_incomplete_manifest() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --allow-incomplete-manifest --no-verify --index")
+        .arg(registry_url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+warning: manifest has no description, documentation, homepage or repository.
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
+        .run();
+}
