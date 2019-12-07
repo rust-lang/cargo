@@ -58,7 +58,11 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     src.update()?;
 
     if opts.check_metadata {
-        check_metadata(pkg, config)?;
+        if !check_metadata(pkg, config)? {
+            failure::bail!(
+                "to proceed despite this incomplete manifest pass the `--allow-incomplete-manifest` flag"
+            )
+        }
     }
 
     verify_dependencies(pkg)?;
@@ -172,7 +176,7 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
 
 // Checks that the package has some piece of metadata that a human can
 // use to tell what the package is about.
-fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
+fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<bool> {
     let md = pkg.manifest().metadata();
 
     let mut missing = vec![];
@@ -205,9 +209,10 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
             "manifest has no {things}.\n\
              See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
-        ))?
+        ))?;
+        return Ok(false)
     }
-    Ok(())
+    Ok(true)
 }
 
 // Checks that the package dependencies are safe to deploy.
