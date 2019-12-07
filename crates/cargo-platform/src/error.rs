@@ -17,8 +17,6 @@ pub enum ParseErrorKind {
     IncompleteExpr(&'static str),
     UnterminatedExpression(String),
     InvalidTarget(String),
-    InvalidCfgName(String),
-    InvalidCfgKey(String),
 
     #[doc(hidden)]
     __Nonexhaustive,
@@ -55,8 +53,6 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "unexpected content `{}` found after cfg expression", s)
             }
             InvalidTarget(s) => write!(f, "invalid target specifier: {}", s),
-            InvalidCfgName(name) => write!(f, "invalid name in target cfg: {}", name),
-            InvalidCfgKey(name) => write!(f, "invalid key in target cfg: {}", name),
             __Nonexhaustive => unreachable!(),
         }
     }

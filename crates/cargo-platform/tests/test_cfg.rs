@@ -155,16 +155,6 @@ fn bad_target_name() {
         "failed to parse `!foo` as a cfg expression: \
          invalid target specifier: unexpected character ! in target name",
     );
-    bad::<Platform>(
-        "cfg(debug_assertions)",
-        "failed to parse `debug_assertions` as a cfg expression: \
-         invalid name in target cfg: debug_assertions",
-    );
-    bad::<Platform>(
-        "cfg(feature = \"abc\")",
-        "failed to parse `feature = \"abc\"` as a cfg expression: \
-         invalid key in target cfg: feature",
-    );
 }
 
 #[test]
@@ -184,5 +174,78 @@ fn round_trip_platform() {
          any(target_arch = \"aarch64\", target_arch = \"arm\", target_arch = \"powerpc64\", \
          target_arch = \"x86\", target_arch = \"x86_64\")), \
          all(target_os = \"freebsd\", target_arch = \"x86_64\")))",
+    );
+}
+
+#[test]
+fn check_cfg_attributes() {
+    fn ok(s: &str) {
+        let p = Platform::Cfg(s.parse().unwrap());
+        let mut warnings = Vec::new();
+        p.check_cfg_attributes(&mut warnings);
+        assert!(
+            warnings.is_empty(),
+            "Expected no warnings but got: {:?}",
+            warnings,
+        );
+    }
+
+    fn warn(s: &str, names: &[&str]) {
+        let p = Platform::Cfg(s.parse().unwrap());
+        let mut warnings = Vec::new();
+        p.check_cfg_attributes(&mut warnings);
+        assert_eq!(
+            warnings.len(),
+            names.len(),
+            "Expecter warnings about {:?} but got {:?}",
+            names,
+            warnings,
+        );
+        for (name, warning) in names.iter().zip(warnings.iter()) {
+            assert!(
+                warning.contains(name),
+                "Expected warning about '{}' but got: {}",
+                name,
+                warning,
+            );
+        }
+    }
+
+    ok("unix");
+    ok("windows");
+    ok("any(not(unix), windows)");
+    ok("foo");
+
+    ok("target_arch = \"abc\"");
+    ok("target_feature = \"abc\"");
+    ok("target_os = \"abc\"");
+    ok("target_family = \"abc\"");
+    ok("target_env = \"abc\"");
+    ok("target_endian = \"abc\"");
+    ok("target_pointer_width = \"abc\"");
+    ok("target_vendor = \"abc\"");
+    ok("bar = \"def\"");
+
+    warn("test", &["test"]);
+    warn("debug_assertions", &["debug_assertions"]);
+    warn("proc_macro", &["proc_macro"]);
+    warn("feature = \"abc\"", &["feature"]);
+
+    warn("any(not(debug_assertions), windows)", &["debug_assertions"]);
+    warn(
+        "any(not(feature = \"def\"), target_arch = \"abc\")",
+        &["feature"],
+    );
+    warn(
+        "any(not(target_os = \"windows\"), proc_macro)",
+        &["proc_macro"],
+    );
+    warn(
+        "any(not(feature = \"windows\"), proc_macro)",
+        &["feature", "proc_macro"],
+    );
+    warn(
+        "all(not(debug_assertions), any(windows, proc_macro))",
+        &["debug_assertions", "proc_macro"],
     );
 }

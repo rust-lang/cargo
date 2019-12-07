@@ -1085,7 +1085,11 @@ impl TomlManifest {
             process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
 
             for (name, platform) in me.target.iter().flatten() {
-                cx.platform = Some(name.parse()?);
+                cx.platform = {
+                    let platform: Platform = name.parse()?;
+                    platform.check_cfg_attributes(&mut cx.warnings);
+                    Some(platform)
+                };
                 process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
                 let build_deps = platform
                     .build_dependencies

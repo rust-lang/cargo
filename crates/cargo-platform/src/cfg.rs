@@ -1,4 +1,4 @@
-use crate::error::{ParseError, ParseErrorKind, ParseErrorKind::*};
+use crate::error::{ParseError, ParseErrorKind::*};
 use std::fmt;
 use std::iter;
 use std::str::{self, FromStr};
@@ -39,21 +39,6 @@ struct Tokenizer<'a> {
 
 struct Parser<'a> {
     t: Tokenizer<'a>,
-}
-
-impl Cfg {
-    pub(crate) fn validate_as_target(&self) -> Result<(), ParseErrorKind> {
-        match self {
-            Cfg::Name(name) => match name.as_str() {
-                "test" | "debug_assertions" | "proc_macro" => Err(InvalidCfgName(name.to_string())),
-                _ => Ok(()),
-            },
-            Cfg::KeyPair(name, _) => match name.as_str() {
-                "feature" => Err(InvalidCfgKey(name.to_string())),
-                _ => Ok(()),
-            },
-        }
-    }
 }
 
 impl FromStr for Cfg {
@@ -103,19 +88,6 @@ impl CfgExpr {
             CfgExpr::Any(ref e) => e.iter().any(|e| e.matches(cfg)),
             CfgExpr::Value(ref e) => cfg.contains(e),
         }
-    }
-
-    pub(crate) fn validate_as_target(&self) -> Result<(), ParseErrorKind> {
-        match *self {
-            CfgExpr::Not(ref e) => e.validate_as_target()?,
-            CfgExpr::All(ref e) | CfgExpr::Any(ref e) => {
-                for e in e {
-                    e.validate_as_target()?;
-                }
-            }
-            CfgExpr::Value(ref e) => e.validate_as_target()?,
-        }
-        Ok(())
     }
 }
 
@@ -344,40 +316,4 @@ impl<'a> Token<'a> {
             Token::String(..) => "a string",
         }
     }
-}
-
-#[test]
-fn cfg_validate_as_target() {
-    fn p(s: &str) -> CfgExpr {
-        s.parse().unwrap()
-    }
-
-    assert!(p("unix").validate_as_target().is_ok());
-    assert!(p("windows").validate_as_target().is_ok());
-    assert!(p("any(not(unix), windows)").validate_as_target().is_ok());
-    assert!(p("foo").validate_as_target().is_ok());
-
-    assert!(p("target_arch = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_feature = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_os = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_family = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_env = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_endian = \"abc\"").validate_as_target().is_ok());
-    assert!(p("target_pointer_width = \"abc\"")
-        .validate_as_target()
-        .is_ok());
-    assert!(p("target_vendor = \"abc\"").validate_as_target().is_ok());
-    assert!(p("bar = \"def\"").validate_as_target().is_ok());
-
-    assert!(p("test").validate_as_target().is_err());
-    assert!(p("debug_assertions").validate_as_target().is_err());
-    assert!(p("proc_macro").validate_as_target().is_err());
-    assert!(p("any(not(debug_assertions), windows)")
-        .validate_as_target()
-        .is_err());
-
-    assert!(p("feature = \"abc\"").validate_as_target().is_err());
-    assert!(p("any(not(feature = \"def\"), target_arch = \"abc\")")
-        .validate_as_target()
-        .is_err());
 }
