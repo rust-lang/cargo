@@ -147,6 +147,8 @@ impl<'cfg> PathSource<'cfg> {
             if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
                 return result;
             }
+            // no include option and not git repo discovered (see rust-lang/cargo#7183).
+            return self.list_files_walk_except_dot_files_and_dirs(pkg, &mut filter);
         }
         self.list_files_walk(pkg, &mut filter)
     }
@@ -329,6 +331,29 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    fn list_files_walk_except_dot_files_and_dirs(
+        &self,
+        pkg: &Package,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+    ) -> CargoResult<Vec<PathBuf>> {
+        let root = pkg.root();
+        let mut exclude_dot_files_dir_builder = GitignoreBuilder::new(root);
+        exclude_dot_files_dir_builder.add_line(None, ".*")?;
+        exclude_dot_files_dir_builder.add_line(None, "*/.*/*")?;
+        let ignore_dot_files_and_dirs = exclude_dot_files_dir_builder.build()?;
+
+        let mut filter_ignore_dot_files_and_dirs = |path: &Path| -> CargoResult<bool> {
+            let relative_path = path.strip_prefix(root)?;
+            match ignore_dot_files_and_dirs
+                .matched_path_or_any_parents(relative_path, /* is_dir */ false)
+            {
+                Match::Ignore(_) => Ok(false),
+                _ => filter(path),
+            }
+        };
+        self.list_files_walk(pkg, &mut filter_ignore_dot_files_and_dirs)
+    }
+
     fn list_files_walk(
         &self,
         pkg: &Package,
@@ -353,15 +378,6 @@ impl<'cfg> PathSource<'cfg> {
         }
         // Don't recurse into any sub-packages that we have.
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
-            return Ok(());
-        }
-        // Skip dotfile directories.
-        if path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .map(|s| s.starts_with('.'))
-            == Some(true)
-        {
             return Ok(());
         }
 
