@@ -1,3 +1,6 @@
-# cargo
-{{#include command-common.html}}
-{{#include ../../man/generated/cargo.html}}
+# Cargo Commands
+* [General Commands](general-commands.md)
+* [Build Commands](build-commands.md)
+* [Manifest Commands](manifest-commands.md)
+* [Package Commands](package-commands.md)
+* [Publishing Commands](publishing-commands.md)
