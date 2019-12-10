@@ -339,7 +339,6 @@ impl<'cfg> PathSource<'cfg> {
         let root = pkg.root();
         let mut exclude_dot_files_dir_builder = GitignoreBuilder::new(root);
         exclude_dot_files_dir_builder.add_line(None, ".*")?;
-        exclude_dot_files_dir_builder.add_line(None, "*/.*/*")?;
         let ignore_dot_files_and_dirs = exclude_dot_files_dir_builder.build()?;
 
         let mut filter_ignore_dot_files_and_dirs = |path: &Path| -> CargoResult<bool> {
