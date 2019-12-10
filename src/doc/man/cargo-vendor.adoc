@@ -38,6 +38,13 @@ to use the vendored sources, which you will need to add to `.cargo/config`.
     Instead of ignoring `[source]` configuration by default in `.cargo/config`
     read it and use it when downloading crates from crates.io, for example
 
+*--versioned-dirs*::
+    Normally versions are only added to disambiguate multiple versions of the
+    same package. This option causes all directories in the "vendor" directory
+    to be versioned, which makes it easier to track the history of vendored
+    packages over time, and can help with the performance of re-vendoring when
+    only a subset of the packages have changed.
+
 === Manifest Options
 
 include::options-manifest-path.adoc[]
