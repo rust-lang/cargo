@@ -53,6 +53,7 @@ mod install_upgrade;
 mod jobserver;
 mod list_targets;
 mod local_registry;
+mod locate_project;
 mod lockfile_compat;
 mod login;
 mod member_errors;
