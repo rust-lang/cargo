@@ -3995,3 +3995,50 @@ fn panic_abort_test_profile_inherits() {
         .with_status(0)
         .run();
 }
+
+#[cargo_test]
+fn bin_env_for_test() {
+    // Test for the `CARGO_BIN_` environment variables for tests.
+    //
+    // Note: The Unicode binary uses a `[[bin]]` definition because different
+    // filesystems normalize utf-8 in different ways. For example, HFS uses
+    // "gru\u{308}ßen" and APFS uses "gr\u{fc}ßen". Defining it in TOML forces
+    // one form to be used.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [[bin]]
+                name = 'grüßen'
+                path = 'src/bin/grussen.rs'
+            "#,
+        )
+        .file("src/bin/foo.rs", "fn main() {}")
+        .file("src/bin/with-dash.rs", "fn main() {}")
+        .file("src/bin/grussen.rs", "fn main() {}")
+        .build();
+
+    let bin_path = |name| p.bin(name).to_string_lossy().replace("\\", "\\\\");
+    p.change_file(
+        "tests/check_env.rs",
+        &r#"
+            #[test]
+            fn run_bins() {
+                assert_eq!(env!("CARGO_BIN_EXE_FOO"), "<FOO_PATH>");
+                assert_eq!(env!("CARGO_BIN_EXE_WITH_DASH"), "<WITH_DASH_PATH>");
+                assert_eq!(env!("CARGO_BIN_EXE_GRÜSSEN"), "<GRÜSSEN_PATH>");
+            }
+        "#
+        .replace("<FOO_PATH>", &bin_path("foo"))
+        .replace("<WITH_DASH_PATH>", &bin_path("with-dash"))
+        .replace("<GRÜSSEN_PATH>", &bin_path("grüßen")),
+    );
+
+    p.cargo("test --test check_env").run();
+    p.cargo("check --test check_env").run();
+}

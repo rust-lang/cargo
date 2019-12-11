@@ -876,6 +876,23 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-Zforce-unstable-if-unmarked")
             .env("RUSTC_BOOTSTRAP", "1");
     }
+
+    // Add `CARGO_BIN_` environment variables for building tests.
+    if unit.target.is_test() || unit.target.is_bench() {
+        for bin_target in unit
+            .pkg
+            .manifest()
+            .targets()
+            .iter()
+            .filter(|target| target.is_bin())
+        {
+            let exe_path = cx
+                .files()
+                .bin_link_for_target(bin_target, unit.kind, cx.bcx)?;
+            let key = format!("CARGO_BIN_EXE_{}", bin_target.crate_name().to_uppercase());
+            cmd.env(&key, exe_path);
+        }
+    }
     Ok(())
 }
 

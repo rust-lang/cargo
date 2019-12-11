@@ -10,7 +10,7 @@ use log::info;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, Unit};
-use crate::core::{TargetKind, Workspace};
+use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a build.
@@ -239,6 +239,36 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             Some(ref metadata) => format!("{}-{}", unit.target.crate_name(), metadata),
             None => self.bin_stem(unit),
         }
+    }
+
+    /// Returns the path to the executable binary for the given bin target.
+    ///
+    /// This should only to be used when a `Unit` is not available.
+    pub fn bin_link_for_target(
+        &self,
+        target: &Target,
+        kind: CompileKind,
+        bcx: &BuildContext<'_, '_>,
+    ) -> CargoResult<PathBuf> {
+        assert!(target.is_bin());
+        let dest = self.layout(kind).dest();
+        let info = bcx.info(kind);
+        let file_types = info
+            .file_types(
+                "bin",
+                FileFlavor::Normal,
+                &TargetKind::Bin,
+                kind.short_name(bcx),
+            )?
+            .expect("target must support `bin`");
+
+        let file_type = file_types
+            .iter()
+            .filter(|file_type| file_type.flavor == FileFlavor::Normal)
+            .next()
+            .expect("target must support `bin`");
+
+        Ok(dest.join(file_type.filename(target.name())))
     }
 
     /// Returns the filenames that the given unit will generate.
