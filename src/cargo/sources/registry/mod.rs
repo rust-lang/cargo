@@ -47,7 +47,7 @@
 //!
 //!   Additionally, each modification to the index is just appending a line at
 //!   the end of a file (the exact format is described later). This means that
-//!   the commits for an index are quite small and easily applied/compressable.
+//!   the commits for an index are quite small and easily applied/compressible.
 //!
 //! ## The format of the Index
 //!

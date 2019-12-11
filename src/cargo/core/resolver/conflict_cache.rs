@@ -61,7 +61,7 @@ impl ConflictStoreTrie {
                             if max_age > age {
                                 // we found one that can jump-back further so replace the out.
                                 out = Some((o, age));
-                                // and dont look at anything older
+                                // and don't look at anything older
                                 max_age = age
                             }
                         }

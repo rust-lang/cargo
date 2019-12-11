@@ -204,7 +204,7 @@ fn custom_runner_cfg() {
         .run();
 }
 
-// custom runner set via `target.$triple.runner` have precende over `target.'cfg(..)'.runner`
+// custom runner set via `target.$triple.runner` have precedence over `target.'cfg(..)'.runner`
 #[cargo_test]
 fn custom_runner_cfg_precedence() {
     let target = rustc_host();

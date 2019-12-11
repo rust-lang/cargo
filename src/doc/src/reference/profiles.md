@@ -187,7 +187,7 @@ case `rustc` uses an internal heuristic to split the crate.
 
 #### rpath
 
-The `rpath` setting controlls the [`-C rpath` flag] which controls
+The `rpath` setting controls the [`-C rpath` flag] which controls
 whether or not [`rpath`] is enabled.
 
 [`-C rpath` flag]: ../../rustc/codegen-options/index.html#rpath

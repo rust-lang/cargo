@@ -236,7 +236,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_VENDOR=apple` — The [target vendor].
     * `CARGO_CFG_TARGET_ENV=gnu` — The [target environment] ABI.
     * `CARGO_CFG_TARGET_POINTER_WIDTH=64` — The CPU [pointer width].
-    * `CARGO_CFG_TARGET_ENDIAN=little` — The CPU [target endianess].
+    * `CARGO_CFG_TARGET_ENDIAN=little` — The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` — List of CPU [target features] enabled.
 * `OUT_DIR` - the folder in which all output should be placed. This folder is
               inside the build directory for the package being built, and it is
@@ -276,7 +276,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [target vendor]: ../../reference/conditional-compilation.html#target_vendor
 [target environment]: ../../reference/conditional-compilation.html#target_env
 [pointer width]: ../../reference/conditional-compilation.html#target_pointer_width
-[target endianess]: ../../reference/conditional-compilation.html#target_endian
+[target endianness]: ../../reference/conditional-compilation.html#target_endian
 [target features]: ../../reference/conditional-compilation.html#target_feature
 [links]: build-scripts.md#the-links-manifest-key
 [configuration]: ../../reference/conditional-compilation.html

@@ -68,7 +68,7 @@ to use the vendored sources, which you will need to add to `.cargo/config`.
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    // We're doing the vendoring operation outselves, so we don't actually want
+    // We're doing the vendoring operation ourselves, so we don't actually want
     // to respect any of the `source` configuration in Cargo itself. That's
     // intended for other consumers of Cargo, but we want to go straight to the
     // source, e.g. crates.io, to fetch crates.
@@ -77,7 +77,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     }
 
     // When we moved `cargo vendor` into Cargo itself we didn't stabilize a few
-    // flags, so try to provide a helpful error message in that case to enusre
+    // flags, so try to provide a helpful error message in that case to ensure
     // that users currently using the flag aren't tripped up.
     let crates_io_cargo_vendor_flag = if args.is_present("no-merge-sources") {
         Some("--no-merge-sources")

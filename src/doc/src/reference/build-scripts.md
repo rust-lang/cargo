@@ -42,7 +42,7 @@ scripts.
 Just before a package is built, Cargo will compile a build script into an
 executable (if it has not already been built). It will then run the script,
 which may perform any number of tasks. The script may communicate with Cargo
-by printing specially formated commands prefixed with `cargo:` to stdout.
+by printing specially formatted commands prefixed with `cargo:` to stdout.
 
 The build script will be rebuilt if any of its source files or dependencies
 change.
