@@ -221,6 +221,34 @@ workspace = "path/to/workspace/root"
 
 For more information, see the documentation for the workspace table below.
 
+#### The `license` and `license-file` fields (optional)
+
+The `license` field can be set to an [SPDX 2.1 license
+expression][spdx-2.1-license-expressions] for the package. Currently crates.io
+will validate the license provided against a whitelist of known license and
+exception identifiers from the [SPDX license list 3.6][spdx-license-list-3.6].
+Parentheses are not currently supported.
+
+Previously multiple licenses could be separated with a `/`, but that usage is
+deprecated. Instead, use a license expression with AND and OR operators to get
+more explicit semantics.
+
+```toml
+[package]
+# ...
+license = "MIT OR Apache-2.0"
+```
+
+If a package is using a nonstandard license, then the `license-file` field may
+be specified in lieu of the `license` field. It must point to a file relative to
+this manifest (similar to the `readme` field).
+
+```toml
+[package]
+# ...
+license-file = "..."
+```
+
 #### Package metadata
 
 There are a number of optional metadata fields also accepted under the
@@ -255,35 +283,31 @@ keywords = ["...", "..."]
 # Categories are a fixed list available at crates.io/category_slugs, and
 # they must match exactly.
 categories = ["...", "..."]
+```
 
-# This is an SPDX 2.1 license expression for this package. Currently
-# crates.io will validate the license provided against a whitelist of
-# known license and exception identifiers from the SPDX license list
-# 3.6. Parentheses are not currently supported.
-#
-# Multiple licenses can be separated with a `/`, although that usage
-# is deprecated. Instead, use a license expression with AND and OR
-# operators to get more explicit semantics.
-license = "..."
+The [crates.io](https://crates.io) registry will render the description, display
+the license, link to the three URLs and categorize by the keywords. These keys
+provide useful information to users of the registry and also influence the
+search ranking of a crate. It is highly discouraged to omit everything in a
+published crate.
 
-# If a package is using a nonstandard license, then this key may be specified in
-# lieu of the above key and must point to a file relative to this manifest
-# (similar to the readme key).
-license-file = "..."
+### The `[badges]` section
 
-# Optional specification of badges to be displayed on crates.io.
-#
-# - The badges pertaining to build status that are currently available are
-#   Appveyor, CircleCI, Cirrus CI, GitLab, Azure DevOps, Travis CI and Bitbucket
-#   Pipelines.
-# - Available badges pertaining to code test coverage are Codecov and
-#   Coveralls.
-# - There are also maintenance-related badges based on isitmaintained.com
-#   which state the issue resolution time, percent of open issues, and future
-#   maintenance intentions.
-#
-# If a `repository` key is required, this refers to a repository in
-# `user/repo` format.
+crates.io can display various badges for build status, test coverage, etc. for
+each crate. All badges are optional.
+
+- The badges pertaining to build status that are currently available are
+  Appveyor, CircleCI, Cirrus CI, GitLab, Azure DevOps, Travis CI and Bitbucket
+  Pipelines.
+- Available badges pertaining to code test coverage are Codecov and Coveralls.
+- There are also maintenance-related badges based on isitmaintained.com
+  which state the issue resolution time, percent of open issues, and future
+  maintenance intentions.
+
+Most badge specifications require a `repository` key. It is expected to be in
+`user/repo` format.
+
+```toml
 [badges]
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
@@ -345,17 +369,6 @@ is-it-maintained-open-issues = { repository = "..." }
 #   their intentions, potential crate users will need to investigate on their own.
 maintenance = { status = "..." }
 ```
-
-The [crates.io](https://crates.io) registry will render the description, display
-the license, link to the three URLs and categorize by the keywords. These keys
-provide useful information to users of the registry and also influence the
-search ranking of a crate. It is highly discouraged to omit everything in a
-published crate.
-
-SPDX 2.1 license expressions are documented
-[here][spdx-2.1-license-expressions]. The current version of the
-license list is available [here][spdx-license-list], and version 3.6
-is available [here][spdx-license-list-3.6].
 
 #### The `metadata` table (optional)
 
@@ -946,4 +959,3 @@ dependencies][replace] section of the documentation.
 [`cargo test`]: ../commands/cargo-test.md
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
-[spdx-license-list]: https://spdx.org/licenses/
