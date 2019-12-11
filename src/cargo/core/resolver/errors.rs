@@ -271,7 +271,7 @@ pub(super) fn activation_error(
             );
             if !candidates.is_empty() {
                 // If dependency package name is equal to the name of the candidate here
-                // it may be a prerelease package which hasn't been speficied correctly
+                // it may be a prerelease package which hasn't been specified correctly
                 if dep.package_name() == candidates[0].1.name()
                     && candidates[0].1.package_id().version().is_prerelease()
                 {

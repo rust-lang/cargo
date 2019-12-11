@@ -234,7 +234,7 @@ impl<'a> RegistryQueryer<'a> {
         let out = Rc::new((used_features, Rc::new(deps)));
 
         // If we succeed we add the result to the cache so we can use it again next time.
-        // We dont cache the failure cases as they dont impl Clone.
+        // We don't cache the failure cases as they don't impl Clone.
         self.summary_cache
             .insert((parent, candidate.clone(), opts.clone()), out.clone());
 

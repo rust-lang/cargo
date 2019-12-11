@@ -758,7 +758,7 @@ Caused by:
 }
 
 #[cargo_test]
-/// Tests if a symlink to a directory is proberly included.
+/// Tests if a symlink to a directory is properly included.
 ///
 /// This test requires you to be able to make symlinks.
 /// For windows, this may require you to enable developer mode.
@@ -824,7 +824,7 @@ committed into git:
 
 Cargo.toml
 
-to proceed despite this and include the uncommited changes, pass the `--allow-dirty` flag
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 ",
         )
         .run();

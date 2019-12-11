@@ -2,7 +2,7 @@
 //!
 //! This module implements a locking server/client where the main `cargo fix`
 //! process will start up a server and then all the client processes will
-//! connect to it. The main purpose of this file is to enusre that each crate
+//! connect to it. The main purpose of this file is to ensure that each crate
 //! (aka file entry point) is only fixed by one process at a time, currently
 //! concurrent fixes can't happen.
 //!

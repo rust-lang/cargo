@@ -868,7 +868,7 @@ fn generalize_conflicting(
                 let mut con = conflicting_activations.clone();
                 // It is always valid to combine previously inserted conflicts.
                 // A, B are both known bad states each that can never be activated.
-                // A + B is redundant but cant be activated, as if
+                // A + B is redundant but can't be activated, as if
                 // A + B is active then A is active and we know that is not ok.
                 for (_, other) in &others {
                     con.extend(other.iter().map(|(&id, re)| (id, re.clone())));
@@ -928,7 +928,7 @@ fn find_candidate(
     // If we backtracked we do not know how our `conflicting_activations` related to
     // the cause of that backtrack, so we do not update it.
     let age = if !backtracked {
-        // we dont have abnormal situations. So we can ask `cx` for how far back we need to go.
+        // we don't have abnormal situations. So we can ask `cx` for how far back we need to go.
         let a = cx.is_conflicting(Some(parent.package_id()), conflicting_activations);
         // If the `conflicting_activations` does not apply to `cx`, then something went very wrong
         // in building it. But we will just fall back to laboriously trying all possibilities witch

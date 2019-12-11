@@ -324,7 +324,7 @@ fn check_repo_state(
                 failure::bail!(
                     "{} files in the working directory contain changes that were \
                      not yet committed into git:\n\n{}\n\n\
-                     to proceed despite this and include the uncommited changes, pass the `--allow-dirty` flag",
+                     to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag",
                     dirty.len(),
                     dirty.join("\n")
                 )
