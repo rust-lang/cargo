@@ -4298,11 +4298,48 @@ required by package `bar v0.1.0 ([..]/foo)`
 }
 
 #[cargo_test]
+fn default_cargo_config_jobs() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            jobs = 1
+        "#,
+        )
+        .build();
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn good_cargo_config_jobs() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            jobs = 4
+        "#,
+        )
+        .build();
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
 fn invalid_jobs() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
+
+    p.cargo("build --jobs -1")
+        .with_status(1)
+        .with_stderr_contains(
+            "error: Found argument '-1' which wasn't expected, or isn't valid in this context",
+        )
+        .run();
 
     p.cargo("build --jobs over9000")
         .with_status(1)
