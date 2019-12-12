@@ -425,11 +425,12 @@ fn include() {
             version = "0.0.1"
             authors = []
             exclude = ["*.txt"]
-            include = ["foo.txt", "**/*.rs", "Cargo.toml"]
+            include = ["foo.txt", "**/*.rs", "Cargo.toml", ".dotfile"]
         "#,
         )
         .file("foo.txt", "")
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file(".dotfile", "")
         // Should be ignored when packaging.
         .file("src/bar.txt", "")
         .build();
@@ -442,6 +443,7 @@ fn include() {
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
 [PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] .dotfile
 [ARCHIVING] Cargo.toml
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
@@ -1417,6 +1419,29 @@ fn gitignore_negate() {
         &["src/lib.rs", "foo.rs", "!important"],
         "Cargo.toml\n\
          foo.rs\n\
+         ",
+    );
+}
+
+#[cargo_test]
+fn exclude_dot_files_and_directories_by_default() {
+    include_exclude_test(
+        "[]",
+        "[]",
+        &["src/lib.rs", ".dotfile", ".dotdir/file"],
+        "Cargo.toml\n\
+         src/lib.rs\n\
+         ",
+    );
+
+    include_exclude_test(
+        r#"["Cargo.toml", "src/lib.rs", ".dotfile", ".dotdir/file"]"#,
+        "[]",
+        &["src/lib.rs", ".dotfile", ".dotdir/file"],
+        ".dotdir/file\n\
+         .dotfile\n\
+         Cargo.toml\n\
+         src/lib.rs\n\
          ",
     );
 }
