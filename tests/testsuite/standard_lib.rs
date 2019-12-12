@@ -98,8 +98,14 @@ fn setup() -> Option<Setup> {
 
                     let is_sysroot_crate = env::var_os("RUSTC_BOOTSTRAP").is_some();
                     if is_sysroot_crate {
-                        let arg = args.iter().position(|a| a == "--sysroot").unwrap();
-                        args[arg + 1] = env::var("REAL_SYSROOT").unwrap();
+                        args.push("--sysroot".to_string());
+                        args.push(env::var("REAL_SYSROOT").unwrap());
+                    } else if args.iter().any(|arg| arg == "--target") {
+                        // build-std target unit
+                        args.push("--sysroot".to_string());
+                        args.push("/path/to/nowhere".to_string());
+                    } else {
+                        // host unit, do not use sysroot
                     }
 
                     let ret = Command::new(&args[0]).args(&args[1..]).status().unwrap();
@@ -242,7 +248,7 @@ fn basic() {
         )
         .build();
 
-    p.cargo("check").build_std(&setup).target_host().run();
+    p.cargo("check -v").build_std(&setup).target_host().run();
     p.cargo("build").build_std(&setup).target_host().run();
     p.cargo("run").build_std(&setup).target_host().run();
     p.cargo("test").build_std(&setup).target_host().run();
