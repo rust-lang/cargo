@@ -163,36 +163,6 @@ invalid value: integer `-1`, expected u32
 }
 
 #[cargo_test]
-fn default_cargo_config_jobs() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [build]
-            jobs = 1
-        "#,
-        )
-        .build();
-    p.cargo("build -v").run();
-}
-
-#[cargo_test]
-fn good_cargo_config_jobs() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [build]
-            jobs = 4
-        "#,
-        )
-        .build();
-    p.cargo("build -v").run();
-}
-
-#[cargo_test]
 fn invalid_global_config() {
     let p = project()
         .file(
