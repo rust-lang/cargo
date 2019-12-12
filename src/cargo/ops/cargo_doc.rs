@@ -5,7 +5,6 @@ use crate::util::CargoResult;
 use failure::Fail;
 use opener;
 use std::collections::HashMap;
-use std::error::Error;
 use std::path::Path;
 use std::process::Command;
 
@@ -94,7 +93,7 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
                 shell.warn(format!(
                     "Couldn't open docs with {}: {}",
                     browser.to_string_lossy(),
-                    e.description()
+                    e
                 ))?;
             }
         }
