@@ -807,13 +807,14 @@ impl Config {
         };
 
         let mut contents = String::new();
-        let mut file = File::open(&credentials)?;
-        file.read_to_string(&mut contents).chain_err(|| {
-            format!(
-                "failed to read configuration file `{}`",
-                credentials.display()
-            )
-        })?;
+        File::open(&credentials)
+            .and_then(|mut file| file.read_to_string(&mut contents))
+            .chain_err(|| {
+                format!(
+                    "failed to read configuration file `{}`",
+                    credentials.display()
+                )
+            })?;
 
         let toml = cargo_toml::parse(&contents, &credentials, self).chain_err(|| {
             format!(
