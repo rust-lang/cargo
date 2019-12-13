@@ -12,6 +12,7 @@ use cargo_test_support::{cargo_process, t};
 use toml;
 
 const TOKEN: &str = "test-token";
+const TOKEN2: &str = "test-token2";
 const ORIGINAL_TOKEN: &str = "api-token";
 
 fn setup_new_credentials() {
@@ -185,4 +186,18 @@ fn registry_credentials() {
 
     // Also ensure that we get the new token for the registry
     assert!(check_token(TOKEN, Some(reg)));
+
+    let reg2 = "alternative2";
+    cargo_process("login --registry")
+        .arg(reg2)
+        .arg(TOKEN2)
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Ensure not overwriting 1st alternate registry token with
+    // 2nd alternate registry token (see rust-lang/cargo#7701).
+    assert!(check_token(ORIGINAL_TOKEN, None));
+    assert!(check_token(TOKEN, Some(reg)));
+    assert!(check_token(TOKEN2, Some(reg2)));
 }

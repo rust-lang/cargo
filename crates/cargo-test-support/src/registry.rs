@@ -44,6 +44,12 @@ pub fn alt_registry_path() -> PathBuf {
 pub fn alt_registry_url() -> Url {
     Url::from_file_path(alt_registry_path()).ok().unwrap()
 }
+pub fn alt2_registry_path() -> PathBuf {
+    paths::root().join("alternative2-registry")
+}
+pub fn alt2_registry_url() -> Url {
+    Url::from_file_path(alt_registry_path()).ok().unwrap()
+}
 /// Gets the alternative-registry version of `dl_path`.
 pub fn alt_dl_path() -> PathBuf {
     paths::root().join("alt_dl")
@@ -52,12 +58,25 @@ pub fn alt_dl_url() -> String {
     let base = Url::from_file_path(alt_dl_path()).ok().unwrap();
     format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
 }
+pub fn alt2_dl_path() -> PathBuf {
+    paths::root().join("alt2_dl")
+}
+pub fn alt2_dl_url() -> String {
+    let base = Url::from_file_path(alt2_dl_path()).ok().unwrap();
+    format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
+}
 /// Gets the alternative-registry version of `api_path`.
 pub fn alt_api_path() -> PathBuf {
     paths::root().join("alt_api")
 }
 pub fn alt_api_url() -> Url {
     Url::from_file_path(alt_api_path()).ok().unwrap()
+}
+pub fn alt2_api_path() -> PathBuf {
+    paths::root().join("alt2_api")
+}
+pub fn alt2_api_url() -> Url {
+    Url::from_file_path(alt2_api_path()).ok().unwrap()
 }
 
 /// A builder for creating a new package in a registry.
@@ -166,9 +185,13 @@ pub fn init() {
 
         [registries.alternative]
         index = '{alt}'
+
+        [registries.alternative2]
+        index = '{alt2}'
     "#,
             reg = registry_url(),
-            alt = alt_registry_url()
+            alt = alt_registry_url(),
+            alt2 = alt2_registry_url()
         )
         .as_bytes()
     ));
@@ -179,6 +202,9 @@ pub fn init() {
         token = "api-token"
 
         [registries.alternative]
+        token = "api-token"
+
+        [registries.alternative2]
         token = "api-token"
     "#
     ));
@@ -212,6 +238,21 @@ pub fn init() {
         )
         .build();
     fs::create_dir_all(alt_api_path().join("api/v1/crates")).unwrap();
+
+    // Initialize an alternative2 registry.
+    repo(&alt2_registry_path())
+        .file(
+            "config.json",
+            &format!(
+                r#"
+            {{"dl":"{}","api":"{}"}}
+        "#,
+                alt2_dl_url(),
+                alt2_api_url()
+            ),
+        )
+        .build();
+    fs::create_dir_all(alt2_api_path().join("api/v1/crates")).unwrap();
 }
 
 impl Package {
