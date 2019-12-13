@@ -1201,7 +1201,7 @@ fn dep_with_changed_submodule() {
             .remote_set_url("origin", &git_project3.url().to_string())
             .unwrap();
         let mut origin = subrepo.find_remote("origin").unwrap();
-        origin.fetch(&[], None, None).unwrap();
+        origin.fetch(&Vec::<String>::new(), None, None).unwrap();
         let id = subrepo.refname_to_id("refs/remotes/origin/master").unwrap();
         let obj = subrepo.find_object(id, None).unwrap();
         subrepo.reset(&obj, git2::ResetType::Hard, None).unwrap();
