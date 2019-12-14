@@ -170,6 +170,7 @@ fn new_credentials_is_used_instead_old() {
 #[cargo_test]
 fn registry_credentials() {
     registry::init();
+    registry::init_alt2_registry();
     setup_new_credentials();
 
     let reg = "alternative";
