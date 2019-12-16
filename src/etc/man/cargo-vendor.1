@@ -2,12 +2,12 @@
 .\"     Title: cargo-vendor
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-08
+.\"      Date: 2019-12-09
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-VENDOR" "1" "2019-09-08" "\ \&" "\ \&"
+.TH "CARGO\-VENDOR" "1" "2019-12-09" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -61,6 +61,15 @@ existing contents of the vendor directory
 .RS 4
 Instead of ignoring \fB[source]\fP configuration by default in \fB.cargo/config\fP
 read it and use it when downloading crates from crates.io, for example
+.RE
+.sp
+\fB\-\-versioned\-dirs\fP
+.RS 4
+Normally versions are only added to disambiguate multiple versions of the
+same package. This option causes all directories in the "vendor" directory
+to be versioned, which makes it easier to track the history of vendored
+packages over time, and can help with the performance of re\-vendoring when
+only a subset of the packages have changed.
 .RE
 .SS "Manifest Options"
 .sp

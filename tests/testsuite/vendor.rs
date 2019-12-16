@@ -89,6 +89,51 @@ fn two_versions() {
 }
 
 #[cargo_test]
+fn two_explicit_versions() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bitflags = "0.8.0"
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                bitflags = "0.7.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    Package::new("bitflags", "0.7.0").publish();
+    Package::new("bitflags", "0.8.0").publish();
+
+    p.cargo("vendor --respect-source-config --versioned-dirs")
+        .run();
+
+    let lock = p.read_file("vendor/bitflags-0.8.0/Cargo.toml");
+    assert!(lock.contains("version = \"0.8.0\""));
+    let lock = p.read_file("vendor/bitflags-0.7.0/Cargo.toml");
+    assert!(lock.contains("version = \"0.7.0\""));
+
+    add_vendor_config(&p);
+    p.cargo("build").run();
+}
+
+#[cargo_test]
 fn help() {
     let p = project().build();
     p.cargo("vendor -h").run();

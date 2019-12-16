@@ -49,6 +49,14 @@ existing contents of the vendor directory</p>
 <p>Instead of ignoring <code>[source]</code> configuration by default in <code>.cargo/config</code>
 read it and use it when downloading crates from crates.io, for example</p>
 </dd>
+<dt class="hdlist1"><strong>--versioned-dirs</strong></dt>
+<dd>
+<p>Normally versions are only added to disambiguate multiple versions of the
+same package. This option causes all directories in the "vendor" directory
+to be versioned, which makes it easier to track the history of vendored
+packages over time, and can help with the performance of re-vendoring when
+only a subset of the packages have changed.</p>
+</dd>
 </dl>
 </div>
 </div>
