@@ -440,3 +440,37 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn proc_macro_extern_prelude() {
+    if !is_nightly() {
+        // remove once pathless `--extern` hits stable (1.41)
+        return;
+    }
+    // Check that proc_macro is in the extern prelude.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+            [lib]
+            proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            use proc_macro::TokenStream;
+            #[proc_macro]
+            pub fn foo(input: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+            "#,
+        )
+        .build();
+    p.cargo("test").run();
+    p.cargo("doc").run();
+}

@@ -1013,6 +1013,17 @@ pub fn extern_args<'a>(
             link_to(&dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }
+    if unit.target.proc_macro()
+        && cx
+            .bcx
+            .info(CompileKind::Host)
+            .supports_pathless_extern
+            .unwrap()
+    {
+        // Automatically import `proc_macro`.
+        result.push(OsString::from("--extern"));
+        result.push(OsString::from("proc_macro"));
+    }
 
     Ok(result)
 }
