@@ -175,12 +175,7 @@ fn registry_credentials() {
 
     let reg = "alternative";
 
-    cargo_process("login --registry")
-        .arg(reg)
-        .arg(TOKEN)
-        .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("login --registry").arg(reg).arg(TOKEN).run();
 
     // Ensure that we have not updated the default token
     assert!(check_token(ORIGINAL_TOKEN, None));
@@ -192,8 +187,6 @@ fn registry_credentials() {
     cargo_process("login --registry")
         .arg(reg2)
         .arg(TOKEN2)
-        .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo()
         .run();
 
     // Ensure not overwriting 1st alternate registry token with
