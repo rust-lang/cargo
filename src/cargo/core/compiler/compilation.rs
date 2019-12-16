@@ -119,12 +119,7 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(
-        &self,
-        pkg: &Package,
-        target: &Target,
-        is_primary: bool,
-    ) -> CargoResult<ProcessBuilder> {
+    pub fn rustc_process(&self, pkg: &Package, is_primary: bool) -> CargoResult<ProcessBuilder> {
         let rustc = if is_primary {
             self.primary_unit_rustc_process
                 .clone()
@@ -133,11 +128,7 @@ impl<'cfg> Compilation<'cfg> {
             self.rustc_process.clone()
         };
 
-        let mut p = self.fill_env(rustc, pkg, true)?;
-        if target.edition() != Edition::Edition2015 {
-            p.arg(format!("--edition={}", target.edition()));
-        }
-        Ok(p)
+        self.fill_env(rustc, pkg, true)
     }
 
     /// See `process`.

@@ -43,7 +43,7 @@ use self::unit_dependencies::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
-use crate::core::{Feature, InternedString, PackageId, Target};
+use crate::core::{Edition, Feature, InternedString, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::machine_message::Message;
 use crate::util::paths;
@@ -538,9 +538,7 @@ fn prepare_rustc<'a, 'cfg>(
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
 
-    let mut base = cx
-        .compilation
-        .rustc_process(unit.pkg, unit.target, is_primary)?;
+    let mut base = cx.compilation.rustc_process(unit.pkg, is_primary)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
@@ -713,6 +711,11 @@ fn build_base_args<'a, 'cfg>(
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
+
+    let edition = unit.target.edition();
+    if edition != Edition::Edition2015 {
+        cmd.arg(format!("--edition={}", edition));
+    }
 
     add_path_args(bcx, unit, cmd);
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
