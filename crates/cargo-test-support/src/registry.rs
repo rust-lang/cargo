@@ -194,51 +194,36 @@ pub fn init() {
     ));
 
     // Initialize a new registry.
-    let _ = repo(&registry_path())
-        .file(
-            "config.json",
-            &format!(
-                r#"
-            {{"dl":"{}","api":"{}"}}
-        "#,
-                dl_url(),
-                api_url()
-            ),
-        )
-        .build();
-    fs::create_dir_all(api_path().join("api/v1/crates")).unwrap();
+    init_registry(
+        registry_path(),
+        dl_url().into_string(),
+        api_url(),
+        api_path(),
+    );
 
     // Initialize an alternative registry.
-    repo(&alt_registry_path())
-        .file(
-            "config.json",
-            &format!(
-                r#"
-            {{"dl":"{}","api":"{}"}}
-        "#,
-                alt_dl_url(),
-                alt_api_url()
-            ),
-        )
-        .build();
-    fs::create_dir_all(alt_api_path().join("api/v1/crates")).unwrap();
+    init_registry(
+        alt_registry_path(),
+        alt_dl_url(),
+        alt_api_url(),
+        alt_api_path(),
+    );
 }
 
-pub fn init_alt2_registry() {
-    // Initialize an alternative2 registry.
-    repo(&generate_path("alternative2-registry"))
+pub fn init_registry(registry_path: PathBuf, dl_url: String, api_url: Url, api_path: PathBuf) {
+    // Initialize a new registry.
+    repo(&registry_path)
         .file(
             "config.json",
             &format!(
                 r#"
             {{"dl":"{}","api":"{}"}}
         "#,
-                generate_alt_dl_url("alt2_dl"),
-                generate_url("alt2_api")
+                dl_url, api_url
             ),
         )
         .build();
-    fs::create_dir_all(generate_path("alt2_api").join("api/v1/crates")).unwrap();
+    fs::create_dir_all(api_path.join("api/v1/crates")).unwrap();
 }
 
 impl Package {

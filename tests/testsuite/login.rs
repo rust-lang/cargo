@@ -184,7 +184,12 @@ fn registry_credentials() {
         .as_bytes(),
     ));
 
-    registry::init_alt2_registry();
+    registry::init_registry(
+        registry::generate_path("alternative2-registry"),
+        registry::generate_alt_dl_url("alt2_dl"),
+        registry::generate_url("alt2_api"),
+        registry::generate_path("alt2_api"),
+    );
     setup_new_credentials();
 
     let reg = "alternative";
