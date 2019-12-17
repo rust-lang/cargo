@@ -4,6 +4,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{is_nightly, project};
 
 #[cargo_test]
+#[ignore] // Not working on nightly https://github.com/rust-lang/cargo/issues/7714.
 fn exported_priv_warning() {
     if !is_nightly() {
         return;
