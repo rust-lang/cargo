@@ -1,6 +1,6 @@
 //! Tests for the `cargo login` command.
 
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
@@ -8,7 +8,7 @@ use cargo::core::Shell;
 use cargo::util::config::Config;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::registry::{self, registry_url};
-use cargo_test_support::{cargo_process, t};
+use cargo_test_support::{cargo_process, paths, t};
 use toml;
 
 const TOKEN: &str = "test-token";
@@ -170,6 +170,20 @@ fn new_credentials_is_used_instead_old() {
 #[cargo_test]
 fn registry_credentials() {
     registry::init();
+
+    let config = paths::home().join(".cargo/config");
+    let mut f = OpenOptions::new().append(true).open(config).unwrap();
+    t!(f.write_all(
+        format!(
+            r#"
+        [registries.alternative2]
+        index = '{}'
+    "#,
+            registry::generate_url("alternative2-registry")
+        )
+        .as_bytes(),
+    ));
+
     registry::init_alt2_registry();
     setup_new_credentials();
 

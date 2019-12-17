@@ -63,7 +63,7 @@ pub fn alt_api_url() -> Url {
 fn generate_path(name: &str) -> PathBuf {
     paths::root().join(name)
 }
-fn generate_url(name: &str) -> Url {
+pub fn generate_url(name: &str) -> Url {
     Url::from_file_path(generate_path(name)).ok().unwrap()
 }
 fn generate_dl_url(name: &str) -> String {
@@ -177,13 +177,9 @@ pub fn init() {
 
         [registries.alternative]
         index = '{alt}'
-
-        [registries.alternative2]
-        index = '{alt2}'
     "#,
             reg = registry_url(),
-            alt = alt_registry_url(),
-            alt2 = generate_url("alternative2-registry")
+            alt = alt_registry_url()
         )
         .as_bytes()
     ));
