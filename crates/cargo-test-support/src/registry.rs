@@ -15,58 +15,57 @@ use url::Url;
 /// initialized with a `config.json` file pointing to `dl_path` for downloads
 /// and `api_path` for uploads.
 pub fn registry_path() -> PathBuf {
-    paths::root().join("registry")
+    generate_path("registry")
 }
 pub fn registry_url() -> Url {
-    Url::from_file_path(registry_path()).ok().unwrap()
+    generate_url("registry")
 }
 /// Gets the path for local web API uploads. Cargo will place the contents of a web API
 /// request here. For example, `api/v1/crates/new` is the result of publishing a crate.
 pub fn api_path() -> PathBuf {
-    paths::root().join("api")
+    generate_path("api")
 }
 pub fn api_url() -> Url {
-    Url::from_file_path(api_path()).ok().unwrap()
+    generate_url("api")
 }
 /// Gets the path where crates can be downloaded using the web API endpoint. Crates
 /// should be organized as `{name}/{version}/download` to match the web API
 /// endpoint. This is rarely used and must be manually set up.
 pub fn dl_path() -> PathBuf {
-    paths::root().join("dl")
+    generate_path("dl")
 }
 pub fn dl_url() -> Url {
-    Url::from_file_path(dl_path()).ok().unwrap()
+    generate_url("dl")
 }
 /// Gets the alternative-registry version of `registry_path`.
 pub fn alt_registry_path() -> PathBuf {
-    paths::root().join("alternative-registry")
+    generate_path("alternative-registry")
 }
 pub fn alt_registry_url() -> Url {
-    Url::from_file_path(alt_registry_path()).ok().unwrap()
+    generate_url("alternative-registry")
 }
 /// Gets the alternative-registry version of `dl_path`.
 pub fn alt_dl_path() -> PathBuf {
-    paths::root().join("alt_dl")
+    generate_path("alt_dl")
 }
 pub fn alt_dl_url() -> String {
-    let base = Url::from_file_path(alt_dl_path()).ok().unwrap();
-    format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
+    generate_alt_dl_url("alt_dl")
 }
 /// Gets the alternative-registry version of `api_path`.
 pub fn alt_api_path() -> PathBuf {
-    paths::root().join("alt_api")
+    generate_path("alt_api")
 }
 pub fn alt_api_url() -> Url {
-    Url::from_file_path(alt_api_path()).ok().unwrap()
+    generate_url("alt_api")
 }
 
-fn generate_path(name: &str) -> PathBuf {
+pub fn generate_path(name: &str) -> PathBuf {
     paths::root().join(name)
 }
 pub fn generate_url(name: &str) -> Url {
     Url::from_file_path(generate_path(name)).ok().unwrap()
 }
-fn generate_dl_url(name: &str) -> String {
+pub fn generate_alt_dl_url(name: &str) -> String {
     let base = Url::from_file_path(generate_path(name)).ok().unwrap();
     format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
 }
@@ -234,7 +233,7 @@ pub fn init_alt2_registry() {
                 r#"
             {{"dl":"{}","api":"{}"}}
         "#,
-                generate_dl_url("alt2_dl"),
+                generate_alt_dl_url("alt2_dl"),
                 generate_url("alt2_api")
             ),
         )
