@@ -1314,14 +1314,14 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
             .open_rw(filename, cfg, "credentials' config file")?
     };
 
-    let (key, value) = {
+    let (key, mut value) = {
         let key = "token".to_string();
         let value = ConfigValue::String(token, file.path().to_path_buf());
         let mut map = HashMap::new();
         map.insert(key, value);
         let table = CV::Table(map, file.path().to_path_buf());
 
-        if let Some(registry) = registry {
+        if let Some(registry) = registry.clone() {
             let mut map = HashMap::new();
             map.insert(registry, table);
             (
@@ -1352,6 +1352,12 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
             .insert("registry".into(), map.into());
     }
 
+    if let Some(_) = registry {
+        if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
+            let v = CV::from_toml(file.path(), table)?;
+            value.merge(v)?;
+        }
+    }
     toml.as_table_mut().unwrap().insert(key, value.into_toml());
 
     let contents = toml.to_string();

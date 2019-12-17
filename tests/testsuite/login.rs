@@ -1,6 +1,6 @@
 //! Tests for the `cargo login` command.
 
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
@@ -8,10 +8,11 @@ use cargo::core::Shell;
 use cargo::util::config::Config;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::registry::{self, registry_url};
-use cargo_test_support::{cargo_process, t};
+use cargo_test_support::{cargo_process, paths, t};
 use toml;
 
 const TOKEN: &str = "test-token";
+const TOKEN2: &str = "test-token2";
 const ORIGINAL_TOKEN: &str = "api-token";
 
 fn setup_new_credentials() {
@@ -169,20 +170,47 @@ fn new_credentials_is_used_instead_old() {
 #[cargo_test]
 fn registry_credentials() {
     registry::init();
+
+    let config = paths::home().join(".cargo/config");
+    let mut f = OpenOptions::new().append(true).open(config).unwrap();
+    t!(f.write_all(
+        format!(
+            r#"
+        [registries.alternative2]
+        index = '{}'
+    "#,
+            registry::generate_url("alternative2-registry")
+        )
+        .as_bytes(),
+    ));
+
+    registry::init_registry(
+        registry::generate_path("alternative2-registry"),
+        registry::generate_alt_dl_url("alt2_dl"),
+        registry::generate_url("alt2_api"),
+        registry::generate_path("alt2_api"),
+    );
     setup_new_credentials();
 
     let reg = "alternative";
 
-    cargo_process("login --registry")
-        .arg(reg)
-        .arg(TOKEN)
-        .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    cargo_process("login --registry").arg(reg).arg(TOKEN).run();
 
     // Ensure that we have not updated the default token
     assert!(check_token(ORIGINAL_TOKEN, None));
 
     // Also ensure that we get the new token for the registry
     assert!(check_token(TOKEN, Some(reg)));
+
+    let reg2 = "alternative2";
+    cargo_process("login --registry")
+        .arg(reg2)
+        .arg(TOKEN2)
+        .run();
+
+    // Ensure not overwriting 1st alternate registry token with
+    // 2nd alternate registry token (see rust-lang/cargo#7701).
+    assert!(check_token(ORIGINAL_TOKEN, None));
+    assert!(check_token(TOKEN, Some(reg)));
+    assert!(check_token(TOKEN2, Some(reg2)));
 }
