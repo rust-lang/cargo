@@ -25,8 +25,8 @@ flags.
 
 include::description-one-target.adoc[]
 To pass flags to all compiler processes spawned by Cargo, use the `RUSTFLAGS`
-environment variable or the `build.rustflags`
-linkcargo:reference/config.html[config value].
+linkcargo:reference/environment-variables.html[environment variable] or the
+`build.rustflags` linkcargo:reference/config.html[config value].
 
 == OPTIONS
 

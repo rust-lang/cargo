@@ -2,12 +2,12 @@
 .\"     Title: cargo-rustdoc
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-12-05
+.\"      Date: 2019-12-18
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-RUSTDOC" "1" "2019-12-05" "\ \&" "\ \&"
+.TH "CARGO\-RUSTDOC" "1" "2019-12-18" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -51,8 +51,10 @@ arguments are provided. If more than one target is available for the current
 package the filters of \fB\-\-lib\fP, \fB\-\-bin\fP, etc, must be used to select which
 target is compiled.
 To pass flags to all rustdoc processes spawned by Cargo, use the
-\fBRUSTDOCFLAGS\fP environment variable or the \fBbuild.rustdocflags\fP configuration
-option.
+\fBRUSTDOCFLAGS\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "environment variable"
+or the \fBbuild.rustdocflags\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .SH "OPTIONS"
 .SS "Documentation Options"
 .sp
