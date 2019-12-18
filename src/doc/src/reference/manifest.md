@@ -23,7 +23,7 @@ inferred lib and bin targets.
 The name must use only [alphanumeric] characters or `-` or `_`, and cannot be empty.
 Note that [`cargo new`] and [`cargo init`] impose some additional restrictions on
 the package name, such as enforcing that it is a valid Rust identifier and not
-a keyword. [crates.io][cratesio] imposes even more restrictions, such as
+a keyword. [crates.io] imposes even more restrictions, such as
 enforcing only ASCII characters, not a reserved name, not a special Windows
 name such as "nul", is not too long, etc.
 
@@ -50,7 +50,7 @@ The `authors` field lists people or organizations that are considered the
 "authors" of the package. The exact meaning is open to interpretation — it may
 list the original or primary authors, current maintainers, or owners of the
 package. These names will be listed on the crate's page on
-[crates.io][cratesio]. An optional email address may be included within angled
+[crates.io]. An optional email address may be included within angled
 brackets at the end of each author.
 
 #### The `edition` field (optional)
@@ -108,8 +108,8 @@ links = "foo"
 #### The `documentation` field (optional)
 
 This field specifies a URL to a website hosting the crate's documentation.
-If no URL is specified in the manifest file, [crates.io][cratesio] will
-automatically link your crate to the corresponding [docs.rs][docsrs] page.
+If no URL is specified in the manifest file, [crates.io] will
+automatically link your crate to the corresponding [docs.rs] page.
 
 Documentation links from specific hosts are blacklisted. Hosts are added
 to the blacklist if they are known to not be hosting documentation and are
@@ -118,11 +118,8 @@ following hosts are blacklisted:
 
 * rust-ci.org
 
-Documentation URLs from blacklisted hosts will not appear on crates.io, and
+Documentation URLs from blacklisted hosts will not appear on [crates.io], and
 may be replaced by docs.rs links.
-
-[docsrs]: https://docs.rs/
-[cratesio]: https://crates.io/
 
 #### The `exclude` and `include` fields (optional)
 
@@ -224,7 +221,7 @@ For more information, see the documentation for the workspace table below.
 #### The `license` and `license-file` fields (optional)
 
 The `license` field can be set to an [SPDX 2.1 license
-expression][spdx-2.1-license-expressions] for the package. Currently crates.io
+expression][spdx-2.1-license-expressions] for the package. Currently [crates.io]
 will validate the license provided against a whitelist of known license and
 exception identifiers from the [SPDX license list 3.6][spdx-license-list-3.6].
 Parentheses are not currently supported.
@@ -285,7 +282,7 @@ keywords = ["...", "..."]
 categories = ["...", "..."]
 ```
 
-The [crates.io](https://crates.io) registry will render the description, display
+The [crates.io] registry will render the description, display
 the license, link to the three URLs and categorize by the keywords. These keys
 provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
@@ -293,7 +290,7 @@ published crate.
 
 ### The `[badges]` section
 
-crates.io can display various badges for build status, test coverage, etc. for
+[crates.io] can display various badges for build status, test coverage, etc. for
 each crate. All badges are optional.
 
 - The badges pertaining to build status that are currently available are
@@ -903,7 +900,6 @@ dependencies][replace] section of the documentation and [RFC 1969] for the
 technical specification of this feature.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
-[crates.io]: https://crates.io/
 [replace]: specifying-dependencies.md#overriding-dependencies
 
 #### Using `[patch]` with multiple versions
@@ -957,5 +953,7 @@ dependencies][replace] section of the documentation.
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo run`]: ../commands/cargo-run.md
 [`cargo test`]: ../commands/cargo-test.md
+[crates.io]: https://crates.io/
+[docs.rs]: https://docs.rs/
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6

@@ -175,7 +175,7 @@ And that’s it! The next `cargo build` will automatically build `hello_utils` a
 all of its own dependencies, and others can also start using the crate as well.
 However, crates that use dependencies specified with only a path are not
 permitted on [crates.io]. If we wanted to publish our `hello_world` crate, we
-would need to publish a version of `hello_utils` to [crates.io](https://crates.io)
+would need to publish a version of `hello_utils` to [crates.io]
 and specify its version in the dependencies line as well:
 
 ```toml
@@ -530,8 +530,6 @@ example:
 mio = "0.0.1"
 ```
 
-[crates.io]: https://crates.io/
-
 ### Build dependencies
 
 You can depend on other Cargo-based crates for use in your build scripts.
@@ -625,3 +623,5 @@ following to the above manifest:
 [features]
 log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
 ```
+
+[crates.io]: https://crates.io/
