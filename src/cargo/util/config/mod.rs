@@ -1526,8 +1526,8 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     if let Some(_) = registry {
         if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
-            let v = CV::from_toml(file.path(), table)?;
-            value.merge(v)?;
+            let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
+            value.merge(v, false)?;
         }
     }
     toml.as_table_mut().unwrap().insert(key, value.into_toml());
