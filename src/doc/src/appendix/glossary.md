@@ -135,9 +135,9 @@ The meaning of the term *target* depends on the context:
     `thumb`, `mips`, etc.
   - `sub` = The CPU sub-architecture, for example `arm` has `v7`, `v7s`,
     `v5te`, etc.
-  - `vendor` = The vendor, for example `unknown`, `apple`, `pc`, `linux`, etc.
-  - `sys` = The system name, for example `linux`, `windows`, etc. `none` is
-    typically used for bare-metal without an OS.
+  - `vendor` = The vendor, for example `unknown`, `apple`, `pc`, `nvidia`, etc.
+  - `sys` = The system name, for example `linux`, `windows`, `darwin`, etc.
+    `none` is typically used for bare-metal without an OS.
   - `abi` = The ABI, for example `gnu`, `android`, `eabi`, etc.
 
   Some parameters may be omitted. Run `rustc --print target-list` for a list of
