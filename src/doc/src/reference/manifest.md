@@ -989,6 +989,9 @@ crates.
 
 ### The `[replace]` Section
 
+> **Note**: `[replace]` is deprecated. You should use the [`[patch]`][patch]
+> table instead.
+
 This section of Cargo.toml can be used to [override dependencies][replace] with
 other copies. The syntax is similar to the `[dependencies]` section:
 
@@ -1021,3 +1024,4 @@ dependencies][replace] section of the documentation.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
+[patch]: #the-patch-section
