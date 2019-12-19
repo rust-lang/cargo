@@ -1,7 +1,51 @@
+//! Cargo's config system.
+//!
+//! The `Config` object contains general information about the environment,
+//! and provides access to Cargo's configuration files.
+//!
+//! ## Config value API
+//!
+//! The primary API for fetching user-defined config values is the
+//! `Config::get` method. It uses `serde` to translate config values to a
+//! target type.
+//!
+//! There are a variety of helper types for deserializing some common formats:
+//!
+//! - `value::Value`: This type provides access to the location where the
+//!   config value was defined.
+//! - `ConfigRelativePath`: For a path that is relative to where it is
+//!   defined.
+//! - `PathAndArgs`: Similar to `ConfigRelativePath`, but also supports a list
+//!   of arguments, useful for programs to execute.
+//! - `StringList`: Get a value that is either a list or a whitespace split
+//!   string.
+//!
+//! ## Map key recommendations
+//!
+//! Handling tables that have arbitrary keys can be tricky, particularly if it
+//! should support environment variables. In general, if possible, the caller
+//! should pass the full key path into the `get()` method so that the config
+//! deserializer can properly handle environment variables (which need to be
+//! uppercased, and dashes converted to underscores).
+//!
+//! A good example is the `[target]` table. The code will request
+//! `target.$TRIPLE` and the config system can then appropriately fetch
+//! environment variables like `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER`.
+//! Conversely, it is not possible do the same thing for the `cfg()` target
+//! tables (because Cargo must fetch all of them), so those do not support
+//! environment variables.
+//!
+//! ## Internal API
+//!
+//! Internally config values are stored with the `ConfigValue` type after they
+//! have been loaded from disk. This is similar to the `toml::Value` type, but
+//! includes the definition location. The `get()` method uses serde to
+//! translate from `ConfigValue` and environment variables to the caller's
+//! desired type.
+
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::hash_map::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
@@ -14,6 +58,7 @@ use std::sync::Once;
 use std::time::Instant;
 
 use curl::easy::Easy;
+use failure::bail;
 use lazycell::LazyCell;
 use serde::Deserialize;
 use url::Url;
@@ -25,10 +70,8 @@ use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Worksp
 use crate::ops;
 use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
-use crate::util::Filesystem;
-use crate::util::Rustc;
-use crate::util::{paths, validate_package_name, FileLock};
-use crate::util::{IntoUrl, IntoUrlWithBase};
+use crate::util::{paths, validate_package_name};
+use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 
 mod de;
 use de::Deserializer;
@@ -40,12 +83,37 @@ mod key;
 use key::ConfigKey;
 
 mod path;
-pub use path::ConfigRelativePath;
+pub use path::{ConfigRelativePath, PathAndArgs};
+
+mod target;
+pub use target::{TargetCfgConfig, TargetConfig};
+
+// Helper macro for creating typed access methods.
+macro_rules! get_value_typed {
+    ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
+        /// Low-level private method for getting a config value as an OptValue.
+        fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
+            let cv = self.get_cv(key)?;
+            let env = self.get_env::<$ty>(key)?;
+            match (cv, env) {
+                (Some(CV::$variant(val, definition)), Some(env)) => {
+                    if definition.is_higher_priority(&env.definition) {
+                        Ok(Some(Value { val, definition }))
+                    } else {
+                        Ok(Some(env))
+                    }
+                }
+                (Some(CV::$variant(val, definition)), None) => Ok(Some(Value { val, definition })),
+                (Some(cv), _) => Err(ConfigError::expected(key, $expected, &cv)),
+                (None, Some(env)) => Ok(Some(env)),
+                (None, None) => Ok(None),
+            }
+        }
+    };
+}
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
-///
-/// This struct implements `Default`: all fields can be inferred.
 #[derive(Debug)]
 pub struct Config {
     /// The location of the user's 'home' directory. OS-dependent.
@@ -54,6 +122,8 @@ pub struct Config {
     shell: RefCell<Shell>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
+    /// CLI config values, passed in via `configure`.
+    cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
     cwd: PathBuf,
     /// The location of the cargo executable (path to current process)
@@ -74,7 +144,7 @@ pub struct Config {
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
     /// Cli flags of the form "-Z something"
-    cli_flags: CliUnstable,
+    unstable_flags: CliUnstable,
     /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
@@ -98,9 +168,17 @@ pub struct Config {
     http_config: LazyCell<CargoHttpConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
+    target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
 }
 
 impl Config {
+    /// Creates a new config instance.
+    ///
+    /// This is typically used for tests or other special cases. `default` is
+    /// preferred otherwise.
+    ///
+    /// This does only minimal initialization. In particular, it does not load
+    /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
         static INIT: Once = Once::new();
@@ -133,6 +211,7 @@ impl Config {
             shell: RefCell::new(shell),
             cwd,
             values: LazyCell::new(),
+            cli_config: None,
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
             extra_verbose: false,
@@ -146,7 +225,7 @@ impl Config {
                     Some((*GLOBAL_JOBSERVER).clone())
                 }
             },
-            cli_flags: CliUnstable::default(),
+            unstable_flags: CliUnstable::default(),
             easy: LazyCell::new(),
             crates_io_source_id: LazyCell::new(),
             cache_rustc_info,
@@ -159,9 +238,14 @@ impl Config {
             http_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
+            target_cfgs: LazyCell::new(),
         }
     }
 
+    /// Creates a new Config instance, with all default settings.
+    ///
+    /// This does only minimal initialization. In particular, it does not load
+    /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn default() -> CargoResult<Config> {
         let shell = Shell::new();
         let cwd =
@@ -282,6 +366,7 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
+    /// Gets profiles defined in config files.
     pub fn profiles(&self) -> CargoResult<&ConfigProfiles> {
         self.profiles.try_borrow_with(|| {
             let ocp = self.get::<Option<ConfigProfiles>>("profile")?;
@@ -301,44 +386,65 @@ impl Config {
         })
     }
 
+    /// Which package sources have been updated, used to ensure it is only done once.
     pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
         self.updated_sources
             .borrow_with(|| RefCell::new(HashSet::new()))
             .borrow_mut()
     }
 
+    /// Gets all config values from disk.
+    ///
+    /// This will lazy-load the values as necessary. Callers are responsible
+    /// for checking environment variables. Callers outside of the `config`
+    /// module should avoid using this.
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.values.try_borrow_with(|| self.load_values())
     }
 
+    /// Gets a mutable copy of the on-disk config values.
+    ///
+    /// This requires the config values to already have been loaded. This
+    /// currently only exists for `cargo vendor` to remove the `source`
+    /// entries. This doesn't respect environment variables. You should avoid
+    /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         match self.values.borrow_mut() {
             Some(map) => Ok(map),
-            None => failure::bail!("config values not loaded yet"),
+            None => bail!("config values not loaded yet"),
         }
     }
 
     // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            failure::bail!("config values already found")
+            bail!("config values already found")
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => failure::bail!("could not fill values"),
+            Err(_) => bail!("could not fill values"),
         }
     }
 
+    /// Reloads on-disk configuration values, starting at the given path and
+    /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
+        self.merge_cli_args()?;
         Ok(())
     }
 
+    /// The current working directory.
     pub fn cwd(&self) -> &Path {
         &self.cwd
     }
 
+    /// The `target` output directory to use.
+    ///
+    /// Returns `None` if the user has not chosen an explicit directory.
+    ///
+    /// Callers should prefer `Workspace::target_dir` instead.
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
@@ -352,33 +458,37 @@ impl Config {
         }
     }
 
-    fn get_cv(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+    /// Get a configuration value by key.
+    ///
+    /// This does NOT look at environment variables, the caller is responsible
+    /// for that.
+    fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
         let vals = self.values()?;
-        let mut parts = key.split('.').enumerate();
+        let mut parts = key.parts().enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
             Some(val) => val,
             None => return Ok(None),
         };
         for (i, part) in parts {
-            match *val {
-                CV::Table(ref map, _) => {
+            match val {
+                CV::Table(map, _) => {
                     val = match map.get(part) {
                         Some(val) => val,
                         None => return Ok(None),
                     }
                 }
-                CV::Integer(_, ref path)
-                | CV::String(_, ref path)
-                | CV::List(_, ref path)
-                | CV::Boolean(_, ref path) => {
-                    let idx = key.split('.').take(i).fold(0, |n, s| n + s.len()) + i - 1;
-                    let key_so_far = &key[..idx];
-                    failure::bail!(
+                CV::Integer(_, def)
+                | CV::String(_, def)
+                | CV::List(_, def)
+                | CV::Boolean(_, def) => {
+                    let key_so_far: Vec<&str> = key.parts().take(i).collect();
+                    bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
-                        key_so_far,
+                        // This join doesn't handle quoting properly.
+                        key_so_far.join("."),
                         val.desc(),
-                        path.display()
+                        def
                     )
                 }
             }
@@ -386,7 +496,7 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
-    // Helper primarily for testing.
+    /// Helper primarily for testing.
     pub fn set_env(&mut self, env: HashMap<String, String>) {
         self.env = env;
     }
@@ -418,7 +528,7 @@ impl Config {
         if self.env.keys().any(|k| k.starts_with(&env_pattern)) {
             return true;
         }
-        if let Ok(o_cv) = self.get_cv(key.as_config_key()) {
+        if let Ok(o_cv) = self.get_cv(key) {
             if o_cv.is_some() {
                 return true;
             }
@@ -426,48 +536,18 @@ impl Config {
         false
     }
 
+    /// Get a string config value.
+    ///
+    /// See `get` for more details.
     pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
         self.get::<Option<Value<String>>>(key)
     }
 
-    fn get_string_priv(&self, key: &ConfigKey) -> Result<OptValue<String>, ConfigError> {
-        match self.get_env(key)? {
-            Some(v) => Ok(Some(v)),
-            None => {
-                let o_cv = self.get_cv(key.as_config_key())?;
-                match o_cv {
-                    Some(CV::String(s, path)) => Ok(Some(Value {
-                        val: s,
-                        definition: Definition::Path(path),
-                    })),
-                    Some(cv) => Err(ConfigError::expected(key.as_config_key(), "a string", &cv)),
-                    None => Ok(None),
-                }
-            }
-        }
-    }
-
-    fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
-        match self.get_env(key)? {
-            Some(v) => Ok(Some(v)),
-            None => {
-                let o_cv = self.get_cv(key.as_config_key())?;
-                match o_cv {
-                    Some(CV::Boolean(b, path)) => Ok(Some(Value {
-                        val: b,
-                        definition: Definition::Path(path),
-                    })),
-                    Some(cv) => Err(ConfigError::expected(
-                        key.as_config_key(),
-                        "true/false",
-                        &cv,
-                    )),
-                    None => Ok(None),
-                }
-            }
-        }
-    }
-
+    /// Get a config value that is expected to be a path.
+    ///
+    /// This returns a relative path if the value does not contain any
+    /// directory separators. See `ConfigRelativePath::resolve_program` for
+    /// more details.
     pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         self.get::<Option<Value<ConfigRelativePath>>>(key).map(|v| {
             v.map(|v| Value {
@@ -487,89 +567,70 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(&self, key: &str) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
-        if let Some(mut val) = self.get_list_or_split_string(key)? {
-            if !val.val.is_empty() {
-                return Ok(Some(Value {
-                    val: (
-                        self.string_to_path(val.val.remove(0), &val.definition),
-                        val.val,
-                    ),
-                    definition: val.definition,
-                }));
-            }
-        }
-        Ok(None)
+    /// Get a list of strings.
+    ///
+    /// DO NOT USE outside of the config module. `pub` will be removed in the
+    /// future.
+    ///
+    /// NOTE: this does **not** support environment variables. Use `get` instead
+    /// if you want that.
+    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
+        let key = ConfigKey::from_str(key);
+        self._get_list(&key)
     }
 
-    // NOTE: this does **not** support environment variables. Use `get` instead
-    // if you want that.
-    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
+    fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
         match self.get_cv(key)? {
-            Some(CV::List(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
-            })),
+            Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("list", key, &val),
             None => Ok(None),
         }
     }
 
-    fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
-        match self.get::<Option<Value<StringList>>>(key)? {
-            None => Ok(None),
-            Some(val) => Ok(Some(Value {
-                val: val.val.list,
-                definition: val.definition,
-            })),
-        }
-    }
-
-    pub fn get_table(&self, key: &str) -> CargoResult<OptValue<HashMap<String, CV>>> {
+    /// Low-level method for getting a config value as a `OptValue<HashMap<String, CV>>`.
+    ///
+    /// NOTE: This does not read from env. The caller is responsible for that.
+    fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.get_cv(key)? {
-            Some(CV::Table(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
-            })),
+            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("table", key, &val),
             None => Ok(None),
         }
     }
 
-    fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
-        match self.get_env::<i64>(key)? {
-            Some(v) => Ok(Some(v)),
-            None => match self.get_cv(key.as_config_key())? {
-                Some(CV::Integer(i, path)) => Ok(Some(Value {
-                    val: i,
-                    definition: Definition::Path(path),
-                })),
-                Some(cv) => Err(ConfigError::expected(
-                    key.as_config_key(),
-                    "an integer",
-                    &cv,
-                )),
-                None => Ok(None),
-            },
-        }
-    }
+    get_value_typed! {get_integer, i64, Integer, "an integer"}
+    get_value_typed! {get_bool, bool, Boolean, "true/false"}
+    get_value_typed! {get_string_priv, String, String, "a string"}
 
-    fn expected<T>(&self, ty: &str, key: &str, val: &CV) -> CargoResult<T> {
-        val.expected(ty, key)
+    /// Generate an error when the given value is the wrong type.
+    fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
+        val.expected(ty, &key.to_string())
             .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
 
+    /// Update the Config instance based on settings typically passed in on
+    /// the command-line.
+    ///
+    /// This may also load the config from disk if it hasn't already been
+    /// loaded.
     pub fn configure(
         &mut self,
         verbose: u32,
         quiet: Option<bool>,
-        color: &Option<String>,
+        color: Option<&str>,
         frozen: bool,
         locked: bool,
         offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
+        cli_config: &[&str],
     ) -> CargoResult<()> {
+        self.unstable_flags.parse(unstable_flags)?;
+        if !cli_config.is_empty() {
+            self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
+            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
+            self.merge_cli_args()?;
+        }
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 { None } else { Some(true) };
 
@@ -580,11 +641,11 @@ impl Config {
         }
 
         // Ignore errors in the configuration files.
-        let cfg = self.get::<TermConfig>("term").unwrap_or_default();
+        let term = self.get::<TermConfig>("term").unwrap_or_default();
 
-        let color = color.as_ref().or_else(|| cfg.color.as_ref());
+        let color = color.or_else(|| term.color.as_ref().map(|s| s.as_ref()));
 
-        let verbosity = match (verbose, cfg.verbose, quiet) {
+        let verbosity = match (verbose, term.verbose, quiet) {
             (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
 
             // Command line takes precedence over configuration, so ignore the
@@ -594,7 +655,7 @@ impl Config {
             // Can't pass both at the same time on the command line regardless
             // of configuration.
             (Some(true), _, Some(true)) => {
-                failure::bail!("cannot set both --verbose and --quiet");
+                bail!("cannot set both --verbose and --quiet");
             }
 
             // Can't actually get `Some(false)` as a value from the command
@@ -623,11 +684,10 @@ impl Config {
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
-        self.cli_flags.parse(unstable_flags)?;
 
         if nightly_features_allowed() {
             if let Some(val) = self.get::<Option<bool>>("unstable.mtime_on_use")? {
-                self.cli_flags.mtime_on_use |= val;
+                self.unstable_flags.mtime_on_use |= val;
             }
         }
 
@@ -635,7 +695,7 @@ impl Config {
     }
 
     pub fn cli_unstable(&self) -> &CliUnstable {
-        &self.cli_flags
+        &self.unstable_flags
     }
 
     pub fn extra_verbose(&self) -> bool {
@@ -664,24 +724,14 @@ impl Config {
     }
 
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
-        let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
+        // This definition path is ignored, this is just a temporary container
+        // representing the entire file.
+        let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
-            let mut contents = String::new();
-            let mut file = File::open(&path)?;
-            file.read_to_string(&mut contents)
-                .chain_err(|| format!("failed to read configuration file `{}`", path.display()))?;
-            let toml = cargo_toml::parse(&contents, path, self).chain_err(|| {
-                format!("could not parse TOML configuration in `{}`", path.display())
-            })?;
-            let value = CV::from_toml(path, toml).chain_err(|| {
-                format!(
-                    "failed to load TOML configuration from `{}`",
-                    path.display()
-                )
-            })?;
-            cfg.merge(value)
+            let value = self.load_file(path)?;
+            cfg.merge(value, false)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
         })
@@ -692,6 +742,129 @@ impl Config {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
+    }
+
+    fn load_file(&self, path: &Path) -> CargoResult<ConfigValue> {
+        let mut seen = HashSet::new();
+        self._load_file(path, &mut seen)
+    }
+
+    fn _load_file(&self, path: &Path, seen: &mut HashSet<PathBuf>) -> CargoResult<ConfigValue> {
+        if !seen.insert(path.to_path_buf()) {
+            bail!(
+                "config `include` cycle detected with path `{}`",
+                path.display()
+            );
+        }
+        let contents = fs::read_to_string(path)
+            .chain_err(|| format!("failed to read configuration file `{}`", path.display()))?;
+        let toml = cargo_toml::parse(&contents, path, self)
+            .chain_err(|| format!("could not parse TOML configuration in `{}`", path.display()))?;
+        let value = CV::from_toml(Definition::Path(path.to_path_buf()), toml).chain_err(|| {
+            format!(
+                "failed to load TOML configuration from `{}`",
+                path.display()
+            )
+        })?;
+        let value = self.load_includes(value, seen)?;
+        Ok(value)
+    }
+
+    /// Load any `include` files listed in the given `value`.
+    ///
+    /// Returns `value` with the given include files merged into it.
+    ///
+    /// `seen` is used to check for cyclic includes.
+    fn load_includes(&self, mut value: CV, seen: &mut HashSet<PathBuf>) -> CargoResult<CV> {
+        // Get the list of files to load.
+        let (includes, def) = match &mut value {
+            CV::Table(table, _def) => match table.remove("include") {
+                Some(CV::String(s, def)) => (vec![(s, def.clone())], def),
+                Some(CV::List(list, def)) => (list, def),
+                Some(other) => bail!(
+                    "`include` expected a string or list, but found {} in `{}`",
+                    other.desc(),
+                    other.definition()
+                ),
+                None => {
+                    return Ok(value);
+                }
+            },
+            _ => unreachable!(),
+        };
+        // Check unstable.
+        if !self.cli_unstable().config_include {
+            self.shell().warn(format!("config `include` in `{}` ignored, the -Zconfig-include command-line flag is required",
+                def))?;
+            return Ok(value);
+        }
+        // Accumulate all values here.
+        let mut root = CV::Table(HashMap::new(), value.definition().clone());
+        for (path, def) in includes {
+            let abs_path = match &def {
+                Definition::Path(p) => p.parent().unwrap().join(&path),
+                Definition::Environment(_) | Definition::Cli => self.cwd().join(&path),
+            };
+            self._load_file(&abs_path, seen)
+                .and_then(|include| root.merge(include, true))
+                .chain_err(|| format!("failed to load config include `{}` from `{}`", path, def))?;
+        }
+        root.merge(value, true)?;
+        Ok(root)
+    }
+
+    /// Add config arguments passed on the command line.
+    fn merge_cli_args(&mut self) -> CargoResult<()> {
+        let cli_args = match &self.cli_config {
+            Some(cli_args) => cli_args,
+            None => return Ok(()),
+        };
+        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
+        for arg in cli_args {
+            // TODO: This should probably use a more narrow parser, reject
+            // comments, blank lines, [headers], etc.
+            let toml_v: toml::Value = toml::de::from_str(&arg)
+                .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
+            let toml_table = toml_v.as_table().unwrap();
+            if toml_table.len() != 1 {
+                bail!(
+                    "--config argument `{}` expected exactly one key=value pair, got {} keys",
+                    arg,
+                    toml_table.len()
+                );
+            }
+            let tmp_table = CV::from_toml(Definition::Cli, toml_v)
+                .chain_err(|| format!("failed to convert --config argument `{}`", arg))?;
+            let mut seen = HashSet::new();
+            let tmp_table = self
+                .load_includes(tmp_table, &mut seen)
+                .chain_err(|| format!("failed to load --config include"))?;
+            loaded_args
+                .merge(tmp_table, true)
+                .chain_err(|| format!("failed to merge --config argument `{}`", arg))?;
+        }
+        // Force values to be loaded.
+        let _ = self.values()?;
+        let values = self.values_mut()?;
+        let loaded_map = match loaded_args {
+            CV::Table(table, _def) => table,
+            _ => unreachable!(),
+        };
+        for (key, value) in loaded_map.into_iter() {
+            match values.entry(key) {
+                Vacant(entry) => {
+                    entry.insert(value);
+                }
+                Occupied(mut entry) => entry.get_mut().merge(value, true).chain_err(|| {
+                    format!(
+                        "failed to merge --config key `{}` into `{}`",
+                        entry.key(),
+                        entry.get().definition(),
+                    )
+                })?,
+            };
+        }
+        Ok(())
     }
 
     /// The purpose of this function is to aid in the transition to using
@@ -770,7 +943,7 @@ impl Config {
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
                 Some(index) => self.resolve_registry_index(index)?,
-                None => failure::bail!("No index found for registry: `{}`", registry),
+                None => bail!("No index found for registry: `{}`", registry),
             },
         )
     }
@@ -792,7 +965,7 @@ impl Config {
         let _parsed = index.val.into_url()?;
         let url = index.val.into_url_with_base(Some(&*base))?;
         if url.password().is_some() {
-            failure::bail!("Registry URLs may not contain passwords");
+            bail!("Registry URLs may not contain passwords");
         }
         Ok(url)
     }
@@ -806,49 +979,25 @@ impl Config {
             None => return Ok(()),
         };
 
-        let mut contents = String::new();
-        let mut file = File::open(&credentials)?;
-        file.read_to_string(&mut contents).chain_err(|| {
-            format!(
-                "failed to read configuration file `{}`",
-                credentials.display()
-            )
-        })?;
-
-        let toml = cargo_toml::parse(&contents, &credentials, self).chain_err(|| {
-            format!(
-                "could not parse TOML configuration in `{}`",
-                credentials.display()
-            )
-        })?;
-
-        let mut value = CV::from_toml(&credentials, toml).chain_err(|| {
-            format!(
-                "failed to load TOML configuration from `{}`",
-                credentials.display()
-            )
-        })?;
-
+        let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
-            let value = match value {
-                CV::Table(ref mut value, _) => value,
+            let (value_map, def) = match value {
+                CV::Table(ref mut value, ref def) => (value, def),
                 _ => unreachable!(),
             };
 
-            if let Some(token) = value.remove("token") {
-                if let Vacant(entry) = value.entry("registry".into()) {
+            if let Some(token) = value_map.remove("token") {
+                if let Vacant(entry) = value_map.entry("registry".into()) {
                     let mut map = HashMap::new();
                     map.insert("token".into(), token);
-                    let table = CV::Table(map, PathBuf::from("."));
+                    let table = CV::Table(map, def.clone());
                     entry.insert(table);
                 }
             }
         }
 
-        // We want value to override `cfg`, so swap these.
-        mem::swap(cfg, &mut value);
-        cfg.merge(value)?;
+        cfg.merge(value, true)?;
 
         Ok(())
     }
@@ -915,6 +1064,14 @@ impl Config {
             .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
     }
 
+    /// Returns a list of [target.'cfg()'] tables.
+    ///
+    /// The list is sorted by the table name.
+    pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
+        self.target_cfgs
+            .try_borrow_with(|| target::load_target_cfgs(self))
+    }
+
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
     where
         F: FnMut() -> CargoResult<SourceId>,
@@ -926,13 +1083,20 @@ impl Config {
         self.creation_time
     }
 
-    // Retrieves a config variable.
-    //
-    // This supports most serde `Deserialize` types. Examples:
-    //
-    //     let v: Option<u32> = config.get("some.nested.key")?;
-    //     let v: Option<MyStruct> = config.get("some.key")?;
-    //     let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    /// Retrieves a config variable.
+    ///
+    /// This supports most serde `Deserialize` types. Examples:
+    ///
+    /// ```rust,ignore
+    /// let v: Option<u32> = config.get("some.nested.key")?;
+    /// let v: Option<MyStruct> = config.get("some.key")?;
+    /// let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    /// ```
+    ///
+    /// The key may be a dotted key, but this does NOT support TOML key
+    /// quoting. Avoid key components that may have dots. For example,
+    /// `foo.'a.b'.bar" does not work if you try to fetch `foo.'a.b'". You can
+    /// fetch `foo` if it is a map, though.
     pub fn get<'de, T: serde::de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
         let d = Deserializer {
             config: self,
@@ -1035,7 +1199,7 @@ impl ConfigError {
         }
     }
 
-    fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
+    fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
             error: failure::format_err!(
                 "`{}` expected {}, but found a {}",
@@ -1043,24 +1207,20 @@ impl ConfigError {
                 expected,
                 found.desc()
             ),
-            definition: Some(Definition::Path(found.definition_path().to_path_buf())),
+            definition: Some(found.definition().clone()),
         }
     }
 
     fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("missing config key `{}`", key.as_config_key()),
+            error: failure::format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
-            error: failure::format_err!(
-                "could not load config key `{}`: {}",
-                key.as_config_key(),
-                self
-            ),
+            error: failure::format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
@@ -1103,60 +1263,60 @@ impl From<failure::Error> for ConfigError {
 
 #[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
-    Integer(i64, PathBuf),
-    String(String, PathBuf),
-    List(Vec<(String, PathBuf)>, PathBuf),
-    Table(HashMap<String, ConfigValue>, PathBuf),
-    Boolean(bool, PathBuf),
+    Integer(i64, Definition),
+    String(String, Definition),
+    List(Vec<(String, Definition)>, Definition),
+    Table(HashMap<String, ConfigValue>, Definition),
+    Boolean(bool, Definition),
 }
 
 impl fmt::Debug for ConfigValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            CV::Integer(i, ref path) => write!(f, "{} (from {})", i, path.display()),
-            CV::Boolean(b, ref path) => write!(f, "{} (from {})", b, path.display()),
-            CV::String(ref s, ref path) => write!(f, "{} (from {})", s, path.display()),
-            CV::List(ref list, ref path) => {
+        match self {
+            CV::Integer(i, def) => write!(f, "{} (from {})", i, def),
+            CV::Boolean(b, def) => write!(f, "{} (from {})", b, def),
+            CV::String(s, def) => write!(f, "{} (from {})", s, def),
+            CV::List(list, def) => {
                 write!(f, "[")?;
-                for (i, &(ref s, ref path)) in list.iter().enumerate() {
+                for (i, (s, def)) in list.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{} (from {})", s, path.display())?;
+                    write!(f, "{} (from {})", s, def)?;
                 }
-                write!(f, "] (from {})", path.display())
+                write!(f, "] (from {})", def)
             }
-            CV::Table(ref table, _) => write!(f, "{:?}", table),
+            CV::Table(table, _) => write!(f, "{:?}", table),
         }
     }
 }
 
 impl ConfigValue {
-    fn from_toml(path: &Path, toml: toml::Value) -> CargoResult<ConfigValue> {
+    fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
-            toml::Value::String(val) => Ok(CV::String(val, path.to_path_buf())),
-            toml::Value::Boolean(b) => Ok(CV::Boolean(b, path.to_path_buf())),
-            toml::Value::Integer(i) => Ok(CV::Integer(i, path.to_path_buf())),
+            toml::Value::String(val) => Ok(CV::String(val, def)),
+            toml::Value::Boolean(b) => Ok(CV::Boolean(b, def)),
+            toml::Value::Integer(i) => Ok(CV::Integer(i, def)),
             toml::Value::Array(val) => Ok(CV::List(
                 val.into_iter()
                     .map(|toml| match toml {
-                        toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => failure::bail!("expected string but found {} in list", v.type_str()),
+                        toml::Value::String(val) => Ok((val, def.clone())),
+                        v => bail!("expected string but found {} in list", v.type_str()),
                     })
                     .collect::<CargoResult<_>>()?,
-                path.to_path_buf(),
+                def,
             )),
             toml::Value::Table(val) => Ok(CV::Table(
                 val.into_iter()
                     .map(|(key, value)| {
-                        let value = CV::from_toml(path, value)
+                        let value = CV::from_toml(def.clone(), value)
                             .chain_err(|| format!("failed to parse key `{}`", key))?;
                         Ok((key, value))
                     })
                     .collect::<CargoResult<_>>()?,
-                path.to_path_buf(),
+                def,
             )),
-            v => failure::bail!(
+            v => bail!(
                 "found TOML configuration value of unknown type `{}`",
                 v.type_str()
             ),
@@ -1177,7 +1337,15 @@ impl ConfigValue {
         }
     }
 
-    fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
+    /// Merge the given value into self.
+    ///
+    /// If `force` is true, primitive (non-container) types will override existing values.
+    /// If false, the original will be kept and the new value ignored.
+    ///
+    /// Container types (tables and arrays) are merged with existing values.
+    ///
+    /// Container and non-container types cannot be mixed.
+    fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
                 let new = mem::replace(new, Vec::new());
@@ -1188,17 +1356,15 @@ impl ConfigValue {
                 for (key, value) in new {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
-                            let path = value.definition_path().to_path_buf();
+                            let new_def = value.definition().clone();
                             let entry = entry.get_mut();
-                            entry.merge(value).chain_err(|| {
+                            entry.merge(value, force).chain_err(|| {
                                 format!(
                                     "failed to merge key `{}` between \
-                                     files:\n  \
-                                     file 1: {}\n  \
-                                     file 2: {}",
+                                     {} and {}",
                                     key,
-                                    entry.definition_path().display(),
-                                    path.display()
+                                    entry.definition(),
+                                    new_def,
                                 )
                             })?;
                         }
@@ -1214,48 +1380,54 @@ impl ConfigValue {
             | (expected, found @ CV::List(_, _))
             | (expected, found @ CV::Table(_, _)) => {
                 return Err(internal(format!(
-                    "expected {}, but found {}",
+                    "failed to merge config value from `{}` into `{}`: expected {}, but found {}",
+                    found.definition(),
+                    expected.definition(),
                     expected.desc(),
                     found.desc()
                 )));
             }
-            _ => {}
+            (old, mut new) => {
+                if force || new.definition().is_higher_priority(old.definition()) {
+                    mem::swap(old, &mut new);
+                }
+            }
         }
 
         Ok(())
     }
 
-    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Path)> {
-        match *self {
-            CV::Integer(i, ref p) => Ok((i, p)),
+    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Definition)> {
+        match self {
+            CV::Integer(i, def) => Ok((*i, def)),
             _ => self.expected("integer", key),
         }
     }
 
-    pub fn string(&self, key: &str) -> CargoResult<(&str, &Path)> {
-        match *self {
-            CV::String(ref s, ref p) => Ok((s, p)),
+    pub fn string(&self, key: &str) -> CargoResult<(&str, &Definition)> {
+        match self {
+            CV::String(s, def) => Ok((s, def)),
             _ => self.expected("string", key),
         }
     }
 
-    pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Path)> {
-        match *self {
-            CV::Table(ref table, ref p) => Ok((table, p)),
+    pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Definition)> {
+        match self {
+            CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
         }
     }
 
-    pub fn list(&self, key: &str) -> CargoResult<&[(String, PathBuf)]> {
-        match *self {
-            CV::List(ref list, _) => Ok(list),
+    pub fn list(&self, key: &str) -> CargoResult<&[(String, Definition)]> {
+        match self {
+            CV::List(list, _) => Ok(list),
             _ => self.expected("list", key),
         }
     }
 
-    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Path)> {
-        match *self {
-            CV::Boolean(b, ref p) => Ok((b, p)),
+    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Definition)> {
+        match self {
+            CV::Boolean(b, def) => Ok((*b, def)),
             _ => self.expected("bool", key),
         }
     }
@@ -1270,23 +1442,23 @@ impl ConfigValue {
         }
     }
 
-    pub fn definition_path(&self) -> &Path {
-        match *self {
-            CV::Boolean(_, ref p)
-            | CV::Integer(_, ref p)
-            | CV::String(_, ref p)
-            | CV::List(_, ref p)
-            | CV::Table(_, ref p) => p,
+    pub fn definition(&self) -> &Definition {
+        match self {
+            CV::Boolean(_, def)
+            | CV::Integer(_, def)
+            | CV::String(_, def)
+            | CV::List(_, def)
+            | CV::Table(_, def) => def,
         }
     }
 
     fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        failure::bail!(
+        bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
             self.desc(),
             key,
-            self.definition_path().display()
+            self.definition()
         )
     }
 }
@@ -1316,17 +1488,17 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let (key, mut value) = {
         let key = "token".to_string();
-        let value = ConfigValue::String(token, file.path().to_path_buf());
+        let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
         let mut map = HashMap::new();
         map.insert(key, value);
-        let table = CV::Table(map, file.path().to_path_buf());
+        let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
 
         if let Some(registry) = registry.clone() {
             let mut map = HashMap::new();
             map.insert(registry, table);
             (
                 "registries".into(),
-                CV::Table(map, file.path().to_path_buf()),
+                CV::Table(map, Definition::Path(file.path().to_path_buf())),
             )
         } else {
             ("registry".into(), table)
@@ -1354,8 +1526,8 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     if let Some(_) = registry {
         if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
-            let v = CV::from_toml(file.path(), table)?;
-            value.merge(v)?;
+            let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
+            value.merge(v, false)?;
         }
     }
     toml.as_table_mut().unwrap().insert(key, value.into_toml());
@@ -1501,7 +1673,19 @@ impl<'de> serde::de::Deserialize<'de> for StringList {
             List(Vec<String>),
         }
 
-        Ok(match Target::deserialize(d)? {
+        // Add some context to the error. Serde gives a vague message for
+        // untagged enums. See https://github.com/serde-rs/serde/issues/773
+        let result = match Target::deserialize(d) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(serde::de::Error::custom(format!(
+                    "failed to deserialize, expected a string or array of strings: {}",
+                    e
+                )))
+            }
+        };
+
+        Ok(match result {
             Target::String(s) => StringList {
                 list: s.split_whitespace().map(str::to_string).collect(),
             },

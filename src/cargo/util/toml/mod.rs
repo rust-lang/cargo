@@ -724,7 +724,7 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(PartialEq, Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum VecStringOrBool {
     VecString(Vec<String>),

@@ -4,23 +4,45 @@
 //! structure usable by Cargo itself. Currently this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
-
-use log::debug;
-use url::Url;
-
 use crate::core::{GitReference, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
-use crate::util::config::ConfigValue;
+use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Config, IntoUrl};
+use failure::bail;
+use log::debug;
+use std::collections::{HashMap, HashSet};
+use url::Url;
 
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
+    /// Mapping of source name to the toml configuration.
     cfgs: HashMap<String, SourceConfig>,
+    /// Mapping of `SourceId` to the source name.
     id2name: HashMap<SourceId, String>,
     config: &'cfg Config,
+}
+
+/// Definition of a source in a config file.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct SourceConfigDef {
+    /// Indicates this source should be replaced with another of the given name.
+    replace_with: OptValue<String>,
+    /// A directory source.
+    directory: Option<ConfigRelativePath>,
+    /// A registry source. Value is a URL.
+    registry: OptValue<String>,
+    /// A local registry source.
+    local_registry: Option<ConfigRelativePath>,
+    /// A git source. Value is a URL.
+    git: OptValue<String>,
+    /// The git branch.
+    branch: OptValue<String>,
+    /// The git tag.
+    tag: OptValue<String>,
+    /// The git revision.
+    rev: OptValue<String>,
 }
 
 /// Configuration for a particular source, found in TOML looking like:
@@ -32,21 +54,24 @@ pub struct SourceConfigMap<'cfg> {
 /// ```
 #[derive(Clone)]
 struct SourceConfig {
-    // id this source corresponds to, inferred from the various defined keys in
-    // the configuration
+    /// `SourceId` this source corresponds to, inferred from the various
+    /// defined keys in the configuration.
     id: SourceId,
 
-    // Name of the source that this source should be replaced with. This field
-    // is a tuple of (name, path) where path is where this configuration key was
-    // defined (the literal `.cargo/config` file).
-    replace_with: Option<(String, PathBuf)>,
+    /// Whether or not this source is replaced with another.
+    ///
+    /// This field is a tuple of `(name, location)` where `location` is where
+    /// this configuration key was defined (such as the `.cargo/config` path
+    /// or the environment variable name).
+    replace_with: Option<(String, String)>,
 }
 
 impl<'cfg> SourceConfigMap<'cfg> {
     pub fn new(config: &'cfg Config) -> CargoResult<SourceConfigMap<'cfg>> {
         let mut base = SourceConfigMap::empty(config)?;
-        if let Some(table) = config.get_table("source")? {
-            for (key, value) in table.val.iter() {
+        let sources: Option<HashMap<String, SourceConfigDef>> = config.get("source")?;
+        if let Some(sources) = sources {
+            for (key, value) in sources.into_iter() {
                 base.add_config(key, value)?;
             }
         }
@@ -73,35 +98,37 @@ impl<'cfg> SourceConfigMap<'cfg> {
         self.config
     }
 
+    /// Get the `Source` for a given `SourceId`.
     pub fn load(
         &self,
         id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
     ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
+
         let mut name = match self.id2name.get(&id) {
             Some(name) => name,
             None => return Ok(id.load(self.config, yanked_whitelist)?),
         };
-        let mut path = Path::new("/");
+        let mut cfg_loc = "";
         let orig_name = name;
         let new_id;
         loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
-                None => failure::bail!(
+                None => bail!(
                     "could not find a configured source with the \
                      name `{}` when attempting to lookup `{}` \
                      (configuration in `{}`)",
                     name,
                     orig_name,
-                    path.display()
+                    cfg_loc
                 ),
             };
-            match cfg.replace_with {
-                Some((ref s, ref p)) => {
+            match &cfg.replace_with {
+                Some((s, c)) => {
                     name = s;
-                    path = p;
+                    cfg_loc = c;
                 }
                 None if id == cfg.id => return Ok(id.load(self.config, yanked_whitelist)?),
                 None => {
@@ -111,12 +138,12 @@ impl<'cfg> SourceConfigMap<'cfg> {
             }
             debug!("following pointer to {}", name);
             if name == orig_name {
-                failure::bail!(
+                bail!(
                     "detected a cycle of `replace-with` sources, the source \
                      `{}` is eventually replaced with itself \
                      (configuration in `{}`)",
                     name,
-                    path.display()
+                    cfg_loc
                 )
             }
         }
@@ -130,7 +157,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         )?;
         let old_src = id.load(self.config, yanked_whitelist)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
-            failure::bail!(
+            bail!(
                 "\
 cannot replace `{orig}` with `{name}`, the source `{orig}` supports \
 checksums, but `{name}` does not
@@ -143,7 +170,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         }
 
         if old_src.requires_precise() && id.precise().is_none() {
-            failure::bail!(
+            bail!(
                 "\
 the source {orig} requires a lock file to be present first before it can be
 used against vendored source code
@@ -163,75 +190,74 @@ restore the source replacement configuration to continue the build
         self.cfgs.insert(name.to_string(), cfg);
     }
 
-    fn add_config(&mut self, name: &str, cfg: &ConfigValue) -> CargoResult<()> {
-        let (table, _path) = cfg.table(&format!("source.{}", name))?;
+    fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
         let mut srcs = Vec::new();
-        if let Some(val) = table.get("registry") {
-            let url = url(val, &format!("source.{}.registry", name))?;
+        if let Some(registry) = def.registry {
+            let url = url(&registry, &format!("source.{}.registry", name))?;
             srcs.push(SourceId::for_registry(&url)?);
         }
-        if let Some(val) = table.get("local-registry") {
-            let (s, path) = val.string(&format!("source.{}.local-registry", name))?;
-            let mut path = path.to_path_buf();
-            path.pop();
-            path.pop();
-            path.push(s);
+        if let Some(local_registry) = def.local_registry {
+            let path = local_registry.resolve_path(self.config);
             srcs.push(SourceId::for_local_registry(&path)?);
         }
-        if let Some(val) = table.get("directory") {
-            let (s, path) = val.string(&format!("source.{}.directory", name))?;
-            let mut path = path.to_path_buf();
-            path.pop();
-            path.pop();
-            path.push(s);
+        if let Some(directory) = def.directory {
+            let path = directory.resolve_path(self.config);
             srcs.push(SourceId::for_directory(&path)?);
         }
-        if let Some(val) = table.get("git") {
-            let url = url(val, &format!("source.{}.git", name))?;
-            let r#try = |s: &str| {
-                let val = match table.get(s) {
-                    Some(s) => s,
-                    None => return Ok(None),
-                };
-                let key = format!("source.{}.{}", name, s);
-                val.string(&key).map(Some)
-            };
-            let reference = match r#try("branch")? {
-                Some(b) => GitReference::Branch(b.0.to_string()),
-                None => match r#try("tag")? {
-                    Some(b) => GitReference::Tag(b.0.to_string()),
-                    None => match r#try("rev")? {
-                        Some(b) => GitReference::Rev(b.0.to_string()),
+        if let Some(git) = def.git {
+            let url = url(&git, &format!("source.{}.git", name))?;
+            let reference = match def.branch {
+                Some(b) => GitReference::Branch(b.val),
+                None => match def.tag {
+                    Some(b) => GitReference::Tag(b.val),
+                    None => match def.rev {
+                        Some(b) => GitReference::Rev(b.val),
                         None => GitReference::Branch("master".to_string()),
                     },
                 },
             };
             srcs.push(SourceId::for_git(&url, reference)?);
+        } else {
+            let check_not_set = |key, v: OptValue<String>| {
+                if let Some(val) = v {
+                    bail!(
+                        "source definition `source.{}` specifies `{}`, \
+                         but that requires a `git` key to be specified (in {})",
+                        name,
+                        key,
+                        val.definition
+                    );
+                }
+                Ok(())
+            };
+            check_not_set("branch", def.branch)?;
+            check_not_set("tag", def.tag)?;
+            check_not_set("rev", def.rev)?;
         }
         if name == "crates-io" && srcs.is_empty() {
             srcs.push(SourceId::crates_io(self.config)?);
         }
 
-        let mut srcs = srcs.into_iter();
-        let src = srcs.next().ok_or_else(|| {
-            failure::format_err!(
-                "no source URL specified for `source.{}`, need \
-                 either `registry` or `local-registry` defined",
+        match srcs.len() {
+            0 => bail!(
+                "no source location specified for `source.{}`, need \
+                 `registry`, `local-registry`, `directory`, or `git` defined",
                 name
-            )
-        })?;
-        if srcs.next().is_some() {
-            failure::bail!("more than one source URL specified for `source.{}`", name)
+            ),
+            1 => {}
+            _ => bail!(
+                "more than one source location specified for `source.{}`",
+                name
+            ),
         }
+        let src = srcs[0];
 
-        let mut replace_with = None;
-        if let Some(val) = table.get("replace-with") {
-            let (s, path) = val.string(&format!("source.{}.replace-with", name))?;
-            replace_with = Some((s.to_string(), path.to_path_buf()));
-        }
+        let replace_with = def
+            .replace_with
+            .map(|val| (val.val, val.definition.to_string()));
 
         self.add(
-            name,
+            &name,
             SourceConfig {
                 id: src,
                 replace_with,
@@ -240,16 +266,15 @@ restore the source replacement configuration to continue the build
 
         return Ok(());
 
-        fn url(cfg: &ConfigValue, key: &str) -> CargoResult<Url> {
-            let (url, path) = cfg.string(key)?;
-            let url = url.into_url().chain_err(|| {
+        fn url(val: &config::Value<String>, key: &str) -> CargoResult<Url> {
+            let url = val.val.into_url().chain_err(|| {
                 format!(
                     "configuration key `{}` specified an invalid \
                      URL (in {})",
-                    key,
-                    path.display()
+                    key, val.definition
                 )
             })?;
+
             Ok(url)
         }
     }

@@ -332,6 +332,7 @@ pub struct CliUnstable {
     pub package_features: bool,
     pub advanced_env: bool,
     pub config_profile: bool,
+    pub config_include: bool,
     pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
     pub named_profiles: bool,
@@ -396,6 +397,7 @@ impl CliUnstable {
             "package-features" => self.package_features = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-profile" => self.config_profile = parse_empty(k, v)?,
+            "config-include" => self.config_include = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,

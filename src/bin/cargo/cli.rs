@@ -10,6 +10,9 @@ use super::list_commands;
 use crate::command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
+    // CAUTION: Be careful with using `config` until it is configured below.
+    // In general, try to avoid loading config values unless necessary (like
+    // the [alias] table).
     let args = match cli().get_matches_safe() {
         Ok(args) => args,
         Err(e) => {
@@ -90,8 +93,18 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
     }
 
     let args = expand_aliases(config, args)?;
+    let (cmd, subcommand_args) = match args.subcommand() {
+        (cmd, Some(args)) => (cmd, args),
+        _ => {
+            // No subcommand provided.
+            cli().print_help()?;
+            return Ok(());
+        }
+    };
+    config_configure(config, &args, subcommand_args)?;
+    super::init_git_transports(&config);
 
-    execute_subcommand(config, &args)
+    execute_subcommand(config, cmd, subcommand_args)
 }
 
 pub fn get_version_string(is_verbose: bool) -> String {
@@ -147,25 +160,22 @@ fn expand_aliases(
     Ok(args)
 }
 
-fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let (cmd, subcommand_args) = match args.subcommand() {
-        (cmd, Some(args)) => (cmd, args),
-        _ => {
-            cli().print_help()?;
-            return Ok(());
-        }
-    };
-
+fn config_configure(
+    config: &mut Config,
+    args: &ArgMatches<'_>,
+    subcommand_args: &ArgMatches<'_>,
+) -> CliResult {
     let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
-
+    let config_args: Vec<&str> = args.values_of("config").unwrap_or_default().collect();
+    let quiet = if args.is_present("quiet") || subcommand_args.is_present("quiet") {
+        Some(true)
+    } else {
+        None
+    };
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quiet") || subcommand_args.is_present("quiet") {
-            Some(true)
-        } else {
-            None
-        },
-        &args.value_of("color").map(|s| s.to_string()),
+        quiet,
+        args.value_of("color"),
         args.is_present("frozen"),
         args.is_present("locked"),
         args.is_present("offline"),
@@ -173,8 +183,16 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         &args
             .values_of_lossy("unstable-features")
             .unwrap_or_default(),
+        &config_args,
     )?;
+    Ok(())
+}
 
+fn execute_subcommand(
+    config: &mut Config,
+    cmd: &str,
+    subcommand_args: &ArgMatches<'_>,
+) -> CliResult {
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
@@ -241,6 +259,11 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(opt("offline", "Run without accessing the network").global(true))
+        .arg(
+            multi_opt("config", "KEY=VALUE", "Override a configuration value")
+                .global(true)
+                .hidden(true),
+        )
         .arg(
             Arg::with_name("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")

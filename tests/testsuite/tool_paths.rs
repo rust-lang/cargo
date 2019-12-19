@@ -256,9 +256,67 @@ fn custom_runner_cfg_collision() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
+first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
+second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_env() {
+    let target = rustc_host();
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let key = format!(
+        "CARGO_TARGET_{}_RUNNER",
+        target.to_uppercase().replace('-', "_")
+    );
+
+    p.cargo("run")
+        .env(&key, "nonexistent-runner --foo")
+        .with_status(101)
+        .with_stderr_contains("[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`")
+        .run();
+}
+
+#[cargo_test]
+fn cfg_ignored_fields() {
+    // Test for some ignored fields in [target.'cfg()'] tables.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            # Try some empty tables.
+            [target.'cfg(not(foo))']
+            [target.'cfg(not(bar))'.somelib]
+
+            # A bunch of unused fields.
+            [target.'cfg(not(target_os = "none"))']
+            linker = 'false'
+            ar = 'false'
+            foo = {rustc-flags = "-l foo"}
+            invalid = 1
+            runner = 'false'
+            rustflags = ''
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] unused key `somelib` in [target] config table `cfg(not(bar))`
+[WARNING] unused key `ar` in [target] config table `cfg(not(target_os = \"none\"))`
+[WARNING] unused key `foo` in [target] config table `cfg(not(target_os = \"none\"))`
+[WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = \"none\"))`
+[WARNING] unused key `linker` in [target] config table `cfg(not(target_os = \"none\"))`
+[CHECKING] foo v0.0.1 ([..])
+[FINISHED] [..]
 ",
         )
         .run();

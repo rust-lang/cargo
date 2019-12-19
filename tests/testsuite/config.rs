@@ -1,22 +1,107 @@
 //! Tests for config settings.
 
 use std::borrow::Borrow;
-use std::collections;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::os;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cargo::core::{enable_nightly_features, Shell};
-use cargo::util::config::{self, Config, SslVersionConfig};
+use cargo::util::config::{self, Config, SslVersionConfig, StringList};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
-use cargo_test_support::{paths, project, t};
+use cargo::CargoResult;
+use cargo_test_support::{normalized_lines_match, paths, project, t};
 use serde::Deserialize;
 
-fn lines_match(a: &str, b: &str) -> bool {
-    // Perform a small amount of normalization for filesystem paths before we
-    // send this to the `lines_match` function.
-    cargo_test_support::lines_match(&a.replace("\\", "/"), &b.replace("\\", "/"))
+/// Helper for constructing a `Config` object.
+pub struct ConfigBuilder {
+    env: HashMap<String, String>,
+    unstable: Vec<String>,
+    config_args: Vec<String>,
+    cwd: Option<PathBuf>,
+}
+
+impl ConfigBuilder {
+    pub fn new() -> ConfigBuilder {
+        ConfigBuilder {
+            env: HashMap::new(),
+            unstable: Vec::new(),
+            config_args: Vec::new(),
+            cwd: None,
+        }
+    }
+
+    /// Passes a `-Z` flag.
+    pub fn unstable_flag(&mut self, s: impl Into<String>) -> &mut Self {
+        self.unstable.push(s.into());
+        self
+    }
+
+    /// Sets an environment variable.
+    pub fn env(&mut self, key: impl Into<String>, val: impl Into<String>) -> &mut Self {
+        self.env.insert(key.into(), val.into());
+        self
+    }
+
+    /// Passes a `--config` flag.
+    pub fn config_arg(&mut self, arg: impl Into<String>) -> &mut Self {
+        if !self.unstable.iter().any(|s| s == "unstable-options") {
+            // --config is current unstable
+            self.unstable_flag("unstable-options");
+        }
+        self.config_args.push(arg.into());
+        self
+    }
+
+    /// Sets the current working directory where config files will be loaded.
+    pub fn cwd(&mut self, path: impl AsRef<Path>) -> &mut Self {
+        self.cwd = Some(paths::root().join(path.as_ref()));
+        self
+    }
+
+    /// Creates the `Config`.
+    pub fn build(&self) -> Config {
+        self.build_err().unwrap()
+    }
+
+    /// Creates the `Config`, returning a Result.
+    pub fn build_err(&self) -> CargoResult<Config> {
+        if !self.unstable.is_empty() {
+            // This is unfortunately global. Some day that should be fixed.
+            enable_nightly_features();
+        }
+        let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
+        let shell = Shell::from_write(output);
+        let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
+        let homedir = paths::home();
+        let mut config = Config::new(shell, cwd, homedir);
+        config.set_env(self.env.clone());
+        let config_args: Vec<&str> = self.config_args.iter().map(AsRef::as_ref).collect();
+        config.configure(
+            0,
+            None,
+            None,
+            false,
+            false,
+            false,
+            &None,
+            &self.unstable,
+            &config_args,
+        )?;
+        Ok(config)
+    }
+}
+
+fn new_config() -> Config {
+    ConfigBuilder::new().build()
+}
+
+/// Read the output from Config.
+pub fn read_output(config: Config) -> String {
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    fs::read_to_string(path).unwrap()
 }
 
 #[cargo_test]
@@ -47,16 +132,18 @@ fn read_env_vars_for_config() {
     p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
 }
 
-fn write_config(config: &str) {
-    let path = paths::root().join(".cargo/config");
+pub fn write_config(config: &str) {
+    write_config_at(paths::root().join(".cargo/config"), config);
+}
+
+pub fn write_config_at(path: impl AsRef<Path>, contents: &str) {
+    let path = paths::root().join(path.as_ref());
     fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, config).unwrap();
+    fs::write(path, contents).unwrap();
 }
 
 fn write_config_toml(config: &str) {
-    let path = paths::root().join(".cargo/config.toml");
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, config).unwrap();
+    write_config_at(paths::root().join(".cargo/config.toml"), config);
 }
 
 // Several test fail on windows if the user does not have permission to
@@ -97,44 +184,21 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
-fn new_config(env: &[(&str, &str)]) -> Config {
-    enable_nightly_features(); // -Z advanced-env
-    let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
-    let shell = Shell::from_write(output);
-    let cwd = paths::root();
-    let homedir = paths::home();
-    let env = env
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect();
-    let mut config = Config::new(shell, cwd, homedir);
-    config.set_env(env);
-    config
-        .configure(
-            0,
-            None,
-            &None,
-            false,
-            false,
-            false,
-            &None,
-            &["advanced-env".into()],
-        )
-        .unwrap();
-    config
-}
-
-fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
+pub fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
         .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    if !lines_match(msgs, &causes) {
+    assert_match(msgs, &causes);
+}
+
+pub fn assert_match(expected: &str, actual: &str) {
+    if !normalized_lines_match(expected, actual, None) {
         panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            msgs, causes
+            "Did not find expected:\n{}\nActual:\n{}\n",
+            expected, actual
         );
     }
 }
@@ -148,7 +212,7 @@ f1 = 123
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct S {
@@ -156,7 +220,7 @@ f1 = 123
     }
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(123) });
-    let config = new_config(&[("CARGO_S_F1", "456")]);
+    let config = ConfigBuilder::new().env("CARGO_S_F1", "456").build();
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: Some(456) });
 }
@@ -170,7 +234,7 @@ f1 = 1
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 }
@@ -192,18 +256,16 @@ f1 = 1
 
     symlink_config_to_config_toml();
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let unexpected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    if lines_match(unexpected, &output) {
+    if normalized_lines_match(unexpected, &output, None) {
         panic!(
             "Found unexpected:\n{}\nActual error:\n{}\n",
             unexpected, output
@@ -227,25 +289,18 @@ f1 = 2
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     // It should use the value from the one without the extension for
     // backwards compatibility.
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // But it also should have warned.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let expected = "\
 warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    if !lines_match(expected, &output) {
-        panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            expected, output
-        );
-    }
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -257,7 +312,10 @@ unused = 456
 ",
     );
 
-    let config = new_config(&[("CARGO_S_UNUSED2", "1"), ("CARGO_S2_UNUSED", "2")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_S_UNUSED2", "1")
+        .env("CARGO_S2_UNUSED", "2")
+        .build();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct S {
@@ -272,18 +330,11 @@ unused = 456
     assert_eq!(s, S { f1: None });
 
     // Verify the warnings.
-    drop(config); // Paranoid about flushing the file.
-    let path = paths::root().join("shell.out");
-    let output = fs::read_to_string(path).unwrap();
+    let output = read_output(config);
     let expected = "\
-warning: unused key `S.unused` in config file `[..]/.cargo/config`
+warning: unused config key `S.unused` in `[..]/.cargo/config`
 ";
-    if !lines_match(expected, &output) {
-        panic!(
-            "Did not find expected:\n{}\nActual error:\n{}\n",
-            expected, output
-        );
-    }
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -314,16 +365,17 @@ lto = false
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5"),
-        ("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11"),
-        ("CARGO_PROFILE_DEV_PACKAGE_env_CODEGEN_UNITS", "13"),
-        ("CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL", "2"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5")
+        .env("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11")
+        .env("CARGO_PROFILE_DEV_PACKAGE_env_CODEGEN_UNITS", "13")
+        .env("CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL", "2")
+        .build();
 
     // TODO: don't use actual `tomlprofile`.
     let p: toml::TomlProfile = config.get("profile.dev").unwrap();
-    let mut packages = collections::BTreeMap::new();
+    let mut packages = BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
     let o_profile = toml::TomlProfile {
         opt_level: Some(toml::TomlOptLevel("2".to_string())),
@@ -384,37 +436,90 @@ c = ['c']
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_ENVB", "false"),
-        ("CARGO_C", "['d']"),
-        ("CARGO_ENVL", "['a', 'b']"),
-    ]);
+    // advanced-env
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_ENVB", "false")
+        .env("CARGO_C", "['d']")
+        .env("CARGO_ENVL", "['a', 'b']")
+        .build();
+    assert_eq!(config.get::<VSOB>("a").unwrap(), VSOB::Bool(true));
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec!["b".to_string()])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec!["c".to_string(), "d".to_string()])
+    );
+    assert_eq!(config.get::<VSOB>("envb").unwrap(), VSOB::Bool(false));
+    assert_eq!(
+        config.get::<VSOB>("envl").unwrap(),
+        VSOB::VecString(vec!["a".to_string(), "b".to_string()])
+    );
 
-    let a = config.get::<VSOB>("a").unwrap();
-    match a {
-        VSOB::VecString(_) => panic!("expected bool"),
-        VSOB::Bool(b) => assert_eq!(b, true),
-    }
-    let b = config.get::<VSOB>("b").unwrap();
-    match b {
-        VSOB::VecString(l) => assert_eq!(l, vec!["b".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
-    let c = config.get::<VSOB>("c").unwrap();
-    match c {
-        VSOB::VecString(l) => assert_eq!(l, vec!["c".to_string(), "d".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
-    let envb = config.get::<VSOB>("envb").unwrap();
-    match envb {
-        VSOB::VecString(_) => panic!("expected bool"),
-        VSOB::Bool(b) => assert_eq!(b, false),
-    }
-    let envl = config.get::<VSOB>("envl").unwrap();
-    match envl {
-        VSOB::VecString(l) => assert_eq!(l, vec!["a".to_string(), "b".to_string()]),
-        VSOB::Bool(_) => panic!("expected list"),
-    }
+    // Demonstrate where merging logic isn't very smart. This could be improved.
+    let config = ConfigBuilder::new().env("CARGO_A", "x y").build();
+    assert_error(
+        config.get::<VSOB>("a").unwrap_err(),
+        "error in environment variable `CARGO_A`: \
+         could not load config key `a`: \
+         invalid type: string \"x y\", expected a boolean or vector of strings",
+    );
+
+    // Normal env.
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_B", "d e")
+        .env("CARGO_C", "f g")
+        .build();
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec!["b".to_string(), "d".to_string(), "e".to_string()])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec!["c".to_string(), "f".to_string(), "g".to_string()])
+    );
+
+    // config-cli
+    // This test demonstrates that ConfigValue::merge isn't very smart.
+    // It would be nice if it was smarter.
+    let config = ConfigBuilder::new().config_arg("a = ['a']").build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to merge --config key `a` into `[..]/.cargo/config`
+failed to merge config value from `--config cli option` into `[..]/.cargo/config`: \
+expected boolean, but found array",
+    );
+
+    // config-cli and advanced-env
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .config_arg("b=['clib']")
+        .config_arg("c=['clic']")
+        .env("CARGO_B", "env1 env2")
+        .env("CARGO_C", "['e1', 'e2']")
+        .build();
+    assert_eq!(
+        config.get::<VSOB>("b").unwrap(),
+        VSOB::VecString(vec![
+            "b".to_string(),
+            "clib".to_string(),
+            "env1".to_string(),
+            "env2".to_string()
+        ])
+    );
+    assert_eq!(
+        config.get::<VSOB>("c").unwrap(),
+        VSOB::VecString(vec![
+            "c".to_string(),
+            "clic".to_string(),
+            "e1".to_string(),
+            "e2".to_string()
+        ])
+    );
 }
 
 #[cargo_test]
@@ -426,7 +531,7 @@ opt-level = 'foo'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
@@ -435,7 +540,9 @@ opt-level = 'foo'
          must be an integer, `z`, or `s`, but found: foo",
     );
 
-    let config = new_config(&[("CARGO_PROFILE_DEV_OPT_LEVEL", "asdf")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_PROFILE_DEV_OPT_LEVEL", "asdf")
+        .build();
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
@@ -457,22 +564,23 @@ asdf = 3
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_NEST_foo_f2", "3"),
-        ("CARGO_NESTE_foo_f1", "1"),
-        ("CARGO_NESTE_foo_f2", "3"),
-        ("CARGO_NESTE_bar_asdf", "3"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_NEST_foo_f2", "3")
+        .env("CARGO_NESTE_foo_f1", "1")
+        .env("CARGO_NESTE_foo_f2", "3")
+        .env("CARGO_NESTE_bar_asdf", "3")
+        .build();
 
-    type Nested = collections::HashMap<String, collections::HashMap<String, u8>>;
+    type Nested = HashMap<String, HashMap<String, u8>>;
 
     let n: Nested = config.get("nest").unwrap();
-    let mut expected = collections::HashMap::new();
-    let mut foo = collections::HashMap::new();
+    let mut expected = HashMap::new();
+    let mut foo = HashMap::new();
     foo.insert("f1".to_string(), 1);
     foo.insert("f2".to_string(), 3);
     expected.insert("foo".to_string(), foo);
-    let mut bar = collections::HashMap::new();
+    let mut bar = HashMap::new();
     bar.insert("asdf".to_string(), 3);
     expected.insert("bar".to_string(), bar);
     assert_eq!(n, expected);
@@ -492,7 +600,10 @@ big = 123456789
 ",
     );
 
-    let config = new_config(&[("CARGO_E_S", "asdf"), ("CARGO_E_BIG", "123456789")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_E_S", "asdf")
+        .env("CARGO_E_BIG", "123456789")
+        .build();
     assert_error(
         config.get::<i64>("foo").unwrap_err(),
         "missing config key `foo`",
@@ -545,7 +656,7 @@ f1 = 1
 ",
     );
 
-    let config = new_config(&[("CARGO_BAR_ASDF", "3")]);
+    let config = ConfigBuilder::new().env("CARGO_BAR_ASDF", "3").build();
 
     assert_eq!(config.get::<Option<i32>>("a").unwrap(), None);
     assert_eq!(config.get::<Option<i32>>("a.b").unwrap(), None);
@@ -557,7 +668,7 @@ f1 = 1
 #[cargo_test]
 fn config_bad_toml() {
     write_config("asdf");
-    let config = new_config(&[]);
+    let config = new_config();
     assert_error(
         config.get::<i32>("foo").unwrap_err(),
         "\
@@ -595,19 +706,20 @@ l = ['y']
 
     type L = Vec<String>;
 
-    let config = new_config(&[
-        ("CARGO_L4", "['three', 'four']"),
-        ("CARGO_L5", "['a']"),
-        ("CARGO_ENV_EMPTY", "[]"),
-        ("CARGO_ENV_BLANK", ""),
-        ("CARGO_ENV_NUM", "1"),
-        ("CARGO_ENV_NUM_LIST", "[1]"),
-        ("CARGO_ENV_TEXT", "asdf"),
-        ("CARGO_LEPAIR", "['a', 'b']"),
-        ("CARGO_NESTED2_L", "['z']"),
-        ("CARGO_NESTEDE_L", "['env']"),
-        ("CARGO_BAD_ENV", "[zzz]"),
-    ]);
+    let config = ConfigBuilder::new()
+        .unstable_flag("advanced-env")
+        .env("CARGO_L4", "['three', 'four']")
+        .env("CARGO_L5", "['a']")
+        .env("CARGO_ENV_EMPTY", "[]")
+        .env("CARGO_ENV_BLANK", "")
+        .env("CARGO_ENV_NUM", "1")
+        .env("CARGO_ENV_NUM_LIST", "[1]")
+        .env("CARGO_ENV_TEXT", "asdf")
+        .env("CARGO_LEPAIR", "['a', 'b']")
+        .env("CARGO_NESTED2_L", "['z']")
+        .env("CARGO_NESTEDE_L", "['env']")
+        .env("CARGO_BAD_ENV", "[zzz]")
+        .build();
 
     assert_eq!(config.get::<L>("unset").unwrap(), vec![] as Vec<String>);
     assert_eq!(config.get::<L>("l1").unwrap(), vec![] as Vec<String>);
@@ -624,25 +736,16 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     );
     assert_eq!(config.get::<L>("l5").unwrap(), vec!["a"]);
     assert_eq!(config.get::<L>("env-empty").unwrap(), vec![] as Vec<String>);
-    assert_error(
-        config.get::<L>("env-blank").unwrap_err(),
-        "error in environment variable `CARGO_ENV_BLANK`: \
-         should have TOML list syntax, found ``",
-    );
-    assert_error(
-        config.get::<L>("env-num").unwrap_err(),
-        "error in environment variable `CARGO_ENV_NUM`: \
-         should have TOML list syntax, found `1`",
-    );
+    assert_eq!(config.get::<L>("env-blank").unwrap(), vec![] as Vec<String>);
+    assert_eq!(config.get::<L>("env-num").unwrap(), vec!["1".to_string()]);
     assert_error(
         config.get::<L>("env-num-list").unwrap_err(),
         "error in environment variable `CARGO_ENV_NUM_LIST`: \
          expected string, found integer",
     );
-    assert_error(
-        config.get::<L>("env-text").unwrap_err(),
-        "error in environment variable `CARGO_ENV_TEXT`: \
-         should have TOML list syntax, found `asdf`",
+    assert_eq!(
+        config.get::<L>("env-text").unwrap(),
+        vec!["asdf".to_string()]
     );
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
@@ -708,7 +811,10 @@ ns2 = 456
 ",
     );
 
-    let config = new_config(&[("CARGO_NSE", "987"), ("CARGO_NS2", "654")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_NSE", "987")
+        .env("CARGO_NS2", "654")
+        .build();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     #[serde(transparent)]
@@ -734,7 +840,10 @@ abs = '{}'
         paths::home().display(),
     ));
 
-    let config = new_config(&[("CARGO_EPATH", "a/b"), ("CARGO_P3", "d/e")]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_EPATH", "a/b")
+        .env("CARGO_P3", "d/e")
+        .build();
 
     assert_eq!(
         config
@@ -783,11 +892,11 @@ i64max = 9223372036854775807
 ",
     );
 
-    let config = new_config(&[
-        ("CARGO_EPOS", "123456789"),
-        ("CARGO_ENEG", "-1"),
-        ("CARGO_EI64MAX", "9223372036854775807"),
-    ]);
+    let config = ConfigBuilder::new()
+        .env("CARGO_EPOS", "123456789")
+        .env("CARGO_ENEG", "-1")
+        .env("CARGO_EI64MAX", "9223372036854775807")
+        .build();
 
     assert_eq!(
         config.get::<u64>("i64max").unwrap(),
@@ -841,7 +950,7 @@ hello = 'world'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -858,7 +967,7 @@ ssl-version = 'tlsv1.2'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     let a = config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -880,7 +989,7 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
     let a = config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
@@ -907,11 +1016,90 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config(&[]);
+    let config = new_config();
 
-    assert!(config.get::<SslVersionConfig>("http.ssl-version").is_err());
+    assert_error(
+        config
+            .get::<SslVersionConfig>("http.ssl-version")
+            .unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  could not parse TOML configuration in `[..]/.cargo/config`
+
+Caused by:
+  could not parse input as TOML
+
+Caused by:
+  dotted key attempted to extend non-table type at line 2 column 15",
+    );
     assert!(config
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .is_none());
+}
+
+#[cargo_test]
+fn table_merge_failure() {
+    // Config::merge fails to merge entries in two tables.
+    write_config_at(
+        "foo/.cargo/config",
+        "
+        [table]
+        key = ['foo']
+        ",
+    );
+    write_config_at(
+        ".cargo/config",
+        "
+        [table]
+        key = 'bar'
+        ",
+    );
+
+    #[derive(Debug, Deserialize)]
+    struct Table {
+        key: StringList,
+    }
+    let config = ConfigBuilder::new().cwd("foo").build();
+    assert_error(
+        config.get::<Table>("table").unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  failed to merge configuration at `[..]/.cargo/config`
+
+Caused by:
+  failed to merge key `table` between [..]/foo/.cargo/config and [..]/.cargo/config
+
+Caused by:
+  failed to merge key `key` between [..]/foo/.cargo/config and [..]/.cargo/config
+
+Caused by:
+  failed to merge config value from `[..]/.cargo/config` into `[..]/foo/.cargo/config`: \
+  expected array, but found string",
+    );
+}
+
+#[cargo_test]
+fn non_string_in_array() {
+    // Currently only strings are supported.
+    write_config("foo = [1, 2, 3]");
+    let config = new_config();
+    assert_error(
+        config.get::<Vec<i32>>("foo").unwrap_err(),
+        "\
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[..]/.cargo/config`
+
+Caused by:
+  failed to parse key `foo`
+
+Caused by:
+  expected string but found integer in list",
+    );
 }

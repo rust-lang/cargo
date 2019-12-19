@@ -1,5 +1,5 @@
-use crate::util::config::{Config, Value};
-use serde::Deserialize;
+use super::{Config, StringList, Value};
+use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
 /// Use with the `get` API to fetch a string that will be converted to a
@@ -31,5 +31,43 @@ impl ConfigRelativePath {
     /// absolute path.
     pub fn resolve_program(self, config: &Config) -> PathBuf {
         config.string_to_path(self.0.val, &self.0.definition)
+    }
+}
+
+/// A config type that is a program to run.
+///
+/// This supports a list of strings like `['/path/to/program', 'somearg']`
+/// or a space separated string like `'/path/to/program somearg'`.
+///
+/// This expects the first value to be the path to the program to run.
+/// Subsequent values are strings of arguments to pass to the program.
+///
+/// Typically you should use `ConfigRelativePath::resolve_program` on the path
+/// to get the actual program.
+#[derive(Debug, Clone)]
+pub struct PathAndArgs {
+    pub path: ConfigRelativePath,
+    pub args: Vec<String>,
+}
+
+impl<'de> serde::Deserialize<'de> for PathAndArgs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let vsl = Value::<StringList>::deserialize(deserializer)?;
+        let mut strings = vsl.val.list;
+        if strings.is_empty() {
+            return Err(D::Error::invalid_length(0, &"at least one element"));
+        }
+        let first = strings.remove(0);
+        let crp = Value {
+            val: first,
+            definition: vsl.definition,
+        };
+        Ok(PathAndArgs {
+            path: ConfigRelativePath(crp),
+            args: strings,
+        })
     }
 }

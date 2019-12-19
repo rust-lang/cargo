@@ -427,3 +427,61 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
+
+### config-cli
+* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+
+The `--config` CLI option allows arbitrary config values to be passed
+in via the command-line. The argument should be in TOML syntax of KEY=VALUE:
+
+```console
+cargo +nightly -Zunstable-options --config net.git-fetch-with-cli=true fetch
+```
+
+The `--config` option may be specified multiple times, in which case the
+values are merged in left-to-right order, using the same merging logic that
+multiple config files use. CLI values take precedence over environment
+variables, which take precedence over config files.
+
+Some examples of what it looks like using Bourne shell syntax:
+
+```sh
+# Most shells will require escaping.
+cargo --config http.proxy=\"http://example.com\" …
+
+# Spaces may be used.
+cargo --config "net.git-fetch-with-cli = true" …
+
+# TOML array example. Single quotes make it easier to read and write.
+cargo --config 'build.rustdocflags = ["--html-in-header", "header.html"]' …
+
+# Example of a complex TOML key.
+cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.runner = 'my-runner'" …
+
+# Example of overriding a profile setting.
+cargo --config profile.dev.package.image.opt-level=3 …
+```
+
+### config-include
+* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+
+The `include` key in a config file can be used to load another config file. It
+takes a string for a path to another file relative to the config file, or a
+list of strings. It requires the `-Zconfig-include` command-line option.
+
+```toml
+# .cargo/config
+include = '../../some-common-config.toml'
+```
+
+The config values are first loaded from the include path, and then the config
+file's own values are merged on top of it.
+
+This can be paired with [config-cli](#config-cli) to specify a file to load
+from the command-line:
+
+```console
+cargo +nightly -Zunstable-options -Zconfig-include --config 'include="somefile.toml"' build
+```
+
+CLI paths are relative to the current working directory.

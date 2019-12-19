@@ -28,7 +28,7 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, ProfileKind};
-pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
+pub use self::build_context::{BuildContext, FileFlavor, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
@@ -46,9 +46,8 @@ use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::{Edition, Feature, InternedString, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::machine_message::Message;
-use crate::util::paths;
 use crate::util::{self, machine_message, ProcessBuilder};
-use crate::util::{internal, join_paths, profile};
+use crate::util::{internal, join_paths, paths, profile};
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
@@ -850,12 +849,17 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("--target").arg(n.rustc_target());
     }
 
-    opt(cmd, "-C", "ar=", bcx.ar(unit.kind).map(|s| s.as_ref()));
+    opt(
+        cmd,
+        "-C",
+        "ar=",
+        bcx.ar(unit.kind).as_ref().map(|ar| ar.as_ref()),
+    );
     opt(
         cmd,
         "-C",
         "linker=",
-        bcx.linker(unit.kind).map(|s| s.as_ref()),
+        bcx.linker(unit.kind).as_ref().map(|s| s.as_ref()),
     );
     if incremental {
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();

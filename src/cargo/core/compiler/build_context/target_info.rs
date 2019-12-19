@@ -443,28 +443,18 @@ fn env_args(
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
-        if let Some(table) = config.get_table("target")? {
-            let cfgs = table
-                .val
-                .keys()
-                .filter(|key| CfgExpr::matches_key(key, target_cfg));
-
-            // Note that we may have multiple matching `[target]` sections and
-            // because we're passing flags to the compiler this can affect
-            // cargo's caching and whether it rebuilds. Ensure a deterministic
-            // ordering through sorting for now. We may perhaps one day wish to
-            // ensure a deterministic ordering via the order keys were defined
-            // in files perhaps.
-            let mut cfgs = cfgs.collect::<Vec<_>>();
-            cfgs.sort();
-
-            for n in cfgs {
-                let key = format!("target.{}.{}", n, name);
-                if let Some(args) = config.get::<Option<StringList>>(&key)? {
-                    rustflags.extend(args.as_slice().iter().cloned());
-                }
-            }
-        }
+        config
+            .target_cfgs()?
+            .iter()
+            .filter_map(|(key, cfg)| {
+                cfg.rustflags
+                    .as_ref()
+                    .map(|rustflags| (key, &rustflags.val))
+            })
+            .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
+            .for_each(|(_key, cfg_rustflags)| {
+                rustflags.extend(cfg_rustflags.as_slice().iter().cloned());
+            });
     }
 
     if !rustflags.is_empty() {

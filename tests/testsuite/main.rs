@@ -11,6 +11,7 @@
 #[macro_use]
 extern crate cargo_test_macro;
 
+mod advanced_env;
 mod alt_registry;
 mod bad_config;
 mod bad_manifest_path;
@@ -30,6 +31,8 @@ mod clippy;
 mod collisions;
 mod concurrent;
 mod config;
+mod config_cli;
+mod config_include;
 mod corrupt_git;
 mod cross_compile;
 mod cross_publish;

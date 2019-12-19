@@ -12,7 +12,7 @@ use cargo_test_support::install::{
 };
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, cargo_process, project};
+use cargo_test_support::{basic_manifest, cargo_process, project, NO_SUCH_FILE_ERR_MSG};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -824,11 +824,6 @@ fn uninstall_cwd_not_installed() {
 
 #[cargo_test]
 fn uninstall_cwd_no_project() {
-    let err_msg = if cfg!(windows) {
-        "The system cannot find the file specified."
-    } else {
-        "No such file or directory"
-    };
     cargo_process("uninstall")
         .with_status(101)
         .with_stdout("")
@@ -837,8 +832,8 @@ fn uninstall_cwd_no_project() {
 [ERROR] failed to read `[CWD]/Cargo.toml`
 
 Caused by:
-  {err_msg} (os error 2)",
-            err_msg = err_msg,
+  {err_msg}",
+            err_msg = NO_SUCH_FILE_ERR_MSG,
         ))
         .run();
 }

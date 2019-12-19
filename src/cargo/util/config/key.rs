@@ -13,17 +13,13 @@ pub struct ConfigKey {
     // updated with `push` methods and looks like `CARGO_FOO_BAR` for pushing
     // `foo` and then `bar`.
     env: String,
-    // The current toml key this configuration key maps to. This is
-    // updated with `push` methods and looks like `foo.bar` for pushing
-    // `foo` and then `bar`.
-    config: String,
-    // This is used to keep track of how many sub-keys have been pushed on this
-    // `ConfigKey`. Each element of this vector is a new sub-key pushed onto
-    // this `ConfigKey`. Each element is a pair of `usize` where the first item
-    // is an index into `env` and the second item is an index into `config`.
-    // These indices are used on `pop` to truncate `env` and `config` to rewind
-    // back to the previous `ConfigKey` state before a `push`.
-    parts: Vec<(usize, usize)>,
+    // This is used to keep track of how many sub-keys have been pushed on
+    // this `ConfigKey`. Each element of this vector is a new sub-key pushed
+    // onto this `ConfigKey`. Each element is a pair where the first item is
+    // the key part as a string, and the second item is an index into `env`.
+    // The `env` index is used on `pop` to truncate `env` to rewind back to
+    // the previous `ConfigKey` state before a `push`.
+    parts: Vec<(String, usize)>,
 }
 
 impl ConfigKey {
@@ -32,7 +28,6 @@ impl ConfigKey {
     pub fn new() -> ConfigKey {
         ConfigKey {
             env: "CARGO".to_string(),
-            config: String::new(),
             parts: Vec::new(),
         }
     }
@@ -70,23 +65,16 @@ impl ConfigKey {
     }
 
     fn _push(&mut self, env: &str, config: &str) {
-        self.parts.push((self.env.len(), self.config.len()));
-
+        self.parts.push((config.to_string(), self.env.len()));
         self.env.push_str("_");
         self.env.push_str(env);
-
-        if !self.config.is_empty() {
-            self.config.push_str(".");
-        }
-        self.config.push_str(config);
     }
 
     /// Rewinds this `ConfigKey` back to the state it was at before the last
     /// `push` method being called.
     pub fn pop(&mut self) {
-        let (env, config) = self.parts.pop().unwrap();
+        let (_part, env) = self.parts.pop().unwrap();
         self.env.truncate(env);
-        self.config.truncate(config);
     }
 
     /// Returns the corresponding environment variable key for this
@@ -95,15 +83,17 @@ impl ConfigKey {
         &self.env
     }
 
-    /// Returns the corresponding TOML (period-separated) key for this
-    /// configuration value.
-    pub fn as_config_key(&self) -> &str {
-        &self.config
+    /// Returns an iterator of the key parts as strings.
+    pub(super) fn parts(&self) -> impl Iterator<Item = &str> {
+        self.parts.iter().map(|p| p.0.as_ref())
     }
 }
 
 impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_config_key().fmt(f)
+        // Note: This is not a perfect TOML representation. This really should
+        // check if the parts should be quoted.
+        let parts: Vec<&str> = self.parts().collect();
+        parts.join(".").fmt(f)
     }
 }
