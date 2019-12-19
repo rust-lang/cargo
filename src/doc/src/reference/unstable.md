@@ -429,7 +429,7 @@ like to stabilize it somehow!
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
 
 ### config-cli
-* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+* Tracking Issue: [#7722](https://github.com/rust-lang/cargo/issues/7722)
 
 The `--config` CLI option allows arbitrary config values to be passed
 in via the command-line. The argument should be in TOML syntax of KEY=VALUE:
@@ -463,7 +463,7 @@ cargo --config profile.dev.package.image.opt-level=3 …
 ```
 
 ### config-include
-* Original Issue: [#6699](https://github.com/rust-lang/cargo/issues/6699)
+* Tracking Issue: [#7723](https://github.com/rust-lang/cargo/issues/7723)
 
 The `include` key in a config file can be used to load another config file. It
 takes a string for a path to another file relative to the config file, or a
