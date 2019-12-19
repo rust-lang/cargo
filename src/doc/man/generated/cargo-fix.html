@@ -34,20 +34,25 @@ executing:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>which behaves the same as <code>cargo check --all-targets</code>. Similarly if you&#8217;d like
-to fix code for different platforms you can do:</p>
+<p>which behaves the same as <code>cargo check --all-targets</code>.</p>
+</div>
+<div class="paragraph">
+<p><code>cargo fix</code> is only capable of fixing code that is normally compiled with
+<code>cargo check</code>. If code is conditionally enabled with optional features, you
+will need to enable those features for that code to be analyzed:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cargo fix --edition --features foo</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Similarly, other <code>cfg</code> expressions like platform-specific code will need to
+pass <code>--target</code> to fix code for the given target.</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>cargo fix --edition --target x86_64-pc-windows-gnu</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>or if your crate has optional features:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>cargo fix --edition --no-default-features --features foo</pre>
 </div>
 </div>
 <div class="paragraph">
