@@ -49,6 +49,20 @@ Directory | Description
 <code style="white-space: nowrap">target/debug/incremental/</code> |  `rustc` [incremental output], a cache used to speed up subsequent builds.
 <code style="white-space: nowrap">target/debug/build/</code> |  Output from [build scripts].
 
+### Dep-info files
+
+Next to each compiled artifact is a file called a "dep info" file with a `.d`
+suffix. This file is a Makefile-like syntax that indicates all of the file
+dependencies required to rebuild the artifact. These are intended to be used
+with external build systems so that they can detect if Cargo needs to be
+re-executed. The paths in the file are absolute by default. See the
+[`build.dep-info-basedir`] config option to use relative paths.
+
+```Makefile
+# Example dep-info file found in target/debug/foo.d
+/path/to/myproj/target/debug/foo: /path/to/myproj/src/lib.rs /path/to/myproj/src/main.rs
+```
+
 ### Shared cache
 
 A third party tool, [sccache], can be used to share built dependencies across
@@ -60,6 +74,7 @@ you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to
 `.bashrc`. Alternatively, you can set [`build.rustc-wrapper`] in the [Cargo
 configuration][config]. Refer to sccache documentation for more details.
 
+[`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
 [`build.target-dir`]: ../reference/config.md#buildtarget-dir
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo package`]: ../commands/cargo-package.md
