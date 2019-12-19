@@ -33,6 +33,9 @@ steps:
       about the current VCS checkout hash if available (not included with
       `--allow-dirty`).
 . Extract the `.crate` file and build it to verify it can build.
+    - This will rebuild your package from scratch to ensure that it can be
+      built from a pristine state. The `--no-verify` flag can be used to skip
+      this step.
 . Check that build scripts did not modify any source files.
 
 The list of files included can be controlled with the `include` and `exclude`
