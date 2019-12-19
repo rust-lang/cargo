@@ -258,6 +258,12 @@ fn sync(
                 registry: None,
                 replace_with: merged_source_name.to_string(),
             }
+        } else if source_id.is_remote_registry() {
+            let registry = source_id.url().to_string();
+            VendorSource::Registry {
+                registry: Some(registry),
+                replace_with: merged_source_name.to_string(),
+            }
         } else if source_id.is_git() {
             let mut branch = None;
             let mut tag = None;
