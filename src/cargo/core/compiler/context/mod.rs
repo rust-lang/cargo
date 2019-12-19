@@ -491,4 +491,23 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
         self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
     }
+
+    pub fn new_jobserver(&mut self) -> CargoResult<Client> {
+        let tokens = self.bcx.build_config.jobs as usize;
+        let client = Client::new(tokens).chain_err(|| "failed to create jobserver")?;
+
+        // Drain the client fully
+        for i in 0..tokens {
+            while let Err(e) = client.acquire_raw() {
+                anyhow::bail!(
+                    "failed to fully drain {}/{} token from jobserver at startup: {:?}",
+                    i,
+                    tokens,
+                    e,
+                );
+            }
+        }
+
+        Ok(client)
+    }
 }

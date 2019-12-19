@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::format_err;
 use crossbeam_utils::thread::Scope;
-use jobserver::{Acquired, HelperThread};
+use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
 
 use super::context::OutputFile;
@@ -127,6 +127,22 @@ impl<'a> JobState<'a> {
         let _ = self
             .tx
             .send(Message::Finish(self.id, Artifact::Metadata, Ok(())));
+    }
+
+    /// The rustc underlying this Job is about to acquire a jobserver token (i.e., block)
+    /// on the passed client.
+    ///
+    /// This should arrange for the passed client to eventually get a token via
+    /// `client.release_raw()`.
+    pub fn will_acquire(&self, _client: &Client) {
+        // ...
+    }
+
+    /// The rustc underlying this Job is informing us that it is done with a jobserver token.
+    ///
+    /// Note that it does *not* write that token back anywhere.
+    pub fn release_token(&self) {
+        // ...
     }
 }
 
