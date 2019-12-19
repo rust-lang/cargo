@@ -481,7 +481,6 @@ Cargo how to find local unpublished crates.
 
 ### Platform specific dependencies
 
-
 Platform-specific dependencies take the same format, but are listed under a
 `target` section. Normally Rust-like [`#[cfg]`
 syntax](../../reference/conditional-compilation.html) will be used to define
@@ -531,6 +530,8 @@ winhttp = "0.4.0"
 openssl = "1.0.1"
 ```
 
+#### Custom target specifications
+
 If you’re using a custom target specification (such as `--target
 foo/bar.json`), use the base filename without the `.json` extension:
 
@@ -542,6 +543,8 @@ winhttp = "0.4.0"
 openssl = "1.0.1"
 native = { path = "native/i686" }
 ```
+
+> **Note**: Custom target specifications are not usable on the stable channel.
 
 ### Development dependencies
 
