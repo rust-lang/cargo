@@ -5,23 +5,30 @@ this is the directory named `target` in the root of your workspace. To change
 the location, you can set the `CARGO_TARGET_DIR` [environment variable], the
 [`build.target-dir`] config value, or the `--target-dir` command-line flag.
 
-The directory layout depends on whether or not you are cross-compiling for a
-different platform with the `--target` flag. When not cross-compiling, the
-output goes into the root of the target directory, separated based on whether
-or not it is a release build:
+The directory layout depends on whether or not you are using the `--target`
+flag to build for a specific platform. If `--target` is not specified, Cargo
+runs in a mode where it builds for the host architecture. The output goes into
+the root of the target directory, separated based on whether or not it is a
+release build:
 
 Directory | Description
 ----------|------------
 <code style="white-space: nowrap">target/debug/</code> | Contains debug build output.
 <code style="white-space: nowrap">target/release/</code> | Contains release build output (with `--release` flag).
 
-When building for another target, the output is placed in a directory with the
-name of the target:
+When building for another target with `--target`, the output is placed in a
+directory with the name of the target:
 
 Directory | Example
 ----------|--------
 <code style="white-space: nowrap">target/&lt;triple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
 <code style="white-space: nowrap">target/&lt;triple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
+
+> **Note**: When not using `--target`, this has a consequence that Cargo will
+> share your dependencies with build scripts and proc macros. [`RUSTFLAGS`]
+> will be shared with every `rustc` invocation. With the `--target` flag,
+> build scripts and proc macros are built separately (for the host
+> architecture), and do not share `RUSTFLAGS`.
 
 Within the profile directory (`debug` or `release`), artifacts are placed into
 the following directories:
@@ -74,6 +81,7 @@ you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to
 `.bashrc`. Alternatively, you can set [`build.rustc-wrapper`] in the [Cargo
 configuration][config]. Refer to sccache documentation for more details.
 
+[`RUSTFLAGS`]: ../reference/config.md#buildrustflags
 [`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
 [`build.target-dir`]: ../reference/config.md#buildtarget-dir
 [`cargo doc`]: ../commands/cargo-doc.md
