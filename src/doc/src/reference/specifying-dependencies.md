@@ -508,11 +508,19 @@ If you want to know which cfg targets are available on your platform, run
 targets are available for another platform, such as 64-bit Windows,
 run `rustc --print=cfg --target=x86_64-pc-windows-msvc`.
 
-Unlike in your Rust source code,
-you cannot use `[target.'cfg(feature = "my_crate")'.dependencies]` to add
-dependencies based on optional crate features.
-Use [the `[features]` section](manifest.md#the-features-section)
-instead.
+Unlike in your Rust source code, you cannot use
+`[target.'cfg(feature = "fancy-feature")'.dependencies]` to add dependencies
+based on optional features. Use [the `[features]`
+section](manifest.md#the-features-section) instead:
+
+```toml
+[dependencies]
+foo = { version = "1.0", optional = true }
+bar = { version = "1.0", optional = true }
+
+[features]
+fancy-feature = ["foo", "bar"]
+```
 
 The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(prog_macro)`.
 These values will not work as expected and will always have the default value
