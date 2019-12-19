@@ -180,7 +180,7 @@ manifest is located.
 [config option]: ../reference/config.md
 [directory layout]: ../reference/manifest.md#the-project-layout
 [edition guide]: ../../edition-guide/index.html
-[edition-field]: ../reference/manifest.md#the-edition-field-optional
+[edition-field]: ../reference/manifest.md#the-edition-field
 [environment variable]: ../reference/environment-variables.md
 [feature]: ../reference/manifest.md#the-features-section
 [git dependency]: ../reference/specifying-dependencies.md#specifying-dependencies-from-git-repositories

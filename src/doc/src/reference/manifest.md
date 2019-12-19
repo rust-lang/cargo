@@ -3,6 +3,7 @@
 The `Cargo.toml` file for each package is called its *manifest*. Every manifest
 file consists of one or more sections.
 
+<a id="package-metadata"></a>
 ### The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.
@@ -13,6 +14,11 @@ name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
+
+The only fields required by Cargo are [`name`](#the-name-field) and
+[`version`](#the-version-field). If publishing to a registry, the registry may
+require additional fields. See the notes below and [the publishing
+chapter][publishing] for requirements for publishing to [crates.io].
 
 #### The `name` field
 
@@ -44,7 +50,7 @@ Versioning](https://semver.org/), so make sure you follow some basic rules:
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
-#### The `authors` field (optional)
+#### The `authors` field
 
 The `authors` field lists people or organizations that are considered the
 "authors" of the package. The exact meaning is open to interpretation — it may
@@ -53,9 +59,11 @@ package. These names will be listed on the crate's page on
 [crates.io]. An optional email address may be included within angled
 brackets at the end of each author.
 
-#### The `edition` field (optional)
+> **Note**: [crates.io] requires at least one author to be listed.
 
-You can opt in to a specific Rust Edition for your package with the
+#### The `edition` field
+
+You can opt in to a specific [Rust Edition] for your package with the
 `edition` key in `Cargo.toml`. If you don't specify the edition, it will
 default to 2015.
 
@@ -71,12 +79,162 @@ latest edition. Setting the `edition` key in `[package]` will affect all
 targets/crates in the package, including test suites, benchmarks, binaries,
 examples, etc.
 
-<a id="package-build"></a>
-#### The `build` field (optional)
+#### The `description` field
 
-This field specifies a file in the package root which is a [build script] for
-building native code. More information can be found in the [build script
-guide][build script].
+The description is a short blurb about the package. [crates.io] will display
+this with your package. This should be plain text (not Markdown).
+
+```toml
+[package]
+# ...
+description = "A short description of my package"
+```
+
+> **Note**: [crates.io] requires the `description` to be set.
+
+#### The `documentation` field
+
+The `documentation` field specifies a URL to a website hosting the crate's
+documentation. If no URL is specified in the manifest file, [crates.io] will
+automatically link your crate to the corresponding [docs.rs] page.
+
+```toml
+[package]
+# ...
+documentation = "https://docs.rs/bitflags"
+```
+
+> **Note**: [crates.io] may not show certain sites if they are known to not be
+> hosting documentation and are possibly of malicious intent e.g., ad tracking
+> networks. At this time, the site `rust-ci.org` is not allowed.
+
+#### The `readme` field
+
+The `readme` field should be the path to a file in the package root (relative
+to this `Cargo.toml`) that contains general information about the package.
+This file will be transferred to the registry when you publish. [crates.io]
+will interpret it as Markdown and render it on the crate's page.
+
+```toml
+[package]
+# ...
+readme = "README.md"
+```
+
+#### The `homepage` field
+
+The `homepage` field should be a URL to a site that is the home page for your
+package.
+
+```toml
+[package]
+# ...
+homepage = "https://serde.rs/"
+```
+
+#### The `repository` field
+
+The `repository` field should be a URL to the source repository for your
+package.
+
+```toml
+[package]
+# ...
+repository = "https://github.com/rust-lang/cargo/"
+```
+
+#### The `license` and `license-file` fields
+
+The `license` field contains the name of the software license that the package
+is released under. The `license-file` field contains the path to a file
+containing the text of the license (relative to this `Cargo.toml`).
+
+[crates.io] interprets the `license` field as an [SPDX 2.1 license
+expression][spdx-2.1-license-expressions]. The name must be a known license
+from the [SPDX license list 3.6][spdx-license-list-3.6]. Parentheses are not
+currently supported. See the [SPDX site] for more information.
+
+SPDX license expressions support AND and OR operators to combine multiple
+licenses.[^slash]
+
+```toml
+[package]
+# ...
+license = "MIT OR Apache-2.0"
+```
+
+Using `OR` indicates the user may choose either license. Using `AND` indicates
+the user must comply with both licenses simultaneously. The `WITH` operator
+indicates a license with a special exception. Some examples:
+
+* `MIT OR Apache-2.0`
+* `LGPL-2.1 AND MIT AND BSD-2-Clause`
+* `GPL-2.0+ WITH Bison-exception-2.2`
+
+If a package is using a nonstandard license, then the `license-file` field may
+be specified in lieu of the `license` field.
+
+```toml
+[package]
+# ...
+license-file = "LICENSE.txt"
+```
+
+> **Note**: [crates.io] requires either `license` or `license-file` to be set.
+
+[^slash]: Previously multiple licenses could be separated with a `/`, but that
+usage is deprecated.
+
+#### The `keywords` field
+
+The `keywords` field is an array of strings that describe this package. This
+can help when searching for the package on a registry, and you may choose any
+words that would help someone find this crate.
+
+```toml
+[package]
+# ...
+keywords = ["gamedev", "graphics"]
+```
+
+> **Note**: [crates.io] has a maximum of 5 keywords. Each keyword must be
+> ASCII text, start with a letter, and only contain letters, numbers, `_` or
+> `-`, and have at most 20 characters.
+
+#### The `categories` field
+
+The `categories` field is an array of strings of the categories this package
+belongs to.
+
+```toml
+categories = ["command-line-utilities", "development-tools::cargo-plugins"]
+```
+
+> **Note**: [crates.io] has a maximum of 5 categories. Each category should
+> match one of the strings available at <https://crates.io/category_slugs>, and
+> must match exactly.
+
+#### The `workspace` field
+
+The `workspace` field can be used to configure the workspace that this package
+will be a member of. If not specified this will be inferred as the first
+Cargo.toml with `[workspace]` upwards in the filesystem.
+
+```toml
+[package]
+# ...
+workspace = "path/to/workspace/root"
+```
+
+For more information, see the documentation for the [workspace table
+below](#the-workspace-section).
+
+<a id="package-build"></a>
+#### The `build` field
+
+The `build` field specifies a file in the package root which is a [build
+script] for building native code. More information can be found in the [build
+script guide][build script].
 
 [build script]: build-scripts.md
 
@@ -91,10 +249,10 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
-#### The `links` field (optional)
+#### The `links` field
 
-This field specifies the name of a native library that is being linked to.
-More information can be found in the [`links`][links] section of the build
+The `links` field specifies the name of a native library that is being linked
+to. More information can be found in the [`links`][links] section of the build
 script guide.
 
 [links]: build-scripts.md#the-links-manifest-key
@@ -105,23 +263,7 @@ script guide.
 links = "foo"
 ```
 
-#### The `documentation` field (optional)
-
-This field specifies a URL to a website hosting the crate's documentation.
-If no URL is specified in the manifest file, [crates.io] will
-automatically link your crate to the corresponding [docs.rs] page.
-
-Documentation links from specific hosts are blacklisted. Hosts are added
-to the blacklist if they are known to not be hosting documentation and are
-possibly of malicious intent e.g., ad tracking networks. URLs from the
-following hosts are blacklisted:
-
-* rust-ci.org
-
-Documentation URLs from blacklisted hosts will not appear on [crates.io], and
-may be replaced by docs.rs links.
-
-#### The `exclude` and `include` fields (optional)
+#### The `exclude` and `include` fields
 
 You can explicitly specify that a set of file patterns should be ignored or
 included for the purposes of packaging. The patterns specified in the
@@ -183,7 +325,7 @@ if any of those files change.
 
 [gitignore]: https://git-scm.com/docs/gitignore
 
-#### The `publish`  field (optional)
+#### The `publish` field
 
 The `publish` field can be used to prevent a package from being published to a
 package registry (like *crates.io*) by mistake, for instance to keep a package
@@ -203,90 +345,6 @@ allowed to be published to.
 # ...
 publish = ["some-registry-name"]
 ```
-
-#### The `workspace`  field (optional)
-
-The `workspace` field can be used to configure the workspace that this package
-will be a member of. If not specified this will be inferred as the first
-Cargo.toml with `[workspace]` upwards in the filesystem.
-
-```toml
-[package]
-# ...
-workspace = "path/to/workspace/root"
-```
-
-For more information, see the documentation for the workspace table below.
-
-#### The `license` and `license-file` fields (optional)
-
-The `license` field can be set to an [SPDX 2.1 license
-expression][spdx-2.1-license-expressions] for the package. Currently [crates.io]
-will validate the license provided against a whitelist of known license and
-exception identifiers from the [SPDX license list 3.6][spdx-license-list-3.6].
-Parentheses are not currently supported.
-
-Previously multiple licenses could be separated with a `/`, but that usage is
-deprecated. Instead, use a license expression with AND and OR operators to get
-more explicit semantics.
-
-```toml
-[package]
-# ...
-license = "MIT OR Apache-2.0"
-```
-
-If a package is using a nonstandard license, then the `license-file` field may
-be specified in lieu of the `license` field. It must point to a file relative to
-this manifest (similar to the `readme` field).
-
-```toml
-[package]
-# ...
-license-file = "..."
-```
-
-#### Package metadata
-
-There are a number of optional metadata fields also accepted under the
-`[package]` section:
-
-```toml
-[package]
-# ...
-
-# A short blurb about the package. This is not rendered in any format when
-# uploaded to crates.io (aka this is not markdown).
-description = "..."
-
-# These URLs point to more information about the package. These are
-# intended to be webviews of the relevant data, not necessarily compatible
-# with VCS tools and the like.
-documentation = "..."
-homepage = "..."
-repository = "..."
-
-# This points to a file under the package root (relative to this `Cargo.toml`).
-# The contents of this file are stored and indexed in the registry.
-# crates.io will render this file and place the result on the crate's page.
-readme = "..."
-
-# This is a list of up to five keywords that describe this crate. Keywords
-# are searchable on crates.io, and you may choose any words that would
-# help someone find this crate.
-keywords = ["...", "..."]
-
-# This is a list of up to five categories where this crate would fit.
-# Categories are a fixed list available at crates.io/category_slugs, and
-# they must match exactly.
-categories = ["...", "..."]
-```
-
-The [crates.io] registry will render the description, display
-the license, link to the three URLs and categorize by the keywords. These keys
-provide useful information to users of the registry and also influence the
-search ranking of a crate. It is highly discouraged to omit everything in a
-published crate.
 
 ### The `[badges]` section
 
@@ -367,7 +425,7 @@ is-it-maintained-open-issues = { repository = "..." }
 maintenance = { status = "..." }
 ```
 
-#### The `metadata` table (optional)
+#### The `metadata` table
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
 detecting typos and such. The `package.metadata` table, however, is completely
@@ -491,6 +549,9 @@ The usage of features is subject to a few rules:
 Note that it is explicitly allowed for features to not actually activate any
 optional dependencies. This allows packages to internally enable/disable
 features without requiring a new dependency.
+
+> **Note**: [crates.io] requires feature names to only contain ASCII letters,
+> digits, `_`, or `-`.
 
 #### Usage in end products
 
@@ -821,7 +882,7 @@ autobins = false
 > is `false` if at least one target is manually defined in `Cargo.toml`.
 > Beginning with the 2018 edition, the default is always `true`.
 
-#### The `required-features` field (optional)
+#### The `required-features` field
 
 The `required-features` field specifies which features the target needs in order
 to be built. If any of the required features are not selected, the target will
@@ -955,5 +1016,8 @@ dependencies][replace] section of the documentation.
 [`cargo test`]: ../commands/cargo-test.md
 [crates.io]: https://crates.io/
 [docs.rs]: https://docs.rs/
+[publishing]: publishing.md
+[Rust Edition]: ../../edition-guide/index.html
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
+[SPDX site]: https://spdx.org/license-list

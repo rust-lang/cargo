@@ -83,6 +83,8 @@ positioned.
 1.2.* := >=1.2.0, <1.3.0
 ```
 
+> **Note**: [crates.io] does not allow bare `*` versions.
+
 ### Comparison requirements
 
 **Comparison requirements** allow manually specifying a version range or an
@@ -114,6 +116,9 @@ to the name of the registry to use.
 some-crate = { version = "1.0", registry = "my-registry" }
 ```
 
+> **Note**: [crates.io] does not allow packages to be published with
+> dependencies on other registries.
+
 [registries documentation]: registries.md
 
 ### Specifying dependencies from `git` repositories
@@ -143,6 +148,10 @@ rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 ```
 
 See [Git Authentication] for help with git authentication for private repos.
+
+> **Note**: [crates.io] does not allow packages to be published with `git`
+> dependencies (`git` [dev-dependencies] are ignored). See the [Multiple
+> locations](#multiple-locations) section for a fallback alternative.
 
 [Git Authentication]: ../appendix/git-authentication.md
 
@@ -182,6 +191,36 @@ and specify its version in the dependencies line as well:
 [dependencies]
 hello_utils = { path = "hello_utils", version = "0.1.0" }
 ```
+
+> **Note**: [crates.io] does not allow packages to be published with `path`
+> dependencies (`path` [dev-dependencies] are ignored). See the [Multiple
+> locations](#multiple-locations) section for a fallback alternative.
+
+### Multiple locations
+
+It is possible to specify both a registry version and a `git` or `path`
+location. The `git` or `path` dependency will be used locally (in which case
+the `version` is ignored), and when published to a registry like [crates.io],
+it will use the registry version. Other combinations are not allowed.
+Examples:
+
+```toml
+[dependencies]
+# Uses `my-bitflags` when used locally, and uses
+# version 1.0 from crates.io when published.
+bitflags = { path = "my-bitflags", version = "1.0" }
+
+# Uses the given git repo when used locally, and uses
+# version 1.0 from crates.io when published.
+smallvec = { git = "https://github.com/servo/rust-smallvec", version = "1.0" }
+```
+
+One example where this can be useful is when you have split up a library into
+multiple packages within the same workspace. You can then use `path`
+dependencies to point to the local packages within the workspace to use the
+local version during development, and then use the [crates.io] version once it
+is published. This is similar to specifying an
+[override](#overriding-dependencies).
 
 ### Overriding dependencies
 
@@ -530,6 +569,12 @@ example:
 mio = "0.0.1"
 ```
 
+> **Note**: When a package is published, only dev-dependencies that specify a
+> `version` will be included in the published crate. For most use cases,
+> dev-dependencies are not needed when published, though some users (like OS
+> packagers) may want to run tests within a crate, so providing a `version` if
+> possible can still be beneficial.
+
 ### Build dependencies
 
 You can depend on other Cargo-based crates for use in your build scripts.
@@ -625,3 +670,4 @@ log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
 ```
 
 [crates.io]: https://crates.io/
+[dev-dependencies]: #development-dependencies
