@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+pub use self::build_specific::get_features_for;
 pub use self::canonical_url::CanonicalUrl;
 pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::DependencyQueue;
@@ -28,6 +29,7 @@ pub use self::workspace::{
     print_available_tests,
 };
 
+pub mod build_specific;
 mod canonical_url;
 pub mod command_prelude;
 pub mod config;

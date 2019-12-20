@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, DocOptions};
+use cargo::util;
 
 pub fn cli() -> App {
     subcommand("doc")
@@ -56,6 +57,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    util::get_features_for("doc", &mut compile_opts, &ws)?;
 
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
