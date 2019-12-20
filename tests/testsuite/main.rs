@@ -38,6 +38,7 @@ mod death;
 mod dep_info;
 mod directory;
 mod doc;
+mod doc_features_specific;
 mod edition;
 mod features;
 mod fetch;
