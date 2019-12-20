@@ -2236,3 +2236,28 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn manifest_path_sanitation() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+        "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("a/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("install --path a/../a").run();
+}

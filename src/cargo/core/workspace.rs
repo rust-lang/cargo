@@ -137,9 +137,10 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
+        let manifest_path = manifest_path.canonicalize()?;
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
         ws.target_dir = config.target_dir()?;
-        ws.root_manifest = ws.find_root(manifest_path)?;
+        ws.root_manifest = ws.find_root(&manifest_path)?;
         ws.find_members()?;
         ws.validate()?;
         Ok(ws)
