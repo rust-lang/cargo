@@ -178,7 +178,7 @@ manifest is located.
 [Source Replacement]: ../reference/source-replacement.md
 [cargo-unstable]: ../reference/unstable.md
 [config option]: ../reference/config.md
-[directory layout]: ../reference/manifest.md#the-project-layout
+[directory layout]: ../guide/project-layout.md
 [edition guide]: ../../edition-guide/index.html
 [edition-field]: ../reference/manifest.md#the-edition-field
 [environment variable]: ../reference/environment-variables.md

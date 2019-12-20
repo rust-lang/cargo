@@ -679,53 +679,6 @@ When `default-members` is not specified, the default is the root manifest
 if it is a package, or every member manifest (as if `--workspace` were specified
 on the command-line) for virtual workspaces.
 
-### The project layout
-
-If your package is an executable, name the main source file `src/main.rs`. If it
-is a library, name the main source file `src/lib.rs`.
-
-Cargo will also treat any files located in `src/bin/*.rs` as executables. If your
-executable consists of more than just one source file, you might also use a directory
-inside `src/bin` containing a `main.rs` file which will be treated as an executable
-with a name of the parent directory.
-
-Your package can optionally contain folders named `examples`, `tests`, and
-`benches`, which Cargo will treat as containing examples,
-integration tests, and benchmarks respectively. Analogous to `bin` targets, they
-may be composed of single files or directories with a `main.rs` file.
-
-```
-▾ src/           # directory containing source files
-  lib.rs         # the main entry point for libraries and packages
-  main.rs        # the main entry point for packages producing executables
-  ▾ bin/         # (optional) directory containing additional executables
-    *.rs
-  ▾ */           # (optional) directories containing multi-file executables
-    main.rs
-▾ examples/      # (optional) examples
-  *.rs
-  ▾ */           # (optional) directories containing multi-file examples
-    main.rs
-▾ tests/         # (optional) integration tests
-  *.rs
-  ▾ */           # (optional) directories containing multi-file tests
-    main.rs
-▾ benches/       # (optional) benchmarks
-  *.rs
-  ▾ */           # (optional) directories containing multi-file benchmarks
-    main.rs
-```
-
-To structure your code after you've created the files and folders for your
-package, you should remember to use Rust's module system, which you can read
-about in [the
-book](../../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html).
-
-See [Configuring a target](#configuring-a-target) below for more details on
-manually configuring target settings. See [Target
-auto-discovery](#target-auto-discovery) below for more information on
-controlling how Cargo automatically infers targets.
-
 ### Examples
 
 Files located under `examples` are example uses of the functionality provided by
@@ -845,7 +798,7 @@ path = "src/my-cool-binary.rs"
 #### Target auto-discovery
 
 By default, Cargo automatically determines the targets to build based on the
-[layout of the files](#the-project-layout) on the filesystem. The target
+[layout of the files][package-layout] on the filesystem. The target
 configuration tables, such as `[lib]`, `[[bin]]`, `[[test]]`, `[[bench]]`, or
 `[[example]]`, can be used to add additional targets that don't follow the
 standard directory layout.
@@ -1024,4 +977,19 @@ dependencies][replace] section of the documentation.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
+[package-layout]: ../guide/project-layout.md
 [patch]: #the-patch-section
+
+<script>
+(function() {
+    var fragments = {
+        "#the-project-layout": "../guide/project-layout.html",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        var url = window.location.toString();
+        var base = url.substring(0, url.lastIndexOf('/'));
+        window.location.replace(base + "/" + target);
+    }
+})();
+</script>
