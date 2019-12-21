@@ -1,14 +1,83 @@
 # Changelog
 
-## Cargo 1.41 (2019-01-30)
-[5da4b4d4...HEAD](https://github.com/rust-lang/cargo/compare/5da4b4d4...HEAD)
+## Cargo 1.42 (2020-03-12)
+[0bf7aafe...HEAD](https://github.com/rust-lang/cargo/compare/0bf7aafe...HEAD)
 
 ### Added
+- Added documentation on git authentication.
+  [#7658](https://github.com/rust-lang/cargo/pull/7658)
+- Bitbucket Pipeline badges are now supported on crates.io.
+  [#7663](https://github.com/rust-lang/cargo/pull/7663)
+
 ### Changed
+- Emit a warning if `debug_assertions`, `test`, `proc_macro`, or `feature=` is
+  used in a `cfg()` expression.
+  [#7660](https://github.com/rust-lang/cargo/pull/7660)
+
 ### Fixed
+- Removed `--offline` empty index check, which was a false positive in some cases.
+  [#7655](https://github.com/rust-lang/cargo/pull/7655)
+
+### Nightly only
+
+
+## Cargo 1.41 (2020-01-30)
+[5da4b4d4...rust-1.41.0](https://github.com/rust-lang/cargo/compare/5da4b4d4...rust-1.41.0)
+
+### Added
+- 🔥 Cargo now uses a new `Cargo.lock` file format. This new format should
+  support easier merges in source control systems. Projects using the old
+  format will continue to use the old format, only new `Cargo.lock` files will
+  use the new format.
+  [#7579](https://github.com/rust-lang/cargo/pull/7579)
+- 🔥 `cargo install` will now upgrade already installed packages instead of
+  failing.
+  [#7560](https://github.com/rust-lang/cargo/pull/7560)
+- 🔥 Profile overrides have been added. This allows overriding profiles for
+  individual dependencies or build scripts. See [the
+  documentation](https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#overrides)
+  for more.
+  [#7591](https://github.com/rust-lang/cargo/pull/7591)
+- Added new documentation for build scripts.
+  [#7565](https://github.com/rust-lang/cargo/pull/7565)
+- Added documentation for Cargo's JSON output.
+  [#7595](https://github.com/rust-lang/cargo/pull/7595)
+- Significant expansion of config and environment variable documentation.
+  [#7650](https://github.com/rust-lang/cargo/pull/7650)
+- Add back support for `BROWSER` environment variable for `cargo doc --open`.
+  [#7576](https://github.com/rust-lang/cargo/pull/7576)
+- Added `kind` and `platform` for dependencies in `cargo metadata`.
+  [#7132](https://github.com/rust-lang/cargo/pull/7132)
+- The `OUT_DIR` value is now included in the `build-script-executed` JSON message.
+  [#7622](https://github.com/rust-lang/cargo/pull/7622)
+
+### Changed
+- `cargo doc` will now document private items in binaries by default.
+  [#7593](https://github.com/rust-lang/cargo/pull/7593)
+- Subcommand typo suggestions now include aliases.
+  [#7486](https://github.com/rust-lang/cargo/pull/7486)
+- Tweak how the "already existing..." comment is added to `.gitignore`.
+  [#7570](https://github.com/rust-lang/cargo/pull/7570)
+- Ignore `cargo login` text from copy/paste in token.
+  [#7588](https://github.com/rust-lang/cargo/pull/7588)
+- Windows: Ignore errors for locking files when not supported by the filesystem.
+  [#7602](https://github.com/rust-lang/cargo/pull/7602)
+- Remove `**/*.rs.bk` from `.gitignore`.
+  [#7647](https://github.com/rust-lang/cargo/pull/7647)
+
+### Fixed
+- Fix unused warnings for some keys in the `build` config section.
+  [#7575](https://github.com/rust-lang/cargo/pull/7575)
+- Linux: Don't panic when parsing `/proc/stat`.
+  [#7580](https://github.com/rust-lang/cargo/pull/7580)
+- Don't show canonical path in `cargo vendor`.
+  [#7629](https://github.com/rust-lang/cargo/pull/7629)
+
+### Nightly only
+
 
 ## Cargo 1.40 (2019-12-19)
-[1c6ec66d...rust-1.40.0](https://github.com/rust-lang/cargo/compare/1c6ec66d...rust-1.40.0)
+[1c6ec66d...5da4b4d4](https://github.com/rust-lang/cargo/compare/1c6ec66d...5da4b4d4)
 
 ### Added
 - Added `http.ssl-version` config option to control the version of TLS,
