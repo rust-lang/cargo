@@ -1240,7 +1240,7 @@ fn on_stderr_line_inner(
     if let Ok(JobserverNotification { jobserver_event }) =
         serde_json::from_str::<JobserverNotification>(compiler_message.get())
     {
-        log::trace!(
+        log::info!(
             "found jobserver directive from rustc: `{:?}`",
             jobserver_event
         );
