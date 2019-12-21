@@ -1,7 +1,52 @@
 ## The Manifest Format
 
 The `Cargo.toml` file for each package is called its *manifest*. Every manifest
-file consists of one or more sections.
+file consists of the following sections:
+
+* [`cargo-features`](unstable.md) — Unstable, nightly-only features.
+* [`[package]`](#the-package-section) — Defines a package.
+  * [`name`](#the-name-field) — The name of the package.
+  * [`version`](#the-version-field) — The version of the package.
+  * [`authors`](#the-authors-field) — The authors of the package.
+  * [`edition`](#the-edition-field) — The Rust edition.
+  * [`description`](#the-description-field) — A description of the package.
+  * [`documentation`](#the-documentation-field) — URL of the package documentation.
+  * [`readme`](#the-readme-field) — Path to the package's README file.
+  * [`homepage`](#the-homepage-field) — URL of the package homepage.
+  * [`repository`](#the-repository-field) — URL of the package source repository.
+  * [`license`](#the-license-and-license-file-fields) — The package license.
+  * [`license-file`](#the-license-and-license-file-fields) — Path to the text of the license.
+  * [`keywords`](#the-keywords-field) — Keywords for the package.
+  * [`categories`](#the-categories-field) — Categories of the package.
+  * [`workspace`](#the-workspace-field) — Path to the workspace for the package.
+  * [`build`](#the-build-field) — Path to the package build script.
+  * [`links`](#the-links-field) — Name of the native library the package links with.
+  * [`exclude`](#the-exclude-and-include-fields) — Files to exclude when publishing.
+  * [`include`](#the-exclude-and-include-fields) — Files to include when publishing.
+  * [`publish`](#the-publish-field) — Can be used to prevent publishing the package.
+  * [`metadata`](#the-metadata-table) — Extra settings for external tools.
+  * [`default-run`](#the-default-run-field) — The default binary to run by [`cargo run`].
+  * [`autobins`](cargo-targets.md#target-auto-discovery) — Disables binary auto discovery.
+  * [`autoexamples`](cargo-targets.md#target-auto-discovery) — Disables example auto discovery.
+  * [`autotests`](cargo-targets.md#target-auto-discovery) — Disables test auto discovery.
+  * [`autobenches`](cargo-targets.md#target-auto-discovery) — Disables bench auto discovery.
+* Target tables: (see [configuration](cargo-targets.md#configuring-a-target) for settings)
+  * [`[lib]`](cargo-targets.md#library) — Library target settings.
+  * [`[[bin]]`](cargo-targets.md#binaries) — Binary target settings.
+  * [`[[example]]`](cargo-targets.md#examples) — Example target settings.
+  * [`[[test]]`](cargo-targets.md#tests) — Test target settings.
+  * [`[[bench]]`](cargo-targets.md#benchmarks) — Benchmark target settings.
+* Dependency tables:
+  * [`[dependencies]`](specifying-dependencies.md) — Package library dependencies.
+  * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
+  * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
+  * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
+* [`[badges]`](#the-badges-section) — Badges to display on [crates.io].
+* [`[features]`](features.md) — Conditional compilation features.
+* [`[patch]`](#the-patch-section) — Override dependencies.
+* [`[replace]`](#the-replace-section) — Override dependencies (deprecated).
+* [`[profile]`](profiles.md) — Compiler settings and optimizations.
+* [`[workspace]`](workspaces.md) — The workspace definition.
 
 <a id="package-metadata"></a>
 ### The `[package]` section
@@ -351,6 +396,36 @@ allowed to be published to.
 publish = ["some-registry-name"]
 ```
 
+#### The `metadata` table
+
+Cargo by default will warn about unused keys in `Cargo.toml` to assist in
+detecting typos and such. The `package.metadata` table, however, is completely
+ignored by Cargo and will not be warned about. This section can be used for
+tools which would like to store package configuration in `Cargo.toml`. For
+example:
+
+```toml
+[package]
+name = "..."
+# ...
+
+# Metadata used when generating an Android APK, for example.
+[package.metadata.android]
+package-name = "my-awesome-android-app"
+assets = "path/to/static"
+```
+
+#### The `default-run` field
+
+The `default-run` field in the `[package]` section of the manifest can be used
+to specify a default binary picked by [`cargo run`]. For example, when there is
+both `src/bin/a.rs` and `src/bin/b.rs`:
+
+```toml
+[package]
+default-run = "a"
+```
+
 ### The `[badges]` section
 
 [crates.io] can display various badges for build status, test coverage, etc. for
@@ -428,36 +503,6 @@ is-it-maintained-open-issues = { repository = "..." }
 # - `none`: Displays no badge on crates.io, since the maintainer has not chosen to specify
 #   their intentions, potential crate users will need to investigate on their own.
 maintenance = { status = "..." }
-```
-
-#### The `metadata` table
-
-Cargo by default will warn about unused keys in `Cargo.toml` to assist in
-detecting typos and such. The `package.metadata` table, however, is completely
-ignored by Cargo and will not be warned about. This section can be used for
-tools which would like to store package configuration in `Cargo.toml`. For
-example:
-
-```toml
-[package]
-name = "..."
-# ...
-
-# Metadata used when generating an Android APK, for example.
-[package.metadata.android]
-package-name = "my-awesome-android-app"
-assets = "path/to/static"
-```
-
-#### The `default-run` field
-
-The `default-run` field in the `[package]` section of the manifest can be used
-to specify a default binary picked by [`cargo run`]. For example, when there is
-both `src/bin/a.rs` and `src/bin/b.rs`:
-
-```toml
-[package]
-default-run = "a"
 ```
 
 ### Dependency sections
