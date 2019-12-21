@@ -476,7 +476,7 @@ dependencies based on optional crate features.
 Use [the `[features]` section](manifest.md#the-features-section)
 instead.
 
-The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(prog_macro)`.
+The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(proc_macro)`.
 These values will not work as expected and will always have the default value
 returned by `rustc --print=cfg`.
 There is currently no way to add dependencies based on these configuration values.
