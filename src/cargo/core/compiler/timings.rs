@@ -84,6 +84,10 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
+    /// Number of rustc "extra" threads -- i.e., how many tokens have been
+    /// provided across all current rustc instances that are not the main thread
+    /// tokens.
+    rustc_parallelism: usize,
 }
 
 impl<'a, 'cfg> Timings<'a, 'cfg> {
@@ -232,7 +236,13 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
-    pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
+    pub fn mark_concurrency(
+        &mut self,
+        active: usize,
+        waiting: usize,
+        inactive: usize,
+        rustc_parallelism: usize,
+    ) {
         if !self.enabled {
             return;
         }
@@ -241,6 +251,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             active,
             waiting,
             inactive,
+            rustc_parallelism,
         };
         self.concurrency.push(c);
     }
@@ -285,7 +296,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         if !self.enabled {
             return Ok(());
         }
-        self.mark_concurrency(0, 0, 0);
+        self.mark_concurrency(0, 0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
@@ -361,6 +372,12 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         };
         let total_time = format!("{:.1}s{}", duration, time_human);
         let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
+        let max_rustc_concurrency = self
+            .concurrency
+            .iter()
+            .map(|c| c.rustc_parallelism)
+            .max()
+            .unwrap();
         let rustc_info = render_rustc_info(bcx);
         write!(
             f,
@@ -393,6 +410,9 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
   <tr>
     <td>rustc:</td><td>{}</td>
   </tr>
+  <tr>
+    <td>Max (global) rustc threads concurrency:</td><td>{}</td>
+  </tr>
 
 </table>
 "#,
@@ -407,6 +427,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             self.start_str,
             total_time,
             rustc_info,
+            max_rustc_concurrency,
         )?;
         Ok(())
     }

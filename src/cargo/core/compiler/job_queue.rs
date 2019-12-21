@@ -363,8 +363,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // Record some timing information if `-Ztimings` is enabled, and
             // this'll end up being a noop if we're not recording this
             // information.
-            self.timings
-                .mark_concurrency(self.active.len(), queue.len(), self.queue.len());
+            self.timings.mark_concurrency(
+                self.active.len(),
+                queue.len(),
+                self.queue.len(),
+                rustc_tokens.len(),
+            );
             self.timings.record_cpu();
 
             // Drain all events at once to avoid displaying the progress bar
