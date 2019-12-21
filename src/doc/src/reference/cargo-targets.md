@@ -248,6 +248,9 @@ default is `true` for all targets.
 If set to `false`, then you are responsible for defining a `main()` function
 to run tests and benchmarks.
 
+Tests have the [`cfg(test)` conditional expression][cfg-test] enabled whether
+or not the harness is enabled.
+
 #### The `edition` field
 
 The `edition` field defines the [Rust edition] the target will use. If not
@@ -353,6 +356,7 @@ autobins = false
 [`cargo install`]: ../commands/cargo-install.md
 [`cargo run`]: ../commands/cargo-run.md
 [`cargo test`]: ../commands/cargo-test.md
+[cfg-test]: ../../reference/conditional-compilation.html#test
 [crate types]: ../../reference/linkage.html
 [crates.io]: https://crates.io/
 [customized]: #configuring-a-target
