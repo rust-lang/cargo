@@ -43,8 +43,8 @@ file consists of the following sections:
   * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
 * [`[badges]`](#the-badges-section) — Badges to display on [crates.io].
 * [`[features]`](features.md) — Conditional compilation features.
-* [`[patch]`](#the-patch-section) — Override dependencies.
-* [`[replace]`](#the-replace-section) — Override dependencies (deprecated).
+* [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
+* [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
 * [`[profile]`](profiles.md) — Compiler settings and optimizations.
 * [`[workspace]`](workspaces.md) — The workspace definition.
 
@@ -517,97 +517,7 @@ The `[profile]` tables provide a way to customize compiler settings such as
 optimizations and debug settings. See [the Profiles chapter](profiles.md) for
 more detail.
 
-### The `[patch]` Section
 
-This section of Cargo.toml can be used to [override dependencies][replace] with
-other copies. The syntax is similar to the `[dependencies]` section:
-
-```toml
-[patch.crates-io]
-foo = { git = 'https://github.com/example/foo' }
-bar = { path = 'my/local/bar' }
-
-[dependencies.baz]
-git = 'https://github.com/example/baz'
-
-[patch.'https://github.com/example/baz']
-baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
-```
-
-The `[patch]` table is made of dependency-like sub-tables. Each key after
-`[patch]` is a URL of the source that is being patched, or the name of a
-registry. The name `crates-io` may be used to override the default registry
-[crates.io]. The first `[patch]` in the example above demonstrates overriding
-[crates.io], and the second `[patch]` demonstrates overriding a git source.
-
-Each entry in these tables is a normal dependency specification, the same as
-found in the `[dependencies]` section of the manifest. The dependencies listed
-in the `[patch]` section are resolved and used to patch the source at the
-URL specified. The above manifest snippet patches the `crates-io` source (e.g.
-crates.io itself) with the `foo` crate and `bar` crate. It also
-patches the `https://github.com/example/baz` source with a `my-branch` that
-comes from elsewhere.
-
-Sources can be patched with versions of crates that do not exist, and they can
-also be patched with versions of crates that already exist. If a source is
-patched with a crate version that already exists in the source, then the
-source's original crate is replaced.
-
-More information about overriding dependencies can be found in the [overriding
-dependencies][replace] section of the documentation and [RFC 1969] for the
-technical specification of this feature.
-
-[RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
-[replace]: specifying-dependencies.md#overriding-dependencies
-
-#### Using `[patch]` with multiple versions
-
-You can patch in multiple versions of the same crate with the `package` key used
-to rename dependencies. For example let's say that the `serde` crate has a
-bugfix that we'd like to use to its 1.\* series but we'd also like to prototype
-using a 2.0.0 version of serde we have in our git repository. To configure this
-we'd do:
-
-```toml
-[patch.crates-io]
-serde = { git = 'https://github.com/serde-rs/serde' }
-serde2 = { git = 'https://github.com/example/serde', package = 'serde', branch = 'v2' }
-```
-
-The first `serde = ...` directive indicates that serde 1.\* should be used from
-the git repository (pulling in the bugfix we need) and the second `serde2 = ...`
-directive indicates that the `serde` package should also be pulled from the `v2`
-branch of `https://github.com/example/serde`. We're assuming here that
-`Cargo.toml` on that branch mentions version 2.0.0.
-
-Note that when using the `package` key the `serde2` identifier here is actually
-ignored. We simply need a unique name which doesn't conflict with other patched
-crates.
-
-### The `[replace]` Section
-
-> **Note**: `[replace]` is deprecated. You should use the [`[patch]`][patch]
-> table instead.
-
-This section of Cargo.toml can be used to [override dependencies][replace] with
-other copies. The syntax is similar to the `[dependencies]` section:
-
-```toml
-[replace]
-"foo:0.1.0" = { git = 'https://github.com/example/foo' }
-"bar:1.0.2" = { path = 'my/local/bar' }
-```
-
-Each key in the `[replace]` table is a [package ID
-specification](pkgid-spec.md), which allows arbitrarily choosing a node in the
-dependency graph to override (the 3-part version number is required). The
-value of each key is the same as the `[dependencies]` syntax for specifying
-dependencies, except that you can't specify features. Note that when a crate
-is overridden the copy it's overridden with must have both the same name and
-version, but it can come from a different source (e.g., git or a local path).
-
-More information about overriding dependencies can be found in the [overriding
-dependencies][replace] section of the documentation.
 
 [`cargo init`]: ../commands/cargo-init.md
 [`cargo new`]: ../commands/cargo-new.md
@@ -619,7 +529,6 @@ dependencies][replace] section of the documentation.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
-[patch]: #the-patch-section
 
 <script>
 (function() {
@@ -639,6 +548,9 @@ dependencies][replace] section of the documentation.
         "#rules": "features.html#rules",
         "#usage-in-end-products": "features.html#usage-in-end-products",
         "#usage-in-packages": "features.html#usage-in-packages",
+        "#the-patch-section": "overriding-dependencies.html#the-patch-section",
+        "#using-patch-with-multiple-versions": "overriding-dependencies.html#using-patch-with-multiple-versions",
+        "#the-replace-section": "overriding-dependencies.html#the-replace-section",
     };
     var target = fragments[window.location.hash];
     if (target) {

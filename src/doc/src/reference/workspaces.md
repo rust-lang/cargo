@@ -84,8 +84,8 @@ When specified, `default-members` must expand to a subset of `members`.
 
 [package]: manifest.md#the-package-section
 [output directory]: ../guide/build-cache.md
-[patch]: manifest.md#the-patch-section
-[replace]: manifest.md#the-replace-section
+[patch]: overriding-dependencies.md#the-patch-section
+[replace]: overriding-dependencies.md#the-replace-section
 [profiles]: profiles.md
 [`path` dependencies]: specifying-dependencies.md#specifying-path-dependencies
 [`package.workspace`]: manifest.md#the-workspace-field

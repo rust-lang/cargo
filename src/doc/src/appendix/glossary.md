@@ -188,7 +188,7 @@ manifest is located.
 [integration-tests]: ../reference/cargo-targets.md#integration-tests
 [manifest]: ../reference/manifest.md
 [path dependency]: ../reference/specifying-dependencies.md#specifying-path-dependencies
-[path overrides]: ../reference/specifying-dependencies.md#overriding-with-local-dependencies
+[path overrides]: ../reference/overriding-dependencies.md#paths-overrides
 [pkgid-spec]: ../reference/pkgid-spec.md
 [rustdoc-unstable]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html
 [target-feature]: ../../reference/attributes/codegen.html#the-target_feature-attribute

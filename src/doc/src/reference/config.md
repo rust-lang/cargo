@@ -207,8 +207,8 @@ the `<triple>` part can be any target triple like
 * Environment: not supported
 
 An array of paths to local packages which are to be used as overrides for
-dependencies. For more information see the [Specifying Dependencies
-guide](specifying-dependencies.md#overriding-with-local-dependencies).
+dependencies. For more information see the [Overriding Dependencies
+guide](overriding-dependencies.md#paths-overrides).
 
 #### `[alias]`
 * Type: string or array of strings

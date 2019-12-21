@@ -1,7 +1,7 @@
 ## Source Replacement
 
 This document is about replacing the crate index. You can read about overriding
-dependencies in the [overriding dependencies][overriding] section of this
+dependencies in the [overriding dependencies] section of this
 documentation.
 
 A *source* is a provider that contains crates that may be included as
@@ -22,11 +22,12 @@ original source.
 
 As a consequence, source replacement is not appropriate for situations such as
 patching a dependency or a private registry. Cargo supports patching
-dependencies through the usage of [the `[replace]` key][replace-section], and
-private registry support is described in [Registries][registries].
+dependencies through the usage of [the `[patch]` key][overriding
+dependencies], and private registry support is described in [the Registries
+chapter][registries].
 
 [replace-section]: manifest.md#the-replace-section
-[overriding]: specifying-dependencies.md#overriding-dependencies
+[overriding dependencies]: overriding-dependencies.md
 [registries]: registries.md
 
 ### Configuration
