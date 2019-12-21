@@ -359,7 +359,7 @@ autobins = false
 [dependencies]: specifying-dependencies.md
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
 [documentation examples]: ../../rustdoc/documentation-tests.html
-[features]: manifest.md#the-features-section
+[features]: features.md
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [package layout]: ../guide/project-layout.md
 [package-edition]: manifest.md#the-edition-field

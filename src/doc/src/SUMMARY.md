@@ -23,6 +23,7 @@
     * [The Manifest Format](reference/manifest.md)
         * [Cargo Targets](reference/cargo-targets.md)
     * [Workspaces](reference/workspaces.md)
+    * [Features](reference/features.md)
     * [Profiles](reference/profiles.md)
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)

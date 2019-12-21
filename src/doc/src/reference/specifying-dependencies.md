@@ -510,8 +510,8 @@ run `rustc --print=cfg --target=x86_64-pc-windows-msvc`.
 
 Unlike in your Rust source code, you cannot use
 `[target.'cfg(feature = "fancy-feature")'.dependencies]` to add dependencies
-based on optional features. Use [the `[features]`
-section](manifest.md#the-features-section) instead:
+based on optional features. Use [the `[features]` section](features.md)
+instead:
 
 ```toml
 [dependencies]
@@ -618,8 +618,8 @@ default-features = false # do not include the default features, and optionally
 features = ["secure-password", "civet"]
 ```
 
-More information about features can be found in the
-[manifest documentation](manifest.md#the-features-section).
+More information about features can be found in the [features
+chapter](features.md).
 
 ### Renaming dependencies in `Cargo.toml`
 

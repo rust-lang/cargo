@@ -176,7 +176,7 @@ of `feature=`). Or an arbitrary key/value pair may be used with an `=` symbol
 like `cargo:rustc-cfg=my_component="foo"`. The key should be a Rust
 identifier, the value should be a string.
 
-[cargo features]: manifest.md#the-features-section
+[cargo features]: features.md
 [conditional compilation]: ../../reference/conditional-compilation.md
 [option-cfg]: ../../rustc/command-line-arguments.md#option-cfg
 
