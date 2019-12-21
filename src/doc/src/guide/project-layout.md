@@ -55,5 +55,5 @@ See [Target auto-discovery] for more information on controlling how Cargo
 automatically infers target names.
 
 [book-modules]: ../../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html
-[Configuring a target]: ../reference/manifest.md#configuring-a-target
-[Target auto-discovery]: ../reference/manifest.md#target-auto-discovery
+[Configuring a target]: ../reference/cargo-targets.md#configuring-a-target
+[Target auto-discovery]: ../reference/cargo-targets.md#target-auto-discovery

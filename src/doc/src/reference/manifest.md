@@ -679,200 +679,6 @@ When `default-members` is not specified, the default is the root manifest
 if it is a package, or every member manifest (as if `--workspace` were specified
 on the command-line) for virtual workspaces.
 
-### Examples
-
-Files located under `examples` are example uses of the functionality provided by
-the library. When compiled, they are placed in the `target/examples` directory.
-
-They can compile either as executables (with a `main()` function) or libraries
-and pull in the library by using `extern crate <library-name>`. They are
-compiled when you run your tests to protect them from bitrotting.
-
-You can run individual executable examples with the command `cargo run --example
-<example-name>`.
-
-Specify `crate-type` to make an example be compiled as a library (additional
-information about crate types is available in
-[The Rust Reference](../../reference/linkage.html)):
-
-```toml
-[[example]]
-name = "foo"
-crate-type = ["staticlib"]
-```
-
-You can build individual library examples with the command `cargo build
---example <example-name>`.
-
-### Tests
-
-When you run [`cargo test`], Cargo will:
-
-* compile and run your library’s unit tests, which are in the files reachable
-  from `lib.rs` (naturally, any sections marked with `#[cfg(test)]` will be
-  considered at this stage);
-* compile and run your library’s documentation tests, which are embedded inside
-  of documentation blocks;
-* compile and run your library’s [integration tests](#integration-tests); and
-* compile your library’s examples.
-
-#### Integration tests
-
-Each file in `tests/*.rs` is an integration test. When you run [`cargo test`],
-Cargo will compile each of these files as a separate crate. The crate can link
-to your library by using `extern crate <library-name>`, like any other code that
-depends on it.
-
-Cargo will not automatically compile files inside subdirectories of `tests`, but
-an integration test can import modules from these directories as usual. For
-example, if you want several integration tests to share some code, you can put
-the shared code in `tests/common/mod.rs` and then put `mod common;` in each of
-the test files.
-
-### Configuring a target
-
-All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
-sections support similar configuration for specifying how a target should be
-built. The double-bracket sections like `[[bin]]` are array-of-table of
-[TOML](https://github.com/toml-lang/toml#array-of-tables), which means you can
-write more than one `[[bin]]` section to make several executables in your crate.
-
-The example below uses `[lib]`, but it also applies to all other sections
-as well. All values listed are the defaults for that option unless otherwise
-specified.
-
-```toml
-[package]
-# ...
-
-[lib]
-# The name of a target is the name of the library that will be generated. This
-# is defaulted to the name of the package, with any dashes replaced
-# with underscores. (Rust `extern crate` declarations reference this name;
-# therefore the value must be a valid Rust identifier to be usable.)
-name = "foo"
-
-# This field points at where the crate is located, relative to the `Cargo.toml`.
-path = "src/lib.rs"
-
-# A flag for enabling unit tests for this target. This is used by `cargo test`.
-test = true
-
-# A flag for enabling documentation tests for this target. This is only relevant
-# for libraries, it has no effect on other sections. This is used by
-# `cargo test`.
-doctest = true
-
-# A flag for enabling benchmarks for this target. This is used by `cargo bench`.
-bench = true
-
-# A flag for enabling documentation of this target. This is used by `cargo doc`.
-doc = true
-
-# If the target is meant to be a compiler plugin, this field must be set to true
-# for Cargo to correctly compile it and make it available for all dependencies.
-plugin = false
-
-# If the target is meant to be a "macros 1.1" procedural macro, this field must
-# be set to true.
-proc-macro = false
-
-# If set to false, `cargo test` will omit the `--test` flag to rustc, which
-# stops it from generating a test harness. This is useful when the binary being
-# built manages the test runner itself.
-harness = true
-
-# If set then a target can be configured to use a different edition than the
-# `[package]` is configured to use, perhaps only compiling a library with the
-# 2018 edition or only compiling one unit test with the 2015 edition. By default
-# all targets are compiled with the edition specified in `[package]`.
-edition = '2015'
-
-# Here's an example of a TOML "array of tables" section, in this case specifying
-# a binary target name and path.
-[[bin]]
-name = "my-cool-binary"
-path = "src/my-cool-binary.rs"
-```
-
-#### Target auto-discovery
-
-By default, Cargo automatically determines the targets to build based on the
-[layout of the files][package-layout] on the filesystem. The target
-configuration tables, such as `[lib]`, `[[bin]]`, `[[test]]`, `[[bench]]`, or
-`[[example]]`, can be used to add additional targets that don't follow the
-standard directory layout.
-
-The automatic target discovery can be disabled so that only manually
-configured targets will be built. Setting the keys `autobins`, `autoexamples`,
-`autotests`, or `autobenches` to `false` in the `[package]` section will
-disable auto-discovery of the corresponding target type.
-
-Disabling automatic discovery should only be needed for specialized
-situations. For example, if you have a library where you want a *module* named
-`bin`, this would present a problem because Cargo would usually attempt to
-compile anything in the `bin` directory as an executable. Here is a sample
-layout of this scenario:
-
-```
-├── Cargo.toml
-└── src
-    ├── lib.rs
-    └── bin
-        └── mod.rs
-```
-
-To prevent Cargo from inferring `src/bin/mod.rs` as an executable, set
-`autobins = false` in `Cargo.toml` to disable auto-discovery:
-
-```toml
-[package]
-# …
-autobins = false
-```
-
-> **Note**: For packages with the 2015 edition, the default for auto-discovery
-> is `false` if at least one target is manually defined in `Cargo.toml`.
-> Beginning with the 2018 edition, the default is always `true`.
-
-#### The `required-features` field
-
-The `required-features` field specifies which features the target needs in order
-to be built. If any of the required features are not selected, the target will
-be skipped. This is only relevant for the `[[bin]]`, `[[bench]]`, `[[test]]`,
-and `[[example]]` sections, it has no effect on `[lib]`.
-
-```toml
-[features]
-# ...
-postgres = []
-sqlite = []
-tools = []
-
-[[bin]]
-# ...
-required-features = ["postgres", "tools"]
-```
-
-#### Building dynamic or static libraries
-
-If your package produces a library, you can specify which kind of library to
-build by explicitly listing the library in your `Cargo.toml`:
-
-```toml
-# ...
-
-[lib]
-name = "..."
-crate-type = ["dylib"] # could be `staticlib` as well
-```
-
-The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
-`proc-macro`.
-
-You can read more about the different crate types in the
-[Rust Reference Manual](../../reference/linkage.html)
-
 ### The `[patch]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
@@ -969,7 +775,6 @@ dependencies][replace] section of the documentation.
 [`cargo init`]: ../commands/cargo-init.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo run`]: ../commands/cargo-run.md
-[`cargo test`]: ../commands/cargo-test.md
 [crates.io]: https://crates.io/
 [docs.rs]: https://docs.rs/
 [publishing]: publishing.md
@@ -977,13 +782,19 @@ dependencies][replace] section of the documentation.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
-[package-layout]: ../guide/project-layout.md
 [patch]: #the-patch-section
 
 <script>
 (function() {
     var fragments = {
         "#the-project-layout": "../guide/project-layout.html",
+        "#examples": "cargo-targets.html#examples",
+        "#tests": "cargo-targets.html#tests",
+        "#integration-tests": "cargo-targets.html#integration-tests",
+        "#configuring-a-target": "cargo-targets.html#configuring-a-target",
+        "#target-auto-discovery": "cargo-targets.html#target-auto-discovery",
+        "#the-required-features-field": "cargo-targets.html#the-required-features-field",
+        "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field"
     };
     var target = fragments[window.location.hash];
     if (target) {

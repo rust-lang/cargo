@@ -185,14 +185,14 @@ manifest is located.
 [feature]: ../reference/manifest.md#the-features-section
 [git dependency]: ../reference/specifying-dependencies.md#specifying-dependencies-from-git-repositories
 [git source]: ../reference/source-replacement.md
-[integration-tests]: ../reference/manifest.md#integration-tests
+[integration-tests]: ../reference/cargo-targets.md#integration-tests
 [manifest]: ../reference/manifest.md
 [path dependency]: ../reference/specifying-dependencies.md#specifying-path-dependencies
 [path overrides]: ../reference/specifying-dependencies.md#overriding-with-local-dependencies
 [pkgid-spec]: ../reference/pkgid-spec.md
 [rustdoc-unstable]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html
 [target-feature]: ../../reference/attributes/codegen.html#the-target_feature-attribute
-[targets]: ../reference/manifest.md#configuring-a-target
+[targets]: ../reference/cargo-targets.md#configuring-a-target
 [unstable-book]: https://doc.rust-lang.org/nightly/unstable-book/index.html
 [virtual]: ../reference/manifest.md#virtual-manifest
 [workspace]: ../reference/manifest.md#the-workspace-section
