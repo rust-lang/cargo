@@ -12,6 +12,7 @@ The reference covers the details of various areas of Cargo.
 * [Configuration](config.md)
 * [Environment Variables](environment-variables.md)
 * [Build Scripts](build-scripts.md)
+    * [Build Script Examples](build-script-examples.md)
 * [Publishing on crates.io](publishing.md)
 * [Package ID Specifications](pkgid-spec.md)
 * [Source Replacement](source-replacement.md)
