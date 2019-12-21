@@ -218,7 +218,8 @@ categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 
 The `workspace` field can be used to configure the workspace that this package
 will be a member of. If not specified this will be inferred as the first
-Cargo.toml with `[workspace]` upwards in the filesystem.
+Cargo.toml with `[workspace]` upwards in the filesystem. Setting this is
+useful if the member is not inside a subdirectory of the workspace root.
 
 ```toml
 [package]
@@ -226,8 +227,12 @@ Cargo.toml with `[workspace]` upwards in the filesystem.
 workspace = "path/to/workspace/root"
 ```
 
-For more information, see the documentation for the [workspace table
-below](#the-workspace-section).
+This field cannot be specified if the manifest already has a `[workspace]`
+table defined. That is, a crate cannot both be a root crate in a workspace
+(contain `[workspace]`) and also be a member crate of another workspace
+(contain `package.workspace`).
+
+For more information, see the [workspaces chapter](workspaces.md).
 
 <a id="package-build"></a>
 #### The `build` field
@@ -595,90 +600,6 @@ In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
 can almost certainly be expressed as a separate package.
 
-### The `[workspace]` section
-
-Packages can define a workspace which is a set of crates that will all share the
-same `Cargo.lock` and output directory. The `[workspace]` table can be defined
-as:
-
-```toml
-[workspace]
-
-# Optional key, inferred from path dependencies if not present.
-# Additional non-path dependencies that should be included must be given here.
-# In particular, for a virtual manifest, all members have to be listed.
-members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
-
-# Optional key, empty if not present.
-exclude = ["path1", "path/to/dir2"]
-```
-
-Workspaces were added to Cargo as part of [RFC 1525] and have a number of
-properties:
-
-* A workspace can contain multiple crates where one of them is the *root crate*.
-* The *root crate*'s `Cargo.toml` contains the `[workspace]` table, but is not
-  required to have other configuration.
-* Whenever any crate in the workspace is compiled, output is placed in the
-  *workspace root* (i.e., next to the *root crate*'s `Cargo.toml`).
-* The lock file for all crates in the workspace resides in the *workspace root*.
-* The `[patch]`, `[replace]` and `[profile.*]` sections in `Cargo.toml`
-  are only recognized
-  in the *root crate*'s manifest, and ignored in member crates' manifests.
-
-[RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
-
-The *root crate* of a workspace, indicated by the presence of `[workspace]` in
-its manifest, is responsible for defining the entire workspace. All `path`
-dependencies residing in the workspace directory become members. You can add
-additional packages to the workspace by listing them in the `members` key. Note
-that members of the workspaces listed explicitly will also have their path
-dependencies included in the workspace. Sometimes a package may have a lot of
-workspace members and it can be onerous to keep up to date. The `members` list
-can also use [globs][globs] to match multiple paths. Finally, the `exclude`
-key can be used to blacklist paths from being included in a workspace. This can
-be useful if some path dependencies aren't desired to be in the workspace at
-all.
-
-The `package.workspace` manifest key (described above) is used in member crates
-to point at a workspace's root crate. If this key is omitted then it is inferred
-to be the first crate whose manifest contains `[workspace]` upwards in the
-filesystem.
-
-A crate may either specify `package.workspace` or specify `[workspace]`. That
-is, a crate cannot both be a root crate in a workspace (contain `[workspace]`)
-and also be a member crate of another workspace (contain `package.workspace`).
-
-Most of the time workspaces will not need to be dealt with as [`cargo new`] and
-[`cargo init`] will handle workspace configuration automatically.
-
-[globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
-
-#### Virtual Manifest
-
-In workspace manifests, if the `package` table is present, the workspace root
-crate will be treated as a normal package, as well as a workspace. If the
-`package` table is not present in a workspace manifest, it is called a *virtual
-manifest*.
-
-#### Package selection
-
-In a workspace, package-related cargo commands like [`cargo build`] apply to
-packages selected by `-p` / `--package` or `--workspace` command-line parameters.
-When neither is specified, the optional `default-members` configuration is used:
-
-```toml
-[workspace]
-members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
-default-members = ["path/to/member2", "path/to/member3/foo"]
-```
-
-When specified, `default-members` must expand to a subset of `members`.
-
-When `default-members` is not specified, the default is the root manifest
-if it is a package, or every member manifest (as if `--workspace` were specified
-on the command-line) for virtual workspaces.
-
 ### The `[patch]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
@@ -771,7 +692,6 @@ version, but it can come from a different source (e.g., git or a local path).
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
 
-[`cargo build`]: ../commands/cargo-build.md
 [`cargo init`]: ../commands/cargo-init.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo run`]: ../commands/cargo-run.md
@@ -794,7 +714,10 @@ dependencies][replace] section of the documentation.
         "#configuring-a-target": "cargo-targets.html#configuring-a-target",
         "#target-auto-discovery": "cargo-targets.html#target-auto-discovery",
         "#the-required-features-field": "cargo-targets.html#the-required-features-field",
-        "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field"
+        "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field",
+        "#the-workspace-section": "workspaces.html#the-workspace-section",
+        "#virtual-manifest": "workspaces.html",
+        "#package-selection": "workspaces.html#package-selection"
     };
     var target = fragments[window.location.hash];
     if (target) {

@@ -194,5 +194,5 @@ manifest is located.
 [target-feature]: ../../reference/attributes/codegen.html#the-target_feature-attribute
 [targets]: ../reference/cargo-targets.md#configuring-a-target
 [unstable-book]: https://doc.rust-lang.org/nightly/unstable-book/index.html
-[virtual]: ../reference/manifest.md#virtual-manifest
-[workspace]: ../reference/manifest.md#the-workspace-section
+[virtual]: ../reference/workspaces.md
+[workspace]: ../reference/workspaces.md
