@@ -241,5 +241,11 @@ Cargo. Alternatively, it can link to `cargo` crate as a library, but this
 approach has drawbacks:
 
 * Cargo as a library is unstable: the  API may change without deprecation
-
 * versions of the linked Cargo library may be different from the Cargo binary
+
+Instead, it is encouraged to use the CLI interface to drive Cargo. The [`cargo
+metadata`] command can be used to obtain information about the current project
+(the [`cargo_metadata`] crate provides a Rust interface to this command).
+
+[`cargo metadata`]: ../commands/cargo-metadata.md
+[`cargo_metadata`]: https://crates.io/crates/cargo_metadata

@@ -59,6 +59,15 @@ about the current VCS checkout hash if available (not included with
 </li>
 <li>
 <p>Extract the <code>.crate</code> file and build it to verify it can build.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>This will rebuild your package from scratch to ensure that it can be
+built from a pristine state. The <code>--no-verify</code> flag can be used to skip
+this step.</p>
+</li>
+</ul>
+</div>
 </li>
 <li>
 <p>Check that build scripts did not modify any source files.</p>
@@ -117,6 +126,11 @@ list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
 </div>
+<div class="paragraph">
+<p>Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+<a href="../guide/build-cache.html">build cache</a> documentation for more details.</p>
+</div>
 </dd>
 <dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
 <dd>
@@ -140,7 +154,8 @@ every selected package.</p>
 <dd>
 <p>Space or comma separated list of features to activate. These features only
 apply to the current directory&#8217;s package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax.</p>
+may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
+specified multiple times, which enables all specified features.</p>
 </dd>
 <dt class="hdlist1"><strong>--all-features</strong></dt>
 <dd>

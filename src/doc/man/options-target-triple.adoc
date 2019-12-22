@@ -6,3 +6,7 @@
 +
 This may also be specified with the `build.target`
 linkcargo:reference/config.html[config value].
++
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+linkcargo:guide/build-cache.html[build cache] documentation for more details.

@@ -2,12 +2,12 @@
 .\"     Title: cargo-fix
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
+.\"      Date: 2019-12-19
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-FIX" "1" "2019-09-05" "\ \&" "\ \&"
+.TH "CARGO\-FIX" "1" "2019-12-19" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -53,20 +53,24 @@ cargo fix \-\-edition
 .fi
 .if n .RE
 .sp
-which behaves the same as \fBcargo check \-\-all\-targets\fP. Similarly if you\(cqd like
-to fix code for different platforms you can do:
+which behaves the same as \fBcargo check \-\-all\-targets\fP.
+.sp
+\fBcargo fix\fP is only capable of fixing code that is normally compiled with
+\fBcargo check\fP. If code is conditionally enabled with optional features, you
+will need to enable those features for that code to be analyzed:
+.sp
+.if n .RS 4
+.nf
+cargo fix \-\-edition \-\-features foo
+.fi
+.if n .RE
+.sp
+Similarly, other \fBcfg\fP expressions like platform\-specific code will need to
+pass \fB\-\-target\fP to fix code for the given target.
 .sp
 .if n .RS 4
 .nf
 cargo fix \-\-edition \-\-target x86_64\-pc\-windows\-gnu
-.fi
-.if n .RE
-.sp
-or if your crate has optional features:
-.sp
-.if n .RS 4
-.nf
-cargo fix \-\-edition \-\-no\-default\-features \-\-features foo
 .fi
 .if n .RE
 .sp
@@ -225,7 +229,8 @@ every selected package.
 .RS 4
 Space or comma separated list of features to activate. These features only
 apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fP
@@ -249,6 +254,11 @@ list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.sp
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
+documentation for more details.
 .RE
 .sp
 \fB\-\-release\fP

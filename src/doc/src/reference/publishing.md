@@ -30,19 +30,19 @@ immediately.
 Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
 serve basis. Once a crate name is taken, it cannot be used for another crate.
 
-Check out the [metadata you can
-specify](manifest.md#package-metadata) in `Cargo.toml` to ensure
-your crate can be discovered more easily! Before publishing, make sure you have
-filled out the following fields:
+Check out the [metadata you can specify](manifest.md) in `Cargo.toml` to
+ensure your crate can be discovered more easily! Before publishing, make sure
+you have filled out the following fields:
 
-- `authors`
-- `license` or `license-file`
-- `description`
-- `homepage`
-- `documentation`
-- `repository`
+- [`authors`]
+- [`license` or `license-file`]
+- [`description`]
+- [`homepage`]
+- [`documentation`]
+- [`repository`]
+- [`readme`]
 
-It would also be a good idea to include some `keywords` and `categories`,
+It would also be a good idea to include some [`keywords`] and [`categories`],
 though they are not required.
 
 If you are publishing a library, you may also want to consult the [Rust API
@@ -83,8 +83,7 @@ $ cargo package --list
 
 Cargo will automatically ignore files ignored by your version control system
 when packaging, but if you want to specify an extra set of files to ignore you
-can use the [`exclude`
-key](manifest.md#the-exclude-and-include-fields-optional) in the
+can use the [`exclude` key](manifest.md#the-exclude-and-include-fields) in the
 manifest:
 
 ```toml
@@ -241,9 +240,17 @@ the “Grant Access” button next to its name:
 
 [RFC 1105]: https://github.com/rust-lang/rfcs/blob/master/text/1105-api-evolution.md
 [Rust API Guidelines]: https://rust-lang-nursery.github.io/api-guidelines/
+[`authors`]: manifest.md#the-authors-field
 [`cargo login`]: ../commands/cargo-login.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
+[`categories`]: manifest.md#the-categories-field
+[`description`]: manifest.md#the-description-field
+[`documentation`]: manifest.md#the-documentation-field
+[`homepage`]: manifest.md#the-homepage-field
+[`keywords`]: manifest.md#the-keywords-field
+[`license` or `license-file`]: manifest.md#the-license-and-license-file-fields
+[`readme`]: manifest.md#the-readme-field
+[`repository`]: manifest.md#the-repository-field
 [crates.io]: https://crates.io/
 [oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
-

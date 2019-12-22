@@ -28,14 +28,18 @@ executing:
 
     cargo fix --edition
 
-which behaves the same as `cargo check --all-targets`. Similarly if you'd like
-to fix code for different platforms you can do:
+which behaves the same as `cargo check --all-targets`.
+
+`cargo fix` is only capable of fixing code that is normally compiled with
+`cargo check`. If code is conditionally enabled with optional features, you
+will need to enable those features for that code to be analyzed:
+
+    cargo fix --edition --features foo
+
+Similarly, other `cfg` expressions like platform-specific code will need to
+pass `--target` to fix code for the given target.
 
     cargo fix --edition --target x86_64-pc-windows-gnu
-
-or if your crate has optional features:
-
-    cargo fix --edition --no-default-features --features foo
 
 If you encounter any problems with `cargo fix` or otherwise have any questions
 or feature requests please don't hesitate to file an issue at

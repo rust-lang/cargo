@@ -25,8 +25,8 @@ flags.
 
 include::description-one-target.adoc[]
 To pass flags to all rustdoc processes spawned by Cargo, use the
-`RUSTDOCFLAGS` environment variable or the `build.rustdocflags` configuration
-option.
+`RUSTDOCFLAGS` linkcargo:reference/environment-variables.html[environment variable]
+or the `build.rustdocflags` linkcargo:reference/config.html[config value].
 
 == OPTIONS
 

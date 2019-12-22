@@ -2,12 +2,12 @@
 .\"     Title: cargo-package
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-10-28
+.\"      Date: 2019-12-19
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-PACKAGE" "1" "2019-10-28" "\ \&" "\ \&"
+.TH "CARGO\-PACKAGE" "1" "2019-12-19" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -132,6 +132,19 @@ about the current VCS checkout hash if available (not included with
 .  IP " 3." 4.2
 .\}
 Extract the \fB.crate\fP file and build it to verify it can build.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+This will rebuild your package from scratch to ensure that it can be
+built from a pristine state. The \fB\-\-no\-verify\fP flag can be used to skip
+this step.
+.RE
 .RE
 .sp
 .RS 4
@@ -186,6 +199,11 @@ list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.sp
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
+documentation for more details.
 .RE
 .sp
 \fB\-\-target\-dir\fP \fIDIRECTORY\fP
@@ -206,7 +224,8 @@ every selected package.
 .RS 4
 Space or comma separated list of features to activate. These features only
 apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fP

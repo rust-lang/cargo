@@ -2,12 +2,12 @@
 .\"     Title: cargo-fetch
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
+.\"      Date: 2019-11-11
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-FETCH" "1" "2019-09-05" "\ \&" "\ \&"
+.TH "CARGO\-FETCH" "1" "2019-11-11" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -60,6 +60,11 @@ list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.sp
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
+documentation for more details.
 .RE
 .SS "Display Options"
 .sp

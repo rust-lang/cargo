@@ -25,6 +25,10 @@ The reference covers the details of various areas of Cargo.
 
 **[Frequently Asked Questions](faq.md)**
 
+**Appendicies:**
+* [Glossary](appendix/glossary.md)
+* [Git Authentication](appendix/git-authentication.md)
+
 [rust]: https://www.rust-lang.org/
 [crates.io]: https://crates.io/
 [GitHub]: https://github.com/rust-lang/cargo/tree/master/src/doc

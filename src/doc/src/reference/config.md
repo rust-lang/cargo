@@ -207,8 +207,8 @@ the `<triple>` part can be any target triple like
 * Environment: not supported
 
 An array of paths to local packages which are to be used as overrides for
-dependencies. For more information see the [Specifying Dependencies
-guide](specifying-dependencies.md#overriding-with-local-dependencies).
+dependencies. For more information see the [Overriding Dependencies
+guide](overriding-dependencies.md#paths-overrides).
 
 #### `[alias]`
 * Type: string or array of strings
@@ -348,14 +348,10 @@ overrides the config setting.
 * Default: none
 * Environment: `CARGO_BUILD_DEP_INFO_BASEDIR`
 
-Strips the given path prefix from dep info file paths.
-
-Cargo saves a "dep info" file with a `.d` suffix which is a Makefile-like
-syntax that indicates all of the file dependencies required to rebuild the
-artifact. These are intended to be used with external build systems so that
-they can detect if Cargo needs to be re-executed. The paths in the file are
-absolute by default. This config setting can be set to strip the given prefix
-from all of the paths for tools that require relative paths.
+Strips the given path prefix from [dep
+info](../guide/build-cache.md#dep-info-files) file paths. This config setting
+is intended to convert absolute paths to relative paths for tools that require
+relative paths.
 
 The setting itself is a config-relative path. So, for example, a value of
 `"."` would strip all paths starting with the parent directory of the `.cargo`

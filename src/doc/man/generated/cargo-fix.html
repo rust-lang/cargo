@@ -34,20 +34,25 @@ executing:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>which behaves the same as <code>cargo check --all-targets</code>. Similarly if you&#8217;d like
-to fix code for different platforms you can do:</p>
+<p>which behaves the same as <code>cargo check --all-targets</code>.</p>
+</div>
+<div class="paragraph">
+<p><code>cargo fix</code> is only capable of fixing code that is normally compiled with
+<code>cargo check</code>. If code is conditionally enabled with optional features, you
+will need to enable those features for that code to be analyzed:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cargo fix --edition --features foo</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Similarly, other <code>cfg</code> expressions like platform-specific code will need to
+pass <code>--target</code> to fix code for the given target.</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>cargo fix --edition --target x86_64-pc-windows-gnu</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>or if your crate has optional features:</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>cargo fix --edition --no-default-features --features foo</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -217,7 +222,8 @@ every selected package.</p>
 <dd>
 <p>Space or comma separated list of features to activate. These features only
 apply to the current directory&#8217;s package. Features of direct dependencies
-may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax.</p>
+may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax. This flag may be
+specified multiple times, which enables all specified features.</p>
 </dd>
 <dt class="hdlist1"><strong>--all-features</strong></dt>
 <dd>
@@ -244,6 +250,11 @@ list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
 <a href="../reference/config.html">config value</a>.</p>
+</div>
+<div class="paragraph">
+<p>Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+<a href="../guide/build-cache.html">build cache</a> documentation for more details.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>

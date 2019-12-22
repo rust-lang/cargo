@@ -20,7 +20,11 @@
 
 * [Cargo Reference](reference/index.md)
     * [Specifying Dependencies](reference/specifying-dependencies.md)
+        * [Overriding Dependencies](reference/overriding-dependencies.md)
     * [The Manifest Format](reference/manifest.md)
+        * [Cargo Targets](reference/cargo-targets.md)
+    * [Workspaces](reference/workspaces.md)
+    * [Features](reference/features.md)
     * [Profiles](reference/profiles.md)
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)

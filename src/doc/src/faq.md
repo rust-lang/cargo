@@ -178,7 +178,7 @@ and a populated cache of the crates reflected in the lock file. If either of
 these components are missing, then they're required for the build to succeed and
 must be fetched remotely.
 
-As of Rust 1.11.0 Cargo understands a new flag, `--frozen`, which is an
+As of Rust 1.11.0, Cargo understands a new flag, `--frozen`, which is an
 assertion that it shouldn't touch the network. When passed, Cargo will
 immediately return an error if it would otherwise attempt a network request.
 The error should include contextual information about why the network request is
@@ -187,7 +187,15 @@ not change the behavior of Cargo*, it simply asserts that Cargo shouldn't touch
 the network as a previous command has been run to ensure that network activity
 shouldn't be necessary.
 
+The `--offline` flag was added in Rust 1.36.0. This flag tells Cargo to not
+access the network, and try to proceed with available cached data if possible.
+You can use [`cargo fetch`] in one project to download dependencies before
+going offline, and then use those same dependencies in another project with
+the `--offline` flag (or [configuration value][offline config]).
+
 For more information about vendoring, see documentation on [source
 replacement][replace].
 
 [replace]: reference/source-replacement.md
+[`cargo fetch`]: commands/cargo-fetch.md
+[offline config]: reference/config.md#netoffline

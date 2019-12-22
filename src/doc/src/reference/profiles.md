@@ -304,6 +304,9 @@ profile. However, when building an integration test target, the library target
 is built with the `dev` profile and linked into the integration test
 executable.
 
+![Profile selection for cargo test](../images/profile-selection.svg)
+
+
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo build`]: ../commands/cargo-build.md
 [`cargo check`]: ../commands/cargo-check.md

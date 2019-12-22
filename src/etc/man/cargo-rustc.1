@@ -2,12 +2,12 @@
 .\"     Title: cargo-rustc
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
+.\"      Date: 2019-12-19
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-RUSTC" "1" "2019-09-05" "\ \&" "\ \&"
+.TH "CARGO\-RUSTC" "1" "2019-12-19" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -51,7 +51,9 @@ arguments are provided. If more than one target is available for the current
 package the filters of \fB\-\-lib\fP, \fB\-\-bin\fP, etc, must be used to select which
 target is compiled.
 To pass flags to all compiler processes spawned by Cargo, use the \fBRUSTFLAGS\fP
-environment variable or the \fBbuild.rustflags\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "environment variable" " "
+or the
+\fBbuild.rustflags\fP \c
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .SH "OPTIONS"
 .SS "Package Selection"
@@ -144,7 +146,8 @@ every selected package.
 .RS 4
 Space or comma separated list of features to activate. These features only
 apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fP
@@ -168,6 +171,11 @@ list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.sp
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
+documentation for more details.
 .RE
 .sp
 \fB\-\-release\fP

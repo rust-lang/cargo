@@ -135,9 +135,9 @@ The meaning of the term *target* depends on the context:
     `thumb`, `mips`, etc.
   - `sub` = The CPU sub-architecture, for example `arm` has `v7`, `v7s`,
     `v5te`, etc.
-  - `vendor` = The vendor, for example `unknown`, `apple`, `pc`, `linux`, etc.
-  - `sys` = The system name, for example `linux`, `windows`, etc. `none` is
-    typically used for bare-metal without an OS.
+  - `vendor` = The vendor, for example `unknown`, `apple`, `pc`, `nvidia`, etc.
+  - `sys` = The system name, for example `linux`, `windows`, `darwin`, etc.
+    `none` is typically used for bare-metal without an OS.
   - `abi` = The ABI, for example `gnu`, `android`, `eabi`, etc.
 
   Some parameters may be omitted. Run `rustc --print target-list` for a list of
@@ -178,21 +178,21 @@ manifest is located.
 [Source Replacement]: ../reference/source-replacement.md
 [cargo-unstable]: ../reference/unstable.md
 [config option]: ../reference/config.md
-[directory layout]: ../reference/manifest.md#the-project-layout
+[directory layout]: ../guide/project-layout.md
 [edition guide]: ../../edition-guide/index.html
-[edition-field]: ../reference/manifest.md#the-edition-field-optional
+[edition-field]: ../reference/manifest.md#the-edition-field
 [environment variable]: ../reference/environment-variables.md
-[feature]: ../reference/manifest.md#the-features-section
+[feature]: ../reference/features.md
 [git dependency]: ../reference/specifying-dependencies.md#specifying-dependencies-from-git-repositories
 [git source]: ../reference/source-replacement.md
-[integration-tests]: ../reference/manifest.md#integration-tests
+[integration-tests]: ../reference/cargo-targets.md#integration-tests
 [manifest]: ../reference/manifest.md
 [path dependency]: ../reference/specifying-dependencies.md#specifying-path-dependencies
-[path overrides]: ../reference/specifying-dependencies.md#overriding-with-local-dependencies
+[path overrides]: ../reference/overriding-dependencies.md#paths-overrides
 [pkgid-spec]: ../reference/pkgid-spec.md
 [rustdoc-unstable]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html
 [target-feature]: ../../reference/attributes/codegen.html#the-target_feature-attribute
-[targets]: ../reference/manifest.md#configuring-a-target
+[targets]: ../reference/cargo-targets.md#configuring-a-target
 [unstable-book]: https://doc.rust-lang.org/nightly/unstable-book/index.html
-[virtual]: ../reference/manifest.md#virtual-manifest
-[workspace]: ../reference/manifest.md#the-workspace-section
+[virtual]: ../reference/workspaces.md
+[workspace]: ../reference/workspaces.md

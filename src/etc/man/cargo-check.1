@@ -155,7 +155,8 @@ every selected package.
 .RS 4
 Space or comma separated list of features to activate. These features only
 apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+specified multiple times, which enables all specified features.
 .RE
 .sp
 \fB\-\-all\-features\fP
@@ -179,6 +180,11 @@ list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.sp
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
+documentation for more details.
 .RE
 .sp
 \fB\-\-release\fP
