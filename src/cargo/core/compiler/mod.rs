@@ -19,7 +19,7 @@ pub mod unit_dependencies;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -1252,9 +1252,19 @@ fn replay_output_cache(
             // No cached output, probably didn't emit anything.
             return Ok(());
         }
-        let contents = fs::read_to_string(&path)?;
-        for line in contents.lines() {
-            on_stderr_line(state, line, package_id, &target, &mut options)?;
+        // We sometimes have gigabytes of output from the compiler, so avoid
+        // loading it all into memory at once, as that can cause OOM where
+        // otherwise there would be none.
+        let file = fs::File::open(&path)?;
+        let mut reader = std::io::BufReader::new(file);
+        let mut line = String::new();
+        loop {
+            let length = reader.read_line(&mut line)?;
+            if length == 0 {
+                break;
+            }
+            on_stderr_line(state, line.as_str(), package_id, &target, &mut options)?;
+            line.clear();
         }
         Ok(())
     })
