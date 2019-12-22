@@ -1,6 +1,6 @@
 #![feature(staged_api)]
 #![feature(test)]
-#![unstable(feature = "test", issue = "0")]
+#![unstable(feature = "test", issue = "none")]
 
 extern crate test;
 
