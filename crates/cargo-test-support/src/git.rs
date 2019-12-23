@@ -197,7 +197,7 @@ pub fn add_submodule<'a>(
     default_repo_cfg(&subrepo);
     t!(subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*"));
     let mut origin = t!(subrepo.find_remote("origin"));
-    t!(origin.fetch(&[], None, None));
+    t!(origin.fetch(&Vec::<String>::new(), None, None));
     t!(subrepo.checkout_head(None));
     t!(s.add_finalize());
     s
