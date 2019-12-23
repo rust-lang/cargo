@@ -1,3 +1,54 @@
+//! This module implements the job queue which determines the ordering in which
+//! rustc is spawned off. It also manages the allocation of jobserver tokens to
+//! rustc beyond the implicit token each rustc owns (i.e., the ones used for
+//! parallel LLVM work and parallel rustc threads).
+//!
+//! Cargo and rustc have a somewhat non-trivial jobserver relationship with each
+//! other, which is due to scaling issues with sharing a single jobserver
+//! amongst what is potentially hundreds of threads of work on many-cored
+//! systems on (at least) linux, and likely other platforms as well.
+//!
+//! The details of this algorithm are (also) written out in
+//! src/librustc_jobserver/lib.rs. What follows is a description focusing on the
+//! Cargo side of things.
+//!
+//! Cargo wants to complete the build as quickly as possible, fully saturating
+//! all cores (as constrained by the -j=N) parameter. Cargo also must not spawn
+//! more than N threads of work: the total amount of tokens we have floating
+//! around must always be limited to N.
+//!
+//! It is not really possible to optimally choose which crate should build first
+//! or last; nor is it possible to decide whether to give an additional token to
+//! rustc first or rather spawn a new crate of work. For now, the algorithm we
+//! implement prioritizes spawning as many crates (i.e., rustc processes) as
+//! possible, and then filling each rustc with tokens on demand.
+//!
+//! The primary loop is in `drain_the_queue` below.
+//!
+//! We integrate with the jobserver, originating from GNU make, to make sure
+//! that build scripts which use make to build C code can cooperate with us on
+//! the number of used tokens and avoid overfilling the system we're on.
+//!
+//! The jobserver is unfortunately a very simple protocol, so we enhance it a
+//! little when we know that there is a rustc on the other end. Via the stderr
+//! pipe we have to rustc, we get messages such as "NeedsToken" and
+//! "ReleaseToken" from rustc.
+//!
+//! "NeedsToken" indicates that a rustc is interested in acquiring a token, but
+//! never that it would be impossible to make progress without one (i.e., it
+//! would be incorrect for rustc to not terminate due to a unfulfilled
+//! NeedsToken request); we do not usually fulfill all NeedsToken requests for a
+//! given rustc.
+//!
+//! "ReleaseToken" indicates that a rustc is done with one of its tokens and is
+//! ready for us to re-acquire ownership -- we will either release that token
+//! back into the general pool or reuse it ourselves. Note that rustc will
+//! inform us that it is releasing a token even if it itself is also requesting
+//! tokens; is is up to us whether to return the token to that same rustc.
+//!
+//! The current scheduling algorithm is relatively primitive and could likely be
+//! improved.
+
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::io;
@@ -343,11 +394,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 break;
             }
 
-            // And finally, before we block waiting for the next event, drop any
-            // excess tokens we may have accidentally acquired. Due to how our
-            // jobserver interface is architected we may acquire a token that we
-            // don't actually use, and if this happens just relinquish it back
-            // to the jobserver itself.
+            // If we managed to acquire some extra tokens, send them off to a waiting rustc.
             let extra_tokens = tokens.len() - (self.active.len() - 1);
             for _ in 0..extra_tokens {
                 if let Some((id, client)) = to_send_clients.pop() {
@@ -358,6 +405,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         .chain_err(|| "failed to release jobserver token")?;
                 }
             }
+
+            // And finally, before we block waiting for the next event, drop any
+            // excess tokens we may have accidentally acquired. Due to how our
+            // jobserver interface is architected we may acquire a token that we
+            // don't actually use, and if this happens just relinquish it back
+            // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
             // Record some timing information if `-Ztimings` is enabled, and
