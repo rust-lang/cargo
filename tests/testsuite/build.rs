@@ -2806,6 +2806,11 @@ fn custom_target_dir_env() {
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
+    p.cargo("build")
+        .env("CARGO_BUILD_TARGET_DIR", "foo2/target")
+        .run();
+    assert!(p.root().join("foo2/target/debug").join(&exe_name).is_file());
+
     fs::create_dir(p.root().join(".cargo")).unwrap();
     File::create(p.root().join(".cargo/config"))
         .unwrap()

@@ -35,6 +35,12 @@
 //! tables (because Cargo must fetch all of them), so those do not support
 //! environment variables.
 //!
+//! Try to avoid keys that are a prefix of another with a dash/underscore. For
+//! example `build.target` and `build.target-dir`. This is OK if these are not
+//! structs/maps, but if it is a struct or map, then it will not be able to
+//! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
+//! more details.)
+//!
 //! ## Internal API
 //!
 //! Internally config values are stored with the `ConfigValue` type after they
@@ -520,13 +526,16 @@ impl Config {
         }
     }
 
-    fn has_key(&self, key: &ConfigKey) -> bool {
-        if self.env.get(key.as_env_key()).is_some() {
+    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> bool {
+        if self.env.contains_key(key.as_env_key()) {
             return true;
         }
-        let env_pattern = format!("{}_", key.as_env_key());
-        if self.env.keys().any(|k| k.starts_with(&env_pattern)) {
-            return true;
+        // See ConfigMapAccess for a description of this.
+        if env_prefix_ok {
+            let env_prefix = format!("{}_", key.as_env_key());
+            if self.env.keys().any(|k| k.starts_with(&env_prefix)) {
+                return true;
+            }
         }
         if let Ok(o_cv) = self.get_cv(key) {
             if o_cv.is_some() {
@@ -1101,6 +1110,7 @@ impl Config {
         let d = Deserializer {
             config: self,
             key: ConfigKey::from_str(key),
+            env_prefix_ok: true,
         };
         T::deserialize(d).map_err(|e| e.into())
     }

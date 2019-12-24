@@ -425,6 +425,32 @@ lto = false
 }
 
 #[cargo_test]
+fn profile_env_var_prefix() {
+    // Check for a bug with collision on DEBUG vs DEBUG_ASSERTIONS.
+    let config = ConfigBuilder::new()
+        .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
+        .build();
+    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.debug_assertions, Some(false));
+    assert_eq!(p.debug, None);
+
+    let config = ConfigBuilder::new()
+        .env("CARGO_PROFILE_DEV_DEBUG", "1")
+        .build();
+    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.debug_assertions, None);
+    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+
+    let config = ConfigBuilder::new()
+        .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
+        .env("CARGO_PROFILE_DEV_DEBUG", "1")
+        .build();
+    let p: toml::TomlProfile = config.get("profile.dev").unwrap();
+    assert_eq!(p.debug_assertions, Some(false));
+    assert_eq!(p.debug, Some(toml::U32OrBool::U32(1)));
+}
+
+#[cargo_test]
 fn config_deserialize_any() {
     // Some tests to exercise deserialize_any for deserializers that need to
     // be told the format.
@@ -1102,4 +1128,54 @@ Caused by:
 Caused by:
   expected string but found integer in list",
     );
+}
+
+#[cargo_test]
+fn struct_with_opt_inner_struct() {
+    // Struct with a key that is Option of another struct.
+    // Check that can be defined with environment variable.
+    #[derive(Deserialize)]
+    struct Inner {
+        value: Option<i32>,
+    }
+    #[derive(Deserialize)]
+    struct Foo {
+        inner: Option<Inner>,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_FOO_INNER_VALUE", "12")
+        .build();
+    let f: Foo = config.get("foo").unwrap();
+    assert_eq!(f.inner.unwrap().value.unwrap(), 12);
+}
+
+#[cargo_test]
+fn overlapping_env_config() {
+    // Issue where one key is a prefix of another.
+    #[derive(Deserialize)]
+    #[serde(rename_all = "kebab-case")]
+    struct Ambig {
+        debug: Option<u32>,
+        debug_assertions: Option<bool>,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, Some(true));
+    assert_eq!(s.debug, None);
+
+    let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "0").build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, None);
+    assert_eq!(s.debug, Some(0));
+
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG", "1")
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, Some(true));
+    assert_eq!(s.debug, Some(1));
 }
