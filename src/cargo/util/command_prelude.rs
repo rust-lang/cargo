@@ -289,7 +289,8 @@ pub trait ArgMatchesExt {
             for flag in &["features", "no-default-features"] {
                 if self._is_present(flag) {
                     bail!(
-                        "--{} is not allowed in the root of a virtual workspace",
+                        "--{} is not allowed in the root of a virtual workspace\n\
+                         note: while this was previously accepted, it didn't actually do anything",
                         flag
                     );
                 }
