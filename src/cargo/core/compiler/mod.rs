@@ -27,7 +27,7 @@ use anyhow::Error;
 use lazycell::LazyCell;
 use log::debug;
 
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, ProfileKind};
+pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};

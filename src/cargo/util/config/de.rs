@@ -425,13 +425,11 @@ impl<'config> ValueDeserializer<'config> {
                         cv.definition().clone()
                     }
                 }
-                (true, None) => env_def,
                 (false, Some(cv)) => cv.definition().clone(),
-                (false, None) => {
-                    return Err(
-                        anyhow::format_err!("failed to find definition of `{}`", de.key).into(),
-                    )
-                }
+                // Assume it is an environment, even if the key is not set.
+                // This can happen for intermediate tables, like
+                // CARGO_FOO_BAR_* where `CARGO_FOO_BAR` is not set.
+                (_, None) => env_def,
             }
         };
         Ok(ValueDeserializer {

@@ -1,27 +1,9 @@
-use std::cell::RefCell;
-
-use serde::ser;
-
 use crate::core::compiler::{CompileKind, CompileTarget};
+use crate::core::interning::InternedString;
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
-
-#[derive(Debug, Clone)]
-pub enum ProfileKind {
-    Dev,
-    Release,
-    Custom(String),
-}
-
-impl ProfileKind {
-    pub fn name(&self) -> &str {
-        match self {
-            ProfileKind::Dev => "dev",
-            ProfileKind::Release => "release",
-            ProfileKind::Custom(name) => name,
-        }
-    }
-}
+use serde::ser;
+use std::cell::RefCell;
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -31,7 +13,7 @@ pub struct BuildConfig {
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
     /// Build profile
-    pub profile_kind: ProfileKind,
+    pub requested_profile: InternedString,
     /// The mode we are compiling in.
     pub mode: CompileMode,
     /// `true` to print stdout in JSON format (for machine reading).
@@ -92,7 +74,7 @@ impl BuildConfig {
         Ok(BuildConfig {
             requested_kind,
             jobs,
-            profile_kind: ProfileKind::Dev,
+            requested_profile: InternedString::new("dev"),
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
@@ -109,10 +91,6 @@ impl BuildConfig {
             MessageFormat::Json { .. } => true,
             _ => false,
         }
-    }
-
-    pub fn profile_name(&self) -> &str {
-        self.profile_kind.name()
     }
 
     pub fn test(&self) -> bool {

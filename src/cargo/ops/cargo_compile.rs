@@ -300,10 +300,12 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let profiles = ws.profiles();
-
-    // Early check for whether the profile is defined.
-    let _ = profiles.base_profile(&build_config.profile_kind)?;
+    let profiles = Profiles::new(
+        ws.profiles(),
+        config,
+        build_config.requested_profile,
+        ws.features(),
+    )?;
 
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
@@ -381,6 +383,7 @@ pub fn compile_ws<'a>(
     }
 
     profiles.validate_packages(
+        ws.profiles(),
         &mut config.shell(),
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
@@ -397,7 +400,6 @@ pub fn compile_ws<'a>(
     )?;
     let units = generate_targets(
         ws,
-        profiles,
         &to_builds,
         filter,
         build_config.requested_kind,
@@ -652,7 +654,6 @@ struct Proposal<'a> {
 /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
 fn generate_targets<'a>(
     ws: &Workspace<'_>,
-    profiles: &Profiles,
     packages: &[&'a Package],
     filter: &CompileFilter,
     default_arch_kind: CompileKind,
@@ -716,13 +717,9 @@ fn generate_targets<'a>(
             _ => target_mode,
         };
         let kind = default_arch_kind.for_target(target);
-        let profile = profiles.get_profile(
-            pkg.package_id(),
-            ws.is_member(pkg),
-            unit_for,
-            target_mode,
-            bcx.build_config.profile_kind.clone(),
-        );
+        let profile =
+            bcx.profiles
+                .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
         let features = resolve.features_sorted(pkg.package_id());
         bcx.units.intern(
             pkg,

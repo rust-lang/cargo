@@ -116,8 +116,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         ProfileChecking::Checked,
     )?;
 
-    compile_opts.build_config.profile_kind =
-        args.get_profile_kind(config, ProfileKind::Release, ProfileChecking::Checked)?;
+    compile_opts.build_config.requested_profile =
+        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
 
     let krates = args
         .values_of("crate")

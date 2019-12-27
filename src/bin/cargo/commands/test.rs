@@ -108,11 +108,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         ProfileChecking::Checked,
     )?;
 
-    compile_opts.build_config.profile_kind = args.get_profile_kind(
-        config,
-        ProfileKind::Custom("test".to_owned()),
-        ProfileChecking::Checked,
-    )?;
+    compile_opts.build_config.requested_profile =
+        args.get_profile_name(config, "test", ProfileChecking::Checked)?;
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.

@@ -1,18 +1,17 @@
 //! Tests for config settings.
 
+use cargo::core::{enable_nightly_features, InternedString, Shell};
+use cargo::util::config::{self, Config, SslVersionConfig, StringList};
+use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use cargo::CargoResult;
+use cargo_test_support::{normalized_lines_match, paths, project, t};
+use serde::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::os;
 use std::path::{Path, PathBuf};
-
-use cargo::core::{enable_nightly_features, Shell};
-use cargo::util::config::{self, Config, SslVersionConfig, StringList};
-use cargo::util::toml::{self, VecStringOrBool as VSOB};
-use cargo::CargoResult;
-use cargo_test_support::{normalized_lines_match, paths, project, t};
-use serde::Deserialize;
 
 /// Helper for constructing a `Config` object.
 pub struct ConfigBuilder {
@@ -424,8 +423,8 @@ lto = false
         p,
         toml::TomlProfile {
             lto: Some(toml::StringOrBool::Bool(false)),
-            dir_name: Some("without-lto".to_string()),
-            inherits: Some("dev".to_string()),
+            dir_name: Some(InternedString::new("without-lto")),
+            inherits: Some(InternedString::new("dev")),
             ..Default::default()
         }
     );
