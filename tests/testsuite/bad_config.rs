@@ -974,7 +974,6 @@ fn bad_source_config4() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'https://example.com'
             replace-with = 'bar'
 
             [source.bar]
@@ -1392,5 +1391,54 @@ fn bad_target_links_overrides() {
     p.cargo("check")
         .with_status(101)
         .with_stderr("[ERROR] `warning` is not supported in build script overrides")
+        .run();
+}
+
+#[cargo_test]
+fn redefined_sources() {
+    // Cannot define a source multiple times.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [source.foo]
+            registry = "https://github.com/rust-lang/crates.io-index"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] source `foo` defines source registry `https://github.com/rust-lang/crates.io-index`, \
+    but that source is already defined by `crates-io`
+note: Sources are not allowed to be defined multiple times.
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        r#"
+        [source.one]
+        directory = "index"
+
+        [source.two]
+        directory = "index"
+        "#,
+    );
+
+    // Name is `[..]` because we can't guarantee the order.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] source `[..]` defines source dir [..]/foo/index, \
+    but that source is already defined by `[..]`
+note: Sources are not allowed to be defined multiple times.
+",
+        )
         .run();
 }

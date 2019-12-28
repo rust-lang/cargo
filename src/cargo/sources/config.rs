@@ -90,7 +90,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 id: SourceId::crates_io(config)?,
                 replace_with: None,
             },
-        );
+        )?;
         Ok(base)
     }
 
@@ -185,9 +185,22 @@ restore the source replacement configuration to continue the build
         Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
     }
 
-    fn add(&mut self, name: &str, cfg: SourceConfig) {
-        self.id2name.insert(cfg.id, name.to_string());
+    fn add(&mut self, name: &str, cfg: SourceConfig) -> CargoResult<()> {
+        if let Some(old_name) = self.id2name.insert(cfg.id, name.to_string()) {
+            // The user is allowed to redefine the built-in crates-io
+            // definition from `empty()`.
+            if name != CRATES_IO_REGISTRY {
+                bail!(
+                    "source `{}` defines source {}, but that source is already defined by `{}`\n\
+                     note: Sources are not allowed to be defined multiple times.",
+                    name,
+                    cfg.id,
+                    old_name
+                );
+            }
+        }
         self.cfgs.insert(name.to_string(), cfg);
+        Ok(())
     }
 
     fn add_config(&mut self, name: String, def: SourceConfigDef) -> CargoResult<()> {
@@ -262,7 +275,7 @@ restore the source replacement configuration to continue the build
                 id: src,
                 replace_with,
             },
-        );
+        )?;
 
         return Ok(());
 
