@@ -2017,13 +2017,17 @@ fn virtual_ws_flags() {
         .build();
 
     p.cargo("build --features=f1")
-        .with_stderr("[ERROR] --features is not allowed in the root of a virtual workspace")
+        .with_stderr(
+            "[ERROR] --features is not allowed in the root of a virtual workspace\n\
+             note: while this was previously accepted, it didn't actually do anything",
+        )
         .with_status(101)
         .run();
 
     p.cargo("build --no-default-features")
         .with_stderr(
-            "[ERROR] --no-default-features is not allowed in the root of a virtual workspace",
+            "[ERROR] --no-default-features is not allowed in the root of a virtual workspace\n\
+             note: while this was previously accepted, it didn't actually do anything",
         )
         .with_status(101)
         .run();
