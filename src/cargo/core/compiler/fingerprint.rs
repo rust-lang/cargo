@@ -643,7 +643,7 @@ impl Fingerprint {
             bail!("target configuration has changed")
         }
         if self.path != old.path {
-            bail!("path to the compiler has changed")
+            bail!("path to the source has changed")
         }
         if self.profile != old.profile {
             bail!("profile configuration has changed")
