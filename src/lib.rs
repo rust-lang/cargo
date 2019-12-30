@@ -21,9 +21,9 @@
 //! `rustup_home`, which are the canonical way to determine the
 //! location that Cargo and rustup store their data.
 //!
-//! See [rust-lang/rust#43321].
+//! See also this [discussion].
 //!
-//! [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
+//! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
 #![doc(html_root_url = "https://docs.rs/home/0.5.1")]
 #![deny(rust_2018_idioms)]
@@ -50,7 +50,7 @@ use std::path::{Path, PathBuf};
 /// [`GetUserProfileDirectory`][msdn] is used to return the
 /// appropriate path.
 ///
-/// [msdn]: https://msdn.microsoft.com/en-us/library/windows/desktop/bb762280(v=vs.85).aspx
+/// [msdn]: https://docs.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-getuserprofiledirectoryw
 ///
 /// # Examples
 ///
