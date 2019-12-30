@@ -143,11 +143,6 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 /// - The `.rustup` directory in the user's home directory, as reported
 ///   by the `home_dir` function.
 ///
-/// As a matter of backwards compatibility, this function _may_ return
-/// the `.multirust` directory in the user's home directory, only if
-/// it determines that the user is running an old version of rustup
-/// where that is necessary.
-///
 /// # Errors
 ///
 /// This function fails if it fails to retrieve the current directory,
