@@ -2,17 +2,15 @@
 
 use std::env;
 use std::ffi::OsString;
+use std::mem::MaybeUninit;
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
 use std::ptr;
+use std::slice;
 
-use winapi::shared::minwindef::{DWORD, MAX_PATH};
-use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
-use winapi::um::errhandlingapi::{GetLastError, SetLastError};
-use winapi::um::handleapi::CloseHandle;
-use winapi::um::processthreadsapi::{GetCurrentProcess, OpenProcessToken};
-use winapi::um::userenv::GetUserProfileDirectoryW;
-use winapi::um::winnt::{HANDLE, TOKEN_READ};
+use winapi::shared::minwindef::MAX_PATH;
+use winapi::shared::winerror::S_OK;
+use winapi::um::shlobj::{SHGetFolderPathW, CSIDL_PROFILE};
 
 pub fn home_dir_inner() -> Option<PathBuf> {
     env::var_os("USERPROFILE")
@@ -24,14 +22,18 @@ pub fn home_dir_inner() -> Option<PathBuf> {
 #[cfg(not(target_vendor = "uwp"))]
 fn home_dir_crt() -> Option<PathBuf> {
     unsafe {
-        let me = GetCurrentProcess();
-        let mut token = ptr::null_mut();
-        if OpenProcessToken(me, TOKEN_READ, &mut token) == 0 {
-            return None;
+        let mut path: [MaybeUninit<u16>; MAX_PATH] = MaybeUninit::uninit().assume_init();
+        let ptr = path.as_mut_ptr() as *mut u16;
+        match SHGetFolderPathW(ptr::null_mut(), CSIDL_PROFILE, ptr::null_mut(), 0, ptr) {
+            S_OK => {
+                let ptr = path.as_ptr() as *const u16;
+                let len = wcslen(ptr);
+                let path = slice::from_raw_parts(ptr, len);
+                let s = OsString::from_wide(path);
+                Some(PathBuf::from(s))
+            }
+            _ => None,
         }
-        let rs = get_user_profile_directory(token);
-        let _ = CloseHandle(token);
-        rs
     }
 }
 
@@ -40,34 +42,8 @@ fn home_dir_crt() -> Option<PathBuf> {
     None
 }
 
-// Inspired from rust/src/libstd/sys/windows/mod.rs#L106
-fn get_user_profile_directory(token: HANDLE) -> Option<PathBuf> {
-    // Start off with a stack buf but then spill over to the heap if we end up
-    // needing more space.
-    let mut stack_buf = [0u16; MAX_PATH];
-    let mut heap_buf = Vec::new();
-    let mut n = stack_buf.len() as DWORD;
-    let mut buf = &mut stack_buf[..];
-    unsafe {
-        loop {
-            SetLastError(0);
-            match GetUserProfileDirectoryW(token, buf.as_mut_ptr(), &mut n) {
-                0 => match GetLastError() {
-                    ERROR_INSUFFICIENT_BUFFER => {
-                        let extra = n as usize - heap_buf.len();
-                        heap_buf.reserve(extra);
-                        heap_buf.set_len(n as usize);
-                        buf = &mut heap_buf[..];
-                    }
-                    _code => return None,
-                },
-                _ => {
-                    let n = n as usize - 1; // sz includes the null terminator
-                    return Some(PathBuf::from(OsString::from_wide(buf.get_unchecked(..n))));
-                }
-            }
-        }
-    }
+extern "C" {
+    fn wcslen(buf: *const u16) -> usize;
 }
 
 #[cfg(not(target_vendor = "uwp"))]

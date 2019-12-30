@@ -11,11 +11,7 @@ description = "Shared definitions of home directories"
 [target."cfg(windows)".dependencies.winapi]
 version = "0.3"
 features = [
-    "errhandlingapi",
-    "handleapi",
-    "processthreadsapi",
+    "shlobj",
     "std",
     "winerror",
-    "winnt",
-    "userenv",
 ]
