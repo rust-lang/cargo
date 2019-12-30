@@ -16,9 +16,7 @@ use winapi::um::userenv::GetUserProfileDirectoryW;
 use winapi::um::winnt::TOKEN_READ;
 
 pub fn home_dir_inner() -> Option<PathBuf> {
-    env::var_os("USERPROFILE")
-        .map(PathBuf::from)
-        .or_else(home_dir_crt)
+    env::var_os("USERPROFILE").map(PathBuf::from).or_else(home_dir_crt)
 }
 
 #[cfg(not(target_vendor = "uwp"))]
