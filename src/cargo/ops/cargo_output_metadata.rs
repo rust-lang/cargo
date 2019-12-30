@@ -88,7 +88,7 @@ struct Dep {
     dep_kinds: Vec<DepKindInfo>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord)]
 struct DepKindInfo {
     kind: dependency::Kind,
     target: Option<Platform>,
@@ -184,6 +184,11 @@ fn build_resolve_graph_r(
             None => true,
         })
         .filter_map(|(dep_id, deps)| {
+            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            // Duplicates may appear if the same package is used by different
+            // members of a workspace with different features selected.
+            dep_kinds.sort_unstable();
+            dep_kinds.dedup();
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
@@ -191,7 +196,7 @@ fn build_resolve_graph_r(
                 .map(|name| Dep {
                     name,
                     pkg: dep_id,
-                    dep_kinds: deps.iter().map(DepKindInfo::from).collect(),
+                    dep_kinds,
                 })
         })
         .collect();
