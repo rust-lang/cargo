@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
@@ -9,7 +10,7 @@ use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use crate::util::{process_error, read2, CargoResult, CargoResultExt};
+use crate::util::{internal, process_error, read2, CargoResult, CargoResultExt, CommandAndResponseFile};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -29,6 +30,10 @@ pub struct ProcessBuilder {
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
+    /// `true` to use a [@response_file] to workaround command line length limits.
+    /// 
+    /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+    response_file: bool,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -146,6 +151,14 @@ impl ProcessBuilder {
     /// Enables environment variable display.
     pub fn display_env_vars(&mut self) -> &mut Self {
         self.display_env_vars = true;
+        self
+    }
+
+    /// Enables the use of a [@response_file] to workaround command line length limits.
+    /// 
+    /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+    pub fn response_file(&mut self) -> &mut Self {
+        self.response_file = true;
         self
     }
 
@@ -304,16 +317,22 @@ impl ProcessBuilder {
         Ok(output)
     }
 
-    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
+    /// Converts `ProcessBuilder` into a `CommandAndResponseFile`, and handles the jobserver, if
     /// present.
-    pub fn build_command(&self) -> Command {
+    pub fn build_command(&self) -> CommandAndResponseFile {
         let mut command = Command::new(&self.program);
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
         }
-        for arg in &self.args {
-            command.arg(arg);
-        }
+        let response_file = if let Ok(Some(file)) = self.build_response_file() {
+            command.arg(file.to_path_buf());
+            Some(file)
+        } else {
+            for arg in &self.args {
+                command.arg(arg);
+            }
+            None
+        };
         for (k, v) in &self.env {
             match *v {
                 Some(ref v) => {
@@ -327,7 +346,19 @@ impl ProcessBuilder {
         if let Some(ref c) = self.jobserver {
             c.configure(&mut command);
         }
-        command
+        CommandAndResponseFile { command, response_file }
+    }
+
+    fn build_response_file(&self) -> CargoResult<Option<tempfile::TempPath>> {
+        if !self.response_file || self.args.len() == 0 {
+            return Ok(None);
+        }
+        let mut file = tempfile::NamedTempFile::new()?;
+        for arg in &self.args {
+            let arg = arg.to_str().ok_or_else(|| internal(format!("argument {:?} contains invalid unicode", arg)))?;
+            writeln!(file, "{}", arg)?;
+        }
+        Ok(Some(file.into_temp_path()))
     }
 }
 
@@ -340,6 +371,7 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         env: HashMap::new(),
         jobserver: None,
         display_env_vars: false,
+        response_file: false,
     }
 }
 

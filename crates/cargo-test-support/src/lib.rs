@@ -115,13 +115,13 @@ use std::fs;
 use std::io::prelude::*;
 use std::os;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Output};
 use std::str;
 use std::time::{self, Duration};
 use std::usize;
 
 use cargo;
-use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{is_ci, CargoResult, CommandAndResponseFile, ProcessBuilder, ProcessError, Rustc};
 use filetime;
 use serde_json::{self, Value};
 use url::Url;
@@ -828,7 +828,7 @@ impl Execs {
         p.exec_with_output()
     }
 
-    pub fn build_command(&mut self) -> Command {
+    pub fn build_command(&mut self) -> CommandAndResponseFile {
         self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();

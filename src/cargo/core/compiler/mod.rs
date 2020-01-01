@@ -548,6 +548,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let bcx = cx.bcx;
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
+    rustdoc.response_file();
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
@@ -709,6 +710,7 @@ fn build_base_args<'a, 'cfg>(
     } = unit.profile;
     let test = unit.mode.is_any_test();
 
+    cmd.response_file();
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     let edition = unit.target.edition();
