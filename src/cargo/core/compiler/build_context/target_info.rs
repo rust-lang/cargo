@@ -228,7 +228,7 @@ impl TargetInfo {
         }];
 
         // See rust-lang/cargo#4500.
-        if target_triple.ends_with("pc-windows-msvc")
+        if target_triple.ends_with("-windows-msvc")
             && crate_type.ends_with("dylib")
             && suffix == ".dll"
         {
