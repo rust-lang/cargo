@@ -3958,3 +3958,80 @@ Caused by:
         .run();
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }
+
+#[cargo_test]
+fn links_duplicated_across_build_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies.a]
+            path = "a"
+            [dependencies.b]
+            path = "b"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+
+            [build-dependencies.bar-sys]
+            path = "../bar-sys/1"
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+
+            [build-dependencies.bar-sys]
+            path = "../bar-sys/2"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "bar-sys/1/Cargo.toml",
+            r#"
+            [project]
+            name = "bar-sys"
+            version = "0.1.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+        "#,
+        )
+        .file("bar-sys/1/src/lib.rs", "")
+        .file("bar-sys/1/build.rs", "")
+        .file(
+            "bar-sys/2/Cargo.toml",
+            r#"
+            [project]
+            name = "bar-sys"
+            version = "0.2.0"
+            authors = []
+            links = "bar"
+            build = "build.rs"
+        "#,
+        )
+        .file("bar-sys/2/src/lib.rs", "")
+        .file("bar-sys/2/build.rs", "")
+        .build();
+
+    p.cargo("build")
+        .env("CARGO_LOG", "trace")
+        .run();
+}
