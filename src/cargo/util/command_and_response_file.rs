@@ -6,8 +6,8 @@ use tempfile::TempPath;
 /// A wrapper around `Command` which extends the lifetime of associated
 /// temporary response files until the command is executed.
 pub struct CommandAndResponseFile {
-    pub command:        Command,
-    pub response_file:  Option<TempPath>,
+    pub command: Command,
+    pub response_file: Option<TempPath>,
 }
 
 impl Deref for CommandAndResponseFile {

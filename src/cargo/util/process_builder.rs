@@ -10,7 +10,9 @@ use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use crate::util::{internal, process_error, read2, CargoResult, CargoResultExt, CommandAndResponseFile};
+use crate::util::{
+    internal, process_error, read2, CargoResult, CargoResultExt, CommandAndResponseFile,
+};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -31,7 +33,7 @@ pub struct ProcessBuilder {
     /// `true` to include environment variable in display.
     display_env_vars: bool,
     /// Use a [@response_file] for all args after this index to workaround command line length limits.
-    /// 
+    ///
     /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
     response_file_after_arg: usize,
 }
@@ -155,7 +157,7 @@ impl ProcessBuilder {
     }
 
     /// Use a [@response_file] for subsequent arguments to workaround command line length limits.
-    /// 
+    ///
     /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
     pub fn response_file(&mut self) -> &mut Self {
         self.response_file_after_arg = self.response_file_after_arg.min(self.args.len());
@@ -351,7 +353,10 @@ impl ProcessBuilder {
         if let Some(ref c) = self.jobserver {
             c.configure(&mut command);
         }
-        CommandAndResponseFile { command, response_file }
+        CommandAndResponseFile {
+            command,
+            response_file,
+        }
     }
 
     fn build_response_file(&self) -> CargoResult<Option<tempfile::TempPath>> {
@@ -360,7 +365,9 @@ impl ProcessBuilder {
         }
         let mut file = tempfile::NamedTempFile::new()?;
         for arg in &self.args[self.response_file_after_arg..] {
-            let arg = arg.to_str().ok_or_else(|| internal(format!("argument {:?} contains invalid unicode", arg)))?;
+            let arg = arg
+                .to_str()
+                .ok_or_else(|| internal(format!("argument {:?} contains invalid unicode", arg)))?;
             writeln!(file, "{}", arg)?;
         }
         Ok(Some(file.into_temp_path()))

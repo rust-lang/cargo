@@ -84,7 +84,7 @@ impl Rustc {
                 let mut cmd = util::process(path.as_ref());
                 cmd.response_file();
                 cmd
-            },
+            }
         }
     }
 
