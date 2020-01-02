@@ -23,7 +23,7 @@ jobs:
             rust: stable-x86_64-msvc
     steps:
       - uses: actions/checkout@v1
-      - run: bash ci/install-rustup.bash ${{ matrix.rust }}
+      - run: bash ci/install-rustup.bash
       - run: bash ci/install-rust.bash ${{ matrix.rust }}
       - if: runner.os == 'Linux'
         shell: bash
@@ -42,16 +42,13 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            rust: stable
           - build: macos
             os: macos-latest
-            rust: stable
           - build: windows
             os: windows-latest
-            rust: stable
     steps:
       - uses: actions/checkout@v1
-      - run: bash ci/install-rustup.bash ${{ matrix.rust }}
-      - run: bash ci/install-rust.bash ${{ matrix.rust }}
+      - run: bash ci/install-rustup.bash
+      - run: bash ci/install-rust.bash stable
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
