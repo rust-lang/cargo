@@ -1,3 +1,5 @@
+# XXX: Miri cannot emulate the Windows syscalls. So it's pointless to run it.
+
 name: Rust
 on: [push, pull_request]
 
