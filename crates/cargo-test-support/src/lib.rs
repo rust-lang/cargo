@@ -115,13 +115,15 @@ use std::fs;
 use std::io::prelude::*;
 use std::os;
 use std::path::{Path, PathBuf};
-use std::process::{Output};
+use std::process::Output;
 use std::str;
 use std::time::{self, Duration};
 use std::usize;
 
 use cargo;
-use cargo::util::{is_ci, CargoResult, CommandAndResponseFile, ProcessBuilder, ProcessError, Rustc};
+use cargo::util::{
+    is_ci, CargoResult, CommandAndResponseFile, ProcessBuilder, ProcessError, Rustc,
+};
 use filetime;
 use serde_json::{self, Value};
 use url::Url;
