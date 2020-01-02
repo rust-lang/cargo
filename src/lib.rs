@@ -106,16 +106,8 @@ pub fn cargo_home() -> io::Result<PathBuf> {
 }
 
 pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    let cargo_home_env = match env::var_os("CARGO_HOME") {
-        Some(p) => match p.as_os_str().to_str() {
-            Some(q) if !q.trim().is_empty() => Some(p),
-            _ => None,
-        },
-        _ => None,
-    };
-
-    match cargo_home_env {
-        Some(home) => {
+    match env::var_os("CARGO_HOME") {
+        Some(home) if !home.is_empty() => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
                 Ok(home)
@@ -123,7 +115,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
                 Ok(cwd.join(&home))
             }
         }
-        None => home_dir()
+        _ => home_dir()
             .map(|p| p.join(".cargo"))
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find cargo home dir")),
     }
@@ -163,7 +155,7 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     match env::var_os("RUSTUP_HOME") {
-        Some(home) => {
+        Some(home) if !home.is_empty() => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
                 Ok(home)
@@ -171,7 +163,7 @@ pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
                 Ok(cwd.join(&home))
             }
         }
-        None => home_dir()
+        _ => home_dir()
             .map(|d| d.join(".rustup"))
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find rustup home dir")),
     }
