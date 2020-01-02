@@ -325,7 +325,9 @@ impl ProcessBuilder {
             command.current_dir(cwd);
         }
         let response_file = if let Ok(Some(file)) = self.build_response_file() {
-            command.arg(file.to_path_buf());
+            let mut arg = OsString::from("@");
+            arg.push(file.to_path_buf());
+            command.arg(arg);
             Some(file)
         } else {
             for arg in &self.args {
