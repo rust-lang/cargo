@@ -4032,6 +4032,5 @@ fn links_duplicated_across_build_deps() {
         .build();
 
     p.cargo("build")
-        .env("CARGO_LOG", "trace")
         .run();
 }

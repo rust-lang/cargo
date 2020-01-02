@@ -36,6 +36,9 @@ pub struct Context {
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
+
+    /// full resolution for build dependencies
+    pub build_graphs: im_rc::HashMap<PackageId, Resolve>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -93,6 +96,7 @@ impl Context {
             },
             parents: Graph::new(),
             activations: im_rc::HashMap::new(),
+            build_graphs: im_rc::HashMap::new(),
         }
     }
 
@@ -268,6 +272,10 @@ impl Context {
             }
         }
         graph
+    }
+
+    pub fn build_graphs(&self) -> HashMap<PackageId, Resolve> {
+        self.build_graphs.iter().cloned().collect()
     }
 }
 

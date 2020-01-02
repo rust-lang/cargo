@@ -228,7 +228,12 @@ fn compute_deps<'a, 'cfg>(
 
     let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = state.resolve().deps(id).filter(|&(_id, deps)| {
+    let deps = if unit.target.is_custom_build() {
+        state.resolve().build_graph(id).map(|x| x.deps(id)).into_iter().flatten()
+    } else {
+        Some(state.resolve().deps(id)).into_iter().flatten()
+    };
+    let deps = deps.filter(|&(_id, deps)| {
         assert!(!deps.is_empty());
         deps.iter().any(|dep| {
             // If this target is a build command, then we only want build

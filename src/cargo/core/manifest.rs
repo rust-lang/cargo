@@ -436,6 +436,12 @@ impl Manifest {
         }
     }
 
+    pub fn run_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.summary.run_dependencies()
+    }
+    pub fn build_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.summary.build_dependencies()
+    }
     pub fn dependencies(&self) -> &[Dependency] {
         self.summary.dependencies()
     }

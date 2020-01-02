@@ -141,7 +141,15 @@ impl Package {
         }
     }
 
-    /// Gets the manifest dependencies.
+    /// Gets the manifest runtime (i.e. normal and development) dependencies.
+    pub fn run_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.manifest.run_dependencies()
+    }
+    /// Gets the manifest build dependencies.
+    pub fn build_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.manifest.build_dependencies()
+    }
+    /// Gets all dependencies.
     pub fn dependencies(&self) -> &[Dependency] {
         self.manifest.dependencies()
     }

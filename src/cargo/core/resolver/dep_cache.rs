@@ -200,6 +200,7 @@ impl<'a> RegistryQueryer<'a> {
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
+        is_build: bool,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -213,7 +214,7 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(parent, candidate, opts, is_build)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -248,10 +249,19 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    is_build: bool,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
+    let deps = deps.iter().filter(|d| {
+        use crate::core::dependency::Kind;
+        match (d.kind(), is_build) {
+            (Kind::Build, _) => is_build,
+            (_, true) => false,
+            (Kind::Normal, false) => true,
+            (Kind::Development, false) => opts.dev_deps,
+        }
+    });
 
     let reqs = build_requirements(s, opts)?;
     let mut ret = Vec::new();

@@ -127,14 +127,27 @@ pub fn resolve(
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+    let resolve = resolve_deps(summaries, &mut registry, config, check_public_visible_dependencies, false)?;
+    trace!("resolved: {:?}", resolve);
+
+    Ok(resolve)
+}
+
+fn resolve_deps(
+    summaries: &[(Summary, ResolveOpts)],
+    registry: &mut RegistryQueryer<'_>,
+    config: Option<&Config>,
+    check_public_visible_dependencies: bool,
+    is_build: bool,
+) -> CargoResult<Resolve> {
+    let cx = Context::new(check_public_visible_dependencies);
+    let cx = activate_deps_loop(cx, registry, summaries, config, is_build)?;
 
     let mut cksums = HashMap::new();
     for (summary, _) in cx.activations.values() {
@@ -151,12 +164,12 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
+        cx.build_graphs(),
         ResolveVersion::default_for_new_lockfiles(),
     );
 
     check_cycles(&resolve)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
-    trace!("resolved: {:?}", resolve);
 
     Ok(resolve)
 }
@@ -171,6 +184,7 @@ fn activate_deps_loop(
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
     config: Option<&Config>,
+    is_build: bool,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
@@ -182,7 +196,7 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
+        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone(), config.clone(), is_build);
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -379,7 +393,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts, config, false);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -592,6 +606,8 @@ fn activate(
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
     opts: ResolveOpts,
+    config: Option<&Config>,
+    is_build: bool,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -615,6 +631,18 @@ fn activate(
     }
 
     let activated = cx.flag_activated(&candidate, &opts, parent)?;
+
+    if !is_build && candidate.build_dependencies().count() > 0 {
+        // resolve build dependencies
+        let build_graph = resolve_deps(
+            &[(candidate.clone(), opts.clone())],
+            registry,
+            config,
+            cx.public_dependency.is_some(),
+            true,
+        )?;
+        cx.build_graphs.insert(candidate_pid, build_graph);
+    }
 
     let candidate = match registry.replacement_summary(candidate_pid) {
         Some(replace) => {
@@ -644,7 +672,7 @@ fn activate(
 
     let now = Instant::now();
     let (used_features, deps) =
-        &*registry.build_deps(parent.map(|p| p.0.package_id()), &candidate, &opts)?;
+        &*registry.build_deps(parent.map(|p| p.0.package_id()), &candidate, &opts, is_build)?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {

@@ -16,6 +16,7 @@ use super::encode::Metadata;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package.
+#[derive(Clone)]
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
     /// from `Cargo.toml`. We need a `Vec` here because the same package
@@ -47,6 +48,8 @@ pub struct Resolve {
     unused_patches: Vec<PackageId>,
     /// A map from packages to a set of their public dependencies
     public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
+    /// A map from packages to their build dependency graphs
+    build_graphs: HashMap<PackageId, Resolve>,
     /// Version of the `Cargo.lock` format, see
     /// `cargo::core::resolver::encode` for more.
     version: ResolveVersion,
@@ -77,6 +80,7 @@ impl Resolve {
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
+        build_graphs: HashMap<PackageId, Resolve>,
         version: ResolveVersion,
     ) -> Resolve {
         let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
@@ -106,6 +110,7 @@ impl Resolve {
             empty_features: HashSet::new(),
             reverse_replacements,
             public_dependencies,
+            build_graphs,
             version,
         }
     }
@@ -277,6 +282,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             .map(|(id, deps)| (*id, deps.as_slice()))
     }
 
+    pub fn build_graph(&self, pkg: PackageId) -> Option<&Resolve> {
+        self.build_graphs.get(&pkg)
+    }
+
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
         self.replacements.get(&pkg).cloned()
     }
@@ -388,7 +397,7 @@ impl PartialEq for Resolve {
         compare! {
             // fields to compare
             graph replacements reverse_replacements empty_features features
-            checksums metadata unused_patches public_dependencies
+            checksums metadata unused_patches public_dependencies build_graphs
             |
             // fields to ignore
             version

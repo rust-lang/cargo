@@ -84,6 +84,12 @@ impl Summary {
     pub fn source_id(&self) -> SourceId {
         self.package_id().source_id()
     }
+    pub fn run_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.inner.dependencies.iter().filter(|dep| !dep.is_build())
+    }
+    pub fn build_dependencies(&self) -> impl Iterator<Item=&Dependency> {
+        self.inner.dependencies.iter().filter(|dep| dep.is_build())
+    }
     pub fn dependencies(&self) -> &[Dependency] {
         &self.inner.dependencies
     }

@@ -364,6 +364,7 @@ impl EncodableResolve {
             checksums,
             metadata,
             unused_patches,
+            HashMap::new(), // TODO how to serialize??
             version,
         ))
     }
