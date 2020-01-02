@@ -1072,6 +1072,11 @@ impl Config {
             .try_borrow_with(|| target::load_target_cfgs(self))
     }
 
+    /// Returns the `[target]` table definition for the given target triple.
+    pub fn target_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
+        target::load_target_triple(self, target)
+    }
+
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
     where
         F: FnMut() -> CargoResult<SourceId>,

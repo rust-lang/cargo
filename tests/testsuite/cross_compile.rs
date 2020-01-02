@@ -148,7 +148,7 @@ fn simple_deps() {
 }
 
 #[cargo_test]
-fn linker_and_ar() {
+fn linker() {
     if cross_compile::disabled() {
         return;
     }
@@ -160,7 +160,6 @@ fn linker_and_ar() {
             &format!(
                 r#"
             [target.{}]
-            ar = "my-ar-tool"
             linker = "my-linker-tool"
         "#,
                 target
@@ -192,7 +191,7 @@ fn linker_and_ar() {
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
     --target {target} \
-    -C ar=my-ar-tool -C linker=my-linker-tool \
+    -C linker=my-linker-tool \
     -L dependency=[CWD]/target/{target}/debug/deps \
     -L dependency=[CWD]/target/debug/deps`
 ",

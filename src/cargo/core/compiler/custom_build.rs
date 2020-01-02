@@ -7,13 +7,13 @@ use crate::util::machine_message::{self, Message};
 use crate::util::{self, internal, paths, profile};
 use cargo_platform::Cfg;
 use std::collections::hash_map::{Entry, HashMap};
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
 /// Contains the parsed output of a custom build script.
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, Default)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag.
     pub library_paths: Vec<PathBuf>,
@@ -740,83 +740,4 @@ fn prev_build_output<'a, 'cfg>(
         .ok(),
         prev_script_out_dir,
     )
-}
-
-impl<'de> serde::Deserialize<'de> for BuildOutput {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        /// Helper to deserialize `BuildOutput`.
-        #[derive(Debug, Default, serde::Deserialize)]
-        #[serde(rename_all = "kebab-case")]
-        #[serde(default)]
-        struct LinksOverride {
-            rustc_flags: Option<String>,
-            rustc_link_lib: Vec<String>,
-            rustc_link_search: Vec<PathBuf>,
-            rustc_cdylib_link_arg: Vec<String>,
-            rustc_cfg: Vec<String>,
-            rustc_env: Option<HashMap<String, String>>,
-            warning: Option<String>,
-            rerun_if_changed: Option<Vec<String>>,
-            rerun_if_env_changed: Option<Vec<String>>,
-            #[serde(flatten)]
-            // Sort so it is consistent and deterministic (for fingerprinting and errors).
-            metadata: BTreeMap<String, String>,
-        }
-
-        // Note: Some of this could be improved, for example using StringList
-        // and other convenience types. I also wonder if it should maybe use
-        // ConfigRelativePath, although that is more awkward, since it would
-        // require an intermediate step to translate LinksOverride to
-        // BuildOutput, converting the ConfigRelativePath values to PathBuf.
-
-        let lo = LinksOverride::deserialize(deserializer).map_err(|e| {
-            serde::de::Error::custom(format!(
-                "failed to load config [target] links override table: {}",
-                e
-            ))
-        })?;
-        if lo.warning.is_some() {
-            return Err(Error::custom(
-                "`warning` is not supported in build script overrides",
-            ));
-        }
-        if lo.rerun_if_changed.is_some() {
-            return Err(Error::custom(
-                "`rerun-if-changed` is not supported in build script overrides",
-            ));
-        }
-        if lo.rerun_if_env_changed.is_some() {
-            return Err(Error::custom(
-                "`rerun-if-env-changed` is not supported in build script overrides",
-            ));
-        }
-        let mut library_paths = lo.rustc_link_search;
-        let mut library_links = lo.rustc_link_lib;
-        if let Some(flags) = lo.rustc_flags {
-            let (paths, links) =
-                BuildOutput::parse_rustc_flags(&flags, "target config").map_err(Error::custom)?;
-            library_paths.extend(paths);
-            library_links.extend(links);
-        }
-        // Convert map to vec of (key, value).
-        let env = lo
-            .rustc_env
-            .map_or_else(Vec::new, |map| map.into_iter().collect());
-        let metadata: Vec<(String, String)> = lo.metadata.into_iter().collect();
-        Ok(BuildOutput {
-            library_paths,
-            library_links,
-            linker_args: lo.rustc_cdylib_link_arg,
-            cfgs: lo.rustc_cfg,
-            env,
-            metadata,
-            rerun_if_changed: Vec::new(),
-            rerun_if_env_changed: Vec::new(),
-            warnings: Vec::new(),
-        })
-    }
 }

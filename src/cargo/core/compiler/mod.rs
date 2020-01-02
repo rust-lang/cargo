@@ -852,12 +852,6 @@ fn build_base_args<'a, 'cfg>(
     opt(
         cmd,
         "-C",
-        "ar=",
-        bcx.ar(unit.kind).as_ref().map(|ar| ar.as_ref()),
-    );
-    opt(
-        cmd,
-        "-C",
         "linker=",
         bcx.linker(unit.kind).as_ref().map(|s| s.as_ref()),
     );
