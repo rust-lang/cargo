@@ -30,10 +30,10 @@ pub struct ProcessBuilder {
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
-    /// `true` to use a [@response_file] to workaround command line length limits.
+    /// Use a [@response_file] for all args after this index to workaround command line length limits.
     /// 
     /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
-    response_file: bool,
+    response_file_after_arg: usize,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -154,11 +154,11 @@ impl ProcessBuilder {
         self
     }
 
-    /// Enables the use of a [@response_file] to workaround command line length limits.
+    /// Use a [@response_file] for subsequent arguments to workaround command line length limits.
     /// 
     /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
     pub fn response_file(&mut self) -> &mut Self {
-        self.response_file = true;
+        self.response_file_after_arg = self.response_file_after_arg.min(self.args.len());
         self
     }
 
@@ -325,6 +325,9 @@ impl ProcessBuilder {
             command.current_dir(cwd);
         }
         let response_file = if let Ok(Some(file)) = self.build_response_file() {
+            for arg in &self.args[..self.response_file_after_arg] {
+                command.arg(arg);
+            }
             let mut arg = OsString::from("@");
             arg.push(file.to_path_buf());
             command.arg(arg);
@@ -352,11 +355,11 @@ impl ProcessBuilder {
     }
 
     fn build_response_file(&self) -> CargoResult<Option<tempfile::TempPath>> {
-        if !self.response_file || self.args.len() == 0 {
+        if self.response_file_after_arg >= self.args.len() {
             return Ok(None);
         }
         let mut file = tempfile::NamedTempFile::new()?;
-        for arg in &self.args {
+        for arg in &self.args[self.response_file_after_arg..] {
             let arg = arg.to_str().ok_or_else(|| internal(format!("argument {:?} contains invalid unicode", arg)))?;
             writeln!(file, "{}", arg)?;
         }
@@ -373,7 +376,7 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         env: HashMap::new(),
         jobserver: None,
         display_env_vars: false,
-        response_file: false,
+        response_file_after_arg: std::usize::MAX,
     }
 }
 

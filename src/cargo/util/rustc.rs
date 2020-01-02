@@ -77,9 +77,14 @@ impl Rustc {
             Some(ref wrapper) if !wrapper.get_program().is_empty() => {
                 let mut cmd = wrapper.clone();
                 cmd.arg(path.as_ref());
+                cmd.response_file();
                 cmd
             }
-            _ => util::process(path.as_ref()),
+            _ => {
+                let mut cmd = util::process(path.as_ref());
+                cmd.response_file();
+                cmd
+            },
         }
     }
 
@@ -89,7 +94,9 @@ impl Rustc {
     }
 
     pub fn process_no_wrapper(&self) -> ProcessBuilder {
-        util::process(&self.path)
+        let mut cmd = util::process(&self.path);
+        cmd.response_file();
+        cmd
     }
 
     pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
