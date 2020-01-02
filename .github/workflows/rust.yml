@@ -37,17 +37,7 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        build: [linux, macos, windows]
-        include:
-          - build: linux
-            os: ubuntu-latest
-          - build: macos
-            os: macos-latest
-          - build: windows
-            os: windows-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
       - run: bash ci/install-rustup.bash
