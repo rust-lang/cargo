@@ -28,6 +28,7 @@
 #![doc(html_root_url = "https://docs.rs/home/0.5.1")]
 #![deny(rust_2018_idioms)]
 
+#[cfg(windows)]
 mod windows;
 
 use std::env;

@@ -1,5 +1,3 @@
-#![cfg(windows)]
-
 use std::env;
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
