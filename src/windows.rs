@@ -2,11 +2,9 @@
 
 use std::env;
 use std::ffi::OsString;
-use std::mem::MaybeUninit;
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
 use std::ptr;
-use std::slice;
 
 use winapi::shared::minwindef::MAX_PATH;
 use winapi::shared::winerror::S_OK;
@@ -22,14 +20,12 @@ pub fn home_dir_inner() -> Option<PathBuf> {
 #[cfg(not(target_vendor = "uwp"))]
 fn home_dir_crt() -> Option<PathBuf> {
     unsafe {
-        let mut path: [MaybeUninit<u16>; MAX_PATH] = MaybeUninit::uninit().assume_init();
-        let ptr = path.as_mut_ptr() as *mut u16;
-        match SHGetFolderPathW(ptr::null_mut(), CSIDL_PROFILE, ptr::null_mut(), 0, ptr) {
+        let mut path: Vec<u16> = Vec::with_capacity(MAX_PATH);
+        match SHGetFolderPathW(ptr::null_mut(), CSIDL_PROFILE, ptr::null_mut(), 0, path.as_mut_ptr()) {
             S_OK => {
-                let ptr = path.as_ptr() as *const u16;
-                let len = wcslen(ptr);
-                let path = slice::from_raw_parts(ptr, len);
-                let s = OsString::from_wide(path);
+                let len = wcslen(path.as_ptr());
+                path.set_len(len);
+                let s = OsString::from_wide(&path);
                 Some(PathBuf::from(s))
             }
             _ => None,
