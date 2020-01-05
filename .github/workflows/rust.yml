@@ -25,6 +25,12 @@ jobs:
             rust: stable-x86_64-msvc
     steps:
       - uses: actions/checkout@v1
+      - name: Cache CARGO_HOME
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-home
       - run: bash ci/install-rustup.bash
       - run: bash ci/install-rust.bash ${{ matrix.rust }}
       - if: runner.os == 'Linux'
@@ -40,6 +46,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache CARGO_HOME
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-home
       - run: bash ci/install-rustup.bash
       - run: bash ci/install-rust.bash stable
       - run: rustup component add clippy
