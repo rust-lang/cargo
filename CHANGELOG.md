@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- ## [Unreleased] -->
 
+## [0.5.2] - 2020-01-05
+### Changed
+- Check for emptiness of `CARGO_HOME` and `RUSTUP_HOME` environment variables.
+- Windows: Use `SHGetFolderPath` to replace `GetUserProfileDirectory` syscall.
+  * Remove `scopeguard` dependency.
+
 ## [0.5.1] - 2019-10-12
 ### Changed
 - Disable unnecessary features for `scopeguard`. Thanks @mati865.

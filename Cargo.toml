@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.5.1" # also update `html_root_url` in `src/lib.rs`
+version = "0.5.2" # also update `html_root_url` in `src/lib.rs`
 authors = [ "Brian Anderson <andersrb@gmail.com>" ]
 documentation = "https://docs.rs/home"
 edition = "2018"
