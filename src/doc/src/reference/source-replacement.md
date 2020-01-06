@@ -26,7 +26,6 @@ dependencies through the usage of [the `[patch]` key][overriding
 dependencies], and private registry support is described in [the Registries
 chapter][registries].
 
-[replace-section]: manifest.md#the-replace-section
 [overriding dependencies]: overriding-dependencies.md
 [registries]: registries.md
 
