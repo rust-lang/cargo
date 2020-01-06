@@ -316,10 +316,10 @@ fn multiple_crates_git_all() {
     let p = git::repo(&paths::root().join("foo"))
         .file(
             "Cargo.toml",
-            r#"\
-[workspace]
-members = ["bin1", "bin2"]
-"#,
+            r#"
+            [workspace]
+            members = ["bin1", "bin2"]
+            "#,
         )
         .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
         .file("bin2/Cargo.toml", &basic_manifest("bin2", "0.1.0"))
