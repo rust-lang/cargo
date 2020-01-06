@@ -15,7 +15,6 @@ fn pathless_tools() {
             &format!(
                 r#"
             [target.{}]
-            ar = "nonexistent-ar"
             linker = "nonexistent-linker"
         "#,
                 target
@@ -27,7 +26,7 @@ fn pathless_tools() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -39,13 +38,10 @@ fn absolute_tools() {
     let target = rustc_host();
 
     // Escaped as they appear within a TOML config file
-    let config = if cfg!(windows) {
-        (
-            r#"C:\\bogus\\nonexistent-ar"#,
-            r#"C:\\bogus\\nonexistent-linker"#,
-        )
+    let linker = if cfg!(windows) {
+        r#"C:\\bogus\\nonexistent-linker"#
     } else {
-        (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
+        r#"/bogus/nonexistent-linker"#
     };
 
     let foo = project()
@@ -56,12 +52,10 @@ fn absolute_tools() {
             &format!(
                 r#"
             [target.{target}]
-            ar = "{ar}"
             linker = "{linker}"
         "#,
                 target = target,
-                ar = config.0,
-                linker = config.1
+                linker = linker
             ),
         )
         .build();
@@ -70,7 +64,7 @@ fn absolute_tools() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar=[..]bogus/nonexistent-ar -C linker=[..]bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C linker=[..]bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -82,10 +76,10 @@ fn relative_tools() {
     let target = rustc_host();
 
     // Escaped as they appear within a TOML config file
-    let config = if cfg!(windows) {
-        (r#".\\nonexistent-ar"#, r#".\\tools\\nonexistent-linker"#)
+    let linker = if cfg!(windows) {
+        r#".\\tools\\nonexistent-linker"#
     } else {
-        (r#"./nonexistent-ar"#, r#"./tools/nonexistent-linker"#)
+        r#"./tools/nonexistent-linker"#
     };
 
     // Funky directory structure to test that relative tool paths are made absolute
@@ -99,26 +93,27 @@ fn relative_tools() {
             &format!(
                 r#"
             [target.{target}]
-            ar = "{ar}"
             linker = "{linker}"
         "#,
                 target = target,
-                ar = config.0,
-                linker = config.1
+                linker = linker
             ),
         )
         .build();
 
     let prefix = p.root().into_os_string().into_string().unwrap();
 
-    p.cargo("build --verbose").cwd("bar").with_stderr(&format!(
+    p.cargo("build --verbose")
+        .cwd("bar")
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C linker={prefix}/./tools/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = prefix,
-        )).run();
+        ))
+        .run();
 }
 
 #[cargo_test]
@@ -280,6 +275,23 @@ fn custom_runner_env() {
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
         .with_stderr_contains("[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`")
+        .run();
+}
+
+#[cargo_test]
+fn custom_linker_env() {
+    let target = rustc_host();
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let key = format!(
+        "CARGO_TARGET_{}_LINKER",
+        target.to_uppercase().replace('-', "_")
+    );
+
+    p.cargo("build -v")
+        .env(&key, "nonexistent-linker")
+        .with_status(101)
+        .with_stderr_contains("[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]")
         .run();
 }
 

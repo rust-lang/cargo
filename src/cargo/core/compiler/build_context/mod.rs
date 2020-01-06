@@ -64,7 +64,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let rustc = config.load_global_rustc(Some(ws))?;
 
-        let host_config = config.get(&format!("target.{}", rustc.host))?;
+        let host_config = config.target_cfg_triple(&rustc.host)?;
         let host_info = TargetInfo::new(
             config,
             build_config.requested_kind,
@@ -74,7 +74,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
         if let CompileKind::Target(target) = build_config.requested_kind {
-            let tcfg = config.get(&format!("target.{}", target.short_name()))?;
+            let tcfg = config.target_cfg_triple(target.short_name())?;
             target_config.insert(target, tcfg);
             target_info.insert(
                 target,
@@ -122,14 +122,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             .linker
             .as_ref()
             .map(|l| l.val.clone().resolve_program(self.config))
-    }
-
-    /// Gets the user-specified `ar` program for a particular host or target.
-    pub fn ar(&self, kind: CompileKind) -> Option<PathBuf> {
-        self.target_config(kind)
-            .ar
-            .as_ref()
-            .map(|ar| ar.val.clone().resolve_program(self.config))
     }
 
     /// Gets the list of `cfg`s printed out from the compiler for the specified kind.

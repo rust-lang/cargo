@@ -1376,7 +1376,10 @@ fn bad_target_links_overrides() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr("[ERROR] Only `-l` and `-L` flags are allowed in target config: `foo`")
+        .with_stderr(
+            "[ERROR] Only `-l` and `-L` flags are allowed in target config \
+             `target.[..].rustc-flags` (in [..]foo/.cargo/config): `foo`",
+        )
         .run();
 
     p.change_file(
