@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: bash ci/install-rustup.bash
       - run: bash ci/install-rust.bash ${{ matrix.rust }}
@@ -53,6 +53,17 @@ jobs:
           cargo fmt -- --check
       - run: cargo build --verbose
       - run: cargo test --verbose
+      # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
+      - name: Before cache
+        shell: bash
+        run: |
+          case ${{ runner.os }} in
+            Linux ) OS=linux;;
+            Windows ) OS=windows;;
+            macOS ) OS=osx;;
+          esac
+          curl -sSL "https://github.com/lzutao/cargo-cache/releases/download/0.3.3/cargo-cache-0.3.3-${OS}.tar.gz" | tar -xzf - -C ~/.cargo/bin
+          cargo cache --autoclean
 
   clippy:
     name: Clippy
@@ -63,9 +74,20 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: bash ci/install-rustup.bash
       - run: bash ci/install-rust.bash stable
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
+      # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
+      - name: Before cache
+        shell: bash
+        run: |
+          case ${{ runner.os }} in
+            Linux ) OS=linux;;
+            Windows ) OS=windows;;
+            macOS ) OS=osx;;
+          esac
+          curl -sSL "https://github.com/lzutao/cargo-cache/releases/download/0.3.3/cargo-cache-0.3.3-${OS}.tar.gz" | tar -xzf - -C ~/.cargo/bin
+          cargo cache --autoclean
