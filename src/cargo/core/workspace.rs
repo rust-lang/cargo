@@ -198,7 +198,9 @@ impl<'cfg> Workspace<'cfg> {
         target_dir: Option<Filesystem>,
         require_optional_deps: bool,
     ) -> CargoResult<Workspace<'cfg>> {
-        let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
+        let manifest_path = package.manifest_path();
+        let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
+        ws.root_manifest = ws.find_root(&manifest_path)?;
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
         let key = ws.current_manifest.parent().unwrap();
