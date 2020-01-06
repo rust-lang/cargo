@@ -266,7 +266,7 @@ bar = { version = "1.0", optional = true }
 fancy-feature = ["foo", "bar"]
 ```
 
-The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(prog_macro)`.
+The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(proc_macro)`.
 These values will not work as expected and will always have the default value
 returned by `rustc --print=cfg`.
 There is currently no way to add dependencies based on these configuration values.
