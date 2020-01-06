@@ -12,6 +12,7 @@ include = [
     "/README.md",
 ]
 license = "MIT OR Apache-2.0"
+readme = "README.md"
 repository = "https://github.com/brson/home"
 description = "Shared definitions of home directories"
 
