@@ -2623,3 +2623,113 @@ fn dep_kinds() {
         )
         .run();
 }
+
+#[cargo_test]
+fn dep_kinds_workspace() {
+    // Check for bug with duplicate dep kinds in a workspace.
+    // If different members select different features for the same package,
+    // they show up multiple times in the resolver `deps`.
+    //
+    // Here:
+    //     foo -> dep
+    //     bar -> foo[feat1] -> dep
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            feat1 = []
+
+            [dependencies]
+            dep = { path="dep" }
+
+            [workspace]
+            members = ["bar"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+
+            [dependencies]
+            foo = { path="..", features=["feat1"] }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("dep/Cargo.toml", &basic_lib_manifest("dep"))
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"
+{
+  "packages": "{...}",
+  "workspace_members": "{...}",
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_root": "[..]/foo",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "dep 0.5.0 (path+file://[..]/foo/dep)",
+        "dependencies": [],
+        "deps": [],
+        "features": []
+      },
+      {
+        "id": "bar 0.1.0 (path+file://[..]/foo/bar)",
+        "dependencies": [
+          "foo 0.1.0 (path+file://[..]/foo)"
+        ],
+        "deps": [
+          {
+            "name": "foo",
+            "pkg": "foo 0.1.0 (path+file://[..]/foo)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "foo 0.1.0 (path+file://[..]/foo)",
+        "dependencies": [
+          "dep 0.5.0 (path+file://[..]/foo/dep)"
+        ],
+        "deps": [
+          {
+            "name": "dep",
+            "pkg": "dep 0.5.0 (path+file://[..]/foo/dep)",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": [
+          "feat1"
+        ]
+      }
+    ],
+    "root": "foo 0.1.0 (path+file://[..]/foo)"
+  }
+}
+"#,
+        )
+        .run();
+}
