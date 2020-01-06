@@ -91,7 +91,7 @@ impl Platform {
                                  This key is not supported for selecting dependencies \
                                  and will not work as expected. \
                                  Use the [features] section instead: \
-                                 https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section"
+                                 https://doc.rust-lang.org/cargo/reference/features.html"
                             )),
                         _ => (),
                     },
