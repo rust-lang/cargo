@@ -4,15 +4,22 @@ use crate::util::config::value;
 use crate::util::config::{Config, ConfigError, ConfigKey};
 use crate::util::config::{ConfigValue as CV, Definition, Value};
 use serde::{de, de::IntoDeserializer};
-use std::collections::HashSet;
 use std::vec;
 
 /// Serde deserializer used to convert config values to a target type using
 /// `Config::get`.
 #[derive(Clone)]
-pub(crate) struct Deserializer<'config> {
-    pub(crate) config: &'config Config,
-    pub(crate) key: ConfigKey,
+pub(super) struct Deserializer<'config> {
+    pub(super) config: &'config Config,
+    /// The current key being deserialized.
+    pub(super) key: ConfigKey,
+    /// Whether or not this key part is allowed to be an inner table. For
+    /// example, `profile.dev.build-override` needs to check if
+    /// CARGO_PROFILE_DEV_BUILD_OVERRIDE_ prefixes exist. But
+    /// CARGO_BUILD_TARGET should not check for prefixes because it would
+    /// collide with CARGO_BUILD_TARGET_DIR. See `ConfigMapAccess` for
+    /// details.
+    pub(super) env_prefix_ok: bool,
 }
 
 macro_rules! deserialize_method {
@@ -109,7 +116,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if self.config.has_key(&self.key) {
+        if self.config.has_key(&self.key, self.env_prefix_ok) {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.
@@ -179,8 +186,10 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
 
 struct ConfigMapAccess<'config> {
     de: Deserializer<'config>,
-    set_iter: <HashSet<KeyKind> as IntoIterator>::IntoIter,
-    next: Option<KeyKind>,
+    /// The fields that this map should deserialize.
+    fields: Vec<KeyKind>,
+    /// Current field being deserialized.
+    field_index: usize,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -191,31 +200,31 @@ enum KeyKind {
 
 impl<'config> ConfigMapAccess<'config> {
     fn new_map(de: Deserializer<'config>) -> Result<ConfigMapAccess<'config>, ConfigError> {
-        let mut set = HashSet::new();
+        let mut fields = Vec::new();
         if let Some(mut v) = de.config.get_table(&de.key)? {
             // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
-                set.insert(KeyKind::CaseSensitive(key));
+                fields.push(KeyKind::CaseSensitive(key));
             }
         }
         if de.config.cli_unstable().advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
-            let env_pattern = format!("{}_", de.key.as_env_key());
+            let env_prefix = format!("{}_", de.key.as_env_key());
             for env_key in de.config.env.keys() {
-                if env_key.starts_with(&env_pattern) {
+                if env_key.starts_with(&env_prefix) {
                     // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
-                    let rest = &env_key[env_pattern.len()..];
+                    let rest = &env_key[env_prefix.len()..];
                     // `rest = bar_OPT_LEVEL`
                     let part = rest.splitn(2, '_').next().unwrap();
                     // `part = "bar"`
-                    set.insert(KeyKind::CaseSensitive(part.to_string()));
+                    fields.push(KeyKind::CaseSensitive(part.to_string()));
                 }
             }
         }
         Ok(ConfigMapAccess {
             de,
-            set_iter: set.into_iter(),
-            next: None,
+            fields,
+            field_index: 0,
         })
     }
 
@@ -223,10 +232,10 @@ impl<'config> ConfigMapAccess<'config> {
         de: Deserializer<'config>,
         fields: &'static [&'static str],
     ) -> Result<ConfigMapAccess<'config>, ConfigError> {
-        let mut set = HashSet::new();
-        for field in fields {
-            set.insert(KeyKind::Normal(field.to_string()));
-        }
+        let fields: Vec<KeyKind> = fields
+            .iter()
+            .map(|field| KeyKind::Normal(field.to_string()))
+            .collect();
 
         // Assume that if we're deserializing a struct it exhaustively lists all
         // possible fields on this key that we're *supposed* to use, so take
@@ -234,7 +243,10 @@ impl<'config> ConfigMapAccess<'config> {
         // fields and warn about them.
         if let Some(mut v) = de.config.get_table(&de.key)? {
             for (t_key, value) in v.val.drain() {
-                if set.contains(&KeyKind::Normal(t_key.to_string())) {
+                if fields.iter().any(|k| match k {
+                    KeyKind::Normal(s) => s == &t_key,
+                    KeyKind::CaseSensitive(s) => s == &t_key,
+                }) {
                     continue;
                 }
                 de.config.shell().warn(format!(
@@ -248,8 +260,8 @@ impl<'config> ConfigMapAccess<'config> {
 
         Ok(ConfigMapAccess {
             de,
-            set_iter: set.into_iter(),
-            next: None,
+            fields,
+            field_index: 0,
         })
     }
 }
@@ -261,30 +273,61 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
     where
         K: de::DeserializeSeed<'de>,
     {
-        match self.set_iter.next() {
-            Some(key) => {
-                let name = match &key {
-                    KeyKind::Normal(s) | KeyKind::CaseSensitive(s) => s.as_str(),
-                };
-                let result = seed.deserialize(name.into_deserializer()).map(Some);
-                self.next = Some(key);
-                result
-            }
-            None => Ok(None),
+        if self.field_index >= self.fields.len() {
+            return Ok(None);
         }
+        let field = match &self.fields[self.field_index] {
+            KeyKind::Normal(s) | KeyKind::CaseSensitive(s) => s.as_str(),
+        };
+        seed.deserialize(field.into_deserializer()).map(Some)
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
     where
         V: de::DeserializeSeed<'de>,
     {
-        match self.next.take().expect("next field missing") {
-            KeyKind::Normal(key) => self.de.key.push(&key),
-            KeyKind::CaseSensitive(key) => self.de.key.push_sensitive(&key),
-        }
+        let field = &self.fields[self.field_index];
+        self.field_index += 1;
+        // Set this as the current key in the deserializer.
+        let field = match field {
+            KeyKind::Normal(field) => {
+                self.de.key.push(&field);
+                field
+            }
+            KeyKind::CaseSensitive(field) => {
+                self.de.key.push_sensitive(&field);
+                field
+            }
+        };
+        // Env vars that are a prefix of another with a dash/underscore cannot
+        // be supported by our serde implementation, so check for them here.
+        // Example:
+        //     CARGO_BUILD_TARGET
+        //     CARGO_BUILD_TARGET_DIR
+        // or
+        //     CARGO_PROFILE_DEV_DEBUG
+        //     CARGO_PROFILE_DEV_DEBUG_ASSERTIONS
+        // The `deserialize_option` method does not know the type of the field.
+        // If the type is an Option<struct> (like
+        // `profile.dev.build-override`), then it needs to check for env vars
+        // starting with CARGO_FOO_BAR_. This is a problem for keys like
+        // CARGO_BUILD_TARGET because checking for a prefix would incorrectly
+        // match CARGO_BUILD_TARGET_DIR. `deserialize_option` would have no
+        // choice but to call `visit_some()` which would then fail if
+        // CARGO_BUILD_TARGET isn't set. So we check for these prefixes and
+        // disallow them here.
+        let env_prefix = format!("{}_", field).replace('-', "_");
+        let env_prefix_ok = !self.fields.iter().any(|field| {
+            let field = match field {
+                KeyKind::Normal(s) | KeyKind::CaseSensitive(s) => s.as_str(),
+            };
+            field.replace('-', "_").starts_with(&env_prefix)
+        });
+
         let result = seed.deserialize(Deserializer {
             config: self.de.config,
             key: self.de.key.clone(),
+            env_prefix_ok,
         });
         self.de.key.pop();
         result
