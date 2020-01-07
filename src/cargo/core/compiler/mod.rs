@@ -1008,7 +1008,7 @@ pub fn extern_args<'a>(
 
     for dep in deps {
         if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
-            link_to(&dep, dep.extern_crate_name, dep.noprelude)?;
+            link_to(dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }
     if unit.target.proc_macro()

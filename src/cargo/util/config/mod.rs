@@ -832,7 +832,7 @@ impl Config {
         for arg in cli_args {
             // TODO: This should probably use a more narrow parser, reject
             // comments, blank lines, [headers], etc.
-            let toml_v: toml::Value = toml::de::from_str(&arg)
+            let toml_v: toml::Value = toml::de::from_str(arg)
                 .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
             let toml_table = toml_v.as_table().unwrap();
             if toml_table.len() != 1 {
