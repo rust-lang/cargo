@@ -26,6 +26,8 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+    config.load_credentials()?;
+
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
     let index = args.index(config)?;

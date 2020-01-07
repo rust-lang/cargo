@@ -112,28 +112,6 @@ fn credentials_work_with_extension() {
 }
 
 #[cargo_test]
-fn credentials_ambiguous_filename() {
-    registry::init();
-    setup_new_credentials();
-    setup_new_credentials_toml();
-
-    cargo_process("login --host")
-        .arg(registry_url().to_string())
-        .arg(TOKEN)
-        .with_stderr_contains(
-            "\
-[WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
-",
-        )
-        .run();
-
-    // It should use the value from the one without the extension
-    // for backwards compatibility. check_token explicitly checks
-    // 'credentials' without the extension, which is what we want.
-    assert!(check_token(TOKEN, None));
-}
-
-#[cargo_test]
 fn login_with_old_and_new_credentials() {
     setup_new_credentials();
     login_with_old_credentials();
@@ -161,7 +139,9 @@ fn new_credentials_is_used_instead_old() {
         .arg(TOKEN)
         .run();
 
-    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    let mut config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    let _ = config.values();
+    let _ = config.load_credentials();
 
     let token = config.get_string("registry.token").unwrap().map(|p| p.val);
     assert_eq!(token.unwrap(), TOKEN);

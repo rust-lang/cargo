@@ -746,7 +746,6 @@ impl Config {
         })
         .chain_err(|| "could not load Cargo configuration")?;
 
-        self.load_credentials(&mut cfg)?;
         match cfg {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
@@ -979,9 +978,8 @@ impl Config {
         Ok(url)
     }
 
-    /// Loads credentials config from the credentials file into the `ConfigValue` object, if
-    /// present.
-    fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
+    /// Loads credentials config from the credentials file, if present.
+    pub fn load_credentials(&mut self) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = match self.get_file_path(&home_path, "credentials", true)? {
             Some(credentials) => credentials,
@@ -1006,7 +1004,28 @@ impl Config {
             }
         }
 
-        cfg.merge(value, true)?;
+        if let CV::Table(mut map, _) = value {
+            if map.contains_key("registry") {
+                if let Some(mut new_map) = self.values_mut()?.remove("registry") {
+                    let token = map.remove("registry").unwrap();
+                    new_map.merge(token, true)?;
+                    self.values_mut()?.insert("registry".into(), new_map);
+                } else {
+                    self.values_mut()?
+                        .insert("registry".into(), map.remove("registry").unwrap());
+                }
+            }
+            if map.contains_key("registries") {
+                if let Some(mut new_map) = self.values_mut()?.remove("registries") {
+                    let token = map.remove("registries").unwrap();
+                    new_map.merge(token, true)?;
+                    self.values_mut()?.insert("registries".into(), new_map);
+                } else {
+                    self.values_mut()?
+                        .insert("registries".into(), map.remove("registries").unwrap());
+                }
+            }
+        }
 
         Ok(())
     }
