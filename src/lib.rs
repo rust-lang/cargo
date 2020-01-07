@@ -109,8 +109,8 @@ pub fn cargo_home() -> io::Result<PathBuf> {
 /// Returns the storage directory used by Cargo within `cwd`.
 /// For more details, see [`cargo_home`](fn.cargo_home.html).
 pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    match env::var_os("CARGO_HOME") {
-        Some(home) if !home.is_empty() => {
+    match env::var_os("CARGO_HOME").filter(|h| !h.is_empty()) {
+        Some(home) => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
                 Ok(home)
@@ -159,8 +159,8 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 /// Returns the storage directory used by rustup within `cwd`.
 /// For more details, see [`rustup_home`](fn.rustup_home.html).
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    match env::var_os("RUSTUP_HOME") {
-        Some(home) if !home.is_empty() => {
+    match env::var_os("RUSTUP_HOME").filter(|h| !h.is_empty()) {
+        Some(home) => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
                 Ok(home)

@@ -45,6 +45,7 @@ extern "C" {
 mod tests {
     use super::home_dir_inner;
     use std::env;
+    use std::ops::Deref;
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -59,9 +60,9 @@ mod tests {
         let home = Path::new(r"C:\Users\foo tar baz");
 
         env::set_var("HOME", home.as_os_str());
-        assert_ne!(home_dir_inner().as_deref(), Some(home));
+        assert_ne!(home_dir_inner().as_ref().map(Deref::deref), Some(home));
 
         env::set_var("USERPROFILE", home.as_os_str());
-        assert_eq!(home_dir_inner().as_deref(), Some(home));
+        assert_eq!(home_dir_inner().as_ref().map(Deref::deref), Some(home));
     }
 }

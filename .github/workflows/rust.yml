@@ -26,16 +26,16 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            rust: stable
+            rust: 1.36.0
           - build: macos
             os: macos-latest
-            rust: stable
+            rust: 1.36.0
           - build: win32
             os: windows-latest
-            rust: stable-i686-msvc
+            rust: 1.36.0-i686-msvc
           - build: win64
             os: windows-latest
-            rust: stable-x86_64-msvc
+            rust: 1.36.0-x86_64-msvc
     steps:
       - uses: actions/checkout@v1
       - name: Cache CARGO_HOME
