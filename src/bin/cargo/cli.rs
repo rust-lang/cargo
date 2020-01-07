@@ -102,7 +102,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         }
     };
     config_configure(config, &args, subcommand_args)?;
-    super::init_git_transports(&config);
+    super::init_git_transports(config);
 
     execute_subcommand(config, cmd, subcommand_args)
 }

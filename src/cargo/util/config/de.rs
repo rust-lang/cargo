@@ -291,11 +291,11 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
         // Set this as the current key in the deserializer.
         let field = match field {
             KeyKind::Normal(field) => {
-                self.de.key.push(&field);
+                self.de.key.push(field);
                 field
             }
             KeyKind::CaseSensitive(field) => {
-                self.de.key.push_sensitive(&field);
+                self.de.key.push_sensitive(field);
                 field
             }
         };

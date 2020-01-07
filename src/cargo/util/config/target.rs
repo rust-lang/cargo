@@ -113,7 +113,7 @@ fn parse_links_overrides(
                 "rustc-flags" => {
                     let flags = value.string(key)?;
                     let whence = format!("target config `{}.{}` (in {})", target_key, key, flags.1);
-                    let (paths, links) = BuildOutput::parse_rustc_flags(&flags.0, &whence)?;
+                    let (paths, links) = BuildOutput::parse_rustc_flags(flags.0, &whence)?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);
                 }
