@@ -48,10 +48,9 @@ use std::path::{Path, PathBuf};
 ///
 /// Returns the value of the `USERPROFILE` environment variable if it
 /// is set and not equal to the empty string. If both do not exist,
-/// [`GetUserProfileDirectory`][msdn] is used to return the
-/// appropriate path.
+/// [`SHGetFolderPathW`][msdn] is used to return the appropriate path.
 ///
-/// [msdn]: https://docs.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-getuserprofiledirectoryw
+/// [msdn]: https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
 ///
 /// # Examples
 ///
