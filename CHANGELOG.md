@@ -5,8 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- ## [Unreleased] -->
+## [0.5.3] - 2020-01-07
+
+Use Rust 1.36.0 as minimum Rust version.
 
 ## [0.5.2] - 2020-01-05
+
+*YANKED since it cannot be built on Rust 1.36.0*
+
 ### Changed
 - Check for emptiness of `CARGO_HOME` and `RUSTUP_HOME` environment variables.
 - Windows: Use `SHGetFolderPath` to replace `GetUserProfileDirectory` syscall.
