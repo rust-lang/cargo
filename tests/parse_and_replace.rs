@@ -1,15 +1,15 @@
 #![cfg(not(windows))] // TODO: should fix these tests on Windows
 
+use anyhow::{anyhow, ensure, Context, Error};
+use log::{debug, info, warn};
+use rustfix::apply_suggestions;
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use anyhow::{Error, Context, ensure, anyhow};
 use tempdir::TempDir;
-use rustfix::apply_suggestions;
-use log::{info, warn, debug};
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
