@@ -77,7 +77,7 @@ jobs:
           key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: bash ci/install-rustup.bash
-      - run: bash ci/install-rust.bash stable
+      - run: bash ci/install-rust.bash beta
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
       # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
