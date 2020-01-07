@@ -4,15 +4,13 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, ExitStatus, Output, Stdio};
 
 use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use crate::util::{
-    internal, process_error, read2, CargoResult, CargoResultExt, CommandAndResponseFile,
-};
+use crate::util::{internal, process_error, read2, CargoResult, CargoResultExt};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -32,10 +30,6 @@ pub struct ProcessBuilder {
     jobserver: Option<Client>,
     /// `true` to include environment variable in display.
     display_env_vars: bool,
-    /// Use a [@response_file] for all args after this index to workaround command line length limits.
-    ///
-    /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
-    response_file_after_arg: usize,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -156,20 +150,15 @@ impl ProcessBuilder {
         self
     }
 
-    /// Use a [@response_file] for subsequent arguments to workaround command line length limits.
-    ///
-    /// [@response_file]: https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
-    pub fn response_file(&mut self) -> &mut Self {
-        self.response_file_after_arg = self.response_file_after_arg.min(self.args.len());
-        self
-    }
-
     /// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
     pub fn exec(&self) -> CargoResult<()> {
-        let mut command = self.build_command();
-        let exit = command.status().chain_err(|| {
-            process_error(&format!("could not execute process {}", self), None, None)
-        })?;
+        let exit = match self.build_command().status() {
+            Err(ref err) if imp::command_line_too_big(err) => self
+                .build_command_and_response_file()
+                .and_then(|(mut cmd, _file)| cmd.status().map_err(|e| e.into())),
+            other => other.map_err(|e| e.into()),
+        }
+        .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
 
         if exit.success() {
             Ok(())
@@ -204,11 +193,13 @@ impl ProcessBuilder {
 
     /// Executes the process, returning the stdio output, or an error if non-zero exit status.
     pub fn exec_with_output(&self) -> CargoResult<Output> {
-        let mut command = self.build_command();
-
-        let output = command.output().chain_err(|| {
-            process_error(&format!("could not execute process {}", self), None, None)
-        })?;
+        let output = match self.build_command().output() {
+            Err(ref err) if imp::command_line_too_big(err) => self
+                .build_command_and_response_file()
+                .and_then(|(mut cmd, _file)| cmd.output().map_err(|e| e.into())),
+            other => other.map_err(|e| e.into()),
+        }
+        .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
 
         if output.status.success() {
             Ok(output)
@@ -246,8 +237,20 @@ impl ProcessBuilder {
             .stdin(Stdio::null());
 
         let mut callback_error = None;
-        let status = (|| {
-            let mut child = cmd.spawn()?;
+        let status = (|| -> CargoResult<ExitStatus> {
+            let mut response_file = None;
+            let mut child = match cmd.spawn() {
+                Err(ref err) if imp::command_line_too_big(err) => self
+                    .build_command_and_response_file()
+                    .and_then(|(mut cmd, file)| {
+                        cmd.stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .stdin(Stdio::null());
+                        response_file = Some(file);
+                        Ok(cmd.spawn()?)
+                    }),
+                other => other.map_err(|e| e.into()),
+            }?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
             read2(out, err, &mut |is_out, data, eof| {
@@ -288,7 +291,7 @@ impl ProcessBuilder {
                     data.drain(..idx);
                 }
             })?;
-            child.wait()
+            Ok(child.wait()?)
         })()
         .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
         let output = Output {
@@ -319,27 +322,16 @@ impl ProcessBuilder {
         Ok(output)
     }
 
-    /// Converts `ProcessBuilder` into a `CommandAndResponseFile`, and handles the jobserver, if
+    /// Converts `ProcessBuilder` into a `std::process::Command`, and handles the jobserver, if
     /// present.
-    pub fn build_command(&self) -> CommandAndResponseFile {
+    pub fn build_command(&self) -> Command {
         let mut command = Command::new(&self.program);
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
         }
-        let response_file = if let Ok(Some(file)) = self.build_response_file() {
-            for arg in &self.args[..self.response_file_after_arg] {
-                command.arg(arg);
-            }
-            let mut arg = OsString::from("@");
-            arg.push(file.to_path_buf());
+        for arg in &self.args {
             command.arg(arg);
-            Some(file)
-        } else {
-            for arg in &self.args {
-                command.arg(arg);
-            }
-            None
-        };
+        }
         for (k, v) in &self.env {
             match *v {
                 Some(ref v) => {
@@ -353,24 +345,54 @@ impl ProcessBuilder {
         if let Some(ref c) = self.jobserver {
             c.configure(&mut command);
         }
-        CommandAndResponseFile {
-            command,
-            response_file,
-        }
+        command
     }
 
-    fn build_response_file(&self) -> CargoResult<Option<tempfile::TempPath>> {
-        if self.response_file_after_arg >= self.args.len() {
-            return Ok(None);
+    /// Converts `ProcessBuilder` into a `std::process::Command` and a rustc style response
+    /// file.  Also handles the jobserver, if present.
+    pub fn build_command_and_response_file(&self) -> CargoResult<(Command, tempfile::TempPath)> {
+        // The rust linker also jumps through similar hoops, although with a different
+        // of response file, which this borrows from.  Some references:
+        // https://github.com/rust-lang/rust/blob/ef92009c1dbe2750f1d24a6619b827721fb49749/src/librustc_codegen_ssa/back/link.rs#L935
+        // https://github.com/rust-lang/rust/blob/ef92009c1dbe2750f1d24a6619b827721fb49749/src/librustc_codegen_ssa/back/command.rs#L135
+
+        let mut command = Command::new(&self.program);
+        if let Some(cwd) = self.get_cwd() {
+            command.current_dir(cwd);
         }
-        let mut file = tempfile::NamedTempFile::new()?;
-        for arg in &self.args[self.response_file_after_arg..] {
-            let arg = arg
-                .to_str()
-                .ok_or_else(|| internal(format!("argument {:?} contains invalid unicode", arg)))?;
-            writeln!(file, "{}", arg)?;
+        // cmd.exe can handle up to 8k work of args, this leaves some headroom if using a .cmd rustc wrapper.
+        let mut cmd_remaining: usize = 1024 * 6;
+        let mut response_file = tempfile::NamedTempFile::new()?;
+        for arg in &self.args {
+            cmd_remaining = cmd_remaining.saturating_sub(arg.len());
+            if cmd_remaining > 0 {
+                command.arg(arg);
+            } else if let Some(arg) = arg.to_str() {
+                writeln!(response_file, "{}", arg)?;
+            } else {
+                return Err(internal(format!(
+                    "argument {:?} contains invalid unicode",
+                    arg
+                )));
+            }
         }
-        Ok(Some(file.into_temp_path()))
+        let mut arg = OsString::from("@");
+        arg.push(response_file.path());
+        command.arg(arg);
+        for (k, v) in &self.env {
+            match *v {
+                Some(ref v) => {
+                    command.env(k, v);
+                }
+                None => {
+                    command.env_remove(k);
+                }
+            }
+        }
+        if let Some(ref c) = self.jobserver {
+            c.configure(&mut command);
+        }
+        Ok((command, response_file.into_temp_path()))
     }
 }
 
@@ -383,7 +405,6 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         env: HashMap::new(),
         jobserver: None,
         display_env_vars: false,
-        response_file_after_arg: std::usize::MAX,
     }
 }
 
@@ -403,6 +424,10 @@ mod imp {
                 None,
             ))
             .into())
+    }
+
+    pub fn command_line_too_big(err: &std::io::Error) -> bool {
+        err.raw_os_error() == Some(::libc::E2BIG)
     }
 }
 
@@ -427,5 +452,10 @@ mod imp {
 
         // Just execute the process as normal.
         process_builder.exec()
+    }
+
+    pub fn command_line_too_big(err: &std::io::Error) -> bool {
+        const ERROR_FILENAME_EXCED_RANGE: i32 = 206;
+        err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE)
     }
 }
