@@ -460,7 +460,7 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_end()),
                 // Line started with `cargo:` but didn't match `key=value`.
-                _ => failure::bail!("Wrong output in {}: `{}`", whence, line),
+                _ => anyhow::bail!("Wrong output in {}: `{}`", whence, line),
             };
 
             // This will rewrite paths if the target directory has been moved.
@@ -520,7 +520,7 @@ impl BuildOutput {
                 if value.is_empty() {
                     value = match flags_iter.next() {
                         Some(v) => v,
-                        None => failure::bail! {
+                        None => anyhow::bail! {
                             "Flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
@@ -536,7 +536,7 @@ impl BuildOutput {
                     _ => unreachable!(),
                 };
             } else {
-                failure::bail!(
+                anyhow::bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
@@ -552,7 +552,7 @@ impl BuildOutput {
         let val = iter.next();
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => failure::bail!("Variable rustc-env has no value in {}: {}", whence, value),
+            _ => anyhow::bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }
     }
 }

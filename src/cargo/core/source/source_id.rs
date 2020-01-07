@@ -112,7 +112,7 @@ impl SourceId {
         let kind = parts.next().unwrap();
         let url = parts
             .next()
-            .ok_or_else(|| failure::format_err!("invalid source `{}`", string))?;
+            .ok_or_else(|| anyhow::format_err!("invalid source `{}`", string))?;
 
         match kind {
             "git" => {
@@ -141,10 +141,7 @@ impl SourceId {
                 let url = url.into_url()?;
                 SourceId::new(Kind::Path, url)
             }
-            kind => Err(failure::format_err!(
-                "unsupported source protocol: {}",
-                kind
-            )),
+            kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
     }
 

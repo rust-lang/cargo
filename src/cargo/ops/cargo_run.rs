@@ -33,7 +33,7 @@ pub fn run(
 
     if bins.is_empty() {
         if !options.filter.is_specific() {
-            failure::bail!("a bin target must be available for `cargo run`")
+            anyhow::bail!("a bin target must be available for `cargo run`")
         } else {
             // This will be verified in `cargo_compile`.
         }
@@ -42,7 +42,7 @@ pub fn run(
     if bins.len() == 1 {
         let target = bins[0].1;
         if let TargetKind::ExampleLib(..) = target.kind() {
-            failure::bail!(
+            anyhow::bail!(
                 "example target `{}` is a library and cannot be executed",
                 target.name()
             )
@@ -55,7 +55,7 @@ pub fn run(
                 .into_iter()
                 .map(|(_pkg, target)| target.name())
                 .collect();
-            failure::bail!(
+            anyhow::bail!(
                 "`cargo run` could not determine which binary to run. \
                  Use the `--bin` option to specify a binary, \
                  or the `default-run` manifest key.\n\
@@ -63,7 +63,7 @@ pub fn run(
                 names.join(", ")
             )
         } else {
-            failure::bail!(
+            anyhow::bail!(
                 "`cargo run` can run at most one executable, but \
                  multiple were specified"
             )

@@ -50,7 +50,7 @@ use std::env;
 use std::fmt;
 use std::str::FromStr;
 
-use failure::{bail, Error};
+use anyhow::{bail, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;

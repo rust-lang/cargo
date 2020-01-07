@@ -290,7 +290,7 @@ impl<'cfg> PathSource<'cfg> {
                 warn!("  found submodule {}", file_path.display());
                 let rel = file_path.strip_prefix(root)?;
                 let rel = rel.to_str().ok_or_else(|| {
-                    failure::format_err!("invalid utf-8 filename: {}", rel.display())
+                    anyhow::format_err!("invalid utf-8 filename: {}", rel.display())
                 })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?

@@ -23,7 +23,7 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use failure::Error;
+use anyhow::Error;
 use lazycell::LazyCell;
 use log::debug;
 

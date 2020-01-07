@@ -151,7 +151,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             .map(|p| &p.0)
             .cloned()
             .map(MaybePackage::Ready)
-            .ok_or_else(|| failure::format_err!("failed to find package with id: {}", id))
+            .ok_or_else(|| anyhow::format_err!("failed to find package with id: {}", id))
     }
 
     fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
@@ -165,7 +165,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn verify(&self, id: PackageId) -> CargoResult<()> {
         let (pkg, cksum) = match self.packages.get(&id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
-            None => failure::bail!("failed to find entry for `{}` in directory source", id),
+            None => anyhow::bail!("failed to find entry for `{}` in directory source", id),
         };
 
         for (file, cksum) in cksum.files.iter() {
@@ -175,7 +175,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
                 .finish_hex();
             if &*actual != cksum {
-                failure::bail!(
+                anyhow::bail!(
                     "the listed checksum of `{}` has changed:\n\
                      expected: {}\n\
                      actual:   {}\n\

@@ -24,7 +24,7 @@ pub fn read_package(
     let (manifest, nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
-        EitherManifest::Virtual(..) => failure::bail!(
+        EitherManifest::Virtual(..) => anyhow::bail!(
             "found a virtual manifest at `{}` instead of a package \
              manifest",
             path.display()
@@ -41,7 +41,7 @@ pub fn read_packages(
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
-    let mut errors = Vec::<failure::Error>::new();
+    let mut errors = Vec::<anyhow::Error>::new();
 
     trace!(
         "looking for root package: {}, source_id={}",
@@ -88,7 +88,7 @@ pub fn read_packages(
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(failure::format_err!(
+            None => Err(anyhow::format_err!(
                 "Could not find Cargo.toml in `{}`",
                 path.display()
             )),
@@ -111,7 +111,7 @@ fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> Ca
         Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => return Ok(()),
         Err(e) => {
             let cx = format!("failed to read directory `{}`", path.display());
-            let e = failure::Error::from(e);
+            let e = anyhow::Error::from(e);
             return Err(e.context(cx).into());
         }
     };
@@ -134,7 +134,7 @@ fn read_nested_packages(
     source_id: SourceId,
     config: &Config,
     visited: &mut HashSet<PathBuf>,
-    errors: &mut Vec<failure::Error>,
+    errors: &mut Vec<anyhow::Error>,
 ) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) {
         return Ok(());

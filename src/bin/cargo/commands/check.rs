@@ -60,7 +60,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some("test") => true,
         None => false,
         Some(profile) => {
-            let err = failure::format_err!(
+            let err = anyhow::format_err!(
                 "unknown profile: `{}`, only `test` is \
                  currently supported",
                 profile

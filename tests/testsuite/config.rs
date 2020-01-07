@@ -184,13 +184,20 @@ fn symlink_config_to_config_toml() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
-pub fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
+pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
-        .iter_chain()
-        .map(|e| e.to_string())
+        .chain()
+        .enumerate()
+        .map(|(i, e)| {
+            if i == 0 {
+                e.to_string()
+            } else {
+                format!("Caused by:\n  {}", e)
+            }
+        })
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n\n");
     assert_match(msgs, &causes);
 }
 
@@ -516,7 +523,9 @@ c = ['c']
         config.unwrap_err(),
         "\
 failed to merge --config key `a` into `[..]/.cargo/config`
-failed to merge config value from `--config cli option` into `[..]/.cargo/config`: \
+
+Caused by:
+  failed to merge config value from `--config cli option` into `[..]/.cargo/config`: \
 expected boolean, but found array",
     );
 

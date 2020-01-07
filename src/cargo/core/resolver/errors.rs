@@ -3,7 +3,7 @@ use std::fmt;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
 use crate::util::Config;
-use failure::{Error, Fail};
+use anyhow::Error;
 use semver;
 
 use super::context::Context;
@@ -30,9 +30,9 @@ impl ResolveError {
     }
 }
 
-impl Fail for ResolveError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.cause.as_fail().cause()
+impl std::error::Error for ResolveError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.cause.source()
     }
 }
 
@@ -52,12 +52,12 @@ pub type ActivateResult<T> = Result<T, ActivateError>;
 
 #[derive(Debug)]
 pub enum ActivateError {
-    Fatal(failure::Error),
+    Fatal(anyhow::Error),
     Conflict(PackageId, ConflictReason),
 }
 
-impl From<::failure::Error> for ActivateError {
-    fn from(t: ::failure::Error) -> Self {
+impl From<::anyhow::Error> for ActivateError {
+    fn from(t: ::anyhow::Error) -> Self {
         ActivateError::Fatal(t)
     }
 }
@@ -185,7 +185,7 @@ pub(super) fn activation_error(
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
-        return to_resolve_err(failure::format_err!("{}", msg));
+        return to_resolve_err(anyhow::format_err!("{}", msg));
     }
 
     // We didn't actually find any candidates, so we need to
@@ -324,7 +324,7 @@ pub(super) fn activation_error(
         }
     }
 
-    to_resolve_err(failure::format_err!("{}", msg))
+    to_resolve_err(anyhow::format_err!("{}", msg))
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.

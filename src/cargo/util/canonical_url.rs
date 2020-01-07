@@ -22,7 +22,7 @@ impl CanonicalUrl {
         // cannot-be-a-base-urls (e.g., `github.com:rust-lang-nursery/rustfmt.git`)
         // are not supported.
         if url.cannot_be_a_base() {
-            failure::bail!(
+            anyhow::bail!(
                 "invalid url `{}`: cannot-be-a-base-URLs are not supported",
                 url
             )

@@ -144,7 +144,7 @@ fn parse_links_overrides(
                     }
                 }
                 "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
-                    failure::bail!("`{}` is not supported in build script overrides", key);
+                    anyhow::bail!("`{}` is not supported in build script overrides", key);
                 }
                 _ => {
                     let val = value.string(key)?.0;

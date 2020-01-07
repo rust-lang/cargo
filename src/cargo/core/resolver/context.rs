@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::rc::Rc;
 
-use failure::format_err;
+use anyhow::format_err;
 use log::debug;
 
 use crate::core::interning::InternedString;

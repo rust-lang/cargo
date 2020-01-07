@@ -2,8 +2,6 @@ use crate::core::resolver::ResolveOpts;
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
-use failure::Fail;
-use opener;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
@@ -41,7 +39,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 if let Some(prev) = lib_names.insert(target.crate_name(), package) {
-                    failure::bail!(
+                    anyhow::bail!(
                         "The library `{}` is specified by packages `{}` and \
                          `{}` but can only be documented once. Consider renaming \
                          or marking one of the targets as `doc = false`.",
@@ -51,7 +49,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
                     );
                 }
             } else if let Some(prev) = bin_names.insert(target.crate_name(), package) {
-                failure::bail!(
+                anyhow::bail!(
                     "The binary `{}` is specified by packages `{}` and \
                      `{}` but can be documented only once. Consider renaming \
                      or marking one of the targets as `doc = false`.",
@@ -100,7 +98,7 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
         None => {
             if let Err(e) = opener::open(&path) {
                 shell.warn(format!("Couldn't open docs: {}", e))?;
-                for cause in (&e as &dyn Fail).iter_chain() {
+                for cause in anyhow::Error::new(e).chain().skip(1) {
                     shell.warn(format!("Caused by:\n {}", cause))?;
                 }
             }

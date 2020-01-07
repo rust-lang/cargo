@@ -66,11 +66,11 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // these directories exist.
         let root = self.root.clone().into_path_unlocked();
         if !root.is_dir() {
-            failure::bail!("local registry path is not a directory: {}", root.display())
+            anyhow::bail!("local registry path is not a directory: {}", root.display())
         }
         let index_path = self.index_path.clone().into_path_unlocked();
         if !index_path.is_dir() {
-            failure::bail!(
+            anyhow::bail!(
                 "local registry index path is not a directory: {}",
                 index_path.display()
             )
@@ -100,7 +100,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // verify the checksum matches the .crate file itself.
         let actual = Sha256::new().update_file(&crate_file)?.finish_hex();
         if actual != checksum {
-            failure::bail!("failed to verify the checksum of `{}`", pkg)
+            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         crate_file.seek(SeekFrom::Start(0))?;

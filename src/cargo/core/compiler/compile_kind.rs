@@ -77,7 +77,7 @@ impl CompileTarget {
     pub fn new(name: &str) -> CargoResult<CompileTarget> {
         let name = name.trim();
         if name.is_empty() {
-            failure::bail!("target was empty");
+            anyhow::bail!("target was empty");
         }
         if !name.ends_with(".json") {
             return Ok(CompileTarget { name: name.into() });
@@ -88,12 +88,12 @@ impl CompileTarget {
         // with different paths always produce the same result.
         let path = Path::new(name)
             .canonicalize()
-            .chain_err(|| failure::format_err!("target path {:?} is not a valid file", name))?;
+            .chain_err(|| anyhow::format_err!("target path {:?} is not a valid file", name))?;
 
         let name = path
             .into_os_string()
             .into_string()
-            .map_err(|_| failure::format_err!("target path is not valid unicode"))?;
+            .map_err(|_| anyhow::format_err!("target path is not valid unicode"))?;
         Ok(CompileTarget { name: name.into() })
     }
 

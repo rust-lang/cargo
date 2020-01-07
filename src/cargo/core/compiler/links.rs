@@ -39,7 +39,7 @@ pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph<'_>) -> CargoRes
                 dep_path_desc
             };
 
-            failure::bail!(
+            anyhow::bail!(
                 "multiple packages link to native library `{}`, \
                  but a native library can be linked only once\n\
                  \n\

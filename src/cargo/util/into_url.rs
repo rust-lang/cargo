@@ -12,14 +12,14 @@ pub trait IntoUrl {
 
 impl<'a> IntoUrl for &'a str {
     fn into_url(self) -> CargoResult<Url> {
-        Url::parse(self).map_err(|s| failure::format_err!("invalid url `{}`: {}", self, s))
+        Url::parse(self).map_err(|s| anyhow::format_err!("invalid url `{}`: {}", self, s))
     }
 }
 
 impl<'a> IntoUrl for &'a Path {
     fn into_url(self) -> CargoResult<Url> {
         Url::from_file_path(self)
-            .map_err(|()| failure::format_err!("invalid path url `{}`", self.display()))
+            .map_err(|()| anyhow::format_err!("invalid path url `{}`", self.display()))
     }
 }
 

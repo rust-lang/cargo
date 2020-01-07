@@ -155,13 +155,13 @@ fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
         paths::remove_dir_all(path)
-            .chain_err(|| failure::format_err!("could not remove build directory"))?;
+            .chain_err(|| anyhow::format_err!("could not remove build directory"))?;
     } else if m.is_ok() {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
         paths::remove_file(path)
-            .chain_err(|| failure::format_err!("failed to remove build artifact"))?;
+            .chain_err(|| anyhow::format_err!("failed to remove build artifact"))?;
     }
     Ok(())
 }

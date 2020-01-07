@@ -137,7 +137,7 @@ impl TargetInfo {
 
         let line = match lines.next() {
             Some(line) => line,
-            None => failure::bail!(
+            None => anyhow::bail!(
                 "output of --print=sysroot missing when learning about \
                  target-specific information from rustc\n{}",
                 output_err_info(&process, &output, &error)
@@ -329,7 +329,7 @@ fn parse_crate_type(
     }
     let line = match lines.next() {
         Some(line) => line,
-        None => failure::bail!(
+        None => anyhow::bail!(
             "malformed output when learning about crate-type {} information\n{}",
             crate_type,
             output_err_info(cmd, output, error)
@@ -339,7 +339,7 @@ fn parse_crate_type(
     let prefix = parts.next().unwrap();
     let suffix = match parts.next() {
         Some(part) => part,
-        None => failure::bail!(
+        None => anyhow::bail!(
             "output of --print=file-names has changed in the compiler, cannot parse\n{}",
             output_err_info(cmd, output, error)
         ),

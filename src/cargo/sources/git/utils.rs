@@ -67,7 +67,7 @@ pub struct GitDatabase {
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a `failure::Error` if no revision for that reference was found.
+/// and return a `anyhow::Error` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
@@ -219,7 +219,7 @@ impl GitReference {
                     .chain_err(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
-                    .ok_or_else(|| failure::format_err!("branch `{}` did not have a target", s))?
+                    .ok_or_else(|| anyhow::format_err!("branch `{}` did not have a target", s))?
             }
             GitReference::Rev(ref s) => {
                 let obj = repo.revparse_single(s)?;
@@ -588,7 +588,7 @@ where
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    let res = res.map_err(failure::Error::from).chain_err(|| {
+    let res = res.map_err(anyhow::Error::from).chain_err(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository"
             .to_string();
@@ -669,13 +669,13 @@ pub fn fetch(
     config: &Config,
 ) -> CargoResult<()> {
     if config.frozen() {
-        failure::bail!(
+        anyhow::bail!(
             "attempting to update a git repository, but --frozen \
              was specified"
         )
     }
     if !config.network_allowed() {
-        failure::bail!("can't update a git repository in the offline mode")
+        anyhow::bail!("can't update a git repository in the offline mode")
     }
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for

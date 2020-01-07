@@ -9,8 +9,8 @@ use crate::util::{
     print_available_tests,
 };
 use crate::CargoResult;
+use anyhow::bail;
 use clap::{self, SubCommand};
-use failure::bail;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::PathBuf;
@@ -264,10 +264,10 @@ pub trait ArgMatchesExt {
             // but in this particular case we need it to fix #3586.
             let path = paths::normalize_path(&path);
             if !path.ends_with("Cargo.toml") {
-                failure::bail!("the manifest-path must be a path to a Cargo.toml file")
+                anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
             if fs::metadata(&path).is_err() {
-                failure::bail!(
+                anyhow::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
                 )
@@ -327,7 +327,7 @@ pub trait ArgMatchesExt {
             ProfileChecking::Unchecked => {}
             ProfileChecking::Checked => {
                 if specified_profile.is_some() && !config.cli_unstable().unstable_options {
-                    failure::bail!("Usage of `--profile` requires `-Z unstable-options`")
+                    anyhow::bail!("Usage of `--profile` requires `-Z unstable-options`")
                 }
             }
         }
@@ -338,7 +338,7 @@ pub trait ArgMatchesExt {
             } else {
                 match specified_profile {
                     None | Some(ProfileKind::Release) => Ok(ProfileKind::Release),
-                    _ => failure::bail!("Conflicting usage of --profile and --release"),
+                    _ => anyhow::bail!("Conflicting usage of --profile and --release"),
                 }
             }
         } else if self._is_present("debug") {
@@ -347,7 +347,7 @@ pub trait ArgMatchesExt {
             } else {
                 match specified_profile {
                     None | Some(ProfileKind::Dev) => Ok(ProfileKind::Dev),
-                    _ => failure::bail!("Conflicting usage of --profile and --debug"),
+                    _ => anyhow::bail!("Conflicting usage of --profile and --debug"),
                 }
             }
         } else {

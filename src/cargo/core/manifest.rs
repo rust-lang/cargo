@@ -514,7 +514,7 @@ impl Manifest {
             self.features
                 .require(Feature::test_dummy_unstable())
                 .chain_err(|| {
-                    failure::format_err!(
+                    anyhow::format_err!(
                         "the `im-a-teapot` manifest key is unstable and may \
                          not work properly in England"
                     )

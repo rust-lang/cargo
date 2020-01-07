@@ -79,7 +79,7 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
         .chars()
         .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
     {
-        failure::bail!("Invalid character `{}` in {}: `{}`{}", ch, what, name, help);
+        anyhow::bail!("Invalid character `{}` in {}: `{}`{}", ch, what, name, help);
     }
     Ok(())
 }

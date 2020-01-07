@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
-use failure::{Error, ResultExt};
+use anyhow::{Context, Error};
 
 pub struct LockServer {
     listener: TcpListener,
@@ -45,7 +45,7 @@ struct ServerClient {
 impl LockServer {
     pub fn new() -> Result<LockServer, Error> {
         let listener = TcpListener::bind("127.0.0.1:0")
-            .with_context(|_| "failed to bind TCP listener to manage locking")?;
+            .with_context(|| "failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
         Ok(LockServer {
             listener,
@@ -156,16 +156,16 @@ impl Drop for LockServerStarted {
 
 impl LockServerClient {
     pub fn lock(addr: &SocketAddr, name: impl AsRef<[u8]>) -> Result<LockServerClient, Error> {
-        let mut client = TcpStream::connect(&addr)
-            .with_context(|_| "failed to connect to parent lock server")?;
+        let mut client =
+            TcpStream::connect(&addr).with_context(|| "failed to connect to parent lock server")?;
         client
             .write_all(name.as_ref())
             .and_then(|_| client.write_all(b"\n"))
-            .with_context(|_| "failed to write to lock server")?;
+            .with_context(|| "failed to write to lock server")?;
         let mut buf = [0];
         client
             .read_exact(&mut buf)
-            .with_context(|_| "failed to acquire lock")?;
+            .with_context(|| "failed to acquire lock")?;
         Ok(LockServerClient { _socket: client })
     }
 }

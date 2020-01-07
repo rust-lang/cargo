@@ -47,7 +47,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
 
     if !ws.config().lock_update_allowed() {
         if ws.config().offline() {
-            failure::bail!("can't update in the offline mode");
+            anyhow::bail!("can't update in the offline mode");
         }
 
         let flag = if ws.config().network_allowed() {
@@ -55,7 +55,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         } else {
             "--frozen"
         };
-        failure::bail!(
+        anyhow::bail!(
             "the lock file {} needs to be updated but {} was passed to prevent this\n\
              If you want to try to generate the lock file without accessing the network, \
              use the --offline flag.",

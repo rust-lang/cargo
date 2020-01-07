@@ -169,9 +169,15 @@ fn cli_include_failed() {
         &format!(
             "\
 failed to load --config include
-failed to load config include `foobar` from `--config cli option`
-failed to read configuration file `[..]/foobar`
-{}",
+
+Caused by:
+  failed to load config include `foobar` from `--config cli option`
+
+Caused by:
+  failed to read configuration file `[..]/foobar`
+
+Caused by:
+  {}",
             NO_SUCH_FILE_ERR_MSG
         ),
     );
@@ -196,7 +202,9 @@ fn cli_merge_failed() {
         config.unwrap_err(),
         "\
 failed to merge --config key `foo` into `[..]/.cargo/config`
-failed to merge config value from `[..]/.cargo/other` into `[..]/.cargo/config`: \
-expected array, but found string",
+
+Caused by:
+  failed to merge config value from `[..]/.cargo/other` into `[..]/.cargo/config`: \
+  expected array, but found string",
     );
 }

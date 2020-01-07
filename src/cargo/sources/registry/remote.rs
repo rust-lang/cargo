@@ -164,7 +164,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let object = entry.to_object(repo)?;
         let blob = match object.as_blob() {
             Some(blob) => blob,
-            None => failure::bail!("path `{}` is not a blob in the git repo", path.display()),
+            None => anyhow::bail!("path `{}` is not a blob in the git repo", path.display()),
         };
         data(blob.content())
     }
@@ -272,7 +272,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // Verify what we just downloaded
         let actual = Sha256::new().update(data).finish_hex();
         if actual != checksum {
-            failure::bail!("failed to verify the checksum of `{}`", pkg)
+            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         let filename = self.filename(pkg);

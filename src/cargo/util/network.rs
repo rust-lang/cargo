@@ -1,7 +1,7 @@
 use curl;
 use git2;
 
-use failure::Error;
+use anyhow::Error;
 
 use crate::util::errors::{CargoResult, HttpNot200};
 use crate::util::Config;
@@ -37,7 +37,7 @@ impl<'a> Retry<'a> {
 }
 
 fn maybe_spurious(err: &Error) -> bool {
-    for e in err.iter_chain() {
+    for e in err.chain() {
         if let Some(git_err) = e.downcast_ref::<git2::Error>() {
             match git_err.class() {
                 git2::ErrorClass::Net | git2::ErrorClass::Os => return true,
@@ -121,16 +121,16 @@ fn with_retry_finds_nested_spurious_errors() {
 
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious
-    let error1 = failure::Error::from(HttpNot200 {
+    let error1 = anyhow::Error::from(HttpNot200 {
         code: 501,
         url: "Uri".to_string(),
     });
-    let error1 = failure::Error::from(error1.context("A non-spurious wrapping err"));
-    let error2 = failure::Error::from(HttpNot200 {
+    let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
+    let error2 = anyhow::Error::from(HttpNot200 {
         code: 502,
         url: "Uri".to_string(),
     });
-    let error2 = failure::Error::from(error2.context("A second chained error"));
+    let error2 = anyhow::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
     *config.shell() = Shell::from_write(Box::new(Vec::new()));

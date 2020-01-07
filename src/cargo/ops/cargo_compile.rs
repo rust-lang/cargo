@@ -111,7 +111,7 @@ impl Packages {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => failure::bail!("--exclude can only be used together with --workspace"),
+            (false, _, _) => anyhow::bail!("--exclude can only be used together with --workspace"),
             (true, 0, _) => Packages::All,
             (true, _, _) => Packages::OptOut(exclude),
         })
@@ -160,13 +160,13 @@ impl Packages {
         };
         if specs.is_empty() {
             if ws.is_virtual() {
-                failure::bail!(
+                anyhow::bail!(
                     "manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.",
                     ws.root().display()
                 )
             }
-            failure::bail!("no packages to compile")
+            anyhow::bail!("no packages to compile")
         }
         Ok(specs)
     }
@@ -185,7 +185,7 @@ impl Packages {
                     ws.members()
                         .find(|pkg| pkg.name().as_str() == name)
                         .ok_or_else(|| {
-                            failure::format_err!(
+                            anyhow::format_err!(
                                 "package `{}` is not a member of the workspace",
                                 name
                             )
@@ -325,7 +325,7 @@ pub fn compile_ws<'a>(
             // TODO: This should eventually be fixed. Unfortunately it is not
             // easy to get the host triple in BuildConfig. Consider changing
             // requested_target to an enum, or some other approach.
-            failure::bail!("-Zbuild-std requires --target");
+            anyhow::bail!("-Zbuild-std requires --target");
         }
         let (mut std_package_set, std_resolve) = standard_lib::resolve_std(ws, crates)?;
         remove_dylib_crate_type(&mut std_package_set)?;
@@ -359,7 +359,7 @@ pub fn compile_ws<'a>(
             && !ws.is_member(pkg)
             && pkg.dependencies().iter().any(|dep| !dep.is_transitive())
         {
-            failure::bail!(
+            anyhow::bail!(
                 "package `{}` cannot be tested because it requires dev-dependencies \
                  and is not a member of the workspace",
                 pkg.name()
@@ -430,7 +430,7 @@ pub fn compile_ws<'a>(
 
     if let Some(args) = extra_args {
         if units.len() != 1 {
-            failure::bail!(
+            anyhow::bail!(
                 "extra arguments to `{}` can only be passed to one \
                  target, consider filtering\nthe package by passing, \
                  e.g., `--lib` or `--bin NAME` to specify a single target",
@@ -793,12 +793,9 @@ fn generate_targets<'a>(
                 if !all_targets && libs.is_empty() && *lib == LibRule::True {
                     let names = packages.iter().map(|pkg| pkg.name()).collect::<Vec<_>>();
                     if names.len() == 1 {
-                        failure::bail!("no library targets found in package `{}`", names[0]);
+                        anyhow::bail!("no library targets found in package `{}`", names[0]);
                     } else {
-                        failure::bail!(
-                            "no library targets found in packages: {}",
-                            names.join(", ")
-                        );
+                        anyhow::bail!("no library targets found in packages: {}", names.join(", "));
                     }
                 }
                 proposals.extend(libs);
@@ -887,7 +884,7 @@ fn generate_targets<'a>(
                 .iter()
                 .map(|s| format!("`{}`", s))
                 .collect();
-            failure::bail!(
+            anyhow::bail!(
                 "target `{}` in package `{}` requires the features: {}\n\
                  Consider enabling them by passing, e.g., `--features=\"{}\"`",
                 target.name(),
@@ -991,7 +988,7 @@ fn find_named_targets<'a>(
                 .filter(|target| is_expected_kind(target))
         });
         let suggestion = closest_msg(target_name, targets, |t| t.name());
-        failure::bail!(
+        anyhow::bail!(
             "no {} target named `{}`{}",
             target_desc,
             target_name,

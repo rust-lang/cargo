@@ -304,7 +304,7 @@ fn target_runner(
         .filter(|(key, _runner)| CfgExpr::matches_key(key, target_cfg));
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
-        failure::bail!(
+        anyhow::bail!(
             "several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`\n\
              first match `{}` located in {}\n\
              second match `{}` located in {}",

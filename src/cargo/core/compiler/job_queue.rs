@@ -7,8 +7,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::format_err;
 use crossbeam_utils::thread::Scope;
-use failure::format_err;
 use jobserver::{Acquired, HelperThread};
 use log::{debug, info, trace};
 
@@ -393,7 +393,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                                 self.emit_warnings(Some(msg), &unit, cx)?;
 
                                 if !self.active.is_empty() {
-                                    error = Some(failure::format_err!("build failed"));
+                                    error = Some(anyhow::format_err!("build failed"));
                                     handle_error(&e, &mut *cx.bcx.config.shell());
                                     cx.bcx.config.shell().warn(
                                         "build failed, waiting for other \

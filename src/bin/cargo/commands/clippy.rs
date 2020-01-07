@@ -66,7 +66,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
 
     if !config.cli_unstable().unstable_options {
-        return Err(failure::format_err!(
+        return Err(anyhow::format_err!(
             "`clippy-preview` is unstable, pass `-Z unstable-options` to enable it"
         )
         .into());

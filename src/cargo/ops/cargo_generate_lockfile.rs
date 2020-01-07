@@ -36,15 +36,15 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
     if opts.aggressive && opts.precise.is_some() {
-        failure::bail!("cannot specify both aggressive and precise simultaneously")
+        anyhow::bail!("cannot specify both aggressive and precise simultaneously")
     }
 
     if ws.members().count() == 0 {
-        failure::bail!("you can't generate a lockfile for an empty workspace.")
+        anyhow::bail!("you can't generate a lockfile for an empty workspace.")
     }
 
     if opts.config.offline() {
-        failure::bail!("you can't update in the offline mode");
+        anyhow::bail!("you can't update in the offline mode");
     }
 
     // Updates often require a lot of modifications to the registry, so ensure

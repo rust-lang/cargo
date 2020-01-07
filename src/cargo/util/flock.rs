@@ -227,7 +227,7 @@ impl Filesystem {
                     paths::create_dir_all(path.parent().unwrap())?;
                     Ok(opts.open(&path)?)
                 } else {
-                    Err(failure::Error::from(e))
+                    Err(anyhow::Error::from(e))
                 }
             })
             .chain_err(|| format!("failed to open: {}", path.display()))?;
@@ -318,7 +318,7 @@ fn acquire(
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                let e = failure::Error::from(e);
+                let e = anyhow::Error::from(e);
                 let cx = format!("failed to lock file: {}", path.display());
                 return Err(e.context(cx).into());
             }
