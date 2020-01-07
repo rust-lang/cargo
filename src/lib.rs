@@ -2,8 +2,6 @@
 
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate failure;
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
@@ -12,7 +10,7 @@ use serde_json;
 use std::collections::HashSet;
 use std::ops::Range;
 
-use failure::Error;
+use anyhow::Error;
 
 pub mod diagnostics;
 use crate::diagnostics::{Diagnostic, DiagnosticSpan};

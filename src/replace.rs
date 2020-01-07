@@ -2,7 +2,7 @@
 //! replacement of parts of its content, with the ability to prevent changing
 //! the same parts multiple times.
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -133,7 +133,7 @@ impl Data {
                         );
                     }
 
-                    format_err!(
+                    anyhow!(
                         "Could not replace range {}...{} in file \
                          -- maybe parts of it were already replaced?",
                         from,

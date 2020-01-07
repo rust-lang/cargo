@@ -1,6 +1,4 @@
-use rustfix;
-
-use failure::Error;
+use anyhow::Error;
 use std::io::{stdin, BufReader, Read};
 use std::{collections::HashMap, collections::HashSet, env, fs};
 

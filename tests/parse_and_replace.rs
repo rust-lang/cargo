@@ -1,25 +1,15 @@
 #![cfg(not(windows))] // TODO: should fix these tests on Windows
 
-use duct;
-use env_logger;
-#[macro_use]
-extern crate log;
-use rustfix;
-
-#[macro_use]
-extern crate failure;
-
+use anyhow::{anyhow, ensure, Context, Error};
+use log::{debug, info, warn};
+use rustfix::apply_suggestions;
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-
-use failure::{Error, ResultExt};
 use tempdir::TempDir;
-
-use rustfix::apply_suggestions;
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
@@ -67,7 +57,7 @@ fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error>
 
     match res.status.code() {
         Some(0) | Some(1) | Some(101) => Ok(stderr),
-        _ => Err(format_err!(
+        _ => Err(anyhow!(
             "failed with status {:?}: {}",
             res.status.code(),
             stderr
@@ -86,7 +76,7 @@ fn compiles_without_errors(file: &Path, mode: &str) -> Result<(), Error> {
                 file,
                 String::from_utf8(res.stderr)?
             );
-            Err(format_err!(
+            Err(anyhow!(
                 "failed with status {:?} (`env RUST_LOG=parse_and_replace=info` for more info)",
                 res.status.code(),
             ))
@@ -226,10 +216,7 @@ fn assert_fixtures(dir: &str, mode: &str) {
     for file in &files {
         if let Err(err) = test_rustfix_with_file(file, mode) {
             println!("failed: {}", file.display());
-            warn!("{}", err);
-            for cause in err.iter_chain().skip(1) {
-                info!("\tcaused by: {}", cause);
-            }
+            warn!("{:?}", err);
             failures += 1;
         }
         info!("passed: {:?}", file);
