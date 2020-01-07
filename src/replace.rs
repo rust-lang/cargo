@@ -2,7 +2,7 @@
 //! replacement of parts of its content, with the ability to prevent changing
 //! the same parts multiple times.
 
-use anyhow::{Error, ensure, anyhow};
+use anyhow::{anyhow, ensure, Error};
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
