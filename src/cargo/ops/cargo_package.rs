@@ -299,7 +299,9 @@ fn check_repo_state(
                 if let Ok(status) = repo.status_file(relative) {
                     if status == git2::Status::CURRENT {
                         false
-                    } else if relative.to_str().unwrap_or("") == "Cargo.lock" {
+                    } else if relative.file_name().and_then(|s| s.to_str()).unwrap_or("")
+                        == "Cargo.lock"
+                    {
                         // It is OK to include this file even if it is ignored.
                         status != git2::Status::IGNORED
                     } else {
