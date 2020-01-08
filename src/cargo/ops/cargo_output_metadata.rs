@@ -24,7 +24,7 @@ pub struct OutputMetadataOptions {
 /// format to stdout.
 pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
-        failure::bail!(
+        anyhow::bail!(
             "metadata version {} not supported, only {} is currently supported",
             opt.version,
             VERSION

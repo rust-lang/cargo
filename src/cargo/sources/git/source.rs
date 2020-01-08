@@ -118,7 +118,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let db_path = git_path.join("db").join(&self.ident);
 
         if self.config.offline() && !db_path.exists() {
-            failure::bail!(
+            anyhow::bail!(
                 "can't checkout from '{}': you are in the offline mode (--offline)",
                 self.remote.url()
             );

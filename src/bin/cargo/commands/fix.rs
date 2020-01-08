@@ -120,7 +120,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some("test") => true,
         None => false,
         Some(profile) => {
-            let err = failure::format_err!(
+            let err = anyhow::format_err!(
                 "unknown profile: `{}`, only `test` is \
                  currently supported",
                 profile
@@ -143,7 +143,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .filter(|_| use_clippy);
 
     if use_clippy && !config.cli_unstable().unstable_options {
-        return Err(failure::format_err!(
+        return Err(anyhow::format_err!(
             "`cargo fix --clippy` is unstable, pass `-Z unstable-options` to enable it"
         )
         .into());

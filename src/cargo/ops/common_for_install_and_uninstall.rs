@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
-use failure::{bail, format_err};
+use anyhow::{bail, format_err};
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 

@@ -133,7 +133,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
             let aliases = list_aliases(config);
             let suggestions = commands.iter().chain(aliases.iter());
             let did_you_mean = closest_msg(cmd, suggestions, |c| c);
-            let err = failure::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
+            let err = anyhow::format_err!("no such subcommand: `{}`{}", cmd, did_you_mean);
             return Err(CliError::new(err, 101));
         }
     };

@@ -916,11 +916,7 @@ impl Execs {
                 {
                     return self.match_output(out);
                 }
-                let mut s = format!("could not exec process {}: {}", process, e);
-                for cause in e.iter_causes() {
-                    s.push_str(&format!("\ncaused by: {}", cause));
-                }
-                Err(s)
+                Err(format!("could not exec process {}: {:?}", process, e))
             }
         }
     }

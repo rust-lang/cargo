@@ -4,7 +4,7 @@ use crate::ops;
 use crate::sources::path::PathSource;
 use crate::util::Sha256;
 use crate::util::{paths, CargoResult, CargoResultExt, Config};
-use failure::bail;
+use anyhow::bail;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};

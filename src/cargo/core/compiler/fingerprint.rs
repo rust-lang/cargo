@@ -194,7 +194,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use failure::{bail, format_err};
+use anyhow::{bail, format_err};
 use filetime::FileTime;
 use log::{debug, info};
 use serde::de;
@@ -1414,11 +1414,7 @@ fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
         "fingerprint error for {}/{:?}/{:?}",
         unit.pkg, unit.mode, unit.target,
     );
-    info!("    err: {}", ce);
-
-    for cause in ce.iter_causes() {
-        info!("  cause: {}", cause);
-    }
+    info!("    err: {:?}", ce);
 }
 
 // Parse the dep-info into a list of paths

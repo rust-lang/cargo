@@ -46,7 +46,7 @@ use std::path::{Path, PathBuf};
 use std::process::{self, Command, ExitStatus};
 use std::str;
 
-use failure::{Error, ResultExt};
+use anyhow::{Context, Error};
 use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
@@ -147,7 +147,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
     }
     let config = opts.compile_opts.config;
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
-        failure::bail!(
+        anyhow::bail!(
             "no VCS found for this package and `cargo fix` can potentially \
              perform destructive changes; if you'd like to suppress this \
              error pass `--allow-no-vcs`"
@@ -202,7 +202,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
         files_list.push_str(" (staged)\n");
     }
 
-    failure::bail!(
+    anyhow::bail!(
         "the working directory of this package has uncommitted changes, and \
          `cargo fix` can potentially perform destructive changes; if you'd \
          like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
@@ -268,7 +268,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
             if env::var_os(BROKEN_CODE_ENV).is_none() {
                 for (path, file) in fixes.files.iter() {
                     fs::write(path, &file.original_code)
-                        .with_context(|_| format!("failed to write file `{}`", path))?;
+                        .with_context(|| format!("failed to write file `{}`", path))?;
                 }
             }
             log_failed_fix(&output.stderr)?;
@@ -415,7 +415,7 @@ fn rustfix_and_fix(
     args.apply(&mut cmd);
     let output = cmd
         .output()
-        .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
+        .with_context(|| format!("failed to execute `{}`", rustc.display()))?;
 
     // If rustc didn't succeed for whatever reasons then we're very likely to be
     // looking at otherwise broken code. Let's not make things accidentally
@@ -525,7 +525,7 @@ fn rustfix_and_fix(
             }
         }
         let new_code = fixed.finish()?;
-        fs::write(&file, new_code).with_context(|_| format!("failed to write file `{}`", file))?;
+        fs::write(&file, new_code).with_context(|| format!("failed to write file `{}`", file))?;
     }
 
     Ok(())

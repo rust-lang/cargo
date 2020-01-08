@@ -7,14 +7,12 @@ use std::io::prelude::*;
 use std::io::Cursor;
 use std::time::Instant;
 
+use anyhow::{bail, Result};
 use curl::easy::{Easy, List};
-use failure::bail;
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use url::Url;
-
-pub type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Registry {
     /// The base URL for issuing API requests.

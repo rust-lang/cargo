@@ -275,7 +275,9 @@ fn bad_parse() {
         config.unwrap_err(),
         "\
 failed to parse --config argument `abc`
-expected an equals, found eof at line 1 column 4",
+
+Caused by:
+  expected an equals, found eof at line 1 column 4",
     );
 }
 
@@ -306,8 +308,12 @@ fn bad_cv_convert() {
         config.unwrap_err(),
         "\
 failed to convert --config argument `a=2019-12-01`
-failed to parse key `a`
-found TOML configuration value of unknown type `datetime`",
+
+Caused by:
+  failed to parse key `a`
+
+Caused by:
+  found TOML configuration value of unknown type `datetime`",
     );
 }
 
@@ -323,8 +329,12 @@ fn fail_to_merge_multiple_args() {
         config.unwrap_err(),
         "\
 failed to merge --config argument `foo=['a']`
-failed to merge key `foo` between --config cli option and --config cli option
-failed to merge config value from `--config cli option` into `--config cli option`: \
-expected string, but found array",
+
+Caused by:
+  failed to merge key `foo` between --config cli option and --config cli option
+
+Caused by:
+  failed to merge config value from `--config cli option` into `--config cli option`: \
+  expected string, but found array",
     );
 }

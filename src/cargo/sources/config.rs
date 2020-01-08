@@ -9,7 +9,7 @@ use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Config, IntoUrl};
-use failure::bail;
+use anyhow::bail;
 use log::debug;
 use std::collections::{HashMap, HashSet};
 use url::Url;

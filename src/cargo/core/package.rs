@@ -7,10 +7,10 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use anyhow::Context;
 use bytesize::ByteSize;
 use curl::easy::{Easy, HttpVersion};
 use curl::multi::{EasyHandle, Multi};
-use failure::ResultExt;
 use lazycell::LazyCell;
 use log::{debug, warn};
 use semver::Version;
@@ -485,8 +485,8 @@ macro_rules! try_old_curl {
                 warn!("ignoring libcurl {} error: {}", $msg, e);
             }
         } else {
-            result.with_context(|_| {
-                failure::format_err!("failed to enable {}, is curl not built right?", $msg)
+            result.with_context(|| {
+                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
             })?;
         }
     };
@@ -525,7 +525,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
         let pkg = source
             .download(id)
-            .chain_err(|| failure::format_err!("unable to get packages from source"))?;
+            .chain_err(|| anyhow::format_err!("unable to get packages from source"))?;
         let (url, descriptor) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);

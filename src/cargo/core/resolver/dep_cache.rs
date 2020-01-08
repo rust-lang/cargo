@@ -104,7 +104,7 @@ impl<'a> RegistryQueryer<'a> {
 
             let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
-                failure::format_err!(
+                anyhow::format_err!(
                     "no matching package for override `{}` found\n\
                      location searched: {}\n\
                      version required: {}",
@@ -119,7 +119,7 @@ impl<'a> RegistryQueryer<'a> {
                     .iter()
                     .map(|s| format!("  * {}", s.package_id()))
                     .collect::<Vec<_>>();
-                failure::bail!(
+                anyhow::bail!(
                     "the replacement specification `{}` matched \
                      multiple packages:\n  * {}\n{}",
                     spec,
@@ -144,7 +144,7 @@ impl<'a> RegistryQueryer<'a> {
 
             // Make sure no duplicates
             if let Some(&(ref spec, _)) = potential_matches.next() {
-                failure::bail!(
+                anyhow::bail!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
                     matched_spec,
@@ -277,7 +277,7 @@ pub fn resolve_features<'b>(
                 .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
         if always_required && base.0 {
             return Err(match parent {
-                None => failure::format_err!(
+                None => anyhow::format_err!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
                      with that name, but only optional dependencies can be used as features.",
                     s.package_id(),
@@ -295,7 +295,7 @@ pub fn resolve_features<'b>(
         base.extend(dep.features().iter());
         for feature in base.iter() {
             if feature.contains('/') {
-                return Err(failure::format_err!(
+                return Err(anyhow::format_err!(
                     "feature names may not contain slashes: `{}`",
                     feature
                 )
@@ -318,7 +318,7 @@ pub fn resolve_features<'b>(
     if !remaining.is_empty() {
         let features = remaining.join(", ");
         return Err(match parent {
-            None => failure::format_err!(
+            None => anyhow::format_err!(
                 "Package `{}` does not have these features: `{}`",
                 s.package_id(),
                 features
@@ -437,7 +437,7 @@ impl Requirements<'_> {
             .expect("must be a valid feature")
         {
             match *fv {
-                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
+                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => anyhow::bail!(
                     "cyclic feature dependency: feature `{}` depends on itself",
                     feat
                 ),

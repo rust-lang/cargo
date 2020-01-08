@@ -100,7 +100,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
-            Some(i) => CliError::new(failure::format_err!("bench failed"), i),
+            Some(i) => CliError::new(anyhow::format_err!("bench failed"), i),
             None => CliError::new(err.into(), 101),
         }),
     }

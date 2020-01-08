@@ -1,21 +1,18 @@
 #![allow(unknown_lints)]
 
+use crate::core::{TargetKind, Workspace};
+use crate::ops::CompileOptions;
+use anyhow::Error;
 use std::fmt;
 use std::path::PathBuf;
 use std::process::{ExitStatus, Output};
 use std::str;
 
-use clap;
-use failure::{Context, Error, Fail};
-use log::trace;
+pub type CargoResult<T> = anyhow::Result<T>;
 
-use crate::core::{TargetKind, Workspace};
-use crate::ops::CompileOptions;
-
-pub type CargoResult<T> = failure::Fallible<T>; // Alex's body isn't quite ready to give up "Result"
-
+// TODO: should delete this trait and just use `with_context` instead
 pub trait CargoResultExt<T, E> {
-    fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
+    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
     where
         F: FnOnce() -> D,
         D: fmt::Display + Send + Sync + 'static;
@@ -25,27 +22,32 @@ impl<T, E> CargoResultExt<T, E> for Result<T, E>
 where
     E: Into<Error>,
 {
-    fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
+    fn chain_err<F, D>(self, f: F) -> CargoResult<T>
     where
         F: FnOnce() -> D,
         D: fmt::Display + Send + Sync + 'static,
     {
-        self.map_err(|failure| {
-            let err = failure.into();
-            let context = f();
-            trace!("error: {}", err);
-            trace!("\tcontext: {}", context);
-            err.context(context)
-        })
+        self.map_err(|e| e.into().context(f()))
     }
 }
 
-#[derive(Debug, Fail)]
-#[fail(display = "failed to get 200 response from `{}`, got {}", url, code)]
+#[derive(Debug)]
 pub struct HttpNot200 {
     pub code: u32,
     pub url: String,
 }
+
+impl fmt::Display for HttpNot200 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "failed to get 200 response from `{}`, got {}",
+            self.url, self.code
+        )
+    }
+}
+
+impl std::error::Error for HttpNot200 {}
 
 pub struct Internal {
     inner: Error,
@@ -57,9 +59,9 @@ impl Internal {
     }
 }
 
-impl Fail for Internal {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.inner.as_fail().cause()
+impl std::error::Error for Internal {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source()
     }
 }
 
@@ -103,9 +105,9 @@ impl ManifestError {
     }
 }
 
-impl Fail for ManifestError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.cause.as_fail().cause()
+impl std::error::Error for ManifestError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.cause.source()
     }
 }
 
@@ -139,26 +141,40 @@ impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 
 // =============================================================================
 // Process errors
-#[derive(Debug, Fail)]
-#[fail(display = "{}", desc)]
+#[derive(Debug)]
 pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub output: Option<Output>,
 }
 
+impl fmt::Display for ProcessError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.desc.fmt(f)
+    }
+}
+
+impl std::error::Error for ProcessError {}
+
 // =============================================================================
 // Cargo test errors.
 
 /// Error when testcases fail
-#[derive(Debug, Fail)]
-#[fail(display = "{}", desc)]
+#[derive(Debug)]
 pub struct CargoTestError {
     pub test: Test,
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub causes: Vec<ProcessError>,
 }
+
+impl fmt::Display for CargoTestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.desc.fmt(f)
+    }
+}
+
+impl std::error::Error for CargoTestError {}
 
 #[derive(Debug)]
 pub enum Test {
@@ -232,14 +248,17 @@ pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    pub error: Option<failure::Error>,
+    pub error: Option<anyhow::Error>,
     pub unknown: bool,
     pub exit_code: i32,
 }
 
 impl CliError {
-    pub fn new(error: failure::Error, code: i32) -> CliError {
-        let unknown = error.downcast_ref::<Internal>().is_some();
+    pub fn new(error: anyhow::Error, code: i32) -> CliError {
+        // Specifically deref the error to a standard library error to only
+        // check the top-level error to see if it's an `Internal`, we don't want
+        // `anyhow::Error`'s behavior of recursively checking.
+        let unknown = (&*error).downcast_ref::<Internal>().is_some();
         CliError {
             error: Some(error),
             exit_code: code,
@@ -256,8 +275,8 @@ impl CliError {
     }
 }
 
-impl From<failure::Error> for CliError {
-    fn from(err: failure::Error) -> CliError {
+impl From<anyhow::Error> for CliError {
+    fn from(err: anyhow::Error) -> CliError {
         CliError::new(err, 101)
     }
 }
@@ -392,18 +411,10 @@ pub fn is_simple_exit_code(code: i32) -> bool {
     code >= 0 && code <= 127
 }
 
-pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
+pub fn internal<S: fmt::Display>(error: S) -> anyhow::Error {
     _internal(&error)
 }
 
-fn _internal(error: &dyn fmt::Display) -> failure::Error {
-    Internal::new(failure::format_err!("{}", error)).into()
-}
-
-pub fn display_causes(error: &Error) -> String {
-    error
-        .iter_chain()
-        .map(|e| e.to_string())
-        .collect::<Vec<_>>()
-        .join("\n\nCaused by:\n  ")
+fn _internal(error: &dyn fmt::Display) -> anyhow::Error {
+    Internal::new(anyhow::format_err!("{}", error)).into()
 }

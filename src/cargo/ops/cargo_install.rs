@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use failure::{bail, format_err};
+use anyhow::{bail, format_err};
 use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;

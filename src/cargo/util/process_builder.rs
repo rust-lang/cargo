@@ -1,15 +1,13 @@
+use crate::util::{process_error, read2, CargoResult, CargoResultExt};
+use anyhow::bail;
+use jobserver::Client;
+use shell_escape::escape;
 use std::collections::HashMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
-
-use failure::Fail;
-use jobserver::Client;
-use shell_escape::escape;
-
-use crate::util::{process_error, read2, CargoResult, CargoResultExt};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -290,14 +288,13 @@ impl ProcessBuilder {
                     Some(output.status),
                     to_print,
                 );
-                return Err(cx.context(e).into());
+                bail!(anyhow::Error::new(cx).context(e));
             } else if !output.status.success() {
-                return Err(process_error(
+                bail!(process_error(
                     &format!("process didn't exit successfully: {}", self),
                     Some(output.status),
                     to_print,
-                )
-                .into());
+                ));
             }
         }
 
@@ -352,7 +349,7 @@ mod imp {
     pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
         let mut command = process_builder.build_command();
         let error = command.exec();
-        Err(failure::Error::from(error)
+        Err(anyhow::Error::from(error)
             .context(process_error(
                 &format!("could not execute process {}", process_builder),
                 None,

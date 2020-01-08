@@ -161,12 +161,12 @@ fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
     let rustc = ws.config().load_global_rustc(Some(ws))?;
     let output = rustc.process().arg("--print=sysroot").exec_with_output()?;
     let s = String::from_utf8(output.stdout)
-        .map_err(|e| failure::format_err!("rustc didn't return utf8 output: {:?}", e))?;
+        .map_err(|e| anyhow::format_err!("rustc didn't return utf8 output: {:?}", e))?;
     let sysroot = PathBuf::from(s.trim());
     let src_path = sysroot.join("lib").join("rustlib").join("src").join("rust");
     let lock = src_path.join("Cargo.lock");
     if !lock.exists() {
-        failure::bail!(
+        anyhow::bail!(
             "{:?} does not exist, unable to build with the standard \
              library, try:\n        rustup component add rust-src",
             lock

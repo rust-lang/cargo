@@ -63,8 +63,8 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
 
+use anyhow::{anyhow, bail};
 use curl::easy::Easy;
-use failure::bail;
 use lazycell::LazyCell;
 use serde::Deserialize;
 use url::Url;
@@ -74,7 +74,7 @@ use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
+use crate::util::errors::{internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::{paths, validate_package_name};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -257,7 +257,7 @@ impl Config {
         let cwd =
             env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
-            failure::format_err!(
+            anyhow!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
             )
@@ -360,7 +360,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or_else(|| failure::format_err!("no argv[0]"))?;
+                        .ok_or_else(|| anyhow!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -469,6 +469,7 @@ impl Config {
     /// This does NOT look at environment variables, the caller is responsible
     /// for that.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
+        log::trace!("get cv {:?}", key);
         let vals = self.values()?;
         let mut parts = key.parts().enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
@@ -614,7 +615,7 @@ impl Config {
     /// Generate an error when the given value is the wrong type.
     fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
         val.expected(ty, &key.to_string())
-            .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
+            .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
     }
 
     /// Update the Config instance based on settings typically passed in on
@@ -1180,8 +1181,8 @@ impl Config {
         }
         return Ok(PackageCacheLock(self));
 
-        fn maybe_readonly(err: &failure::Error) -> bool {
-            err.iter_chain().any(|err| {
+        fn maybe_readonly(err: &anyhow::Error) -> bool {
+            err.chain().any(|err| {
                 if let Some(io) = err.downcast_ref::<io::Error>() {
                     if io.kind() == io::ErrorKind::PermissionDenied {
                         return true;
@@ -1202,21 +1203,21 @@ impl Config {
 /// Internal error for serde errors.
 #[derive(Debug)]
 pub struct ConfigError {
-    error: failure::Error,
+    error: anyhow::Error,
     definition: Option<Definition>,
 }
 
 impl ConfigError {
     fn new(message: String, definition: Definition) -> ConfigError {
         ConfigError {
-            error: failure::err_msg(message),
+            error: anyhow::Error::msg(message),
             definition: Some(definition),
         }
     }
 
     fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
-            error: failure::format_err!(
+            error: anyhow!(
                 "`{}` expected {}, but found a {}",
                 key,
                 expected,
@@ -1228,32 +1229,31 @@ impl ConfigError {
 
     fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("missing config key `{}`", key),
+            error: anyhow!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
-            error: failure::format_err!("could not load config key `{}`: {}", key, self),
+            error: anyhow!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
 }
 
-impl std::error::Error for ConfigError {}
+impl std::error::Error for ConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.error.source()
+    }
+}
 
-// Future note: currently, we cannot override `Fail::cause` (due to
-// specialization) so we have no way to return the underlying causes. In the
-// future, once this limitation is lifted, this should instead implement
-// `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = errors::display_causes(&self.error);
-        if let Some(ref definition) = self.definition {
-            write!(f, "error in {}: {}", definition, message)
+        if let Some(definition) = &self.definition {
+            write!(f, "error in {}: {}", definition, self.error)
         } else {
-            message.fmt(f)
+            self.error.fmt(f)
         }
     }
 }
@@ -1261,14 +1261,14 @@ impl fmt::Display for ConfigError {
 impl serde::de::Error for ConfigError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         ConfigError {
-            error: failure::err_msg(msg.to_string()),
+            error: anyhow::Error::msg(msg.to_string()),
             definition: None,
         }
     }
 }
 
-impl From<failure::Error> for ConfigError {
-    fn from(error: failure::Error) -> Self {
+impl From<anyhow::Error> for ConfigError {
+    fn from(error: anyhow::Error) -> Self {
         ConfigError {
             error,
             definition: None,

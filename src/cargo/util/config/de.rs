@@ -429,7 +429,7 @@ impl<'config> ValueDeserializer<'config> {
                 (false, Some(cv)) => cv.definition().clone(),
                 (false, None) => {
                     return Err(
-                        failure::format_err!("failed to find definition of `{}`", de.key).into(),
+                        anyhow::format_err!("failed to find definition of `{}`", de.key).into(),
                     )
                 }
             }

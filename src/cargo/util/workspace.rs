@@ -1,7 +1,7 @@
 use crate::core::{Target, Workspace};
 use crate::ops::CompileOptions;
 use crate::util::CargoResult;
-
+use anyhow::bail;
 use std::fmt::Write;
 
 fn get_available_targets<'a>(
@@ -46,7 +46,7 @@ fn print_available(
             writeln!(output, "    {}", target.name())?;
         }
     }
-    Err(failure::err_msg(output))
+    bail!("{}", output)
 }
 
 pub fn print_available_examples(

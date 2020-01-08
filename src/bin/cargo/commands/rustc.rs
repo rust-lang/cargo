@@ -55,7 +55,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
         Some(mode) => {
-            let err = failure::format_err!(
+            let err = anyhow::format_err!(
                 "unknown profile: `{}`, use dev,
                                    test, or bench",
                 mode

@@ -79,7 +79,7 @@ impl PackageIdSpec {
         I: IntoIterator<Item = PackageId>,
     {
         let spec = PackageIdSpec::parse(spec)
-            .chain_err(|| failure::format_err!("invalid package ID specification: `{}`", spec))?;
+            .chain_err(|| anyhow::format_err!("invalid package ID specification: `{}`", spec))?;
         spec.query(i)
     }
 
@@ -96,16 +96,16 @@ impl PackageIdSpec {
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query().is_some() {
-            failure::bail!("cannot have a query string in a pkgid: {}", url)
+            anyhow::bail!("cannot have a query string in a pkgid: {}", url)
         }
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
             let mut path = url
                 .path_segments()
-                .ok_or_else(|| failure::format_err!("pkgid urls must have a path: {}", url))?;
+                .ok_or_else(|| anyhow::format_err!("pkgid urls must have a path: {}", url))?;
             let path_name = path.next_back().ok_or_else(|| {
-                failure::format_err!(
+                anyhow::format_err!(
                     "pkgid urls must have at least one path \
                      component: {}",
                     url
@@ -183,7 +183,7 @@ impl PackageIdSpec {
         let mut ids = i.into_iter().filter(|p| self.matches(*p));
         let ret = match ids.next() {
             Some(id) => id,
-            None => failure::bail!(
+            None => anyhow::bail!(
                 "package ID specification `{}` \
                  matched no packages",
                 self
@@ -204,7 +204,7 @@ impl PackageIdSpec {
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, &vec, self);
-                Err(failure::format_err!("{}", msg))
+                Err(anyhow::format_err!("{}", msg))
             }
             None => Ok(ret),
         };

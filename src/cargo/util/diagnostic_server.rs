@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
-use failure::{Error, ResultExt};
+use anyhow::{Context, Error};
 use log::warn;
 use serde::{Deserialize, Serialize};
 
@@ -229,7 +229,7 @@ pub struct StartedServer {
 impl RustfixDiagnosticServer {
     pub fn new() -> Result<Self, Error> {
         let listener = TcpListener::bind("127.0.0.1:0")
-            .with_context(|_| "failed to bind TCP listener to manage locking")?;
+            .with_context(|| "failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
 
         Ok(RustfixDiagnosticServer { listener, addr })

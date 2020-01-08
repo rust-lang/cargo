@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
+use anyhow::{anyhow, bail};
 use cargo_platform::Platform;
-use failure::bail;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
@@ -162,7 +162,7 @@ and this will become a hard error in the future.",
         return Ok(ret);
     }
 
-    let first_error = failure::Error::from(first_error);
+    let first_error = anyhow::Error::from(first_error);
     Err(first_error.context("could not parse input as TOML").into())
 }
 
@@ -546,22 +546,22 @@ impl TomlProfile {
             .chars()
             .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
         {
-            failure::bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
+            bail!("Invalid character `{}` in {}: `{}`", ch, what, name);
         }
 
         match name {
             "package" | "build" => {
-                failure::bail!("Invalid {}: `{}`", what, name);
+                bail!("Invalid {}: `{}`", what, name);
             }
             "debug" if what == "profile" => {
                 if what == "profile name" {
                     // Allowed, but will emit warnings
                 } else {
-                    failure::bail!("Invalid {}: `{}`", what, name);
+                    bail!("Invalid {}: `{}`", what, name);
                 }
             }
             "doc" if what == "dir-name" => {
-                failure::bail!("Invalid {}: `{}`", what, name);
+                bail!("Invalid {}: `{}`", what, name);
             }
             _ => {}
         }
@@ -973,7 +973,7 @@ impl TomlManifest {
         let features = Features::new(cargo_features, &mut warnings)?;
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
-        let project = project.ok_or_else(|| failure::format_err!("no `package` section found"))?;
+        let project = project.ok_or_else(|| anyhow!("no `package` section found"))?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
@@ -1367,7 +1367,7 @@ impl TomlManifest {
             let mut dep = replacement.to_dependency(spec.name().as_str(), cx, None)?;
             {
                 let version = spec.version().ok_or_else(|| {
-                    failure::format_err!(
+                    anyhow!(
                         "replacements must specify a version \
                          to replace, but `{}` does not",
                         spec

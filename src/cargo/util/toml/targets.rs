@@ -54,7 +54,7 @@ pub fn targets(
         .package
         .as_ref()
         .or_else(|| manifest.project.as_ref())
-        .ok_or_else(|| failure::format_err!("manifest has no `package` (or `project`)"))?;
+        .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
     targets.extend(clean_bins(
         features,
@@ -101,7 +101,7 @@ pub fn targets(
     // processing the custom build script
     if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
         if metabuild.is_some() {
-            failure::bail!("cannot specify both `metabuild` and `build`");
+            anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
         let name = format!(
             "build-script-{}",
@@ -121,7 +121,7 @@ pub fn targets(
         let bdeps = manifest.build_dependencies.as_ref();
         for name in &metabuild.0 {
             if !bdeps.map_or(false, |bd| bd.contains_key(name)) {
-                failure::bail!(
+                anyhow::bail!(
                     "metabuild package `{}` must be specified in `build-dependencies`",
                     name
                 );
@@ -151,7 +151,7 @@ fn clean_lib(
             if let Some(ref name) = lib.name {
                 // XXX: other code paths dodge this validation
                 if name.contains('-') {
-                    failure::bail!("library target names cannot contain hyphens: {}", name)
+                    anyhow::bail!("library target names cannot contain hyphens: {}", name)
                 }
             }
             Some(TomlTarget {
@@ -187,7 +187,7 @@ fn clean_lib(
                 ));
                 legacy_path
             } else {
-                failure::bail!(
+                anyhow::bail!(
                     "can't find library `{}`, \
                      rename file to `src/lib.rs` or specify lib.path",
                     lib.name()
@@ -219,12 +219,12 @@ fn clean_lib(
                 lib.name()
             ));
             if kinds.len() > 1 {
-                failure::bail!("cannot mix `proc-macro` crate type with others");
+                anyhow::bail!("cannot mix `proc-macro` crate type with others");
             }
             vec![LibKind::ProcMacro]
         }
         (_, Some(true), Some(true)) => {
-            failure::bail!("`lib.plugin` and `lib.proc-macro` cannot both be `true`")
+            anyhow::bail!("`lib.plugin` and `lib.proc-macro` cannot both be `true`")
         }
         (Some(kinds), _, _) => kinds.iter().map(|s| s.into()).collect(),
         (None, Some(true), _) => vec![LibKind::Dylib],
@@ -287,7 +287,7 @@ fn clean_bins(
         }
 
         if compiler::is_bad_artifact_name(&name) {
-            failure::bail!("the binary target name `{}` is forbidden", name)
+            anyhow::bail!("the binary target name `{}` is forbidden", name)
         }
     }
 
@@ -310,7 +310,7 @@ fn clean_bins(
         });
         let path = match path {
             Ok(path) => path,
-            Err(e) => failure::bail!("{}", e),
+            Err(e) => anyhow::bail!("{}", e),
         };
 
         let mut target =
@@ -727,10 +727,10 @@ fn validate_has_name(
     match target.name {
         Some(ref name) => {
             if name.trim().is_empty() {
-                failure::bail!("{} target names cannot be empty", target_kind_human)
+                anyhow::bail!("{} target names cannot be empty", target_kind_human)
             }
         }
-        None => failure::bail!(
+        None => anyhow::bail!(
             "{} target {}.name is required",
             target_kind_human,
             target_kind
@@ -745,7 +745,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     let mut seen = HashSet::new();
     for name in targets.iter().map(|e| e.name()) {
         if !seen.insert(name.clone()) {
-            failure::bail!(
+            anyhow::bail!(
                 "found duplicate {target_kind} name {name}, \
                  but all {target_kind} targets must have a unique name",
                 target_kind = target_kind,

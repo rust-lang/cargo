@@ -240,7 +240,7 @@ impl Profiles {
                     match &profile.inherits {
                         None => {}
                         Some(_) => {
-                            failure::bail!(
+                            anyhow::bail!(
                                 "An 'inherits' must not specified root profile '{}'",
                                 name
                             );
@@ -278,7 +278,7 @@ impl Profiles {
             Some(name) => {
                 let name = name.to_owned();
                 if set.get(&name).is_some() {
-                    failure::bail!(
+                    anyhow::bail!(
                         "Inheritance loop of profiles cycles with profile '{}'",
                         name
                     );
@@ -287,13 +287,13 @@ impl Profiles {
                 set.insert(name.clone());
                 match profiles.get(&name) {
                     None => {
-                        failure::bail!("Profile '{}' not found in Cargo.toml", name);
+                        anyhow::bail!("Profile '{}' not found in Cargo.toml", name);
                     }
                     Some(parent) => self.process_chain(&name, parent, set, result, profiles),
                 }
             }
             None => {
-                failure::bail!(
+                anyhow::bail!(
                     "An 'inherits' directive is needed for all \
                      profiles that are not 'dev' or 'release'. Here \
                      it is missing from '{}'",
@@ -415,7 +415,7 @@ impl Profiles {
         };
 
         match self.by_name.get(profile_name) {
-            None => failure::bail!("Profile `{}` undefined", profile_kind.name()),
+            None => anyhow::bail!("Profile `{}` undefined", profile_kind.name()),
             Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
         }
     }
@@ -546,7 +546,7 @@ impl ProfileMaker {
                         .map(|spec| spec.to_string())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    failure::bail!(
+                    anyhow::bail!(
                         "multiple package overrides in profile `{}` match package `{}`\n\
                          found package specs: {}",
                         self.default.name,
@@ -1021,13 +1021,13 @@ impl ConfigProfiles {
         if let Some(ref profile) = self.dev {
             profile
                 .validate("dev", features, warnings)
-                .chain_err(|| failure::format_err!("config profile `profile.dev` is not valid"))?;
+                .chain_err(|| anyhow::format_err!("config profile `profile.dev` is not valid"))?;
         }
         if let Some(ref profile) = self.release {
             profile
                 .validate("release", features, warnings)
                 .chain_err(|| {
-                    failure::format_err!("config profile `profile.release` is not valid")
+                    anyhow::format_err!("config profile `profile.release` is not valid")
                 })?;
         }
         Ok(())

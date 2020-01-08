@@ -1012,7 +1012,7 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
         path.push(id);
         // See if we visited ourselves
         if !visited.insert(id) {
-            failure::bail!(
+            anyhow::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
                 errors::describe_path(&path.iter().rev().collect::<Vec<_>>()),
@@ -1062,7 +1062,7 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     for pkg_id in resolve.iter() {
         let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
-            failure::bail!(
+            anyhow::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \
                  but only one can be written to lockfile unambiguously",
                 prev_pkg_id,

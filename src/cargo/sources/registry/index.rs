@@ -628,21 +628,21 @@ impl<'a> SummariesCache<'a> {
         // NB: keep this method in sync with `serialize` below
         let (first_byte, rest) = data
             .split_first()
-            .ok_or_else(|| failure::format_err!("malformed cache"))?;
+            .ok_or_else(|| anyhow::format_err!("malformed cache"))?;
         if *first_byte != CURRENT_CACHE_VERSION {
-            failure::bail!("looks like a different Cargo's cache, bailing out");
+            anyhow::bail!("looks like a different Cargo's cache, bailing out");
         }
         let mut iter = split(rest, 0);
         if let Some(update) = iter.next() {
             if update != last_index_update.as_bytes() {
-                failure::bail!(
+                anyhow::bail!(
                     "cache out of date: current index ({}) != cache ({})",
                     last_index_update,
                     str::from_utf8(update)?,
                 )
             }
         } else {
-            failure::bail!("malformed file");
+            anyhow::bail!("malformed file");
         }
         let mut ret = SummariesCache::default();
         while let Some(version) = iter.next() {

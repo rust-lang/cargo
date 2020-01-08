@@ -6,9 +6,9 @@ use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
+use anyhow::{bail, format_err};
 use crates_io::{NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
-use failure::{bail, format_err};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 
@@ -603,7 +603,7 @@ pub fn registry_login(
                 .lock()
                 .read_line(&mut line)
                 .chain_err(|| "failed to read stdin")
-                .map_err(failure::Error::from)?;
+                .map_err(anyhow::Error::from)?;
             // Automatically remove `cargo login` from an inputted token to allow direct pastes from `registry.host()`/me.
             line.replace("cargo login", "").trim().to_string()
         }

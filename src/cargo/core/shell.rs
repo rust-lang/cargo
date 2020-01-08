@@ -252,7 +252,7 @@ impl Shell {
 
                 Some("auto") | None => ColorChoice::CargoAuto,
 
-                Some(arg) => failure::bail!(
+                Some(arg) => anyhow::bail!(
                     "argument for --color must be auto, always, or \
                      never, but found `{}`",
                     arg

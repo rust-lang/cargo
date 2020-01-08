@@ -431,7 +431,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
         if ret.is_empty() {
             if !unsupported.is_empty() {
-                failure::bail!(
+                anyhow::bail!(
                     "cannot produce {} for `{}` as the target `{}` \
                      does not support these crate types",
                     unsupported.join(", "),
@@ -439,7 +439,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     unit.kind.short_name(bcx),
                 )
             }
-            failure::bail!(
+            anyhow::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,

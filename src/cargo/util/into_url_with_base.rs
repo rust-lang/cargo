@@ -14,7 +14,7 @@ impl<'a> IntoUrlWithBase for &'a str {
         let base_url = match base {
             Some(base) => Some(
                 base.into_url()
-                    .map_err(|s| failure::format_err!("invalid url `{}`: {}", self, s))?,
+                    .map_err(|s| anyhow::format_err!("invalid url `{}`: {}", self, s))?,
             ),
             None => None,
         };
@@ -22,7 +22,7 @@ impl<'a> IntoUrlWithBase for &'a str {
         Url::options()
             .base_url(base_url.as_ref())
             .parse(self)
-            .map_err(|s| failure::format_err!("invalid url `{}`: {}", self, s))
+            .map_err(|s| anyhow::format_err!("invalid url `{}`: {}", self, s))
     }
 }
 

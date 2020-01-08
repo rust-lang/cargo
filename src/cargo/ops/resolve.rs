@@ -265,7 +265,7 @@ pub fn resolve_with_previous<'cfg>(
             members.extend(ws.members());
         } else {
             if specs.len() > 1 && !opts.features.is_empty() {
-                failure::bail!("cannot specify features for more than one package");
+                anyhow::bail!("cannot specify features for more than one package");
             }
             members.extend(
                 ws.members()
@@ -276,7 +276,7 @@ pub fn resolve_with_previous<'cfg>(
             // into the resolution graph.
             if members.is_empty() {
                 if !(opts.features.is_empty() && !opts.all_features && opts.uses_default_features) {
-                    failure::bail!("cannot specify features for packages outside of workspace");
+                    anyhow::bail!("cannot specify features for packages outside of workspace");
                 }
                 members.extend(ws.members());
             }

@@ -78,7 +78,7 @@ impl BuildConfig {
         };
 
         if jobs == Some(0) {
-            failure::bail!("jobs must be at least 1")
+            anyhow::bail!("jobs must be at least 1")
         }
         if jobs.is_some() && config.jobserver_from_env().is_some() {
             config.shell().warn(
