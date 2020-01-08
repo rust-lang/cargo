@@ -1,12 +1,12 @@
 #![allow(unknown_lints)]
 
+use crate::core::{TargetKind, Workspace};
+use crate::ops::CompileOptions;
+use anyhow::Error;
 use std::fmt;
 use std::path::PathBuf;
 use std::process::{ExitStatus, Output};
 use std::str;
-use anyhow::Error;
-use crate::core::{TargetKind, Workspace};
-use crate::ops::CompileOptions;
 
 pub type CargoResult<T> = anyhow::Result<T>;
 
