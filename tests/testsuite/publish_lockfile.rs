@@ -404,24 +404,18 @@ fn ignore_lockfile() {
     // With an explicit `include` list, but Cargo.lock in .gitignore, don't
     // complain about `Cargo.lock` being ignored. Note that it is still
     // included in the packaged regardless.
-    let (p, _r) = git::new_repo("foo", |p| {
+    let p = git::new("foo", |p| {
         p.file(
             "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
-                license = "MIT"
-                description = "foo"
-                documentation = "foo"
-                homepage = "foo"
-                repository = "foo"
-
+            &pl_manifest(
+                "foo",
+                "0.0.1",
+                r#"
                 include = [
                     "src/main.rs"
                 ]
-            "#,
+                "#,
+            ),
         )
         .file("src/main.rs", "fn main() {}")
         .file(".gitignore", "Cargo.lock")
@@ -449,6 +443,30 @@ src/main.rs
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn ignore_lockfile_inner() {
+    // Ignore `Cargo.lock` if in .gitignore in a git subdirectory.
+    let p = git::new("foo", |p| {
+        p.no_manifest()
+            .file("bar/Cargo.toml", &pl_manifest("bar", "0.0.1", ""))
+            .file("bar/src/main.rs", "fn main() {}")
+            .file("bar/.gitignore", "Cargo.lock")
+    });
+    p.cargo("generate-lockfile").cwd("bar").run();
+    p.cargo("package -v --no-verify")
+        .cwd("bar")
+        .with_stderr(
+            "\
+[PACKAGING] bar v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/main.rs
+[ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 ",
         )
         .run();
