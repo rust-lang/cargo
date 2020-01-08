@@ -469,7 +469,7 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
         // which is the actual deserializer
         if self.hits == 1 {
             return seed.deserialize(self.de.clone()).map_err(|e| {
-                ConfigError::from(e).with_key_context(&self.de.key, self.definition.clone())
+                e.with_key_context(&self.de.key, self.definition.clone())
             });
         }
 
