@@ -10,7 +10,7 @@ use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use crate::util::{internal, process_error, read2, CargoResult, CargoResultExt};
+use crate::util::{process_error, read2, CargoResult, CargoResultExt};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -370,10 +370,7 @@ impl ProcessBuilder {
             } else if let Some(arg) = arg.to_str() {
                 writeln!(response_file, "{}", arg)?;
             } else {
-                return Err(internal(format!(
-                    "argument {:?} contains invalid unicode",
-                    arg
-                )));
+                failure::bail!("argument {:?} contains invalid unicode", arg);
             }
         }
         let mut arg = OsString::from("@");
@@ -427,7 +424,7 @@ mod imp {
     }
 
     pub fn command_line_too_big(err: &std::io::Error) -> bool {
-        err.raw_os_error() == Some(::libc::E2BIG)
+        err.raw_os_error() == Some(libc::E2BIG)
     }
 }
 
@@ -436,6 +433,7 @@ mod imp {
     use crate::util::{process_error, ProcessBuilder};
     use crate::CargoResult;
     use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
+    use winapi::shared::winerror::ERROR_FILENAME_EXCED_RANGE;
     use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
     unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
@@ -455,7 +453,6 @@ mod imp {
     }
 
     pub fn command_line_too_big(err: &std::io::Error) -> bool {
-        const ERROR_FILENAME_EXCED_RANGE: i32 = 206;
-        err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE)
+        err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE as i32)
     }
 }
