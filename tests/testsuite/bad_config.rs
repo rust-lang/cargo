@@ -155,8 +155,10 @@ fn bad_cargo_config_jobs() {
         .with_stderr(
             "\
 [ERROR] error in [..].cargo/config: \
-could not load config key `build.jobs`: \
-invalid value: integer `-1`, expected u32
+could not load config key `build.jobs`
+
+Caused by:
+  invalid value: integer `-1`, expected u32
 ",
         )
         .run();
@@ -1102,8 +1104,12 @@ fn bad_source_config6() {
     p.cargo("build")
         .with_status(101)
         .with_stderr(
-            "[ERROR] error in [..]/foo/.cargo/config: `source.crates-io.replace-with` \
-             expected a string, but found a array",
+            "\
+[ERROR] error in [..]/foo/.cargo/config: could not load config key `source.crates-io.replace-with`
+
+Caused by:
+  error in [..]/foo/.cargo/config: `source.crates-io.replace-with` expected a string, but found a array
+"
         )
         .run();
 }
@@ -1342,11 +1348,15 @@ fn bad_target_cfg() {
         .with_stderr(
             "\
 [ERROR] error in [..]/foo/.cargo/config: \
-could not load config key `target.cfg(not(target_os = \"none\")).runner`: \
-error in [..]/foo/.cargo/config: \
-could not load config key `target.cfg(not(target_os = \"none\")).runner`: \
-failed to deserialize, expected a string or array of strings: \
-data did not match any variant of untagged enum Target
+could not load config key `target.cfg(not(target_os = \"none\")).runner`
+
+Caused by:
+  error in [..]/foo/.cargo/config: \
+  could not load config key `target.cfg(not(target_os = \"none\")).runner`
+
+Caused by:
+  failed to deserialize, expected a string or array of strings: \
+  data did not match any variant of untagged enum Target
 ",
         )
         .run();

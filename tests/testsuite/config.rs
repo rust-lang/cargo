@@ -495,9 +495,11 @@ c = ['c']
     let config = ConfigBuilder::new().env("CARGO_A", "x y").build();
     assert_error(
         config.get::<VSOB>("a").unwrap_err(),
-        "error in environment variable `CARGO_A`: \
-         could not load config key `a`: \
-         invalid type: string \"x y\", expected a boolean or vector of strings",
+        "\
+error in environment variable `CARGO_A`: could not load config key `a`
+
+Caused by:
+  invalid type: string \"x y\", expected a boolean or vector of strings",
     );
 
     // Normal env.
@@ -570,9 +572,11 @@ opt-level = 'foo'
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
-        "error in [..]/.cargo/config: \
-         could not load config key `profile.dev.opt-level`: \
-         must be an integer, `z`, or `s`, but found: foo",
+        "\
+error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
+
+Caused by:
+  must be an integer, `z`, or `s`, but found: foo",
     );
 
     let config = ConfigBuilder::new()
@@ -581,9 +585,11 @@ opt-level = 'foo'
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
-        "error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: \
-         could not load config key `profile.dev.opt-level`: \
-         must be an integer, `z`, or `s`, but found: asdf",
+        "\
+error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
+
+Caused by:
+  must be an integer, `z`, or `s`, but found: asdf",
     );
 }
 
@@ -653,8 +659,11 @@ big = 123456789
     );
     assert_error(
         config.get::<u8>("S.big").unwrap_err(),
-        "error in [..].cargo/config: could not load config key `S.big`: \
-         invalid value: integer `123456789`, expected u8",
+        "\
+error in [..].cargo/config: could not load config key `S.big`
+
+Caused by:
+  invalid value: integer `123456789`, expected u8",
     );
 
     // Environment variable type errors.
@@ -664,9 +673,11 @@ big = 123456789
     );
     assert_error(
         config.get::<i8>("e.big").unwrap_err(),
-        "error in environment variable `CARGO_E_BIG`: \
-         could not load config key `e.big`: \
-         invalid value: integer `123456789`, expected i8",
+        "\
+error in environment variable `CARGO_E_BIG`: could not load config key `e.big`
+
+Caused by:
+  invalid value: integer `123456789`, expected i8",
     );
 
     #[derive(Debug, Deserialize)]
@@ -952,27 +963,35 @@ i64max = 9223372036854775807
 
     assert_error(
         config.get::<u32>("nneg").unwrap_err(),
-        "error in [..].cargo/config: \
-         could not load config key `nneg`: \
-         invalid value: integer `-123456789`, expected u32",
+        "\
+error in [..].cargo/config: could not load config key `nneg`
+
+Caused by:
+  invalid value: integer `-123456789`, expected u32",
     );
     assert_error(
         config.get::<u32>("eneg").unwrap_err(),
-        "error in environment variable `CARGO_ENEG`: \
-         could not load config key `eneg`: \
-         invalid value: integer `-1`, expected u32",
+        "\
+error in environment variable `CARGO_ENEG`: could not load config key `eneg`
+
+Caused by:
+  invalid value: integer `-1`, expected u32",
     );
     assert_error(
         config.get::<i8>("npos").unwrap_err(),
-        "error in [..].cargo/config: \
-         could not load config key `npos`: \
-         invalid value: integer `123456789`, expected i8",
+        "\
+error in [..].cargo/config: could not load config key `npos`
+
+Caused by:
+  invalid value: integer `123456789`, expected i8",
     );
     assert_error(
         config.get::<i8>("epos").unwrap_err(),
-        "error in environment variable `CARGO_EPOS`: \
-         could not load config key `epos`: \
-         invalid value: integer `123456789`, expected i8",
+        "\
+error in environment variable `CARGO_EPOS`: could not load config key `epos`
+
+Caused by:
+  invalid value: integer `123456789`, expected i8",
     );
 }
 
