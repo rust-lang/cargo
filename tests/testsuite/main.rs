@@ -68,6 +68,7 @@ mod net_config;
 mod new;
 mod offline;
 mod out_dir;
+mod owner;
 mod package;
 mod patch;
 mod path;
@@ -106,6 +107,7 @@ mod verify_project;
 mod version;
 mod warn_on_failure;
 mod workspaces;
+mod yank;
 
 #[cargo_test]
 fn aaa_trigger_cross_compile_disabled_check() {
