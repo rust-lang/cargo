@@ -225,7 +225,7 @@ explaining the format of the entry.
             // If the dependency is renamed, this is a string of the actual
             // package name. If not specified or null, this dependency is not
             // renamed.
-            "package": null,
+            "package": null
         }
     ],
     // A SHA256 checksum of the `.crate` file.
@@ -351,7 +351,7 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
             // If the dependency is renamed, this is a string of the new
             // package name. If not specified or null, this dependency is not
             // renamed.
-            "explicit_name_in_toml": null,
+            "explicit_name_in_toml": null
         }
     ],
     // Set of features defined for the package.
@@ -403,7 +403,7 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
     },
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
-    "links": null,
+    "links": null
 }
 ```
 
@@ -437,7 +437,7 @@ A successful response includes the JSON object:
 ```javascript
 {
     // Indicates the delete succeeded, always true.
-    "ok": true,
+    "ok": true
 }
 ```
 
@@ -455,7 +455,7 @@ A successful response includes the JSON object:
 ```javascript
 {
     // Indicates the delete succeeded, always true.
-    "ok": true,
+    "ok": true
 }
 ```
 
@@ -488,7 +488,7 @@ A successful response includes the JSON object:
             "login": "github:rust-lang:core",
             // Name of the owner.
             // This is optional and may be null.
-            "name": "Core",
+            "name": "Core"
         }
     ]
 }
@@ -573,7 +573,7 @@ A successful response includes the JSON object:
             // The highest version available.
             "max_version": "0.6.1",
             // Textual description of the crate.
-            "description": "Random number generators and other randomness functionality.\n",
+            "description": "Random number generators and other randomness functionality.\n"
         }
     ],
     "meta": {
