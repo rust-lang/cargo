@@ -1004,25 +1004,13 @@ impl Config {
             }
         }
 
-        if let CV::Table(mut map, _) = value {
-            if map.contains_key("registry") {
-                if let Some(mut new_map) = self.values_mut()?.remove("registry") {
-                    let token = map.remove("registry").unwrap();
-                    new_map.merge(token, true)?;
-                    self.values_mut()?.insert("registry".into(), new_map);
+        if let CV::Table(map, _) = value {
+            for (k, v) in map {
+                if let Some(mut base_map) = self.values_mut()?.remove(&k) {
+                    base_map.merge(v, true)?;
+                    self.values_mut()?.insert(k.into(), base_map);
                 } else {
-                    self.values_mut()?
-                        .insert("registry".into(), map.remove("registry").unwrap());
-                }
-            }
-            if map.contains_key("registries") {
-                if let Some(mut new_map) = self.values_mut()?.remove("registries") {
-                    let token = map.remove("registries").unwrap();
-                    new_map.merge(token, true)?;
-                    self.values_mut()?.insert("registries".into(), new_map);
-                } else {
-                    self.values_mut()?
-                        .insert("registries".into(), map.remove("registries").unwrap());
+                    self.values_mut()?.insert(k.into(), v);
                 }
             }
         }
