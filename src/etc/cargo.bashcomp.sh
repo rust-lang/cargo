@@ -43,14 +43,13 @@ _cargo()
 	local opt_mani='--manifest-path'
 	local opt_jobs='-j --jobs'
 	local opt_force='-f --force'
-	local opt_test='--test --bench'
 	local opt_lock='--frozen --locked'
 	local opt_targets="--lib --bin --bins --example --examples --test --tests --bench --benches --all-targets"
 
 	local opt___nocmd="$opt_common -V --version --list --explain"
-	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --target --no-run --no-fail-fast --target-dir"
-	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --target --release --target-dir"
-	local opt__check="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --target --release --profile --target-dir"
+	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --no-run --no-fail-fast --target-dir"
+	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --target-dir"
+	local opt__check="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --profile --target-dir"
 	local opt__clean="$opt_common $opt_pkg $opt_mani $opt_lock --target --release --doc --target-dir"
 	local opt__doc="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs --message-format --bin --bins --lib --target --open --no-deps --release --document-private-items --target-dir"
 	local opt__fetch="$opt_common $opt_mani $opt_lock"
@@ -70,10 +69,10 @@ _cargo()
 	local opt__publish="$opt_common $opt_mani $opt_feat $opt_lock $opt_jobs --allow-dirty --dry-run --host --token --no-verify --index --registry --target --target-dir"
 	local opt__read_manifest="$opt_help $opt_quiet $opt_verbose $opt_mani $opt_color "
 	local opt__run="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs --message-format --target --bin --example --release --target-dir"
-	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --profile --target --release --target-dir"
-	local opt__rustdoc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --target --release --open --target-dir"
+	local opt__rustc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --profile --target --release --target-dir"
+	local opt__rustdoc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --open --target-dir"
 	local opt__search="$opt_common $opt_lock --host --limit --index --limit --registry"
-	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_test $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir"
+	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir"
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg_spec --bin --root"
 	local opt__update="$opt_common $opt_pkg_spec $opt_mani $opt_lock --aggressive --precise --dry-run"
 	local opt__verify_project="${opt__fetch}"
