@@ -52,6 +52,7 @@ fn maybe_spurious(err: &Error) -> bool {
                 || curl_err.is_recv_error()
                 || curl_err.is_http2_stream_error()
                 || curl_err.is_ssl_connect_error()
+                || curl_err.is_partial_file()
             {
                 return true;
             }
