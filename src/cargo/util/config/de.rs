@@ -468,9 +468,9 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
         // If this is the first time around we deserialize the `value` field
         // which is the actual deserializer
         if self.hits == 1 {
-            return seed.deserialize(self.de.clone()).map_err(|e| {
-                ConfigError::from(e).with_key_context(&self.de.key, self.definition.clone())
-            });
+            return seed
+                .deserialize(self.de.clone())
+                .map_err(|e| e.with_key_context(&self.de.key, self.definition.clone()));
         }
 
         // ... otherwise we're deserializing the `definition` field, so we need

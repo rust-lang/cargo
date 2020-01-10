@@ -1236,7 +1236,8 @@ impl ConfigError {
 
     fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
         ConfigError {
-            error: anyhow!("could not load config key `{}`: {}", key, self),
+            error: anyhow::Error::from(self)
+                .context(format!("could not load config key `{}`", key)),
             definition: Some(definition),
         }
     }
