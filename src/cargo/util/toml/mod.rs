@@ -14,7 +14,7 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::core::dependency::Kind;
+use crate::core::dependency::DepKind;
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
@@ -1057,7 +1057,7 @@ impl TomlManifest {
             fn process_dependencies(
                 cx: &mut Context<'_, '_>,
                 new_deps: Option<&BTreeMap<String, TomlDependency>>,
-                kind: Option<Kind>,
+                kind: Option<DepKind>,
             ) -> CargoResult<()> {
                 let dependencies = match new_deps {
                     Some(dependencies) => dependencies,
@@ -1077,12 +1077,12 @@ impl TomlManifest {
                 .dev_dependencies
                 .as_ref()
                 .or_else(|| me.dev_dependencies2.as_ref());
-            process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
+            process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
             let build_deps = me
                 .build_dependencies
                 .as_ref()
                 .or_else(|| me.build_dependencies2.as_ref());
-            process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
+            process_dependencies(&mut cx, build_deps, Some(DepKind::Build))?;
 
             for (name, platform) in me.target.iter().flatten() {
                 cx.platform = {
@@ -1095,12 +1095,12 @@ impl TomlManifest {
                     .build_dependencies
                     .as_ref()
                     .or_else(|| platform.build_dependencies2.as_ref());
-                process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
+                process_dependencies(&mut cx, build_deps, Some(DepKind::Build))?;
                 let dev_deps = platform
                     .dev_dependencies
                     .as_ref()
                     .or_else(|| platform.dev_dependencies2.as_ref());
-                process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
+                process_dependencies(&mut cx, dev_deps, Some(DepKind::Development))?;
             }
 
             replace = me.replace(&mut cx)?;
@@ -1450,7 +1450,7 @@ impl TomlDependency {
         &self,
         name: &str,
         cx: &mut Context<'_, '_>,
-        kind: Option<Kind>,
+        kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
@@ -1475,7 +1475,7 @@ impl DetailedTomlDependency {
         &self,
         name_in_toml: &str,
         cx: &mut Context<'_, '_>,
-        kind: Option<Kind>,
+        kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
             let msg = format!(
@@ -1635,7 +1635,7 @@ impl DetailedTomlDependency {
         if let Some(p) = self.public {
             cx.features.require(Feature::public_dependency())?;
 
-            if dep.kind() != Kind::Normal {
+            if dep.kind() != DepKind::Normal {
                 bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
             }
 

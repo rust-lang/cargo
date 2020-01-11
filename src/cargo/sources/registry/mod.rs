@@ -171,7 +171,7 @@ use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tar::Archive;
 
-use crate::core::dependency::{Dependency, Kind};
+use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
 use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
@@ -316,9 +316,9 @@ impl<'a> RegistryDependency<'a> {
             dep.set_explicit_name_in_toml(name);
         }
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
-            "dev" => Kind::Development,
-            "build" => Kind::Build,
-            _ => Kind::Normal,
+            "dev" => DepKind::Development,
+            "build" => DepKind::Build,
+            _ => DepKind::Normal,
         };
 
         let platform = match target {

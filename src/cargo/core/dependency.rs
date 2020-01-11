@@ -32,7 +32,7 @@ struct Inner {
     registry_id: Option<SourceId>,
     req: VersionReq,
     specified_req: bool,
-    kind: Kind,
+    kind: DepKind,
     only_match_name: bool,
     explicit_name_in_toml: Option<InternedString>,
 
@@ -51,7 +51,7 @@ struct SerializedDependency<'a> {
     name: &'a str,
     source: SourceId,
     req: String,
-    kind: Kind,
+    kind: DepKind,
     rename: Option<&'a str>,
 
     optional: bool,
@@ -86,7 +86,7 @@ impl ser::Serialize for Dependency {
 }
 
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug, Copy)]
-pub enum Kind {
+pub enum DepKind {
     Normal,
     Development,
     Build,
@@ -138,15 +138,15 @@ this warning.
     }
 }
 
-impl ser::Serialize for Kind {
+impl ser::Serialize for DepKind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
         match *self {
-            Kind::Normal => None,
-            Kind::Development => Some("dev"),
-            Kind::Build => Some("build"),
+            DepKind::Normal => None,
+            DepKind::Development => Some("dev"),
+            DepKind::Build => Some("build"),
         }
         .serialize(s)
     }
@@ -208,7 +208,7 @@ impl Dependency {
                 source_id,
                 registry_id: None,
                 req: VersionReq::any(),
-                kind: Kind::Normal,
+                kind: DepKind::Normal,
                 only_match_name: true,
                 optional: false,
                 public: false,
@@ -284,7 +284,7 @@ impl Dependency {
         self
     }
 
-    pub fn kind(&self) -> Kind {
+    pub fn kind(&self) -> DepKind {
         self.inner.kind
     }
 
@@ -296,7 +296,7 @@ impl Dependency {
     pub fn set_public(&mut self, public: bool) -> &mut Dependency {
         if public {
             // Setting 'public' only makes sense for normal dependencies
-            assert_eq!(self.kind(), Kind::Normal);
+            assert_eq!(self.kind(), DepKind::Normal);
         }
         Rc::make_mut(&mut self.inner).public = public;
         self
@@ -320,10 +320,10 @@ impl Dependency {
         self.inner.explicit_name_in_toml
     }
 
-    pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+    pub fn set_kind(&mut self, kind: DepKind) -> &mut Dependency {
         if self.is_public() {
             // Setting 'public' only makes sense for normal dependencies
-            assert_eq!(kind, Kind::Normal);
+            assert_eq!(kind, DepKind::Normal);
         }
         Rc::make_mut(&mut self.inner).kind = kind;
         self
@@ -400,14 +400,14 @@ impl Dependency {
     /// Returns `false` if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
         match self.inner.kind {
-            Kind::Normal | Kind::Build => true,
-            Kind::Development => false,
+            DepKind::Normal | DepKind::Build => true,
+            DepKind::Development => false,
         }
     }
 
     pub fn is_build(&self) -> bool {
         match self.inner.kind {
-            Kind::Build => true,
+            DepKind::Build => true,
             _ => false,
         }
     }

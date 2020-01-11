@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::FromIterator;
 
-use crate::core::dependency::Kind;
+use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
 use crate::util::Graph;
@@ -87,7 +87,7 @@ impl Resolve {
                     .edges(p)
                     .filter(|(_, deps)| {
                         deps.iter()
-                            .any(|d| d.kind() == Kind::Normal && d.is_public())
+                            .any(|d| d.kind() == DepKind::Normal && d.is_public())
                     })
                     .map(|(dep_package, _)| *dep_package)
                     .collect::<HashSet<PackageId>>();

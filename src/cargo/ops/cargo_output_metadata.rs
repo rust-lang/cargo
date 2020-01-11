@@ -90,7 +90,7 @@ struct Dep {
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord)]
 struct DepKindInfo {
-    kind: dependency::Kind,
+    kind: dependency::DepKind,
     target: Option<Platform>,
 }
 
