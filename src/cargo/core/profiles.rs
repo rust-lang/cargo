@@ -1,45 +1,42 @@
-use std::collections::HashSet;
-use std::collections::{BTreeMap, HashMap};
-use std::{cmp, env, fmt, hash};
-
-use serde::Deserialize;
-
-use crate::core::compiler::{CompileMode, ProfileKind};
+use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use crate::util::{closest_msg, CargoResult, Config};
+use crate::util::{closest_msg, config, CargoResult, Config};
+use anyhow::bail;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::{cmp, env, fmt, hash};
 
-/// Collection of all user profiles.
+/// Collection of all profiles.
 #[derive(Clone, Debug)]
 pub struct Profiles {
     /// Incremental compilation can be overridden globally via:
     /// - `CARGO_INCREMENTAL` environment variable.
     /// - `build.incremental` config value.
     incremental: Option<bool>,
-    dir_names: HashMap<String, String>,
-    by_name: HashMap<String, ProfileMaker>,
+    /// Map of profile name to directory name for that profile.
+    dir_names: HashMap<InternedString, InternedString>,
+    /// The profile makers. Key is the profile name.
+    by_name: HashMap<InternedString, ProfileMaker>,
+    /// Whether or not unstable "named" profiles are enabled.
     named_profiles_enabled: bool,
+    /// The profile the user requested to use.
+    requested_profile: InternedString,
 }
 
 impl Profiles {
     pub fn new(
         profiles: Option<&TomlProfiles>,
         config: &Config,
+        requested_profile: InternedString,
         features: &Features,
-        warnings: &mut Vec<String>,
     ) -> CargoResult<Profiles> {
-        if let Some(profiles) = profiles {
-            profiles.validate(features, warnings)?;
-        }
-
-        let config_profiles = config.profiles()?;
-
         let incremental = match env::var_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
             None => config.build_config()?.incremental,
         };
+        let mut profiles = merge_config_profiles(profiles, config, requested_profile, features)?;
 
         if !features.is_enabled(Feature::named_profiles()) {
             let mut profile_makers = Profiles {
@@ -47,72 +44,49 @@ impl Profiles {
                 named_profiles_enabled: false,
                 dir_names: Self::predefined_dir_names(),
                 by_name: HashMap::new(),
+                requested_profile,
             };
 
             profile_makers.by_name.insert(
-                "dev".to_owned(),
-                ProfileMaker {
-                    toml: profiles.and_then(|p| p.get("dev").cloned()),
-                    inherits: vec![],
-                    config: config_profiles.dev.clone(),
-                    default: Profile::default_dev(),
-                },
+                InternedString::new("dev"),
+                ProfileMaker::new(Profile::default_dev(), profiles.remove("dev")),
             );
             profile_makers
                 .dir_names
-                .insert("dev".to_owned(), "debug".to_owned());
+                .insert(InternedString::new("dev"), InternedString::new("debug"));
 
             profile_makers.by_name.insert(
-                "release".to_owned(),
-                ProfileMaker {
-                    toml: profiles.and_then(|p| p.get("release").cloned()),
-                    inherits: vec![],
-                    config: config_profiles.release.clone(),
-                    default: Profile::default_release(),
-                },
+                InternedString::new("release"),
+                ProfileMaker::new(Profile::default_release(), profiles.remove("release")),
             );
-            profile_makers
-                .dir_names
-                .insert("release".to_owned(), "release".to_owned());
+            profile_makers.dir_names.insert(
+                InternedString::new("release"),
+                InternedString::new("release"),
+            );
 
             profile_makers.by_name.insert(
-                "test".to_owned(),
-                ProfileMaker {
-                    toml: profiles.and_then(|p| p.get("test").cloned()),
-                    inherits: vec![],
-                    config: None,
-                    default: Profile::default_test(),
-                },
+                InternedString::new("test"),
+                ProfileMaker::new(Profile::default_test(), profiles.remove("test")),
             );
             profile_makers
                 .dir_names
-                .insert("test".to_owned(), "debug".to_owned());
+                .insert(InternedString::new("test"), InternedString::new("debug"));
 
             profile_makers.by_name.insert(
-                "bench".to_owned(),
-                ProfileMaker {
-                    toml: profiles.and_then(|p| p.get("bench").cloned()),
-                    inherits: vec![],
-                    config: None,
-                    default: Profile::default_bench(),
-                },
+                InternedString::new("bench"),
+                ProfileMaker::new(Profile::default_bench(), profiles.remove("bench")),
             );
             profile_makers
                 .dir_names
-                .insert("bench".to_owned(), "release".to_owned());
+                .insert(InternedString::new("bench"), InternedString::new("release"));
 
             profile_makers.by_name.insert(
-                "doc".to_owned(),
-                ProfileMaker {
-                    toml: profiles.and_then(|p| p.get("doc").cloned()),
-                    inherits: vec![],
-                    config: None,
-                    default: Profile::default_doc(),
-                },
+                InternedString::new("doc"),
+                ProfileMaker::new(Profile::default_doc(), profiles.remove("doc")),
             );
             profile_makers
                 .dir_names
-                .insert("doc".to_owned(), "debug".to_owned());
+                .insert(InternedString::new("doc"), InternedString::new("debug"));
 
             return Ok(profile_makers);
         }
@@ -122,20 +96,15 @@ impl Profiles {
             named_profiles_enabled: true,
             dir_names: Self::predefined_dir_names(),
             by_name: HashMap::new(),
+            requested_profile,
         };
 
-        Self::add_root_profiles(&mut profile_makers, profiles, config_profiles);
+        Self::add_root_profiles(&mut profile_makers, &profiles)?;
 
-        let mut profiles = if let Some(profiles) = profiles {
-            profiles.get_all().clone()
-        } else {
-            BTreeMap::new()
-        };
-
-        // Merge with predefined profiles
+        // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
         for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
-            match profiles.entry(predef_name.to_owned()) {
+            match profiles.entry(InternedString::new(predef_name)) {
                 Entry::Vacant(vac) => {
                     vac.insert(predef_prof);
                 }
@@ -148,159 +117,166 @@ impl Profiles {
             }
         }
 
-        profile_makers.process_customs(&profiles)?;
-
+        for (name, profile) in &profiles {
+            profile_makers.add_maker(*name, profile, &profiles)?;
+        }
+        // Verify that the requested profile is defined *somewhere*.
+        // This simplifies the API (no need for CargoResult), and enforces
+        // assumptions about how config profiles are loaded.
+        profile_makers.get_profile_maker(requested_profile)?;
         Ok(profile_makers)
     }
 
-    fn predefined_dir_names() -> HashMap<String, String> {
+    /// Returns the hard-coded directory names for built-in profiles.
+    fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
         let mut dir_names = HashMap::new();
-        dir_names.insert("dev".to_owned(), "debug".to_owned());
-        dir_names.insert("check".to_owned(), "debug".to_owned());
-        dir_names.insert("test".to_owned(), "debug".to_owned());
-        dir_names.insert("bench".to_owned(), "release".to_owned());
+        dir_names.insert(InternedString::new("dev"), InternedString::new("debug"));
+        dir_names.insert(InternedString::new("check"), InternedString::new("debug"));
+        dir_names.insert(InternedString::new("test"), InternedString::new("debug"));
+        dir_names.insert(InternedString::new("bench"), InternedString::new("release"));
         dir_names
     }
 
+    /// Initialize `by_name` with the two "root" profiles, `dev`, and
+    /// `release` given the user's definition.
     fn add_root_profiles(
         profile_makers: &mut Profiles,
-        profiles: Option<&TomlProfiles>,
-        config_profiles: &ConfigProfiles,
-    ) {
-        let profile_name = "dev";
+        profiles: &BTreeMap<InternedString, TomlProfile>,
+    ) -> CargoResult<()> {
         profile_makers.by_name.insert(
-            profile_name.to_owned(),
-            ProfileMaker {
-                default: Profile::default_dev(),
-                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
-                config: config_profiles.dev.clone(),
-                inherits: vec![],
-            },
+            InternedString::new("dev"),
+            ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
         );
 
-        let profile_name = "release";
         profile_makers.by_name.insert(
-            profile_name.to_owned(),
-            ProfileMaker {
-                default: Profile::default_release(),
-                toml: profiles.and_then(|p| p.get(profile_name).cloned()),
-                config: config_profiles.release.clone(),
-                inherits: vec![],
-            },
+            InternedString::new("release"),
+            ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
         );
+        Ok(())
     }
 
+    /// Returns the built-in profiles (not including dev/release, which are
+    /// "root" profiles).
     fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
         vec![
             (
                 "bench",
                 TomlProfile {
-                    inherits: Some(String::from("release")),
+                    inherits: Some(InternedString::new("release")),
                     ..TomlProfile::default()
                 },
             ),
             (
                 "test",
                 TomlProfile {
-                    inherits: Some(String::from("dev")),
+                    inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
                 },
             ),
             (
                 "check",
                 TomlProfile {
-                    inherits: Some(String::from("dev")),
+                    inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
                 },
             ),
             (
                 "doc",
                 TomlProfile {
-                    inherits: Some(String::from("dev")),
+                    inherits: Some(InternedString::new("dev")),
                     ..TomlProfile::default()
                 },
             ),
         ]
     }
 
-    fn process_customs(&mut self, profiles: &BTreeMap<String, TomlProfile>) -> CargoResult<()> {
-        for (name, profile) in profiles {
-            let mut set = HashSet::new();
-            let mut result = Vec::new();
-
-            set.insert(name.as_str().to_owned());
-            match &profile.dir_name {
-                None => {}
-                Some(dir_name) => {
-                    self.dir_names.insert(name.clone(), dir_name.to_owned());
-                }
+    /// Creates a `ProfileMaker`, and inserts it into `self.by_name`.
+    fn add_maker(
+        &mut self,
+        name: InternedString,
+        profile: &TomlProfile,
+        profiles: &BTreeMap<InternedString, TomlProfile>,
+    ) -> CargoResult<()> {
+        match &profile.dir_name {
+            None => {}
+            Some(dir_name) => {
+                self.dir_names.insert(name, dir_name.to_owned());
             }
-            match name.as_str() {
-                "dev" | "release" => {
-                    match &profile.inherits {
-                        None => {}
-                        Some(_) => {
-                            anyhow::bail!(
-                                "An 'inherits' must not specified root profile '{}'",
-                                name
-                            );
-                        }
-                    }
-                    continue;
-                }
-                _ => {}
-            };
-
-            let mut maker = self.process_chain(name, profile, &mut set, &mut result, profiles)?;
-            result.reverse();
-            maker.inherits = result;
-
-            self.by_name.insert(name.as_str().to_owned(), maker);
         }
 
-        Ok(())
-    }
-
-    fn process_chain(
-        &mut self,
-        name: &str,
-        profile: &TomlProfile,
-        set: &mut HashSet<String>,
-        result: &mut Vec<TomlProfile>,
-        profiles: &BTreeMap<String, TomlProfile>,
-    ) -> CargoResult<ProfileMaker> {
-        result.push(profile.clone());
-        match profile.inherits.as_ref().map(|x| x.as_str()) {
-            Some(name @ "dev") | Some(name @ "release") => {
-                // These are the root profiles
-                Ok(self.by_name.get(name).unwrap().clone())
-            }
-            Some(name) => {
-                let name = name.to_owned();
-                if set.get(&name).is_some() {
-                    anyhow::bail!(
-                        "Inheritance loop of profiles cycles with profile '{}'",
-                        name
-                    );
-                }
-
-                set.insert(name.clone());
-                match profiles.get(&name) {
-                    None => {
-                        anyhow::bail!("Profile '{}' not found in Cargo.toml", name);
-                    }
-                    Some(parent) => self.process_chain(&name, parent, set, result, profiles),
-                }
-            }
-            None => {
-                anyhow::bail!(
-                    "An 'inherits' directive is needed for all \
-                     profiles that are not 'dev' or 'release'. Here \
-                     it is missing from '{}'",
+        // dev/release are "roots" and don't inherit.
+        if name == "dev" || name == "release" {
+            if profile.inherits.is_some() {
+                bail!(
+                    "`inherits` must not be specified in root profile `{}`",
                     name
                 );
             }
+            // Already inserted from `add_root_profiles`, no need to do anything.
+            return Ok(());
         }
+
+        // Keep track for inherits cycles.
+        let mut set = HashSet::new();
+        set.insert(name);
+        let maker = self.process_chain(name, profile, &mut set, profiles)?;
+        self.by_name.insert(name, maker);
+        Ok(())
+    }
+
+    /// Build a `ProfileMaker` by recursively following the `inherits` setting.
+    ///
+    /// * `name`: The name of the profile being processed.
+    /// * `profile`: The TOML profile being processed.
+    /// * `set`: Set of profiles that have been visited, used to detect cycles.
+    /// * `profiles`: Map of all TOML profiles.
+    ///
+    /// Returns a `ProfileMaker` to be used for the given named profile.
+    fn process_chain(
+        &mut self,
+        name: InternedString,
+        profile: &TomlProfile,
+        set: &mut HashSet<InternedString>,
+        profiles: &BTreeMap<InternedString, TomlProfile>,
+    ) -> CargoResult<ProfileMaker> {
+        let mut maker = match profile.inherits {
+            Some(inherits_name) if inherits_name == "dev" || inherits_name == "release" => {
+                // These are the root profiles added in `add_root_profiles`.
+                self.get_profile_maker(inherits_name).unwrap().clone()
+            }
+            Some(inherits_name) => {
+                if !set.insert(inherits_name) {
+                    bail!(
+                        "profile inheritance loop detected with profile `{}` inheriting `{}`",
+                        name,
+                        inherits_name
+                    );
+                }
+
+                match profiles.get(&inherits_name) {
+                    None => {
+                        bail!(
+                            "profile `{}` inherits from `{}`, but that profile is not defined",
+                            name,
+                            inherits_name
+                        );
+                    }
+                    Some(parent) => self.process_chain(inherits_name, parent, set, profiles)?,
+                }
+            }
+            None => {
+                bail!(
+                    "profile `{}` is missing an `inherits` directive \
+                     (`inherits` is required for all profiles except `dev` or `release`)",
+                    name
+                );
+            }
+        };
+        match &mut maker.toml {
+            Some(toml) => toml.merge(profile),
+            None => maker.toml = Some(profile.clone()),
+        };
+        Ok(maker)
     }
 
     /// Retrieves the profile for a target.
@@ -312,25 +288,29 @@ impl Profiles {
         is_member: bool,
         unit_for: UnitFor,
         mode: CompileMode,
-        profile_kind: ProfileKind,
     ) -> Profile {
         let (profile_name, inherits) = if !self.named_profiles_enabled {
             // With the feature disabled, we degrade `--profile` back to the
             // `--release` and `--debug` predicates, and convert back from
             // ProfileKind::Custom instantiation.
 
-            let release = match profile_kind {
-                ProfileKind::Release => true,
-                ProfileKind::Custom(ref s) if s == "bench" => true,
+            let release = match self.requested_profile.as_str() {
+                "release" | "bench" => true,
                 _ => false,
             };
 
             match mode {
                 CompileMode::Test | CompileMode::Bench => {
                     if release {
-                        ("bench", Some("release"))
+                        (
+                            InternedString::new("bench"),
+                            Some(InternedString::new("release")),
+                        )
                     } else {
-                        ("test", Some("dev"))
+                        (
+                            InternedString::new("test"),
+                            Some(InternedString::new("dev")),
+                        )
                     }
                 }
                 CompileMode::Build
@@ -342,20 +322,17 @@ impl Profiles {
                     // ancestor's profile. However, `cargo clean -p` can hit this
                     // path.
                     if release {
-                        ("release", None)
+                        (InternedString::new("release"), None)
                     } else {
-                        ("dev", None)
+                        (InternedString::new("dev"), None)
                     }
                 }
-                CompileMode::Doc { .. } => ("doc", None),
+                CompileMode::Doc { .. } => (InternedString::new("doc"), None),
             }
         } else {
-            (profile_kind.name(), None)
+            (self.requested_profile, None)
         };
-        let maker = match self.by_name.get(profile_name) {
-            None => panic!("Profile {} undefined", profile_name),
-            Some(r) => r,
-        };
+        let maker = self.get_profile_maker(profile_name).unwrap();
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
@@ -365,7 +342,8 @@ impl Profiles {
             PanicSetting::ReadProfile => {}
             PanicSetting::Inherit => {
                 if let Some(inherits) = inherits {
-                    let maker = self.by_name.get(inherits).unwrap();
+                    // TODO: Fixme, broken with named profiles.
+                    let maker = self.get_profile_maker(inherits).unwrap();
                     profile.panic = maker.get_profile(Some(pkg_id), is_member, unit_for).panic;
                 }
             }
@@ -384,6 +362,7 @@ impl Profiles {
         if !pkg_id.source_id().is_path() {
             profile.incremental = false;
         }
+        profile.name = profile_name;
         profile
     }
 
@@ -403,37 +382,54 @@ impl Profiles {
     /// This returns the base profile. This is currently used for the
     /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
-    pub fn base_profile(&self, profile_kind: &ProfileKind) -> CargoResult<Profile> {
+    pub fn base_profile(&self) -> Profile {
         let profile_name = if !self.named_profiles_enabled {
-            match profile_kind {
-                ProfileKind::Release => "release",
-                ProfileKind::Custom(ref s) if s == "bench" => "bench",
-                _ => "dev",
+            match self.requested_profile.as_str() {
+                "release" | "bench" => self.requested_profile,
+                _ => InternedString::new("dev"),
             }
         } else {
-            profile_kind.name()
+            self.requested_profile
         };
 
-        match self.by_name.get(profile_name) {
-            None => anyhow::bail!("Profile `{}` undefined", profile_kind.name()),
-            Some(r) => Ok(r.get_profile(None, true, UnitFor::new_normal())),
-        }
+        let maker = self.get_profile_maker(profile_name).unwrap();
+        maker.get_profile(None, true, UnitFor::new_normal())
     }
 
-    pub fn get_dir_name(&self, profile_kind: &ProfileKind) -> String {
-        let dest = profile_kind.name();
-        match self.dir_names.get(dest) {
-            None => dest.to_owned(),
-            Some(s) => s.clone(),
-        }
+    /// Gets the directory name for a profile, like `debug` or `release`.
+    pub fn get_dir_name(&self) -> InternedString {
+        *self
+            .dir_names
+            .get(&self.requested_profile)
+            .unwrap_or(&self.requested_profile)
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(&self, shell: &mut Shell, resolve: &Resolve) -> CargoResult<()> {
-        for profile in self.by_name.values() {
-            profile.validate_packages(shell, resolve)?;
+    pub fn validate_packages(
+        &self,
+        profiles: Option<&TomlProfiles>,
+        shell: &mut Shell,
+        resolve: &Resolve,
+    ) -> CargoResult<()> {
+        for (name, profile) in &self.by_name {
+            let found = validate_packages_unique(resolve, name, &profile.toml)?;
+            // We intentionally do not validate unmatched packages for config
+            // profiles, in case they are defined in a central location. This
+            // iterates over the manifest profiles only.
+            if let Some(profiles) = profiles {
+                if let Some(toml_profile) = profiles.get(name) {
+                    validate_packages_unmatched(shell, resolve, name, toml_profile, &found)?;
+                }
+            }
         }
         Ok(())
+    }
+
+    /// Returns the profile maker for the given profile name.
+    fn get_profile_maker(&self, name: InternedString) -> CargoResult<&ProfileMaker> {
+        self.by_name
+            .get(&name)
+            .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
     }
 }
 
@@ -451,18 +447,19 @@ impl Profiles {
 struct ProfileMaker {
     /// The starting, hard-coded defaults for the profile.
     default: Profile,
-    /// The profile from the `Cargo.toml` manifest.
+    /// The TOML profile defined in `Cargo.toml` or config.
     toml: Option<TomlProfile>,
-
-    /// Profiles from which we inherit, in the order from which
-    /// we inherit.
-    inherits: Vec<TomlProfile>,
-
-    /// Profile loaded from `.cargo/config` files.
-    config: Option<TomlProfile>,
 }
 
 impl ProfileMaker {
+    /// Creates a new `ProfileMaker`.
+    ///
+    /// Note that this does not process `inherits`, the caller is responsible for that.
+    fn new(default: Profile, toml: Option<TomlProfile>) -> ProfileMaker {
+        ProfileMaker { default, toml }
+    }
+
+    /// Generates a new `Profile`.
     fn get_profile(
         &self,
         pkg_id: Option<PackageId>,
@@ -470,136 +467,15 @@ impl ProfileMaker {
         unit_for: UnitFor,
     ) -> Profile {
         let mut profile = self.default;
-
-        let mut tomls = vec![];
-        if let Some(ref toml) = self.toml {
-            tomls.push(toml);
-        }
-        for toml in &self.inherits {
-            tomls.push(toml);
-        }
-
-        // First merge the profiles
-        for toml in &tomls {
-            merge_profile(&mut profile, toml);
-        }
-
-        // Then their overrides
-        for toml in &tomls {
-            merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
-        }
-
-        // '.cargo/config' can still overrides everything we had so far.
-        if let Some(ref toml) = self.config {
+        if let Some(toml) = &self.toml {
             merge_profile(&mut profile, toml);
             merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
         }
-
         profile
-    }
-
-    fn validate_packages(&self, shell: &mut Shell, resolve: &Resolve) -> CargoResult<()> {
-        self.validate_packages_toml(shell, resolve, &self.toml, true)?;
-        self.validate_packages_toml(shell, resolve, &self.config, false)?;
-        Ok(())
-    }
-
-    fn validate_packages_toml(
-        &self,
-        shell: &mut Shell,
-        resolve: &Resolve,
-        toml: &Option<TomlProfile>,
-        warn_unmatched: bool,
-    ) -> CargoResult<()> {
-        let toml = match *toml {
-            Some(ref toml) => toml,
-            None => return Ok(()),
-        };
-        let overrides = match toml.package.as_ref().or_else(|| toml.overrides.as_ref()) {
-            Some(overrides) => overrides,
-            None => return Ok(()),
-        };
-        // Verify that a package doesn't match multiple spec overrides.
-        let mut found = HashSet::new();
-        for pkg_id in resolve.iter() {
-            let matches: Vec<&PackageIdSpec> = overrides
-                .keys()
-                .filter_map(|key| match *key {
-                    ProfilePackageSpec::All => None,
-                    ProfilePackageSpec::Spec(ref spec) => {
-                        if spec.matches(pkg_id) {
-                            Some(spec)
-                        } else {
-                            None
-                        }
-                    }
-                })
-                .collect();
-            match matches.len() {
-                0 => {}
-                1 => {
-                    found.insert(matches[0].clone());
-                }
-                _ => {
-                    let specs = matches
-                        .iter()
-                        .map(|spec| spec.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    anyhow::bail!(
-                        "multiple package overrides in profile `{}` match package `{}`\n\
-                         found package specs: {}",
-                        self.default.name,
-                        pkg_id,
-                        specs
-                    );
-                }
-            }
-        }
-
-        if !warn_unmatched {
-            return Ok(());
-        }
-        // Verify every override matches at least one package.
-        let missing_specs = overrides.keys().filter_map(|key| {
-            if let ProfilePackageSpec::Spec(ref spec) = *key {
-                if !found.contains(spec) {
-                    return Some(spec);
-                }
-            }
-            None
-        });
-        for spec in missing_specs {
-            // See if there is an exact name match.
-            let name_matches: Vec<String> = resolve
-                .iter()
-                .filter_map(|pkg_id| {
-                    if pkg_id.name() == spec.name() {
-                        Some(pkg_id.to_string())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            if name_matches.is_empty() {
-                let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
-                shell.warn(format!(
-                    "package profile spec `{}` did not match any packages{}",
-                    spec, suggestion
-                ))?;
-            } else {
-                shell.warn(format!(
-                    "version or URL in package profile spec `{}` does not \
-                     match any of the packages: {}",
-                    spec,
-                    name_matches.join(", ")
-                ))?;
-            }
-        }
-        Ok(())
     }
 }
 
+/// Merge package and build overrides from the given TOML profile into the given `Profile`.
 fn merge_toml_overrides(
     pkg_id: Option<PackageId>,
     is_member: bool,
@@ -612,7 +488,7 @@ fn merge_toml_overrides(
             merge_profile(profile, build_override);
         }
     }
-    if let Some(overrides) = toml.package.as_ref().or_else(|| toml.overrides.as_ref()) {
+    if let Some(overrides) = toml.package.as_ref() {
         if !is_member {
             if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
                 merge_profile(profile, all);
@@ -645,6 +521,9 @@ fn merge_toml_overrides(
     }
 }
 
+/// Merge the given TOML profile into the given `Profile`.
+///
+/// Does not merge overrides (see `merge_toml_overrides`).
 fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(ref opt_level) = toml.opt_level {
         profile.opt_level = InternedString::new(&opt_level.0);
@@ -685,6 +564,11 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
 }
 
+/// The root profile (dev/release).
+///
+/// This is currently only used for the `PROFILE` env var for build scripts
+/// for backwards compatibility. We should probably deprecate `PROFILE` and
+/// encourage using things like `DEBUG` and `OPT_LEVEL` instead.
 #[derive(Clone, Copy, Eq, PartialOrd, Ord, PartialEq, Debug)]
 pub enum ProfileRoot {
     Release,
@@ -695,7 +579,7 @@ pub enum ProfileRoot {
 /// target.
 #[derive(Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct Profile {
-    pub name: &'static str,
+    pub name: InternedString,
     pub opt_level: InternedString,
     pub root: ProfileRoot,
     pub lto: Lto,
@@ -712,7 +596,7 @@ pub struct Profile {
 impl Default for Profile {
     fn default() -> Profile {
         Profile {
-            name: "",
+            name: InternedString::new(""),
             opt_level: InternedString::new("0"),
             root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
@@ -730,7 +614,7 @@ impl Default for Profile {
 compact_debug! {
     impl fmt::Debug for Profile {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let (default, default_name) = match self.name {
+            let (default, default_name) = match self.name.as_str() {
                 "dev" => (Profile::default_dev(), "default_dev()"),
                 "release" => (Profile::default_release(), "default_release()"),
                 _ => (Profile::default(), "default()"),
@@ -776,7 +660,7 @@ impl cmp::PartialEq for Profile {
 impl Profile {
     fn default_dev() -> Profile {
         Profile {
-            name: "dev",
+            name: InternedString::new("dev"),
             root: ProfileRoot::Debug,
             debuginfo: Some(2),
             debug_assertions: true,
@@ -788,7 +672,7 @@ impl Profile {
 
     fn default_release() -> Profile {
         Profile {
-            name: "release",
+            name: InternedString::new("release"),
             root: ProfileRoot::Release,
             opt_level: InternedString::new("3"),
             ..Profile::default()
@@ -799,21 +683,21 @@ impl Profile {
 
     fn default_test() -> Profile {
         Profile {
-            name: "test",
+            name: InternedString::new("test"),
             ..Profile::default_dev()
         }
     }
 
     fn default_bench() -> Profile {
         Profile {
-            name: "bench",
+            name: InternedString::new("bench"),
             ..Profile::default_release()
         }
     }
 
     fn default_doc() -> Profile {
         Profile {
-            name: "doc",
+            name: InternedString::new("doc"),
             ..Profile::default_dev()
         }
     }
@@ -1009,27 +893,199 @@ impl UnitFor {
     }
 }
 
-/// Profiles loaded from `.cargo/config` files.
-#[derive(Clone, Debug, Deserialize, Default)]
-pub struct ConfigProfiles {
-    dev: Option<TomlProfile>,
-    release: Option<TomlProfile>,
+/// Takes the manifest profiles, and overlays the config profiles on-top.
+///
+/// Returns a new copy of the profile map with all the mergers complete.
+fn merge_config_profiles(
+    profiles: Option<&TomlProfiles>,
+    config: &Config,
+    requested_profile: InternedString,
+    features: &Features,
+) -> CargoResult<BTreeMap<InternedString, TomlProfile>> {
+    let mut profiles = match profiles {
+        Some(profiles) => profiles.get_all().clone(),
+        None => BTreeMap::new(),
+    };
+    // List of profile names to check if defined in config only.
+    let mut check_to_add = vec![requested_profile];
+    // Flag so -Zconfig-profile warning is only printed once.
+    let mut unstable_warned = false;
+    // Merge config onto manifest profiles.
+    for (name, profile) in &mut profiles {
+        if let Some(config_profile) =
+            get_config_profile(name, config, features, &mut unstable_warned)?
+        {
+            profile.merge(&config_profile);
+        }
+        if let Some(inherits) = &profile.inherits {
+            check_to_add.push(*inherits);
+        }
+    }
+    // Add config-only profiles.
+    // Need to iterate repeatedly to get all the inherits values.
+    let mut current = Vec::new();
+    while !check_to_add.is_empty() {
+        std::mem::swap(&mut current, &mut check_to_add);
+        for name in current.drain(..) {
+            if !profiles.contains_key(&name) {
+                if let Some(config_profile) =
+                    get_config_profile(&name, config, features, &mut unstable_warned)?
+                {
+                    if let Some(inherits) = &config_profile.inherits {
+                        check_to_add.push(*inherits);
+                    }
+                    profiles.insert(name, config_profile);
+                }
+            }
+        }
+    }
+    Ok(profiles)
 }
 
-impl ConfigProfiles {
-    pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
-        if let Some(ref profile) = self.dev {
-            profile
-                .validate("dev", features, warnings)
-                .chain_err(|| anyhow::format_err!("config profile `profile.dev` is not valid"))?;
-        }
-        if let Some(ref profile) = self.release {
-            profile
-                .validate("release", features, warnings)
-                .chain_err(|| {
-                    anyhow::format_err!("config profile `profile.release` is not valid")
-                })?;
-        }
-        Ok(())
+/// Helper for fetching a profile from config.
+fn get_config_profile(
+    name: &str,
+    config: &Config,
+    features: &Features,
+    unstable_warned: &mut bool,
+) -> CargoResult<Option<TomlProfile>> {
+    let profile: Option<config::Value<TomlProfile>> = config.get(&format!("profile.{}", name))?;
+    let profile = match profile {
+        Some(profile) => profile,
+        None => return Ok(None),
+    };
+    if !*unstable_warned && !config.cli_unstable().config_profile {
+        config.shell().warn(format!(
+            "config profiles require the `-Z config-profile` command-line option (found profile `{}` in {})",
+            name, profile.definition))?;
+        *unstable_warned = true;
+        return Ok(None);
     }
+    let mut warnings = Vec::new();
+    profile
+        .val
+        .validate(name, features, &mut warnings)
+        .chain_err(|| {
+            anyhow::format_err!(
+                "config profile `{}` is not valid (defined in `{}`)",
+                name,
+                profile.definition
+            )
+        })?;
+    for warning in warnings {
+        config.shell().warn(warning)?;
+    }
+    Ok(Some(profile.val))
+}
+
+/// Validate that a package does not match multiple package override specs.
+///
+/// For example `[profile.dev.package.bar]` and `[profile.dev.package."bar:0.5.0"]`
+/// would both match `bar:0.5.0` which would be ambiguous.
+fn validate_packages_unique(
+    resolve: &Resolve,
+    name: &str,
+    toml: &Option<TomlProfile>,
+) -> CargoResult<HashSet<PackageIdSpec>> {
+    let toml = match toml {
+        Some(ref toml) => toml,
+        None => return Ok(HashSet::new()),
+    };
+    let overrides = match toml.package.as_ref() {
+        Some(overrides) => overrides,
+        None => return Ok(HashSet::new()),
+    };
+    // Verify that a package doesn't match multiple spec overrides.
+    let mut found = HashSet::new();
+    for pkg_id in resolve.iter() {
+        let matches: Vec<&PackageIdSpec> = overrides
+            .keys()
+            .filter_map(|key| match *key {
+                ProfilePackageSpec::All => None,
+                ProfilePackageSpec::Spec(ref spec) => {
+                    if spec.matches(pkg_id) {
+                        Some(spec)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .collect();
+        match matches.len() {
+            0 => {}
+            1 => {
+                found.insert(matches[0].clone());
+            }
+            _ => {
+                let specs = matches
+                    .iter()
+                    .map(|spec| spec.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                bail!(
+                    "multiple package overrides in profile `{}` match package `{}`\n\
+                     found package specs: {}",
+                    name,
+                    pkg_id,
+                    specs
+                );
+            }
+        }
+    }
+    Ok(found)
+}
+
+/// Check for any profile override specs that do not match any known packages.
+///
+/// This helps check for typos and mistakes.
+fn validate_packages_unmatched(
+    shell: &mut Shell,
+    resolve: &Resolve,
+    name: &str,
+    toml: &TomlProfile,
+    found: &HashSet<PackageIdSpec>,
+) -> CargoResult<()> {
+    let overrides = match toml.package.as_ref() {
+        Some(overrides) => overrides,
+        None => return Ok(()),
+    };
+
+    // Verify every override matches at least one package.
+    let missing_specs = overrides.keys().filter_map(|key| {
+        if let ProfilePackageSpec::Spec(ref spec) = *key {
+            if !found.contains(spec) {
+                return Some(spec);
+            }
+        }
+        None
+    });
+    for spec in missing_specs {
+        // See if there is an exact name match.
+        let name_matches: Vec<String> = resolve
+            .iter()
+            .filter_map(|pkg_id| {
+                if pkg_id.name() == spec.name() {
+                    Some(pkg_id.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if name_matches.is_empty() {
+            let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
+            shell.warn(format!(
+                "profile package spec `{}` in profile `{}` did not match any packages{}",
+                spec, name, suggestion
+            ))?;
+        } else {
+            shell.warn(format!(
+                "profile package spec `{}` in profile `{}` \
+                 has a version or URL that does not match any of the packages: {}",
+                spec,
+                name,
+                name_matches.join(", ")
+            ))?;
+        }
+    }
+    Ok(())
 }

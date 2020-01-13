@@ -1,13 +1,12 @@
+use crate::core::InternedString;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
 use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::UnitInterner;
-use crate::core::compiler::{
-    BuildConfig, BuildContext, CompileKind, CompileMode, Context, ProfileKind,
-};
-use crate::core::profiles::UnitFor;
+use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
+use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -23,7 +22,7 @@ pub struct CleanOptions<'a> {
     /// Whether to clean the release directory
     pub profile_specified: bool,
     /// Whether to clean the directory of a certain build profile
-    pub profile_kind: ProfileKind,
+    pub requested_profile: InternedString,
     /// Whether to just clean the doc directory
     pub doc: bool,
 }
@@ -39,16 +38,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
-    let profiles = ws.profiles();
-
-    // Check for whether the profile is defined.
-    let _ = profiles.base_profile(&opts.profile_kind)?;
+    let profiles = Profiles::new(ws.profiles(), config, opts.requested_profile, ws.features())?;
 
     if opts.profile_specified {
         // After parsing profiles we know the dir-name of the profile, if a profile
         // was passed from the command line. If so, delete only the directory of
         // that profile.
-        let dir_name = profiles.get_dir_name(&opts.profile_kind);
+        let dir_name = profiles.get_dir_name();
         target_dir = target_dir.join(dir_name);
     }
 
@@ -64,8 +60,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
-    let profile_kind = opts.profile_kind.clone();
-    build_config.profile_kind = profile_kind.clone();
+    build_config.requested_profile = opts.requested_profile;
     let bcx = BuildContext::new(
         ws,
         &packages,
@@ -88,20 +83,19 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                 for mode in CompileMode::all_modes() {
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
-                            profiles.get_profile_run_custom_build(&profiles.get_profile(
-                                pkg.package_id(),
-                                ws.is_member(pkg),
-                                *unit_for,
-                                CompileMode::Build,
-                                profile_kind.clone(),
-                            ))
+                            bcx.profiles
+                                .get_profile_run_custom_build(&bcx.profiles.get_profile(
+                                    pkg.package_id(),
+                                    ws.is_member(pkg),
+                                    *unit_for,
+                                    CompileMode::Build,
+                                ))
                         } else {
-                            profiles.get_profile(
+                            bcx.profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
                                 *unit_for,
                                 *mode,
-                                profile_kind.clone(),
                             )
                         };
                         let features = resolve.features_sorted(pkg.package_id());

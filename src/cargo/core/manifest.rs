@@ -10,11 +10,10 @@ use serde::Serialize;
 use url::Url;
 
 use crate::core::interning::InternedString;
-use crate::core::profiles::Profiles;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
-use crate::util::toml::TomlManifest;
+use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
@@ -33,7 +32,7 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     custom_metadata: Option<toml::Value>,
-    profiles: Profiles,
+    profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
     publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
@@ -64,7 +63,7 @@ pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
-    profiles: Profiles,
+    profiles: Option<TomlProfiles>,
     warnings: Warnings,
     features: Features,
 }
@@ -399,7 +398,7 @@ impl Manifest {
         links: Option<String>,
         metadata: ManifestMetadata,
         custom_metadata: Option<toml::Value>,
-        profiles: Profiles,
+        profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
         publish_lockfile: bool,
         replace: Vec<(PackageIdSpec, Dependency)>,
@@ -475,8 +474,8 @@ impl Manifest {
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
-    pub fn profiles(&self) -> &Profiles {
-        &self.profiles
+    pub fn profiles(&self) -> Option<&TomlProfiles> {
+        self.profiles.as_ref()
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
@@ -563,7 +562,7 @@ impl VirtualManifest {
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
-        profiles: Profiles,
+        profiles: Option<TomlProfiles>,
         features: Features,
     ) -> VirtualManifest {
         VirtualManifest {
@@ -588,8 +587,8 @@ impl VirtualManifest {
         &self.workspace
     }
 
-    pub fn profiles(&self) -> &Profiles {
-        &self.profiles
+    pub fn profiles(&self) -> Option<&TomlProfiles> {
+        self.profiles.as_ref()
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {

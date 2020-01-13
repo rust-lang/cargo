@@ -70,7 +70,6 @@ use serde::Deserialize;
 use url::Url;
 
 use self::ConfigValue as CV;
-use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
@@ -163,8 +162,6 @@ pub struct Config {
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
     env: HashMap<String, String>,
-    /// Profiles loaded from config.
-    profiles: LazyCell<ConfigProfiles>,
     /// Tracks which sources have been updated to avoid multiple updates.
     updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
     /// Lock, if held, of the global package cache along with the number of
@@ -238,7 +235,6 @@ impl Config {
             creation_time: Instant::now(),
             target_dir: None,
             env,
-            profiles: LazyCell::new(),
             updated_sources: LazyCell::new(),
             package_cache_lock: RefCell::new(None),
             http_config: LazyCell::new(),
@@ -370,26 +366,6 @@ impl Config {
                 Ok(exe)
             })
             .map(AsRef::as_ref)
-    }
-
-    /// Gets profiles defined in config files.
-    pub fn profiles(&self) -> CargoResult<&ConfigProfiles> {
-        self.profiles.try_borrow_with(|| {
-            let ocp = self.get::<Option<ConfigProfiles>>("profile")?;
-            if let Some(config_profiles) = ocp {
-                // Warn if config profiles without CLI option.
-                if !self.cli_unstable().config_profile {
-                    self.shell().warn(
-                        "profiles in config files require `-Z config-profile` \
-                         command-line option",
-                    )?;
-                    return Ok(ConfigProfiles::default());
-                }
-                Ok(config_profiles)
-            } else {
-                Ok(ConfigProfiles::default())
-            }
-        })
     }
 
     /// Which package sources have been updated, used to ensure it is only done once.

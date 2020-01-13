@@ -26,7 +26,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub ws: &'a Workspace<'cfg>,
     /// The cargo configuration.
     pub config: &'cfg Config,
-    pub profiles: &'a Profiles,
+    pub profiles: Profiles,
     pub build_config: &'a BuildConfig,
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
@@ -58,7 +58,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         packages: &'a PackageSet<'cfg>,
         config: &'cfg Config,
         build_config: &'a BuildConfig,
-        profiles: &'a Profiles,
+        profiles: Profiles,
         units: &'a UnitInterner<'a>,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {

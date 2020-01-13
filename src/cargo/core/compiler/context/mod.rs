@@ -281,8 +281,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<()> {
-        let profile_kind = &self.bcx.build_config.profile_kind;
-        let dest = self.bcx.profiles.get_dir_name(profile_kind);
+        let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
         if let CompileKind::Target(target) = self.bcx.build_config.requested_kind {

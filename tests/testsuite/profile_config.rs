@@ -1,5 +1,6 @@
 //! Tests for profiles defined in config files.
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
@@ -19,10 +20,41 @@ fn profile_config_gated() {
     p.cargo("build -v")
         .with_stderr_contains(
             "\
-[WARNING] profiles in config files require `-Z config-profile` command-line option
+[WARNING] config profiles require the `-Z config-profile` command-line option \
+    (found profile `dev` in [..]/foo/.cargo/config)
 ",
         )
         .with_stderr_contains("[..]-C debuginfo=2[..]")
+        .run();
+}
+
+#[cargo_test]
+fn named_profile_gated() {
+    // Named profile in config requires enabling in Cargo.toml.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [profile.foo]
+            inherits = 'dev'
+            opt-level = 1
+            "#,
+        )
+        .build();
+    p.cargo("build --profile foo -Zunstable-options -Zconfig-profile")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[ERROR] config profile `foo` is not valid (defined in `[..]/foo/.cargo/config`)
+
+Caused by:
+  feature `named-profiles` is required
+
+consider adding `cargo-features = [\"named-profiles\"]` to the manifest
+",
+        )
+        .with_status(101)
         .run();
 }
 
@@ -56,8 +88,6 @@ fn profile_config_validate_warnings() {
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
-[WARNING] unused config key `profile.asdf` in `[..].cargo/config`
-[WARNING] unused config key `profile.test` in `[..].cargo/config`
 [WARNING] unused config key `profile.dev.bad-key` in `[..].cargo/config`
 [WARNING] unused config key `profile.dev.package.bar.bad-key-bar` in `[..].cargo/config`
 [WARNING] unused config key `profile.dev.build-override.bad-key-bo` in `[..].cargo/config`
@@ -70,6 +100,7 @@ fn profile_config_validate_warnings() {
 
 #[cargo_test]
 fn profile_config_error_paths() {
+    // Errors in config show where the error is located.
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
@@ -94,10 +125,10 @@ fn profile_config_error_paths() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+[ERROR] error in [..]/foo/.cargo/config: could not load config key `profile.dev`
 
 Caused by:
-  error in [..].cargo/config: `profile.dev.rpath` expected true/false, but found a string
+  error in [..]/home/.cargo/config: `profile.dev.rpath` expected true/false, but found a string
 ",
         )
         .run();
@@ -122,7 +153,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] config profile `profile.dev` is not valid
+[ERROR] config profile `dev` is not valid (defined in `[..]/foo/.cargo/config`)
 
 Caused by:
   `panic` may not be specified in a `package` profile
@@ -150,10 +181,10 @@ fn profile_config_syntax_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
+[ERROR] error in [..]/.cargo/config: could not load config key `profile.dev`
 
 Caused by:
-  error in [..].cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
+  error in [..]/foo/.cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
 ",
         )
         .run();
@@ -335,5 +366,125 @@ fn profile_config_mixed_types() {
     p.cargo("build -v -Z config-profile")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[..]-C opt-level=3 [..]")
+        .run();
+}
+
+#[cargo_test]
+fn named_config_profile() {
+    // Exercises config named profies.
+    // foo -> middle -> bar -> dev
+    // middle exists in Cargo.toml, the others in .cargo/config
+    use super::config::ConfigBuilder;
+    use cargo::core::compiler::CompileMode;
+    use cargo::core::enable_nightly_features;
+    use cargo::core::features::Features;
+    use cargo::core::profiles::{Profiles, UnitFor};
+    use cargo::core::{InternedString, PackageId};
+    use cargo::util::toml::TomlProfiles;
+    use std::fs;
+    enable_nightly_features();
+    paths::root().join(".cargo").mkdir_p();
+    fs::write(
+        paths::root().join(".cargo/config"),
+        r#"
+        [profile.foo]
+        inherits = "middle"
+        codegen-units = 2
+        [profile.foo.build-override]
+        codegen-units = 6
+        [profile.foo.package.dep]
+        codegen-units = 7
+
+        [profile.middle]
+        inherits = "bar"
+        codegen-units = 3
+
+        [profile.bar]
+        inherits = "dev"
+        codegen-units = 4
+        debug = 1
+        "#,
+    )
+    .unwrap();
+    let config = ConfigBuilder::new().unstable_flag("config-profile").build();
+    let mut warnings = Vec::new();
+    let features = Features::new(&["named-profiles".to_string()], &mut warnings).unwrap();
+    assert_eq!(warnings.len(), 0);
+    let profile_name = InternedString::new("foo");
+    let toml = r#"
+        [profile.middle]
+        inherits = "bar"
+        codegen-units = 1
+        opt-level = 1
+        [profile.middle.package.dep]
+        overflow-checks = false
+
+        [profile.foo.build-override]
+        codegen-units = 5
+        debug-assertions = false
+        [profile.foo.package.dep]
+        codegen-units = 8
+    "#;
+    #[derive(serde::Deserialize)]
+    struct TomlManifest {
+        profile: Option<TomlProfiles>,
+    }
+    let manifest: TomlManifest = toml::from_str(toml).unwrap();
+    let profiles =
+        Profiles::new(manifest.profile.as_ref(), &config, profile_name, &features).unwrap();
+
+    let crates_io = cargo::core::source::SourceId::crates_io(&config).unwrap();
+    let a_pkg = PackageId::new("a", "0.1.0", crates_io).unwrap();
+    let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
+
+    // normal package
+    let p = profiles.get_profile(a_pkg, true, UnitFor::new_normal(), CompileMode::Build);
+    assert_eq!(p.name, "foo");
+    assert_eq!(p.codegen_units, Some(2)); // "foo" from config
+    assert_eq!(p.opt_level, "1"); // "middle" from manifest
+    assert_eq!(p.debuginfo, Some(1)); // "bar" from config
+    assert_eq!(p.debug_assertions, true); // "dev" built-in (ignore build-override)
+    assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
+
+    // build-override
+    let bo = profiles.get_profile(a_pkg, true, UnitFor::new_build(), CompileMode::Build);
+    assert_eq!(bo.name, "foo");
+    assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
+    assert_eq!(bo.opt_level, "1"); // SAME as normal
+    assert_eq!(bo.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(bo.debug_assertions, false); // "foo" build override from manifest
+    assert_eq!(bo.overflow_checks, true); // SAME as normal
+
+    // package overrides
+    let po = profiles.get_profile(dep_pkg, false, UnitFor::new_normal(), CompileMode::Build);
+    assert_eq!(po.name, "foo");
+    assert_eq!(po.codegen_units, Some(7)); // "foo" package override from config
+    assert_eq!(po.opt_level, "1"); // SAME as normal
+    assert_eq!(po.debuginfo, Some(1)); // SAME as normal
+    assert_eq!(po.debug_assertions, true); // SAME as normal
+    assert_eq!(po.overflow_checks, false); // "middle" package override from manifest
+}
+
+#[cargo_test]
+fn named_env_profile() {
+    // Environment variables used to define a named profile.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Zconfig-profile -Zunstable-options --profile=other")
+        .masquerade_as_nightly_cargo()
+        .env("CARGO_PROFILE_OTHER_CODEGEN_UNITS", "1")
+        .env("CARGO_PROFILE_OTHER_INHERITS", "dev")
+        .with_stderr_contains("[..]-C codegen-units=1 [..]")
         .run();
 }

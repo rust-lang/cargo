@@ -68,13 +68,16 @@ fn profile_override_warnings() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").with_stderr_contains(
+    p.cargo("build")
+        .with_stderr_contains(
             "\
-[WARNING] version or URL in package profile spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
-[WARNING] package profile spec `bart` did not match any packages
+[WARNING] profile package spec `bar:1.2.3` in profile `dev` \
+    has a version or URL that does not match any of the packages: \
+    bar v0.5.0 ([..]/foo/bar)
+[WARNING] profile package spec `bart` in profile `dev` did not match any packages
 
 <tab>Did you mean `bar`?
-[WARNING] package profile spec `no-suggestion` did not match any packages
+[WARNING] profile package spec `no-suggestion` in profile `dev` did not match any packages
 [COMPILING] [..]
 ",
         )
@@ -96,10 +99,7 @@ fn profile_override_bad_settings() {
             "rpath = true",
             "`rpath` may not be specified in a `package` profile",
         ),
-        (
-            "overrides = {}",
-            "package-specific profiles cannot be nested",
-        ),
+        ("package = {}", "package-specific profiles cannot be nested"),
     ];
     for &(snippet, expected) in bad_values.iter() {
         let p = project()
@@ -391,42 +391,6 @@ fn override_proc_macro() {
             &["[RUNNING] `rustc [..]--crate-name foo"],
             &["-C codegen-units"],
         )
-        .run();
-}
-
-#[cargo_test]
-fn override_package_rename() {
-    // backwards-compatibility test
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-
-            [dependencies]
-            bar = {path = "bar"}
-
-            [profile.dev]
-            opt-level = 1
-
-            [profile.dev.overrides.bar]
-            opt-level = 3
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
-        .file("bar/src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .with_stderr("\
-[WARNING] profile key `overrides` has been renamed to `package`, please update the manifest to the new key name
-[CHECKING] bar [..]
-[CHECKING] foo [..]
-[FINISHED] [..]
-")
         .run();
 }
 

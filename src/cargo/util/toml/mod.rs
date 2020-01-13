@@ -16,7 +16,6 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
-use crate::core::profiles::Profiles;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
@@ -270,23 +269,19 @@ pub struct TomlManifest {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(BTreeMap<String, TomlProfile>);
+pub struct TomlProfiles(BTreeMap<InternedString, TomlProfile>);
 
 impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+    pub fn get_all(&self) -> &BTreeMap<InternedString, TomlProfile> {
         &self.0
     }
 
-    pub fn get(&self, name: &'static str) -> Option<&TomlProfile> {
-        self.0.get(&String::from(name))
+    pub fn get(&self, name: &str) -> Option<&TomlProfile> {
+        self.0.get(name)
     }
 
     pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
         for (name, profile) in &self.0 {
-            if name == "debug" {
-                warnings.push("use `[profile.dev]` to configure debug builds".to_string());
-            }
-
             profile.validate(name, features, warnings)?;
         }
         Ok(())
@@ -408,13 +403,10 @@ pub struct TomlProfile {
     pub panic: Option<String>,
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
-    // `overrides` has been renamed to `package`, this should be removed when
-    // stabilized.
-    pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
-    pub dir_name: Option<String>,
-    pub inherits: Option<String>,
+    pub dir_name: Option<InternedString>,
+    pub inherits: Option<InternedString>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -458,20 +450,13 @@ impl TomlProfile {
         features: &Features,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
+        if name == "debug" {
+            warnings.push("use `[profile.dev]` to configure debug builds".to_string());
+        }
+
         if let Some(ref profile) = self.build_override {
             features.require(Feature::profile_overrides())?;
             profile.validate_override("build-override")?;
-        }
-        if let Some(ref override_map) = self.overrides {
-            warnings.push(
-                "profile key `overrides` has been renamed to `package`, \
-                 please update the manifest to the new key name"
-                    .to_string(),
-            );
-            features.require(Feature::profile_overrides())?;
-            for profile in override_map.values() {
-                profile.validate_override("package")?;
-            }
         }
         if let Some(ref packages) = self.package {
             features.require(Feature::profile_overrides())?;
@@ -570,7 +555,7 @@ impl TomlProfile {
     }
 
     fn validate_override(&self, which: &str) -> CargoResult<()> {
-        if self.overrides.is_some() || self.package.is_some() {
+        if self.package.is_some() {
             bail!("package-specific profiles cannot be nested");
         }
         if self.build_override.is_some() {
@@ -588,6 +573,7 @@ impl TomlProfile {
         Ok(())
     }
 
+    /// Overwrite self's values with the given profile.
     pub fn merge(&mut self, profile: &TomlProfile) {
         if let Some(v) = &profile.opt_level {
             self.opt_level = Some(v.clone());
@@ -625,16 +611,27 @@ impl TomlProfile {
             self.incremental = Some(v);
         }
 
-        if let Some(v) = &profile.overrides {
-            self.overrides = Some(v.clone());
+        if let Some(other_package) = &profile.package {
+            match &mut self.package {
+                Some(self_package) => {
+                    for (spec, other_pkg_profile) in other_package {
+                        match self_package.get_mut(spec) {
+                            Some(p) => p.merge(other_pkg_profile),
+                            None => {
+                                self_package.insert(spec.clone(), other_pkg_profile.clone());
+                            }
+                        }
+                    }
+                }
+                None => self.package = Some(other_package.clone()),
+            }
         }
 
-        if let Some(v) = &profile.package {
-            self.package = Some(v.clone());
-        }
-
-        if let Some(v) = &profile.build_override {
-            self.build_override = Some(v.clone());
+        if let Some(other_bo) = &profile.build_override {
+            match &mut self.build_override {
+                Some(self_bo) => self_bo.merge(other_bo),
+                None => self.build_override = Some(other_bo.clone()),
+            }
         }
 
         if let Some(v) = &profile.inherits {
@@ -1173,7 +1170,10 @@ impl TomlManifest {
                  `[workspace]`, only one can be specified"
             ),
         };
-        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
+        let profiles = me.profile.clone();
+        if let Some(profiles) = &profiles {
+            profiles.validate(&features, &mut warnings)?;
+        }
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
@@ -1321,7 +1321,10 @@ impl TomlManifest {
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
-        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
+        let profiles = me.profile.clone();
+        if let Some(profiles) = &profiles {
+            profiles.validate(&features, &mut warnings)?;
+        }
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 root,

@@ -27,10 +27,7 @@ fn inherits_on_release() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  An 'inherits' must not specified root profile 'release'
+[ERROR] `inherits` must not be specified in root profile `release`
 ",
         )
         .run();
@@ -61,10 +58,9 @@ fn missing_inherits() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  An 'inherits' directive is needed for all profiles that are not 'dev' or 'release'. Here it is missing from 'release-lto'",
+[ERROR] profile `release-lto` is missing an `inherits` directive \
+    (`inherits` is required for all profiles except `dev` or `release`)
+",
         )
         .run();
 }
@@ -198,10 +194,8 @@ fn non_existent_inherits() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  Profile 'non-existent' not found in Cargo.toml",
+[ERROR] profile `release-lto` inherits from `non-existent`, but that profile is not defined
+",
         )
         .run();
 }
@@ -232,10 +226,8 @@ fn self_inherits() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  Inheritance loop of profiles cycles with profile 'release-lto'",
+[ERROR] profile inheritance loop detected with profile `release-lto` inheriting `release-lto`
+",
         )
         .run();
 }
@@ -270,10 +262,8 @@ fn inherits_loop() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  Inheritance loop of profiles cycles with profile 'release-lto'",
+[ERROR] profile inheritance loop detected with profile `release-lto2` inheriting `release-lto`
+",
         )
         .run();
 }
@@ -476,4 +466,33 @@ fn clean_custom_dirname() {
         .run();
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("other").is_dir());
+}
+
+#[cargo_test]
+fn unknown_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["named-profiles"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --profile alpha -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[ERROR] profile `alpha` is not defined")
+        .with_status(101)
+        .run();
+    // Clean has a separate code path, need to check it too.
+    p.cargo("clean --profile alpha -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[ERROR] profile `alpha` is not defined")
+        .with_status(101)
+        .run();
 }

@@ -9,7 +9,6 @@ use log::debug;
 use url::Url;
 
 use crate::core::features::Features;
-use crate::core::profiles::Profiles;
 use crate::core::registry::PackageRegistry;
 use crate::core::{Dependency, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
@@ -17,7 +16,7 @@ use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::toml::read_manifest;
+use crate::util::toml::{read_manifest, TomlProfiles};
 use crate::util::{Config, Filesystem};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -273,7 +272,7 @@ impl<'cfg> Workspace<'cfg> {
         self.config
     }
 
-    pub fn profiles(&self) -> &Profiles {
+    pub fn profiles(&self) -> Option<&TomlProfiles> {
         match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().profiles(),
             MaybePackage::Virtual(vm) => vm.profiles(),
@@ -583,14 +582,6 @@ impl<'cfg> Workspace<'cfg> {
     /// 2. All workspace members agree on this one root as the root.
     /// 3. The current crate is a member of this workspace.
     fn validate(&mut self) -> CargoResult<()> {
-        // Validate config profiles only once per workspace.
-        let features = self.features();
-        let mut warnings = Vec::new();
-        self.config.profiles()?.validate(features, &mut warnings)?;
-        for warning in warnings {
-            self.config.shell().warn(&warning)?;
-        }
-
         // The rest of the checks require a VirtualManifest or multiple members.
         if self.root_manifest.is_none() {
             return Ok(());
