@@ -17,7 +17,7 @@
 
 use crate::core::compiler::Unit;
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
-use crate::core::dependency::Kind as DepKind;
+use crate::core::dependency::DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::core::resolver::Resolve;

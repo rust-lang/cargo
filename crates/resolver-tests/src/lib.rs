@@ -10,7 +10,7 @@ use std::fmt::Write;
 use std::rc::Rc;
 use std::time::Instant;
 
-use cargo::core::dependency::Kind;
+use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
@@ -629,7 +629,7 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
 }
-pub fn dep_req_kind(name: &str, req: &str, kind: Kind, public: bool) -> Dependency {
+pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
     dep.set_public(public);
@@ -642,7 +642,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let source_id = SourceId::for_git(&url, master).unwrap();
     Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
 }
-pub fn dep_kind(name: &str, kind: Kind) -> Dependency {
+pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     dep(name).set_kind(kind).clone()
 }
 
@@ -677,12 +677,12 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal
+                    if d.kind() == DepKind::Normal
                         && &d.version_req().to_string() == "*"
                         && !d.is_public()
                     {
                         write!(f, "dep(\"{}\"),", d.name_in_toml())?;
-                    } else if d.kind() == Kind::Normal && !d.is_public() {
+                    } else if d.kind() == DepKind::Normal && !d.is_public() {
                         write!(
                             f,
                             "dep_req(\"{}\", \"{}\"),",
@@ -696,9 +696,9 @@ impl fmt::Debug for PrettyPrintRegistry {
                             d.name_in_toml(),
                             d.version_req(),
                             match d.kind() {
-                                Kind::Development => "Kind::Development",
-                                Kind::Build => "Kind::Build",
-                                Kind::Normal => "Kind::Normal",
+                                DepKind::Development => "DepKind::Development",
+                                DepKind::Build => "DepKind::Build",
+                                DepKind::Normal => "DepKind::Normal",
                             },
                             d.is_public()
                         )?;
@@ -725,8 +725,8 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build, false)]),
-                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", Kind::Development, false)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build, false)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development, false)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -738,8 +738,8 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
          pkg!((\"baz\", \"1.0.1\")),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
-         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", DepKind::Build, false),]),\
+         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", DepKind::Development, false),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
@@ -848,10 +848,10 @@ pub fn registry_strategy(
                             format!(">={}, <={}", s[c].0, s[d].0)
                         },
                         match k {
-                            0 => Kind::Normal,
-                            1 => Kind::Build,
-                            // => Kind::Development, // Development has no impact so don't gen
-                            _ => panic!("bad index for Kind"),
+                            0 => DepKind::Normal,
+                            1 => DepKind::Build,
+                            // => DepKind::Development, // Development has no impact so don't gen
+                            _ => panic!("bad index for DepKind"),
                         },
                         p && k == 0,
                     ))

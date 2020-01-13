@@ -1,4 +1,4 @@
-use cargo::core::dependency::Kind;
+use cargo::core::dependency::DepKind;
 use cargo::core::{enable_nightly_features, Dependency};
 use cargo::util::{is_ci, Config};
 
@@ -232,7 +232,7 @@ fn pub_fail() {
     let input = vec![
         pkg!(("a", "0.0.4")),
         pkg!(("a", "0.0.5")),
-        pkg!(("e", "0.0.6") => [dep_req_kind("a", "<= 0.0.4", Kind::Normal, true),]),
+        pkg!(("e", "0.0.6") => [dep_req_kind("a", "<= 0.0.4", DepKind::Normal, true),]),
         pkg!(("kB", "0.0.3") => [dep_req("a", ">= 0.0.5"),dep("e"),]),
     ];
     let reg = registry(input);
@@ -244,7 +244,7 @@ fn basic_public_dependency() {
     let reg = registry(vec![
         pkg!(("A", "0.1.0")),
         pkg!(("A", "0.2.0")),
-        pkg!("B" => [dep_req_kind("A", "0.1", Kind::Normal, true)]),
+        pkg!("B" => [dep_req_kind("A", "0.1", DepKind::Normal, true)]),
         pkg!("C" => [dep("A"), dep("B")]),
     ]);
 
@@ -279,7 +279,7 @@ fn public_dependency_filling_in() {
         pkg!(("a", "0.1.1")),
         pkg!(("b", "0.0.0") => [dep("bad")]),
         pkg!(("b", "0.0.1") => [dep("bad")]),
-        pkg!(("b", "0.0.2") => [dep_req_kind("a", "=0.0.6", Kind::Normal, true)]),
+        pkg!(("b", "0.0.2") => [dep_req_kind("a", "=0.0.6", DepKind::Normal, true)]),
         pkg!("c" => [dep_req("b", ">=0.0.1")]),
         pkg!("d" => [dep("c"), dep("a"), dep("b")]),
     ]);
@@ -315,7 +315,7 @@ fn public_dependency_filling_in_and_update() {
     let reg = registry(vec![
         pkg!(("A", "0.0.0")),
         pkg!(("A", "0.0.2")),
-        pkg!("B" => [dep_req_kind("A", "=0.0.0", Kind::Normal, true),]),
+        pkg!("B" => [dep_req_kind("A", "=0.0.0", DepKind::Normal, true),]),
         pkg!("C" => [dep("A"),dep("B")]),
         pkg!("D" => [dep("B"),dep("C")]),
     ]);
@@ -341,7 +341,7 @@ fn public_dependency_skipping() {
         pkg!(("a", "0.2.0")),
         pkg!(("a", "2.0.0")),
         pkg!(("b", "0.0.0") => [dep("bad")]),
-        pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", Kind::Normal, true)]),
+        pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", DepKind::Normal, true)]),
         pkg!("c" => [dep("a"),dep("b")]),
     ];
     let reg = registry(input);
@@ -361,7 +361,7 @@ fn public_dependency_skipping_in_backtracking() {
         pkg!(("A", "0.0.3") => [dep("bad")]),
         pkg!(("A", "0.0.4")),
         pkg!(("A", "0.0.5")),
-        pkg!("B" => [dep_req_kind("A", ">= 0.0.3", Kind::Normal, true)]),
+        pkg!("B" => [dep_req_kind("A", ">= 0.0.3", DepKind::Normal, true)]),
         pkg!("C" => [dep_req("A", "<= 0.0.4"), dep("B")]),
     ];
     let reg = registry(input);
@@ -374,9 +374,9 @@ fn public_sat_topological_order() {
     let input = vec![
         pkg!(("a", "0.0.1")),
         pkg!(("a", "0.0.0")),
-        pkg!(("b", "0.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "0.0.1") => [dep_req_kind("a", "= 0.0.1", DepKind::Normal, true),]),
         pkg!(("b", "0.0.0") => [dep("bad"),]),
-        pkg!("A" => [dep_req("a", "= 0.0.0"),dep_req_kind("b", "*", Kind::Normal, true)]),
+        pkg!("A" => [dep_req("a", "= 0.0.0"),dep_req_kind("b", "*", DepKind::Normal, true)]),
     ];
 
     let reg = registry(input);
@@ -388,7 +388,7 @@ fn public_sat_unused_makes_things_pub() {
     let input = vec![
         pkg!(("a", "0.0.1")),
         pkg!(("a", "0.0.0")),
-        pkg!(("b", "8.0.1") => [dep_req_kind("a", "= 0.0.1", Kind::Normal, true),]),
+        pkg!(("b", "8.0.1") => [dep_req_kind("a", "= 0.0.1", DepKind::Normal, true),]),
         pkg!(("b", "8.0.0") => [dep_req("a", "= 0.0.1"),]),
         pkg!("c" => [dep_req("b", "= 8.0.0"),dep_req("a", "= 0.0.0"),]),
     ];
@@ -403,8 +403,8 @@ fn public_sat_unused_makes_things_pub_2() {
         pkg!(("c", "0.0.2")),
         pkg!(("c", "0.0.1")),
         pkg!(("a-sys", "0.0.2")),
-        pkg!(("a-sys", "0.0.1") => [dep_req_kind("c", "= 0.0.1", Kind::Normal, true),]),
-        pkg!("P" => [dep_req_kind("a-sys", "*", Kind::Normal, true),dep_req("c", "= 0.0.1"),]),
+        pkg!(("a-sys", "0.0.1") => [dep_req_kind("c", "= 0.0.1", DepKind::Normal, true),]),
+        pkg!("P" => [dep_req_kind("a-sys", "*", DepKind::Normal, true),dep_req("c", "= 0.0.1"),]),
         pkg!("A" => [dep("P"),dep_req("c", "= 0.0.2"),]),
     ];
     let reg = registry(input);
@@ -492,13 +492,17 @@ fn test_resolving_with_same_name() {
 #[test]
 fn test_resolving_with_dev_deps() {
     let reg = registry(vec![
-        pkg!("foo" => ["bar", dep_kind("baz", Kind::Development)]),
-        pkg!("baz" => ["bat", dep_kind("bam", Kind::Development)]),
+        pkg!("foo" => ["bar", dep_kind("baz", DepKind::Development)]),
+        pkg!("baz" => ["bat", dep_kind("bam", DepKind::Development)]),
         pkg!("bar"),
         pkg!("bat"),
     ]);
 
-    let res = resolve(vec![dep("foo"), dep_kind("baz", Kind::Development)], &reg).unwrap();
+    let res = resolve(
+        vec![dep("foo"), dep_kind("baz", DepKind::Development)],
+        &reg,
+    )
+    .unwrap();
 
     assert_same(&res, &names(&["root", "foo", "bar", "baz", "bat"]));
 }
@@ -1061,7 +1065,7 @@ fn resolving_with_public_constrained_sibling() {
                                   dep_req("backtrack_trap1", "1.0"),
                                   dep_req("backtrack_trap2", "1.0"),
                                   dep_req("constrained", "<=60")]),
-        pkg!(("bar", "1.0.0") => [dep_req_kind("constrained", ">=60", Kind::Normal, true)]),
+        pkg!(("bar", "1.0.0") => [dep_req_kind("constrained", ">=60", DepKind::Normal, true)]),
     ];
     // Bump these to make the test harder, but you'll also need to
     // change the version constraints on `constrained` above. To correctly

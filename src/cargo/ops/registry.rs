@@ -12,7 +12,7 @@ use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 
-use crate::core::dependency::Kind;
+use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
@@ -203,9 +203,9 @@ fn transmit(
                 version_req: dep.version_req().to_string(),
                 target: dep.platform().map(|s| s.to_string()),
                 kind: match dep.kind() {
-                    Kind::Normal => "normal",
-                    Kind::Build => "build",
-                    Kind::Development => "dev",
+                    DepKind::Normal => "normal",
+                    DepKind::Build => "build",
+                    DepKind::Development => "dev",
                 }
                 .to_string(),
                 registry: dep_registry,
