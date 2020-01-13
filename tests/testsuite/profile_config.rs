@@ -125,10 +125,10 @@ fn profile_config_error_paths() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] error in [..]/foo/.cargo/config: \
-    could not load config key `profile.dev`: \
-    error in [..]/home/.cargo/config: \
-    `profile.dev.rpath` expected true/false, but found a string
+[ERROR] error in [..]/foo/.cargo/config: could not load config key `profile.dev`
+
+Caused by:
+  error in [..]/home/.cargo/config: `profile.dev.rpath` expected true/false, but found a string
 ",
         )
         .run();
@@ -181,10 +181,10 @@ fn profile_config_syntax_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] error in [..]/foo/.cargo/config: \
-    could not load config key `profile.dev`: \
-    error in [..]/foo/.cargo/config: \
-    `profile.dev.codegen-units` expected an integer, but found a string
+[ERROR] error in [..]/.cargo/config: could not load config key `profile.dev`
+
+Caused by:
+  error in [..]/foo/.cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
 ",
         )
         .run();
