@@ -234,9 +234,29 @@ impl<'cfg> Workspace<'cfg> {
         Ok(pkg)
     }
 
+    pub fn current_mut(&mut self) -> CargoResult<&mut Package> {
+        let cm = self.current_manifest.clone();
+        let pkg = self.current_opt_mut().ok_or_else(|| {
+            anyhow::format_err!(
+                "manifest path `{}` is a virtual manifest, but this \
+                 command requires running against an actual package in \
+                 this workspace",
+                cm.display()
+            )
+        })?;
+        Ok(pkg)
+    }
+
     pub fn current_opt(&self) -> Option<&Package> {
         match *self.packages.get(&self.current_manifest) {
             MaybePackage::Package(ref p) => Some(p),
+            MaybePackage::Virtual(..) => None,
+        }
+    }
+
+    pub fn current_opt_mut(&mut self) -> Option<&mut Package> {
+        match *self.packages.get_mut(&self.current_manifest) {
+            MaybePackage::Package(ref mut p) => Some(p),
             MaybePackage::Virtual(..) => None,
         }
     }
@@ -825,8 +845,16 @@ impl<'cfg> Packages<'cfg> {
         self.maybe_get(manifest_path).unwrap()
     }
 
+    fn get_mut(&mut self, manifest_path: &Path) -> &mut MaybePackage {
+        self.maybe_get_mut(manifest_path).unwrap()
+    }
+
     fn maybe_get(&self, manifest_path: &Path) -> Option<&MaybePackage> {
         self.packages.get(manifest_path.parent().unwrap())
+    }
+
+    fn maybe_get_mut(&mut self, manifest_path: &Path) -> Option<&mut MaybePackage> {
+        self.packages.get_mut(manifest_path.parent().unwrap())
     }
 
     fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {
