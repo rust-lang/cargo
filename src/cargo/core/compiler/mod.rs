@@ -294,7 +294,7 @@ fn rustc<'a, 'cfg>(
                         package_id,
                         &target,
                         &mut output_options,
-                        Some(&rustc_client),
+                        &rustc_client,
                     )
                 },
             )
@@ -544,12 +544,19 @@ fn prepare_rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     crate_types: &[&str],
     unit: &Unit<'a>,
-) -> CargoResult<(Client, ProcessBuilder)> {
+) -> CargoResult<(Option<Client>, ProcessBuilder)> {
     let is_primary = cx.is_primary_package(unit);
 
     let mut base = cx.compilation.rustc_process(unit.pkg, is_primary)?;
-    let client = cx.new_jobserver()?;
-    base.inherit_jobserver(&client);
+    let client = if cx.bcx.config.cli_unstable().jobserver_per_rustc {
+        let client = cx.new_jobserver()?;
+        base.inherit_jobserver(&client);
+        base.arg("-Zjobserver-token-requests");
+        Some(client)
+    } else {
+        base.inherit_jobserver(&cx.jobserver);
+        None
+    };
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok((client, base))
@@ -612,7 +619,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
                 &mut |line| {
-                    on_stderr_line(state, line, package_id, &target, &mut output_options, None)
+                    on_stderr_line(state, line, package_id, &target, &mut output_options, &None)
                 },
                 false,
             )
@@ -696,7 +703,6 @@ fn add_error_format_and_color(
         _ => {}
     }
     cmd.arg(json);
-    cmd.arg("-Zjobserver-token-requests");
     Ok(())
 }
 
@@ -1095,7 +1101,7 @@ fn on_stderr_line(
     package_id: PackageId,
     target: &Target,
     options: &mut OutputOptions,
-    rustc_client: Option<&Client>,
+    rustc_client: &Option<Client>,
 ) -> CargoResult<()> {
     if on_stderr_line_inner(state, line, package_id, target, options, rustc_client)? {
         // Check if caching is enabled.
@@ -1117,7 +1123,7 @@ fn on_stderr_line_inner(
     package_id: PackageId,
     target: &Target,
     options: &mut OutputOptions,
-    rustc_client: Option<&Client>,
+    rustc_client: &Option<Client>,
 ) -> CargoResult<bool> {
     // We primarily want to use this function to process JSON messages from
     // rustc. The compiler should always print one JSON message per line, and
@@ -1304,7 +1310,7 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &target, &mut options, None)?;
+            on_stderr_line(state, trimmed, package_id, &target, &mut options, &None)?;
             line.clear();
         }
         Ok(())
