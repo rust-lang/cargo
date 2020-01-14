@@ -1,24 +1,15 @@
 //! Tests for the `cargo yank` command.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
 use cargo_test_support::registry::{self, api_path, registry_url};
 
 fn setup(name: &str, version: &str) {
-    fs::create_dir_all(&api_path().join(format!("api/v1/crates/{}/{}", name, version))).unwrap();
-
-    let dest = api_path().join(format!("api/v1/crates/{}/{}/yank", name, version));
-
-    let content = r#"{
-        "ok": true
-    }"#;
-
-    File::create(&dest)
-        .unwrap()
-        .write_all(content.as_bytes())
-        .unwrap();
+    let dir = api_path().join(format!("api/v1/crates/{}/{}", name, version));
+    dir.mkdir_p();
+    fs::write(dir.join("yank"), r#"{"ok": true}"#).unwrap();
 }
 
 #[cargo_test]

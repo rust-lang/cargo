@@ -1,17 +1,17 @@
 //! Tests for the `cargo owner` command.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
 use cargo_test_support::registry::{self, api_path, registry_url};
 
 fn setup(name: &str) {
-    fs::create_dir_all(&api_path().join(format!("api/v1/crates/{}", name))).unwrap();
-
-    let dest = api_path().join(format!("api/v1/crates/{}/owners", name));
-
-    let content = r#"{
+    let dir = api_path().join(format!("api/v1/crates/{}", name));
+    dir.mkdir_p();
+    fs::write(
+        dir.join("owners"),
+        r#"{
         "users": [
             {
                 "id": 70,
@@ -19,12 +19,9 @@ fn setup(name: &str) {
                 "name": "Core"
             }
         ]
-    }"#;
-
-    File::create(&dest)
-        .unwrap()
-        .write_all(content.as_bytes())
-        .unwrap();
+    }"#,
+    )
+    .unwrap();
 }
 
 #[cargo_test]

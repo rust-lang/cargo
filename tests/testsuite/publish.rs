@@ -1267,10 +1267,7 @@ fn credentials_ambiguous_filename() {
     registry::init();
 
     let credentials_toml = paths::home().join(".cargo/credentials.toml");
-    File::create(&credentials_toml)
-        .unwrap()
-        .write_all(br#"token = "api-token""#)
-        .unwrap();
+    fs::write(credentials_toml, r#"token = "api-token""#).unwrap();
 
     let p = project()
         .file(
