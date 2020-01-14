@@ -202,7 +202,7 @@ fn install_one(
 
     let mut td_opt = None;
     let mut needs_cleanup = false;
-    let overidden_target_dir = if source_id.is_path() {
+    let overidden_target_dir = if source_id.is_git() || source_id.is_path() {
         None
     } else if let Some(dir) = config.target_dir()? {
         Some(dir)
@@ -220,6 +220,17 @@ fn install_one(
         None => {
             let mut ws = Workspace::new(pkg.manifest_path(), config)?;
             ws.set_require_optional_deps(false);
+
+            // Use tempdir to build git depedencies to prevent bloat in cargo cache
+            if source_id.is_git() && config.target_dir()?.is_none() {
+                match TempFileBuilder::new().prefix("cargo-install").tempdir() {
+                    Ok(td) => ws.set_target_dir(Filesystem::new(td.path().to_owned())),
+                    // If tempfile creation fails, write to cargo cache but clean up afterwards
+                    Err(_) => needs_cleanup = true,
+                }
+            }
+            ws.set_package(pkg);
+
             ws
         }
     };

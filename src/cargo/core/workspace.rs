@@ -198,9 +198,7 @@ impl<'cfg> Workspace<'cfg> {
         target_dir: Option<Filesystem>,
         require_optional_deps: bool,
     ) -> CargoResult<Workspace<'cfg>> {
-        let manifest_path = package.manifest_path();
-        let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
-        ws.root_manifest = ws.find_root(&manifest_path)?;
+        let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
         let key = ws.current_manifest.parent().unwrap();
@@ -830,6 +828,17 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
         Ok(())
+    }
+
+    pub fn set_target_dir(&mut self, target_dir: Filesystem) {
+        self.target_dir = Some(target_dir);
+    }
+
+    // TODO: This seems like the wrong approach
+    pub fn set_package(&mut self, package: Package) {
+        let key = self.current_manifest.parent().unwrap();
+        let package = MaybePackage::Package(package);
+        self.packages.packages.insert(key.to_path_buf(), package);
     }
 }
 
