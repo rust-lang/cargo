@@ -1005,12 +1005,15 @@ impl Config {
         }
 
         if let CV::Table(map, _) = value {
+            let base_map = self.values_mut()?;
             for (k, v) in map {
-                if let Some(mut base_map) = self.values_mut()?.remove(&k) {
-                    base_map.merge(v, true)?;
-                    self.values_mut()?.insert(k.into(), base_map);
-                } else {
-                    self.values_mut()?.insert(k.into(), v);
+                match base_map.entry(k) {
+                    Vacant(entry) => {
+                        entry.insert(v);
+                    }
+                    Occupied(mut entry) => {
+                        entry.get_mut().merge(v, true)?;
+                    }
                 }
             }
         }
