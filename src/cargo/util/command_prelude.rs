@@ -190,6 +190,13 @@ pub trait AppExt: Sized {
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
         self._arg(opt("dry-run", dry_run))
     }
+
+    fn arg_ignore_min_rust_version(self) -> Self {
+        self._arg(opt(
+            "ignore-min-rust-version",
+            "Ignore `min-rust-version` specification in packages",
+        ))
+    }
 }
 
 impl AppExt for App {

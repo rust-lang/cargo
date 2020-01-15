@@ -32,6 +32,7 @@ pub fn cli() -> App {
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_ignore_min_rust_version()
         .arg_message_format()
         .after_help(
             "\

@@ -39,6 +39,7 @@ pub fn cli() -> App {
             .value_name("PATH"),
         )
         .arg_manifest_path()
+        .arg_ignore_min_rust_version()
         .arg_message_format()
         .arg_build_plan()
         .after_help(
