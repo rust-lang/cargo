@@ -87,7 +87,7 @@ pub struct JobQueue<'a, 'cfg> {
     queue: DependencyQueue<Unit<'a>, Artifact, Job>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
-    active: HashMap<u32, Unit<'a>>,
+    active: HashMap<JobId, Unit<'a>>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
@@ -96,13 +96,22 @@ pub struct JobQueue<'a, 'cfg> {
     timings: Timings<'a, 'cfg>,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct JobId(pub u32);
+
+impl std::fmt::Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct JobState<'a> {
     /// Channel back to the main thread to coordinate messages and such.
     tx: Sender<Message>,
 
     /// The job id that this state is associated with, used when sending
     /// messages back to the main thread.
-    id: u32,
+    id: JobId,
 
     /// Whether or not we're expected to have a call to `rmeta_produced`. Once
     /// that method is called this is dynamically set to `false` to prevent
@@ -135,19 +144,19 @@ enum Artifact {
 }
 
 enum Message {
-    Run(u32, String),
+    Run(JobId, String),
     BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
-    Finish(u32, Artifact, CargoResult<()>),
+    Finish(JobId, Artifact, CargoResult<()>),
 
     // This client should get release_raw called on it with one of our tokens
-    NeedsToken(u32, Client),
+    NeedsToken(JobId, Client),
 
     // A token previously passed to a NeedsToken client is being released.
-    ReleaseToken(u32),
+    ReleaseToken(JobId),
 }
 
 impl<'a> JobState<'a> {
@@ -343,7 +352,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     ) -> CargoResult<()> {
         let mut tokens = Vec::new();
         let mut rustc_tokens = Vec::new();
-        let mut to_send_clients: Vec<(u32, Client)> = Vec::new();
+        let mut to_send_clients: Vec<(JobId, Client)> = Vec::new();
         let mut queue = Vec::new();
         let mut print = DiagnosticPrinter::new(cx.bcx.config);
         trace!("queue: {:#?}", self.queue);
@@ -626,8 +635,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         cx: &Context<'a, '_>,
         scope: &Scope<'a>,
     ) -> CargoResult<()> {
-        let id = self.next_id;
-        self.next_id = id.checked_add(1).unwrap();
+        let id = JobId(self.next_id);
+        self.next_id = self.next_id.checked_add(1).unwrap();
 
         info!("start {}: {:?}", id, unit);
 
@@ -676,7 +685,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // to make sure nothing hangs by accident.
             struct FinishOnDrop<'a> {
                 tx: &'a Sender<Message>,
-                id: u32,
+                id: JobId,
                 result: CargoResult<()>,
             }
 
@@ -737,7 +746,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
     fn finish(
         &mut self,
-        id: u32,
+        id: JobId,
         unit: &Unit<'a>,
         artifact: Artifact,
         cx: &mut Context<'a, '_>,

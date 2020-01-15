@@ -3,6 +3,7 @@
 //! This module implements some simple tracking information for timing of how
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
+use crate::core::compiler::job_queue::JobId;
 use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
 use crate::util::cpu::State;
@@ -41,7 +42,7 @@ pub struct Timings<'a, 'cfg> {
     unit_times: Vec<UnitTime<'a>>,
     /// Units that are in the process of being built.
     /// When they finished, they are moved to `unit_times`.
-    active: HashMap<u32, UnitTime<'a>>,
+    active: HashMap<JobId, UnitTime<'a>>,
     /// Concurrency-tracking information. This is periodically updated while
     /// compilation progresses.
     concurrency: Vec<Concurrency>,
@@ -144,7 +145,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Mark that a unit has started running.
-    pub fn unit_start(&mut self, id: u32, unit: Unit<'a>) {
+    pub fn unit_start(&mut self, id: JobId, unit: Unit<'a>) {
         if !self.enabled {
             return;
         }
@@ -178,7 +179,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Mark that the `.rmeta` file as generated.
-    pub fn unit_rmeta_finished(&mut self, id: u32, unlocked: Vec<&Unit<'a>>) {
+    pub fn unit_rmeta_finished(&mut self, id: JobId, unlocked: Vec<&Unit<'a>>) {
         if !self.enabled {
             return;
         }
@@ -196,7 +197,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Mark that a unit has finished running.
-    pub fn unit_finished(&mut self, id: u32, unlocked: Vec<&Unit<'a>>) {
+    pub fn unit_finished(&mut self, id: JobId, unlocked: Vec<&Unit<'a>>) {
         if !self.enabled {
             return;
         }
