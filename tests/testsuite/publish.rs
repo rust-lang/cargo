@@ -1261,3 +1261,37 @@ repository = "foo"
         )],
     );
 }
+
+#[cargo_test]
+fn credentials_ambiguous_filename() {
+    registry::init();
+
+    let credentials_toml = paths::home().join(".cargo/credentials.toml");
+    fs::write(credentials_toml, r#"token = "api-token""#).unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
+        .with_stderr_contains(
+            "\
+[WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
+",
+        )
+        .run();
+
+    validate_upload_foo();
+}

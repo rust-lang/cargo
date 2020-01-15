@@ -2239,6 +2239,32 @@ fn recompile_space_in_name() {
 
 #[cfg(unix)]
 #[cargo_test]
+fn credentials_is_unreadable() {
+    use cargo_test_support::paths::home;
+    use std::os::unix::prelude::*;
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let credentials = home().join(".cargo/credentials");
+    t!(fs::create_dir_all(credentials.parent().unwrap()));
+    t!(t!(File::create(&credentials)).write_all(
+        br#"
+        [registry]
+        token = "api-token"
+    "#
+    ));
+    let stat = fs::metadata(credentials.as_path()).unwrap();
+    let mut perms = stat.permissions();
+    perms.set_mode(0o000);
+    fs::set_permissions(credentials, perms.clone()).unwrap();
+
+    p.cargo("build").run();
+}
+
+#[cfg(unix)]
+#[cargo_test]
 fn ignore_bad_directories() {
     use std::os::unix::prelude::*;
     let foo = project()

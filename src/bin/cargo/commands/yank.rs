@@ -29,6 +29,8 @@ crates to be locked to any yanked version.
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+    config.load_credentials()?;
+
     let registry = args.registry(config)?;
 
     ops::yank(
