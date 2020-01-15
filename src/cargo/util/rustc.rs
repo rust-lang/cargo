@@ -75,7 +75,7 @@ impl Rustc {
                     )
                 })?;
             semver::Version::parse(realease_str)?
-        };        
+        };
 
         Ok(Rustc {
             path,

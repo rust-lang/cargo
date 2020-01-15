@@ -353,11 +353,7 @@ pub fn resolve_with_previous<'cfg>(
     };
 
     let rustc_version = if ws.config().honor_min_rust_version() {
-         ws
-        .config()
-        .load_global_rustc(Some(ws))
-        .ok()
-        .map(|rustc| {
+        ws.config().load_global_rustc(Some(ws)).ok().map(|rustc| {
             let mut release = rustc.release;
             // Resolver logic doesn't care about toolchain channel, so pre-strip it, as an optimization.
             release.pre.clear();

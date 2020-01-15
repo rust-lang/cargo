@@ -48,7 +48,7 @@ fn min_rust_version_too_high() {
     p.cargo("build")
         .with_status(101)
         .with_stderr(
-        "\
+            "\
 error: package foo requires rust version 1.9876.0 or greater (currently have [..])
 ",
         )
@@ -177,7 +177,6 @@ perhaps a crate was updated and forgotten to be re-vendored?
     p.cargo("build --ignore-min-rust-version").run();
 }
 
-
 #[cargo_test]
 fn min_rust_version_registry_dependency_resolution() {
     let p = project()
@@ -203,7 +202,6 @@ fn min_rust_version_registry_dependency_resolution() {
     Package::new("bar", "0.1.1")
         .min_rust_version(Some("1.987.0".to_string()))
         .publish();
-
 
     p.cargo("build").run();
     p.cargo("build --ignore-min-rust-version").run();

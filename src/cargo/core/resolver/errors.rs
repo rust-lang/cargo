@@ -388,7 +388,7 @@ pub(super) fn activation_error(
                         },
                     ));
                 }
-                
+
                 msg.push_str("\n");
             }
             msg.push_str("required by ");
