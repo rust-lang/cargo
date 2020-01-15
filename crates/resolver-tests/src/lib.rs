@@ -176,6 +176,7 @@ pub fn resolve_with_config_raw(
         &BTreeMap::<String, Vec<String>>::new(),
         None::<&String>,
         false,
+        None,
     )
     .unwrap();
     let opts = ResolveOpts::everything();
@@ -187,6 +188,7 @@ pub fn resolve_with_config_raw(
         &HashSet::new(),
         config,
         true,
+        None,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -577,6 +579,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         &BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
+        None,
     )
     .unwrap()
 }
@@ -605,6 +608,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         &BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
+        None,
     )
     .unwrap()
 }
@@ -619,6 +623,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
         &BTreeMap::<String, Vec<String>>::new(),
         sum.links().map(|a| a.as_str()),
         sum.namespaced_features(),
+        sum.min_rust_version().map(|v| v.clone()),
     )
     .unwrap()
 }
