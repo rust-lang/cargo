@@ -63,6 +63,10 @@ pub struct CompilationFiles<'a, 'cfg> {
     /// include dependencies).
     roots: Vec<Unit<'a>>,
     ws: &'a Workspace<'cfg>,
+    /// Metadata hash to use for each unit.
+    ///
+    /// `None` if the unit should not use a metadata data hash (like rustdoc,
+    /// or some dylibs).
     metas: HashMap<Unit<'a>, Option<Metadata>>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
@@ -133,12 +137,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// We build to the path `"{filename}-{target_metadata}"`.
     /// We use a linking step to link/copy to a predictable filename
     /// like `target/debug/libfoo.{a,so,rlib}` and such.
+    ///
+    /// Returns `None` if the unit should not use a metadata data hash (like
+    /// rustdoc, or some dylibs).
     pub fn metadata(&self, unit: &Unit<'a>) -> Option<Metadata> {
         self.metas[unit].clone()
     }
 
     /// Gets the short hash based only on the `PackageId`.
-    /// Used for the metadata when `target_metadata` returns `None`.
+    /// Used for the metadata when `metadata` returns `None`.
     pub fn target_short_hash(&self, unit: &Unit<'_>) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
         util::short_hash(&hashable)
@@ -160,10 +167,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
+    /// Additional export directory from `--out-dir`.
     pub fn export_dir(&self) -> Option<PathBuf> {
         self.export_dir.clone()
     }
 
+    /// Directory name to use for a package in the form `NAME-HASH`.
     pub fn pkg_dir(&self, unit: &Unit<'a>) -> String {
         let name = unit.pkg.package_id().name();
         match self.metas[unit] {
@@ -177,6 +186,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.host.dest()
     }
 
+    /// Returns the host `deps` directory path.
     pub fn host_deps(&self) -> &Path {
         self.host.deps()
     }
@@ -187,6 +197,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).deps()
     }
 
+    /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit<'a>) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).fingerprint().join(dir)
@@ -241,7 +252,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(Arc::clone)
     }
 
-    /// Returns the bin stem for a given target (without metadata).
+    /// Returns the bin filename for a given target, without extension and metadata.
     fn bin_stem(&self, unit: &Unit<'_>) -> String {
         if unit.target.allows_underscores() {
             unit.target.name().to_string()
@@ -250,11 +261,16 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    /// Returns a tuple with the directory and name of the hard link we expect
-    /// our target to be copied to. Eg, file_stem may be out_dir/deps/foo-abcdef
-    /// and link_stem would be out_dir/foo
-    /// This function returns it in two parts so the caller can add prefix/suffix
-    /// to filename separately.
+    /// Returns a tuple `(hard_link_dir, filename_stem)` for the primary
+    /// output file for the given unit.
+    ///
+    /// `hard_link_dir` is the directory where the file should be hard-linked
+    /// ("uplifted") to. For example, `/path/to/project/target`.
+    ///
+    /// `filename_stem` is the base filename without an extension.
+    ///
+    /// This function returns it in two parts so the caller can add
+    /// prefix/suffix to filename separately.
     ///
     /// Returns an `Option` because in some cases we don't want to link
     /// (eg a dependent lib).
