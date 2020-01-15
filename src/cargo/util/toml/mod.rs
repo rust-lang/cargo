@@ -769,10 +769,12 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 /// the field `metadata`, since it is a table and values cannot appear after
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlProject {
     edition: Option<String>,
     name: InternedString,
     version: semver::Version,
+    min_rust_version: Option<semver::Version>,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
@@ -780,18 +782,14 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
-    #[serde(rename = "publish-lockfile")]
     publish_lockfile: Option<bool>,
     workspace: Option<String>,
-    #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
     autoexamples: Option<bool>,
     autotests: Option<bool>,
     autobenches: Option<bool>,
-    #[serde(rename = "namespaced-features")]
     namespaced_features: Option<bool>,
-    #[serde(rename = "default-run")]
     default_run: Option<String>,
 
     // Package metadata.
@@ -802,7 +800,6 @@ pub struct TomlProject {
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
-    #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
@@ -1126,20 +1123,33 @@ impl TomlManifest {
             features.require(Feature::namespaced_features())?;
         }
 
-        let summary = Summary::new(
-            pkgid,
-            deps,
-            &me.features
-                .as_ref()
-                .map(|x| {
-                    x.iter()
-                        .map(|(k, v)| (k.as_str(), v.iter().collect()))
-                        .collect()
-                })
-                .unwrap_or_else(BTreeMap::new),
-            project.links.as_ref().map(|x| x.as_str()),
-            project.namespaced_features.unwrap_or(false),
-        )?;
+        let summary = {
+            let mut min_rust_version = project.min_rust_version.clone();
+            if let Some(ver) = &mut min_rust_version {
+                if !ver.pre.is_empty() {
+                    warnings.push(format!(
+                        "pre-release part of min-rust-version ({:?}) is ignored.",
+                        ver.pre
+                    ));
+                    ver.pre.clear();
+                }
+            };
+            Summary::new(
+                pkgid,
+                deps,
+                &me.features
+                    .as_ref()
+                    .map(|x| {
+                        x.iter()
+                            .map(|(k, v)| (k.as_str(), v.iter().collect()))
+                            .collect()
+                    })
+                    .unwrap_or_else(BTreeMap::new),
+                project.links.as_ref().map(|x| x.as_str()),
+                project.namespaced_features.unwrap_or(false),
+                min_rust_version,
+            )?
+        };
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),

@@ -715,6 +715,7 @@ impl IndexSummary {
             features,
             yanked,
             links,
+            min_rust_version,
         } = serde_json::from_slice(line)?;
         log::trace!("json parsed registry {}/{}", name, vers);
         let pkgid = PackageId::new(name, &vers, source_id)?;
@@ -722,7 +723,7 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let mut summary = Summary::new(pkgid, deps, &features, links, false)?;
+        let mut summary = Summary::new(pkgid, deps, &features, links, false, min_rust_version)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,

@@ -227,6 +227,7 @@ pub struct RegistryPackage<'a> {
     cksum: String,
     yanked: Option<bool>,
     links: Option<InternedString>,
+    min_rust_version: Option<Version>,
 }
 
 #[test]

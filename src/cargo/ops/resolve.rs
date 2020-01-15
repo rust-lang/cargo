@@ -352,6 +352,17 @@ pub fn resolve_with_previous<'cfg>(
         None => root_replace.to_vec(),
     };
 
+    let rustc_version = ws
+        .config()
+        .load_global_rustc(Some(ws))
+        .ok()
+        .map(|rustc| {
+            let mut release = rustc.release;
+            // Resolver logic doesn't care about toolchain channel, so pre-strip it, as an optimization.
+            release.pre.clear();
+            release
+        });
+
     ws.preload(registry);
     let mut resolved = resolver::resolve(
         &summaries,
@@ -360,6 +371,7 @@ pub fn resolve_with_previous<'cfg>(
         &try_to_use,
         Some(ws.config()),
         ws.features().require(Feature::public_dependency()).is_ok(),
+        rustc_version.as_ref(),
     )?;
     resolved.register_used_patches(&registry.patches());
     if register_patches {

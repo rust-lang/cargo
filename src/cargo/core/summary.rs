@@ -30,6 +30,7 @@ struct Inner {
     checksum: Option<String>,
     links: Option<InternedString>,
     namespaced_features: bool,
+    min_rust_version: Option<Version>,
 }
 
 impl Summary {
@@ -39,6 +40,7 @@ impl Summary {
         features: &BTreeMap<K, Vec<impl AsRef<str>>>,
         links: Option<impl Into<InternedString>>,
         namespaced_features: bool,
+        min_rust_version: Option<Version>,
     ) -> CargoResult<Summary>
     where
         K: Borrow<str> + Ord + Display,
@@ -68,6 +70,7 @@ impl Summary {
                 checksum: None,
                 links: links.map(|l| l.into()),
                 namespaced_features,
+                min_rust_version,
             }),
         })
     }
@@ -129,6 +132,30 @@ impl Summary {
             self
         };
         me.map_dependencies(|dep| dep.map_source(to_replace, replace_with))
+    }
+
+    pub fn min_rust_version(&self) -> Option<&Version> {
+        self.inner.min_rust_version.as_ref()
+    }
+    // Whether the package min-rust-version constraint is satisfied by current toolchain.
+    pub fn compatible_with_rust_version(&self, rust: Option<&Version>) -> bool {
+        match (self.min_rust_version(), rust) {
+            (None, _) => true, // no constraints
+            (_, None) => true, // unknown rust version. Assume it's good enough.
+            (Some(pkg_v), Some(rust_v)) => {
+                // Zealously remove pre-release parts, since they don't work as one would expect.
+                // These should be pre-stripped already, so we try to optimize for that,
+                // but we can't blindly assume this to be true.
+                match (pkg_v.pre.is_empty(), rust_v.pre.is_empty()) {
+                    (true, true) => rust_v >= pkg_v,
+                    (_, _) => {
+                        let pkg_v = Version::new(pkg_v.major, pkg_v.minor, pkg_v.patch);
+                        let rust_v = Version::new(rust_v.major, rust_v.minor, rust_v.patch);
+                        rust_v >= pkg_v
+                    }
+                }
+            }
+        }
     }
 }
 

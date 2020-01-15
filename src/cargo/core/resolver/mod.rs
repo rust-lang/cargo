@@ -126,6 +126,7 @@ pub fn resolve(
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     check_public_visible_dependencies: bool,
+    active_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Resolve> {
     let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
@@ -134,7 +135,7 @@ pub fn resolve(
         None => false,
     };
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+    let cx = activate_deps_loop(cx, &mut registry, summaries, config, active_rust_version)?;
 
     let mut cksums = HashMap::new();
     for (summary, _) in cx.activations.values() {
@@ -171,6 +172,7 @@ fn activate_deps_loop(
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
     config: Option<&Config>,
+    active_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
@@ -182,7 +184,24 @@ fn activate_deps_loop(
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref opts) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let res = activate(&mut cx, registry, None, summary.clone(), opts.clone());
+        if !summary.compatible_with_rust_version(active_rust_version) {
+            return Err(anyhow::format_err!(
+                "package {} requires rust version {} or greater (currently have {})",
+                summary.name(),
+                // unwraps justified: if either toolchain's or package required min version is None,
+                // it is considered to be "compatible".
+                summary.min_rust_version().unwrap(),
+                active_rust_version.unwrap()
+            ));
+        }
+        let res = activate(
+            &mut cx,
+            registry,
+            None,
+            summary.clone(),
+            opts.clone(),
+            active_rust_version.clone(),
+        );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -292,6 +311,7 @@ fn activate_deps_loop(
                         &parent,
                         &dep,
                         &conflicting_activations,
+                        active_rust_version.clone(),
                     ) {
                         generalize_conflicting_activations = Some(c);
                     }
@@ -329,6 +349,7 @@ fn activate_deps_loop(
                             &conflicting_activations,
                             &candidates,
                             config,
+                            active_rust_version.clone(),
                         ))
                     }
                 }
@@ -379,7 +400,14 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, opts);
+            let res = activate(
+                &mut cx,
+                registry,
+                Some((&parent, &dep)),
+                candidate,
+                opts,
+                active_rust_version.clone(),
+            );
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -592,6 +620,7 @@ fn activate(
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
     opts: ResolveOpts,
+    active_rust_version: Option<&semver::Version>,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -643,8 +672,12 @@ fn activate(
     };
 
     let now = Instant::now();
-    let (used_features, deps) =
-        &*registry.build_deps(parent.map(|p| p.0.package_id()), &candidate, &opts)?;
+    let (used_features, deps) = &*registry.build_deps(
+        parent.map(|p| p.0.package_id()),
+        &candidate,
+        &opts,
+        active_rust_version,
+    )?;
 
     // Record what list of features is active for this package.
     if !used_features.is_empty() {
@@ -803,6 +836,7 @@ fn generalize_conflicting(
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
+    active_rust_version: Option<&semver::Version>,
 ) -> Option<ConflictMap> {
     if conflicting_activations.is_empty() {
         return None;
@@ -841,7 +875,7 @@ fn generalize_conflicting(
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
-                .query(critical_parents_dep)
+                .query(critical_parents_dep, active_rust_version.clone())
                 .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.

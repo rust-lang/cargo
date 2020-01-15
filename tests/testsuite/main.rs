@@ -64,6 +64,7 @@ mod message_format;
 mod metabuild;
 mod metadata;
 mod minimal_versions;
+mod min_rust_version;
 mod net_config;
 mod new;
 mod offline;

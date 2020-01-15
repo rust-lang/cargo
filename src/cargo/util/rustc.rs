@@ -25,6 +25,8 @@ pub struct Rustc {
     pub verbose_version: String,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: InternedString,
+    /// The rustc version (`1.23.4-beta.2`), this comes from verbose_version.
+    pub release: semver::Version,
     cache: Mutex<Cache>,
 }
 
@@ -61,12 +63,26 @@ impl Rustc {
                 })?;
             InternedString::new(triple)
         };
+        let release = {
+            let realease_str = verbose_version
+                .lines()
+                .find(|l| l.starts_with("release: "))
+                .map(|l| &l[9..])
+                .ok_or_else(|| {
+                    anyhow::format_err!(
+                        "`rustc -vV` didn't have a line for `release:`, got:\n{}",
+                        verbose_version
+                    )
+                })?;
+            semver::Version::parse(realease_str)?
+        };        
 
         Ok(Rustc {
             path,
             wrapper: wrapper.map(util::process),
             verbose_version,
             host,
+            release,
             cache: Mutex::new(cache),
         })
     }

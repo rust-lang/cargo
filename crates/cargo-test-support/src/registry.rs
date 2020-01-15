@@ -144,6 +144,7 @@ pub struct Package {
     local: bool,
     alternative: bool,
     invalid_json: bool,
+    min_rust_version: Option<String>,
 }
 
 #[derive(Clone)]
@@ -242,6 +243,7 @@ impl Package {
             local: false,
             alternative: false,
             invalid_json: false,
+            min_rust_version: None,
         }
     }
 
@@ -359,6 +361,12 @@ impl Package {
         self
     }
 
+    /// Sets min_rust_version.
+    pub fn min_rust_version(&mut self, min_rust_version: Option<String>) -> &mut Package {
+        self.min_rust_version = min_rust_version;
+        self
+    }
+
     /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
@@ -413,6 +421,7 @@ impl Package {
             "cksum": cksum,
             "features": self.features,
             "yanked": self.yanked,
+            "min_rust_version": self.min_rust_version,
         })
         .to_string();
 

@@ -73,7 +73,11 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
+    pub fn query(
+        &mut self,
+        dep: &Dependency,
+        active_rust_version: Option<&semver::Version>,
+    ) -> CargoResult<Rc<Vec<Summary>>> {
         if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
         }
@@ -81,8 +85,11 @@ impl<'a> RegistryQueryer<'a> {
         let mut ret = Vec::new();
         self.registry.query(
             dep,
-            &mut |s| {
-                ret.push(s);
+            &mut |summary| {
+                if !summary.compatible_with_rust_version(active_rust_version) {
+                    return;
+                }
+                ret.push(summary);
             },
             false,
         )?;
@@ -200,6 +207,7 @@ impl<'a> RegistryQueryer<'a> {
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
+        active_rust_version: Option<&semver::Version>,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -220,7 +228,7 @@ impl<'a> RegistryQueryer<'a> {
         let mut deps = deps
             .into_iter()
             .map(|(dep, features)| {
-                let candidates = self.query(&dep)?;
+                let candidates = self.query(&dep, active_rust_version)?;
                 Ok((dep, candidates, features))
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;

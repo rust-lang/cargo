@@ -76,6 +76,7 @@ pub(super) fn activation_error(
     conflicting_activations: &ConflictMap,
     candidates: &[Summary],
     config: Option<&Config>,
+    active_rust_version: Option<&semver::Version>,
 ) -> ResolveError {
     let to_resolve_err = |err| {
         ResolveError::new(
@@ -190,67 +191,152 @@ pub(super) fn activation_error(
 
     // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
-    //
-    // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
-    // was meant. So we re-query the registry with `deb="*"` so we can
-    // list a few versions that were actually found.
-    let all_req = semver::VersionReq::parse("*").unwrap();
-    let mut new_dep = dep.clone();
-    new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query_vec(&new_dep, false) {
-        Ok(candidates) => candidates,
-        Err(e) => return to_resolve_err(e),
-    };
-    candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
-    let mut msg =
-        if !candidates.is_empty() {
-            let versions = {
-                let mut versions = candidates
-                    .iter()
-                    .take(3)
-                    .map(|cand| cand.version().to_string())
-                    .collect::<Vec<_>>();
+    // Factored into a standalone function to streamline control flow a bit
+    fn get_helpful_message(
+        cx: &Context,
+        parent: &Summary,
+        dep: &Dependency,
+        registry: &mut dyn Registry,
+        active_rust_version: Option<&semver::Version>,
+    ) -> Result<String, ResolveError> {
+        let to_resolve_err = |err| {
+            Err(ResolveError::new(
+                err,
+                cx.parents
+                    .path_to_bottom(&parent.package_id())
+                    .into_iter()
+                    .cloned()
+                    .collect(),
+            ))
+        };
 
-                if candidates.len() > 3 {
-                    versions.push("...".into());
+        // Maybe the package actually exists, but the required rust version
+        // is higher than what we have right now?
+        // Note that registry.query() does not take rust version into account - that's done in the resolver.
+        if let Some(active_rust_version) = active_rust_version {
+            let candidates = match registry.query_vec(dep, false) {
+                Ok(candidates) => candidates,
+                Err(e) => return to_resolve_err(e),
+            };
+            if !candidates.is_empty() {
+                let versions = {
+                    let mut versions = candidates
+                        .iter()
+                        .take(3)
+                        .map(|cand| match cand.min_rust_version() {
+                            Some(ver) => format!("{} (rust>={})", cand.version(), ver),
+                            // Honestly, this should never happen, but let's not panic.
+                            None => format!("{} (rust - any)", cand.version()),
+                        })
+                        .collect::<Vec<_>>();
+
+                    if candidates.len() > 3 {
+                        versions.push("...".into());
+                    }
+
+                    versions.join(", ")
+                };
+
+                let mut msg = format!(
+                    "failed to select a version for the requirement `{} = \"{}\"`\n  \
+                     which would be compatible with current rust version of {}\n  \
+                     candidate versions found which didn't match: {}\n  \
+                     location searched: {}\n",
+                    dep.package_name(),
+                    dep.version_req(),
+                    active_rust_version,
+                    versions,
+                    registry.describe_source(dep.source_id()),
+                );
+                msg.push_str("required by ");
+                msg.push_str(&describe_path(
+                    &cx.parents.path_to_bottom(&parent.package_id()),
+                ));
+
+                // If we have a path dependency with a locked version, then this may
+                // indicate that we updated a sub-package and forgot to run `cargo
+                // update`. In this case try to print a helpful error!
+                if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
+                    msg.push_str(
+                        "\nconsider running `cargo update` to update \
+                         a path dependency's locked version",
+                    );
                 }
 
-                versions.join(", ")
-            };
+                if registry.is_replaced(dep.source_id()) {
+                    msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
+                }
 
-            let mut msg = format!(
-                "failed to select a version for the requirement `{} = \"{}\"`\n  \
-                 candidate versions found which didn't match: {}\n  \
-                 location searched: {}\n",
-                dep.package_name(),
-                dep.version_req(),
-                versions,
-                registry.describe_source(dep.source_id()),
-            );
-            msg.push_str("required by ");
-            msg.push_str(&describe_path(
-                &cx.parents.path_to_bottom(&parent.package_id()),
-            ));
+                return Ok(msg);
+            }
+        }
 
-            // If we have a path dependency with a locked version, then this may
-            // indicate that we updated a sub-package and forgot to run `cargo
-            // update`. In this case try to print a helpful error!
-            if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
-                msg.push_str(
-                    "\nconsider running `cargo update` to update \
-                     a path dependency's locked version",
+        // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
+        // was meant. So we re-query the registry with `deb="*"` so we can
+        // list a few versions that were actually found.
+        // We no longer care about min-rust-version here. This might lead to somewhat
+        // degraded experience if the 3 latest package versions all require rust version
+        // newer than what we have currently, but that's a lot of code for a somewhat niche case.
+        let all_req = semver::VersionReq::parse("*").unwrap();
+        let mut new_dep = dep.clone();
+        new_dep.set_version_req(all_req);
+        let mut candidates = match registry.query_vec(&new_dep, false) {
+            Ok(candidates) => candidates,
+            Err(e) => return to_resolve_err(e),
+        };
+        {
+            candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
+            if !candidates.is_empty() {
+                let versions = {
+                    let mut versions = candidates
+                        .iter()
+                        .take(3)
+                        .map(|cand| cand.version().to_string())
+                        .collect::<Vec<_>>();
+
+                    if candidates.len() > 3 {
+                        versions.push("...".into());
+                    }
+
+                    versions.join(", ")
+                };
+
+                let mut msg = format!(
+                    "failed to select a version for the requirement `{} = \"{}\"`\n  \
+                     candidate versions found which didn't match: {}\n  \
+                     location searched: {}\n",
+                    dep.package_name(),
+                    dep.version_req(),
+                    versions,
+                    registry.describe_source(dep.source_id()),
                 );
-            }
+                msg.push_str("required by ");
+                msg.push_str(&describe_path(
+                    &cx.parents.path_to_bottom(&parent.package_id()),
+                ));
 
-            if registry.is_replaced(dep.source_id()) {
-                msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
-            }
+                // If we have a path dependency with a locked version, then this may
+                // indicate that we updated a sub-package and forgot to run `cargo
+                // update`. In this case try to print a helpful error!
+                if dep.source_id().is_path() && dep.version_req().to_string().starts_with('=') {
+                    msg.push_str(
+                        "\nconsider running `cargo update` to update \
+                         a path dependency's locked version",
+                    );
+                }
 
-            msg
-        } else {
-            // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-            // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+                if registry.is_replaced(dep.source_id()) {
+                    msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
+                }
+
+                return Ok(msg);
+            }
+        }
+
+        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+        {
             let mut candidates = Vec::new();
             if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s), true) {
                 return to_resolve_err(e);
@@ -302,16 +388,21 @@ pub(super) fn activation_error(
                         },
                     ));
                 }
-
+                
                 msg.push_str("\n");
             }
             msg.push_str("required by ");
             msg.push_str(&describe_path(
                 &cx.parents.path_to_bottom(&parent.package_id()),
             ));
+            return Ok(msg);
+        }
+    };
 
-            msg
-        };
+    let mut msg = match get_helpful_message(cx, parent, dep, registry, active_rust_version) {
+        Ok(m) => m,
+        Err(e) => return e,
+    };
 
     if let Some(config) = config {
         if config.offline() {
