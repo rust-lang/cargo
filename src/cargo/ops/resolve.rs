@@ -352,7 +352,8 @@ pub fn resolve_with_previous<'cfg>(
         None => root_replace.to_vec(),
     };
 
-    let rustc_version = ws
+    let rustc_version = if ws.config().honor_min_rust_version() {
+         ws
         .config()
         .load_global_rustc(Some(ws))
         .ok()
@@ -361,7 +362,10 @@ pub fn resolve_with_previous<'cfg>(
             // Resolver logic doesn't care about toolchain channel, so pre-strip it, as an optimization.
             release.pre.clear();
             release
-        });
+        })
+    } else {
+        None
+    };
 
     ws.preload(registry);
     let mut resolved = resolver::resolve(

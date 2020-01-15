@@ -146,6 +146,11 @@ pub struct Config {
     /// `offline` is set if we should never access the network, but otherwise
     /// continue operating if possible.
     offline: bool,
+    /// `honor_min_rust_version` is set if we should honor `min-rust-version`
+    /// specifications advertized by packages. `true` is default.
+    /// If set to `false`, the package min-rust-version is ignored and we assume
+    /// our active toolchain is good enough to satisfy those.
+    honor_min_rust_version: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
     /// Cli flags of the form "-Z something"
@@ -221,6 +226,7 @@ impl Config {
             frozen: false,
             locked: false,
             offline: false,
+            honor_min_rust_version: true,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -607,6 +613,7 @@ impl Config {
         frozen: bool,
         locked: bool,
         offline: bool,
+        honor_min_rust_version: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
         cli_config: &[&str],
@@ -669,6 +676,7 @@ impl Config {
                 .ok()
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
+        self.honor_min_rust_version = honor_min_rust_version;
         self.target_dir = cli_target_dir;
 
         if nightly_features_allowed() {
@@ -702,6 +710,10 @@ impl Config {
 
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen && !self.locked
+    }
+
+    pub fn honor_min_rust_version(&self) -> bool {
+        self.honor_min_rust_version
     }
 
     /// Loads configuration from the filesystem.

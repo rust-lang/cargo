@@ -179,6 +179,7 @@ fn config_configure(
         args.is_present("frozen"),
         args.is_present("locked"),
         args.is_present("offline"),
+        !args.is_present("ignore-min-rust-version"),
         arg_target_dir,
         &args
             .values_of_lossy("unstable-features")
@@ -259,6 +260,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(opt("offline", "Run without accessing the network").global(true))
+        .arg(opt("ignore-min-rust-version", "Ignore packages min-rust-version specifier").global(true))
         .arg(
             multi_opt("config", "KEY=VALUE", "Override a configuration value")
                 .global(true)

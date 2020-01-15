@@ -23,7 +23,7 @@ fn min_rust_version_satisfied() {
         .build();
 
     p.cargo("build").run();
-    assert!(p.bin("foo").is_file());
+    p.cargo("build --ignore-min-rust-version").run();
 }
 
 #[cargo_test]
@@ -53,6 +53,7 @@ error: package foo requires rust version 1.9876.0 or greater (currently have [..
 ",
         )
         .run();
+    p.cargo("build --ignore-min-rust-version").run();
 }
 
 #[cargo_test]
@@ -84,6 +85,7 @@ warning: pre-release part of min-rust-version ([AlphaNumeric(\"nightly\")]) is i
 ",
         )
         .run();
+    p.cargo("build --ignore-min-rust-version").run();
 }
 
 #[cargo_test]
@@ -103,7 +105,7 @@ fn min_rust_version_local_dependency_fails() {
             #path = "../baz"
         "#,
         )
-        .file("src/main.rs", "fn stuff(){}")
+        .file("src/main.rs", "fn main(){}")
         .build();
     let _bar = project()
         .at("bar")
@@ -132,6 +134,7 @@ required by package `foo v0.0.1 ([..])`
 ",
         )
         .run();
+    p.cargo("build --ignore-min-rust-version").run();
 }
 
 #[cargo_test]
@@ -171,6 +174,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .run();
+    p.cargo("build --ignore-min-rust-version").run();
 }
 
 
@@ -202,4 +206,5 @@ fn min_rust_version_registry_dependency_resolution() {
 
 
     p.cargo("build").run();
+    p.cargo("build --ignore-min-rust-version").run();
 }
