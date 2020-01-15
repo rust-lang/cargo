@@ -152,19 +152,19 @@ let version = env!("CARGO_PKG_VERSION");
 
 `version` will now contain the value of `CARGO_PKG_VERSION`.
 
-* `CARGO` - Path to the `cargo` binary performing the build.
-* `CARGO_MANIFEST_DIR` - The directory containing the manifest of your package.
-* `CARGO_PKG_VERSION` - The full version of your package.
-* `CARGO_PKG_VERSION_MAJOR` - The major version of your package.
-* `CARGO_PKG_VERSION_MINOR` - The minor version of your package.
-* `CARGO_PKG_VERSION_PATCH` - The patch version of your package.
-* `CARGO_PKG_VERSION_PRE` - The pre-release version of your package.
-* `CARGO_PKG_AUTHORS` - Colon separated list of authors from the manifest of your package.
-* `CARGO_PKG_NAME` - The name of your package.
-* `CARGO_PKG_DESCRIPTION` - The description from the manifest of your package.
-* `CARGO_PKG_HOMEPAGE` - The home page from the manifest of your package.
-* `CARGO_PKG_REPOSITORY` - The repository from the manifest of your package.
-* `OUT_DIR` - If the package has a build script, this is set to the folder where the build
+* `CARGO` — Path to the `cargo` binary performing the build.
+* `CARGO_MANIFEST_DIR` — The directory containing the manifest of your package.
+* `CARGO_PKG_VERSION` — The full version of your package.
+* `CARGO_PKG_VERSION_MAJOR` — The major version of your package.
+* `CARGO_PKG_VERSION_MINOR` — The minor version of your package.
+* `CARGO_PKG_VERSION_PATCH` — The patch version of your package.
+* `CARGO_PKG_VERSION_PRE` — The pre-release version of your package.
+* `CARGO_PKG_AUTHORS` — Colon separated list of authors from the manifest of your package.
+* `CARGO_PKG_NAME` — The name of your package.
+* `CARGO_PKG_DESCRIPTION` — The description from the manifest of your package.
+* `CARGO_PKG_HOMEPAGE` — The home page from the manifest of your package.
+* `CARGO_PKG_REPOSITORY` — The repository from the manifest of your package.
+* `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
 
@@ -208,18 +208,18 @@ let out_dir = env::var("OUT_DIR").unwrap();
 
 `out_dir` will now contain the value of `OUT_DIR`.
 
-* `CARGO` - Path to the `cargo` binary performing the build.
-* `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
+* `CARGO` — Path to the `cargo` binary performing the build.
+* `CARGO_MANIFEST_DIR` — The directory containing the manifest for the package
                          being built (the package containing the build
                          script). Also note that this is the value of the
                          current working directory of the build script when it
                          starts.
-* `CARGO_MANIFEST_LINKS` - the manifest `links` value.
-* `CARGO_FEATURE_<name>` - For each activated feature of the package being
+* `CARGO_MANIFEST_LINKS` — the manifest `links` value.
+* `CARGO_FEATURE_<name>` — For each activated feature of the package being
                            built, this environment variable will be present
                            where `<name>` is the name of the feature uppercased
                            and having `-` translated to `_`.
-* `CARGO_CFG_<cfg>` - For each [configuration option][configuration] of the
+* `CARGO_CFG_<cfg>` — For each [configuration option][configuration] of the
   package being built, this environment variable will contain the value of the
   configuration, where `<cfg>` is the name of the configuration uppercased and
   having `-` translated to `_`. Boolean configurations are present if they are
@@ -238,14 +238,14 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_POINTER_WIDTH=64` — The CPU [pointer width].
     * `CARGO_CFG_TARGET_ENDIAN=little` — The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` — List of CPU [target features] enabled.
-* `OUT_DIR` - the folder in which all output should be placed. This folder is
+* `OUT_DIR` — the folder in which all output should be placed. This folder is
               inside the build directory for the package being built, and it is
               unique for the package in question.
-* `TARGET` - the target triple that is being compiled for. Native code should be
+* `TARGET` — the target triple that is being compiled for. Native code should be
              compiled for this triple. See the [Target Triple] description
              for more information.
-* `HOST` - the host triple of the rust compiler.
-* `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
+* `HOST` — the host triple of the rust compiler.
+* `NUM_JOBS` — the parallelism specified as the top-level parallelism. This can
                be useful to pass a `-j` parameter to a system like `make`. Note
                that care should be taken when interpreting this environment
                variable. For historical purposes this is still provided but
@@ -254,15 +254,15 @@ let out_dir = env::var("OUT_DIR").unwrap();
                [jobserver] and will allow build scripts to inherit this
                information, so programs compatible with GNU make jobservers will
                already have appropriately configured parallelism.
-* `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
+* `OPT_LEVEL`, `DEBUG` — values of the corresponding variables for the
                          profile currently being built.
-* `PROFILE` - `release` for release builds, `debug` for other builds.
-* `DEP_<name>_<key>` - For more information about this set of environment
+* `PROFILE` — `release` for release builds, `debug` for other builds.
+* `DEP_<name>_<key>` — For more information about this set of environment
                        variables, see build script documentation about [`links`][links].
-* `RUSTC`, `RUSTDOC` - the compiler and documentation generator that Cargo has
+* `RUSTC`, `RUSTDOC` — the compiler and documentation generator that Cargo has
                        resolved to use, passed to the build script so it might
                        use it as well.
-* `RUSTC_LINKER` - The path to the linker binary that Cargo has resolved to use
+* `RUSTC_LINKER` — The path to the linker binary that Cargo has resolved to use
                    for the current target, if specified. The linker can be
                    changed by editing `.cargo/config`; see the documentation
                    about [cargo configuration][cargo-config] for more
@@ -289,4 +289,4 @@ let out_dir = env::var("OUT_DIR").unwrap();
 Cargo exposes this environment variable to 3rd party subcommands
 (ie. programs named `cargo-foobar` placed in `$PATH`):
 
-* `CARGO` - Path to the `cargo` binary performing the build.
+* `CARGO` — Path to the `cargo` binary performing the build.
