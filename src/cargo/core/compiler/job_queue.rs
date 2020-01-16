@@ -425,7 +425,10 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // If we managed to acquire some extra tokens, send them off to a waiting rustc.
         let extra_tokens = self.tokens.len() - (self.active.len() - 1);
         for _ in 0..extra_tokens {
-            if let Some((id, client)) = self.to_send_clients.pop() {
+            if !self.to_send_clients.is_empty() {
+                // remove from the front so we grant the token to the oldest
+                // waiter
+                let (id, client) = self.to_send_clients.remove(0);
                 let token = self.tokens.pop().expect("an extra token");
                 self.rustc_tokens
                     .entry(id)
