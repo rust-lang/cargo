@@ -380,6 +380,22 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
+    fn grant_rustc_token_requests(&mut self) -> CargoResult<()> {
+        // If we managed to acquire some extra tokens, send them off to a waiting rustc.
+        let extra_tokens = self.tokens.len() - (self.active.len() - 1);
+        for _ in 0..extra_tokens {
+            if let Some((id, client)) = self.to_send_clients.pop() {
+                let token = self.tokens.pop().expect("an extra token");
+                self.rustc_tokens.push((id, token));
+                client
+                    .release_raw()
+                    .chain_err(|| "failed to release jobserver token")?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn drain_the_queue(
         &mut self,
         cx: &mut Context<'a, '_>,
@@ -417,17 +433,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 break;
             }
 
-            // If we managed to acquire some extra tokens, send them off to a waiting rustc.
-            let extra_tokens = self.tokens.len() - (self.active.len() - 1);
-            for _ in 0..extra_tokens {
-                if let Some((id, client)) = self.to_send_clients.pop() {
-                    let token = self.tokens.pop().expect("an extra token");
-                    self.rustc_tokens.push((id, token));
-                    client
-                        .release_raw()
-                        .chain_err(|| "failed to release jobserver token")?;
-                }
-            }
+            self.grant_rustc_token_requests()?;
 
             // And finally, before we block waiting for the next event, drop any
             // excess tokens we may have accidentally acquired. Due to how our
