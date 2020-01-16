@@ -95,7 +95,7 @@ pub struct JobQueue<'a, 'cfg> {
     timings: Timings<'a, 'cfg>,
 
     tokens: Vec<Acquired>,
-    rustc_tokens: Vec<(JobId, Acquired)>,
+    rustc_tokens: HashMap<JobId, Vec<Acquired>>,
     to_send_clients: Vec<(JobId, Client)>,
     pending_queue: Vec<(Unit<'a>, Job)>,
     print: DiagnosticPrinter<'cfg>,
@@ -238,7 +238,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             timings,
 
             tokens: Vec::new(),
-            rustc_tokens: Vec::new(),
+            rustc_tokens: HashMap::new(),
             to_send_clients: Vec::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(bcx.config),
@@ -390,7 +390,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         for _ in 0..extra_tokens {
             if let Some((id, client)) = self.to_send_clients.pop() {
                 let token = self.tokens.pop().expect("an extra token");
-                self.rustc_tokens.push((id, token));
+                self.rustc_tokens
+                    .entry(id)
+                    .or_insert_with(Vec::new)
+                    .push(token);
                 client
                     .release_raw()
                     .chain_err(|| "failed to release jobserver token")?;
@@ -436,10 +439,14 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     Artifact::All => {
                         info!("end: {:?}", id);
                         self.finished += 1;
-                        while let Some(pos) = self.rustc_tokens.iter().position(|(i, _)| *i == id) {
-                            // push all the leftover tokens back into
-                            // the token list
-                            self.tokens.push(self.rustc_tokens.remove(pos).1);
+                        if let Some(rustc_tokens) = self.rustc_tokens.remove(&id) {
+                            // This puts back the tokens that this rustc
+                            // acquired into our primary token list.
+                            //
+                            // FIXME: this represents a rustc bug: it did not
+                            // release all of its thread tokens but finished
+                            // completely.
+                            self.tokens.extend(rustc_tokens);
                         }
                         while let Some(pos) =
                             self.to_send_clients.iter().position(|(i, _)| *i == id)
@@ -489,13 +496,11 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 // Note that this pops off potentially a completely
                 // different token, but all tokens of the same job are
                 // conceptually the same so that's fine.
-                if let Some(pos) = self.rustc_tokens.iter().position(|(i, _)| *i == id) {
-                    self.tokens.push(self.rustc_tokens.remove(pos).1);
+                if let Some(rustc_tokens) = self.rustc_tokens.get_mut(&id) {
+                    self.tokens
+                        .push(rustc_tokens.pop().expect("rustc releases token it has"));
                 } else {
-                    panic!(
-                        "This job (id={}) does not have tokens associated with it",
-                        id
-                    );
+                    panic!("This job does not have tokens associated with it");
                 }
             }
         }
