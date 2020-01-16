@@ -99,6 +99,9 @@ pub struct JobQueue<'a, 'cfg> {
     to_send_clients: Vec<(JobId, Client)>,
     pending_queue: Vec<(Unit<'a>, Job)>,
     print: DiagnosticPrinter<'cfg>,
+
+    // How many jobs we've finished
+    finished: usize,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -239,6 +242,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             to_send_clients: Vec::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(bcx.config),
+            finished: 0,
         }
     }
 
@@ -396,6 +400,116 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
+    fn handle_event(
+        &mut self,
+        cx: &mut Context<'a, '_>,
+        jobserver_helper: &HelperThread,
+        plan: &mut BuildPlan,
+        event: Message,
+    ) -> CargoResult<Option<anyhow::Error>> {
+        match event {
+            Message::Run(id, cmd) => {
+                cx.bcx
+                    .config
+                    .shell()
+                    .verbose(|c| c.status("Running", &cmd))?;
+                self.timings.unit_start(id, self.active[&id]);
+            }
+            Message::BuildPlanMsg(module_name, cmd, filenames) => {
+                plan.update(&module_name, &cmd, &filenames)?;
+            }
+            Message::Stdout(out) => {
+                cx.bcx.config.shell().stdout_println(out);
+            }
+            Message::Stderr(err) => {
+                let mut shell = cx.bcx.config.shell();
+                shell.print_ansi(err.as_bytes())?;
+                shell.err().write_all(b"\n")?;
+            }
+            Message::FixDiagnostic(msg) => {
+                self.print.print(&msg)?;
+            }
+            Message::Finish(id, artifact, result) => {
+                let unit = match artifact {
+                    // If `id` has completely finished we remove it
+                    // from the `active` map ...
+                    Artifact::All => {
+                        info!("end: {:?}", id);
+                        self.finished += 1;
+                        while let Some(pos) = self.rustc_tokens.iter().position(|(i, _)| *i == id) {
+                            // push all the leftover tokens back into
+                            // the token list
+                            self.tokens.push(self.rustc_tokens.remove(pos).1);
+                        }
+                        while let Some(pos) =
+                            self.to_send_clients.iter().position(|(i, _)| *i == id)
+                        {
+                            // drain all the pending clients
+                            self.to_send_clients.remove(pos);
+                        }
+                        self.active.remove(&id).unwrap()
+                    }
+                    // ... otherwise if it hasn't finished we leave it
+                    // in there as we'll get another `Finish` later on.
+                    Artifact::Metadata => {
+                        info!("end (meta): {:?}", id);
+                        self.active[&id]
+                    }
+                };
+                info!("end ({:?}): {:?}", unit, result);
+                match result {
+                    Ok(()) => self.finish(id, &unit, artifact, cx)?,
+                    Err(e) => {
+                        let msg = "The following warnings were emitted during compilation:";
+                        self.emit_warnings(Some(msg), &unit, cx)?;
+
+                        if !self.active.is_empty() {
+                            handle_error(&e, &mut *cx.bcx.config.shell());
+                            cx.bcx.config.shell().warn(
+                                "build failed, waiting for other \
+                                 jobs to finish...",
+                            )?;
+                            return Ok(Some(anyhow::format_err!("build failed")));
+                        } else {
+                            return Ok(Some(e));
+                        }
+                    }
+                }
+            }
+            Message::Token(acquired_token) => {
+                let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
+                if let Some((id, client)) = self.to_send_clients.pop() {
+                    self.rustc_tokens.push((id, token));
+                    client
+                        .release_raw()
+                        .chain_err(|| "failed to release jobserver token")?;
+                } else {
+                    self.tokens.push(token);
+                }
+            }
+            Message::NeedsToken(id, client) => {
+                log::info!("queue token request");
+                jobserver_helper.request_token();
+                self.to_send_clients.push((id, client));
+            }
+            Message::ReleaseToken(id) => {
+                // Note that this pops off potentially a completely
+                // different token, but all tokens of the same job are
+                // conceptually the same so that's fine.
+                if let Some(pos) = self.rustc_tokens.iter().position(|(i, _)| *i == id) {
+                    self.tokens.push(self.rustc_tokens.remove(pos).1);
+                } else {
+                    panic!(
+                        "This job (id={}) does not have tokens associated with it",
+                        id
+                    );
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     fn drain_the_queue(
         &mut self,
         cx: &mut Context<'a, '_>,
@@ -415,8 +529,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
-        let total = self.queue.len();
-        let mut finished = 0;
         loop {
             self.spawn_work_if_possible(cx, jobserver_helper, error.is_some())?;
 
@@ -461,7 +573,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             // previous parts of the loop again.
             let events: Vec<_> = self.rx.try_iter().collect();
             let events = if events.is_empty() {
-                self.show_progress(finished, total);
+                self.show_progress();
                 match self.rx.recv_timeout(Duration::from_millis(500)) {
                     Ok(message) => vec![message],
                     Err(_) => continue,
@@ -471,107 +583,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             };
 
             for event in events {
-                match event {
-                    Message::Run(id, cmd) => {
-                        cx.bcx
-                            .config
-                            .shell()
-                            .verbose(|c| c.status("Running", &cmd))?;
-                        self.timings.unit_start(id, self.active[&id]);
-                    }
-                    Message::BuildPlanMsg(module_name, cmd, filenames) => {
-                        plan.update(&module_name, &cmd, &filenames)?;
-                    }
-                    Message::Stdout(out) => {
-                        cx.bcx.config.shell().stdout_println(out);
-                    }
-                    Message::Stderr(err) => {
-                        let mut shell = cx.bcx.config.shell();
-                        shell.print_ansi(err.as_bytes())?;
-                        shell.err().write_all(b"\n")?;
-                    }
-                    Message::FixDiagnostic(msg) => {
-                        self.print.print(&msg)?;
-                    }
-                    Message::Finish(id, artifact, result) => {
-                        let unit = match artifact {
-                            // If `id` has completely finished we remove it
-                            // from the `active` map ...
-                            Artifact::All => {
-                                info!("end: {:?}", id);
-                                finished += 1;
-                                while let Some(pos) =
-                                    self.rustc_tokens.iter().position(|(i, _)| *i == id)
-                                {
-                                    // push all the leftover tokens back into
-                                    // the token list
-                                    self.tokens.push(self.rustc_tokens.remove(pos).1);
-                                }
-                                while let Some(pos) =
-                                    self.to_send_clients.iter().position(|(i, _)| *i == id)
-                                {
-                                    // drain all the pending clients
-                                    self.to_send_clients.remove(pos);
-                                }
-                                self.active.remove(&id).unwrap()
-                            }
-                            // ... otherwise if it hasn't finished we leave it
-                            // in there as we'll get another `Finish` later on.
-                            Artifact::Metadata => {
-                                info!("end (meta): {:?}", id);
-                                self.active[&id]
-                            }
-                        };
-                        info!("end ({:?}): {:?}", unit, result);
-                        match result {
-                            Ok(()) => self.finish(id, &unit, artifact, cx)?,
-                            Err(e) => {
-                                let msg = "The following warnings were emitted during compilation:";
-                                self.emit_warnings(Some(msg), &unit, cx)?;
-
-                                if !self.active.is_empty() {
-                                    error = Some(anyhow::format_err!("build failed"));
-                                    handle_error(&e, &mut *cx.bcx.config.shell());
-                                    cx.bcx.config.shell().warn(
-                                        "build failed, waiting for other \
-                                         jobs to finish...",
-                                    )?;
-                                } else {
-                                    error = Some(e);
-                                }
-                            }
-                        }
-                    }
-                    Message::Token(acquired_token) => {
-                        let token =
-                            acquired_token.chain_err(|| "failed to acquire jobserver token")?;
-                        if let Some((id, client)) = self.to_send_clients.pop() {
-                            self.rustc_tokens.push((id, token));
-                            client
-                                .release_raw()
-                                .chain_err(|| "failed to release jobserver token")?;
-                        } else {
-                            self.tokens.push(token);
-                        }
-                    }
-                    Message::NeedsToken(id, client) => {
-                        log::info!("queue token request");
-                        jobserver_helper.request_token();
-                        self.to_send_clients.push((id, client));
-                    }
-                    Message::ReleaseToken(id) => {
-                        // Note that this pops off potentially a completely
-                        // different token, but all tokens of the same job are
-                        // conceptually the same so that's fine.
-                        if let Some(pos) = self.rustc_tokens.iter().position(|(i, _)| *i == id) {
-                            self.tokens.push(self.rustc_tokens.remove(pos).1);
-                        } else {
-                            panic!(
-                                "This job (id={}) does not have tokens associated with it",
-                                id
-                            );
-                        }
-                    }
+                if let Some(err) = self.handle_event(cx, jobserver_helper, plan, event)? {
+                    error = Some(err);
                 }
             }
         }
@@ -615,16 +628,17 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
     }
 
-    fn show_progress(&mut self, count: usize, total: usize) {
+    fn show_progress(&mut self) {
         let active_names = self
             .active
             .values()
             .map(|u| self.name_for_progress(u))
             .collect::<Vec<_>>();
-        drop(
-            self.progress
-                .tick_now(count, total, &format!(": {}", active_names.join(", "))),
-        );
+        drop(self.progress.tick_now(
+            self.finished,
+            self.queue.len(),
+            &format!(": {}", active_names.join(", ")),
+        ));
     }
 
     fn name_for_progress(&self, unit: &Unit<'_>) -> String {
