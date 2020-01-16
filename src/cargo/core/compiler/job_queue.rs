@@ -347,6 +347,39 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         self.drain_the_queue(cx, plan, &helper)
     }
 
+    fn spawn_work_if_possible(
+        &mut self,
+        cx: &mut Context<'a, '_>,
+        jobserver_helper: &HelperThread,
+        has_errored: bool,
+    ) -> CargoResult<()> {
+        // Dequeue as much work as we can, learning about everything
+        // possible that can run. Note that this is also the point where we
+        // start requesting job tokens. Each job after the first needs to
+        // request a token.
+        while let Some((unit, job)) = self.queue.dequeue() {
+            self.pending_queue.push((unit, job));
+            if self.active.len() + self.pending_queue.len() > 1 {
+                jobserver_helper.request_token();
+            }
+        }
+
+        // Do not actually spawn the new work if we've errored out
+        if has_errored {
+            return Ok(());
+        }
+
+        // Now that we've learned of all possible work that we can execute
+        // try to spawn it so long as we've got a jobserver token which says
+        // we're able to perform some parallel work.
+        while self.active.len() < self.tokens.len() + 1 && !self.pending_queue.is_empty() {
+            let (unit, job) = self.pending_queue.remove(0);
+            self.run(&unit, job, cx)?;
+        }
+
+        Ok(())
+    }
+
     fn drain_the_queue(
         &mut self,
         cx: &mut Context<'a, '_>,
@@ -369,24 +402,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let total = self.queue.len();
         let mut finished = 0;
         loop {
-            // Dequeue as much work as we can, learning about everything
-            // possible that can run. Note that this is also the point where we
-            // start requesting job tokens. Each job after the first needs to
-            // request a token.
-            while let Some((unit, job)) = self.queue.dequeue() {
-                self.pending_queue.push((unit, job));
-                if self.active.len() + self.pending_queue.len() > 1 {
-                    jobserver_helper.request_token();
-                }
-            }
-
-            // Now that we've learned of all possible work that we can execute
-            // try to spawn it so long as we've got a jobserver token which says
-            // we're able to perform some parallel work.
-            while error.is_none() && self.active.len() < self.tokens.len() + 1 && !self.pending_queue.is_empty() {
-                let (unit, job) = self.pending_queue.remove(0);
-                self.run(&unit, job, cx)?;
-            }
+            self.spawn_work_if_possible(cx, jobserver_helper, error.is_some())?;
 
             info!(
                 "tokens: {}, rustc_tokens: {}, waiting_rustcs: {}",
