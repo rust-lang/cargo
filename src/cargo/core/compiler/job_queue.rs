@@ -77,12 +77,23 @@ use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder
 use crate::util::{Config, DependencyQueue};
 use crate::util::{Progress, ProgressStyle};
 
-/// A management structure of the entire dependency graph to compile.
-///
+/// This structure is backed by the `DependencyQueue` type and manages the
+/// queueing of compilation steps for each package. Packages enqueue units of
+/// work and then later on the entire graph is converted to DrainState and
+/// executed.
+pub struct JobQueue<'a, 'cfg> {
+    queue: DependencyQueue<Unit<'a>, Artifact, Job>,
+    counts: HashMap<PackageId, usize>,
+    timings: Timings<'a, 'cfg>,
+}
+
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
-pub struct JobQueue<'a, 'cfg> {
+///
+/// It is created from JobQueue when we have fully assembled the crate graph
+/// (i.e., all package dependencies are known).
+struct DrainState<'a, 'cfg> {
     queue: DependencyQueue<Unit<'a>, Artifact, Job>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
@@ -225,27 +236,10 @@ impl<'a> JobState<'a> {
 
 impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'a>]) -> JobQueue<'a, 'cfg> {
-        let (tx, rx) = channel();
-        let progress = Progress::with_style("Building", ProgressStyle::Ratio, bcx.config);
-        let timings = Timings::new(bcx, root_units);
         JobQueue {
             queue: DependencyQueue::new(),
-            tx,
-            rx,
-            active: HashMap::new(),
-            compiled: HashSet::new(),
-            documented: HashSet::new(),
             counts: HashMap::new(),
-            progress,
-            next_id: 0,
-            timings,
-
-            tokens: Vec::new(),
-            rustc_tokens: HashMap::new(),
-            to_send_clients: Vec::new(),
-            pending_queue: Vec::new(),
-            print: DiagnosticPrinter::new(bcx.config),
-            finished: 0,
+            timings: Timings::new(bcx, root_units),
         }
     }
 
@@ -330,8 +324,30 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
+        let (tx, rx) = channel();
+        let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
+        let state = DrainState {
+            queue: self.queue,
+            tx,
+            rx,
+            active: HashMap::new(),
+            compiled: HashSet::new(),
+            documented: HashSet::new(),
+            counts: self.counts,
+            progress,
+            next_id: 0,
+            timings: self.timings,
+
+            tokens: Vec::new(),
+            rustc_tokens: HashMap::new(),
+            to_send_clients: Vec::new(),
+            pending_queue: Vec::new(),
+            print: DiagnosticPrinter::new(cx.bcx.config),
+            finished: 0,
+        };
+
         // Create a helper thread for acquiring jobserver tokens
-        let tx = self.tx.clone();
+        let tx = state.tx.clone();
         let helper = cx
             .jobserver
             .clone()
@@ -342,7 +358,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
         // Create a helper thread to manage the diagnostics for rustfix if
         // necessary.
-        let tx = self.tx.clone();
+        let tx = state.tx.clone();
         let _diagnostic_server = cx
             .bcx
             .build_config
@@ -351,9 +367,11 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| drop(tx.send(Message::FixDiagnostic(msg)))));
 
-        self.drain_the_queue(cx, plan, &helper)
+        state.drain_the_queue(cx, plan, &helper)
     }
+}
 
+impl<'a, 'cfg> DrainState<'a, 'cfg> {
     fn spawn_work_if_possible(
         &mut self,
         cx: &mut Context<'a, '_>,
