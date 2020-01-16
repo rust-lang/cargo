@@ -96,6 +96,9 @@ pub struct JobQueue<'a, 'cfg> {
 
     tokens: Vec<Acquired>,
     rustc_tokens: HashMap<JobId, Vec<Acquired>>,
+
+    // We use a vec here as we don't want to order randomly which rustc we give
+    // tokens to.
     to_send_clients: Vec<(JobId, Client)>,
     pending_queue: Vec<(Unit<'a>, Job)>,
     print: DiagnosticPrinter<'cfg>,
