@@ -326,7 +326,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context<'a, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(mut self, cx: &mut Context<'a, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -534,7 +534,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     }
 
     fn drain_the_queue(
-        &mut self,
+        mut self,
         cx: &mut Context<'a, '_>,
         plan: &mut BuildPlan,
         jobserver_helper: &HelperThread,
