@@ -2194,6 +2194,8 @@ fn rebuild_preserves_out_dir() {
 
 #[cargo_test]
 fn dep_no_libs() {
+    let exe_name = format!("bar{}", env::consts::EXE_SUFFIX);
+
     let foo = project()
         .file(
             "Cargo.toml",
@@ -2209,9 +2211,11 @@ fn dep_no_libs() {
         )
         .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
-        .file("bar/src/main.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
         .build();
+
     foo.cargo("build").run();
+    assert!(foo.target_debug_dir().join(exe_name).exists());
 }
 
 #[cargo_test]

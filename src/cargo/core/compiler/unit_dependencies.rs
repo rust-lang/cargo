@@ -266,7 +266,7 @@ fn compute_deps<'a, 'cfg>(
             Some(pkg) => pkg,
             None => continue,
         };
-        let lib = match pkg.targets().iter().find(|t| t.is_lib()) {
+        let lib = match pkg.targets().iter().find(|t| t.is_lib() || t.is_bin()) {
             Some(t) => t,
             None => continue,
         };
