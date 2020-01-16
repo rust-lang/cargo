@@ -105,12 +105,28 @@ struct DrainState<'a, 'cfg> {
     next_id: u32,
     timings: Timings<'a, 'cfg>,
 
+    /// Tokens that are currently owned by this Cargo, and may be "associated"
+    /// with a rustc process. They may also be unused, though if so will be
+    /// dropped on the next loop iteration.
+    ///
+    /// Note that the length of this may be zero, but we will still spawn work,
+    /// as we share the implicit token given to this Cargo process with a
+    /// single rustc process.
     tokens: Vec<Acquired>,
+
+    /// rustc per-thread tokens, when in jobserver-per-rustc mode.
     rustc_tokens: HashMap<JobId, Vec<Acquired>>,
 
+    /// This represents the list of rustc jobs (processes) and associated
+    /// clients that are interested in receiving a token. Note that each process
+    /// may be present many times (if it has requested multiple tokens).
     // We use a vec here as we don't want to order randomly which rustc we give
     // tokens to.
     to_send_clients: Vec<(JobId, Client)>,
+
+    /// The list of jobs that we have not yet started executing, but have
+    /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
+    /// allow us to request jobserver tokens pretty early.
     pending_queue: Vec<(Unit<'a>, Job)>,
     print: DiagnosticPrinter<'cfg>,
 
