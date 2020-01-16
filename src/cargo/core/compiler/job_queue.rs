@@ -478,14 +478,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
-                if let Some((id, client)) = self.to_send_clients.pop() {
-                    self.rustc_tokens.push((id, token));
-                    client
-                        .release_raw()
-                        .chain_err(|| "failed to release jobserver token")?;
-                } else {
-                    self.tokens.push(token);
-                }
+                self.tokens.push(token);
             }
             Message::NeedsToken(id, client) => {
                 log::info!("queue token request");
