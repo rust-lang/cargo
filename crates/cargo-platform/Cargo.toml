@@ -10,4 +10,4 @@ documentation = "https://docs.rs/cargo-platform"
 description = "Cargo's representation of a target platform."
 
 [dependencies]
-serde = { version = "1.0.82", features = ['derive'] }
+serde = { version = "1.0.104", features = ['derive'] }
