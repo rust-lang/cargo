@@ -59,6 +59,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
+use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
 
@@ -383,7 +384,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| drop(tx.send(Message::FixDiagnostic(msg)))));
 
-        state.drain_the_queue(cx, plan, &helper)
+        crossbeam_utils::thread::scope(move |scope| state.drain_the_queue(cx, plan, scope, &helper))
+            .expect("child threads shouldn't panic")
     }
 }
 
@@ -392,6 +394,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         &mut self,
         cx: &mut Context<'a, '_>,
         jobserver_helper: &HelperThread,
+        scope: &Scope<'_>,
         has_errored: bool,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
@@ -415,7 +418,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // we're able to perform some parallel work.
         while self.active.len() < self.tokens.len() + 1 && !self.pending_queue.is_empty() {
             let (unit, job) = self.pending_queue.remove(0);
-            self.run(&unit, job, cx)?;
+            self.run(&unit, job, cx, scope)?;
         }
 
         Ok(())
@@ -574,6 +577,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         mut self,
         cx: &mut Context<'a, '_>,
         plan: &mut BuildPlan,
+        scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
     ) -> CargoResult<()> {
         trace!("queue: {:#?}", self.queue);
@@ -590,7 +594,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // and then immediately return.
         let mut error = None;
         loop {
-            self.spawn_work_if_possible(cx, jobserver_helper, error.is_some())?;
+            self.spawn_work_if_possible(cx, jobserver_helper, scope, error.is_some())?;
 
             info!(
                 "tokens: {}, rustc_tokens: {}, waiting_rustcs: {}",
@@ -706,7 +710,13 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     }
 
     /// Executes a job, pushing the spawned thread's handled onto `threads`.
-    fn run(&mut self, unit: &Unit<'a>, job: Job, cx: &Context<'a, '_>) -> CargoResult<()> {
+    fn run(
+        &mut self,
+        unit: &Unit<'a>,
+        job: Job,
+        cx: &Context<'a, '_>,
+        scope: &Scope<'_>,
+    ) -> CargoResult<()> {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
@@ -724,61 +734,65 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             self.note_working_on(cx.bcx.config, unit, fresh)?;
         }
 
+        let doit = move || {
+            let state = JobState {
+                id,
+                tx: my_tx.clone(),
+                rmeta_required: Cell::new(rmeta_required),
+                _marker: marker::PhantomData,
+            };
+
+            let mut sender = FinishOnDrop {
+                tx: &my_tx,
+                id,
+                result: Err(format_err!("worker panicked")),
+            };
+            sender.result = job.run(&state);
+
+            // If the `rmeta_required` wasn't consumed but it was set
+            // previously, then we either have:
+            //
+            // 1. The `job` didn't do anything because it was "fresh".
+            // 2. The `job` returned an error and didn't reach the point where
+            //    it called `rmeta_produced`.
+            // 3. We forgot to call `rmeta_produced` and there's a bug in Cargo.
+            //
+            // Ruling out the third, the other two are pretty common for 2
+            // we'll just naturally abort the compilation operation but for 1
+            // we need to make sure that the metadata is flagged as produced so
+            // send a synthetic message here.
+            if state.rmeta_required.get() && sender.result.is_ok() {
+                my_tx
+                    .send(Message::Finish(id, Artifact::Metadata, Ok(())))
+                    .unwrap();
+            }
+
+            // Use a helper struct with a `Drop` implementation to guarantee
+            // that a `Finish` message is sent even if our job panics. We
+            // shouldn't panic unless there's a bug in Cargo, so we just need
+            // to make sure nothing hangs by accident.
+            struct FinishOnDrop<'a> {
+                tx: &'a Sender<Message>,
+                id: JobId,
+                result: CargoResult<()>,
+            }
+
+            impl Drop for FinishOnDrop<'_> {
+                fn drop(&mut self) {
+                    let msg = mem::replace(&mut self.result, Ok(()));
+                    drop(self.tx.send(Message::Finish(self.id, Artifact::All, msg)));
+                }
+            }
+        };
+
         match fresh {
             Freshness::Fresh => {
                 self.timings.add_fresh();
+                doit();
             }
             Freshness::Dirty => {
                 self.timings.add_dirty();
-            }
-        }
-
-        let state = JobState {
-            id,
-            tx: my_tx.clone(),
-            rmeta_required: Cell::new(rmeta_required),
-            _marker: marker::PhantomData,
-        };
-
-        let mut sender = FinishOnDrop {
-            tx: &my_tx,
-            id,
-            result: Err(format_err!("worker panicked")),
-        };
-        sender.result = job.run(&state);
-
-        // If the `rmeta_required` wasn't consumed but it was set
-        // previously, then we either have:
-        //
-        // 1. The `job` didn't do anything because it was "fresh".
-        // 2. The `job` returned an error and didn't reach the point where
-        //    it called `rmeta_produced`.
-        // 3. We forgot to call `rmeta_produced` and there's a bug in Cargo.
-        //
-        // Ruling out the third, the other two are pretty common for 2
-        // we'll just naturally abort the compilation operation but for 1
-        // we need to make sure that the metadata is flagged as produced so
-        // send a synthetic message here.
-        if state.rmeta_required.get() && sender.result.is_ok() {
-            my_tx
-                .send(Message::Finish(id, Artifact::Metadata, Ok(())))
-                .unwrap();
-        }
-
-        // Use a helper struct with a `Drop` implementation to guarantee
-        // that a `Finish` message is sent even if our job panics. We
-        // shouldn't panic unless there's a bug in Cargo, so we just need
-        // to make sure nothing hangs by accident.
-        struct FinishOnDrop<'a> {
-            tx: &'a Sender<Message>,
-            id: JobId,
-            result: CargoResult<()>,
-        }
-
-        impl Drop for FinishOnDrop<'_> {
-            fn drop(&mut self) {
-                let msg = mem::replace(&mut self.result, Ok(()));
-                drop(self.tx.send(Message::Finish(self.id, Artifact::All, msg)));
+                scope.spawn(move |_| doit());
             }
         }
 
