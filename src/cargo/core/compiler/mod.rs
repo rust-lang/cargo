@@ -49,6 +49,24 @@ use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, paths, profile};
 
+#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+pub enum LinkType {
+    Cdylib,
+    Bin,
+}
+
+impl From<&super::Target> for Option<LinkType> {
+    fn from(value: &super::Target) -> Self {
+        if value.is_cdylib() {
+            Some(LinkType::Cdylib)
+        } else if value.is_bin() {
+            Some(LinkType::Bin)
+        } else {
+            None
+        }
+    }
+}
+
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
 /// the build calls.
@@ -191,7 +209,7 @@ fn rustc<'a, 'cfg>(
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let pass_cdylib_link_args = unit.target.is_cdylib();
+    let link_type = unit.target.into();
     let do_rename = unit.target.allows_underscores() && !unit.mode.is_any_test();
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
@@ -242,7 +260,7 @@ fn rustc<'a, 'cfg>(
                     &script_outputs,
                     &build_scripts,
                     pass_l_flag,
-                    pass_cdylib_link_args,
+                    link_type,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
@@ -336,7 +354,7 @@ fn rustc<'a, 'cfg>(
         build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        pass_cdylib_link_args: bool,
+        link_type: Option<LinkType>,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -358,8 +376,14 @@ fn rustc<'a, 'cfg>(
                         rustc.arg("-l").arg(name);
                     }
                 }
-                if pass_cdylib_link_args {
-                    for arg in output.linker_args.iter() {
+
+                if link_type.is_some() {
+                    for arg in output
+                        .linker_args
+                        .iter()
+                        .filter(|x| x.0.is_none() || x.0 == link_type)
+                        .map(|x| &x.1)
+                    {
                         let link_arg = format!("link-arg={}", arg);
                         rustc.arg("-C").arg(link_arg);
                     }

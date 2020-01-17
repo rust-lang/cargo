@@ -1,5 +1,5 @@
 use super::{Config, ConfigKey, ConfigRelativePath, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::BuildOutput;
+use crate::core::compiler::{BuildOutput, LinkType};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -131,7 +131,18 @@ fn parse_links_overrides(
                 }
                 "rustc-cdylib-link-arg" => {
                     let args = value.list(key)?;
-                    output.linker_args.extend(args.iter().map(|v| v.0.clone()));
+                    let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
+                    output.linker_args.extend(args);
+                }
+                "rustc-bin-link-arg" => {
+                    let args = value.list(key)?;
+                    let args = args.iter().map(|v| (Some(LinkType::Bin), v.0.clone()));
+                    output.linker_args.extend(args);
+                }
+                "rustc-link-arg" => {
+                    let args = value.list(key)?;
+                    let args = args.iter().map(|v| (None, v.0.clone()));
+                    output.linker_args.extend(args);
                 }
                 "rustc-cfg" => {
                     let list = value.list(key)?;

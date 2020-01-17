@@ -105,6 +105,10 @@ one detailed below.
 * [`cargo:rustc-env=VAR=VALUE`](#rustc-env) — Sets an environment variable.
 * [`cargo:rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) — Passes custom
   flags to a linker for cdylib crates.
+* [`cargo:rustc-bin-link-arg=FLAG`](#rustc-bin-link-arg) — Passes custom
+  flags to a linker for bin crates.
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) — Passes custom
+  flags to a linker for all supported crates.
 * [`cargo:warning=MESSAGE`](#cargo-warning) — Displays a warning on the
   terminal.
 * [`cargo:KEY=VALUE`](#the-links-manifest-key) — Metadata, used by `links`
@@ -202,6 +206,26 @@ The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 `cdylib` library target. Its usage is highly platform specific. It is useful
 to set the shared library version or the runtime-path.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-bin-link-arg"></a>
+#### `cargo:rustc-bin-link-arg=FLAG`
+
+The `rustc-bin-link-arg` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+binary target. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg"></a>
+#### `cargo:rustc-link-arg=FLAG`
+
+The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
+option][link-arg] to the compiler, but only when building a supported target
+(currently a binary or `cdylib` library). Its usage is highly platform
+specific. It is useful to set the shared library version or linker script.
 
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
@@ -372,6 +396,8 @@ rustc-flags = "-L /some/path"
 rustc-cfg = ['key="value"']
 rustc-env = {key = "value"}
 rustc-cdylib-link-arg = ["…"]
+rustc-bin-link-arg = ["…"]
+rustc-link-arg = ["…"]
 metadata_key1 = "value"
 metadata_key2 = "value"
 ```
