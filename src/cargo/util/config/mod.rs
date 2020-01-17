@@ -1643,6 +1643,7 @@ pub struct CargoBuildConfig {
     pub rustc_wrapper: Option<PathBuf>,
     pub rustc: Option<PathBuf>,
     pub rustdoc: Option<PathBuf>,
+    pub out_dir: Option<ConfigRelativePath>,
 }
 
 /// A type to deserialize a list of strings from a toml file.
