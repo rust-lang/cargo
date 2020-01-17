@@ -1,5 +1,5 @@
 use super::job::{Freshness, Job, Work};
-use super::{fingerprint, Context, Unit};
+use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId};
@@ -23,7 +23,7 @@ pub struct BuildOutput {
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
-    pub linker_args: Vec<String>,
+    pub linker_args: Vec<(Option<LinkType>, String)>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Additional environment variables to run the compiler with.
@@ -535,7 +535,9 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
-                "rustc-cdylib-link-arg" => linker_args.push(value.to_string()),
+                "rustc-cdylib-link-arg" => linker_args.push((Some(LinkType::Cdylib), value)),
+                "rustc-bin-link-arg" => linker_args.push((Some(LinkType::Bin), value)),
+                "rustc-link-arg" => linker_args.push((None, value)),
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
