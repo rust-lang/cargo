@@ -449,7 +449,7 @@ pub fn compile_ws<'a>(
             // the target is a binary. Binary crates get their private items
             // documented by default.
             if rustdoc_document_private_items || unit.target.is_bin() {
-                let mut args = extra_args.take().unwrap_or(vec![]);
+                let mut args = extra_args.take().unwrap_or_else(|| vec![]);
                 args.push("--document-private-items".into());
                 extra_args = Some(args);
             }

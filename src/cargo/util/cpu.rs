@@ -72,7 +72,7 @@ mod imp {
         let nice = next.nice - prev.nice;
         let system = next.system - prev.system;
         let idle = next.idle - prev.idle;
-        let iowait = next.iowait.checked_sub(prev.iowait).unwrap_or(0);
+        let iowait = next.iowait.saturating_sub(prev.iowait);
         let irq = next.irq - prev.irq;
         let softirq = next.softirq - prev.softirq;
         let steal = next.steal - prev.steal;

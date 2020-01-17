@@ -635,11 +635,11 @@ impl TomlProfile {
         }
 
         if let Some(v) = &profile.inherits {
-            self.inherits = Some(v.clone());
+            self.inherits = Some(*v);
         }
 
         if let Some(v) = &profile.dir_name {
-            self.dir_name = Some(v.clone());
+            self.dir_name = Some(*v);
         }
     }
 }
