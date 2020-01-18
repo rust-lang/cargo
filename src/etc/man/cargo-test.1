@@ -2,12 +2,12 @@
 .\"     Title: cargo-test
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
+.\"      Date: 2020-01-18
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-TEST" "1" "2019-09-05" "\ \&" "\ \&"
+.TH "CARGO\-TEST" "1" "2020-01-18" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -41,7 +41,7 @@ dashes (\fB\-\-\fP) are passed to the test binaries and thus to \fIlibtest\fP (r
 built in unit\-test and micro\-benchmarking framework).  If you\(cqre passing
 arguments to both Cargo and the binary, the ones after \fB\-\-\fP go to the binary,
 the ones before go to Cargo.  For details about libtest\(cqs arguments see the
-output of \fBcargo test \(em \-\-help\fP.  As an example, this will run all tests with
+output of \fBcargo test \-\- \-\-help\fP.  As an example, this will run all tests with
 \fBfoo\fP in their name on 3 threads in parallel:
 .sp
 .if n .RS 4
