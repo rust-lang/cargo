@@ -2258,7 +2258,7 @@ fn credentials_is_unreadable() {
     let stat = fs::metadata(credentials.as_path()).unwrap();
     let mut perms = stat.permissions();
     perms.set_mode(0o000);
-    fs::set_permissions(credentials, perms.clone()).unwrap();
+    fs::set_permissions(credentials, perms).unwrap();
 
     p.cargo("build").run();
 }

@@ -1511,7 +1511,7 @@ fn find_json_mismatch_r<'a>(
             l.values()
                 .zip(r.values())
                 .filter_map(|(l, r)| find_json_mismatch_r(l, r))
-                .nth(0)
+                .next()
         }
         (&Null, &Null) => None,
         // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.

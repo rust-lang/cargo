@@ -823,7 +823,7 @@ impl Config {
             let mut seen = HashSet::new();
             let tmp_table = self
                 .load_includes(tmp_table, &mut seen)
-                .chain_err(|| format!("failed to load --config include"))?;
+                .chain_err(|| "failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
                 .chain_err(|| format!("failed to merge --config argument `{}`", arg))?;
@@ -1526,7 +1526,7 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
             .insert("registry".into(), map.into());
     }
 
-    if let Some(_) = registry {
+    if registry.is_some() {
         if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
             let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
             value.merge(v, false)?;

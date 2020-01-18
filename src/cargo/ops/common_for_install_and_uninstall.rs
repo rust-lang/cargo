@@ -552,7 +552,7 @@ where
             // version range, otherwise parse it as a specific version
             let first = v
                 .chars()
-                .nth(0)
+                .next()
                 .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
 
             let is_req = "<>=^~".contains(first) || v.contains('*');

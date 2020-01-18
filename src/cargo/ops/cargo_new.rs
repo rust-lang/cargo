@@ -181,7 +181,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         )
     }
 
-    if let Some(ref c) = name.chars().nth(0) {
+    if let Some(ref c) = name.chars().next() {
         if c.is_digit(10) {
             anyhow::bail!(
                 "Package names starting with a digit cannot be used as a crate name{}",

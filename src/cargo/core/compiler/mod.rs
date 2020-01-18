@@ -937,7 +937,7 @@ fn build_deps_args<'a, 'cfg>(
         cmd.arg("-Z").arg("unstable-options");
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Generates a list of `--extern` arguments.

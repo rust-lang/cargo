@@ -349,7 +349,7 @@ impl EncodableResolve {
         // To help fix this issue we special case here. If our lockfile only has
         // one trailing newline, not two, *and* it only has one package, then
         // this is actually the v2 format.
-        if original.ends_with("\n")
+        if original.ends_with('\n')
             && !original.ends_with("\n\n")
             && version == ResolveVersion::V1
             && g.iter().count() == 1
