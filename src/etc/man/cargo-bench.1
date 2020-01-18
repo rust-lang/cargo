@@ -2,12 +2,12 @@
 .\"     Title: cargo-bench
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-12-05
+.\"      Date: 2020-01-18
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BENCH" "1" "2019-12-05" "\ \&" "\ \&"
+.TH "CARGO\-BENCH" "1" "2020-01-18" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -41,7 +41,7 @@ the two dashes (\fB\-\-\fP) are passed to the benchmark binaries and thus to
 \fIlibtest\fP (rustc\(cqs built in unit\-test and micro\-benchmarking framework).  If
 you\(cqre passing arguments to both Cargo and the binary, the ones after \fB\-\-\fP go
 to the binary, the ones before go to Cargo.  For details about libtest\(cqs
-arguments see the output of \fBcargo bench \(em \-\-help\fP.  As an example, this will
+arguments see the output of \fBcargo bench \-\- \-\-help\fP.  As an example, this will
 run only the benchmark named \fBfoo\fP (and skip other similarly named benchmarks
 like \fBfoobar\fP):
 .sp
