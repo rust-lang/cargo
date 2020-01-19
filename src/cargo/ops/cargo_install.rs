@@ -215,6 +215,7 @@ fn install_one(
         Some(Filesystem::new(config.cwd().join("target-install")))
     };
 
+    let mut git_package = None;
     let mut ws = match overidden_target_dir {
         Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
         None => {
@@ -222,20 +223,22 @@ fn install_one(
             ws.set_require_optional_deps(false);
 
             // Use tempdir to build git depedencies to prevent bloat in cargo cache
-            if source_id.is_git() && config.target_dir()?.is_none() {
-                match TempFileBuilder::new().prefix("cargo-install").tempdir() {
-                    Ok(td) => ws.set_target_dir(Filesystem::new(td.path().to_owned())),
-                    // If tempfile creation fails, write to cargo cache but clean up afterwards
-                    Err(_) => needs_cleanup = true,
+            if source_id.is_git() {
+                if config.target_dir()?.is_none() {
+                    match TempFileBuilder::new().prefix("cargo-install").tempdir() {
+                        Ok(td) => ws.set_target_dir(Filesystem::new(td.path().to_owned())),
+                        // If tempfile creation fails, write to cargo cache but clean up afterwards
+                        Err(_) => needs_cleanup = true,
+                    }
                 }
+                git_package = Some(&pkg);
             }
-            ws.set_package(pkg);
 
             ws
-        }
+        },
     };
     ws.set_ignore_lock(config.lock_update_allowed());
-    let pkg = ws.current()?;
+    let pkg = git_package.map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
 
     if from_cwd {
         if pkg.manifest().edition() == Edition::Edition2015 {

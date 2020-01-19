@@ -833,13 +833,6 @@ impl<'cfg> Workspace<'cfg> {
     pub fn set_target_dir(&mut self, target_dir: Filesystem) {
         self.target_dir = Some(target_dir);
     }
-
-    // TODO: This seems like the wrong approach
-    pub fn set_package(&mut self, package: Package) {
-        let key = self.current_manifest.parent().unwrap();
-        let package = MaybePackage::Package(package);
-        self.packages.packages.insert(key.to_path_buf(), package);
-    }
 }
 
 impl<'cfg> Packages<'cfg> {
