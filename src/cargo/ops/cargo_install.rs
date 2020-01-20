@@ -226,7 +226,11 @@ fn install_one(
             if source_id.is_git() {
                 if config.target_dir()?.is_none() {
                     match TempFileBuilder::new().prefix("cargo-install").tempdir() {
-                        Ok(td) => ws.set_target_dir(Filesystem::new(td.path().to_owned())),
+                        Ok(td) => {
+                            let p = td.path().to_owned();
+                            td_opt = Some(td);
+                            ws.set_target_dir(Filesystem::new(p));
+                        }
                         // If tempfile creation fails, write to cargo cache but clean up afterwards
                         Err(_) => needs_cleanup = true,
                     }
