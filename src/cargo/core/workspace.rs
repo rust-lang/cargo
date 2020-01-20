@@ -129,18 +129,6 @@ pub struct Members<'a, 'cfg> {
     iter: slice::Iter<'a, PathBuf>,
 }
 
-fn resolve_path(path: &Path) -> PathBuf {
-    let mut resolved_path = PathBuf::new();
-    for component in path {
-        if component == ".." {
-            resolved_path.pop();
-        } else if component != "." {
-            resolved_path.push(component)
-        }
-    }
-    resolved_path
-}
-
 impl<'cfg> Workspace<'cfg> {
     /// Creates a new workspace given the target manifest pointed to by
     /// `manifest_path`.
@@ -149,7 +137,7 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let manifest_path = resolve_path(&manifest_path);
+        let manifest_path = paths::normalize_path(&manifest_path);
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
         ws.target_dir = config.target_dir()?;
         ws.root_manifest = ws.find_root(&manifest_path)?;
