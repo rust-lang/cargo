@@ -501,9 +501,12 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                             // This puts back the tokens that this rustc
                             // acquired into our primary token list.
                             //
-                            // FIXME: this represents a rustc bug: it did not
+                            // This represents a rustc bug: it did not
                             // release all of its thread tokens but finished
-                            // completely.
+                            // completely. But we want to make Cargo resilient
+                            // to such rustc bugs, as they're generally not
+                            // fatal in nature (i.e., Cargo can make progress
+                            // still, and the build might not even fail).
                             self.tokens.extend(rustc_tokens);
                         }
                         self.to_send_clients.remove(&id);
@@ -552,6 +555,11 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                 // Note that this pops off potentially a completely
                 // different token, but all tokens of the same job are
                 // conceptually the same so that's fine.
+                //
+                // self.tokens is a "pool" -- the order doesn't matter -- and
+                // this transfers ownership of the token into that pool. If we
+                // end up using it on the next go around, then this token will
+                // be truncated, same as tokens obtained through Message::Token.
                 let rustc_tokens = self
                     .rustc_tokens
                     .get_mut(&id)
