@@ -189,7 +189,7 @@ enum Message {
     Finish(JobId, Artifact, CargoResult<()>),
 
     // This client should get release_raw called on it with one of our tokens
-    NeedsToken(JobId, Client),
+    NeedsToken(JobId),
 
     // A token previously passed to a NeedsToken client is being released.
     ReleaseToken(JobId),
@@ -234,10 +234,10 @@ impl<'a> JobState<'a> {
     /// The rustc underlying this Job is about to acquire a jobserver token (i.e., block)
     /// on the passed client.
     ///
-    /// This should arrange for the passed client to eventually get a token via
+    /// This should arrange for the associated client to eventually get a token via
     /// `client.release_raw()`.
-    pub fn will_acquire(&self, client: &Client) {
-        let _ = self.tx.send(Message::NeedsToken(self.id, client.clone()));
+    pub fn will_acquire(&self) {
+        let _ = self.tx.send(Message::NeedsToken(self.id));
     }
 
     /// The rustc underlying this Job is informing us that it is done with a jobserver token.
@@ -543,9 +543,10 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                 let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
                 self.tokens.push(token);
             }
-            Message::NeedsToken(id, client) => {
+            Message::NeedsToken(id) => {
                 log::info!("queue token request");
                 jobserver_helper.request_token();
+                let client = cx.rustc_clients[&self.active[&id]].clone();
                 self.to_send_clients
                     .entry(id)
                     .or_insert_with(Vec::new)

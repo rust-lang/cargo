@@ -69,6 +69,11 @@ pub struct Context<'a, 'cfg> {
     /// metadata files in addition to the rlib itself. This is only filled in
     /// when `pipelining` above is enabled.
     rmeta_required: HashSet<Unit<'a>>,
+
+    /// When we're in jobserver-per-rustc process mode, this keeps those
+    /// jobserver clients for each Unit (which eventually becomes a rustc
+    /// process).
+    pub rustc_clients: HashMap<Unit<'a>, Client>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -112,6 +117,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             unit_dependencies,
             files: None,
             rmeta_required: HashSet::new(),
+            rustc_clients: HashMap::new(),
             pipelining,
         })
     }

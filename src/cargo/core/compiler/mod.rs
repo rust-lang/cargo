@@ -48,7 +48,6 @@ use crate::util::errors::{self, CargoResult, CargoResultExt, Internal, ProcessEr
 use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, paths, profile};
-use jobserver::Client;
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
@@ -172,7 +171,7 @@ fn rustc<'a, 'cfg>(
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
-    let (rustc_client, mut rustc) = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
+    let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
@@ -287,16 +286,7 @@ fn rustc<'a, 'cfg>(
                 &target,
                 mode,
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &target,
-                        &mut output_options,
-                        &rustc_client,
-                    )
-                },
+                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`.", name))?;
@@ -544,22 +534,21 @@ fn prepare_rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     crate_types: &[&str],
     unit: &Unit<'a>,
-) -> CargoResult<(Option<Client>, ProcessBuilder)> {
+) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
 
     let mut base = cx.compilation.rustc_process(unit.pkg, is_primary)?;
-    let client = if cx.bcx.config.cli_unstable().jobserver_per_rustc {
+    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
         base.arg("-Zjobserver-token-requests");
-        Some(client)
+        assert!(cx.rustc_clients.insert(*unit, client).is_none());
     } else {
         base.inherit_jobserver(&cx.jobserver);
-        None
-    };
+    }
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
-    Ok((client, base))
+    Ok(base)
 }
 
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
@@ -618,9 +607,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc
             .exec_with_streaming(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(state, line, package_id, &target, &mut output_options, &None)
-                },
+                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
                 false,
             )
             .chain_err(|| format!("Could not document `{}`.", name))?;
@@ -1101,9 +1088,8 @@ fn on_stderr_line(
     package_id: PackageId,
     target: &Target,
     options: &mut OutputOptions,
-    rustc_client: &Option<Client>,
 ) -> CargoResult<()> {
-    if on_stderr_line_inner(state, line, package_id, target, options, rustc_client)? {
+    if on_stderr_line_inner(state, line, package_id, target, options)? {
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
@@ -1123,7 +1109,6 @@ fn on_stderr_line_inner(
     package_id: PackageId,
     target: &Target,
     options: &mut OutputOptions,
-    rustc_client: &Option<Client>,
 ) -> CargoResult<bool> {
     // We primarily want to use this function to process JSON messages from
     // rustc. The compiler should always print one JSON message per line, and
@@ -1250,14 +1235,9 @@ fn on_stderr_line_inner(
             "found jobserver directive from rustc: `{:?}`",
             jobserver_event
         );
-        match rustc_client {
-            Some(client) => match jobserver_event {
-                Event::WillAcquire => state.will_acquire(client),
-                Event::Release => state.release_token(),
-            },
-            None => {
-                panic!("Received jobserver event without a client");
-            }
+        match jobserver_event {
+            Event::WillAcquire => state.will_acquire(),
+            Event::Release => state.release_token(),
         }
         return Ok(false);
     }
@@ -1310,7 +1290,7 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &target, &mut options, &None)?;
+            on_stderr_line(state, trimmed, package_id, &target, &mut options)?;
             line.clear();
         }
         Ok(())
