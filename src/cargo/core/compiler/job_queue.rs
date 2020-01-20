@@ -416,7 +416,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // Now that we've learned of all possible work that we can execute
         // try to spawn it so long as we've got a jobserver token which says
         // we're able to perform some parallel work.
-        while self.active.len() < self.tokens.len() + 1 && !self.pending_queue.is_empty() {
+        while self.has_extra_tokens() && !self.pending_queue.is_empty() {
             let (unit, job) = self.pending_queue.remove(0);
             self.run(&unit, job, cx, scope)?;
         }
@@ -424,23 +424,26 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         Ok(())
     }
 
+    fn has_extra_tokens(&self) -> bool {
+        self.active.len() < self.tokens.len() + 1
+    }
+
+    // If we managed to acquire some extra tokens, send them off to a waiting rustc.
     fn grant_rustc_token_requests(&mut self) -> CargoResult<()> {
-        // If we managed to acquire some extra tokens, send them off to a waiting rustc.
-        let extra_tokens = self.tokens.len() - (self.active.len() - 1);
-        for _ in 0..extra_tokens {
-            if !self.to_send_clients.is_empty() {
-                // remove from the front so we grant the token to the oldest
-                // waiter
-                let (id, client) = self.to_send_clients.remove(0);
-                let token = self.tokens.pop().expect("an extra token");
-                self.rustc_tokens
-                    .entry(id)
-                    .or_insert_with(Vec::new)
-                    .push(token);
-                client
-                    .release_raw()
-                    .chain_err(|| "failed to release jobserver token")?;
-            }
+        while !self.to_send_clients.is_empty() && self.has_extra_tokens() {
+            // Remove from the front so we grant the token to the oldest waiter
+            let (id, client) = self.to_send_clients.remove(0);
+            // This unwrap is guaranteed to succeed. `active` must be at least
+            // length 1, as otherwise there can't be a client waiting to be sent
+            // on, so tokens.len() must also be at least one.
+            let token = self.tokens.pop().unwrap();
+            self.rustc_tokens
+                .entry(id)
+                .or_insert_with(Vec::new)
+                .push(token);
+            client
+                .release_raw()
+                .chain_err(|| "failed to release jobserver token")?;
         }
 
         Ok(())
