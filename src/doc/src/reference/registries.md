@@ -546,7 +546,9 @@ A successful response includes the JSON object:
 ```javascript
 {
     // Indicates the remove succeeded, always true.
-    "ok": true
+    "ok": true,
+    // A string to be displayed to the user.
+    "msg": "user someone has been deleted from owners of crate cargo"
 }
 ```
 

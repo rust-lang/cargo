@@ -149,15 +149,41 @@ impl Registry {
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
-        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
-        Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
+        let body = if body.is_empty() {
+            r#"{"ok":false,"msg":"response body is empty"}"#.parse()?
+        } else {
+            body
+        };
+        match serde_json::from_str::<OwnerResponse>(&body) {
+            Ok(response) => {
+                if response.ok {
+                    Ok(response.msg)
+                } else {
+                    bail!("{}", response.msg)
+                }
+            }
+            _ => bail!("failed to parse response body"),
+        }
     }
 
-    pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
+    pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.delete(&format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
-        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
-        Ok(())
+        let body = if body.is_empty() {
+            r#"{"ok":false,"msg":"response body is empty"}"#.parse()?
+        } else {
+            body
+        };
+        match serde_json::from_str::<OwnerResponse>(&body) {
+            Ok(response) => {
+                if response.ok {
+                    Ok(response.msg)
+                } else {
+                    bail!("{}", response.msg)
+                }
+            }
+            _ => bail!("failed to parse response body"),
+        }
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
