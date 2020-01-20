@@ -542,12 +542,12 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                 // Note that this pops off potentially a completely
                 // different token, but all tokens of the same job are
                 // conceptually the same so that's fine.
-                if let Some(rustc_tokens) = self.rustc_tokens.get_mut(&id) {
-                    self.tokens
-                        .push(rustc_tokens.pop().expect("rustc releases token it has"));
-                } else {
-                    panic!("This job does not have tokens associated with it");
-                }
+                let rustc_tokens = self
+                    .rustc_tokens
+                    .get_mut(&id)
+                    .expect("no tokens associated");
+                self.tokens
+                    .push(rustc_tokens.pop().expect("rustc releases token it has"));
             }
         }
 
