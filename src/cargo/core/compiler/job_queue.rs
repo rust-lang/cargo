@@ -50,7 +50,7 @@
 //! improved.
 
 use std::cell::Cell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
 use std::mem;
@@ -119,11 +119,8 @@ struct DrainState<'a, 'cfg> {
     rustc_tokens: HashMap<JobId, Vec<Acquired>>,
 
     /// This represents the list of rustc jobs (processes) and associated
-    /// clients that are interested in receiving a token. Note that each process
-    /// may be present many times (if it has requested multiple tokens).
-    // We use a vec here as we don't want to order randomly which rustc we give
-    // tokens to.
-    to_send_clients: Vec<(JobId, Client)>,
+    /// clients that are interested in receiving a token.
+    to_send_clients: BTreeMap<JobId, Vec<Client>>,
 
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
@@ -135,7 +132,7 @@ struct DrainState<'a, 'cfg> {
     finished: usize,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct JobId(pub u32);
 
 impl std::fmt::Display for JobId {
@@ -357,7 +354,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
             tokens: Vec::new(),
             rustc_tokens: HashMap::new(),
-            to_send_clients: Vec::new(),
+            to_send_clients: BTreeMap::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(cx.bcx.config),
             finished: 0,
@@ -428,11 +425,26 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         self.active.len() < self.tokens.len() + 1
     }
 
+    // The oldest job (i.e., least job ID) is the one we grant tokens to first.
+    fn pop_waiting_client(&mut self) -> (JobId, Client) {
+        // FIXME: replace this with BTreeMap::first_entry when that stabilizes.
+        let key = *self
+            .to_send_clients
+            .keys()
+            .next()
+            .expect("at least one waiter");
+        let clients = self.to_send_clients.get_mut(&key).unwrap();
+        let client = clients.pop().unwrap();
+        if clients.is_empty() {
+            self.to_send_clients.remove(&key);
+        }
+        (key, client)
+    }
+
     // If we managed to acquire some extra tokens, send them off to a waiting rustc.
     fn grant_rustc_token_requests(&mut self) -> CargoResult<()> {
         while !self.to_send_clients.is_empty() && self.has_extra_tokens() {
-            // Remove from the front so we grant the token to the oldest waiter
-            let (id, client) = self.to_send_clients.remove(0);
+            let (id, client) = self.pop_waiting_client();
             // This unwrap is guaranteed to succeed. `active` must be at least
             // length 1, as otherwise there can't be a client waiting to be sent
             // on, so tokens.len() must also be at least one.
@@ -494,12 +506,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                             // completely.
                             self.tokens.extend(rustc_tokens);
                         }
-                        while let Some(pos) =
-                            self.to_send_clients.iter().position(|(i, _)| *i == id)
-                        {
-                            // drain all the pending clients
-                            self.to_send_clients.remove(pos);
-                        }
+                        self.to_send_clients.remove(&id);
                         self.active.remove(&id).unwrap()
                     }
                     // ... otherwise if it hasn't finished we leave it
@@ -536,7 +543,10 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             Message::NeedsToken(id, client) => {
                 log::info!("queue token request");
                 jobserver_helper.request_token();
-                self.to_send_clients.push((id, client));
+                self.to_send_clients
+                    .entry(id)
+                    .or_insert_with(Vec::new)
+                    .push(client);
             }
             Message::ReleaseToken(id) => {
                 // Note that this pops off potentially a completely
