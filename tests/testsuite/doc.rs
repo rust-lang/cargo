@@ -584,6 +584,10 @@ fn doc_same_name() {
 
 #[cargo_test]
 fn doc_target() {
+    if !is_nightly() {
+        // no_core, lang_items requires nightly.
+        return;
+    }
     const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
