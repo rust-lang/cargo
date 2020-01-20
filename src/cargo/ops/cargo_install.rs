@@ -239,7 +239,7 @@ fn install_one(
             }
 
             ws
-        },
+        }
     };
     ws.set_ignore_lock(config.lock_update_allowed());
     let pkg = git_package.map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
