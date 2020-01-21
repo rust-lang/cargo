@@ -573,6 +573,8 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
 }
 
 fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
+    println!("Entering 'mk'");
+
     let path = opts.path;
     let name = opts.name;
     let cfg = config.get::<CargoNewConfig>("cargo-new")?;
@@ -718,6 +720,8 @@ mod tests {
         );
         config.shell().warn(msg)?;
     }
+
+    println!("Leaving 'mk'");
 
     Ok(())
 }
