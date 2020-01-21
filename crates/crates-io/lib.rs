@@ -298,8 +298,21 @@ impl Registry {
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
-        assert!(serde_json::from_str::<R>(&body)?.ok);
-        Ok(())
+        let body = if body.is_empty() {
+            r#"{"ok":false}"#.parse()?
+        } else {
+            body
+        };
+        match serde_json::from_str::<R>(&body) {
+            Ok(response) => {
+                if response.ok {
+                    Ok(())
+                } else {
+                    bail!("ok is false in response body")
+                }
+            }
+            _ => bail!("failed to parse response body"),
+        }
     }
 
     fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
