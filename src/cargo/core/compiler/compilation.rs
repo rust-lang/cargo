@@ -101,7 +101,7 @@ impl<'cfg> Compilation<'cfg> {
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
-            host_dylib_path: bcx.info(default_kind).sysroot_host_libdir.clone(),
+            host_dylib_path: bcx.info(CompileKind::Host).sysroot_host_libdir.clone(),
             target_dylib_path: bcx.info(default_kind).sysroot_target_libdir.clone(),
             tests: Vec::new(),
             binaries: Vec::new(),
