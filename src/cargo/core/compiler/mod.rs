@@ -1257,7 +1257,8 @@ fn replay_output_cache(
             if length == 0 {
                 break;
             }
-            on_stderr_line(state, line.as_str(), package_id, &target, &mut options)?;
+            let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
+            on_stderr_line(state, trimmed, package_id, &target, &mut options)?;
             line.clear();
         }
         Ok(())
