@@ -605,15 +605,17 @@ fn d_as_f64(d: Duration) -> f64 {
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
     let version = bcx
-        .rustc
+        .rustc()
         .verbose_version
         .lines()
         .next()
         .expect("rustc version");
-    let requested_target = bcx.build_config.requested_kind.short_name(bcx);
+    let requested_target = bcx.target_data.short_name(&bcx.build_config.requested_kind);
     format!(
         "{}<br>Host: {}<br>Target: {}",
-        version, bcx.rustc.host, requested_target
+        version,
+        bcx.rustc().host,
+        requested_target
     )
 }
 

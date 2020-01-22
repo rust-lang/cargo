@@ -31,7 +31,7 @@ use std::sync::Arc;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
-use crate::core::compiler::{CompileKind, CompileMode, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Resolve, ResolveOpts};
@@ -306,6 +306,7 @@ pub fn compile_ws<'a>(
         build_config.requested_profile,
         ws.features(),
     )?;
+    let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
 
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
@@ -397,7 +398,9 @@ pub fn compile_ws<'a>(
         profiles,
         &interner,
         HashMap::new(),
+        target_data,
     )?;
+
     let units = generate_targets(
         ws,
         &to_builds,

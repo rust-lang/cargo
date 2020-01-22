@@ -250,7 +250,7 @@ fn compute_deps<'a, 'cfg>(
 
             // If this dependency is only available for certain platforms,
             // make sure we're only enabling it for that platform.
-            if !bcx.dep_platform_activated(dep, unit.kind) {
+            if !bcx.target_data.dep_platform_activated(dep, unit.kind) {
                 return false;
             }
 
@@ -396,7 +396,7 @@ fn compute_deps_doc<'a, 'cfg>(
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
-                DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
+                DepKind::Normal => bcx.target_data.dep_platform_activated(dep, unit.kind),
                 _ => false,
             })
         });

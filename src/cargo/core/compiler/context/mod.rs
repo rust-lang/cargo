@@ -450,7 +450,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     suggestion,
                     crate::version(),
                     self.bcx.host_triple(),
-                    unit.kind.short_name(self.bcx),
+                    self.bcx.target_data.short_name(&unit.kind),
                     unit,
                     other_unit))
             }

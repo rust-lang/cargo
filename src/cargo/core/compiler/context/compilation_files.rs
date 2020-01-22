@@ -259,13 +259,13 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ) -> CargoResult<PathBuf> {
         assert!(target.is_bin());
         let dest = self.layout(kind).dest();
-        let info = bcx.info(kind);
+        let info = bcx.target_data.info(kind);
         let file_types = info
             .file_types(
                 "bin",
                 FileFlavor::Normal,
                 &TargetKind::Bin,
-                kind.short_name(bcx),
+                bcx.target_data.short_name(&kind),
             )?
             .expect("target must support `bin`");
 
@@ -402,7 +402,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let out_dir = self.out_dir(unit);
         let link_stem = self.link_stem(unit);
-        let info = bcx.info(unit.kind);
+        let info = bcx.target_data.info(unit.kind);
         let file_stem = self.file_stem(unit);
 
         let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
@@ -415,7 +415,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 crate_type,
                 flavor,
                 unit.target.kind(),
-                unit.kind.short_name(bcx),
+                bcx.target_data.short_name(&unit.kind),
             )?;
 
             match file_types {
@@ -489,14 +489,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                      does not support these crate types",
                     unsupported.join(", "),
                     unit.pkg,
-                    unit.kind.short_name(bcx),
+                    bcx.target_data.short_name(&unit.kind),
                 )
             }
             anyhow::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                unit.kind.short_name(bcx),
+                bcx.target_data.short_name(&unit.kind),
             );
         }
         Ok(ret)
@@ -551,11 +551,12 @@ fn compute_metadata<'a, 'cfg>(
     // doing this eventually.
     let bcx = &cx.bcx;
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
+    let short_name = bcx.target_data.short_name(&unit.kind);
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_executable() && unit.kind.short_name(bcx).starts_with("wasm32-"))
-            || (unit.target.is_executable() && unit.kind.short_name(bcx).contains("msvc")))
+            || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
+            || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {
@@ -609,7 +610,7 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    bcx.rustc.verbose_version.hash(&mut hasher);
+    bcx.rustc().verbose_version.hash(&mut hasher);
 
     if cx.is_primary_package(unit) {
         // This is primarily here for clippy. This ensures that the clippy

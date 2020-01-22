@@ -4,8 +4,8 @@ use std::fs;
 use std::path::Path;
 
 use crate::core::compiler::unit_dependencies;
-use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
+use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::Workspace;
 use crate::ops;
@@ -61,6 +61,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     build_config.requested_profile = opts.requested_profile;
+    let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
     let bcx = BuildContext::new(
         ws,
         &packages,
@@ -69,6 +70,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         profiles,
         &interner,
         HashMap::new(),
+        target_data,
     )?;
     let mut units = Vec::new();
 
