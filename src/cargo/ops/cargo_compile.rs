@@ -311,7 +311,7 @@ pub fn compile_ws<'a>(
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
-    let resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
+    let resolve = ops::resolve_ws_with_opts(ws, &opts, &specs)?;
     let WorkspaceResolve {
         mut pkg_set,
         workspace_resolve,

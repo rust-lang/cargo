@@ -1,15 +1,14 @@
+use super::features::RequestedFeatures;
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, PackageId, Summary};
+use crate::util::errors::CargoResult;
+use crate::util::Config;
+use im_rc;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
-
-use crate::core::interning::InternedString;
-use crate::core::{Dependency, PackageId, Summary};
-use crate::util::errors::CargoResult;
-use crate::util::Config;
-
-use im_rc;
 
 pub struct ResolverProgress {
     ticks: u16,
@@ -106,12 +105,8 @@ pub struct ResolveOpts {
     ///
     /// This may be set to `false` by things like `cargo install` or `-Z avoid-dev-deps`.
     pub dev_deps: bool,
-    /// Set of features to enable (`--features=…`).
-    pub features: FeaturesSet,
-    /// Indicates *all* features should be enabled (`--all-features`).
-    pub all_features: bool,
-    /// Include the `default` feature (`--no-default-features` sets this false).
-    pub uses_default_features: bool,
+    /// Set of features requested on the command-line.
+    pub features: RequestedFeatures,
 }
 
 impl ResolveOpts {
@@ -119,9 +114,7 @@ impl ResolveOpts {
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
             dev_deps: true,
-            features: Rc::new(BTreeSet::new()),
-            all_features: true,
-            uses_default_features: true,
+            features: RequestedFeatures::new_all(true),
         }
     }
 
@@ -133,20 +126,12 @@ impl ResolveOpts {
     ) -> ResolveOpts {
         ResolveOpts {
             dev_deps,
-            features: Rc::new(ResolveOpts::split_features(features)),
-            all_features,
-            uses_default_features,
+            features: RequestedFeatures::from_command_line(
+                features,
+                all_features,
+                uses_default_features,
+            ),
         }
-    }
-
-    fn split_features(features: &[String]) -> BTreeSet<InternedString> {
-        features
-            .iter()
-            .flat_map(|s| s.split_whitespace())
-            .flat_map(|s| s.split(','))
-            .filter(|s| !s.is_empty())
-            .map(InternedString::new)
-            .collect::<BTreeSet<InternedString>>()
     }
 }
 

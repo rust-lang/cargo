@@ -164,20 +164,21 @@ impl Context {
             }
         }
         debug!("checking if {} is already activated", summary.package_id());
-        if opts.all_features {
+        if opts.features.all_features {
             return Ok(false);
         }
 
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
-                opts.features.is_subset(prev)
-                    && (!opts.uses_default_features
+                opts.features.features.is_subset(prev)
+                    && (!opts.features.uses_default_features
                         || prev.contains("default")
                         || !has_default_feature)
             }
             None => {
-                opts.features.is_empty() && (!opts.uses_default_features || !has_default_feature)
+                opts.features.features.is_empty()
+                    && (!opts.features.uses_default_features || !has_default_feature)
             }
         })
     }

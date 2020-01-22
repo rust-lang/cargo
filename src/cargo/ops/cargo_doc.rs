@@ -24,7 +24,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         options.compile_opts.all_features,
         !options.compile_opts.no_default_features,
     );
-    let ws_resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
+    let ws_resolve = ops::resolve_ws_with_opts(ws, &opts, &specs)?;
 
     let ids = specs
         .iter()

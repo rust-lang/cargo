@@ -340,7 +340,7 @@ fn build_requirements<'a, 'b: 'a>(
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    if opts.all_features {
+    if opts.features.all_features {
         for key in s.features().keys() {
             reqs.require_feature(*key)?;
         }
@@ -348,12 +348,12 @@ fn build_requirements<'a, 'b: 'a>(
             reqs.require_dependency(dep.name_in_toml());
         }
     } else {
-        for &f in opts.features.iter() {
+        for &f in opts.features.features.iter() {
             reqs.require_value(&FeatureValue::new(f, s))?;
         }
     }
 
-    if opts.uses_default_features && s.features().contains_key("default") {
+    if opts.features.uses_default_features && s.features().contains_key("default") {
         reqs.require_feature(InternedString::new("default"))?;
     }
 

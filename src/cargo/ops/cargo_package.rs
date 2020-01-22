@@ -154,7 +154,7 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     // Regenerate Cargo.lock using the old one as a guide.
     let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let new_resolve = ops::resolve_ws_with_opts(&tmp_ws, ResolveOpts::everything(), &specs)?;
+    let new_resolve = ops::resolve_ws_with_opts(&tmp_ws, &ResolveOpts::everything(), &specs)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(

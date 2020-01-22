@@ -99,7 +99,7 @@ pub fn resolve_std<'cfg>(
         /*dev_deps*/ false, &features, /*all_features*/ false,
         /*uses_default_features*/ true,
     );
-    let resolve = ops::resolve_ws_with_opts(&std_ws, opts, &specs)?;
+    let resolve = ops::resolve_ws_with_opts(&std_ws, &opts, &specs)?;
     Ok((resolve.pkg_set, resolve.targeted_resolve))
 }
 

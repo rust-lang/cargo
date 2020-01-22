@@ -122,7 +122,7 @@ fn build_resolve_graph(
     };
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let ws_resolve = ops::resolve_ws_with_opts(ws, resolve_opts, &specs)?;
+    let ws_resolve = ops::resolve_ws_with_opts(ws, &resolve_opts, &specs)?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,
     // but that would be somewhat complex.

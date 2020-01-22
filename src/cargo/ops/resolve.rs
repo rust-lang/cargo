@@ -10,12 +10,8 @@
 //! - `resolve_with_previous`: A low-level function for running the resolver,
 //!   providing the most power and flexibility.
 
-use std::collections::HashSet;
-use std::rc::Rc;
-
-use log::{debug, trace};
-
 use crate::core::registry::PackageRegistry;
+use crate::core::resolver::features::RequestedFeatures;
 use crate::core::resolver::{self, Resolve, ResolveOpts};
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -23,6 +19,8 @@ use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
+use log::{debug, trace};
+use std::collections::HashSet;
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'a> {
@@ -72,12 +70,11 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'a>(
     ws: &Workspace<'a>,
-    opts: ResolveOpts,
+    opts: &ResolveOpts,
     specs: &[PackageIdSpec],
 ) -> CargoResult<WorkspaceResolve<'a>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
-
     let resolve = if ws.ignore_lock() {
         None
     } else if ws.require_optional_deps() {
@@ -113,7 +110,7 @@ pub fn resolve_ws_with_opts<'a>(
     let resolved_with_overrides = resolve_with_previous(
         &mut registry,
         ws,
-        opts,
+        &opts,
         resolve.as_ref(),
         None,
         specs,
@@ -137,7 +134,7 @@ fn resolve_with_registry<'cfg>(
     let resolve = resolve_with_previous(
         registry,
         ws,
-        ResolveOpts::everything(),
+        &ResolveOpts::everything(),
         prev.as_ref(),
         None,
         &[],
@@ -168,14 +165,14 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    opts: ResolveOpts,
+    opts: &ResolveOpts,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
     assert!(
-        !specs.is_empty() || opts.all_features,
+        !specs.is_empty() || opts.features.all_features,
         "no specs requires all_features"
     );
 
@@ -264,7 +261,7 @@ pub fn resolve_with_previous<'cfg>(
         if specs.is_empty() {
             members.extend(ws.members());
         } else {
-            if specs.len() > 1 && !opts.features.is_empty() {
+            if specs.len() > 1 && !opts.features.features.is_empty() {
                 anyhow::bail!("cannot specify features for more than one package");
             }
             members.extend(
@@ -275,7 +272,10 @@ pub fn resolve_with_previous<'cfg>(
             // of current workspace. Add all packages from workspace to get `foo`
             // into the resolution graph.
             if members.is_empty() {
-                if !(opts.features.is_empty() && !opts.all_features && opts.uses_default_features) {
+                if !(opts.features.features.is_empty()
+                    && !opts.features.all_features
+                    && opts.features.uses_default_features)
+                {
                     anyhow::bail!("cannot specify features for packages outside of workspace");
                 }
                 members.extend(ws.members());
@@ -316,12 +316,10 @@ pub fn resolve_with_previous<'cfg>(
                             // "current" one, don't use the local `--features`.
                             ResolveOpts {
                                 dev_deps: opts.dev_deps,
-                                features: Rc::default(),
-                                all_features: opts.all_features,
-                                uses_default_features: true,
+                                features: RequestedFeatures::new_all(opts.features.all_features),
                             }
                         } else {
-                            // `-p` for non-member, skip.
+                            // This member was not requested on the command-line, skip.
                             continue;
                         }
                     }

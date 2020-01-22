@@ -62,6 +62,7 @@ use crate::util::profile;
 
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
+use self::features::RequestedFeatures;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
@@ -76,6 +77,7 @@ mod context;
 mod dep_cache;
 mod encode;
 mod errors;
+pub mod features;
 mod resolve;
 mod types;
 
@@ -368,9 +370,11 @@ fn activate_deps_loop(
             let pid = candidate.package_id();
             let opts = ResolveOpts {
                 dev_deps: false,
-                features: Rc::clone(&features),
-                all_features: false,
-                uses_default_features: dep.uses_default_features(),
+                features: RequestedFeatures {
+                    features: Rc::clone(&features),
+                    all_features: false,
+                    uses_default_features: dep.uses_default_features(),
+                },
             };
             trace!(
                 "{}[{}]>{} trying {}",
