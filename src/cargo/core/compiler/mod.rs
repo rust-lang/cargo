@@ -538,7 +538,14 @@ fn prepare_rustc<'a, 'cfg>(
     let is_primary = cx.is_primary_package(unit);
 
     let mut base = cx.compilation.rustc_process(unit.pkg, is_primary)?;
-    base.inherit_jobserver(&cx.jobserver);
+    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
+        let client = cx.new_jobserver()?;
+        base.inherit_jobserver(&client);
+        base.arg("-Zjobserver-token-requests");
+        assert!(cx.rustc_clients.insert(*unit, client).is_none());
+    } else {
+        base.inherit_jobserver(&cx.jobserver);
+    }
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
@@ -1208,6 +1215,31 @@ fn on_stderr_line_inner(
             }
             return Ok(false);
         }
+    }
+
+    #[derive(serde::Deserialize)]
+    struct JobserverNotification {
+        jobserver_event: Event,
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    enum Event {
+        WillAcquire,
+        Release,
+    }
+
+    if let Ok(JobserverNotification { jobserver_event }) =
+        serde_json::from_str::<JobserverNotification>(compiler_message.get())
+    {
+        log::info!(
+            "found jobserver directive from rustc: `{:?}`",
+            jobserver_event
+        );
+        match jobserver_event {
+            Event::WillAcquire => state.will_acquire(),
+            Event::Release => state.release_token(),
+        }
+        return Ok(false);
     }
 
     // And failing all that above we should have a legitimate JSON diagnostic
