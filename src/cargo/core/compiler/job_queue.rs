@@ -582,9 +582,23 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // listen for a message with a timeout, and on timeout we run the
         // previous parts of the loop again.
         let events: Vec<_> = self.rx.try_iter().collect();
+        info!(
+            "tokens in use: {}, rustc_tokens: {:?}, waiting_rustcs: {:?} (events this tick: {})",
+            self.tokens.len(),
+            self.rustc_tokens
+                .iter()
+                .map(|(k, j)| (k, j.len()))
+                .collect::<Vec<_>>(),
+            self.to_send_clients
+                .iter()
+                .map(|(k, j)| (k, j.len()))
+                .collect::<Vec<_>>(),
+            events.len(),
+        );
         if events.is_empty() {
             loop {
                 self.tick_progress();
+                self.tokens.truncate(self.active.len() - 1);
                 match self.rx.recv_timeout(Duration::from_millis(500)) {
                     Ok(message) => break vec![message],
                     Err(_) => continue,
@@ -618,13 +632,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         loop {
             self.spawn_work_if_possible(cx, jobserver_helper, scope, error.is_some())?;
 
-            info!(
-                "tokens: {}, rustc_tokens: {}, waiting_rustcs: {}",
-                self.tokens.len(),
-                self.rustc_tokens.len(),
-                self.to_send_clients.len()
-            );
-
             // If after all that we're not actually running anything then we're
             // done!
             if self.active.is_empty() {
@@ -638,7 +645,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             // jobserver interface is architected we may acquire a token that we
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
-            self.tokens.truncate(self.active.len() - 1);
             for event in self.wait_for_events() {
                 if let Some(err) = self.handle_event(cx, jobserver_helper, plan, event)? {
                     error = Some(err);
