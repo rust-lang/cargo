@@ -76,7 +76,7 @@ fn simple_add() {
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
-error: failed to invite owners to crate foo: response body is empty",
+error: failed to invite owners to crate foo: EOF while parsing a value at line 1 column 0",
         )
         .run();
 }
@@ -110,7 +110,7 @@ fn simple_remove() {
 error: failed to remove owners from crate foo
 
 Caused by:
-  response body is empty",
+  EOF while parsing a value at line 1 column 0",
         )
         .run();
 }

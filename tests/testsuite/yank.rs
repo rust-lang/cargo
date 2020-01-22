@@ -45,7 +45,7 @@ fn simple() {
 error: failed to undo a yank
 
 Caused by:
-  ok is false in response body",
+  EOF while parsing a value at line 1 column 0",
         )
         .run();
 }

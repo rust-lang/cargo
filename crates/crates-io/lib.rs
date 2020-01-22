@@ -149,41 +149,15 @@ impl Registry {
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
-        let body = if body.is_empty() {
-            r#"{"ok":false,"msg":"response body is empty"}"#.parse()?
-        } else {
-            body
-        };
-        match serde_json::from_str::<OwnerResponse>(&body) {
-            Ok(response) => {
-                if response.ok {
-                    Ok(response.msg)
-                } else {
-                    bail!("{}", response.msg)
-                }
-            }
-            _ => bail!("failed to parse response body"),
-        }
+        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
+        Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
     }
 
-    pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
+    pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.delete(&format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
-        let body = if body.is_empty() {
-            r#"{"ok":false,"msg":"response body is empty"}"#.parse()?
-        } else {
-            body
-        };
-        match serde_json::from_str::<OwnerResponse>(&body) {
-            Ok(response) => {
-                if response.ok {
-                    Ok(response.msg)
-                } else {
-                    bail!("{}", response.msg)
-                }
-            }
-            _ => bail!("failed to parse response body"),
-        }
+        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
+        Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
@@ -298,21 +272,8 @@ impl Registry {
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
-        let body = if body.is_empty() {
-            r#"{"ok":false}"#.parse()?
-        } else {
-            body
-        };
-        match serde_json::from_str::<R>(&body) {
-            Ok(response) => {
-                if response.ok {
-                    Ok(())
-                } else {
-                    bail!("ok is false in response body")
-                }
-            }
-            _ => bail!("failed to parse response body"),
-        }
+        assert!(serde_json::from_str::<R>(&body)?.ok);
+        Ok(())
     }
 
     fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
