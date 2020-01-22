@@ -1,7 +1,8 @@
 //! Tests for caching compiler diagnostics.
 
 use cargo_test_support::{
-    clippy_is_available, is_coarse_mtime, process, project, registry::Package, sleep_ms,
+    basic_manifest, clippy_is_available, is_coarse_mtime, process, project, registry::Package,
+    sleep_ms,
 };
 use std::path::Path;
 
@@ -389,4 +390,50 @@ fn doesnt_create_extra_files() {
     p.change_file("src/lib.rs", "fn unused() {}");
     p.cargo("build").run();
     assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
+}
+
+#[cargo_test]
+fn replay_non_json() {
+    // Handles non-json output.
+    let rustc = project()
+        .at("rustc")
+        .file("Cargo.toml", &basic_manifest("rustc_alt", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                eprintln!("line 1");
+                eprintln!("line 2");
+                let r = std::process::Command::new("rustc")
+                    .args(std::env::args_os().skip(1))
+                    .status();
+                std::process::exit(r.unwrap().code().unwrap_or(2));
+            }
+            "#,
+        )
+        .build();
+    rustc.cargo("build").run();
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("RUSTC", rustc.bin("rustc_alt"))
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+line 1
+line 2
+[FINISHED] dev [..]
+",
+        )
+        .run();
+
+    p.cargo("check")
+        .env("RUSTC", rustc.bin("rustc_alt"))
+        .with_stderr(
+            "\
+line 1
+line 2
+[FINISHED] dev [..]
+",
+        )
+        .run();
 }
