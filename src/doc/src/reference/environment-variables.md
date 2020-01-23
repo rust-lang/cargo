@@ -84,6 +84,16 @@ supported environment variables are:
 * `CARGO_NET_RETRY` — Number of times to retry network errors, see [`net.retry`].
 * `CARGO_NET_GIT_FETCH_WITH_CLI` — Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
 * `CARGO_NET_OFFLINE` — Offline mode, see [`net.offline`].
+* `CARGO_PROFILE_<name>_BUILD_OVERRIDE_<key>` — Override build script profile, see [`profile.<name>.build-override`].
+* `CARGO_PROFILE_<name>_CODEGEN_UNITS` — Set code generation units, see [`profile.<name>.codegen-units`].
+* `CARGO_PROFILE_<name>_DEBUG` — What kind of debug info to include, see [`profile.<name>.debug`].
+* `CARGO_PROFILE_<name>_DEBUG_ASSERTIONS` — Enable/disable debug assertions, see [`profile.<name>.debug-assertions`].
+* `CARGO_PROFILE_<name>_INCREMENTAL` — Enable/disable incremental compilation, see [`profile.<name>.incremental`].
+* `CARGO_PROFILE_<name>_LTO` — Link-time optimization, see [`profile.<name>.lto`].
+* `CARGO_PROFILE_<name>_OVERFLOW_CHECKS` — Enable/disable overflow checks, see [`profile.<name>.overflow-checks`].
+* `CARGO_PROFILE_<name>_OPT_LEVEL` — Set the optimization level, see [`profile.<name>.opt-level`].
+* `CARGO_PROFILE_<name>_PANIC` — The panic strategy to use, see [`profile.<name>.panic`].
+* `CARGO_PROFILE_<name>_RPATH` — The rpath linking option, see [`profile.<name>.rpath`].
 * `CARGO_REGISTRIES_<name>_INDEX` — URL of a registry index, see [`registries.<name>.index`].
 * `CARGO_REGISTRIES_<name>_TOKEN` — Authentication token of a registry, see [`registries.<name>.token`].
 * `CARGO_REGISTRY_DEFAULT` — Default registry for the `--registry` flag, see [`registry.default`].
@@ -129,6 +139,16 @@ supported environment variables are:
 [`net.retry`]: config.md#netretry
 [`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
 [`net.offline`]: config.md#netoffline
+[`profile.<name>.build-override`]: config.md#profilenamebuild-override
+[`profile.<name>.codegen-units`]: config.md#profilenamecodegen-units
+[`profile.<name>.debug`]: config.md#profilenamedebug
+[`profile.<name>.debug-assertions`]: config.md#profilenamedebug-assertions
+[`profile.<name>.incremental`]: config.md#profilenameincremental
+[`profile.<name>.lto`]: config.md#profilenamelto
+[`profile.<name>.overflow-checks`]: config.md#profilenameoverflow-checks
+[`profile.<name>.opt-level`]: config.md#profilenameopt-level
+[`profile.<name>.panic`]: config.md#profilenamepanic
+[`profile.<name>.rpath`]: config.md#profilenamerpath
 [`registries.<name>.index`]: config.md#registriesnameindex
 [`registries.<name>.token`]: config.md#registriesnametoken
 [`registry.default`]: config.md#registrydefault

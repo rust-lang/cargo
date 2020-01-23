@@ -22,6 +22,12 @@ Cargo only looks at the profile settings in the `Cargo.toml` manifest at the
 root of the workspace. Profile settings defined in dependencies will be
 ignored.
 
+Additionally, profiles can be overridden from a [config] definition.
+Specifying a profile in a config file or environment variable will override
+the settings from `Cargo.toml`.
+
+[config]: config.md
+
 ### Profile settings
 
 The following is a list of settings that can be controlled in a profile.
@@ -392,6 +398,5 @@ will it export locally defined monomorphized items to be shared with other
 crates. When experimenting with optimizing dependencies for development,
 consider trying opt-level 1, which will apply some optimizations while still
 allowing monomorphized items to be shared.
-
 
 [nalgebra]: https://crates.io/crates/nalgebra

@@ -87,6 +87,21 @@ retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = false             # do not access the network
 
+[profile.<name>]         # Modify profile settings via config.
+opt-level = 0            # Optimization level.
+debug = true             # Include debug info.
+debug-assertions = true  # Enables debug assertions.
+overflow-checks = true   # Enables runtime integer overflow checks.
+lto = false              # Sets link-time optimization.
+panic = 'unwind'         # The panic strategy.
+incremental = true       # Incremental compilation.
+codegen-units = 16       # Number of code generation units.
+rpath = false            # Sets the rpath linking option.
+[profile.<name>.build-override]  # Overrides build-script settings.
+# Same keys for a normal profile.
+[profile.<name>.package.<name>]  # Override profile for a package.
+# Same keys for a normal profile (minus `panic`, `lto`, and `rpath`).
+
 [registries.<name>]  # registries other than crates.io
 index = "…"          # URL of the registry index
 token = "…"          # authentication token for the registry
@@ -548,6 +563,93 @@ proceed with locally cached data. If `false`, Cargo will access the network as
 needed, and generate an error if it encounters a network error.
 
 Can be overridden with the `--offline` command-line option.
+
+#### `[profile]`
+
+The `[profile]` table can be used to globally change profile settings, and
+override settings specified in `Cargo.toml`. It has the same syntax and
+options as profiles specified in `Cargo.toml`. See the [Profiles chapter] for
+details about the options.
+
+[Profiles chapter]: profiles.md
+
+##### `[profile.<name>.build-override]`
+* Environment: `CARGO_PROFILE_<name>_BUILD_OVERRIDE_<key>`
+
+The build-override table overrides settings for build scripts, proc macros,
+and their dependencies. It has the same keys as a normal profile. See the
+[overrides section](profiles.md#overrides) for more details.
+
+##### `[profile.<name>.package.<name>]`
+* Environment: not supported
+
+The package table overrides settings for specific packages. It has the same
+keys as a normal profile, minus the `panic`, `lto`, and `rpath` settings. See
+the [overrides section](profiles.md#overrides) for more details.
+
+##### `profile.<name>.codegen-units`
+* Type: integer
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_CODEGEN_UNITS`
+
+See [codegen-units](profiles.md#codegen-units).
+
+##### `profile.<name>.debug`
+* Type: integer or boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_DEBUG`
+
+See [debug](profiles.md#debug).
+
+##### `profile.<name>.debug-assertions`
+* Type: boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_DEBUG_ASSERTIONS`
+
+See [debug-assertions](profiles.md#debug-assertions).
+
+##### `profile.<name>.incremental`
+* Type: boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_INCREMENTAL`
+
+See [incremental](profiles.md#incremental).
+
+##### `profile.<name>.lto`
+* Type: string or boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_LTO`
+
+See [lto](profiles.md#lto).
+
+##### `profile.<name>.overflow-checks`
+* Type: boolean
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_OVERFLOW_CHECKS`
+
+See [overflow-checks](profiles.md#overflow-checks).
+
+##### `profile.<name>.opt-level`
+* Type: integer or string
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_OPT_LEVEL`
+
+See [opt-level](profiles.md#opt-level).
+
+##### `profile.<name>.panic`
+* Type: string
+* default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_PANIC`
+
+See [panic](profiles.md#panic).
+
+##### `profile.<name>.rpath`
+* Type: boolean
+* default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_RPATH`
+
+See [rpath](profiles.md#rpath).
+
 
 #### `[registries]`
 

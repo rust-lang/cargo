@@ -36,7 +36,6 @@ Available unstable (nightly-only) flags:
     -Z minimal-versions -- Install minimal dependency versions instead of maximum
     -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
     -Z unstable-options -- Allow the usage of unstable options
-    -Z config-profile   -- Read profiles from .cargo/config files
     -Z timings          -- Display concurrency information
     -Z doctest-xcompile -- Compile and run doctests for non-host target using runner config
 
