@@ -35,4 +35,17 @@ fn simple() {
     p.cargo("yank --vers 0.0.1 --index")
         .arg(registry_url().to_string())
         .run();
+
+    p.cargo("yank --undo --vers 0.0.1 --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr(
+            "    Updating `[..]` index
+      Unyank foo:0.0.1
+error: failed to undo a yank
+
+Caused by:
+  EOF while parsing a value at line 1 column 0",
+        )
+        .run();
 }
