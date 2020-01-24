@@ -342,6 +342,7 @@ pub struct CliUnstable {
     pub doctest_xcompile: bool,
     pub panic_abort_tests: bool,
     pub jobserver_per_rustc: bool,
+    pub extra_link_arg: bool,
 }
 
 impl CliUnstable {
@@ -411,6 +412,7 @@ impl CliUnstable {
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
+            "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

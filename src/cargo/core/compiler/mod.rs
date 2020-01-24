@@ -213,6 +213,7 @@ fn rustc<'a, 'cfg>(
     let do_rename = unit.target.allows_underscores() && !unit.mode.is_any_test();
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
+    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
 
     // Rely on `target_filenames` iterator as source of truth rather than rederiving filestem.
     let rustc_dep_info_loc = if do_rename && cx.files().metadata(unit).is_none() {
@@ -261,6 +262,7 @@ fn rustc<'a, 'cfg>(
                     &build_scripts,
                     pass_l_flag,
                     link_type,
+                    extra_link_arg,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
@@ -355,6 +357,7 @@ fn rustc<'a, 'cfg>(
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
         link_type: Option<LinkType>,
+        extra_link_arg: bool,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -376,17 +379,15 @@ fn rustc<'a, 'cfg>(
                         rustc.arg("-l").arg(name);
                     }
                 }
-
                 if link_type.is_some() {
-                    for arg in output
+                    output
                         .linker_args
                         .iter()
                         .filter(|x| x.0.is_none() || x.0 == link_type)
-                        .map(|x| &x.1)
-                    {
-                        let link_arg = format!("link-arg={}", arg);
-                        rustc.arg("-C").arg(link_arg);
-                    }
+                        .filter(|x| x.0 == Some(LinkType::Cdylib) || extra_link_arg)
+                        .for_each(|x| {
+                            rustc.arg("-C").arg(format!("link-arg={}", x.1));
+                        });
                 }
             }
         }
