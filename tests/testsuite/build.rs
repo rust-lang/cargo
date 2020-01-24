@@ -2194,8 +2194,6 @@ fn rebuild_preserves_out_dir() {
 
 #[cargo_test]
 fn dep_no_libs() {
-    let exe_name = format!("bar{}", env::consts::EXE_SUFFIX);
-
     let foo = project()
         .file(
             "Cargo.toml",
@@ -2211,11 +2209,17 @@ fn dep_no_libs() {
         )
         .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
-        .file("bar/src/main.rs", "fn main() {}")
+        .file("bar/src/bin/baz.rs", "fn main() {}")
+        .file("bar/src/bin/qux.rs", "fn main() {}")
         .build();
 
     foo.cargo("build").run();
-    assert!(foo.target_debug_dir().join(exe_name).exists());
+
+    let baz = format!("baz{}", env::consts::EXE_SUFFIX);
+    assert!(foo.target_debug_dir().join(baz).exists());
+
+    let qux = format!("qux{}", env::consts::EXE_SUFFIX);
+    assert!(foo.target_debug_dir().join(qux).exists());
 }
 
 #[cargo_test]
@@ -3400,8 +3404,8 @@ fn build_all_workspace_implicit_examples() {
     assert!(!p.bin("b").is_file());
     assert!(p.bin("examples/c").is_file());
     assert!(p.bin("examples/d").is_file());
-    assert!(!p.bin("e").is_file());
-    assert!(!p.bin("f").is_file());
+    assert!(p.bin("e").is_file());
+    assert!(p.bin("f").is_file());
     assert!(p.bin("examples/g").is_file());
     assert!(p.bin("examples/h").is_file());
 }

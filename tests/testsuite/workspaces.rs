@@ -179,7 +179,7 @@ fn inferred_path_dep() {
 
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
-    assert!(!p.bin("bar").is_file());
+    assert!(p.bin("bar").is_file());
 
     p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
@@ -228,13 +228,13 @@ fn transitive_path_dep() {
 
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
-    assert!(!p.bin("bar").is_file());
-    assert!(!p.bin("baz").is_file());
+    assert!(p.bin("bar").is_file());
+    assert!(p.bin("baz").is_file());
 
     p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
-    assert!(!p.bin("baz").is_file());
+    assert!(p.bin("baz").is_file());
 
     p.cargo("build").cwd("baz").run();
     assert!(p.bin("foo").is_file());

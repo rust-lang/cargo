@@ -266,30 +266,29 @@ fn compute_deps<'a, 'cfg>(
             Some(pkg) => pkg,
             None => continue,
         };
-        let lib = match pkg.targets().iter().find(|t| t.is_lib() || t.is_bin()) {
-            Some(t) => t,
-            None => continue,
-        };
-        let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = unit_for.with_for_host(lib.for_host());
 
-        if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
-            ret.push(unit_dep);
-            let unit_dep =
-                new_unit_dep(state, unit, pkg, lib, dep_unit_for, CompileKind::Host, mode)?;
-            ret.push(unit_dep);
-        } else {
-            let unit_dep = new_unit_dep(
-                state,
-                unit,
-                pkg,
-                lib,
-                dep_unit_for,
-                unit.kind.for_target(lib),
-                mode,
-            )?;
-            ret.push(unit_dep);
+        for target in pkg.targets().iter().filter(|t| t.is_lib() || t.is_bin()) {
+            let mode = check_or_build_mode(unit.mode, target);
+            let dep_unit_for = unit_for.with_for_host(target.for_host());
+            let proc_macros = bcx.config.cli_unstable().dual_proc_macros && target.proc_macro();
+
+            let kinds = if proc_macros && !unit.kind.is_host() {
+                vec![unit.kind, CompileKind::Host]
+            } else {
+                vec![unit.kind.for_target(target)]
+            };
+
+            for kind in kinds {
+                ret.push(new_unit_dep(
+                    state,
+                    unit,
+                    pkg,
+                    target,
+                    dep_unit_for,
+                    kind,
+                    mode,
+                )?);
+            }
         }
     }
 

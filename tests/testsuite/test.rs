@@ -1688,9 +1688,13 @@ fn selective_testing() {
 
     println!("whole");
     p.cargo("test")
+        // NOTE: The compilation order appears to be unpredictable.
+        // Therefore, the test will sporadically fail. How do I solve for this?
+        // I've tried reducing parallelism to 1 without success.
         .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+"   Compiling d2 v0.0.1 ([CWD]/d2)
+   Compiling d1 v0.0.1 ([CWD]/d1)
+   Compiling foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
