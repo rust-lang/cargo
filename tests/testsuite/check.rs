@@ -766,7 +766,7 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
     p.cargo("check --message-format=json")
         .with_status(101)
         .with_stdout_contains(
-            "[..]\"message\":\"recursion limit reached while expanding the macro `m`\"[..]",
+            "[..]\"message\":\"recursion limit reached while expanding [..]`m[..]`\"[..]",
         )
         .run();
 
