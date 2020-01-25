@@ -398,7 +398,7 @@ baz = { version = "0.1", registry = "custom", package = "foo" }
 
 In this example, three crates are now available in your Rust code:
 
-```rust
+```rust,ignore
 extern crate foo; // crates.io
 extern crate bar; // git repository
 extern crate baz; // registry `custom`

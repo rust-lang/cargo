@@ -82,7 +82,7 @@ exact filename can be tricky since you need to parse JSON output. The
 that the artifacts are copied, so the originals are still in the `target`
 directory. Example:
 
-```
+```sh
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
@@ -105,7 +105,7 @@ while also passing it a `--target` option, as well as enabling
 `-Zunstable-features --enable-per-target-ignores` and passing along
 information from `.cargo/config.toml`. See the rustc issue for more information.
 
-```
+```sh
 cargo test --target foo -Zdoctest-xcompile
 ```
 
@@ -163,7 +163,7 @@ profiles from which the custom profile inherits are inherited too.
 
 For example, using `cargo build` with `--profile` and the manifest from above:
 
-```
+```sh
 cargo +nightly build --profile release-lto -Z unstable-options
 ```
 
@@ -223,7 +223,7 @@ information about which commands would be run without actually executing
 anything. This can be useful when integrating with another build tool.
 Example:
 
-```
+```sh
 cargo +nightly build --build-plan -Z unstable-options
 ```
 
@@ -296,7 +296,7 @@ need to have the source code for the standard library available, and at this
 time the only supported method of doing so is to add the `rust-src` rust rustup
 component:
 
-```
+```console
 $ rustup component add rust-src --toolchain nightly
 ```
 
@@ -306,7 +306,7 @@ just forced to pass `--target` in one form or another.
 
 Usage looks like:
 
-```
+```console
 $ cargo new foo
 $ cd foo
 $ cargo +nightly run -Z build-std --target x86_64-unknown-linux-gnu
@@ -326,7 +326,7 @@ Using `-Z build-std` will implicitly compile the stable crates `core`, `std`,
 `test` crate. If you're working with an environment which does not support some
 of these crates, then you can pass an argument to `-Zbuild-std` as well:
 
-```
+```console
 $ cargo +nightly build -Z build-std=core,alloc
 ```
 
@@ -373,7 +373,7 @@ override the default list of features enabled.
 The `timings` feature gives some information about how long each compilation
 takes, and tracks concurrency information over time.
 
-```
+```sh
 cargo +nightly build -Z timings
 ```
 
@@ -470,7 +470,7 @@ variables, which take precedence over config files.
 
 Some examples of what it looks like using Bourne shell syntax:
 
-```sh
+```console
 # Most shells will require escaping.
 cargo --config http.proxy=\"http://example.com\" …
 
