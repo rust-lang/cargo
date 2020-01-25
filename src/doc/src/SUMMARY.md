@@ -21,6 +21,7 @@
 * [Cargo Reference](reference/index.md)
     * [Specifying Dependencies](reference/specifying-dependencies.md)
         * [Overriding Dependencies](reference/overriding-dependencies.md)
+    * [Breaking Changes](reference/breaking.md)
     * [The Manifest Format](reference/manifest.md)
         * [Cargo Targets](reference/cargo-targets.md)
     * [Workspaces](reference/workspaces.md)

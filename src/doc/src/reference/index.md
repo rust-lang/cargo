@@ -4,6 +4,7 @@ The reference covers the details of various areas of Cargo.
 
 * [Specifying Dependencies](specifying-dependencies.md)
     * [Overriding Dependencies](overriding-dependencies.md)
+* [Breaking Changes](breaking.md)
 * [The Manifest Format](manifest.md)
     * [Cargo Targets](cargo-targets.md)
 * [Workspaces](workspaces.md)
