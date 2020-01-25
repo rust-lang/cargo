@@ -538,7 +538,14 @@ fn prepare_rustc<'a, 'cfg>(
     let is_primary = cx.is_primary_package(unit);
 
     let mut base = cx.compilation.rustc_process(unit.pkg, is_primary)?;
-    base.inherit_jobserver(&cx.jobserver);
+    if cx.bcx.config.cli_unstable().jobserver_per_rustc {
+        let client = cx.new_jobserver()?;
+        base.inherit_jobserver(&client);
+        base.arg("-Zjobserver-token-requests");
+        assert!(cx.rustc_clients.insert(*unit, client).is_none());
+    } else {
+        base.inherit_jobserver(&cx.jobserver);
+    }
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
@@ -1210,6 +1217,31 @@ fn on_stderr_line_inner(
         }
     }
 
+    #[derive(serde::Deserialize)]
+    struct JobserverNotification {
+        jobserver_event: Event,
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    enum Event {
+        WillAcquire,
+        Release,
+    }
+
+    if let Ok(JobserverNotification { jobserver_event }) =
+        serde_json::from_str::<JobserverNotification>(compiler_message.get())
+    {
+        log::info!(
+            "found jobserver directive from rustc: `{:?}`",
+            jobserver_event
+        );
+        match jobserver_event {
+            Event::WillAcquire => state.will_acquire(),
+            Event::Release => state.release_token(),
+        }
+        return Ok(false);
+    }
+
     // And failing all that above we should have a legitimate JSON diagnostic
     // from the compiler, so wrap it in an external Cargo JSON message
     // indicating which package it came from and then emit it.
@@ -1257,7 +1289,8 @@ fn replay_output_cache(
             if length == 0 {
                 break;
             }
-            on_stderr_line(state, line.as_str(), package_id, &target, &mut options)?;
+            let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
+            on_stderr_line(state, trimmed, package_id, &target, &mut options)?;
             line.clear();
         }
         Ok(())

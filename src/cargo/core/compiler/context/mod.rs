@@ -69,6 +69,11 @@ pub struct Context<'a, 'cfg> {
     /// metadata files in addition to the rlib itself. This is only filled in
     /// when `pipelining` above is enabled.
     rmeta_required: HashSet<Unit<'a>>,
+
+    /// When we're in jobserver-per-rustc process mode, this keeps those
+    /// jobserver clients for each Unit (which eventually becomes a rustc
+    /// process).
+    pub rustc_clients: HashMap<Unit<'a>, Client>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -112,6 +117,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             unit_dependencies,
             files: None,
             rmeta_required: HashSet::new(),
+            rustc_clients: HashMap::new(),
             pipelining,
         })
     }
@@ -490,5 +496,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// well because some compilations rely on that.
     pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
         self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
+    }
+
+    pub fn new_jobserver(&mut self) -> CargoResult<Client> {
+        let tokens = self.bcx.build_config.jobs as usize;
+        let client = Client::new(tokens).chain_err(|| "failed to create jobserver")?;
+
+        // Drain the client fully
+        for i in 0..tokens {
+            while let Err(e) = client.acquire_raw() {
+                anyhow::bail!(
+                    "failed to fully drain {}/{} token from jobserver at startup: {:?}",
+                    i,
+                    tokens,
+                    e,
+                );
+            }
+        }
+
+        Ok(client)
     }
 }
