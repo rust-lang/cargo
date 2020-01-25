@@ -71,7 +71,7 @@ we choose to `cargo update`.
 
 You can now use the `regex` library in `main.rs`.
 
-```rust
+```rust,ignore
 use regex::Regex;
 
 fn main() {

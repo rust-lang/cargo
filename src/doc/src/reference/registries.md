@@ -38,7 +38,7 @@ As with most config values, the index may be specified with an environment
 variable instead of a config file. For example, setting the following
 environment variable will accomplish the same thing as defining a config file:
 
-```
+```ignore
 CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 ```
 

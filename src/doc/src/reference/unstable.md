@@ -72,7 +72,7 @@ exact filename can be tricky since you need to parse JSON output. The
 that the artifacts are copied, so the originals are still in the `target`
 directory. Example:
 
-```
+```ignore
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
@@ -88,7 +88,7 @@ while also passing it a `--target` option, as well as enabling
 `-Zunstable-features --enable-per-target-ignores` and passing along
 information from `.cargo/config`. See the rustc issue for more information.
 
-```
+```ignore
 cargo test --target foo -Zdoctest-xcompile
 ```
 
@@ -127,7 +127,7 @@ profiles from which the custom profile inherits are inherited too.
 
 For example, using `cargo build` with `--profile` and the manifest from above:
 
-```
+```ignore
 cargo +nightly build --profile release-lto -Z unstable-options
 ```
 
@@ -166,7 +166,7 @@ Config settings take precedence over manifest settings.
 opt-level = 3
 ```
 
-```
+```ignore
 cargo +nightly build -Z config-profile
 ```
 
@@ -207,7 +207,7 @@ information about which commands would be run without actually executing
 anything. This can be useful when integrating with another build tool.
 Example:
 
-```
+```ignore
 cargo +nightly build --build-plan -Z unstable-options
 ```
 
@@ -280,7 +280,7 @@ need to have the source code for the standard library available, and at this
 time the only supported method of doing so is to add the `rust-src` rust rustup
 component:
 
-```
+```ignore
 $ rustup component add rust-src --toolchain nightly
 ```
 
@@ -290,7 +290,7 @@ just forced to pass `--target` in one form or another.
 
 Usage looks like:
 
-```
+```ignore
 $ cargo new foo
 $ cd foo
 $ cargo +nightly run -Z build-std --target x86_64-unknown-linux-gnu
@@ -310,7 +310,7 @@ Using `-Z build-std` will implicitly compile the stable crates `core`, `std`,
 `test` crate. If you're working with an environment which does not support some
 of these crates, then you can pass an argument to `-Zbuild-std` as well:
 
-```
+```ignore
 $ cargo +nightly build -Z build-std=core,alloc
 ```
 
@@ -348,7 +348,7 @@ the tracking repository, and if it's not there please file a new issue!
 The `timings` feature gives some information about how long each compilation
 takes, and tracks concurrency information over time.
 
-```
+```ignore
 cargo +nightly build -Z timings
 ```
 
