@@ -12,6 +12,7 @@ use std::fmt;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::str::FromStr;
 
 use toml;
@@ -573,8 +574,6 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
 }
 
 fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
-    println!("Entering 'mk'");
-
     let path = opts.path;
     let name = opts.name;
     let cfg = config.get::<CargoNewConfig>("cargo-new")?;
@@ -709,6 +708,12 @@ mod tests {
             .unwrap_or(false)
         {
             paths::write(&path_of_source_file, default_file_content)?;
+
+            // Format the newly created source file with rustfmt
+            if let Err(e) = Command::new("rustfmt").arg(&path_of_source_file).output() {
+                let msg = format!("failed to format {}: {}", path_of_source_file.display(), e);
+                config.shell().warn(msg)?;
+            }
         }
     }
 
@@ -720,8 +725,6 @@ mod tests {
         );
         config.shell().warn(msg)?;
     }
-
-    println!("Leaving 'mk'");
 
     Ok(())
 }
