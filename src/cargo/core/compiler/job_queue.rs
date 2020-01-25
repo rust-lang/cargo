@@ -95,6 +95,9 @@ pub struct JobQueue<'a, 'cfg> {
 /// It is created from JobQueue when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
 struct DrainState<'a, 'cfg> {
+    // This is the length of the DependencyQueue when starting out
+    total_units: usize,
+
     queue: DependencyQueue<Unit<'a>, Artifact, Job>,
     tx: Sender<Message>,
     rx: Receiver<Message>,
@@ -341,6 +344,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let (tx, rx) = channel();
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
         let state = DrainState {
+            total_units: self.queue.len(),
             queue: self.queue,
             tx,
             rx,
@@ -713,7 +717,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             .collect::<Vec<_>>();
         drop(self.progress.tick_now(
             self.finished,
-            self.queue.len(),
+            self.total_units,
             &format!(": {}", active_names.join(", ")),
         ));
     }
