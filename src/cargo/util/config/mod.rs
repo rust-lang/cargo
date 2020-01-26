@@ -602,14 +602,14 @@ impl Config {
     pub fn configure(
         &mut self,
         verbose: u32,
-        quiet: Option<bool>,
+        quiet: bool,
         color: Option<&str>,
         frozen: bool,
         locked: bool,
         offline: bool,
         target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
-        cli_config: &[&str],
+        cli_config: &[String],
     ) -> CargoResult<()> {
         self.unstable_flags.parse(unstable_flags)?;
         if !cli_config.is_empty() {
@@ -618,7 +618,7 @@ impl Config {
             self.merge_cli_args()?;
         }
         let extra_verbose = verbose >= 2;
-        let verbose = if verbose == 0 { None } else { Some(true) };
+        let verbose = verbose != 0;
 
         #[derive(Deserialize, Default)]
         struct TermConfig {
@@ -632,25 +632,19 @@ impl Config {
         let color = color.or_else(|| term.color.as_ref().map(|s| s.as_ref()));
 
         let verbosity = match (verbose, term.verbose, quiet) {
-            (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
+            (true, _, false) | (_, Some(true), false) => Verbosity::Verbose,
 
             // Command line takes precedence over configuration, so ignore the
             // configuration..
-            (None, _, Some(true)) => Verbosity::Quiet,
+            (false, _, true) => Verbosity::Quiet,
 
             // Can't pass both at the same time on the command line regardless
             // of configuration.
-            (Some(true), _, Some(true)) => {
+            (true, _, true) => {
                 bail!("cannot set both --verbose and --quiet");
             }
 
-            // Can't actually get `Some(false)` as a value from the command
-            // line, so just ignore them here to appease exhaustiveness checking
-            // in match statements.
-            (Some(false), _, _)
-            | (_, _, Some(false))
-            | (None, Some(false), None)
-            | (None, None, None) => Verbosity::Normal,
+            (false, _, false) => Verbosity::Normal,
         };
 
         let cli_target_dir = match target_dir.as_ref() {
@@ -659,7 +653,7 @@ impl Config {
         };
 
         self.shell().set_verbosity(verbosity);
-        self.shell().set_color_choice(color.map(|s| &s[..]))?;
+        self.shell().set_color_choice(color)?;
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;

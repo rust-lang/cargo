@@ -176,3 +176,19 @@ fn builtin_alias_takes_options() {
 
     p.cargo("r --example ex1 -- asdf").with_stdout("asdf").run();
 }
+
+#[cargo_test]
+fn global_options_with_alias() {
+    // Check that global options are passed through.
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("-v c")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
