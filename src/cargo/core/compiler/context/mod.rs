@@ -504,14 +504,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Drain the client fully
         for i in 0..tokens {
-            while let Err(e) = client.acquire_raw() {
-                anyhow::bail!(
-                    "failed to fully drain {}/{} token from jobserver at startup: {:?}",
-                    i,
-                    tokens,
-                    e,
-                );
-            }
+            client.acquire_raw().chain_err(|| {
+                format!(
+                    "failed to fully drain {}/{} token from jobserver at startup",
+                    i, tokens,
+                )
+            })?;
         }
 
         Ok(client)
