@@ -678,6 +678,14 @@ edition = {}
 
     // Create all specified source files (with respective parent directories) if they don't exist.
 
+    let rustfmt_exists = match Command::new("rustfmt").arg("-V").output() {
+        Ok(_) => true,
+        Err(e) => {
+            log::warn!("rustfmt not found: {}", e);
+            false
+        }
+    };
+
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
@@ -709,10 +717,9 @@ mod tests {
         {
             paths::write(&path_of_source_file, default_file_content)?;
 
-            // Format the newly created source file with rustfmt
-            if let Err(e) = Command::new("rustfmt").arg(&path_of_source_file).output() {
-                let msg = format!("failed to format {}: {}", path_of_source_file.display(), e);
-                config.shell().warn(msg)?;
+            // Format the newly created source file
+            if rustfmt_exists {
+                Command::new("rustfmt").arg(&path_of_source_file).output()?;
             }
         }
     }
