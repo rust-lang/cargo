@@ -663,6 +663,7 @@ fn formats_source() {
     fs::write(&paths::root().join("rustfmt.toml"), "tab_spaces = 2").unwrap();
 
     cargo_process("init --lib")
+        .env("USER", "foo")
         .with_stderr("[CREATED] library package")
         .run();
 
@@ -682,6 +683,7 @@ mod tests {
 #[cargo_test]
 fn ignores_failure_to_format_source() {
     cargo_process("init --lib")
+        .env("USER", "foo")
         .env("PATH", "") // pretend that `rustfmt` is missing
         .with_stderr("[CREATED] library package")
         .run();
