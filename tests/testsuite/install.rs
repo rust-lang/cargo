@@ -316,10 +316,10 @@ fn multiple_crates_git_all() {
     let p = git::repo(&paths::root().join("foo"))
         .file(
             "Cargo.toml",
-            r#"\
-[workspace]
-members = ["bin1", "bin2"]
-"#,
+            r#"
+            [workspace]
+            members = ["bin1", "bin2"]
+            "#,
         )
         .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
         .file("bin2/Cargo.toml", &basic_manifest("bin2", "0.1.0"))
@@ -1420,5 +1420,31 @@ fn install_version_req() {
     cargo_process("install foo --version=0.0.*")
         .with_stderr_does_not_contain("[WARNING][..]is not a valid semver[..]")
         .with_stderr_contains("[INSTALLING] foo v0.0.3")
+        .run();
+}
+
+#[cargo_test]
+fn git_install_reads_workspace_manifest() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bin1"]
+
+            [profile.release]
+            incremental = 3
+            "#,
+        )
+        .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
+        .file(
+            "bin1/src/main.rs",
+            r#"fn main() { println!("Hello, world!"); }"#,
+        )
+        .build();
+
+    cargo_process(&format!("install --git {}", p.url().to_string()))
+        .with_status(101)
+        .with_stderr_contains("  invalid type: integer `3`[..]")
         .run();
 }

@@ -829,6 +829,10 @@ impl<'cfg> Workspace<'cfg> {
         }
         Ok(())
     }
+
+    pub fn set_target_dir(&mut self, target_dir: Filesystem) {
+        self.target_dir = Some(target_dir);
+    }
 }
 
 impl<'cfg> Packages<'cfg> {

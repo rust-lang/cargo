@@ -200,31 +200,35 @@ fn install_one(
         )?
     };
 
-    let mut td_opt = None;
-    let mut needs_cleanup = false;
-    let overidden_target_dir = if source_id.is_path() {
-        None
-    } else if let Some(dir) = config.target_dir()? {
-        Some(dir)
-    } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
-        let p = td.path().to_owned();
-        td_opt = Some(td);
-        Some(Filesystem::new(p))
+    let (mut ws, git_package) = if source_id.is_git() {
+        // Don't use ws.current() in order to keep the package source as a git source so that
+        // install tracking uses the correct source.
+        (Workspace::new(pkg.manifest_path(), config)?, Some(&pkg))
+    } else if source_id.is_path() {
+        (Workspace::new(pkg.manifest_path(), config)?, None)
     } else {
-        needs_cleanup = true;
-        Some(Filesystem::new(config.cwd().join("target-install")))
-    };
-
-    let mut ws = match overidden_target_dir {
-        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
-        None => {
-            let mut ws = Workspace::new(pkg.manifest_path(), config)?;
-            ws.set_require_optional_deps(false);
-            ws
-        }
+        (Workspace::ephemeral(pkg, config, None, false)?, None)
     };
     ws.set_ignore_lock(config.lock_update_allowed());
-    let pkg = ws.current()?;
+    ws.set_require_optional_deps(false);
+
+    let mut td_opt = None;
+    let mut needs_cleanup = false;
+    if !source_id.is_path() {
+        let target_dir = if let Some(dir) = config.target_dir()? {
+            dir
+        } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
+            let p = td.path().to_owned();
+            td_opt = Some(td);
+            Filesystem::new(p)
+        } else {
+            needs_cleanup = true;
+            Filesystem::new(config.cwd().join("target-install"))
+        };
+        ws.set_target_dir(target_dir);
+    }
+
+    let pkg = git_package.map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
 
     if from_cwd {
         if pkg.manifest().edition() == Edition::Edition2015 {
