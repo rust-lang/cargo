@@ -202,7 +202,7 @@ fn install_one(
 
     let (mut ws, git_package) = if source_id.is_git() {
         // Don't use ws.current() in order to keep the package source as a git source so that
-        // install tracking uses the correct sourc.
+        // install tracking uses the correct source.
         (Workspace::new(pkg.manifest_path(), config)?, Some(&pkg))
     } else if source_id.is_path() {
         (Workspace::new(pkg.manifest_path(), config)?, None)
