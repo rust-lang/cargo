@@ -657,3 +657,44 @@ fn no_filename() {
         )
         .run();
 }
+
+#[cargo_test]
+fn formats_source() {
+    fs::write(&paths::root().join("rustfmt.toml"), "tab_spaces = 2").unwrap();
+
+    cargo_process("init --lib")
+        .with_stderr("[CREATED] library package")
+        .run();
+
+    assert_eq!(
+        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
+        r#"#[cfg(test)]
+mod tests {
+  #[test]
+  fn it_works() {
+    assert_eq!(2 + 2, 4);
+  }
+}
+"#
+    );
+}
+
+#[cargo_test]
+fn ignores_failure_to_format_source() {
+    cargo_process("init --lib")
+        .env("PATH", "") // pretend that `rustfmt` is missing
+        .with_stderr("[CREATED] library package")
+        .run();
+
+    assert_eq!(
+        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
+        r#"#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+}
+"#
+    );
+}
