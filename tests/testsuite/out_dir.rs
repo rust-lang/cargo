@@ -246,6 +246,30 @@ fn avoid_build_scripts() {
     );
 }
 
+#[cargo_test]
+fn cargo_build_out_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            out-dir = "out"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z unstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
+    check_dir_contents(
+        &p.root().join("out"),
+        &["foo"],
+        &["foo", "foo.dSYM"],
+        &["foo.exe", "foo.pdb"],
+    );
+}
+
 fn check_dir_contents(
     out_dir: &Path,
     expected_linux: &[&str],

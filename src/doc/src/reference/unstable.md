@@ -76,6 +76,13 @@ directory. Example:
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
+This can also be specified in `.cargo/config` files.
+
+```toml
+[build]
+out-dir = "out"
+```
+
 ### doctest-xcompile
 * Tracking Issue: [#7040](https://github.com/rust-lang/cargo/issues/7040)
 * Tracking Rustc Issue: [#64245](https://github.com/rust-lang/rust/issues/64245)
