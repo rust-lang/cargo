@@ -12,13 +12,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Rust (rustup)
       run: rustup update nightly --no-self-update && rustup default nightly
-      if: matrix.os != 'macos-latest'
       shell: bash
-    - name: Install Rust (macos)
-      run: |
-        curl https://sh.rustup.rs | sh -s -- -y
-        echo ::add-path::$HOME/.cargo/bin
-      if: matrix.os == 'macos-latest'
     - run: cargo test --all
     - run: cargo test --all -- --ignored
 
