@@ -54,11 +54,11 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
 use std::mem;
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
@@ -341,7 +341,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
-        let (tx, rx) = channel();
+        let (tx, rx) = unbounded();
         let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
         let state = DrainState {
             total_units: self.queue.len(),
