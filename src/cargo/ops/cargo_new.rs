@@ -13,7 +13,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str::FromStr;
+use std::str::{from_utf8, FromStr};
 
 use toml;
 
@@ -678,14 +678,6 @@ edition = {}
 
     // Create all specified source files (with respective parent directories) if they don't exist.
 
-    let rustfmt_exists = match Command::new("rustfmt").arg("-V").output() {
-        Ok(_) => true,
-        Err(e) => {
-            log::warn!("rustfmt not found: {}", e);
-            false
-        }
-    };
-
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());
 
@@ -718,9 +710,14 @@ mod tests {
             paths::write(&path_of_source_file, default_file_content)?;
 
             // Format the newly created source file
-            if rustfmt_exists {
-                Command::new("rustfmt").arg(&path_of_source_file).output()?;
-            }
+            match Command::new("rustfmt").arg(&path_of_source_file).output() {
+                Err(e) => log::warn!("failed to call rustfmt: {}", e),
+                Ok(output) => {
+                    if !output.status.success() {
+                        log::warn!("rustfmt failed: {:?}", from_utf8(&output.stdout));
+                    }
+                }
+            };
         }
     }
 
