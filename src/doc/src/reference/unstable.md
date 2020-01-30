@@ -533,5 +533,9 @@ The available options are:
   `std` feature. However, when built as a test or example, it will include the
   `std` feature.
 
+  This mode is ignored if you are building any test, bench, or example. That
+  is, dev dependency features will still be unified if you run commands like
+  `cargo test` or `cargo build --all-targets`.
+
 * `compare` — This option compares the resolved features to the old resolver,
   and will print any differences.

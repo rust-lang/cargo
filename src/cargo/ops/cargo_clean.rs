@@ -87,6 +87,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         &requested_features,
         &specs,
         bcx.build_config.requested_kind,
+        true,
     )?;
     let mut units = Vec::new();
 

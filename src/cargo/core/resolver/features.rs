@@ -53,7 +53,7 @@ struct FeatureOpts {
 }
 
 impl FeatureOpts {
-    fn new(config: &Config) -> CargoResult<FeatureOpts> {
+    fn new(config: &Config, has_dev_units: bool) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
         let unstable_flags = config.cli_unstable();
         opts.package_features = unstable_flags.package_features;
@@ -83,6 +83,15 @@ impl FeatureOpts {
                 let env_opts = env_opts.split(',').map(|s| s.to_string()).collect();
                 enable(&env_opts)?;
             }
+        }
+        if has_dev_units {
+            // Decoupling of dev deps is not allowed if any test/bench/example
+            // is being built. It may be possible to relax this in the future,
+            // but it will require significant changes to how unit
+            // dependencies are computed, and can result in longer build times
+            // with `cargo test` because the lib may need to be built 3 times
+            // instead of twice.
+            opts.decouple_dev_deps = false;
         }
         Ok(opts)
     }
@@ -141,7 +150,6 @@ impl ResolvedFeatures {
         if let Some(legacy) = &self.legacy {
             legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
         } else {
-            // TODO: Remove panic, return empty set.
             let dep_kind = if (!self.opts.decouple_build_deps && dep_kind == DepKind::Build)
                 || (!self.opts.decouple_dev_deps && dep_kind == DepKind::Development)
             {
@@ -150,6 +158,7 @@ impl ResolvedFeatures {
             } else {
                 dep_kind
             };
+            // TODO: Remove panic, return empty set.
             let fs = self
                 .activated_features
                 .get(&(pkg_id, dep_kind, compile_kind))
@@ -188,11 +197,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         requested_features: &RequestedFeatures,
         specs: &[PackageIdSpec],
         requested_target: CompileKind,
+        has_dev_units: bool,
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
         let _p = profile::start("resolve features");
 
-        let opts = FeatureOpts::new(ws.config())?;
+        let opts = FeatureOpts::new(ws.config(), has_dev_units)?;
         if !opts.new_resolver {
             // Legacy mode.
             return Ok(ResolvedFeatures {

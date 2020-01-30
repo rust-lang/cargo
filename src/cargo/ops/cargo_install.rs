@@ -506,6 +506,7 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
         CompileKind::Host,
         &ResolveOpts::everything(),
         &specs,
+        false,
     )?;
     let mut sources = ws_resolve.pkg_set.sources_mut();
 

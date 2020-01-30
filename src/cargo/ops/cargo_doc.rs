@@ -27,7 +27,8 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
     );
     let requested_kind = options.compile_opts.build_config.requested_kind;
     let target_data = RustcTargetData::new(ws, requested_kind)?;
-    let ws_resolve = ops::resolve_ws_with_opts(ws, &target_data, requested_kind, &opts, &specs)?;
+    let ws_resolve =
+        ops::resolve_ws_with_opts(ws, &target_data, requested_kind, &opts, &specs, false)?;
 
     let ids = specs
         .iter()

@@ -119,8 +119,14 @@ fn build_resolve_graph(
         metadata_opts.all_features,
         !metadata_opts.no_default_features,
     );
-    let ws_resolve =
-        ops::resolve_ws_with_opts(ws, &target_data, requested_kind, &resolve_opts, &specs)?;
+    let ws_resolve = ops::resolve_ws_with_opts(
+        ws,
+        &target_data,
+        requested_kind,
+        &resolve_opts,
+        &specs,
+        true,
+    )?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,
     // but that would be somewhat complex.

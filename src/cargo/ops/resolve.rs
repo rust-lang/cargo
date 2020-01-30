@@ -77,6 +77,7 @@ pub fn resolve_ws_with_opts<'a>(
     requested_target: CompileKind,
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
+    has_dev_units: bool,
 ) -> CargoResult<WorkspaceResolve<'a>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -131,6 +132,7 @@ pub fn resolve_ws_with_opts<'a>(
         &opts.features,
         specs,
         requested_target,
+        has_dev_units,
     )?;
 
     Ok(WorkspaceResolve {

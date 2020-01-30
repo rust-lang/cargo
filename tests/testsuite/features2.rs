@@ -308,6 +308,14 @@ fn decouple_dev_deps() {
         .file(
             "src/lib.rs",
             r#"
+            // const ensures it uses the correct dependency at *build time*
+            // compared to *link time*.
+            #[cfg(all(feature="f1", not(feature="f2")))]
+            pub const X: u32 = 1;
+
+            #[cfg(all(feature="f1", feature="f2"))]
+            pub const X: u32 = 3;
+
             pub fn foo() -> u32 {
                 let mut res = 0;
                 if cfg!(feature = "f1") {
@@ -342,14 +350,19 @@ fn decouple_dev_deps() {
             "src/main.rs",
             r#"
             fn main() {
-                assert_eq!(foo::foo(), 1);
-                assert_eq!(common::foo(), 1);
+                let expected: u32 = std::env::args().skip(1).next().unwrap().parse().unwrap();
+                assert_eq!(foo::foo(), expected);
+                assert_eq!(foo::build_time(), expected);
+                assert_eq!(common::foo(), expected);
+                assert_eq!(common::X, expected);
             }
 
             #[test]
             fn test_bin() {
                 assert_eq!(foo::foo(), 3);
                 assert_eq!(common::foo(), 3);
+                assert_eq!(common::X, 3);
+                assert_eq!(foo::build_time(), 3);
             }
             "#,
         )
@@ -360,10 +373,15 @@ fn decouple_dev_deps() {
                 common::foo()
             }
 
+            pub fn build_time() -> u32 {
+                common::X
+            }
+
             #[test]
             fn test_lib() {
                 assert_eq!(foo(), 3);
                 assert_eq!(common::foo(), 3);
+                assert_eq!(common::X, 3);
             }
             "#,
         )
@@ -374,17 +392,26 @@ fn decouple_dev_deps() {
             fn test_t1() {
                 assert_eq!(foo::foo(), 3);
                 assert_eq!(common::foo(), 3);
+                assert_eq!(common::X, 3);
+                assert_eq!(foo::build_time(), 3);
+            }
+
+            #[test]
+            fn test_main() {
+                // Features are unified for main when run with `cargo test`,
+                // even with -Zfeatures=dev_dep.
+                let s = std::process::Command::new("target/debug/foo")
+                    .arg("3")
+                    .status().unwrap();
+                assert!(s.success());
             }
             "#,
         )
         .build();
 
-    p.cargo("run")
-        .with_status(101)
-        .with_stderr_contains("[..]assertion failed[..]")
-        .run();
+    p.cargo("run 3").run();
 
-    p.cargo("run -Zfeatures=dev_dep")
+    p.cargo("run -Zfeatures=dev_dep 1")
         .masquerade_as_nightly_cargo()
         .run();
 
