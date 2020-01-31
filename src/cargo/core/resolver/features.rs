@@ -174,8 +174,6 @@ pub struct FeatureResolver<'a, 'cfg> {
     /// The platform to build for, requested by the user.
     requested_target: CompileKind,
     resolve: &'a Resolve,
-    /// Features requested by the user on the command-line.
-    requested_features: &'a RequestedFeatures,
     /// Packages to build, requested on the command-line.
     specs: &'a [PackageIdSpec],
     /// Options that change how the feature resolver operates.
@@ -216,13 +214,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             target_data,
             requested_target,
             resolve,
-            requested_features,
             specs,
             opts,
             activated_features: HashMap::new(),
             processed_deps: HashSet::new(),
         };
-        r.do_resolve()?;
+        r.do_resolve(requested_features)?;
         log::debug!("features={:#?}", r.activated_features);
         if r.opts.compare {
             r.compare();
@@ -235,14 +232,14 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     }
 
     /// Performs the process of resolving all features for the resolve graph.
-    fn do_resolve(&mut self) -> CargoResult<()> {
+    fn do_resolve(&mut self, requested_features: &RequestedFeatures) -> CargoResult<()> {
         if self.opts.package_features {
             let mut found = false;
             for member in self.ws.members() {
                 let member_id = member.package_id();
                 if self.specs.iter().any(|spec| spec.matches(member_id)) {
                     found = true;
-                    self.activate_member(member_id, self.requested_features)?;
+                    self.activate_member(member_id, requested_features)?;
                 }
             }
             if !found {
@@ -259,7 +256,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     Some(current) if member_id == current.package_id() => {
                         // The "current" member gets activated with the flags
                         // from the command line.
-                        self.activate_member(member_id, self.requested_features)?;
+                        self.activate_member(member_id, requested_features)?;
                     }
                     _ => {
                         // Ignore members that are not enabled on the command-line.
@@ -267,7 +264,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // -p for a workspace member that is not the
                             // "current" one, don't use the local `--features`.
                             let not_current_requested =
-                                RequestedFeatures::new_all(self.requested_features.all_features);
+                                RequestedFeatures::new_all(requested_features.all_features);
                             self.activate_member(member_id, &not_current_requested)?;
                         }
                     }
