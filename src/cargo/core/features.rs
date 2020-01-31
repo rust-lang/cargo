@@ -341,7 +341,6 @@ pub struct CliUnstable {
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
     pub panic_abort_tests: bool,
-    pub jobserver_per_rustc: bool,
 }
 
 impl CliUnstable {
@@ -410,7 +409,6 @@ impl CliUnstable {
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
-            "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

@@ -224,7 +224,6 @@ impl<'cfg> State<'cfg> {
 
 impl Format {
     fn progress(&self, cur: usize, max: usize) -> Option<String> {
-        assert!(cur <= max);
         // Render the percentage at the far right and then figure how long the
         // progress bar is
         let pct = (cur as f64) / (max as f64);
