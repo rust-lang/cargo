@@ -1,25 +1,106 @@
 # Changelog
 
+## Cargo 1.43 (2020-04-23)
+[9d32b7b0...HEAD](https://github.com/rust-lang/cargo/compare/9d32b7b0...HEAD)
+
+### Added
+- 🔥 Profiles may now be specified in config files (and environment variables).
+  [#7823](https://github.com/rust-lang/cargo/pull/7823)
+
+### Changed
+- `cargo install --git` now honors workspaces in a git repository. This allows
+  workspace settings, like `[patch]`, `[replace]`, or `[profile]` to be used.
+  [#7768](https://github.com/rust-lang/cargo/pull/7768)
+
+### Fixed
+
+### Nightly only
+- Added `build.out-dir` config variable to set the output directory.
+  [#7810](https://github.com/rust-lang/cargo/pull/7810)
+- Added `-Zjobserver-per-rustc` feature to support improved performance for
+  parallel rustc.
+  [#7731](https://github.com/rust-lang/cargo/pull/7731)
+
+
+
 ## Cargo 1.42 (2020-03-12)
-[0bf7aafe...HEAD](https://github.com/rust-lang/cargo/compare/0bf7aafe...HEAD)
+[0bf7aafe...rust-1.42.0](https://github.com/rust-lang/cargo/compare/0bf7aafe...rust-1.42.0)
 
 ### Added
 - Added documentation on git authentication.
   [#7658](https://github.com/rust-lang/cargo/pull/7658)
 - Bitbucket Pipeline badges are now supported on crates.io.
   [#7663](https://github.com/rust-lang/cargo/pull/7663)
+- `cargo vendor` now accepts the `--versioned-dirs` option to force it to
+  always include the version number in each package's directory name.
+  [#7631](https://github.com/rust-lang/cargo/pull/7631)
+- The `proc_macro` crate is now automatically added to the extern prelude for
+  proc-macro packages. This means that `extern crate proc_macro;` is no longer
+  necessary for proc-macros.
+  [#7700](https://github.com/rust-lang/cargo/pull/7700)
 
 ### Changed
 - Emit a warning if `debug_assertions`, `test`, `proc_macro`, or `feature=` is
   used in a `cfg()` expression.
   [#7660](https://github.com/rust-lang/cargo/pull/7660)
+- Large update to the Cargo documentation, adding new chapters on Cargo
+  targets, workspaces, and features.
+  [#7733](https://github.com/rust-lang/cargo/pull/7733)
+- Windows: `.lib` DLL import libraries are now copied next to the dll for all
+  Windows MSVC targets. Previously it was only supported for
+  `pc-windows-msvc`. This adds DLL support for `uwp-windows-msvc` targets.
+  [#7758](https://github.com/rust-lang/cargo/pull/7758)
+- The `ar` field in the `[target]` configuration is no longer read. It has
+  been ignored for over 4 years.
+  [#7763](https://github.com/rust-lang/cargo/pull/7763)
+- Bash completion file simplified and updated for latest changes.
+  [#7789](https://github.com/rust-lang/cargo/pull/7789)
+- Credentials are only loaded when needed, instead of every Cargo command.
+  [#7774](https://github.com/rust-lang/cargo/pull/7774)
 
 ### Fixed
-- Removed `--offline` empty index check, which was a false positive in some cases.
+- Removed `--offline` empty index check, which was a false positive in some
+  cases.
   [#7655](https://github.com/rust-lang/cargo/pull/7655)
+- Files and directories starting with a `.` can now be included in a package
+  by adding it to the `include` list.
+  [#7680](https://github.com/rust-lang/cargo/pull/7680)
+- Fixed `cargo login` removing alternative registry tokens when previous
+  entries existed in the credentials file.
+  [#7708](https://github.com/rust-lang/cargo/pull/7708)
+- Fixed `cargo vendor` from panicking when used with alternative registries.
+  [#7718](https://github.com/rust-lang/cargo/pull/7718)
+- Fixed incorrect explanation in the fingerprint debug log message.
+  [#7749](https://github.com/rust-lang/cargo/pull/7749)
+- A `[source]` that is defined multiple times will now result in an error.
+  Previously it was randomly picking a source, which could cause
+  non-deterministic behavior.
+  [#7751](https://github.com/rust-lang/cargo/pull/7751)
+- `dep_kinds` in `cargo metadata` are now de-duplicated.
+  [#7756](https://github.com/rust-lang/cargo/pull/7756)
+- Fixed packaging where `Cargo.lock` was listed in `.gitignore` in a
+  subdirectory inside a git repository. Previously it was assuming
+  `Cargo.lock` was at the root of the repo.
+  [#7779](https://github.com/rust-lang/cargo/pull/7779)
+- Partial file transfer errors will now cause an automatic retry.
+  [#7788](https://github.com/rust-lang/cargo/pull/7788)
+- Linux: Fixed panic if CPU iowait stat decreases.
+  [#7803](https://github.com/rust-lang/cargo/pull/7803)
+- Fixed using the wrong sysroot for detecting host compiler settings when
+  `--sysroot` is passed in via `RUSTFLAGS`.
+  [#7798](https://github.com/rust-lang/cargo/pull/7798)
 
 ### Nightly only
-
+- `build-std` now uses `--extern` instead of `--sysroot` to find sysroot
+  pacakges.
+  [#7699](https://github.com/rust-lang/cargo/pull/7699)
+- Added `--config` command-line option to set config settings.
+  [#7649](https://github.com/rust-lang/cargo/pull/7649)
+- Added `include` config setting which allows including another config file.
+  [#7649](https://github.com/rust-lang/cargo/pull/7649)
+- Profiles in config files now support any named profile. Previously it was
+  limited to dev/release.
+  [#7750](https://github.com/rust-lang/cargo/pull/7750)
 
 ## Cargo 1.41 (2020-01-30)
 [5da4b4d4...rust-1.41.0](https://github.com/rust-lang/cargo/compare/5da4b4d4...rust-1.41.0)
