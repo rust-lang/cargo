@@ -287,8 +287,15 @@ fn compute_deps<'a, 'cfg>(
         };
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_kind = if unit.target.is_custom_build() {
+            // Custom build scripts can *only* have build-dependencies.
             DepKind::Build
         } else if deps.iter().any(|dep| !dep.is_transitive()) {
+            // A dependency can be listed in both [dependencies] and
+            // [dev-dependencies], so this checks if any of the deps are
+            // listed in dev-dependencies. Note that `filtered_deps` has
+            // already removed dev-dependencies if it is not a
+            // test/bench/example, so it is not necessary to check `unit`
+            // here.
             DepKind::Development
         } else {
             DepKind::Normal

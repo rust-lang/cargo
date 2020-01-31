@@ -25,6 +25,14 @@ use crate::util::{CargoResult, Config};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
+/// Map of activated features for a PackageId/DepKind/CompileKind.
+///
+/// `DepKind` is needed, as the same package can be built multiple times with
+/// different features. For example, with `decouple_build_deps`, a dependency
+/// can be built once as a build dependency (for example with a 'std'
+/// feature), and once as a normal dependency (without that 'std' feature).
+///
+/// `CompileKind` is used currently not needed.
 type ActivateMap = HashMap<(PackageId, DepKind, CompileKind), BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.

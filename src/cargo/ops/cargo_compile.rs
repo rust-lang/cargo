@@ -746,6 +746,9 @@ fn generate_targets<'a>(
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
+        // Root units are not a dependency of anything, so they are always
+        // DepKind::Normal. Their features are driven by the command-line
+        // arguments.
         let features = Vec::from(resolved_features.activated_features(
             pkg.package_id(),
             DepKind::Normal,
@@ -934,6 +937,11 @@ fn generate_targets<'a>(
     Ok(units.into_iter().collect())
 }
 
+/// Gets all of the features enabled for a package, plus its dependencies'
+/// features.
+///
+/// Dependencies are added as `dep_name/feat_name` because `required-features`
+/// wants to support that syntax.
 fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     resolved_features: &features::ResolvedFeatures,
