@@ -6,11 +6,6 @@ use std::env;
 
 #[cargo_test]
 fn rustc_info_cache() {
-    if !cargo_test_support::is_nightly() {
-        // remove once pathless `--extern` hits stable (1.41)
-        return;
-    }
-
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();

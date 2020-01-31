@@ -443,10 +443,6 @@ Caused by:
 
 #[cargo_test]
 fn proc_macro_extern_prelude() {
-    if !is_nightly() {
-        // remove once pathless `--extern` hits stable (1.41)
-        return;
-    }
     // Check that proc_macro is in the extern prelude.
     let p = project()
         .file(
