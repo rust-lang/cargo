@@ -91,8 +91,11 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
-    let args = expand_aliases(config, args)?;
-    let (cmd, subcommand_args) = match args.subcommand() {
+    // Global args need to be extracted before expanding aliases because the
+    // clap code for extracting a subcommand discards global options
+    // (appearing before the subcommand).
+    let (expanded_args, global_args) = expand_aliases(config, args)?;
+    let (cmd, subcommand_args) = match expanded_args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
             // No subcommand provided.
@@ -100,7 +103,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
             return Ok(());
         }
     };
-    config_configure(config, &args, subcommand_args)?;
+    config_configure(config, &expanded_args, subcommand_args, global_args)?;
     super::init_git_transports(config);
 
     execute_subcommand(config, cmd, subcommand_args)
@@ -128,7 +131,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
 fn expand_aliases(
     config: &mut Config,
     args: ArgMatches<'static>,
-) -> Result<ArgMatches<'static>, CliError> {
+) -> Result<(ArgMatches<'static>, GlobalArgs), CliError> {
     if let (cmd, Some(args)) = args.subcommand() {
         match (
             commands::builtin_exec(cmd),
@@ -147,41 +150,60 @@ fn expand_aliases(
                         .unwrap_or_default()
                         .map(|s| s.to_string()),
                 );
-                let args = cli()
+                // new_args strips out everything before the subcommand, so
+                // capture those global options now.
+                // Note that an alias to an external command will not receive
+                // these arguments. That may be confusing, but such is life.
+                let global_args = GlobalArgs::new(&args);
+                let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
                     .get_matches_from_safe(alias)?;
-                return expand_aliases(config, args);
+                let (expanded_args, _) = expand_aliases(config, new_args)?;
+                return Ok((expanded_args, global_args));
             }
             (_, None) => {}
         }
     };
 
-    Ok(args)
+    Ok((args, GlobalArgs::default()))
 }
 
 fn config_configure(
     config: &mut Config,
     args: &ArgMatches<'_>,
     subcommand_args: &ArgMatches<'_>,
+    global_args: GlobalArgs,
 ) -> CliResult {
     let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
-    let config_args: Vec<&str> = args.values_of("config").unwrap_or_default().collect();
-    let quiet = if args.is_present("quiet") || subcommand_args.is_present("quiet") {
-        Some(true)
-    } else {
-        None
-    };
+    let verbose = global_args.verbose + args.occurrences_of("verbose") as u32;
+    // quiet is unusual because it is redefined in some subcommands in order
+    // to provide custom help text.
+    let quiet =
+        args.is_present("quiet") || subcommand_args.is_present("quiet") || global_args.quiet;
+    let global_color = global_args.color; // Extract so it can take reference.
+    let color = args
+        .value_of("color")
+        .or_else(|| global_color.as_ref().map(|s| s.as_ref()));
+    let frozen = args.is_present("frozen") || global_args.frozen;
+    let locked = args.is_present("locked") || global_args.locked;
+    let offline = args.is_present("offline") || global_args.offline;
+    let mut unstable_flags = global_args.unstable_flags;
+    if let Some(values) = args.values_of("unstable-features") {
+        unstable_flags.extend(values.map(|s| s.to_string()));
+    }
+    let mut config_args = global_args.config_args;
+    if let Some(values) = args.values_of("config") {
+        config_args.extend(values.map(|s| s.to_string()));
+    }
     config.configure(
-        args.occurrences_of("verbose") as u32,
+        verbose,
         quiet,
-        args.value_of("color"),
-        args.is_present("frozen"),
-        args.is_present("locked"),
-        args.is_present("offline"),
+        color,
+        frozen,
+        locked,
+        offline,
         arg_target_dir,
-        &args
-            .values_of_lossy("unstable-features")
-            .unwrap_or_default(),
+        &unstable_flags,
         &config_args,
     )?;
     Ok(())
@@ -199,6 +221,39 @@ fn execute_subcommand(
     let mut ext_args: Vec<&str> = vec![cmd];
     ext_args.extend(subcommand_args.values_of("").unwrap_or_default());
     super::execute_external_subcommand(config, cmd, &ext_args)
+}
+
+#[derive(Default)]
+struct GlobalArgs {
+    verbose: u32,
+    quiet: bool,
+    color: Option<String>,
+    frozen: bool,
+    locked: bool,
+    offline: bool,
+    unstable_flags: Vec<String>,
+    config_args: Vec<String>,
+}
+
+impl GlobalArgs {
+    fn new(args: &ArgMatches<'_>) -> GlobalArgs {
+        GlobalArgs {
+            verbose: args.occurrences_of("verbose") as u32,
+            quiet: args.is_present("quiet"),
+            color: args.value_of("color").map(|s| s.to_string()),
+            frozen: args.is_present("frozen"),
+            locked: args.is_present("locked"),
+            offline: args.is_present("offline"),
+            unstable_flags: args
+                .values_of_lossy("unstable-features")
+                .unwrap_or_default(),
+            config_args: args
+                .values_of("config")
+                .unwrap_or_default()
+                .map(|s| s.to_string())
+                .collect(),
+        }
+    }
 }
 
 fn cli() -> App {

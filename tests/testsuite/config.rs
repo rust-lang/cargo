@@ -76,17 +76,16 @@ impl ConfigBuilder {
         let homedir = paths::home();
         let mut config = Config::new(shell, cwd, homedir);
         config.set_env(self.env.clone());
-        let config_args: Vec<&str> = self.config_args.iter().map(AsRef::as_ref).collect();
         config.configure(
             0,
-            None,
+            false,
             None,
             false,
             false,
             false,
             &None,
             &self.unstable,
-            &config_args,
+            &self.config_args,
         )?;
         Ok(config)
     }
