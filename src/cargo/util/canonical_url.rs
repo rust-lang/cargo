@@ -39,9 +39,14 @@ impl CanonicalUrl {
         // almost certainly not using the same case conversion rules that GitHub
         // does. (See issue #84)
         if url.host_str() == Some("github.com") {
-            url.set_scheme("https").unwrap();
-            let path = url.path().to_lowercase();
-            url.set_path(&path);
+            if url.scheme() == "ssh" {
+                let path = url.path().to_lowercase();
+                url.set_path(&path);
+            } else {
+                url.set_scheme("https").unwrap();
+                let path = url.path().to_lowercase();
+                url.set_path(&path);
+            }
         }
 
         // Repos can generally be accessed with or without `.git` extension.
