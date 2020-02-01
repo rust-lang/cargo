@@ -382,6 +382,11 @@ fn compute_deps<'a, 'cfg>(
 ///
 /// The `unit` provided must represent an execution of a build script, and
 /// the returned set of units must all be run before `unit` is run.
+///
+/// `dep_kind` is the dependency kind of the package this build script is
+/// being built for. This ensures that the build script is built with the same
+/// features the package is built with (if the build script has cfg!()
+/// checks).
 fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
     dep_kind: DepKind,
