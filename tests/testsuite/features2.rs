@@ -609,3 +609,77 @@ fn build_script_runtime_features() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn cyclical_dev_dep() {
+    // Check how a cyclical dev-dependency will work.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [features]
+            dev = []
+
+            [dev-dependencies]
+            foo = { path = '.', features = ["dev"] }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn assert_dev(enabled: bool) {
+                assert_eq!(enabled, cfg!(feature="dev"));
+            }
+
+            #[test]
+            fn test_in_lib() {
+                assert_dev(true);
+            }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let expected: bool = std::env::args().skip(1).next().unwrap().parse().unwrap();
+                foo::assert_dev(expected);
+            }
+            "#,
+        )
+        .file(
+            "tests/t1.rs",
+            r#"
+            #[test]
+            fn integration_links() {
+                foo::assert_dev(true);
+                // The lib linked with main.rs will also be unified.
+                let s = std::process::Command::new("target/debug/foo")
+                    .arg("true")
+                    .status().unwrap();
+                assert!(s.success());
+            }
+            "#,
+        )
+        .build();
+
+    // Old way unifies features.
+    p.cargo("run true").run();
+
+    // Should decouple main.
+    p.cargo("run -Zfeatures=dev_dep false")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // dev feature should always be enabled in tests.
+    p.cargo("test").run();
+
+    // And this should be no different.
+    p.cargo("test -Zfeatures=dev_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
