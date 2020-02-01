@@ -10,6 +10,7 @@ use url::Url;
 
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
+use crate::core::resolver::features::RequestedFeatures;
 use crate::core::{Dependency, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
@@ -832,6 +833,86 @@ impl<'cfg> Workspace<'cfg> {
 
     pub fn set_target_dir(&mut self, target_dir: Filesystem) {
         self.target_dir = Some(target_dir);
+    }
+
+    /// Returns a Vec of `(&Package, RequestedFeatures)` tuples that
+    /// represent the workspace members that were requested on the command-line.
+    ///
+    /// `specs` may be empty, which indicates it should return all workspace
+    /// members. In this case, `requested_features.all_features` must be
+    /// `true`. This is used for generating `Cargo.lock`, which must include
+    /// all members with all features enabled.
+    pub fn members_with_features(
+        &self,
+        specs: &[PackageIdSpec],
+        requested_features: &RequestedFeatures,
+    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        assert!(
+            !specs.is_empty() || requested_features.all_features,
+            "no specs requires all_features"
+        );
+        if specs.is_empty() {
+            // When resolving the entire workspace, resolve each member with
+            // all features enabled.
+            return Ok(self
+                .members()
+                .map(|m| (m, RequestedFeatures::new_all(true)))
+                .collect());
+        }
+        if self.config().cli_unstable().package_features {
+            if specs.len() > 1 && !requested_features.features.is_empty() {
+                anyhow::bail!("cannot specify features for more than one package");
+            }
+            let members: Vec<(&Package, RequestedFeatures)> = self
+                .members()
+                .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+                .map(|m| (m, requested_features.clone()))
+                .collect();
+            if members.is_empty() {
+                // `cargo build -p foo`, where `foo` is not a member.
+                // Do not allow any command-line flags (defaults only).
+                if !(requested_features.features.is_empty()
+                    && !requested_features.all_features
+                    && requested_features.uses_default_features)
+                {
+                    anyhow::bail!("cannot specify features for packages outside of workspace");
+                }
+                // Add all members from the workspace so we can ensure `-p nonmember`
+                // is in the resolve graph.
+                return Ok(self
+                    .members()
+                    .map(|m| (m, RequestedFeatures::new_all(false)))
+                    .collect());
+            }
+            return Ok(members);
+        } else {
+            let ms = self.members().filter_map(|member| {
+                let member_id = member.package_id();
+                match self.current_opt() {
+                    // The features passed on the command-line only apply to
+                    // the "current" package (determined by the cwd).
+                    Some(current) if member_id == current.package_id() => {
+                        Some((member, requested_features.clone()))
+                    }
+                    _ => {
+                        // Ignore members that are not enabled on the command-line.
+                        if specs.iter().any(|spec| spec.matches(member_id)) {
+                            // -p for a workspace member that is not the
+                            // "current" one, don't use the local
+                            // `--features`, only allow `--all-features`.
+                            Some((
+                                member,
+                                RequestedFeatures::new_all(requested_features.all_features),
+                            ))
+                        } else {
+                            // This member was not requested on the command-line, skip.
+                            None
+                        }
+                    }
+                }
+            });
+            return Ok(ms.collect());
+        }
     }
 }
 
