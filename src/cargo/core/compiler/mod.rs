@@ -32,7 +32,7 @@ pub use self::build_context::{BuildContext, FileFlavor, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
-pub use self::context::Context;
+pub use self::context::{Context, Metadata};
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
@@ -181,7 +181,6 @@ fn rustc<'a, 'cfg>(
 
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
-    let kind = unit.kind;
 
     // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
@@ -225,6 +224,7 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
+    let script_metadata = cx.find_build_script_metadata(*unit);
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -247,7 +247,7 @@ fn rustc<'a, 'cfg>(
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_env(&mut rustc, &script_outputs, current_id, kind)?;
+            add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata)?;
         }
 
         for output in outputs.iter() {
@@ -340,9 +340,9 @@ fn rustc<'a, 'cfg>(
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_script_outputs.get(key).ok_or_else(|| {
+            let output = build_script_outputs.get(key.0, key.1).ok_or_else(|| {
                 internal(format!(
-                    "couldn't find build script output for {}/{:?}",
+                    "couldn't find build script output for {}/{}",
                     key.0, key.1
                 ))
             })?;
@@ -375,10 +375,13 @@ fn rustc<'a, 'cfg>(
         rustc: &mut ProcessBuilder,
         build_script_outputs: &BuildScriptOutputs,
         current_id: PackageId,
-        kind: CompileKind,
+        metadata: Option<Metadata>,
     ) -> CargoResult<()> {
-        let key = (current_id, kind);
-        if let Some(output) = build_script_outputs.get(&key) {
+        let metadata = match metadata {
+            Some(metadata) => metadata,
+            None => return Ok(()),
+        };
+        if let Some(output) = build_script_outputs.get(current_id, metadata) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
             }
@@ -477,10 +480,10 @@ fn add_plugin_deps(
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
-    for &id in build_scripts.plugins.iter() {
+    for (pkg_id, metadata) in &build_scripts.plugins {
         let output = build_script_outputs
-            .get(&(id, CompileKind::Host))
-            .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
+            .get(*pkg_id, *metadata)
+            .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", pkg_id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
             root_output,
@@ -588,18 +591,25 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
-    let key = (unit.pkg.package_id(), unit.kind);
     let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mut output_options = OutputOptions::new(cx, unit);
+    let pkg_id = unit.pkg.package_id();
+    let script_metadata = cx.find_build_script_metadata(*unit);
 
     Ok(Work::new(move |state| {
-        if let Some(output) = build_script_outputs.lock().unwrap().get(&key) {
-            for cfg in output.cfgs.iter() {
-                rustdoc.arg("--cfg").arg(cfg);
-            }
-            for &(ref name, ref value) in output.env.iter() {
-                rustdoc.env(name, value);
+        if let Some(script_metadata) = script_metadata {
+            if let Some(output) = build_script_outputs
+                .lock()
+                .unwrap()
+                .get(pkg_id, script_metadata)
+            {
+                for cfg in output.cfgs.iter() {
+                    rustdoc.arg("--cfg").arg(cfg);
+                }
+                for &(ref name, ref value) in output.env.iter() {
+                    rustdoc.env(name, value);
+                }
             }
         }
         state.running(&rustdoc);

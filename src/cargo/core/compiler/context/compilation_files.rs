@@ -41,12 +41,18 @@ use crate::util::{self, CargoResult};
 ///
 /// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
 /// rebuild is needed.
-#[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Metadata(u64);
 
 impl fmt::Display for Metadata {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:016x}", self.0)
+    }
+}
+
+impl fmt::Debug for Metadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Metadata({:016x})", self.0)
     }
 }
 
@@ -213,6 +219,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(!unit.mode.is_run_custom_build());
+        assert!(self.metas.contains_key(unit));
         let dir = self.pkg_dir(unit);
         self.layout(CompileKind::Host).build().join(dir)
     }

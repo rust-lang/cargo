@@ -122,8 +122,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         })
     }
 
-    // Returns a mapping of the root package plus its immediate dependencies to
-    // where the compiled libraries are all located.
+    /// Starts compilation, waits for it to finish, and returns information
+    /// about the result of compilation.
     pub fn compile(
         mut self,
         units: &[Unit<'a>],
@@ -245,16 +245,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             super::output_depinfo(&mut self, unit)?;
         }
 
-        for (&(ref pkg, _), output) in self.build_script_outputs.lock().unwrap().iter() {
+        for (pkg_id, output) in self.build_script_outputs.lock().unwrap().iter() {
             self.compilation
                 .cfgs
-                .entry(pkg.clone())
+                .entry(pkg_id)
                 .or_insert_with(HashSet::new)
                 .extend(output.cfgs.iter().cloned());
 
             self.compilation
                 .extra_env
-                .entry(pkg.clone())
+                .entry(pkg_id)
                 .or_insert_with(Vec::new)
                 .extend(output.env.iter().cloned());
 
@@ -345,6 +345,39 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Direct dependencies for the given unit.
     pub fn unit_deps(&self, unit: &Unit<'a>) -> &[UnitDep<'a>] {
         &self.unit_dependencies[unit]
+    }
+
+    /// Returns the RunCustomBuild Unit associated with the given Unit.
+    ///
+    /// If the package does not have a build script, this returns None.
+    pub fn find_build_script_unit(&self, unit: Unit<'a>) -> Option<Unit<'a>> {
+        if unit.mode.is_run_custom_build() {
+            return Some(unit);
+        }
+        self.unit_dependencies[&unit]
+            .iter()
+            .find(|unit_dep| {
+                unit_dep.unit.mode.is_run_custom_build()
+                    && unit_dep.unit.pkg.package_id() == unit.pkg.package_id()
+            })
+            .map(|unit_dep| unit_dep.unit)
+    }
+
+    /// Returns the metadata hash for the RunCustomBuild Unit associated with
+    /// the given unit.
+    ///
+    /// If the package does not have a build script, this returns None.
+    pub fn find_build_script_metadata(&self, unit: Unit<'a>) -> Option<Metadata> {
+        let script_unit = self.find_build_script_unit(unit)?;
+        Some(self.get_run_build_script_metadata(&script_unit))
+    }
+
+    /// Returns the metadata hash for a RunCustomBuild unit.
+    pub fn get_run_build_script_metadata(&self, unit: &Unit<'a>) -> Metadata {
+        assert!(unit.mode.is_run_custom_build());
+        self.files()
+            .metadata(unit)
+            .expect("build script should always have hash")
     }
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {

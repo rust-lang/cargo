@@ -1,5 +1,6 @@
 use super::job::{Freshness, Job, Work};
-use super::{fingerprint, CompileKind, Context, Unit};
+use super::{fingerprint, Context, Unit};
+use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -41,13 +42,24 @@ pub struct BuildOutput {
 /// This initially starts out as empty. Overridden build scripts get
 /// inserted during `build_map`. The rest of the entries are added
 /// immediately after each build script runs.
-pub type BuildScriptOutputs = HashMap<(PackageId, CompileKind), BuildOutput>;
+///
+/// The `Metadata` is the unique metadata hash for the RunCustomBuild Unit of
+/// the package. It needs a unique key, since the build script can be run
+/// multiple times with different profiles or features. We can't embed a
+/// `Unit` because this structure needs to be shareable between threads.
+#[derive(Default)]
+pub struct BuildScriptOutputs {
+    outputs: HashMap<(PackageId, Metadata), BuildOutput>,
+}
 
 /// Linking information for a `Unit`.
 ///
 /// See `build_map` for more details.
 #[derive(Default)]
 pub struct BuildScripts {
+    /// List of build script outputs this Unit needs to include for linking. Each
+    /// element is an index into `BuildScriptOutputs`.
+    ///
     /// Cargo will use this `to_link` vector to add `-L` flags to compiles as we
     /// propagate them upwards towards the final build. Note, however, that we
     /// need to preserve the ordering of `to_link` to be topologically sorted.
@@ -55,23 +67,24 @@ pub struct BuildScripts {
     /// correctly pick up the files they generated (if there are duplicates
     /// elsewhere).
     ///
-    /// To preserve this ordering, the (id, kind) is stored in two places, once
+    /// To preserve this ordering, the (id, metadata) is stored in two places, once
     /// in the `Vec` and once in `seen_to_link` for a fast lookup. We maintain
     /// this as we're building interactively below to ensure that the memory
     /// usage here doesn't blow up too much.
     ///
     /// For more information, see #2354.
-    pub to_link: Vec<(PackageId, CompileKind)>,
+    pub to_link: Vec<(PackageId, Metadata)>,
     /// This is only used while constructing `to_link` to avoid duplicates.
-    seen_to_link: HashSet<(PackageId, CompileKind)>,
-    /// Host-only dependencies that have build scripts.
+    seen_to_link: HashSet<(PackageId, Metadata)>,
+    /// Host-only dependencies that have build scripts. Each element is an
+    /// index into `BuildScriptOutputs`.
     ///
     /// This is the set of transitive dependencies that are host-only
     /// (proc-macro, plugin, build-dependency) that contain a build script.
     /// Any `BuildOutput::library_paths` path relative to `target` will be
     /// added to LD_LIBRARY_PATH so that the compiler can find any dynamic
     /// libraries a build script may have generated.
-    pub plugins: BTreeSet<PackageId>,
+    pub plugins: BTreeSet<(PackageId, Metadata)>,
 }
 
 /// Dependency information as declared by a build script.
@@ -94,9 +107,13 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRe
         unit.target.name()
     ));
 
-    let key = (unit.pkg.package_id(), unit.kind);
-
-    if cx.build_script_outputs.lock().unwrap().contains_key(&key) {
+    let metadata = cx.get_run_build_script_metadata(unit);
+    if cx
+        .build_script_outputs
+        .lock()
+        .unwrap()
+        .contains_key(unit.pkg.package_id(), metadata)
+    {
         // The output is already set, thus the build script is overridden.
         fingerprint::prepare_target(cx, unit, false)
     } else {
@@ -231,9 +248,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .iter()
         .filter_map(|dep| {
             if dep.unit.mode.is_run_custom_build() {
+                let dep_metadata = cx.get_run_build_script_metadata(&dep.unit);
                 Some((
                     dep.unit.pkg.manifest().links().unwrap().to_string(),
                     dep.unit.pkg.package_id(),
+                    dep_metadata,
                 ))
             } else {
                 None
@@ -255,10 +274,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         script_out_dir.clone(),
     );
     let build_scripts = cx.build_scripts.get(unit).cloned();
-    let kind = unit.kind;
     let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.config.extra_verbose();
     let (prev_output, prev_script_out_dir) = prev_build_output(cx, unit);
+    let metadata_hash = cx.get_run_build_script_metadata(unit);
 
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
@@ -286,15 +305,16 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // native dynamic libraries.
         if !build_plan {
             let build_script_outputs = build_script_outputs.lock().unwrap();
-            for (name, id) in lib_deps {
-                let key = (id, kind);
-                let script_output = build_script_outputs.get(&key).ok_or_else(|| {
-                    internal(format!(
-                        "failed to locate build state for env \
-                         vars: {}/{:?}",
-                        id, kind
-                    ))
-                })?;
+            for (name, dep_id, dep_metadata) in lib_deps {
+                let script_output =
+                    build_script_outputs
+                        .get(dep_id, dep_metadata)
+                        .ok_or_else(|| {
+                            internal(format!(
+                                "failed to locate build state for env vars: {}/{}",
+                                dep_id, dep_metadata
+                            ))
+                        })?;
                 let data = &script_output.metadata;
                 for &(ref key, ref value) in data.iter() {
                     cmd.env(
@@ -360,7 +380,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         build_script_outputs
             .lock()
             .unwrap()
-            .insert((id, kind), parsed_output);
+            .insert(id, metadata_hash, parsed_output);
         Ok(())
     });
 
@@ -386,7 +406,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         build_script_outputs
             .lock()
             .unwrap()
-            .insert((id, kind), output);
+            .insert(id, metadata_hash, output);
         Ok(())
     });
 
@@ -614,7 +634,7 @@ impl BuildDeps {
 ///   scripts.
 ///
 /// The important one here is `build_scripts`, which for each `(package,
-/// kind)` stores a `BuildScripts` object which contains a list of
+/// metadata)` stores a `BuildScripts` object which contains a list of
 /// dependencies with build scripts that the unit should consider when
 /// linking. For example this lists all dependencies' `-L` flags which need to
 /// be propagated transitively.
@@ -644,20 +664,27 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
 
         // If there is a build script override, pre-fill the build output.
-        if let Some(links) = unit.pkg.manifest().links() {
-            if let Some(output) = cx.bcx.script_override(links, unit.kind) {
-                let key = (unit.pkg.package_id(), unit.kind);
-                cx.build_script_outputs
-                    .lock()
-                    .unwrap()
-                    .insert(key, output.clone());
+        if unit.mode.is_run_custom_build() {
+            if let Some(links) = unit.pkg.manifest().links() {
+                if let Some(output) = cx.bcx.script_override(links, unit.kind) {
+                    let metadata = cx.get_run_build_script_metadata(unit);
+                    cx.build_script_outputs.lock().unwrap().insert(
+                        unit.pkg.package_id(),
+                        metadata,
+                        output.clone(),
+                    );
+                }
             }
         }
 
         let mut ret = BuildScripts::default();
 
+        // If a package has a build script, add itself as something to inspect for linking.
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
-            add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
+            let script_meta = cx
+                .find_build_script_metadata(*unit)
+                .expect("has_custom_build should have RunCustomBuild");
+            add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
 
         // Load any dependency declarations from a previous run.
@@ -676,11 +703,10 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
             let dep_scripts = build(out, cx, dep_unit)?;
 
             if dep_unit.target.for_host() {
-                ret.plugins
-                    .extend(dep_scripts.to_link.iter().map(|p| &p.0).cloned());
+                ret.plugins.extend(dep_scripts.to_link.iter().cloned());
             } else if dep_unit.target.linkable() {
-                for &(pkg, kind) in dep_scripts.to_link.iter() {
-                    add_to_link(&mut ret, pkg, kind);
+                for &(pkg, metadata) in dep_scripts.to_link.iter() {
+                    add_to_link(&mut ret, pkg, metadata);
                 }
             }
         }
@@ -693,9 +719,9 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g., we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, kind: CompileKind) {
-        if scripts.seen_to_link.insert((pkg, kind)) {
-            scripts.to_link.push((pkg, kind));
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, metadata: Metadata) {
+        if scripts.seen_to_link.insert((pkg, metadata)) {
+            scripts.to_link.push((pkg, metadata));
         }
     }
 
@@ -740,4 +766,38 @@ fn prev_build_output<'a, 'cfg>(
         .ok(),
         prev_script_out_dir,
     )
+}
+
+impl BuildScriptOutputs {
+    /// Inserts a new entry into the map.
+    fn insert(&mut self, pkg_id: PackageId, metadata: Metadata, parsed_output: BuildOutput) {
+        match self.outputs.entry((pkg_id, metadata)) {
+            Entry::Vacant(entry) => {
+                entry.insert(parsed_output);
+            }
+            Entry::Occupied(entry) => panic!(
+                "build script output collision for {}/{}\n\
+                old={:?}\nnew={:?}",
+                pkg_id,
+                metadata,
+                entry.get(),
+                parsed_output
+            ),
+        }
+    }
+
+    /// Returns `true` if the given key already exists.
+    fn contains_key(&self, pkg_id: PackageId, metadata: Metadata) -> bool {
+        self.outputs.contains_key(&(pkg_id, metadata))
+    }
+
+    /// Gets the build output for the given key.
+    pub fn get(&self, pkg_id: PackageId, meta: Metadata) -> Option<&BuildOutput> {
+        self.outputs.get(&(pkg_id, meta))
+    }
+
+    /// Returns an iterator over all entries.
+    pub fn iter(&self) -> impl Iterator<Item = (PackageId, &BuildOutput)> {
+        self.outputs.iter().map(|(key, value)| (key.0, value))
+    }
 }

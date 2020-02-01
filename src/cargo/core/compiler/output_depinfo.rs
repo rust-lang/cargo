@@ -50,7 +50,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 
 fn add_deps_for_unit<'a, 'b>(
     deps: &mut BTreeSet<PathBuf>,
-    context: &mut Context<'a, 'b>,
+    cx: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
     visited: &mut HashSet<Unit<'a>>,
 ) -> CargoResult<()> {
@@ -62,12 +62,10 @@ fn add_deps_for_unit<'a, 'b>(
     // generate a dep info file, so we just keep on going below
     if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
-        let dep_info_loc = fingerprint::dep_info_loc(context, unit);
-        if let Some(paths) = fingerprint::parse_dep_info(
-            unit.pkg.root(),
-            context.files().host_root(),
-            &dep_info_loc,
-        )? {
+        let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
+        if let Some(paths) =
+            fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
+        {
             for path in paths {
                 deps.insert(path);
             }
@@ -82,19 +80,25 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Add rerun-if-changed dependencies
-    let key = (unit.pkg.package_id(), unit.kind);
-    if let Some(output) = context.build_script_outputs.lock().unwrap().get(&key) {
-        for path in &output.rerun_if_changed {
-            deps.insert(path.into());
+    if let Some(metadata) = cx.find_build_script_metadata(*unit) {
+        if let Some(output) = cx
+            .build_script_outputs
+            .lock()
+            .unwrap()
+            .get(unit.pkg.package_id(), metadata)
+        {
+            for path in &output.rerun_if_changed {
+                deps.insert(path.into());
+            }
         }
     }
 
     // Recursively traverse all transitive dependencies
-    let unit_deps = Vec::from(context.unit_deps(unit)); // Create vec due to mutable borrow.
+    let unit_deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in unit_deps {
         let source_id = dep.unit.pkg.package_id().source_id();
         if source_id.is_path() {
-            add_deps_for_unit(deps, context, &dep.unit, visited)?;
+            add_deps_for_unit(deps, cx, &dep.unit, visited)?;
         }
     }
     Ok(())
