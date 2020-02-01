@@ -421,3 +421,191 @@ fn decouple_dev_deps() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn build_script_runtime_features() {
+    // Check that the CARGO_FEATURE_* environment variable is set correctly.
+    //
+    // This has a common dependency between build/normal/dev-deps, and it
+    // queries which features it was built with in different circumstances.
+    Package::new("common", "1.0.0")
+        .feature("normal", &[])
+        .feature("dev", &[])
+        .feature("build", &[])
+        .file(
+            "build.rs",
+            r#"
+            fn is_set(name: &str) -> bool {
+                std::env::var(name) == Ok("1".to_string())
+            }
+
+            fn main() {
+                let mut res = 0;
+                if is_set("CARGO_FEATURE_NORMAL") {
+                    res |= 1;
+                }
+                if is_set("CARGO_FEATURE_DEV") {
+                    res |= 2;
+                }
+                if is_set("CARGO_FEATURE_BUILD") {
+                    res |= 4;
+                }
+                println!("cargo:rustc-cfg=RunCustomBuild=\"{}\"", res);
+
+                let mut res = 0;
+                if cfg!(feature = "normal") {
+                    res |= 1;
+                }
+                if cfg!(feature = "dev") {
+                    res |= 2;
+                }
+                if cfg!(feature = "build") {
+                    res |= 4;
+                }
+                println!("cargo:rustc-cfg=CustomBuild=\"{}\"", res);
+            }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn foo() -> u32 {
+                let mut res = 0;
+                if cfg!(feature = "normal") {
+                    res |= 1;
+                }
+                if cfg!(feature = "dev") {
+                    res |= 2;
+                }
+                if cfg!(feature = "build") {
+                    res |= 4;
+                }
+                res
+            }
+
+            pub fn build_time() -> u32 {
+                #[cfg(RunCustomBuild="1")] return 1;
+                #[cfg(RunCustomBuild="3")] return 3;
+                #[cfg(RunCustomBuild="4")] return 4;
+                #[cfg(RunCustomBuild="5")] return 5;
+                #[cfg(RunCustomBuild="7")] return 7;
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [build-dependencies]
+            common = {version="1.0", features=["build"]}
+
+            [dependencies]
+            common = {version="1.0", features=["normal"]}
+
+            [dev-dependencies]
+            common = {version="1.0", features=["dev"]}
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                assert_eq!(common::foo(), common::build_time());
+                println!("cargo:rustc-cfg=from_build=\"{}\"", common::foo());
+            }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn foo() -> u32 {
+                common::foo()
+            }
+
+            pub fn build_time() -> u32 {
+                common::build_time()
+            }
+
+            #[test]
+            fn test_lib() {
+                assert_eq!(common::foo(), common::build_time());
+                assert_eq!(common::foo(),
+                    std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
+            }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                assert_eq!(common::foo(), common::build_time());
+                assert_eq!(common::foo(),
+                    std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
+            }
+
+            #[test]
+            fn test_bin() {
+                assert_eq!(common::foo(), common::build_time());
+                assert_eq!(common::foo(),
+                    std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
+            }
+            "#,
+        )
+        .file(
+            "tests/t1.rs",
+            r#"
+            #[test]
+            fn test_t1() {
+                assert_eq!(common::foo(), common::build_time());
+                assert_eq!(common::foo(),
+                    std::env::var("CARGO_FEATURE_EXPECT").unwrap().parse().unwrap());
+            }
+
+            #[test]
+            fn test_main() {
+                // Features are unified for main when run with `cargo test`,
+                // even with -Zfeatures=dev_dep.
+                let s = std::process::Command::new("target/debug/foo")
+                    .status().unwrap();
+                assert!(s.success());
+            }
+            "#,
+        )
+        .build();
+
+    // Old way, unifies all 3.
+    p.cargo("run").env("CARGO_FEATURE_EXPECT", "7").run();
+
+    // normal + build unify
+    p.cargo("run -Zfeatures=dev_dep")
+        .env("CARGO_FEATURE_EXPECT", "5")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Normal only.
+    p.cargo("run -Zfeatures=dev_dep,build_dep")
+        .env("CARGO_FEATURE_EXPECT", "1")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.cargo("test").env("CARGO_FEATURE_EXPECT", "7").run();
+
+    // dev_deps are still unified with `cargo test`
+    p.cargo("test -Zfeatures=dev_dep")
+        .env("CARGO_FEATURE_EXPECT", "7")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // normal + dev unify
+    p.cargo("test -Zfeatures=build_dep")
+        .env("CARGO_FEATURE_EXPECT", "3")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
