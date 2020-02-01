@@ -72,6 +72,11 @@ impl FeatureOpts {
                     "build_dep" => opts.decouple_build_deps = true,
                     "dev_dep" => opts.decouple_dev_deps = true,
                     "itarget" => opts.ignore_inactive_targets = true,
+                    "all" => {
+                        opts.decouple_build_deps = true;
+                        opts.decouple_dev_deps = true;
+                        opts.ignore_inactive_targets = true;
+                    }
                     "compare" => opts.compare = true,
                     "ws" => unimplemented!(),
                     "host" => unimplemented!(),

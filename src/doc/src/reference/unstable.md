@@ -537,5 +537,7 @@ The available options are:
   is, dev dependency features will still be unified if you run commands like
   `cargo test` or `cargo build --all-targets`.
 
+* `all` — Enable all feature options (`itarget,build_dep,dev_dep`).
+
 * `compare` — This option compares the resolved features to the old resolver,
   and will print any differences.

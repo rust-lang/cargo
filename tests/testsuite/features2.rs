@@ -683,3 +683,85 @@ fn cyclical_dev_dep() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn all_feature_opts() {
+    // All feature options at once.
+    Package::new("common", "1.0.0")
+        .feature("normal", &[])
+        .feature("build", &[])
+        .feature("dev", &[])
+        .feature("itarget", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn feats() -> u32 {
+                let mut res = 0;
+                if cfg!(feature="normal") { res |= 1; }
+                if cfg!(feature="build") { res |= 2; }
+                if cfg!(feature="dev") { res |= 4; }
+                if cfg!(feature="itarget") { res |= 8; }
+                res
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            common = {version = "1.0", features=["normal"]}
+
+            [dev-dependencies]
+            common = {version = "1.0", features=["dev"]}
+
+            [build-dependencies]
+            common = {version = "1.0", features=["build"]}
+
+            [target.'cfg(whatever)'.dependencies]
+            common = {version = "1.0", features=["itarget"]}
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                expect();
+            }
+
+            fn expect() {
+                let expected: u32 = std::env::var("EXPECTED_FEATS").unwrap().parse().unwrap();
+                assert_eq!(expected, common::feats());
+            }
+
+            #[test]
+            fn from_test() {
+                expect();
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run").env("EXPECTED_FEATS", "15").run();
+
+    // Only normal feature.
+    p.cargo("run -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .env("EXPECTED_FEATS", "1")
+        .run();
+
+    p.cargo("test").env("EXPECTED_FEATS", "15").run();
+
+    // only normal+dev
+    p.cargo("test -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .env("EXPECTED_FEATS", "5")
+        .run();
+}
