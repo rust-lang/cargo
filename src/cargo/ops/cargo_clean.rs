@@ -116,8 +116,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 *mode,
                             )
                         };
-                        let features = features
-                            .activated_features(pkg.package_id(), unit_for.is_for_build_dep());
+                        // Use unverified here since this is being more
+                        // exhaustive than what is actually needed.
+                        let features = features.activated_features_unverified(
+                            pkg.package_id(),
+                            unit_for.is_for_build_dep(),
+                        );
                         units.push(bcx.units.intern(
                             pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
                         ));

@@ -151,16 +151,37 @@ impl RequestedFeatures {
 impl ResolvedFeatures {
     /// Returns the list of features that are enabled for the given package.
     pub fn activated_features(&self, pkg_id: PackageId, is_build: bool) -> Vec<InternedString> {
+        self.activated_features_int(pkg_id, is_build, true)
+    }
+
+    /// Variant of `activated_features` that returns an empty Vec if this is
+    /// not a valid pkg_id/is_build combination. Used by `cargo clean` which
+    /// doesn't know the exact set.
+    pub fn activated_features_unverified(
+        &self,
+        pkg_id: PackageId,
+        is_build: bool,
+    ) -> Vec<InternedString> {
+        self.activated_features_int(pkg_id, is_build, false)
+    }
+
+    fn activated_features_int(
+        &self,
+        pkg_id: PackageId,
+        is_build: bool,
+        verify: bool,
+    ) -> Vec<InternedString> {
         if let Some(legacy) = &self.legacy {
             legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
         } else {
             let is_build = self.opts.decouple_build_deps && is_build;
-            // TODO: Remove panic, return empty set.
-            let fs = self
-                .activated_features
-                .get(&(pkg_id, is_build))
-                .unwrap_or_else(|| panic!("features did not find {:?} {:?}", pkg_id, is_build));
-            fs.iter().cloned().collect()
+            if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
+                fs.iter().cloned().collect()
+            } else if verify {
+                panic!("features did not find {:?} {:?}", pkg_id, is_build)
+            } else {
+                Vec::new()
+            }
         }
     }
 }
@@ -436,9 +457,8 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     .dep_platform_activated(dep, CompileKind::Host);
             }
             // Not a build dependency, and not for a build script, so must be Target.
-            return self
-                .target_data
-                .dep_platform_activated(dep, self.requested_target);
+            self.target_data
+                .dep_platform_activated(dep, self.requested_target)
         };
         self.resolve
             .deps(pkg_id)
