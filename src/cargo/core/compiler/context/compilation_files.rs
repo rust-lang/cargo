@@ -147,7 +147,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns `None` if the unit should not use a metadata data hash (like
     /// rustdoc, or some dylibs).
     pub fn metadata(&self, unit: &Unit<'a>) -> Option<Metadata> {
-        self.metas[unit].clone()
+        self.metas[unit]
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -515,7 +515,7 @@ fn metadata_of<'a, 'cfg>(
             metadata_of(&dep.unit, cx, metas);
         }
     }
-    metas[unit].clone()
+    metas[unit]
 }
 
 fn compute_metadata<'a, 'cfg>(

@@ -117,7 +117,7 @@ pub fn resolve_ws_with_opts<'a>(
     let resolved_with_overrides = resolve_with_previous(
         &mut registry,
         ws,
-        &opts,
+        opts,
         resolve.as_ref(),
         None,
         specs,

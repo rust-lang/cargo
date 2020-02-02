@@ -1,7 +1,6 @@
 //! Code for building the standard library.
 
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode, RustcTargetData, Unit};
-use crate::core::dependency::DepKind;
 use crate::core::profiles::UnitFor;
 use crate::core::resolver::features::ResolvedFeatures;
 use crate::core::resolver::ResolveOpts;
@@ -149,11 +148,7 @@ pub fn generate_std_roots<'a>(
                 unit_for,
                 mode,
             );
-            let features = std_features.activated_features(
-                pkg.package_id(),
-                DepKind::Normal,
-                bcx.build_config.requested_kind,
-            );
+            let features = std_features.activated_features(pkg.package_id(), false);
             Ok(bcx.units.intern(
                 pkg, lib, profile, kind, mode, features, /*is_std*/ true,
             ))

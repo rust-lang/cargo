@@ -1,5 +1,4 @@
 use crate::core::compiler::CompileMode;
-use crate::core::dependency::DepKind;
 use crate::core::interning::InternedString;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
@@ -484,7 +483,7 @@ fn merge_toml_overrides(
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    if unit_for.is_build() {
+    if unit_for.is_for_host() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -767,9 +766,17 @@ pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
     /// any of its dependencies. This enables `build-override` profiles for
     /// these targets.
-    build: bool,
-    /// The dependency kind (normal, dev, build).
-    dep_kind: DepKind,
+    host: bool,
+    /// A target for a build dependency (or any of its dependencies). This is
+    /// used for computing features of build dependencies independently of
+    /// other dependency kinds.
+    ///
+    /// The subtle difference between this and `host` is that the build script
+    /// for a non-host package sets this to `false` because it wants the
+    /// features of the non-host package (whereas `host` is true because the
+    /// build script is being built for the host). `build_dep` becomes `true`
+    /// for build-dependencies, or any of their dependencies.
+    build_dep: bool,
     /// How Cargo processes the `panic` setting or profiles. This is done to
     /// handle test/benches inheriting from dev/release, as well as forcing
     /// `for_host` units to always unwind.
@@ -796,17 +803,22 @@ impl UnitFor {
     /// proc macro/plugin, or test/bench).
     pub fn new_normal() -> UnitFor {
         UnitFor {
-            build: false,
-            dep_kind: DepKind::Normal,
+            host: false,
+            build_dep: false,
             panic_setting: PanicSetting::ReadProfile,
         }
     }
 
     /// A unit for a custom build script or its dependencies.
-    pub fn new_build() -> UnitFor {
+    ///
+    /// The `build_dep` parameter is whether or not this is for a build
+    /// dependency. Build scripts for non-host units should use `false`
+    /// because they want to use the features of the package they are running
+    /// for.
+    pub fn new_build(build_dep: bool) -> UnitFor {
         UnitFor {
-            build: true,
-            dep_kind: DepKind::Normal,
+            host: true,
+            build_dep,
             // Force build scripts to always use `panic=unwind` for now to
             // maximally share dependencies with procedural macros.
             panic_setting: PanicSetting::AlwaysUnwind,
@@ -816,8 +828,8 @@ impl UnitFor {
     /// A unit for a proc macro or compiler plugin or their dependencies.
     pub fn new_compiler() -> UnitFor {
         UnitFor {
-            build: false,
-            dep_kind: DepKind::Normal,
+            host: false,
+            build_dep: false,
             // Force plugins to use `panic=abort` so panics in the compiler do
             // not abort the process but instead end with a reasonable error
             // message that involves catching the panic in the compiler.
@@ -825,7 +837,7 @@ impl UnitFor {
         }
     }
 
-    /// A unit for a test/bench target.
+    /// A unit for a test/bench target or their dependencies.
     ///
     /// Note that `config` is taken here for unstable CLI features to detect
     /// whether `panic=abort` is supported for tests. Historical versions of
@@ -833,8 +845,8 @@ impl UnitFor {
     /// compiler flag.
     pub fn new_test(config: &Config) -> UnitFor {
         UnitFor {
-            build: false,
-            dep_kind: DepKind::Development,
+            host: false,
+            build_dep: false,
             // We're testing out an unstable feature (`-Zpanic-abort-tests`)
             // which inherits the panic setting from the dev/release profile
             // (basically avoid recompiles) but historical defaults required
@@ -847,7 +859,7 @@ impl UnitFor {
         }
     }
 
-    /// Creates a variant based on `for_host` setting.
+    /// Returns a new copy based on `for_host` setting.
     ///
     /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
     /// fashion so that all its dependencies also have `panic_abort_ok=false`.
@@ -856,8 +868,8 @@ impl UnitFor {
     /// graph where everything is `panic=unwind`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
-            build: self.build || for_host,
-            dep_kind: self.dep_kind,
+            host: self.host || for_host,
+            build_dep: self.build_dep,
             panic_setting: if for_host {
                 PanicSetting::AlwaysUnwind
             } else {
@@ -866,54 +878,64 @@ impl UnitFor {
         }
     }
 
-    /// Creates a variant for the given dependency kind.
+    /// Returns a new copy updating it for a build dependency.
     ///
     /// This is part of the machinery responsible for handling feature
-    /// decoupling in the new feature resolver.
-    pub fn with_dep_kind(mut self, kind: DepKind) -> UnitFor {
-        self.dep_kind = self.dep_kind.sticky_kind(kind);
+    /// decoupling for build dependencies in the new feature resolver.
+    pub fn with_build_dep(mut self, build_dep: bool) -> UnitFor {
+        self.build_dep = self.build_dep || build_dep;
         self
     }
 
-    /// Returns `true` if this unit is for a custom build script or one of its
-    /// dependencies.
-    pub fn is_build(self) -> bool {
-        self.build
+    /// Returns `true` if this unit is for a build script or any of its
+    /// dependencies, or a proc macro or any of its dependencies.
+    pub fn is_for_host(&self) -> bool {
+        self.host
+    }
+
+    pub fn is_for_build_dep(&self) -> bool {
+        self.build_dep
     }
 
     /// Returns how `panic` settings should be handled for this profile
-    fn panic_setting(self) -> PanicSetting {
+    fn panic_setting(&self) -> PanicSetting {
         self.panic_setting
-    }
-
-    /// Returns the dependency kind this unit is intended for.
-    pub fn dep_kind(&self) -> DepKind {
-        self.dep_kind
     }
 
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
-        // dep_kind isn't needed for profiles, so its value doesn't matter.
         static ALL: &[UnitFor] = &[
             UnitFor {
-                build: false,
-                dep_kind: DepKind::Normal,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::ReadProfile,
             },
             UnitFor {
-                build: true,
-                dep_kind: DepKind::Normal,
+                host: true,
+                build_dep: false,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
-                build: false,
-                dep_kind: DepKind::Normal,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
-                build: false,
-                dep_kind: DepKind::Normal,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::Inherit,
+            },
+            // build_dep=true must always have host=true
+            // `Inherit` is not used in build dependencies.
+            UnitFor {
+                host: true,
+                build_dep: true,
+                panic_setting: PanicSetting::ReadProfile,
+            },
+            UnitFor {
+                host: true,
+                build_dep: true,
+                panic_setting: PanicSetting::AlwaysUnwind,
             },
         ];
         ALL

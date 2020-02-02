@@ -173,7 +173,7 @@ fn build_resolve_graph_r(
     if node_map.contains_key(&pkg_id) {
         return;
     }
-    let features = resolve.features(pkg_id).into_iter().cloned().collect();
+    let features = resolve.features(pkg_id).iter().cloned().collect();
 
     let deps: Vec<Dep> = resolve
         .deps(pkg_id)

@@ -25,15 +25,11 @@ use crate::util::{CargoResult, Config};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-/// Map of activated features for a PackageId/DepKind/CompileKind.
+/// Map of activated features.
 ///
-/// `DepKind` is needed, as the same package can be built multiple times with
-/// different features. For example, with `decouple_build_deps`, a dependency
-/// can be built once as a build dependency (for example with a 'std'
-/// feature), and once as a normal dependency (without that 'std' feature).
-///
-/// `CompileKind` is used currently not needed.
-type ActivateMap = HashMap<(PackageId, DepKind, CompileKind), BTreeSet<InternedString>>;
+/// The key is `(PackageId, bool)` where the bool is `true` if these
+/// are features for a build dependency.
+type ActivateMap = HashMap<(PackageId, bool), BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
@@ -154,28 +150,16 @@ impl RequestedFeatures {
 
 impl ResolvedFeatures {
     /// Returns the list of features that are enabled for the given package.
-    pub fn activated_features(
-        &self,
-        pkg_id: PackageId,
-        dep_kind: DepKind,
-        compile_kind: CompileKind,
-    ) -> Vec<InternedString> {
+    pub fn activated_features(&self, pkg_id: PackageId, is_build: bool) -> Vec<InternedString> {
         if let Some(legacy) = &self.legacy {
             legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
         } else {
-            let dep_kind = if (!self.opts.decouple_build_deps && dep_kind == DepKind::Build)
-                || (!self.opts.decouple_dev_deps && dep_kind == DepKind::Development)
-            {
-                // Decoupling disabled, everything is unified under "Normal".
-                DepKind::Normal
-            } else {
-                dep_kind
-            };
+            let is_build = self.opts.decouple_build_deps && is_build;
             // TODO: Remove panic, return empty set.
             let fs = self
                 .activated_features
-                .get(&(pkg_id, dep_kind, compile_kind))
-                .unwrap_or_else(|| panic!("features did not find {:?} {:?}", pkg_id, dep_kind));
+                .get(&(pkg_id, is_build))
+                .unwrap_or_else(|| panic!("features did not find {:?} {:?}", pkg_id, is_build));
             fs.iter().cloned().collect()
         }
     }
@@ -193,7 +177,7 @@ pub struct FeatureResolver<'a, 'cfg> {
     activated_features: ActivateMap,
     /// Keeps track of which packages have had its dependencies processed.
     /// Used to avoid cycles, and to speed up processing.
-    processed_deps: HashSet<(PackageId, DepKind, CompileKind)>,
+    processed_deps: HashSet<(PackageId, bool)>,
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
@@ -248,106 +232,72 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         requested_features: &RequestedFeatures,
     ) -> CargoResult<()> {
         let member_features = self.ws.members_with_features(specs, requested_features)?;
-        for (member, requested_features) in member_features {
-            self.activate_member(member.package_id(), &requested_features)?;
+        for (member, requested_features) in &member_features {
+            let fvs = self.fvs_from_requested(member.package_id(), requested_features);
+            self.activate_pkg(member.package_id(), &fvs, false)?;
         }
         Ok(())
     }
 
-    /// Enable the given features on the given workspace member.
-    fn activate_member(
+    fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
-        requested_features: &RequestedFeatures,
-    ) -> CargoResult<()> {
-        let fvs = self.fvs_from_requested(pkg_id, CompileKind::Host, requested_features);
-        self.activate_member_fvs(pkg_id, CompileKind::Host, &fvs)?;
-        if let CompileKind::Target(_) = self.requested_target {
-            let fvs = self.fvs_from_requested(pkg_id, self.requested_target, requested_features);
-            self.activate_member_fvs(pkg_id, self.requested_target, &fvs)?;
-        }
-        Ok(())
-    }
-
-    fn activate_member_fvs(
-        &mut self,
-        pkg_id: PackageId,
-        compile_kind: CompileKind,
         fvs: &[FeatureValue],
-    ) -> CargoResult<()> {
-        self.activate_with_platform(pkg_id, DepKind::Normal, compile_kind, &fvs)?;
-        if self.opts.decouple_dev_deps {
-            // Activate the member as a dev dep, assuming it has at least one
-            // test, bench, or example. This ensures the member's normal deps get
-            // unified with its dev deps.
-            self.activate_with_platform(pkg_id, DepKind::Development, compile_kind, &fvs)?;
-        }
-        Ok(())
-    }
-
-    fn activate_with_platform(
-        &mut self,
-        pkg_id: PackageId,
-        dep_kind: DepKind,
-        compile_kind: CompileKind,
-        fvs: &[FeatureValue],
+        for_build: bool,
     ) -> CargoResult<()> {
         // Add an empty entry to ensure everything is covered. This is intended for
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
         self.activated_features
-            .entry((pkg_id, dep_kind, compile_kind))
+            .entry((pkg_id, for_build))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
-            self.activate_fv(pkg_id, dep_kind, compile_kind, fv)?;
+            self.activate_fv(pkg_id, fv, for_build)?;
         }
-        if !self.processed_deps.insert((pkg_id, dep_kind, compile_kind)) {
+        if !self.processed_deps.insert((pkg_id, for_build)) {
             // Already processed dependencies.
             return Ok(());
         }
-        // Activate any of its dependencies.
-        for (dep_pkg_id, deps) in self.deps(pkg_id, compile_kind) {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
             for dep in deps {
                 if dep.is_optional() {
                     continue;
                 }
                 // Recurse into the dependency.
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_with_platform(
+                self.activate_pkg(
                     dep_pkg_id,
-                    self.sticky_dep_kind(dep_kind, dep.kind()),
-                    compile_kind,
                     &fvs,
+                    for_build || (self.opts.decouple_build_deps && dep.is_build()),
                 )?;
             }
         }
-        return Ok(());
+        Ok(())
     }
 
+    /// Activate a single FeatureValue for a package.
     fn activate_fv(
         &mut self,
         pkg_id: PackageId,
-        dep_kind: DepKind,
-        compile_kind: CompileKind,
         fv: &FeatureValue,
+        for_build: bool,
     ) -> CargoResult<()> {
         match fv {
             FeatureValue::Feature(f) => {
-                self.activate_rec(pkg_id, dep_kind, compile_kind, *f)?;
+                self.activate_rec(pkg_id, *f, for_build)?;
             }
             FeatureValue::Crate(dep_name) => {
                 // Activate the feature name on self.
-                self.activate_rec(pkg_id, dep_kind, compile_kind, *dep_name)?;
+                self.activate_rec(pkg_id, *dep_name, for_build)?;
                 // Activate the optional dep.
-                for (dep_pkg_id, deps) in self.deps(pkg_id, compile_kind) {
+                for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
                     for dep in deps {
                         if dep.name_in_toml() == *dep_name {
                             let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                            self.activate_with_platform(
+                            self.activate_pkg(
                                 dep_pkg_id,
-                                self.sticky_dep_kind(dep_kind, dep.kind()),
-                                compile_kind,
                                 &fvs,
+                                for_build || (self.opts.decouple_build_deps && dep.is_build()),
                             )?;
                         }
                     }
@@ -355,22 +305,21 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             }
             FeatureValue::CrateFeature(dep_name, dep_feature) => {
                 // Activate a feature within a dependency.
-                for (dep_pkg_id, deps) in self.deps(pkg_id, compile_kind) {
+                for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
                     for dep in deps {
                         if dep.name_in_toml() == *dep_name {
                             if dep.is_optional() {
                                 // Activate the crate on self.
                                 let fv = FeatureValue::Crate(*dep_name);
-                                self.activate_fv(pkg_id, dep_kind, compile_kind, &fv)?;
+                                self.activate_fv(pkg_id, &fv, for_build)?;
                             }
                             // Activate the feature on the dependency.
                             let summary = self.resolve.summary(dep_pkg_id);
                             let fv = FeatureValue::new(*dep_feature, summary);
                             self.activate_fv(
                                 dep_pkg_id,
-                                self.sticky_dep_kind(dep_kind, dep.kind()),
-                                compile_kind,
                                 &fv,
+                                for_build || (self.opts.decouple_build_deps && dep.is_build()),
                             )?;
                         }
                     }
@@ -385,13 +334,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn activate_rec(
         &mut self,
         pkg_id: PackageId,
-        dep_kind: DepKind,
-        compile_kind: CompileKind,
         feature_to_enable: InternedString,
+        for_build: bool,
     ) -> CargoResult<()> {
         let enabled = self
             .activated_features
-            .entry((pkg_id, dep_kind, compile_kind))
+            .entry((pkg_id, for_build))
             .or_insert_with(BTreeSet::new);
         if !enabled.insert(feature_to_enable) {
             // Already enabled.
@@ -414,7 +362,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             }
         };
         for fv in fvs {
-            self.activate_fv(pkg_id, dep_kind, compile_kind, fv)?;
+            self.activate_fv(pkg_id, fv, for_build)?;
         }
         Ok(())
     }
@@ -439,7 +387,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn fvs_from_requested(
         &self,
         pkg_id: PackageId,
-        compile_kind: CompileKind,
         requested_features: &RequestedFeatures,
     ) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(pkg_id);
@@ -450,7 +397,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 .map(|k| FeatureValue::Feature(*k))
                 .collect();
             // Add optional deps.
-            for (_dep_pkg_id, deps) in self.deps(pkg_id, compile_kind) {
+            // Top-level requested features can never apply to
+            // build-dependencies, so for_build is `false` here.
+            for (_dep_pkg_id, deps) in self.deps(pkg_id, false) {
                 for dep in deps {
                     if dep.is_optional() {
                         // This may result in duplicates, but that should be ok.
@@ -475,56 +424,55 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.
-    fn deps(
-        &self,
-        pkg_id: PackageId,
-        compile_kind: CompileKind,
-    ) -> Vec<(PackageId, Vec<&'a Dependency>)> {
+    fn deps(&self, pkg_id: PackageId, for_build: bool) -> Vec<(PackageId, Vec<&'a Dependency>)> {
+        // Helper for determining if a platform is activated.
+        let platform_activated = |dep: &Dependency| -> bool {
+            // We always care about build-dependencies, and they are always
+            // Host. If we are computing dependencies "for a build script",
+            // even normal dependencies are host-only.
+            if for_build || dep.is_build() {
+                return self
+                    .target_data
+                    .dep_platform_activated(dep, CompileKind::Host);
+            }
+            // Not a build dependency, and not for a build script, so must be Target.
+            return self
+                .target_data
+                .dep_platform_activated(dep, self.requested_target);
+        };
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
                 let deps = deps
                     .iter()
                     .filter(|dep| {
-                        !dep.platform().is_some()
-                            || !self.opts.ignore_inactive_targets
-                            || self.target_data.dep_platform_activated(dep, compile_kind)
+                        if dep.platform().is_some()
+                            && self.opts.ignore_inactive_targets
+                            && !platform_activated(dep)
+                        {
+                            return false;
+                        }
+                        if self.opts.decouple_dev_deps && dep.kind() == DepKind::Development {
+                            return false;
+                        }
+                        true
                     })
                     .collect::<Vec<_>>();
                 (dep_id, deps)
             })
+            .filter(|(_id, deps)| !deps.is_empty())
             .collect()
-    }
-
-    /// Convert a DepKind from a package to one of its dependencies.
-    ///
-    /// The rules here determine how decoupling works.
-    fn sticky_dep_kind(&self, from: DepKind, to: DepKind) -> DepKind {
-        if self.opts.decouple_build_deps {
-            if from == DepKind::Build || to == DepKind::Build {
-                return DepKind::Build;
-            }
-        }
-        if self.opts.decouple_dev_deps {
-            if to == DepKind::Development {
-                return DepKind::Development;
-            }
-            if from == DepKind::Development && to != DepKind::Build {
-                return DepKind::Development;
-            }
-        }
-        return DepKind::Normal;
     }
 
     /// Compare the activated features to the resolver. Used for testing.
     fn compare(&self) {
         let mut found = false;
-        for ((pkg_id, dep_kind, compile_kind), features) in &self.activated_features {
+        for ((pkg_id, dep_kind), features) in &self.activated_features {
             let r_features = self.resolve.features(*pkg_id);
             if !r_features.iter().eq(features.iter()) {
                 eprintln!(
-                    "{}/{:?}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
-                    pkg_id, dep_kind, compile_kind, r_features, features
+                    "{}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
+                    pkg_id, dep_kind, r_features, features
                 );
                 found = true;
             }

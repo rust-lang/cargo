@@ -33,7 +33,6 @@ use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
-use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features;
 use crate::core::resolver::{Resolve, ResolveOpts};
@@ -746,13 +745,9 @@ fn generate_targets<'a>(
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
-        // Root units are not a dependency of anything, so they are always
-        // DepKind::Normal. Their features are driven by the command-line
-        // arguments.
         let features = Vec::from(resolved_features.activated_features(
             pkg.package_id(),
-            DepKind::Normal,
-            kind,
+            false, // Root units are never build dependencies.
         ));
         bcx.units.intern(
             pkg,
@@ -903,12 +898,7 @@ fn generate_targets<'a>(
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map.entry(pkg).or_insert_with(|| {
-                    resolve_all_features(
-                        resolve,
-                        resolved_features,
-                        pkg.package_id(),
-                        default_arch_kind,
-                    )
+                    resolve_all_features(resolve, resolved_features, pkg.package_id())
                 });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }
@@ -946,10 +936,9 @@ fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     resolved_features: &features::ResolvedFeatures,
     package_id: PackageId,
-    default_arch_kind: CompileKind,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
-        .activated_features(package_id, DepKind::Normal, default_arch_kind)
+        .activated_features(package_id, false)
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -957,9 +946,7 @@ fn resolve_all_features(
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
-        for feature in
-            resolved_features.activated_features(dep_id, DepKind::Normal, default_arch_kind)
-        {
+        for feature in resolved_features.activated_features(dep_id, false) {
             for dep in deps {
                 features.insert(dep.name_in_toml().to_string() + "/" + &feature);
             }

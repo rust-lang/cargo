@@ -6,7 +6,6 @@ use std::path::Path;
 use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
-use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{FeatureResolver, RequestedFeatures};
 use crate::core::{PackageIdSpec, Workspace};
@@ -117,13 +116,11 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 *mode,
                             )
                         };
-                        for dep_kind in &[DepKind::Normal, DepKind::Development, DepKind::Build] {
-                            let features =
-                                features.activated_features(pkg.package_id(), *dep_kind, *kind);
-                            units.push(bcx.units.intern(
-                                pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
-                            ));
-                        }
+                        let features = features
+                            .activated_features(pkg.package_id(), unit_for.is_for_build_dep());
+                        units.push(bcx.units.intern(
+                            pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
+                        ));
                     }
                 }
             }

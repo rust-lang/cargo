@@ -92,23 +92,6 @@ pub enum DepKind {
     Build,
 }
 
-impl DepKind {
-    /// Convert a DepKind from a package to one of its dependencies.
-    ///
-    /// The rules here determine how feature decoupling works. This works in
-    /// conjunction with the new feature resolver.
-    pub fn sticky_kind(&self, to: DepKind) -> DepKind {
-        use DepKind::*;
-        match (self, to) {
-            (Normal, _) => to,
-            (Build, _) => Build,
-            (Development, Normal) => Development,
-            (Development, Build) => Build,
-            (Development, Development) => Development,
-        }
-    }
-}
-
 fn parse_req_with_deprecated(
     name: InternedString,
     req: &str,
