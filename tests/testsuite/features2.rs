@@ -765,3 +765,59 @@ fn all_feature_opts() {
         .env("EXPECTED_FEATS", "5")
         .run();
 }
+
+#[cargo_test]
+fn required_features_build_dep() {
+    // Check that required-features handles build-dependencies correctly.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[bin]]
+            name = "x"
+            required-features = ["bdep/f1"]
+
+            [build-dependencies]
+            bdep = {path="bdep"}
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file(
+            "src/bin/x.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .file(
+            "bdep/Cargo.toml",
+            r#"
+            [package]
+            name = "bdep"
+            version = "0.1.0"
+
+            [features]
+            f1 = []
+            "#,
+        )
+        .file("bdep/src/lib.rs", "")
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] target `x` in package `foo` requires the features: `bdep/f1`
+Consider enabling them by passing, e.g., `--features=\"bdep/f1\"`
+",
+        )
+        .run();
+
+    p.cargo("run --features bdep/f1 -Zfeatures=build_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
