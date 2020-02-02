@@ -1163,3 +1163,96 @@ available binaries: foo1, foo2",
         )
         .run();
 }
+
+#[cargo_test]
+fn renamed_required_features() {
+    // Test that required-features uses renamed package feature names.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [[bin]]
+            name = "x"
+            required-features = ["a1/f1"]
+
+            [dependencies]
+            a1 = {path="a1", package="a"}
+            a2 = {path="a2", package="a"}
+            "#,
+        )
+        .file(
+            "src/bin/x.rs",
+            r#"
+            fn main() {
+                a1::f();
+                a2::f();
+            }
+            "#,
+        )
+        .file(
+            "a1/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+
+            [features]
+            f1 = []
+            "#,
+        )
+        .file(
+            "a1/src/lib.rs",
+            r#"
+            pub fn f() {
+                if cfg!(feature="f1") {
+                    println!("a1 f1");
+                }
+            }
+            "#,
+        )
+        .file(
+            "a2/Cargo.toml",
+            r#"
+             [package]
+            name = "a"
+            version = "0.2.0"
+
+            [features]
+            f2 = []
+           "#,
+        )
+        .file(
+            "a2/src/lib.rs",
+            r#"
+            pub fn f() {
+                if cfg!(feature="f2") {
+                    println!("a2 f2");
+                }
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] target `x` in package `foo` requires the features: `a1/f1`
+Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
+",
+        )
+        .run();
+
+    p.cargo("build --features a1/f1").run();
+    p.rename_run("x", "x_with_f1").with_stdout("a1 f1").run();
+
+    p.cargo("build --features a1/f1,a2/f2").run();
+    p.rename_run("x", "x_with_f1_f2")
+        .with_stdout("a1 f1\na2 f2")
+        .run();
+}
