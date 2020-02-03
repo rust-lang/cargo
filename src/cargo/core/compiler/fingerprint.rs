@@ -60,6 +60,7 @@
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
+//! is_std                                     |             | ✓
 //!
 //! [^1]: Build script and bin dependencies are not included.
 //!
