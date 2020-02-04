@@ -908,13 +908,9 @@ fn merge_config_profiles(
     };
     // List of profile names to check if defined in config only.
     let mut check_to_add = vec![requested_profile];
-    // Flag so -Zconfig-profile warning is only printed once.
-    let mut unstable_warned = false;
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
-        if let Some(config_profile) =
-            get_config_profile(name, config, features, &mut unstable_warned)?
-        {
+        if let Some(config_profile) = get_config_profile(name, config, features)? {
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
@@ -928,9 +924,7 @@ fn merge_config_profiles(
         std::mem::swap(&mut current, &mut check_to_add);
         for name in current.drain(..) {
             if !profiles.contains_key(&name) {
-                if let Some(config_profile) =
-                    get_config_profile(&name, config, features, &mut unstable_warned)?
-                {
+                if let Some(config_profile) = get_config_profile(&name, config, features)? {
                     if let Some(inherits) = &config_profile.inherits {
                         check_to_add.push(*inherits);
                     }
@@ -947,20 +941,12 @@ fn get_config_profile(
     name: &str,
     config: &Config,
     features: &Features,
-    unstable_warned: &mut bool,
 ) -> CargoResult<Option<TomlProfile>> {
     let profile: Option<config::Value<TomlProfile>> = config.get(&format!("profile.{}", name))?;
     let profile = match profile {
         Some(profile) => profile,
         None => return Ok(None),
     };
-    if !*unstable_warned && !config.cli_unstable().config_profile {
-        config.shell().warn(format!(
-            "config profiles require the `-Z config-profile` command-line option (found profile `{}` in {})",
-            name, profile.definition))?;
-        *unstable_warned = true;
-        return Ok(None);
-    }
     let mut warnings = Vec::new();
     profile
         .val

@@ -4,31 +4,6 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
-fn profile_config_gated() {
-    let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [profile.dev]
-            debug = 1
-        "#,
-        )
-        .build();
-
-    p.cargo("build -v")
-        .with_stderr_contains(
-            "\
-[WARNING] config profiles require the `-Z config-profile` command-line option \
-    (found profile `dev` in [..]/foo/.cargo/config)
-",
-        )
-        .with_stderr_contains("[..]-C debuginfo=2[..]")
-        .run();
-}
-
-#[cargo_test]
 fn named_profile_gated() {
     // Named profile in config requires enabling in Cargo.toml.
     let p = project()
@@ -42,7 +17,7 @@ fn named_profile_gated() {
             "#,
         )
         .build();
-    p.cargo("build --profile foo -Zunstable-options -Zconfig-profile")
+    p.cargo("build --profile foo -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
@@ -84,8 +59,7 @@ fn profile_config_validate_warnings() {
         )
         .build();
 
-    p.cargo("build -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr_unordered(
             "\
 [WARNING] unused config key `profile.dev.bad-key` in `[..].cargo/config`
@@ -120,8 +94,7 @@ fn profile_config_error_paths() {
         )
         .build();
 
-    p.cargo("build -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -148,8 +121,7 @@ fn profile_config_validate_errors() {
         )
         .build();
 
-    p.cargo("build -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -176,8 +148,7 @@ fn profile_config_syntax_errors() {
         )
         .build();
 
-    p.cargo("build -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
@@ -221,8 +192,7 @@ fn profile_config_override_spec_multiple() {
 
     // Unfortunately this doesn't tell you which file, hopefully it's not too
     // much of a problem.
-    p.cargo("build -v -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v")
         .with_status(101)
         .with_stderr(
             "\
@@ -254,8 +224,7 @@ fn profile_config_all_options() {
         )
         .build();
 
-    p.cargo("build --release -v -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build --release -v")
         .env_remove("CARGO_INCREMENTAL")
         .with_stderr(
             "\
@@ -309,8 +278,7 @@ fn profile_config_override_precedence() {
         )
         .build();
 
-    p.cargo("build -v -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v")
         .with_stderr(
             "\
 [COMPILING] bar [..]
@@ -336,8 +304,7 @@ fn profile_config_no_warn_unknown_override() {
         )
         .build();
 
-    p.cargo("build -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build")
         .with_stderr_does_not_contain("[..]warning[..]")
         .run();
 }
@@ -363,8 +330,7 @@ fn profile_config_mixed_types() {
         )
         .build();
 
-    p.cargo("build -v -Z config-profile")
-        .masquerade_as_nightly_cargo()
+    p.cargo("build -v")
         .with_stderr_contains("[..]-C opt-level=3 [..]")
         .run();
 }
@@ -406,7 +372,7 @@ fn named_config_profile() {
         "#,
     )
     .unwrap();
-    let config = ConfigBuilder::new().unstable_flag("config-profile").build();
+    let config = ConfigBuilder::new().build();
     let mut warnings = Vec::new();
     let features = Features::new(&["named-profiles".to_string()], &mut warnings).unwrap();
     assert_eq!(warnings.len(), 0);
@@ -481,7 +447,7 @@ fn named_env_profile() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Zconfig-profile -Zunstable-options --profile=other")
+    p.cargo("build -v -Zunstable-options --profile=other")
         .masquerade_as_nightly_cargo()
         .env("CARGO_PROFILE_OTHER_CODEGEN_UNITS", "1")
         .env("CARGO_PROFILE_OTHER_INHERITS", "dev")
