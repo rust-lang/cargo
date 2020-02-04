@@ -16,6 +16,10 @@ steps:
 - bash: rustup component add clippy || echo "clippy not available"
   displayName: "Install clippy (maybe)"
 
+# Some tests also rely on rustfmt
+- bash: rustup component add rustfmt || echo "rustfmt not available"
+  displayName: "Install rustfmt (maybe)"
+
 # Deny warnings on CI to avoid warnings getting into the codebase, and note the
 # `force-system-lib-on-osx` which is intended to fix compile issues on OSX where
 # compiling curl from source on OSX yields linker errors on Azure.
