@@ -587,5 +587,15 @@ fn compute_metadata<'a, 'cfg>(
     if let Ok(ref channel) = __cargo_default_lib_metadata {
         channel.hash(&mut hasher);
     }
+
+    // std units need to be kept separate from user dependencies. std crates
+    // are differentiated in the Unit with `is_std` (for things like
+    // `-Zforce-unstable-if-unmarked`), so they are always built separately.
+    // This isn't strictly necessary for build dependencies which probably
+    // don't need unstable support. A future experiment might be to set
+    // `is_std` to false for build dependencies so that they can be shared
+    // with user dependencies.
+    unit.is_std.hash(&mut hasher);
+
     Some(Metadata(hasher.finish()))
 }
