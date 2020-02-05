@@ -903,9 +903,11 @@ fn resolve_all_features(
 
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
-    for (dep, _) in resolve_with_overrides.deps(package_id) {
-        for feature in resolve_with_overrides.features(dep) {
-            features.insert(dep.name().to_string() + "/" + feature);
+    for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
+        for feature in resolve_with_overrides.features(dep_id) {
+            for dep in deps {
+                features.insert(dep.name_in_toml().to_string() + "/" + feature);
+            }
         }
     }
 
