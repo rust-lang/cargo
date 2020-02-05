@@ -136,21 +136,49 @@ fn rebuild_sub_package_then_while_package() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] b [..]
+[COMPILING] a [..]
+[COMPILING] foo [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
 
-    File::create(&p.root().join("b/src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn b() {}"#)
-        .unwrap();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    p.change_file("b/src/lib.rs", "pub fn b() {}");
 
-    p.cargo("build -pb").run();
+    p.cargo("build -pb -v")
+        .with_stderr(
+            "\
+[COMPILING] b [..]
+[RUNNING] `rustc --crate-name b [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
 
-    File::create(&p.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"extern crate a; extern crate b; pub fn toplevel() {}"#)
-        .unwrap();
+    p.change_file(
+        "src/lib.rs",
+        "extern crate a; extern crate b; pub fn toplevel() {}",
+    );
 
-    p.cargo("build").run();
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[FRESH] b [..]
+[COMPILING] a [..]
+[RUNNING] `rustc --crate-name a [..]
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
