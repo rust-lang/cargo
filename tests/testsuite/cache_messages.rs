@@ -1,7 +1,7 @@
 //! Tests for caching compiler diagnostics.
 
 use cargo_test_support::{
-    basic_manifest, clippy_is_available, is_coarse_mtime, process, project, registry::Package,
+    basic_manifest, command_is_available, is_coarse_mtime, process, project, registry::Package,
     sleep_ms,
 };
 use std::path::Path;
@@ -276,7 +276,7 @@ fn fix() {
 
 #[cargo_test]
 fn clippy() {
-    if !clippy_is_available() {
+    if !command_is_available("clippy-driver") {
         return;
     }
 

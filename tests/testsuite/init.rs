@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::process::Command;
 
-use cargo_test_support::{paths, Execs};
+use cargo_test_support::{command_is_available, paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
     let mut execs = cargo_test_support::cargo_process(s);
@@ -660,6 +660,10 @@ fn no_filename() {
 
 #[cargo_test]
 fn formats_source() {
+    if !command_is_available("rustfmt") {
+        return;
+    }
+
     fs::write(&paths::root().join("rustfmt.toml"), "tab_spaces = 2").unwrap();
 
     cargo_process("init --lib")
