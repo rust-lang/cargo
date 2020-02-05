@@ -1801,9 +1801,9 @@ pub fn slow_cpu_multiplier(main: u64) -> Duration {
     Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
 }
 
-pub fn clippy_is_available() -> bool {
-    if let Err(e) = process("clippy-driver").arg("-V").exec_with_output() {
-        eprintln!("clippy-driver not available, skipping clippy test");
+pub fn command_is_available(cmd: &str) -> bool {
+    if let Err(e) = process(cmd).arg("-V").exec_with_output() {
+        eprintln!("{} not available, skipping tests", cmd);
         eprintln!("{:?}", e);
         false
     } else {

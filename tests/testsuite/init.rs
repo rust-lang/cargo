@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::process::Command;
 
-use cargo_test_support::{paths, Execs};
+use cargo_test_support::{command_is_available, paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
     let mut execs = cargo_test_support::cargo_process(s);
@@ -656,4 +656,51 @@ fn no_filename() {
                 .to_string(),
         )
         .run();
+}
+
+#[cargo_test]
+fn formats_source() {
+    if !command_is_available("rustfmt") {
+        return;
+    }
+
+    fs::write(&paths::root().join("rustfmt.toml"), "tab_spaces = 2").unwrap();
+
+    cargo_process("init --lib")
+        .env("USER", "foo")
+        .with_stderr("[CREATED] library package")
+        .run();
+
+    assert_eq!(
+        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
+        r#"#[cfg(test)]
+mod tests {
+  #[test]
+  fn it_works() {
+    assert_eq!(2 + 2, 4);
+  }
+}
+"#
+    );
+}
+
+#[cargo_test]
+fn ignores_failure_to_format_source() {
+    cargo_process("init --lib")
+        .env("USER", "foo")
+        .env("PATH", "") // pretend that `rustfmt` is missing
+        .with_stderr("[CREATED] library package")
+        .run();
+
+    assert_eq!(
+        fs::read_to_string(paths::root().join("src/lib.rs")).unwrap(),
+        r#"#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+}
+"#
+    );
 }

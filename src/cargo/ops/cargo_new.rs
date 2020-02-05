@@ -12,7 +12,8 @@ use std::fmt;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
+use std::process::Command;
+use std::str::{from_utf8, FromStr};
 
 use toml;
 
@@ -707,6 +708,16 @@ mod tests {
             .unwrap_or(false)
         {
             paths::write(&path_of_source_file, default_file_content)?;
+
+            // Format the newly created source file
+            match Command::new("rustfmt").arg(&path_of_source_file).output() {
+                Err(e) => log::warn!("failed to call rustfmt: {}", e),
+                Ok(output) => {
+                    if !output.status.success() {
+                        log::warn!("rustfmt failed: {:?}", from_utf8(&output.stdout));
+                    }
+                }
+            };
         }
     }
 

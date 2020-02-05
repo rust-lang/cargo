@@ -1,11 +1,11 @@
 //! Tests for the `cargo clippy` command.
 
-use cargo_test_support::{clippy_is_available, project, registry::Package};
+use cargo_test_support::{command_is_available, project, registry::Package};
 
 #[cargo_test]
 // Clippy should never be considered fresh.
 fn clippy_force_rebuild() {
-    if !clippy_is_available() {
+    if !command_is_available("clippy-driver") {
         return;
     }
 
@@ -43,7 +43,7 @@ fn clippy_force_rebuild() {
 
 #[cargo_test]
 fn clippy_passes_args() {
-    if !clippy_is_available() {
+    if !command_is_available("clippy-driver") {
         return;
     }
 
