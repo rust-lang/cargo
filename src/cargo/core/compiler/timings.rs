@@ -293,7 +293,11 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
     }
 
     /// Call this when all units are finished.
-    pub fn finished(&mut self, bcx: &BuildContext<'_, '_>) -> CargoResult<()> {
+    pub fn finished(
+        &mut self,
+        bcx: &BuildContext<'_, '_>,
+        error: &Option<anyhow::Error>,
+    ) -> CargoResult<()> {
         if !self.enabled {
             return Ok(());
         }
@@ -301,13 +305,17 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(bcx)?;
+            self.report_html(bcx, error)?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(&self, bcx: &BuildContext<'_, '_>) -> CargoResult<()> {
+    fn report_html(
+        &self,
+        bcx: &BuildContext<'_, '_>,
+        error: &Option<anyhow::Error>,
+    ) -> CargoResult<()> {
         let duration = d_as_f64(self.start.elapsed());
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
@@ -318,7 +326,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, bcx)?;
+        self.write_summary_table(&mut f, duration, bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
@@ -359,6 +367,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         f: &mut impl Write,
         duration: f64,
         bcx: &BuildContext<'_, '_>,
+        error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         let targets: Vec<String> = self
             .root_targets
@@ -380,6 +389,17 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             .max()
             .unwrap();
         let rustc_info = render_rustc_info(bcx);
+        let error_msg = match error {
+            Some(e) => format!(
+                r#"\
+  <tr>
+    <td class="error-text">Error:</td><td>{}</td>
+  </tr>
+"#,
+                e
+            ),
+            None => "".to_string(),
+        };
         write!(
             f,
             r#"
@@ -414,7 +434,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
   <tr>
     <td>Max (global) rustc threads concurrency:</td><td>{}</td>
   </tr>
-
+{}
 </table>
 "#,
             targets,
@@ -429,6 +449,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             total_time,
             rustc_info,
             max_rustc_concurrency,
+            error_msg,
         )?;
         Ok(())
     }
@@ -696,6 +717,10 @@ h1 {
 
 .input-table td {
   text-align: center;
+}
+
+.error-text {
+  color: #e80000;
 }
 
 </style>

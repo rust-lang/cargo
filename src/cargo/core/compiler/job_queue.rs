@@ -676,6 +676,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         }
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
+        self.timings.finished(cx.bcx, &error)?;
 
         if let Some(e) = error {
             Err(e)
@@ -687,7 +688,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             if !cx.bcx.build_config.build_plan {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
-            self.timings.finished(cx.bcx)?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
