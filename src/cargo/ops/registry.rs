@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
 use std::fs::{self, File};
-use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
 use std::time::Duration;
@@ -11,6 +10,7 @@ use crates_io::{NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use rpassword::read_password;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -597,11 +597,7 @@ pub fn registry_login(
                 "please visit {}/me and paste the API Token below",
                 registry.host()
             );
-            let mut line = String::new();
-            let input = io::stdin();
-            input
-                .lock()
-                .read_line(&mut line)
+            let line = read_password()
                 .chain_err(|| "failed to read stdin")
                 .map_err(anyhow::Error::from)?;
             // Automatically remove `cargo login` from an inputted token to allow direct pastes from `registry.host()`/me.
