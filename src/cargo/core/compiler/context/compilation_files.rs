@@ -572,7 +572,13 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    bcx.rustc.verbose_version.hash(&mut hasher);
+    // Throw in the verbose rustc version output. Cross-compiling the same target from different
+    // hosts should still produce the same output, so filter out the host triple.
+    for line in bcx.rustc.verbose_version.lines() {
+        if !line.starts_with("host:") {
+            line.hash(&mut hasher);
+        }
+    }
 
     if cx.is_primary_package(unit) {
         // This is primarily here for clippy. This ensures that the clippy
