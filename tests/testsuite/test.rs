@@ -4029,9 +4029,9 @@ fn bin_env_for_test() {
         &r#"
             #[test]
             fn run_bins() {
-                assert_eq!(env!("CARGO_BIN_EXE_FOO"), "<FOO_PATH>");
-                assert_eq!(env!("CARGO_BIN_EXE_WITH_DASH"), "<WITH_DASH_PATH>");
-                assert_eq!(env!("CARGO_BIN_EXE_GRÜSSEN"), "<GRÜSSEN_PATH>");
+                assert_eq!(env!("CARGO_BIN_EXE_foo"), "<FOO_PATH>");
+                assert_eq!(env!("CARGO_BIN_EXE_with-dash"), "<WITH_DASH_PATH>");
+                assert_eq!(env!("CARGO_BIN_EXE_grüßen"), "<GRÜSSEN_PATH>");
             }
         "#
         .replace("<FOO_PATH>", &bin_path("foo"))

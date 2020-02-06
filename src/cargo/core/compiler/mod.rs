@@ -889,7 +889,7 @@ fn build_base_args<'a, 'cfg>(
             let exe_path = cx
                 .files()
                 .bin_link_for_target(bin_target, unit.kind, cx.bcx)?;
-            let key = format!("CARGO_BIN_EXE_{}", bin_target.crate_name().to_uppercase());
+            let key = format!("CARGO_BIN_EXE_{}", bin_target.name());
             cmd.env(&key, exe_path);
         }
     }
