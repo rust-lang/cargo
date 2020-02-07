@@ -288,13 +288,16 @@ pub fn prepare_target<'a, 'cfg>(
         // using the `build_script_local_fingerprints` function which returns a
         // thunk we can invoke on a foreign thread to calculate this.
         let build_script_outputs = Arc::clone(&cx.build_script_outputs);
-        let key = (unit.pkg.package_id(), unit.kind);
+        let pkg_id = unit.pkg.package_id();
+        let metadata = cx.get_run_build_script_metadata(unit);
         let (gen_local, _overridden) = build_script_local_fingerprints(cx, unit);
         let output_path = cx.build_explicit_deps[unit].build_script_output.clone();
         Work::new(move |_| {
             let outputs = build_script_outputs.lock().unwrap();
-            let outputs = &outputs[&key];
-            let deps = BuildDeps::new(&output_path, Some(outputs));
+            let output = outputs
+                .get(pkg_id, metadata)
+                .expect("output must exist after running");
+            let deps = BuildDeps::new(&output_path, Some(output));
 
             // FIXME: it's basically buggy that we pass `None` to `call_box`
             // here. See documentation on `build_script_local_fingerprints`
@@ -1135,6 +1138,7 @@ fn calculate_run_custom_build<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
 ) -> CargoResult<Fingerprint> {
+    assert!(unit.mode.is_run_custom_build());
     // Using the `BuildDeps` information we'll have previously parsed and
     // inserted into `build_explicit_deps` built an initial snapshot of the
     // `LocalFingerprint` list for this build script. If we previously executed
@@ -1221,6 +1225,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     >,
     bool,
 ) {
+    assert!(unit.mode.is_run_custom_build());
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(cx, unit) {
@@ -1286,8 +1291,9 @@ fn build_script_override_fingerprint<'a, 'cfg>(
     // Build script output is only populated at this stage when it is
     // overridden.
     let build_script_outputs = cx.build_script_outputs.lock().unwrap();
+    let metadata = cx.get_run_build_script_metadata(unit);
     // Returns None if it is not overridden.
-    let output = build_script_outputs.get(&(unit.pkg.package_id(), unit.kind))?;
+    let output = build_script_outputs.get(unit.pkg.package_id(), metadata)?;
     let s = format!(
         "overridden build state with hash: {}",
         util::hash_u64(output)

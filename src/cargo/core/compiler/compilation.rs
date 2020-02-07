@@ -11,6 +11,7 @@ use crate::core::compiler::CompileKind;
 use crate::core::{Edition, Package, PackageId, Target};
 use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
 
+/// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
     /// The package being doc-tested.
     pub package: Package,
