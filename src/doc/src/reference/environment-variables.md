@@ -195,7 +195,7 @@ let version = env!("CARGO_PKG_VERSION");
   Binaries are automatically built when the test is built, unless the binary
   has required features that are not enabled.
 
-[integration test]: manifest.md#integration-tests
+[integration test]: cargo-targets.md#integration-tests
 [`env` macro]: ../../std/macro.env.html
 
 #### Dynamic library paths

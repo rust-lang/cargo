@@ -123,6 +123,15 @@ modules. The libtest harness will automatically find all of the `#[test]`
 annotated functions and run them in parallel. You can pass module names to
 [`cargo test`] to only run the tests within that module.
 
+Binary targets are automatically built if there is an integration test. This
+allows an integration test to execute the binary to exercise and test its
+behavior. The `CARGO_BIN_EXE_<name>` [environment variable] is set when the
+integration test is built so that it can use the [`env` macro] to locate the
+executable.
+
+[environment variable]: environment-variables.md#environment-variables-cargo-sets-for-crates
+[`env` macro]: ../../std/macro.env.html
+
 ### Benchmarks
 
 Benchmarks provide a way to test the performance of your code using the
