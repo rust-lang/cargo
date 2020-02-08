@@ -1,17 +1,6 @@
 steps:
   - bash: |
       set -e
-      if command -v rustup; then
-        echo `command -v rustup` `rustup -V` already installed
-        rustup self update
-      else
-        curl -sSL https://sh.rustup.rs | sh -s -- -y --default-toolchain="$TOOLCHAIN" --profile=minimal
-        echo "##vso[task.prependpath]$HOME/.cargo/bin"
-      fi
-    displayName: Install rustup
-
-  - bash: |
-      set -e
       rustup set profile minimal
       rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
       rustup update --no-self-update $TOOLCHAIN

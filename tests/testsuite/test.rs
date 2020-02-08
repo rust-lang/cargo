@@ -3664,6 +3664,8 @@ fn cargo_test_doctest_xcompile_ignores() {
         // -Zdoctest-xcompile is unstable
         return;
     }
+    // -Zdoctest-xcompile also enables --enable-per-target-ignores which
+    // allows the ignore-TARGET syntax.
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
@@ -3713,7 +3715,7 @@ fn cargo_test_doctest_xcompile_ignores() {
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile() {
-    if cross_compile::disabled() {
+    if !cross_compile::can_run_on_host() {
         return;
     }
     if !is_nightly() {
@@ -3753,7 +3755,7 @@ fn cargo_test_doctest_xcompile() {
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile_runner() {
-    if cross_compile::disabled() {
+    if !cross_compile::can_run_on_host() {
         return;
     }
     if !is_nightly() {
@@ -3789,9 +3791,10 @@ fn cargo_test_doctest_xcompile_runner() {
         config,
         format!(
             r#"
-[target.'cfg(target_arch = "x86")']
+[target.'cfg(target_arch = "{}")']
 runner = "{}"
 "#,
+            cross_compile::alternate_arch(),
             runner_str
         ),
     )
@@ -3801,14 +3804,17 @@ runner = "{}"
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
             "src/lib.rs",
-            r#"
-            ///```
-            ///assert!(cfg!(target_arch = "x86"));
-            ///```
-            pub fn foo() -> u8 {
-                4
-            }
-            "#,
+            &format!(
+                r#"
+                ///```
+                ///assert!(cfg!(target_arch = "{}"));
+                ///```
+                pub fn foo() -> u8 {{
+                    4
+                }}
+                "#,
+                cross_compile::alternate_arch()
+            ),
         )
         .build();
 
@@ -3830,7 +3836,7 @@ runner = "{}"
 
 #[cargo_test]
 fn cargo_test_doctest_xcompile_no_runner() {
-    if cross_compile::disabled() {
+    if !cross_compile::can_run_on_host() {
         return;
     }
     if !is_nightly() {
@@ -3842,15 +3848,17 @@ fn cargo_test_doctest_xcompile_no_runner() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
             "src/lib.rs",
-            r#"
-
-            ///```
-            ///assert!(cfg!(target_arch = "x86"));
-            ///```
-            pub fn foo() -> u8 {
-                4
-            }
-            "#,
+            &format!(
+                r#"
+                ///```
+                ///assert!(cfg!(target_arch = "{}"));
+                ///```
+                pub fn foo() -> u8 {{
+                    4
+                }}
+                "#,
+                cross_compile::alternate_arch()
+            ),
         )
         .build();
 
