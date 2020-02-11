@@ -2,7 +2,7 @@ use crate::util::{process_error, read2, CargoResult, CargoResultExt};
 use anyhow::bail;
 use jobserver::Client;
 use shell_escape::escape;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -17,7 +17,7 @@ pub struct ProcessBuilder {
     /// A list of arguments to pass to the program.
     args: Vec<OsString>,
     /// Any environment variables that should be set for the program.
-    env: HashMap<String, Option<OsString>>,
+    env: BTreeMap<String, Option<OsString>>,
     /// The directory to run the program from.
     cwd: Option<OsString>,
     /// The `make` jobserver. See the [jobserver crate][jobserver_docs] for
@@ -128,7 +128,7 @@ impl ProcessBuilder {
 
     /// Gets all environment variables explicitly set or unset for the process (not inherited
     /// vars).
-    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
+    pub fn get_envs(&self) -> &BTreeMap<String, Option<OsString>> {
         &self.env
     }
 
@@ -334,7 +334,7 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         program: cmd.as_ref().to_os_string(),
         args: Vec::new(),
         cwd: None,
-        env: HashMap::new(),
+        env: BTreeMap::new(),
         jobserver: None,
         display_env_vars: false,
     }
