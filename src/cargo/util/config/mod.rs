@@ -117,12 +117,131 @@ macro_rules! get_value_typed {
     };
 }
 
+/// The purpose of this function is to aid in the transition to using
+/// .toml extensions on Cargo's config files, which were historically not used.
+/// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
+/// When both exist, we want to prefer the one without an extension for
+/// backwards compatibility, but warn the user appropriately.
+fn get_file_path(
+    dir: &Path,
+    filename_without_extension: &str,
+    warn: bool,
+    shell: &RefCell<Shell>,
+) -> CargoResult<Option<PathBuf>> {
+    let possible = dir.join(filename_without_extension);
+    let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+
+    if possible.exists() {
+        if warn && possible_with_extension.exists() {
+            // We don't want to print a warning if the version
+            // without the extension is just a symlink to the version
+            // WITH an extension, which people may want to do to
+            // support multiple Cargo versions at once and not
+            // get a warning.
+            let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
+                target_path == possible_with_extension
+            } else {
+                false
+            };
+
+            if !skip_warning {
+                shell.borrow_mut().warn(format!(
+                    "Both `{}` and `{}` exist. Using `{}`",
+                    possible.display(),
+                    possible_with_extension.display(),
+                    possible.display()
+                ))?;
+            }
+        }
+
+        Ok(Some(possible))
+    } else if possible_with_extension.exists() {
+        Ok(Some(possible_with_extension))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Select how config files are found
+#[derive(Debug)]
+pub enum ConfigResolver {
+    /// Default heirarchical algorithm: walk up from current dir towards root, and
+    /// also fall back to home directory.
+    Heirarchical { cwd: PathBuf, home: Option<PathBuf> },
+    /// Search a list of paths in the specified order
+    ConfigPath { path: Vec<PathBuf> },
+}
+
+impl ConfigResolver {
+    fn from_env(cwd: &Path, home: Option<&Path>, env: &HashMap<String, String>) -> Self {
+        if let Some(path) = env.get("CARGO_CONFIG_PATH") {
+            Self::with_path(&path)
+        } else {
+            ConfigResolver::Heirarchical {
+                cwd: cwd.to_path_buf(),
+                home: home.map(Path::to_path_buf),
+            }
+        }
+    }
+
+    fn with_path(path: &str) -> Self {
+        ConfigResolver::ConfigPath {
+            path: path.split(':').map(PathBuf::from).collect(),
+        }
+    }
+
+    fn resolve<F>(&self, shell: &RefCell<Shell>, mut walk: F) -> CargoResult<()>
+    where
+        F: FnMut(&Path) -> CargoResult<()>,
+    {
+        let mut stash: HashSet<PathBuf> = HashSet::new();
+
+        match self {
+            ConfigResolver::Heirarchical { cwd, home } => {
+                for current in paths::ancestors(cwd) {
+                    if let Some(path) =
+                        get_file_path(&current.join(".cargo"), "config", true, shell)?
+                    {
+                        walk(&path)?;
+                        stash.insert(path);
+                    }
+                }
+
+                // Once we're done, also be sure to walk the home directory even if it's not
+                // in our history to be sure we pick up that standard location for
+                // information.
+                if let Some(home) = home {
+                    if let Some(path) = get_file_path(home, "config", true, shell)? {
+                        if !stash.contains(&path) {
+                            walk(&path)?;
+                        }
+                    }
+                }
+            }
+
+            ConfigResolver::ConfigPath { path } => {
+                for dir in path {
+                    if let Some(path) = get_file_path(&dir.join(".cargo"), "config", true, shell)? {
+                        if !stash.contains(dir) {
+                            walk(&path)?;
+                            stash.insert(path);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
 pub struct Config {
     /// The location of the user's 'home' directory. OS-dependent.
     home_path: Filesystem,
+    /// How to resolve paths of configuration files
+    resolver: ConfigResolver,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
     /// A collection of configuration options
@@ -210,6 +329,7 @@ impl Config {
         };
 
         Config {
+            resolver: ConfigResolver::from_env(&cwd, Some(&homedir), &env),
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             cwd,
@@ -418,10 +538,14 @@ impl Config {
         }
     }
 
-    /// Reloads on-disk configuration values, starting at the given path and
-    /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let values = self.load_values_from(path.as_ref())?;
+        let path = path.as_ref();
+        // We treat the path as advisory if the user has overridden the config search path
+        let values = self.load_values_from(&ConfigResolver::from_env(
+            path,
+            homedir(path).as_ref().map(PathBuf::as_path),
+            &self.env,
+        ))?;
         self.values.replace(values);
         self.merge_cli_args()?;
         Ok(())
@@ -774,22 +898,26 @@ impl Config {
 
     /// Loads configuration from the filesystem.
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
-        self.load_values_from(&self.cwd)
+        self.load_values_from(&self.resolver)
     }
 
-    fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
+    fn load_values_from(
+        &self,
+        resolver: &ConfigResolver,
+    ) -> CargoResult<HashMap<String, ConfigValue>> {
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
         let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
-        let home = self.home_path.clone().into_path_unlocked();
 
-        self.walk_tree(path, &home, |path| {
-            let value = self.load_file(path)?;
-            cfg.merge(value, false)
-                .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
-            Ok(())
-        })
-        .chain_err(|| "could not load Cargo configuration")?;
+        resolver
+            .resolve(&self.shell, |path| {
+                let value = self.load_file(path)?;
+                cfg.merge(value, false).chain_err(|| {
+                    format!("failed to merge configuration at `{}`", path.display())
+                })?;
+                Ok(())
+            })
+            .chain_err(|| "could not load Cargo configuration")?;
 
         match cfg {
             CV::Table(map, _) => Ok(map),
@@ -935,76 +1063,6 @@ impl Config {
         Ok(())
     }
 
-    /// The purpose of this function is to aid in the transition to using
-    /// .toml extensions on Cargo's config files, which were historically not used.
-    /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
-    /// When both exist, we want to prefer the one without an extension for
-    /// backwards compatibility, but warn the user appropriately.
-    fn get_file_path(
-        &self,
-        dir: &Path,
-        filename_without_extension: &str,
-        warn: bool,
-    ) -> CargoResult<Option<PathBuf>> {
-        let possible = dir.join(filename_without_extension);
-        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
-
-        if possible.exists() {
-            if warn && possible_with_extension.exists() {
-                // We don't want to print a warning if the version
-                // without the extension is just a symlink to the version
-                // WITH an extension, which people may want to do to
-                // support multiple Cargo versions at once and not
-                // get a warning.
-                let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
-                    target_path == possible_with_extension
-                } else {
-                    false
-                };
-
-                if !skip_warning {
-                    self.shell().warn(format!(
-                        "Both `{}` and `{}` exist. Using `{}`",
-                        possible.display(),
-                        possible_with_extension.display(),
-                        possible.display()
-                    ))?;
-                }
-            }
-
-            Ok(Some(possible))
-        } else if possible_with_extension.exists() {
-            Ok(Some(possible_with_extension))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
-    where
-        F: FnMut(&Path) -> CargoResult<()>,
-    {
-        let mut stash: HashSet<PathBuf> = HashSet::new();
-
-        for current in paths::ancestors(pwd) {
-            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
-                walk(&path)?;
-                stash.insert(path);
-            }
-        }
-
-        // Once we're done, also be sure to walk the home directory even if it's not
-        // in our history to be sure we pick up that standard location for
-        // information.
-        if let Some(path) = self.get_file_path(home, "config", true)? {
-            if !stash.contains(&path) {
-                walk(&path)?;
-            }
-        }
-
-        Ok(())
-    }
-
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
@@ -1044,7 +1102,7 @@ impl Config {
     /// Loads credentials config from the credentials file, if present.
     pub fn load_credentials(&mut self) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
-        let credentials = match self.get_file_path(&home_path, "credentials", true)? {
+        let credentials = match get_file_path(&home_path, "credentials", true, &self.shell)? {
             Some(credentials) => credentials,
             None => return Ok(()),
         };
@@ -1560,7 +1618,7 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
     // use the legacy 'credentials'. There's no need to print the warning
     // here, because it would already be printed at load time.
     let home_path = cfg.home_path.clone().into_path_unlocked();
-    let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
+    let filename = match get_file_path(&home_path, "credentials", false, &cfg.shell)? {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
             None => Path::new("credentials").to_owned(),

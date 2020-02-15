@@ -1258,3 +1258,53 @@ fn string_list_advanced_env() {
         "error in environment variable `CARGO_KEY3`: expected string, found integer",
     );
 }
+
+#[cargo_test]
+fn config_path() {
+    let somedir = paths::root().join("somedir");
+    fs::create_dir_all(somedir.join(".cargo")).unwrap();
+    fs::write(
+        somedir.join(".cargo").join("config"),
+        "
+        b = 'replacedfile'
+        c = 'newfile'
+        ",
+    )
+    .unwrap();
+
+    let otherdir = paths::root().join("otherdir");
+    fs::create_dir_all(otherdir.join(".cargo")).unwrap();
+    fs::write(
+        otherdir.join(".cargo").join("config"),
+        "
+        a = 'file1'
+        b = 'file2'
+        ",
+    )
+    .unwrap();
+
+    let cwd = paths::root().join("cwd");
+    fs::create_dir_all(cwd.join(".cargo")).unwrap();
+    fs::write(
+        cwd.join(".cargo").join("config"),
+        "
+        a = 'BAD1'
+        b = 'BAD2'
+        c = 'BAD3'
+        ",
+    )
+    .unwrap();
+
+    let mut config = ConfigBuilder::new()
+        .cwd(&cwd)
+        .env(
+            "CARGO_CONFIG_PATH",
+            format!("{}:{}", somedir.display(), otherdir.display()),
+        )
+        .build();
+    config.reload_rooted_at(paths::root()).unwrap();
+
+    assert_eq!(config.get::<String>("a").unwrap(), "file1");
+    assert_eq!(config.get::<String>("b").unwrap(), "replacedfile");
+    assert_eq!(config.get::<String>("c").unwrap(), "newfile");
+}
