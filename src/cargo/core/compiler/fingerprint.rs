@@ -653,7 +653,11 @@ impl Fingerprint {
             bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            bail!("RUSTFLAGS has changed")
+            bail!(
+                "RUSTFLAGS has changed: {:?} != {:?}",
+                self.rustflags,
+                old.rustflags
+            )
         }
         if self.metadata != old.metadata {
             bail!("metadata changed")
