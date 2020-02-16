@@ -279,6 +279,25 @@ fn custom_runner_env() {
 }
 
 #[cargo_test]
+#[cfg(unix)] // Assumes `true` is in PATH.
+fn custom_runner_env_true() {
+    // Check for a bug where "true" was interpreted as a boolean instead of
+    // the executable.
+    let target = rustc_host();
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let key = format!(
+        "CARGO_TARGET_{}_RUNNER",
+        target.to_uppercase().replace('-', "_")
+    );
+
+    p.cargo("run")
+        .env(&key, "true")
+        .with_stderr_contains("[RUNNING] `true target/debug/foo[EXE]`")
+        .run();
+}
+
+#[cargo_test]
 fn custom_linker_env() {
     let target = rustc_host();
     let p = project().file("src/main.rs", "fn main() {}").build();

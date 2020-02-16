@@ -573,6 +573,70 @@ impl Config {
         }
     }
 
+    /// Helper for StringList type to get something that is a string or list.
+    fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
+        let mut res = Vec::new();
+        match self.get_cv(&key)? {
+            Some(CV::List(val, _def)) => res.extend(val),
+            Some(CV::String(val, def)) => {
+                let split_vs = val.split_whitespace().map(|s| (s.to_string(), def.clone()));
+                res.extend(split_vs);
+            }
+            Some(val) => {
+                return self.expected("string or array of strings", key, &val);
+            }
+            None => {}
+        }
+
+        self.get_env_list(key, &mut res)?;
+        Ok(res)
+    }
+
+    /// Internal method for getting an environment variable as a list.
+    fn get_env_list(
+        &self,
+        key: &ConfigKey,
+        output: &mut Vec<(String, Definition)>,
+    ) -> CargoResult<()> {
+        let env_val = match self.env.get(key.as_env_key()) {
+            Some(v) => v,
+            None => return Ok(()),
+        };
+
+        let def = Definition::Environment(key.as_env_key().to_string());
+        if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
+            // Parse an environment string as a TOML array.
+            let toml_s = format!("value={}", env_val);
+            let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
+                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+            })?;
+            let values = toml_v
+                .as_table()
+                .unwrap()
+                .get("value")
+                .unwrap()
+                .as_array()
+                .expect("env var was not array");
+            for value in values {
+                // TODO: support other types.
+                let s = value.as_str().ok_or_else(|| {
+                    ConfigError::new(
+                        format!("expected string, found {}", value.type_str()),
+                        def.clone(),
+                    )
+                })?;
+                output.push((s.to_string(), def.clone()));
+            }
+        } else {
+            output.extend(
+                env_val
+                    .split_whitespace()
+                    .map(|s| (s.to_string(), def.clone())),
+            );
+        }
+        Ok(())
+    }
+
     /// Low-level method for getting a config value as a `OptValue<HashMap<String, CV>>`.
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
@@ -1650,43 +1714,11 @@ pub struct CargoBuildConfig {
 /// a = 'a b c'
 /// b = ['a', 'b', 'c']
 /// ```
-#[derive(Debug)]
-pub struct StringList {
-    list: Vec<String>,
-}
+#[derive(Debug, Deserialize)]
+pub struct StringList(Vec<String>);
 
 impl StringList {
     pub fn as_slice(&self) -> &[String] {
-        &self.list
-    }
-}
-
-impl<'de> serde::de::Deserialize<'de> for StringList {
-    fn deserialize<D: serde::de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Target {
-            String(String),
-            List(Vec<String>),
-        }
-
-        // Add some context to the error. Serde gives a vague message for
-        // untagged enums. See https://github.com/serde-rs/serde/issues/773
-        let result = match Target::deserialize(d) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(serde::de::Error::custom(format!(
-                    "failed to deserialize, expected a string or array of strings: {}",
-                    e
-                )))
-            }
-        };
-
-        Ok(match result {
-            Target::String(s) => StringList {
-                list: s.split_whitespace().map(str::to_string).collect(),
-            },
-            Target::List(list) => StringList { list },
-        })
+        &self.0
     }
 }

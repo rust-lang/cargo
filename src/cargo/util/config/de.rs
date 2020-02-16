@@ -176,11 +176,28 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         visitor.visit_seq(ConfigSeqAccess::new(self)?)
     }
 
+    fn deserialize_newtype_struct<V>(
+        self,
+        name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        if name == "StringList" {
+            let vals = self.config.get_list_or_string(&self.key)?;
+            let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
+            visitor.visit_newtype_struct(vals.into_deserializer())
+        } else {
+            visitor.visit_newtype_struct(self)
+        }
+    }
+
     // These aren't really supported, yet.
     serde::forward_to_deserialize_any! {
         f32 f64 char str bytes
         byte_buf unit unit_struct
-        enum identifier ignored_any newtype_struct
+        enum identifier ignored_any
     }
 }
 
@@ -345,36 +362,7 @@ impl ConfigSeqAccess {
             res.extend(v.val);
         }
 
-        // Check environment.
-        if let Some(v) = de.config.env.get(de.key.as_env_key()) {
-            let def = Definition::Environment(de.key.as_env_key().to_string());
-            if de.config.cli_unstable().advanced_env && v.starts_with('[') && v.ends_with(']') {
-                // Parse an environment string as a TOML array.
-                let toml_s = format!("value={}", v);
-                let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
-                    ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
-                })?;
-                let values = toml_v
-                    .as_table()
-                    .unwrap()
-                    .get("value")
-                    .unwrap()
-                    .as_array()
-                    .expect("env var was not array");
-                for value in values {
-                    // TODO: support other types.
-                    let s = value.as_str().ok_or_else(|| {
-                        ConfigError::new(
-                            format!("expected string, found {}", value.type_str()),
-                            def.clone(),
-                        )
-                    })?;
-                    res.push((s.to_string(), def.clone()));
-                }
-            } else {
-                res.extend(v.split_whitespace().map(|s| (s.to_string(), def.clone())));
-            }
-        }
+        de.config.get_env_list(&de.key, &mut res)?;
 
         Ok(ConfigSeqAccess {
             list_iter: res.into_iter(),

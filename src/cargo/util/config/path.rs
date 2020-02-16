@@ -56,7 +56,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
         D: serde::Deserializer<'de>,
     {
         let vsl = Value::<StringList>::deserialize(deserializer)?;
-        let mut strings = vsl.val.list;
+        let mut strings = vsl.val.0;
         if strings.is_empty() {
             return Err(D::Error::invalid_length(0, &"at least one element"));
         }
