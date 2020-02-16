@@ -354,7 +354,7 @@ struct DepFingerprint {
 ///
 /// Note that dependencies are taken into account for fingerprints because rustc
 /// requires that whenever an upstream crate is recompiled that all downstream
-/// dependants are also recompiled. This is typically tracked through
+/// dependents are also recompiled. This is typically tracked through
 /// `DependencyQueue`, but it also needs to be retained here because Cargo can
 /// be interrupted while executing, losing the state of the `DependencyQueue`
 /// graph.
@@ -504,7 +504,7 @@ enum LocalFingerprint {
     CheckDepInfo { dep_info: PathBuf },
 
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
-    /// out by a build script. The `output` file is a arelative file anchored at
+    /// out by a build script. The `output` file is a relative file anchored at
     /// `target_root(...)` which is the actual output of the build script. That
     /// output has already been parsed and the paths printed out via
     /// `rerun-if-changed` are listed in `paths`. The `paths` field is relative
@@ -799,7 +799,8 @@ impl Fingerprint {
             assert!(mtimes.insert(output.clone(), mtime).is_none());
         }
 
-        let max_mtime = match mtimes.values().max() {
+        let opt_max = mtimes.iter().max_by_key(|kv| kv.1);
+        let (max_path, max_mtime) = match opt_max {
             Some(mtime) => mtime,
 
             // We had no output files. This means we're an overridden build
@@ -810,6 +811,10 @@ impl Fingerprint {
                 return Ok(());
             }
         };
+        debug!(
+            "max output mtime for {:?} is {:?} {}",
+            pkg_root, max_path, max_mtime
+        );
 
         for dep in self.deps.iter() {
             let dep_mtimes = match &dep.fingerprint.fs_status {
@@ -850,7 +855,10 @@ impl Fingerprint {
             // for a discussion of why it's `>` see the discussion about #5918
             // below in `find_stale`.
             if dep_mtime > max_mtime {
-                log::info!("dependency on `{}` is newer than we are", dep.name);
+                info!(
+                    "dependency on `{}` is newer than we are {} > {} {:?}",
+                    dep.pkg_id, dep_mtime, max_mtime, pkg_root
+                );
                 return Ok(());
             }
         }
@@ -868,6 +876,7 @@ impl Fingerprint {
 
         // Everything was up to date! Record such.
         self.fs_status = FsStatus::UpToDate { mtimes };
+        debug!("filesystem up-to-date {:?}", pkg_root);
 
         Ok(())
     }
@@ -984,7 +993,7 @@ impl StaleFile {
     fn log(&self) {
         match self {
             StaleFile::Missing(path) => {
-                log::info!("stale: missing {:?}", path);
+                info!("stale: missing {:?}", path);
             }
             StaleFile::Changed {
                 reference,
@@ -992,9 +1001,9 @@ impl StaleFile {
                 stale,
                 stale_mtime,
             } => {
-                log::info!("stale: changed {:?}", stale);
-                log::info!("          (vs) {:?}", reference);
-                log::info!("               {:?} != {:?}", reference_mtime, stale_mtime);
+                info!("stale: changed {:?}", stale);
+                info!("          (vs) {:?}", reference);
+                info!("               {:?} != {:?}", reference_mtime, stale_mtime);
             }
         }
     }
@@ -1229,7 +1238,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(cx, unit) {
-        debug!("override local fingerprints deps");
+        debug!("override local fingerprints deps {}", unit.pkg);
         return (
             Box::new(
                 move |_: &BuildDeps, _: Option<&dyn Fn() -> CargoResult<String>>| {
@@ -1264,8 +1273,11 @@ fn build_script_local_fingerprints<'a, 'cfg>(
                     // (like for a path dependency). Those list of files would
                     // be stored here rather than the the mtime of them.
                     Some(f) => {
-                        debug!("old local fingerprints deps");
                         let s = f()?;
+                        debug!(
+                            "old local fingerprints deps {:?} precalculated={:?}",
+                            pkg_root, s
+                        );
                         return Ok(Some(vec![LocalFingerprint::Precalculated(s)]));
                     }
                     None => return Ok(None),
@@ -1309,7 +1321,7 @@ fn local_fingerprints_deps(
     target_root: &Path,
     pkg_root: &Path,
 ) -> Vec<LocalFingerprint> {
-    debug!("new local fingerprints deps");
+    debug!("new local fingerprints deps {:?}", pkg_root);
     let mut local = Vec::new();
 
     if !deps.rerun_if_changed.is_empty() {
@@ -1520,6 +1532,10 @@ where
         });
     }
 
+    debug!(
+        "all paths up-to-date relative to {:?} mtime={}",
+        reference, reference_mtime
+    );
     None
 }
 
