@@ -367,12 +367,12 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 ///
 /// then if this was not found
 ///
-///  - `target.*.rustflags` from the manifest (Cargo.toml)
-///  - `target.cfg(..).rustflags` from the manifest
+///  - `target.*.rustflags` from the config (.cargo/config)
+///  - `target.cfg(..).rustflags` from the config
 ///
 /// then if neither of these were found
 ///
-///  - `build.rustflags` from the manifest
+///  - `build.rustflags` from the config
 ///
 /// Note that if a `target` is specified, no args will be passed to host code (plugins, build
 /// scripts, ...), even if it is the same as the target.
