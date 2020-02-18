@@ -864,20 +864,35 @@ impl Config {
         };
         let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli);
         for arg in cli_args {
-            // TODO: This should probably use a more narrow parser, reject
-            // comments, blank lines, [headers], etc.
-            let toml_v: toml::Value = toml::de::from_str(arg)
-                .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
-            let toml_table = toml_v.as_table().unwrap();
-            if toml_table.len() != 1 {
-                bail!(
-                    "--config argument `{}` expected exactly one key=value pair, got {} keys",
-                    arg,
-                    toml_table.len()
-                );
-            }
-            let tmp_table = CV::from_toml(Definition::Cli, toml_v)
-                .chain_err(|| format!("failed to convert --config argument `{}`", arg))?;
+            let arg_as_path = self.cwd.join(arg);
+            let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
+                // --config path_to_file
+                let str_path = arg_as_path
+                    .to_str()
+                    .ok_or_else(|| {
+                        anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
+                    })?
+                    .to_string();
+                let mut map = HashMap::new();
+                let value = CV::String(str_path, Definition::Cli);
+                map.insert("include".to_string(), value);
+                CV::Table(map, Definition::Cli)
+            } else {
+                // TODO: This should probably use a more narrow parser, reject
+                // comments, blank lines, [headers], etc.
+                let toml_v: toml::Value = toml::de::from_str(arg)
+                    .chain_err(|| format!("failed to parse --config argument `{}`", arg))?;
+                let toml_table = toml_v.as_table().unwrap();
+                if toml_table.len() != 1 {
+                    bail!(
+                        "--config argument `{}` expected exactly one key=value pair, got {} keys",
+                        arg,
+                        toml_table.len()
+                    );
+                }
+                CV::from_toml(Definition::Cli, toml_v)
+                    .chain_err(|| format!("failed to convert --config argument `{}`", arg))?
+            };
             let mut seen = HashSet::new();
             let tmp_table = self
                 .load_includes(tmp_table, &mut seen)

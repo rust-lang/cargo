@@ -3,7 +3,8 @@
 use super::config::{
     assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
 };
-use cargo_test_support::NO_SUCH_FILE_ERR_MSG;
+use cargo_test_support::{paths, NO_SUCH_FILE_ERR_MSG};
+use std::fs;
 
 #[cargo_test]
 fn gated() {
@@ -206,5 +207,30 @@ failed to merge --config key `foo` into `[..]/.cargo/config`
 Caused by:
   failed to merge config value from `[..]/.cargo/other` into `[..]/.cargo/config`: \
   expected array, but found string",
+    );
+}
+
+#[cargo_test]
+fn cli_path() {
+    // --config path_to_file
+    fs::write(paths::root().join("myconfig.toml"), "key = 123").unwrap();
+    let config = ConfigBuilder::new()
+        .cwd(paths::root())
+        .unstable_flag("config-include")
+        .config_arg("myconfig.toml")
+        .build();
+    assert_eq!(config.get::<u32>("key").unwrap(), 123);
+
+    let config = ConfigBuilder::new()
+        .unstable_flag("config-include")
+        .config_arg("missing.toml")
+        .build_err();
+    assert_error(
+        config.unwrap_err(),
+        "\
+failed to parse --config argument `missing.toml`
+
+Caused by:
+  expected an equals, found eof at line 1 column 13",
     );
 }
