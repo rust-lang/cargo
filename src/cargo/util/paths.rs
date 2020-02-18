@@ -8,26 +8,21 @@ use std::path::{Component, Path, PathBuf};
 
 use filetime::FileTime;
 
-use crate::util::errors::{CargoResult, CargoResultExt, Internal};
+use crate::util::errors::{CargoResult, CargoResultExt};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
-    let err = match env::join_paths(paths.iter()) {
-        Ok(paths) => return Ok(paths),
-        Err(e) => e,
-    };
-    let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-    let err = anyhow::Error::from(err);
-    let explain = Internal::new(anyhow::format_err!(
-        "failed to join path array: {:?}",
-        paths
-    ));
-    let err = anyhow::Error::from(err.context(explain));
-    let more_explain = format!(
-        "failed to join search paths together\n\
-         Does ${} have an unterminated quote character?",
-        env
-    );
-    Err(err.context(more_explain).into())
+    env::join_paths(paths.iter())
+        .chain_err(|| {
+            let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
+            format!("failed to join path array: {:?}", paths)
+        })
+        .chain_err(|| {
+            format!(
+                "failed to join search paths together\n\
+                     Does ${} have an unterminated quote character?",
+                env
+            )
+        })
 }
 
 pub fn dylib_path_envvar() -> &'static str {

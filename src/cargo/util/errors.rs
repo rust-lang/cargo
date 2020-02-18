@@ -49,33 +49,80 @@ impl fmt::Display for HttpNot200 {
 
 impl std::error::Error for HttpNot200 {}
 
-pub struct Internal {
+// =============================================================================
+// Verbose error
+
+/// An error wrapper for errors that should only be displayed with `--verbose`.
+///
+/// This should only be used in rare cases. When emitting this error, you
+/// should have a normal error higher up the error-cause chain (like "could
+/// not compile `foo`"), so at least *something* gets printed without
+/// `--verbose`.
+pub struct VerboseError {
     inner: Error,
 }
 
-impl Internal {
-    pub fn new(inner: Error) -> Internal {
-        Internal { inner }
+impl VerboseError {
+    pub fn new(inner: Error) -> VerboseError {
+        VerboseError { inner }
     }
 }
 
-impl std::error::Error for Internal {
+impl std::error::Error for VerboseError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         self.inner.source()
     }
 }
 
-impl fmt::Debug for Internal {
+impl fmt::Debug for VerboseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
 
-impl fmt::Display for Internal {
+impl fmt::Display for VerboseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
+
+// =============================================================================
+// Internal error
+
+/// An unexpected, internal error.
+///
+/// This should only be used for unexpected errors. It prints a message asking
+/// the user to file a bug report.
+pub struct InternalError {
+    inner: Error,
+}
+
+impl InternalError {
+    pub fn new(inner: Error) -> InternalError {
+        InternalError { inner }
+    }
+}
+
+impl std::error::Error for InternalError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source()
+    }
+}
+
+impl fmt::Debug for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl fmt::Display for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+// =============================================================================
+// Manifest error
 
 /// Error wrapper related to a particular manifest and providing it's path.
 ///
@@ -143,8 +190,15 @@ impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 // Process errors
 #[derive(Debug)]
 pub struct ProcessError {
+    /// A detailed description to show to the user why the process failed.
     pub desc: String,
+    /// The exit status of the process.
+    ///
+    /// This can be `None` if the process failed to launch (like process not found).
     pub exit: Option<ExitStatus>,
+    /// The output from the process.
+    ///
+    /// This can be `None` if the process failed to launch, or the output was not captured.
     pub output: Option<Output>,
 }
 
@@ -247,22 +301,27 @@ impl CargoTestError {
 pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
+/// The CLI error is the error type used at Cargo's CLI-layer.
+///
+/// All errors from the lib side of Cargo will get wrapped with this error.
+/// Other errors (such as command-line argument validation) will create this
+/// directly.
 pub struct CliError {
+    /// The error to display. This can be `None` in rare cases to exit with a
+    /// code without displaying a message. For example `cargo run -q` where
+    /// the resulting process exits with a nonzero code (on Windows), or an
+    /// external subcommand that exits nonzero (we assume it printed its own
+    /// message).
     pub error: Option<anyhow::Error>,
-    pub unknown: bool,
+    /// The process exit code.
     pub exit_code: i32,
 }
 
 impl CliError {
     pub fn new(error: anyhow::Error, code: i32) -> CliError {
-        // Specifically deref the error to a standard library error to only
-        // check the top-level error to see if it's an `Internal`, we don't want
-        // `anyhow::Error`'s behavior of recursively checking.
-        let unknown = (&*error).downcast_ref::<Internal>().is_some();
         CliError {
             error: Some(error),
             exit_code: code,
-            unknown,
         }
     }
 
@@ -270,7 +329,6 @@ impl CliError {
         CliError {
             error: None,
             exit_code: code,
-            unknown: false,
         }
     }
 }
@@ -291,6 +349,10 @@ impl From<clap::Error> for CliError {
 // =============================================================================
 // Construction helpers
 
+/// Creates a new process error.
+///
+/// `status` can be `None` if the process did not launch.
+/// `output` can be `None` if the process did not launch, or output was not captured.
 pub fn process_error(
     msg: &str,
     status: Option<ExitStatus>,
@@ -412,9 +474,5 @@ pub fn is_simple_exit_code(code: i32) -> bool {
 }
 
 pub fn internal<S: fmt::Display>(error: S) -> anyhow::Error {
-    _internal(&error)
-}
-
-fn _internal(error: &dyn fmt::Display) -> anyhow::Error {
-    Internal::new(anyhow::format_err!("{}", error)).into()
+    InternalError::new(anyhow::format_err!("{}", error)).into()
 }

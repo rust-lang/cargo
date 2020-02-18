@@ -44,7 +44,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::{Edition, Feature, InternedString, PackageId, Target};
-use crate::util::errors::{self, CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
 use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, paths, profile};
@@ -262,7 +262,7 @@ fn rustc<'a, 'cfg>(
             }
         }
 
-        fn internal_if_simple_exit_code(err: Error) -> Error {
+        fn verbose_if_simple_exit_code(err: Error) -> Error {
             // If a signal on unix (`code == None`) or an abnormal termination
             // on Windows (codes like `0xC0000409`), don't hide the error details.
             match err
@@ -270,7 +270,7 @@ fn rustc<'a, 'cfg>(
                 .as_ref()
                 .and_then(|perr| perr.exit.and_then(|e| e.code()))
             {
-                Some(n) if errors::is_simple_exit_code(n) => Internal::new(err).into(),
+                Some(n) if errors::is_simple_exit_code(n) => VerboseError::new(err).into(),
                 _ => err,
             }
         }
@@ -288,7 +288,7 @@ fn rustc<'a, 'cfg>(
                 &mut |line| on_stdout_line(state, line, package_id, &target),
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
-            .map_err(internal_if_simple_exit_code)
+            .map_err(verbose_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`.", name))?;
         }
 
@@ -302,8 +302,7 @@ fn rustc<'a, 'cfg>(
                     .replace(&real_name, &crate_name),
             );
             if src.exists() && src.file_name() != dst.file_name() {
-                fs::rename(&src, &dst)
-                    .chain_err(|| internal(format!("could not rename crate {:?}", src)))?;
+                fs::rename(&src, &dst).chain_err(|| format!("could not rename crate {:?}", src))?;
             }
         }
 

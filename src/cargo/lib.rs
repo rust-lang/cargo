@@ -37,7 +37,7 @@ use log::debug;
 use serde::ser;
 use std::fmt;
 
-pub use crate::util::errors::Internal;
+pub use crate::util::errors::{InternalError, VerboseError};
 pub use crate::util::{CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
@@ -106,64 +106,60 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         }
     }
 
-    let CliError {
-        error,
-        exit_code,
-        unknown,
-    } = err;
-    // `exit_code` of 0 means non-fatal error (e.g., docopt version info).
-    let fatal = exit_code != 0;
-
-    let hide = unknown && shell.verbosity() != Verbose;
-
+    let CliError { error, exit_code } = err;
     if let Some(error) = error {
-        if hide {
-            drop(shell.error("An unknown error occurred"))
-        } else if fatal {
-            drop(shell.error(&error))
-        } else {
-            println!("{}", error);
-        }
-
-        if !handle_cause(&error, shell) || hide {
-            drop(writeln!(
-                shell.err(),
-                "\nTo learn more, run the command again \
-                 with --verbose."
-            ));
-        }
+        display_error(&error, shell);
     }
 
     std::process::exit(exit_code)
 }
 
-pub fn handle_error(err: &Error, shell: &mut Shell) {
-    debug!("handle_error; err={:?}", err);
-
-    let _ignored_result = shell.error(err);
-    handle_cause(err, shell);
+/// Displays an error, and all its causes, to stderr.
+pub fn display_error(err: &Error, shell: &mut Shell) {
+    debug!("display_error; err={:?}", err);
+    let has_verbose = _display_error(err, shell);
+    if has_verbose {
+        drop(writeln!(
+            shell.err(),
+            "\nTo learn more, run the command again with --verbose."
+        ));
+    }
+    if err
+        .chain()
+        .any(|e| e.downcast_ref::<InternalError>().is_some())
+    {
+        drop(shell.note("this is an unexpected cargo internal error"));
+        drop(
+            shell.note(
+                "we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/",
+            ),
+        );
+        drop(shell.note(format!("{}", version())));
+        // Once backtraces are stabilized, this should print out a backtrace
+        // if it is available.
+    }
 }
 
-fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
-    fn print(error: &str, shell: &mut Shell) {
-        drop(writeln!(shell.err(), "\nCaused by:"));
-        drop(writeln!(shell.err(), "  {}", error));
+fn _display_error(err: &Error, shell: &mut Shell) -> bool {
+    let verbosity = shell.verbosity();
+    let is_verbose = |e: &(dyn std::error::Error + 'static)| -> bool {
+        verbosity != Verbose && e.downcast_ref::<VerboseError>().is_some()
+    };
+    // Generally the top error shouldn't be verbose, but check it anyways.
+    if is_verbose(err.as_ref()) {
+        return true;
     }
-
-    let verbose = shell.verbosity();
-
-    // The first error has already been printed to the shell.
-    for err in cargo_err.chain().skip(1) {
+    drop(shell.error(&err));
+    for cause in err.chain().skip(1) {
         // If we're not in verbose mode then print remaining errors until one
-        // marked as `Internal` appears.
-        if verbose != Verbose && err.downcast_ref::<Internal>().is_some() {
-            return false;
+        // marked as `VerboseError` appears.
+        if is_verbose(cause) {
+            return true;
         }
-
-        print(&err.to_string(), shell);
+        drop(writeln!(shell.err(), "\nCaused by:"));
+        drop(writeln!(shell.err(), "  {}", cause));
     }
-
-    true
+    false
 }
 
 pub fn version() -> VersionInfo {

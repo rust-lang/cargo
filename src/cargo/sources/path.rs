@@ -67,7 +67,10 @@ impl<'cfg> PathSource<'cfg> {
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
-            None => Err(internal("no package found in source")),
+            None => Err(internal(format!(
+                "no package found in source {:?}",
+                self.path
+            ))),
         }
     }
 
@@ -208,7 +211,7 @@ impl<'cfg> PathSource<'cfg> {
         let index = repo.index()?;
         let root = repo
             .workdir()
-            .ok_or_else(|| internal("Can't list files on a bare repository."))?;
+            .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
         let pkg_path = pkg.root();
 
         let mut ret = Vec::<PathBuf>::new();
@@ -323,9 +326,10 @@ impl<'cfg> PathSource<'cfg> {
             use std::str;
             match str::from_utf8(data) {
                 Ok(s) => Ok(path.join(s)),
-                Err(..) => Err(internal(
-                    "cannot process path in git with a non \
-                     unicode filename",
+                Err(e) => Err(anyhow::format_err!(
+                    "cannot process path in git with a non utf8 filename: {}\n{:?}",
+                    e,
+                    data
                 )),
             }
         }
@@ -403,7 +407,10 @@ impl<'cfg> PathSource<'cfg> {
 
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
         if !self.updated {
-            return Err(internal("BUG: source was not updated"));
+            return Err(internal(format!(
+                "BUG: source `{:?}` was not updated",
+                self.path
+            )));
         }
 
         let mut max = FileTime::zero();

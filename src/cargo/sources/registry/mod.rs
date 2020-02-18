@@ -178,7 +178,7 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::into_url::IntoUrl;
-use crate::util::{internal, CargoResult, Config, Filesystem};
+use crate::util::{CargoResult, Config, Filesystem};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -511,7 +511,7 @@ impl<'cfg> RegistrySource<'cfg> {
     fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
-            .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
+            .chain_err(|| format!("failed to unpack package `{}`", package))?;
         let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
         let mut pkg = match src.download(package)? {

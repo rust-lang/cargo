@@ -35,7 +35,7 @@ pub fn uninstall(
             match uninstall_one(&root, spec, bins, config) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
-                    crate::handle_error(&e, &mut config.shell());
+                    crate::display_error(&e, &mut config.shell());
                     failed.push(spec)
                 }
             }
