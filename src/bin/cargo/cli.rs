@@ -38,6 +38,7 @@ Available unstable (nightly-only) flags:
     -Z unstable-options -- Allow the usage of unstable options
     -Z timings          -- Display concurrency information
     -Z doctest-xcompile -- Compile and run doctests for non-host target using runner config
+    -Z crate-versions   -- Add crate versions to generated docs
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );

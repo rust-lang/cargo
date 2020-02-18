@@ -1510,3 +1510,36 @@ fn bin_private_items_deps() {
     assert!(p.root().join("target/doc/bar/fn.bar_pub.html").is_file());
     assert!(!p.root().join("target/doc/bar/fn.bar_priv.html").exists());
 }
+
+#[cargo_test]
+fn crate_versions() {
+    // Testing unstable flag
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("-Z crate-versions doc")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let doc_file = p.root().join("target/doc/foo/index.html");
+    let mut doc_html = String::new();
+    File::open(&doc_file)
+        .unwrap()
+        .read_to_string(&mut doc_html)
+        .unwrap();
+
+    assert!(doc_html.contains("Version 1.2.4"));
+}
