@@ -9,7 +9,7 @@ use jobserver::Client;
 use crate::core::compiler::{self, compilation, Unit};
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{internal, profile, Config};
+use crate::util::{profile, Config};
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
@@ -313,11 +313,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files_mut()
             .host
             .prepare()
-            .chain_err(|| internal("couldn't prepare build directories"))?;
+            .chain_err(|| "couldn't prepare build directories")?;
         for target in self.files.as_mut().unwrap().target.values_mut() {
             target
                 .prepare()
-                .chain_err(|| internal("couldn't prepare build directories"))?;
+                .chain_err(|| "couldn't prepare build directories")?;
         }
 
         self.compilation.host_deps_output = self.files_mut().host.deps().to_path_buf();

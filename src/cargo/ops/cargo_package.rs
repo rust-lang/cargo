@@ -14,7 +14,6 @@ use flate2::{Compression, GzBuilder};
 use log::debug;
 use serde_json::{self, json};
 use tar::{Archive, Builder, EntryType, Header};
-use termcolor::Color;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::ResolveOpts;
@@ -27,7 +26,7 @@ use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::toml::TomlManifest;
-use crate::util::{self, internal, Config, FileLock};
+use crate::util::{self, Config, FileLock};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -443,17 +442,15 @@ fn tar(
             let orig = Path::new(&path).with_file_name("Cargo.toml.orig");
             header.set_path(&orig)?;
             header.set_cksum();
-            ar.append(&header, &mut file).chain_err(|| {
-                internal(format!("could not archive source file `{}`", relative_str))
-            })?;
+            ar.append(&header, &mut file)
+                .chain_err(|| format!("could not archive source file `{}`", relative_str))?;
 
             let toml = pkg.to_registry_toml(ws.config())?;
             add_generated_file(&mut ar, &path, &toml, relative_str)?;
         } else {
             header.set_cksum();
-            ar.append(&header, &mut file).chain_err(|| {
-                internal(format!("could not archive source file `{}`", relative_str))
-            })?;
+            ar.append(&header, &mut file)
+                .chain_err(|| format!("could not archive source file `{}`", relative_str))?;
         }
     }
 
@@ -581,7 +578,7 @@ fn compare_resolve(
             "package `{}` added to the packaged Cargo.lock file{}",
             pkg_id, extra
         );
-        config.shell().status_with_color("Note", msg, Color::Cyan)?;
+        config.shell().note(msg)?;
     }
     Ok(())
 }
@@ -794,6 +791,6 @@ fn add_generated_file<D: Display>(
     header.set_size(data.len() as u64);
     header.set_cksum();
     ar.append(&header, data.as_bytes())
-        .chain_err(|| internal(format!("could not archive source file `{}`", display)))?;
+        .chain_err(|| format!("could not archive source file `{}`", display))?;
     Ok(())
 }

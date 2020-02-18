@@ -71,7 +71,6 @@ use super::job::{
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
-use crate::handle_error;
 use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
@@ -531,7 +530,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                         self.emit_warnings(Some(msg), &unit, cx)?;
 
                         if !self.active.is_empty() {
-                            handle_error(&e, &mut *cx.bcx.config.shell());
+                            crate::display_error(&e, &mut *cx.bcx.config.shell());
                             cx.bcx.config.shell().warn(
                                 "build failed, waiting for other \
                                  jobs to finish...",

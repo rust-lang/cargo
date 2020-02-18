@@ -82,7 +82,7 @@ pub fn install(
             ) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    crate::handle_error(&e, &mut opts.config.shell());
+                    crate::display_error(&e, &mut opts.config.shell());
                     failed.push(krate)
                 }
             }

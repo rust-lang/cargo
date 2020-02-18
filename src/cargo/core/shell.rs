@@ -228,6 +228,11 @@ impl Shell {
         }
     }
 
+    /// Prints a cyan 'note' message.
+    pub fn note<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
+        self.print(&"note", Some(&message), Cyan, false)
+    }
+
     /// Updates the verbosity of the shell.
     pub fn set_verbosity(&mut self, verbosity: Verbosity) {
         self.verbosity = verbosity;

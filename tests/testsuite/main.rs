@@ -42,6 +42,7 @@ mod dep_info;
 mod directory;
 mod doc;
 mod edition;
+mod error;
 mod features;
 mod fetch;
 mod fix;

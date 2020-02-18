@@ -292,12 +292,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        paths::create_dir_all(&script_out_dir).chain_err(|| {
-            internal(
-                "failed to create script output directory for \
-                 build command",
-            )
-        })?;
+        paths::create_dir_all(&script_out_dir)
+            .chain_err(|| "failed to create script output directory for build command")?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our

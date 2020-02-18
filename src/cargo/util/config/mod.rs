@@ -73,7 +73,7 @@ use self::ConfigValue as CV;
 use crate::core::shell::Verbosity;
 use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::{paths, validate_package_name};
 use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -1439,13 +1439,13 @@ impl ConfigValue {
             | (expected @ &mut CV::Table(_, _), found)
             | (expected, found @ CV::List(_, _))
             | (expected, found @ CV::Table(_, _)) => {
-                return Err(internal(format!(
+                return Err(anyhow!(
                     "failed to merge config value from `{}` into `{}`: expected {}, but found {}",
                     found.definition(),
                     expected.definition(),
                     expected.desc(),
                     found.desc()
-                )));
+                ));
             }
             (old, mut new) => {
                 if force || new.definition().is_higher_priority(old.definition()) {

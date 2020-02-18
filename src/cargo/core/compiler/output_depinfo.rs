@@ -44,7 +44,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
     };
     relpath
         .to_str()
-        .ok_or_else(|| internal("path not utf-8"))
+        .ok_or_else(|| internal(format!("path `{:?}` not utf-8", relpath)))
         .map(|f| f.replace(" ", "\\ "))
 }
 
@@ -119,7 +119,7 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
                 .resolve_path(bcx.config)
                 .as_os_str()
                 .to_str()
-                .ok_or_else(|| internal("build.dep-info-basedir path not utf-8"))?
+                .ok_or_else(|| anyhow::format_err!("build.dep-info-basedir path not utf-8"))?
                 .to_string();
             Some(basedir_string.as_str())
         }

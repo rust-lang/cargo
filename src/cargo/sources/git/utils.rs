@@ -2,7 +2,7 @@ use crate::core::GitReference;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
-use crate::util::{internal, network, Config, IntoUrl, Progress};
+use crate::util::{network, Config, IntoUrl, Progress};
 use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
 use log::{debug, info};
@@ -358,9 +358,9 @@ impl<'a> GitCheckout<'a> {
             cargo_config: &Config,
         ) -> CargoResult<()> {
             child.init(false)?;
-            let url = child
-                .url()
-                .ok_or_else(|| internal("non-utf8 url for submodule"))?;
+            let url = child.url().ok_or_else(|| {
+                anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
+            })?;
 
             // A submodule which is listed in .gitmodules but not actually
             // checked out will not have a head id, so we should ignore it.
@@ -393,11 +393,11 @@ impl<'a> GitCheckout<'a> {
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
             fetch(&mut repo, url, refspec, cargo_config).chain_err(|| {
-                internal(format!(
+                format!(
                     "failed to fetch submodule `{}` from {}",
                     child.name().unwrap_or(""),
                     url
-                ))
+                )
             })?;
 
             let obj = repo.find_object(head, None)?;
