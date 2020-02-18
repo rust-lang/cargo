@@ -110,7 +110,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
     let unit_dependencies =
         unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
-    let mut cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
+    let mut cx = Context::new(
+        config,
+        &bcx,
+        unit_dependencies,
+        build_config.requested_kind,
+        None,
+    )?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {

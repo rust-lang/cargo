@@ -665,6 +665,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             export_dir: None,
+            crate_type: None,
         },
         &exec,
     )?;

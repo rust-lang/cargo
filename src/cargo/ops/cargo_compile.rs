@@ -75,6 +75,8 @@ pub struct CompileOptions<'a> {
     // Note that, although the cmd-line flag name is `out-dir`, in code we use
     // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
     pub export_dir: Option<PathBuf>,
+    /// Crate type
+    pub crate_type: Option<String>,
 }
 
 impl<'a> CompileOptions<'a> {
@@ -94,6 +96,7 @@ impl<'a> CompileOptions<'a> {
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             export_dir: None,
+            crate_type: None,
         })
     }
 }
@@ -277,6 +280,7 @@ pub fn compile_ws<'a>(
         ref local_rustdoc_args,
         rustdoc_document_private_items,
         ref export_dir,
+        ref crate_type,
     } = *options;
 
     match build_config.mode {
@@ -465,7 +469,13 @@ pub fn compile_ws<'a>(
 
     let ret = {
         let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
+        let cx = Context::new(
+            config,
+            &bcx,
+            unit_dependencies,
+            build_config.requested_kind,
+            crate_type.clone(),
+        )?;
         cx.compile(&units, export_dir.clone(), exec)?
     };
 

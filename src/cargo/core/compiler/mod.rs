@@ -737,8 +737,12 @@ fn build_base_args<'a, 'cfg>(
     add_error_format_and_color(cx, cmd, cx.rmeta_required(unit))?;
 
     if !test {
-        for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type);
+        if cx.crate_type.is_some() && cx.is_primary_package(unit) {
+            cmd.arg("--crate-type").arg(cx.crate_type.as_ref().unwrap());
+        } else {
+            for crate_type in crate_types.iter() {
+                cmd.arg("--crate-type").arg(crate_type);
+            }
         }
     }
 

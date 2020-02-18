@@ -150,6 +150,10 @@ pub trait AppExt: Sized {
         ))
     }
 
+    fn arg_crate_type(self) -> Self {
+        self._arg(opt("crate-type", "Crate type").value_name("CRATE-TYPE"))
+    }
+
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -468,6 +472,7 @@ pub trait ArgMatchesExt {
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
             export_dir: None,
+            crate_type: self._value_of("crate-type").map(|s| s.to_string()),
         };
 
         if let Some(ws) = workspace {

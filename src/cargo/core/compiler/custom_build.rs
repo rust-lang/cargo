@@ -777,7 +777,7 @@ impl BuildScriptOutputs {
             }
             Entry::Occupied(entry) => panic!(
                 "build script output collision for {}/{}\n\
-                old={:?}\nnew={:?}",
+                 old={:?}\nnew={:?}",
                 pkg_id,
                 metadata,
                 entry.get(),

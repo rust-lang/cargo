@@ -74,6 +74,8 @@ pub struct Context<'a, 'cfg> {
     /// jobserver clients for each Unit (which eventually becomes a rustc
     /// process).
     pub rustc_clients: HashMap<Unit<'a>, Client>,
+
+    pub crate_type: Option<String>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -82,6 +84,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         bcx: &'a BuildContext<'a, 'cfg>,
         unit_dependencies: UnitGraph<'a>,
         default_kind: CompileKind,
+        crate_type: Option<String>,
     ) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
@@ -119,6 +122,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rmeta_required: HashSet::new(),
             rustc_clients: HashMap::new(),
             pipelining,
+            crate_type,
         })
     }
 
