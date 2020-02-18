@@ -1445,3 +1445,33 @@ fn exclude_dot_files_and_directories_by_default() {
          ",
     );
 }
+
+#[cargo_test]
+fn invalid_license_file_path() {
+    // Test warning when license-file points to a non-existent file.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = "does-not-exist"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] license-file `does-not-exist` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+",
+        )
+        .run();
+}

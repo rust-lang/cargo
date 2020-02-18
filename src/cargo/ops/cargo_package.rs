@@ -200,6 +200,26 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
             things = things
         ))?
     }
+
+    if let Some(license_path) = &md.license_file {
+        let license_path = Path::new(license_path);
+        let abs_license_path = pkg.root().join(license_path);
+        if !abs_license_path.exists() {
+            let rel_msg = if license_path.is_absolute() {
+                "".to_string()
+            } else {
+                format!(" (relative to `{}`)", pkg.root().display())
+            };
+            config.shell().warn(&format!(
+                "license-file `{}` does not appear to exist{}.\n\
+                Please update the license-file setting in the manifest at `{}`\n\
+                This may become a hard error in the future.",
+                license_path.display(),
+                rel_msg,
+                pkg.manifest_path().display()
+            ))?;
+        }
+    }
     Ok(())
 }
 
