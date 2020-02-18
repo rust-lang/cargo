@@ -187,6 +187,16 @@ let version = env!("CARGO_PKG_VERSION");
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
+* `CARGO_BIN_EXE_<name>` — The absolute path to a binary target's executable.
+  This is only set when building an [integration test] or benchmark. This may
+  be used with the [`env` macro] to find the executable to run for testing
+  purposes. The `<name>` is the name of the binary target, exactly as-is. For
+  example, `CARGO_BIN_EXE_my-program` for a binary named `my-program`.
+  Binaries are automatically built when the test is built, unless the binary
+  has required features that are not enabled.
+
+[integration test]: cargo-targets.md#integration-tests
+[`env` macro]: ../../std/macro.env.html
 
 #### Dynamic library paths
 
