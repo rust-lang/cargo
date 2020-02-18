@@ -17,7 +17,6 @@ mod bad_config;
 mod bad_manifest_path;
 mod bench;
 mod build;
-mod build_plan;
 mod build_script;
 mod build_script_env;
 mod cache_messages;

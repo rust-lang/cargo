@@ -1,5 +1,5 @@
 #![allow(deprecated)]
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -11,7 +11,6 @@ use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{profile, Config};
 
-use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
@@ -131,8 +130,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx, units);
-        let mut plan = BuildPlan::new();
-        let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         custom_build::build_map(&mut self, units)?;
@@ -145,7 +142,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // function which will run everything in order with proper
             // parallelism.
             let force_rebuild = self.bcx.build_config.force_rebuild;
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+            super::compile(&mut self, &mut queue, unit, exec, force_rebuild)?;
         }
 
         // Now that we've got the full job queue and we've done all our
@@ -159,12 +156,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         // Now that we've figured out everything that we're going to do, do it!
-        queue.execute(&mut self, &mut plan)?;
-
-        if build_plan {
-            plan.set_inputs(self.build_plan_inputs()?);
-            plan.output_plan();
-        }
+        queue.execute(&mut self)?;
 
         // Collect the result of the build into `self.compilation`.
         for unit in units.iter() {
@@ -382,18 +374,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
-    }
-
-    /// Returns the list of filenames read by cargo to generate the `BuildContext`
-    /// (all `Cargo.toml`, etc.).
-    pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        // Keep sorted for consistency.
-        let mut inputs = BTreeSet::new();
-        // Note: dev-deps are skipped if they are not present in the unit graph.
-        for unit in self.unit_dependencies.keys() {
-            inputs.insert(unit.pkg.manifest_path().to_path_buf());
-        }
-        Ok(inputs.into_iter().collect())
     }
 
     fn check_collistions(&self) -> CargoResult<()> {

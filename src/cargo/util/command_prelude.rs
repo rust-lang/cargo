@@ -143,13 +143,6 @@ pub trait AppExt: Sized {
         self._arg(multi_opt("message-format", "FMT", "Error format"))
     }
 
-    fn arg_build_plan(self) -> Self {
-        self._arg(opt(
-            "build-plan",
-            "Output the build plan in JSON (unstable)",
-        ))
-    }
-
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -437,12 +430,6 @@ pub trait ArgMatchesExt {
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
-        build_config.build_plan = self._is_present("build-plan");
-        if build_config.build_plan {
-            config
-                .cli_unstable()
-                .fail_if_stable_opt("--build-plan", 5579)?;
-        };
 
         let opts = CompileOptions {
             config,

@@ -83,7 +83,6 @@ _cargo() {
                         "${command_scope_spec[@]}" \
                         '(-p --package)'{-p+,--package=}'[specify package to build]:package:_cargo_package_names' \
                         '--release[build in release mode]' \
-                        '--build-plan[output the build plan in JSON]' \
                         ;;
 
                 check)

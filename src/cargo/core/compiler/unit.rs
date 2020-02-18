@@ -1,6 +1,5 @@
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::{profiles::Profile, Package, Target};
-use crate::util::hex::short_hash;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
@@ -64,12 +63,6 @@ impl UnitInner<'_> {
     /// finish in their entirety before this one is started.
     pub fn requires_upstream_objects(&self) -> bool {
         self.mode.is_any_test() || self.target.kind().requires_upstream_objects()
-    }
-}
-
-impl<'a> Unit<'a> {
-    pub fn buildkey(&self) -> String {
-        format!("{}-{}", self.pkg.name(), short_hash(self))
     }
 }
 

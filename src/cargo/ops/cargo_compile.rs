@@ -318,11 +318,6 @@ pub fn compile_ws<'a>(
     } = resolve;
 
     let std_resolve = if let Some(crates) = &config.cli_unstable().build_std {
-        if build_config.build_plan {
-            config
-                .shell()
-                .warn("-Zbuild-std does not currently fully support --build-plan")?;
-        }
         if build_config.requested_kind.is_host() {
             // TODO: This should eventually be fixed. Unfortunately it is not
             // easy to get the host triple in BuildConfig. Consider changing

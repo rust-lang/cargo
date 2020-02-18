@@ -20,8 +20,6 @@ pub struct BuildConfig {
     pub message_format: MessageFormat,
     /// Force Cargo to do a full rebuild and treat each target as changed.
     pub force_rebuild: bool,
-    /// Output a build plan to stdout instead of actually compiling.
-    pub build_plan: bool,
     /// An optional override of the rustc path for primary units only
     pub primary_unit_rustc: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
@@ -78,7 +76,6 @@ impl BuildConfig {
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
-            build_plan: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
         })

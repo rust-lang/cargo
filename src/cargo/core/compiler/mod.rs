@@ -1,6 +1,5 @@
 mod build_config;
 mod build_context;
-mod build_plan;
 mod compilation;
 mod compile_kind;
 mod context;
@@ -29,7 +28,6 @@ use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetInfo};
-use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
@@ -100,13 +98,10 @@ impl Executor for DefaultExecutor {
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
     jobs: &mut JobQueue<'a, 'cfg>,
-    plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
-    let bcx = cx.bcx;
-    let build_plan = bcx.build_config.build_plan;
     if !cx.compiled.insert(*unit) {
         return Ok(());
     }
@@ -121,8 +116,6 @@ fn compile<'a, 'cfg: 'a>(
     } else if unit.mode.is_doc_test() {
         // We run these targets later, so this is just a no-op for now.
         Job::new(Work::noop(), Freshness::Fresh)
-    } else if build_plan {
-        Job::new(rustc(cx, unit, &exec.clone())?, Freshness::Dirty)
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
@@ -157,10 +150,7 @@ fn compile<'a, 'cfg: 'a>(
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(cx, jobs, plan, &dep.unit, exec, false)?;
-    }
-    if build_plan {
-        plan.add(cx, unit)?;
+        compile(cx, jobs, &dep.unit, exec, false)?;
     }
 
     Ok(())
@@ -172,10 +162,8 @@ fn rustc<'a, 'cfg>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
-    let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
-    let buildkey = unit.buildkey();
 
     add_cap_lints(cx.bcx, unit, &mut rustc);
 
@@ -236,17 +224,15 @@ fn rustc<'a, 'cfg>(
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_scripts) = build_scripts {
             let script_outputs = build_script_outputs.lock().unwrap();
-            if !build_plan {
-                add_native_deps(
-                    &mut rustc,
-                    &script_outputs,
-                    &build_scripts,
-                    pass_l_flag,
-                    pass_cdylib_link_args,
-                    current_id,
-                )?;
-                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
-            }
+            add_native_deps(
+                &mut rustc,
+                &script_outputs,
+                &build_scripts,
+                pass_l_flag,
+                pass_cdylib_link_args,
+                current_id,
+            )?;
+            add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             add_custom_env(&mut rustc, &script_outputs, current_id, script_metadata)?;
         }
 
@@ -277,20 +263,16 @@ fn rustc<'a, 'cfg>(
 
         state.running(&rustc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
-        if build_plan {
-            state.build_plan(buildkey, rustc.clone(), outputs.clone());
-        } else {
-            exec.exec(
-                rustc,
-                package_id,
-                &target,
-                mode,
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
-            )
-            .map_err(verbose_if_simple_exit_code)
-            .chain_err(|| format!("could not compile `{}`.", name))?;
-        }
+        exec.exec(
+            rustc,
+            package_id,
+            &target,
+            mode,
+            &mut |line| on_stdout_line(state, line, package_id, &target),
+            &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
+        )
+        .map_err(verbose_if_simple_exit_code)
+        .chain_err(|| format!("could not compile `{}`.", name))?;
 
         if do_rename && real_name != crate_name {
             let dst = &outputs[0].path;

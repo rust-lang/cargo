@@ -54,7 +54,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
 use std::mem;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::format_err;
@@ -63,13 +62,12 @@ use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
 
-use super::context::OutputFile;
 use super::job::{
     Freshness::{self, Dirty, Fresh},
     Job,
 };
 use super::timings::Timings;
-use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use super::{BuildContext, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
 use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
@@ -183,7 +181,6 @@ enum Artifact {
 
 enum Message {
     Run(JobId, String),
-    BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
     FixDiagnostic(diagnostic_server::Message),
@@ -200,17 +197,6 @@ enum Message {
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
         let _ = self.tx.send(Message::Run(self.id, cmd.to_string()));
-    }
-
-    pub fn build_plan(
-        &self,
-        module_name: String,
-        cmd: ProcessBuilder,
-        filenames: Arc<Vec<OutputFile>>,
-    ) {
-        let _ = self
-            .tx
-            .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
     pub fn stdout(&self, stdout: String) {
@@ -336,7 +322,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(mut self, cx: &mut Context<'a, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(mut self, cx: &mut Context<'a, '_>) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -384,7 +370,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| drop(tx.send(Message::FixDiagnostic(msg)))));
 
-        crossbeam_utils::thread::scope(move |scope| state.drain_the_queue(cx, plan, scope, &helper))
+        crossbeam_utils::thread::scope(move |scope| state.drain_the_queue(cx, scope, &helper))
             .expect("child threads shouldn't panic")
     }
 }
@@ -468,7 +454,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         &mut self,
         cx: &mut Context<'a, '_>,
         jobserver_helper: &HelperThread,
-        plan: &mut BuildPlan,
         event: Message,
     ) -> CargoResult<Option<anyhow::Error>> {
         match event {
@@ -478,9 +463,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
                 self.timings.unit_start(id, self.active[&id]);
-            }
-            Message::BuildPlanMsg(module_name, cmd, filenames) => {
-                plan.update(&module_name, &cmd, &filenames)?;
             }
             Message::Stdout(out) => {
                 cx.bcx.config.shell().stdout_println(out);
@@ -615,7 +597,6 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     fn drain_the_queue(
         mut self,
         cx: &mut Context<'a, '_>,
-        plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
     ) -> CargoResult<()> {
@@ -649,7 +630,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
             for event in self.wait_for_events() {
-                if let Some(err) = self.handle_event(cx, jobserver_helper, plan, event)? {
+                if let Some(err) = self.handle_event(cx, jobserver_helper, event)? {
                     error = Some(err);
                 }
             }
@@ -684,9 +665,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                 "{} [{}] target(s) in {}",
                 profile_name, opt_type, time_elapsed
             );
-            if !cx.bcx.build_config.build_plan {
-                cx.bcx.config.shell().status("Finished", message)?;
-            }
+            cx.bcx.config.shell().status("Finished", message)?;
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
@@ -760,10 +739,8 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         let fresh = job.freshness();
         let rmeta_required = cx.rmeta_required(unit);
 
-        if !cx.bcx.build_config.build_plan {
-            // Print out some nice progress information.
-            self.note_working_on(cx.bcx.config, unit, fresh)?;
-        }
+        // Print out some nice progress information.
+        self.note_working_on(cx.bcx.config, unit, fresh)?;
 
         let doit = move || {
             let state = JobState {

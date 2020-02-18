@@ -157,8 +157,6 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let script_dir = cx.files().build_script_dir(build_script_unit);
     let script_out_dir = cx.files().build_script_out_dir(unit);
     let script_run_dir = cx.files().build_script_run_dir(unit);
-    let build_plan = bcx.build_config.build_plan;
-    let invocation_name = unit.buildkey();
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
         prepare_metabuild(cx, build_script_unit, deps)?;
@@ -299,40 +297,34 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if !build_plan {
-            let build_script_outputs = build_script_outputs.lock().unwrap();
-            for (name, dep_id, dep_metadata) in lib_deps {
-                let script_output =
-                    build_script_outputs
-                        .get(dep_id, dep_metadata)
-                        .ok_or_else(|| {
-                            internal(format!(
-                                "failed to locate build state for env vars: {}/{}",
-                                dep_id, dep_metadata
-                            ))
-                        })?;
-                let data = &script_output.metadata;
-                for &(ref key, ref value) in data.iter() {
-                    cmd.env(
-                        &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
-                        value,
-                    );
-                }
-            }
-            if let Some(build_scripts) = build_scripts {
-                super::add_plugin_deps(
-                    &mut cmd,
-                    &build_script_outputs,
-                    &build_scripts,
-                    &host_target_root,
-                )?;
+        let outputs = build_script_outputs.lock().unwrap();
+        for (name, dep_id, dep_metadata) in lib_deps {
+            let script_output =
+                outputs
+                    .get(dep_id, dep_metadata)
+                    .ok_or_else(|| {
+                        internal(format!(
+                            "failed to locate build state for env vars: {}/{}",
+                            dep_id, dep_metadata
+                        ))
+                    })?;
+            let data = &script_output.metadata;
+            for &(ref key, ref value) in data.iter() {
+                cmd.env(
+                    &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
+                    value,
+                );
             }
         }
-
-        if build_plan {
-            state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
-            return Ok(());
+        if let Some(build_scripts) = build_scripts {
+            super::add_plugin_deps(
+                &mut cmd,
+                &outputs,
+                &build_scripts,
+                &host_target_root,
+            )?;
         }
+        drop(outputs);
 
         // And now finally, run the build command itself!
         state.running(&cmd);
@@ -406,11 +398,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         Ok(())
     });
 
-    let mut job = if cx.bcx.build_config.build_plan {
-        Job::new(Work::noop(), Freshness::Dirty)
-    } else {
-        fingerprint::prepare_target(cx, unit, false)?
-    };
+    let mut job = fingerprint::prepare_target(cx, unit, false)?;
     if job.freshness() == Freshness::Dirty {
         job.before(dirty);
     } else {

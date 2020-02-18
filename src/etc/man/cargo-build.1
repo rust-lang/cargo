@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: cargo-build
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
+.\" Generator: Asciidoctor 2.0.8
+.\"      Date: 2020-02-18
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BUILD" "1" "2019-09-05" "\ \&" "\ \&"
+.TH "CARGO\-BUILD" "1" "2020-02-18" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -348,20 +348,6 @@ in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo\(cqs own JSON diagnostics and others
 coming from rustc are still emitted.
 .RE
-.RE
-.sp
-\fB\-\-build\-plan\fP
-.RS 4
-Outputs a series of JSON messages to stdout that indicate the commands to
-run the build.
-.sp
-This option is unstable and available only on the
-\c
-.URL "https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html" "nightly channel"
-and requires the \fB\-Z unstable\-options\fP flag to enable.
-See \c
-.URL "https://github.com/rust\-lang/cargo/issues/5579" "" " "
-for more information.
 .RE
 .SS "Manifest Options"
 .sp
