@@ -465,10 +465,11 @@ The config values are first loaded from the include path, and then the config
 file's own values are merged on top of it.
 
 This can be paired with [config-cli](#config-cli) to specify a file to load
-from the command-line:
+from the command-line. Pass a path to a config file as the argument to
+`--config`:
 
 ```console
-cargo +nightly -Zunstable-options -Zconfig-include --config 'include="somefile.toml"' build
+cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 ```
 
 CLI paths are relative to the current working directory.
