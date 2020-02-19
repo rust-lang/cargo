@@ -326,10 +326,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 // Activate the optional dep.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
                     for (dep, dep_for_build) in deps {
-                        if dep.name_in_toml() == *dep_name {
-                            let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                            self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
+                        if dep.name_in_toml() != *dep_name {
+                            continue;
                         }
+                        let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
+                        self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
                     }
                 }
             }
@@ -337,17 +338,18 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 // Activate a feature within a dependency.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
                     for (dep, dep_for_build) in deps {
-                        if dep.name_in_toml() == *dep_name {
-                            if dep.is_optional() {
-                                // Activate the crate on self.
-                                let fv = FeatureValue::Crate(*dep_name);
-                                self.activate_fv(pkg_id, &fv, for_build)?;
-                            }
-                            // Activate the feature on the dependency.
-                            let summary = self.resolve.summary(dep_pkg_id);
-                            let fv = FeatureValue::new(*dep_feature, summary);
-                            self.activate_fv(dep_pkg_id, &fv, dep_for_build)?;
+                        if dep.name_in_toml() != *dep_name {
+                            continue;
                         }
+                        if dep.is_optional() {
+                            // Activate the crate on self.
+                            let fv = FeatureValue::Crate(*dep_name);
+                            self.activate_fv(pkg_id, &fv, for_build)?;
+                        }
+                        // Activate the feature on the dependency.
+                        let summary = self.resolve.summary(dep_pkg_id);
+                        let fv = FeatureValue::new(*dep_feature, summary);
+                        self.activate_fv(dep_pkg_id, &fv, dep_for_build)?;
                     }
                 }
             }
