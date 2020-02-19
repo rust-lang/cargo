@@ -297,17 +297,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             return Ok(());
         }
         for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-            for dep in deps {
+            for (dep, dep_for_build) in deps {
                 if dep.is_optional() {
                     continue;
                 }
                 // Recurse into the dependency.
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_pkg(
-                    dep_pkg_id,
-                    &fvs,
-                    for_build || (self.opts.decouple_build_deps && dep.is_build()),
-                )?;
+                self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
             }
         }
         Ok(())
@@ -329,14 +325,10 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 self.activate_rec(pkg_id, *dep_name, for_build)?;
                 // Activate the optional dep.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-                    for dep in deps {
+                    for (dep, dep_for_build) in deps {
                         if dep.name_in_toml() == *dep_name {
                             let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                            self.activate_pkg(
-                                dep_pkg_id,
-                                &fvs,
-                                for_build || (self.opts.decouple_build_deps && dep.is_build()),
-                            )?;
+                            self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
                         }
                     }
                 }
@@ -344,7 +336,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::CrateFeature(dep_name, dep_feature) => {
                 // Activate a feature within a dependency.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-                    for dep in deps {
+                    for (dep, dep_for_build) in deps {
                         if dep.name_in_toml() == *dep_name {
                             if dep.is_optional() {
                                 // Activate the crate on self.
@@ -354,11 +346,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // Activate the feature on the dependency.
                             let summary = self.resolve.summary(dep_pkg_id);
                             let fv = FeatureValue::new(*dep_feature, summary);
-                            self.activate_fv(
-                                dep_pkg_id,
-                                &fv,
-                                for_build || (self.opts.decouple_build_deps && dep.is_build()),
-                            )?;
+                            self.activate_fv(dep_pkg_id, &fv, dep_for_build)?;
                         }
                     }
                 }
@@ -438,7 +426,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // Top-level requested features can never apply to
             // build-dependencies, so for_build is `false` here.
             for (_dep_pkg_id, deps) in self.deps(pkg_id, false) {
-                for dep in deps {
+                for (dep, _dep_for_build) in deps {
                     if dep.is_optional() {
                         // This may result in duplicates, but that should be ok.
                         fvs.push(FeatureValue::Crate(dep.name_in_toml()));
@@ -462,7 +450,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.
-    fn deps(&self, pkg_id: PackageId, for_build: bool) -> Vec<(PackageId, Vec<&'a Dependency>)> {
+    fn deps(
+        &self,
+        pkg_id: PackageId,
+        for_build: bool,
+    ) -> Vec<(PackageId, Vec<(&'a Dependency, bool)>)> {
         // Helper for determining if a platform is activated.
         let platform_activated = |dep: &Dependency| -> bool {
             // We always care about build-dependencies, and they are always
@@ -493,6 +485,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             return false;
                         }
                         true
+                    })
+                    .map(|dep| {
+                        let dep_for_build =
+                            for_build || (self.opts.decouple_build_deps && dep.is_build());
+                        (dep, dep_for_build)
                     })
                     .collect::<Vec<_>>();
                 (dep_id, deps)
