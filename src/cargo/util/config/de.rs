@@ -28,13 +28,15 @@ macro_rules! deserialize_method {
         where
             V: de::Visitor<'de>,
         {
-            let v = self.config.$getter(&self.key)?.ok_or_else(||
-                ConfigError::missing(&self.key))?;
-            let Value{val, definition} = v;
+            let v = self
+                .config
+                .$getter(&self.key)?
+                .ok_or_else(|| ConfigError::missing(&self.key))?;
+            let Value { val, definition } = v;
             let res: Result<V::Value, ConfigError> = visitor.$visit(val);
             res.map_err(|e| e.with_key_context(&self.key, definition))
         }
-    }
+    };
 }
 
 impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
