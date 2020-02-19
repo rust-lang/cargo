@@ -3,7 +3,7 @@
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::UnitFor;
 use crate::core::resolver::features::ResolvedFeatures;
-use crate::core::resolver::ResolveOpts;
+use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
@@ -102,8 +102,14 @@ pub fn resolve_std<'cfg>(
         /*dev_deps*/ false, &features, /*all_features*/ false,
         /*uses_default_features*/ true,
     );
-    let resolve =
-        ops::resolve_ws_with_opts(&std_ws, target_data, requested_target, &opts, &specs, false)?;
+    let resolve = ops::resolve_ws_with_opts(
+        &std_ws,
+        target_data,
+        requested_target,
+        &opts,
+        &specs,
+        HasDevUnits::No,
+    )?;
     Ok((
         resolve.pkg_set,
         resolve.targeted_resolve,

@@ -8,7 +8,7 @@ use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, RustcTargetData};
-use crate::core::resolver::ResolveOpts;
+use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Workspace};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
@@ -506,7 +506,7 @@ fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
         CompileKind::Host,
         &ResolveOpts::everything(),
         &specs,
-        false,
+        HasDevUnits::No,
     )?;
     let mut sources = ws_resolve.pkg_set.sources_mut();
 

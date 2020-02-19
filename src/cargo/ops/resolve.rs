@@ -13,7 +13,7 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{FeatureResolver, ResolvedFeatures};
-use crate::core::resolver::{self, Resolve, ResolveOpts};
+use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts};
 use crate::core::summary::Summary;
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -78,7 +78,7 @@ pub fn resolve_ws_with_opts<'a>(
     requested_target: CompileKind,
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
-    has_dev_units: bool,
+    has_dev_units: HasDevUnits,
 ) -> CargoResult<WorkspaceResolve<'a>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;

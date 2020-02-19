@@ -7,7 +7,7 @@ use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeatureResolver, RequestedFeatures};
+use crate::core::resolver::features::{FeatureResolver, HasDevUnits, RequestedFeatures};
 use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -86,7 +86,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         &requested_features,
         &specs,
         bcx.build_config.requested_kind,
-        true,
+        HasDevUnits::Yes,
     )?;
     let mut units = Vec::new();
 

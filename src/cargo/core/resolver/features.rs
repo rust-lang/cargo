@@ -56,8 +56,20 @@ struct FeatureOpts {
     compare: bool,
 }
 
+/// Flag to indicate if Cargo is building *any* dev units (tests, examples, etc.).
+///
+/// This disables decoupling of dev dependencies. It may be possible to relax
+/// this in the future, but it will require significant changes to how unit
+/// dependencies are computed, and can result in longer build times with
+/// `cargo test` because the lib may need to be built 3 times instead of
+/// twice.
+pub enum HasDevUnits {
+    Yes,
+    No,
+}
+
 impl FeatureOpts {
-    fn new(config: &Config, has_dev_units: bool) -> CargoResult<FeatureOpts> {
+    fn new(config: &Config, has_dev_units: HasDevUnits) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
         let unstable_flags = config.cli_unstable();
         opts.package_features = unstable_flags.package_features;
@@ -93,13 +105,7 @@ impl FeatureOpts {
                 enable(&env_opts)?;
             }
         }
-        if has_dev_units {
-            // Decoupling of dev deps is not allowed if any test/bench/example
-            // is being built. It may be possible to relax this in the future,
-            // but it will require significant changes to how unit
-            // dependencies are computed, and can result in longer build times
-            // with `cargo test` because the lib may need to be built 3 times
-            // instead of twice.
+        if let HasDevUnits::Yes = has_dev_units {
             opts.decouple_dev_deps = false;
         }
         Ok(opts)
@@ -211,7 +217,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         requested_features: &RequestedFeatures,
         specs: &[PackageIdSpec],
         requested_target: CompileKind,
-        has_dev_units: bool,
+        has_dev_units: HasDevUnits,
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
         let _p = profile::start("resolve features");

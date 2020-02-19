@@ -1,7 +1,6 @@
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
-use crate::core::resolver::{Resolve, ResolveOpts};
-
 use crate::core::dependency::DepKind;
+use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{Dependency, InternedString, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
@@ -125,7 +124,7 @@ fn build_resolve_graph(
         requested_kind,
         &resolve_opts,
         &specs,
-        true,
+        HasDevUnits::Yes,
     )?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,

@@ -35,7 +35,7 @@ use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features;
-use crate::core::resolver::{Resolve, ResolveOpts};
+use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{LibKind, Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
@@ -312,7 +312,10 @@ pub fn compile_ws<'a>(
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
-    let has_dev_units = filter.need_dev_deps(build_config.mode);
+    let has_dev_units = match filter.need_dev_deps(build_config.mode) {
+        true => HasDevUnits::Yes,
+        false => HasDevUnits::No,
+    };
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
