@@ -5,9 +5,9 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("rustc")
         .setting(AppSettings::TrailingVarArg)
-        .about("Compile a package and all of its dependencies")
+        .about("Compile a package, and pass extra options to the compiler")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(Arg::with_name("args").multiple(true))
+        .arg(Arg::with_name("args").multiple(true).help("Rustc flags"))
         .arg_package("Package to build")
         .arg_jobs()
         .arg_targets_all(
