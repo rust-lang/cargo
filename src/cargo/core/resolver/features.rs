@@ -68,6 +68,13 @@ pub enum HasDevUnits {
     No,
 }
 
+/// Flag to indicate if features are requested for a build dependency or not.
+#[derive(PartialEq)]
+pub enum FeaturesFor {
+    NormalOrDev,
+    BuildDep,
+}
+
 impl FeatureOpts {
     fn new(config: &Config, has_dev_units: HasDevUnits) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
@@ -156,8 +163,12 @@ impl RequestedFeatures {
 
 impl ResolvedFeatures {
     /// Returns the list of features that are enabled for the given package.
-    pub fn activated_features(&self, pkg_id: PackageId, is_build: bool) -> Vec<InternedString> {
-        self.activated_features_int(pkg_id, is_build, true)
+    pub fn activated_features(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+    ) -> Vec<InternedString> {
+        self.activated_features_int(pkg_id, features_for, true)
     }
 
     /// Variant of `activated_features` that returns an empty Vec if this is
@@ -166,21 +177,21 @@ impl ResolvedFeatures {
     pub fn activated_features_unverified(
         &self,
         pkg_id: PackageId,
-        is_build: bool,
+        features_for: FeaturesFor,
     ) -> Vec<InternedString> {
-        self.activated_features_int(pkg_id, is_build, false)
+        self.activated_features_int(pkg_id, features_for, false)
     }
 
     fn activated_features_int(
         &self,
         pkg_id: PackageId,
-        is_build: bool,
+        features_for: FeaturesFor,
         verify: bool,
     ) -> Vec<InternedString> {
         if let Some(legacy) = &self.legacy {
             legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
         } else {
-            let is_build = self.opts.decouple_build_deps && is_build;
+            let is_build = self.opts.decouple_build_deps && features_for == FeaturesFor::BuildDep;
             if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
                 fs.iter().cloned().collect()
             } else if verify {

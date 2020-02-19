@@ -20,7 +20,7 @@ use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::resolver::features::ResolvedFeatures;
+use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
 use crate::core::{InternedString, Package, PackageId, Target};
 use crate::CargoResult;
@@ -586,7 +586,11 @@ fn new_unit_dep_with_profile<'a>(
     let public = state
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
-    let features = state.activated_features(pkg.package_id(), unit_for.is_for_build_dep());
+    let features_for = match unit_for.is_for_build_dep() {
+        true => FeaturesFor::BuildDep,
+        false => FeaturesFor::NormalOrDev,
+    };
+    let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state
         .bcx
         .units
@@ -691,13 +695,17 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
-    fn activated_features(&self, pkg_id: PackageId, for_build_dep: bool) -> Vec<InternedString> {
+    fn activated_features(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+    ) -> Vec<InternedString> {
         let features = if self.is_std {
             self.std_features.unwrap()
         } else {
             self.usr_features
         };
-        features.activated_features(pkg_id, for_build_dep)
+        features.activated_features(pkg_id, features_for)
     }
 
     fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {

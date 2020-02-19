@@ -34,7 +34,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features;
+use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{LibKind, Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -750,7 +750,7 @@ fn generate_targets<'a>(
 
         let features = Vec::from(resolved_features.activated_features(
             pkg.package_id(),
-            false, // Root units are never build dependencies.
+            FeaturesFor::NormalOrDev, // Root units are never build dependencies.
         ));
         bcx.units.intern(
             pkg,
@@ -941,7 +941,7 @@ fn resolve_all_features(
     package_id: PackageId,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
-        .activated_features(package_id, false)
+        .activated_features(package_id, FeaturesFor::NormalOrDev)
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -950,7 +950,11 @@ fn resolve_all_features(
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
         for dep in deps {
-            for feature in resolved_features.activated_features(dep_id, dep.is_build()) {
+            let features_for = match dep.is_build() {
+                true => FeaturesFor::BuildDep,
+                false => FeaturesFor::NormalOrDev,
+            };
+            for feature in resolved_features.activated_features(dep_id, features_for) {
                 features.insert(dep.name_in_toml().to_string() + "/" + &feature);
             }
         }

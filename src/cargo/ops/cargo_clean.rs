@@ -7,7 +7,9 @@ use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeatureResolver, HasDevUnits, RequestedFeatures};
+use crate::core::resolver::features::{
+    FeatureResolver, FeaturesFor, HasDevUnits, RequestedFeatures,
+};
 use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -118,10 +120,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                         };
                         // Use unverified here since this is being more
                         // exhaustive than what is actually needed.
-                        let features = features.activated_features_unverified(
-                            pkg.package_id(),
-                            unit_for.is_for_build_dep(),
-                        );
+                        let features_for = match unit_for.is_for_build_dep() {
+                            true => FeaturesFor::BuildDep,
+                            false => FeaturesFor::NormalOrDev,
+                        };
+                        let features =
+                            features.activated_features_unverified(pkg.package_id(), features_for);
                         units.push(bcx.units.intern(
                             pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
                         ));

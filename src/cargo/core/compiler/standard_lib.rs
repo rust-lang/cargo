@@ -2,7 +2,7 @@
 
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::UnitFor;
-use crate::core::resolver::features::ResolvedFeatures;
+use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
@@ -154,7 +154,8 @@ pub fn generate_std_roots<'a>(
                 unit_for,
                 mode,
             );
-            let features = std_features.activated_features(pkg.package_id(), false);
+            let features =
+                std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
             Ok(bcx.units.intern(
                 pkg, lib, profile, kind, mode, features, /*is_std*/ true,
             ))
