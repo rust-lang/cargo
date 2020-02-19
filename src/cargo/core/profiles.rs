@@ -766,6 +766,8 @@ pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
     /// any of its dependencies. This enables `build-override` profiles for
     /// these targets.
+    ///
+    /// An invariant is that if `build_dep` is true, `host` must be true.
     host: bool,
     /// A target for a build dependency (or any of its dependencies). This is
     /// used for computing features of build dependencies independently of
@@ -775,7 +777,28 @@ pub struct UnitFor {
     /// for a non-host package sets this to `false` because it wants the
     /// features of the non-host package (whereas `host` is true because the
     /// build script is being built for the host). `build_dep` becomes `true`
-    /// for build-dependencies, or any of their dependencies.
+    /// for build-dependencies, or any of their dependencies. For example, with
+    /// this dependency tree:
+    ///
+    /// ```text
+    /// foo
+    /// ├── foo build.rs
+    /// │   └── shared_dep (BUILD dependency)
+    /// │       └── shared_dep build.rs
+    /// └── shared_dep (Normal dependency)
+    ///     └── shared_dep build.rs
+    /// ```
+    ///
+    /// In this example, `foo build.rs` is HOST=true, BUILD_DEP=false. This is
+    /// so that `foo build.rs` gets the profile settings for build scripts
+    /// (HOST=true) and features of foo (BUILD_DEP=false) because build scripts
+    /// need to know which features their package is being built with.
+    ///
+    /// But in the case of `shared_dep`, when built as a build dependency,
+    /// both flags are true (it only wants the build-dependency features).
+    /// When `shared_dep` is built as a normal dependency, then `shared_dep
+    /// build.rs` is HOST=true, BUILD_DEP=false for the same reasons that
+    /// foo's build script is set that way.
     build_dep: bool,
     /// How Cargo processes the `panic` setting or profiles. This is done to
     /// handle test/benches inheriting from dev/release, as well as forcing
@@ -883,6 +906,9 @@ impl UnitFor {
     /// This is part of the machinery responsible for handling feature
     /// decoupling for build dependencies in the new feature resolver.
     pub fn with_build_dep(mut self, build_dep: bool) -> UnitFor {
+        if build_dep {
+            assert!(self.host);
+        }
         self.build_dep = self.build_dep || build_dep;
         self
     }
