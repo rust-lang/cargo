@@ -768,6 +768,15 @@ pub struct UnitFor {
     /// these targets.
     ///
     /// An invariant is that if `build_dep` is true, `host` must be true.
+    ///
+    /// Note that this is `true` for `RunCustomBuild` units, even though that
+    /// unit should *not* use build-override profiles. This is a bit of a
+    /// special case. When computing the `RunCustomBuild` unit, it manually
+    /// uses the `get_profile_run_custom_build` method to get the correct
+    /// profile information for the unit. `host` needs to be true so that all
+    /// of the dependencies of that `RunCustomBuild` unit have this flag be
+    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// the whole point of `UnitFor`.
     host: bool,
     /// A target for a build dependency (or any of its dependencies). This is
     /// used for computing features of build dependencies independently of

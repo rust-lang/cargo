@@ -515,6 +515,31 @@ fn dep_build_script<'a>(
                 .bcx
                 .profiles
                 .get_profile_run_custom_build(&unit.profile);
+            // UnitFor::new_build is used because we want the `host` flag set
+            // for all of our build dependencies (so they all get
+            // build-override profiles), including compiling the build.rs
+            // script itself.
+            //
+            // If `is_for_build_dep` here is `false`, that means we are a
+            // build.rs script for a normal dependency and we want to set the
+            // CARGO_FEATURE_* environment variables to the features as a
+            // normal dep.
+            //
+            // If `is_for_build_dep` here is `true`, that means that this
+            // package is being used as a build dependency, and so we only
+            // want to set CARGO_FEATURE_* variables for the build-dependency
+            // side of the graph.
+            //
+            // Keep in mind that the RunCustomBuild unit and the Compile
+            // build.rs unit use the same features. This is because some
+            // people use `cfg!` and `#[cfg]` expressions to check for enabled
+            // features instead of just checking `CARGO_FEATURE_*` at runtime.
+            // In the case with `-Zfeatures=build_dep`, and a shared
+            // dependency has different features enabled for normal vs. build,
+            // then the build.rs script will get compiled twice. I believe it
+            // is not feasible to only build it once because it would break a
+            // large number of scripts (they would think they have the wrong
+            // set of features enabled).
             let script_unit_for = UnitFor::new_build(unit_for.is_for_build_dep());
             new_unit_dep_with_profile(
                 state,
