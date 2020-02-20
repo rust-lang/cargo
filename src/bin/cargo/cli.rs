@@ -1,9 +1,6 @@
-use clap;
-
-use clap::{AppSettings, Arg, ArgMatches};
-
 use cargo::core::features;
 use cargo::{self, CliResult, Config};
+use clap::{AppSettings, Arg, ArgMatches};
 
 use super::commands;
 use super::list_commands;

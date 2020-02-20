@@ -2,8 +2,6 @@ use std::borrow::Borrow;
 use std::collections::BTreeSet;
 use std::fmt;
 
-use im_rc;
-
 pub struct Graph<N: Clone, E: Clone> {
     nodes: im_rc::OrdMap<N, im_rc::OrdMap<N, E>>,
 }

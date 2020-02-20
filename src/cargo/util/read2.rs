@@ -2,7 +2,6 @@ pub use self::imp::read2;
 
 #[cfg(unix)]
 mod imp {
-    use libc;
     use std::io;
     use std::io::prelude::*;
     use std::mem;

@@ -6,7 +6,6 @@ use std::path::Path;
 use std::ptr;
 use std::sync::Mutex;
 
-use semver;
 use serde::de;
 use serde::ser;
 

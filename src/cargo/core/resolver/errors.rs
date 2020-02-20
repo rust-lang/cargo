@@ -4,7 +4,6 @@ use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
 use crate::util::Config;
 use anyhow::Error;
-use semver;
 
 use super::context::Context;
 use super::types::{ConflictMap, ConflictReason};

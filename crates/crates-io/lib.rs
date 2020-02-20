@@ -11,7 +11,6 @@ use anyhow::{bail, Result};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use url::Url;
 
 pub struct Registry {

@@ -1,6 +1,5 @@
 #![allow(deprecated)]
 
-use hex;
 use std::hash::{Hash, Hasher, SipHasher};
 
 pub fn to_hex(num: u64) -> String {

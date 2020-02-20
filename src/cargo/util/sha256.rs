@@ -1,6 +1,5 @@
-use self::crypto_hash::{Algorithm, Hasher};
 use crate::util::{CargoResult, CargoResultExt};
-use crypto_hash;
+use crypto_hash::{Algorithm, Hasher};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
