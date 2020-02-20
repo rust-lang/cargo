@@ -1,5 +1,6 @@
 use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
+use crate::core::resolver::features::FeaturesFor;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
@@ -974,6 +975,14 @@ impl UnitFor {
             },
         ];
         ALL
+    }
+
+    pub(crate) fn map_to_features_for(&self) -> FeaturesFor {
+        if self.is_for_build_dep() {
+            FeaturesFor::BuildDep
+        } else {
+            FeaturesFor::NormalOrDev
+        }
     }
 }
 

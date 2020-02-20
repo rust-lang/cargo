@@ -576,7 +576,7 @@ impl Config {
     /// Helper for StringList type to get something that is a string or list.
     fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
         let mut res = Vec::new();
-        match self.get_cv(&key)? {
+        match self.get_cv(key)? {
             Some(CV::List(val, _def)) => res.extend(val),
             Some(CV::String(val, def)) => {
                 let split_vs = val.split_whitespace().map(|s| (s.to_string(), def.clone()));

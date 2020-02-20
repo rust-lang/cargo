@@ -312,9 +312,10 @@ pub fn compile_ws<'a>(
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
     let opts = ResolveOpts::new(dev_deps, features, all_features, !no_default_features);
-    let has_dev_units = match filter.need_dev_deps(build_config.mode) {
-        true => HasDevUnits::Yes,
-        false => HasDevUnits::No,
+    let has_dev_units = if filter.need_dev_deps(build_config.mode) {
+        HasDevUnits::Yes
+    } else {
+        HasDevUnits::No
     };
     let resolve = ops::resolve_ws_with_opts(
         ws,
@@ -950,9 +951,10 @@ fn resolve_all_features(
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
         for dep in deps {
-            let features_for = match dep.is_build() {
-                true => FeaturesFor::BuildDep,
-                false => FeaturesFor::NormalOrDev,
+            let features_for = if dep.is_build() {
+                FeaturesFor::BuildDep
+            } else {
+                FeaturesFor::NormalOrDev
             };
             for feature in resolved_features.activated_features(dep_id, features_for) {
                 features.insert(dep.name_in_toml().to_string() + "/" + &feature);

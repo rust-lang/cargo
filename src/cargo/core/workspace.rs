@@ -884,7 +884,7 @@ impl<'cfg> Workspace<'cfg> {
                     .map(|m| (m, RequestedFeatures::new_all(false)))
                     .collect());
             }
-            return Ok(members);
+            Ok(members)
         } else {
             let ms = self.members().filter_map(|member| {
                 let member_id = member.package_id();
@@ -911,7 +911,7 @@ impl<'cfg> Workspace<'cfg> {
                     }
                 }
             });
-            return Ok(ms.collect());
+            Ok(ms.collect())
         }
     }
 }
