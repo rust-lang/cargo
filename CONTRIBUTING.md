@@ -115,10 +115,8 @@ may also need to install additional tools for the target. For example, on Ubuntu
 you should install the `gcc-multilib` package.
 
 If you can't install an alternate target, you can set the
-`CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests.
-Unfortunately 32-bit support on macOS is going away, so you may not be able to
-run these tests on macOS. The Windows cross tests only support the MSVC
-toolchain.
+`CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests. The
+Windows cross tests only support the MSVC toolchain.
 
 Some of the nightly tests require the `rustc-dev` component installed. This
 component includes the compiler as a library. This may already be installed
