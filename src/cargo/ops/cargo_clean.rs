@@ -4,10 +4,13 @@ use std::fs;
 use std::path::Path;
 
 use crate::core::compiler::unit_dependencies;
-use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
+use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::Workspace;
+use crate::core::resolver::features::{
+    FeatureResolver, FeaturesFor, HasDevUnits, RequestedFeatures,
+};
+use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
@@ -61,6 +64,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     build_config.requested_profile = opts.requested_profile;
+    let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
     let bcx = BuildContext::new(
         ws,
         &packages,
@@ -69,6 +73,22 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         profiles,
         &interner,
         HashMap::new(),
+        target_data,
+    )?;
+    let requested_features = RequestedFeatures::new_all(true);
+    let specs = opts
+        .spec
+        .iter()
+        .map(|spec| PackageIdSpec::parse(spec))
+        .collect::<CargoResult<Vec<_>>>()?;
+    let features = FeatureResolver::resolve(
+        ws,
+        &bcx.target_data,
+        &resolve,
+        &requested_features,
+        &specs,
+        bcx.build_config.requested_kind,
+        HasDevUnits::Yes,
     )?;
     let mut units = Vec::new();
 
@@ -98,7 +118,14 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 *mode,
                             )
                         };
-                        let features = resolve.features_sorted(pkg.package_id());
+                        // Use unverified here since this is being more
+                        // exhaustive than what is actually needed.
+                        let features_for = match unit_for.is_for_build_dep() {
+                            true => FeaturesFor::BuildDep,
+                            false => FeaturesFor::NormalOrDev,
+                        };
+                        let features =
+                            features.activated_features_unverified(pkg.package_id(), features_for);
                         units.push(bcx.units.intern(
                             pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
                         ));
@@ -109,7 +136,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     let unit_dependencies =
-        unit_dependencies::build_unit_dependencies(&bcx, &resolve, None, &units, &[])?;
+        unit_dependencies::build_unit_dependencies(&bcx, &resolve, &features, None, &units, &[])?;
     let mut cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
     cx.prepare_units(None, &units)?;
 

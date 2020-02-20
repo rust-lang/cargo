@@ -1,4 +1,3 @@
-use crate::core::compiler::BuildContext;
 use crate::core::{InternedString, Target};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use serde::Serialize;
@@ -38,15 +37,6 @@ impl CompileKind {
             CompileKind::Host => CompileKind::Host,
             CompileKind::Target(_) if target.for_host() => CompileKind::Host,
             CompileKind::Target(n) => CompileKind::Target(n),
-        }
-    }
-
-    /// Returns a "short" name for this kind, suitable for keying off
-    /// configuration in Cargo or presenting to users.
-    pub fn short_name(&self, bcx: &BuildContext<'_, '_>) -> &str {
-        match self {
-            CompileKind::Host => bcx.host_triple().as_str(),
-            CompileKind::Target(target) => target.short_name(),
         }
     }
 }

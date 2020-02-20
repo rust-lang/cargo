@@ -84,7 +84,7 @@ impl<'cfg> Compilation<'cfg> {
         bcx: &BuildContext<'a, 'cfg>,
         default_kind: CompileKind,
     ) -> CargoResult<Compilation<'cfg>> {
-        let mut rustc = bcx.rustc.process();
+        let mut rustc = bcx.rustc().process();
 
         let mut primary_unit_rustc_process = bcx.build_config.primary_unit_rustc.clone();
 
@@ -102,8 +102,16 @@ impl<'cfg> Compilation<'cfg> {
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
-            host_dylib_path: bcx.info(CompileKind::Host).sysroot_host_libdir.clone(),
-            target_dylib_path: bcx.info(default_kind).sysroot_target_libdir.clone(),
+            host_dylib_path: bcx
+                .target_data
+                .info(CompileKind::Host)
+                .sysroot_host_libdir
+                .clone(),
+            target_dylib_path: bcx
+                .target_data
+                .info(default_kind)
+                .sysroot_target_libdir
+                .clone(),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -114,7 +122,7 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             primary_unit_rustc_process,
             host: bcx.host_triple().to_string(),
-            target: default_kind.short_name(bcx).to_string(),
+            target: bcx.target_data.short_name(&default_kind).to_string(),
             target_runner: target_runner(bcx, default_kind)?,
         })
     }
@@ -286,7 +294,7 @@ fn target_runner(
     bcx: &BuildContext<'_, '_>,
     kind: CompileKind,
 ) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
-    let target = kind.short_name(bcx);
+    let target = bcx.target_data.short_name(&kind);
 
     // try target.{}.runner
     let key = format!("target.{}.runner", target);
@@ -296,7 +304,7 @@ fn target_runner(
     }
 
     // try target.'cfg(...)'.runner
-    let target_cfg = bcx.info(kind).cfg();
+    let target_cfg = bcx.target_data.info(kind).cfg();
     let mut cfgs = bcx
         .config
         .target_cfgs()?

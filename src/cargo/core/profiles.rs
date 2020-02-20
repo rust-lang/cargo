@@ -483,7 +483,7 @@ fn merge_toml_overrides(
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
-    if unit_for.is_build() {
+    if unit_for.is_for_host() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -766,7 +766,49 @@ pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies, or a proc-macro or
     /// any of its dependencies. This enables `build-override` profiles for
     /// these targets.
-    build: bool,
+    ///
+    /// An invariant is that if `build_dep` is true, `host` must be true.
+    ///
+    /// Note that this is `true` for `RunCustomBuild` units, even though that
+    /// unit should *not* use build-override profiles. This is a bit of a
+    /// special case. When computing the `RunCustomBuild` unit, it manually
+    /// uses the `get_profile_run_custom_build` method to get the correct
+    /// profile information for the unit. `host` needs to be true so that all
+    /// of the dependencies of that `RunCustomBuild` unit have this flag be
+    /// sticky (and forced to `true` for all further dependencies) — which is
+    /// the whole point of `UnitFor`.
+    host: bool,
+    /// A target for a build dependency (or any of its dependencies). This is
+    /// used for computing features of build dependencies independently of
+    /// other dependency kinds.
+    ///
+    /// The subtle difference between this and `host` is that the build script
+    /// for a non-host package sets this to `false` because it wants the
+    /// features of the non-host package (whereas `host` is true because the
+    /// build script is being built for the host). `build_dep` becomes `true`
+    /// for build-dependencies, or any of their dependencies. For example, with
+    /// this dependency tree:
+    ///
+    /// ```text
+    /// foo
+    /// ├── foo build.rs
+    /// │   └── shared_dep (BUILD dependency)
+    /// │       └── shared_dep build.rs
+    /// └── shared_dep (Normal dependency)
+    ///     └── shared_dep build.rs
+    /// ```
+    ///
+    /// In this example, `foo build.rs` is HOST=true, BUILD_DEP=false. This is
+    /// so that `foo build.rs` gets the profile settings for build scripts
+    /// (HOST=true) and features of foo (BUILD_DEP=false) because build scripts
+    /// need to know which features their package is being built with.
+    ///
+    /// But in the case of `shared_dep`, when built as a build dependency,
+    /// both flags are true (it only wants the build-dependency features).
+    /// When `shared_dep` is built as a normal dependency, then `shared_dep
+    /// build.rs` is HOST=true, BUILD_DEP=false for the same reasons that
+    /// foo's build script is set that way.
+    build_dep: bool,
     /// How Cargo processes the `panic` setting or profiles. This is done to
     /// handle test/benches inheriting from dev/release, as well as forcing
     /// `for_host` units to always unwind.
@@ -793,15 +835,22 @@ impl UnitFor {
     /// proc macro/plugin, or test/bench).
     pub fn new_normal() -> UnitFor {
         UnitFor {
-            build: false,
+            host: false,
+            build_dep: false,
             panic_setting: PanicSetting::ReadProfile,
         }
     }
 
     /// A unit for a custom build script or its dependencies.
-    pub fn new_build() -> UnitFor {
+    ///
+    /// The `build_dep` parameter is whether or not this is for a build
+    /// dependency. Build scripts for non-host units should use `false`
+    /// because they want to use the features of the package they are running
+    /// for.
+    pub fn new_build(build_dep: bool) -> UnitFor {
         UnitFor {
-            build: true,
+            host: true,
+            build_dep,
             // Force build scripts to always use `panic=unwind` for now to
             // maximally share dependencies with procedural macros.
             panic_setting: PanicSetting::AlwaysUnwind,
@@ -811,7 +860,8 @@ impl UnitFor {
     /// A unit for a proc macro or compiler plugin or their dependencies.
     pub fn new_compiler() -> UnitFor {
         UnitFor {
-            build: false,
+            host: false,
+            build_dep: false,
             // Force plugins to use `panic=abort` so panics in the compiler do
             // not abort the process but instead end with a reasonable error
             // message that involves catching the panic in the compiler.
@@ -827,7 +877,8 @@ impl UnitFor {
     /// compiler flag.
     pub fn new_test(config: &Config) -> UnitFor {
         UnitFor {
-            build: false,
+            host: false,
+            build_dep: false,
             // We're testing out an unstable feature (`-Zpanic-abort-tests`)
             // which inherits the panic setting from the dev/release profile
             // (basically avoid recompiles) but historical defaults required
@@ -840,7 +891,7 @@ impl UnitFor {
         }
     }
 
-    /// Creates a variant based on `for_host` setting.
+    /// Returns a new copy based on `for_host` setting.
     ///
     /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
     /// fashion so that all its dependencies also have `panic_abort_ok=false`.
@@ -849,7 +900,8 @@ impl UnitFor {
     /// graph where everything is `panic=unwind`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
-            build: self.build || for_host,
+            host: self.host || for_host,
+            build_dep: self.build_dep,
             panic_setting: if for_host {
                 PanicSetting::AlwaysUnwind
             } else {
@@ -858,14 +910,30 @@ impl UnitFor {
         }
     }
 
-    /// Returns `true` if this unit is for a custom build script or one of its
-    /// dependencies.
-    pub fn is_build(self) -> bool {
-        self.build
+    /// Returns a new copy updating it for a build dependency.
+    ///
+    /// This is part of the machinery responsible for handling feature
+    /// decoupling for build dependencies in the new feature resolver.
+    pub fn with_build_dep(mut self, build_dep: bool) -> UnitFor {
+        if build_dep {
+            assert!(self.host);
+        }
+        self.build_dep = self.build_dep || build_dep;
+        self
+    }
+
+    /// Returns `true` if this unit is for a build script or any of its
+    /// dependencies, or a proc macro or any of its dependencies.
+    pub fn is_for_host(&self) -> bool {
+        self.host
+    }
+
+    pub fn is_for_build_dep(&self) -> bool {
+        self.build_dep
     }
 
     /// Returns how `panic` settings should be handled for this profile
-    fn panic_setting(self) -> PanicSetting {
+    fn panic_setting(&self) -> PanicSetting {
         self.panic_setting
     }
 
@@ -873,20 +941,36 @@ impl UnitFor {
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: &[UnitFor] = &[
             UnitFor {
-                build: false,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::ReadProfile,
             },
             UnitFor {
-                build: true,
+                host: true,
+                build_dep: false,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
-                build: false,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::AlwaysUnwind,
             },
             UnitFor {
-                build: false,
+                host: false,
+                build_dep: false,
                 panic_setting: PanicSetting::Inherit,
+            },
+            // build_dep=true must always have host=true
+            // `Inherit` is not used in build dependencies.
+            UnitFor {
+                host: true,
+                build_dep: true,
+                panic_setting: PanicSetting::ReadProfile,
+            },
+            UnitFor {
+                host: true,
+                build_dep: true,
+                panic_setting: PanicSetting::AlwaysUnwind,
             },
         ];
         ALL

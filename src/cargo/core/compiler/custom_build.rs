@@ -180,7 +180,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
-        .env("TARGET", unit.kind.short_name(bcx))
+        .env("TARGET", bcx.target_data.short_name(&unit.kind))
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
@@ -191,11 +191,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             },
         )
         .env("HOST", &bcx.host_triple())
-        .env("RUSTC", &bcx.rustc.path)
+        .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(linker) = &bcx.target_config(unit.kind).linker {
+    if let Some(linker) = &bcx.target_data.target_config(unit.kind).linker {
         cmd.env(
             "RUSTC_LINKER",
             linker.val.clone().resolve_program(bcx.config),
@@ -213,7 +213,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     }
 
     let mut cfg_map = HashMap::new();
-    for cfg in bcx.cfg(unit.kind) {
+    for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
                 cfg_map.insert(n.clone(), None);

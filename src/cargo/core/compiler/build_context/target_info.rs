@@ -1,18 +1,18 @@
+use crate::core::compiler::CompileKind;
+use crate::core::compiler::CompileTarget;
+use crate::core::{Dependency, TargetKind, Workspace};
+use crate::util::config::{Config, StringList, TargetConfig};
+use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
+use cargo_platform::{Cfg, CfgExpr};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
 use std::path::PathBuf;
 use std::str::{self, FromStr};
 
-use crate::core::compiler::CompileKind;
-use crate::core::TargetKind;
-use crate::util::config::StringList;
-use crate::util::{CargoResult, CargoResultExt, Config, ProcessBuilder, Rustc};
-use cargo_platform::{Cfg, CfgExpr};
-
 /// Information about the platform target gleaned from querying rustc.
 ///
-/// The `BuildContext` keeps two of these, one for the host and one for the
+/// `RustcTargetData` keeps two of these, one for the host and one for the
 /// target. If no target is specified, it uses a clone from the host.
 #[derive(Clone)]
 pub struct TargetInfo {
@@ -467,4 +467,92 @@ fn env_args(
     }
 
     Ok(Vec::new())
+}
+
+/// Collection of information about `rustc` and the host and target.
+pub struct RustcTargetData {
+    /// Information about `rustc` itself.
+    pub rustc: Rustc,
+    /// Build information for the "host", which is information about when
+    /// `rustc` is invoked without a `--target` flag. This is used for
+    /// procedural macros, build scripts, etc.
+    host_config: TargetConfig,
+    host_info: TargetInfo,
+
+    /// Build information for targets that we're building for. This will be
+    /// empty if the `--target` flag is not passed, and currently also only ever
+    /// has at most one entry, but eventually we'd like to support multi-target
+    /// builds with Cargo.
+    target_config: HashMap<CompileTarget, TargetConfig>,
+    target_info: HashMap<CompileTarget, TargetInfo>,
+}
+
+impl RustcTargetData {
+    pub fn new(ws: &Workspace<'_>, requested_kind: CompileKind) -> CargoResult<RustcTargetData> {
+        let config = ws.config();
+        let rustc = config.load_global_rustc(Some(ws))?;
+        let host_config = config.target_cfg_triple(&rustc.host)?;
+        let host_info = TargetInfo::new(config, requested_kind, &rustc, CompileKind::Host)?;
+        let mut target_config = HashMap::new();
+        let mut target_info = HashMap::new();
+        if let CompileKind::Target(target) = requested_kind {
+            let tcfg = config.target_cfg_triple(target.short_name())?;
+            target_config.insert(target, tcfg);
+            target_info.insert(
+                target,
+                TargetInfo::new(config, requested_kind, &rustc, CompileKind::Target(target))?,
+            );
+        }
+
+        Ok(RustcTargetData {
+            rustc,
+            target_config,
+            target_info,
+            host_config,
+            host_info,
+        })
+    }
+
+    /// Returns a "short" name for the given kind, suitable for keying off
+    /// configuration in Cargo or presenting to users.
+    pub fn short_name<'a>(&'a self, kind: &'a CompileKind) -> &'a str {
+        match kind {
+            CompileKind::Host => &self.rustc.host,
+            CompileKind::Target(target) => target.short_name(),
+        }
+    }
+
+    /// Whether a dependency should be compiled for the host or target platform,
+    /// specified by `CompileKind`.
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: CompileKind) -> bool {
+        // If this dependency is only available for certain platforms,
+        // make sure we're only enabling it for that platform.
+        let platform = match dep.platform() {
+            Some(p) => p,
+            None => return true,
+        };
+        let name = self.short_name(&kind);
+        platform.matches(name, self.cfg(kind))
+    }
+
+    /// Gets the list of `cfg`s printed out from the compiler for the specified kind.
+    pub fn cfg(&self, kind: CompileKind) -> &[Cfg] {
+        self.info(kind).cfg()
+    }
+
+    /// Information about the given target platform, learned by querying rustc.
+    pub fn info(&self, kind: CompileKind) -> &TargetInfo {
+        match kind {
+            CompileKind::Host => &self.host_info,
+            CompileKind::Target(s) => &self.target_info[&s],
+        }
+    }
+
+    /// Gets the target configuration for a particular host or target.
+    pub fn target_config(&self, kind: CompileKind) -> &TargetConfig {
+        match kind {
+            CompileKind::Host => &self.host_config,
+            CompileKind::Target(s) => &self.target_config[&s],
+        }
+    }
 }

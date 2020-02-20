@@ -1,15 +1,13 @@
+use super::encode::Metadata;
+use crate::core::dependency::DepKind;
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
+use crate::util::errors::CargoResult;
+use crate::util::Graph;
 use std::borrow::Borrow;
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::iter::FromIterator;
-
-use crate::core::dependency::DepKind;
-use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
-use crate::util::errors::CargoResult;
-use crate::util::Graph;
-
-use super::encode::Metadata;
 
 /// Represents a fully-resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
@@ -28,9 +26,9 @@ pub struct Resolve {
     /// An empty `HashSet` to avoid creating a new `HashSet` for every package
     /// that does not have any features, and to avoid using `Option` to
     /// simplify the API.
-    empty_features: HashSet<String>,
+    empty_features: Vec<InternedString>,
     /// Features enabled for a given package.
-    features: HashMap<PackageId, HashSet<String>>,
+    features: HashMap<PackageId, Vec<InternedString>>,
     /// Checksum for each package. A SHA256 hash of the `.crate` file used to
     /// validate the correct crate file is used. This is `None` for sources
     /// that do not use `.crate` files, like path or git dependencies.
@@ -50,6 +48,7 @@ pub struct Resolve {
     /// Version of the `Cargo.lock` format, see
     /// `cargo::core::resolver::encode` for more.
     version: ResolveVersion,
+    summaries: HashMap<PackageId, Summary>,
 }
 
 /// A version to indicate how a `Cargo.lock` should be serialized. Currently
@@ -73,11 +72,12 @@ impl Resolve {
     pub fn new(
         graph: Graph<PackageId, Vec<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
-        features: HashMap<PackageId, HashSet<String>>,
+        features: HashMap<PackageId, Vec<InternedString>>,
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
         version: ResolveVersion,
+        summaries: HashMap<PackageId, Summary>,
     ) -> Resolve {
         let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
         let public_dependencies = graph
@@ -103,10 +103,11 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: HashSet::new(),
+            empty_features: Vec::new(),
             reverse_replacements,
             public_dependencies,
             version,
+            summaries,
         }
     }
 
@@ -285,8 +286,14 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.replacements
     }
 
-    pub fn features(&self, pkg: PackageId) -> &HashSet<String> {
+    pub fn features(&self, pkg: PackageId) -> &[InternedString] {
         self.features.get(&pkg).unwrap_or(&self.empty_features)
+    }
+
+    /// This is only here for legacy support, it will be removed when
+    /// switching to the new feature resolver.
+    pub fn features_clone(&self) -> HashMap<PackageId, Vec<InternedString>> {
+        self.features.clone()
     }
 
     pub fn is_public_dep(&self, pkg: PackageId, dep: PackageId) -> bool {
@@ -294,12 +301,6 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             .get(&pkg)
             .map(|public_deps| public_deps.contains(&dep))
             .unwrap_or_else(|| panic!("Unknown dependency {:?} for package {:?}", dep, pkg))
-    }
-
-    pub fn features_sorted(&self, pkg: PackageId) -> Vec<&str> {
-        let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
-        v.sort_unstable();
-        v
     }
 
     pub fn query(&self, spec: &str) -> CargoResult<PackageId> {
@@ -374,6 +375,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn version(&self) -> &ResolveVersion {
         &self.version
     }
+
+    pub fn summary(&self, pkg_id: PackageId) -> &Summary {
+        &self.summaries[&pkg_id]
+    }
 }
 
 impl PartialEq for Resolve {
@@ -388,7 +393,7 @@ impl PartialEq for Resolve {
         compare! {
             // fields to compare
             graph replacements reverse_replacements empty_features features
-            checksums metadata unused_patches public_dependencies
+            checksums metadata unused_patches public_dependencies summaries
             |
             // fields to ignore
             version

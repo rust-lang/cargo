@@ -10,19 +10,19 @@
 //! - `resolve_with_previous`: A low-level function for running the resolver,
 //!   providing the most power and flexibility.
 
-use std::collections::HashSet;
-use std::rc::Rc;
-
-use log::{debug, trace};
-
+use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::{self, Resolve, ResolveOpts};
+use crate::core::resolver::features::{FeatureResolver, ResolvedFeatures};
+use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts};
+use crate::core::summary::Summary;
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
+use log::{debug, trace};
+use std::collections::HashSet;
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'a> {
@@ -36,6 +36,8 @@ pub struct WorkspaceResolve<'a> {
     /// The narrowed resolve, with the specific features enabled, and only the
     /// given package specs requested.
     pub targeted_resolve: Resolve,
+    /// The features activated per package.
+    pub resolved_features: ResolvedFeatures,
 }
 
 const UNUSED_PATCH_WARNING: &str = "\
@@ -72,12 +74,14 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// members. In this case, `opts.all_features` must be `true`.
 pub fn resolve_ws_with_opts<'a>(
     ws: &Workspace<'a>,
-    opts: ResolveOpts,
+    target_data: &RustcTargetData,
+    requested_target: CompileKind,
+    opts: &ResolveOpts,
     specs: &[PackageIdSpec],
+    has_dev_units: HasDevUnits,
 ) -> CargoResult<WorkspaceResolve<'a>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
-
     let resolve = if ws.ignore_lock() {
         None
     } else if ws.require_optional_deps() {
@@ -122,10 +126,21 @@ pub fn resolve_ws_with_opts<'a>(
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
+    let resolved_features = FeatureResolver::resolve(
+        ws,
+        target_data,
+        &resolved_with_overrides,
+        &opts.features,
+        specs,
+        requested_target,
+        has_dev_units,
+    )?;
+
     Ok(WorkspaceResolve {
         pkg_set,
         workspace_resolve: resolve,
         targeted_resolve: resolved_with_overrides,
+        resolved_features,
     })
 }
 
@@ -137,7 +152,7 @@ fn resolve_with_registry<'cfg>(
     let resolve = resolve_with_previous(
         registry,
         ws,
-        ResolveOpts::everything(),
+        &ResolveOpts::everything(),
         prev.as_ref(),
         None,
         &[],
@@ -168,17 +183,12 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    opts: ResolveOpts,
+    opts: &ResolveOpts,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
-    assert!(
-        !specs.is_empty() || opts.all_features,
-        "no specs requires all_features"
-    );
-
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
     let _lock = ws.config().acquire_package_cache_lock()?;
@@ -258,80 +268,20 @@ pub fn resolve_with_previous<'cfg>(
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
-    let mut summaries = Vec::new();
-    if ws.config().cli_unstable().package_features {
-        let mut members = Vec::new();
-        if specs.is_empty() {
-            members.extend(ws.members());
-        } else {
-            if specs.len() > 1 && !opts.features.is_empty() {
-                anyhow::bail!("cannot specify features for more than one package");
-            }
-            members.extend(
-                ws.members()
-                    .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id()))),
-            );
-            // Edge case: running `cargo build -p foo`, where `foo` is not a member
-            // of current workspace. Add all packages from workspace to get `foo`
-            // into the resolution graph.
-            if members.is_empty() {
-                if !(opts.features.is_empty() && !opts.all_features && opts.uses_default_features) {
-                    anyhow::bail!("cannot specify features for packages outside of workspace");
-                }
-                members.extend(ws.members());
-            }
-        }
-        for member in members {
+    let summaries: Vec<(Summary, ResolveOpts)> = ws
+        .members_with_features(specs, &opts.features)?
+        .into_iter()
+        .map(|(member, features)| {
             let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, opts.clone()))
-        }
-    } else {
-        for member in ws.members() {
-            let summary_resolve_opts = if specs.is_empty() {
-                // When resolving the entire workspace, resolve each member
-                // with all features enabled.
-                opts.clone()
-            } else {
-                // If we're not resolving everything though then we're constructing the
-                // exact crate graph we're going to build. Here we don't necessarily
-                // want to keep around all workspace crates as they may not all be
-                // built/tested.
-                //
-                // Additionally, the `opts` specified represents command line
-                // flags, which really only matters for the current package
-                // (determined by the cwd). If other packages are specified (via
-                // `-p`) then the command line flags like features don't apply to
-                // them.
-                //
-                // As a result, if this `member` is the current member of the
-                // workspace, then we use `opts` specified. Otherwise we use a
-                // base `opts` with no features specified but using default features
-                // for any other packages specified with `-p`.
-                let member_id = member.package_id();
-                match ws.current_opt() {
-                    Some(current) if member_id == current.package_id() => opts.clone(),
-                    _ => {
-                        if specs.iter().any(|spec| spec.matches(member_id)) {
-                            // -p for a workspace member that is not the
-                            // "current" one, don't use the local `--features`.
-                            ResolveOpts {
-                                dev_deps: opts.dev_deps,
-                                features: Rc::default(),
-                                all_features: opts.all_features,
-                                uses_default_features: true,
-                            }
-                        } else {
-                            // `-p` for non-member, skip.
-                            continue;
-                        }
-                    }
-                }
-            };
-
-            let summary = registry.lock(member.summary().clone());
-            summaries.push((summary, summary_resolve_opts));
-        }
-    };
+            (
+                summary,
+                ResolveOpts {
+                    dev_deps: opts.dev_deps,
+                    features,
+                },
+            )
+        })
+        .collect();
 
     let root_replace = ws.root_replace();
 

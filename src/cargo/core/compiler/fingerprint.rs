@@ -1122,7 +1122,7 @@ fn calculate_normal<'a, 'cfg>(
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     Ok(Fingerprint {
-        rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
+        rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
@@ -1180,7 +1180,7 @@ fn calculate_run_custom_build<'a, 'cfg>(
 
     Ok(Fingerprint {
         local: Mutex::new(local),
-        rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
+        rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         deps,
         outputs: if overridden { Vec::new() } else { vec![output] },
 

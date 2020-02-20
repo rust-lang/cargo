@@ -20,6 +20,7 @@ use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::DepKind;
 use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
+use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
 use crate::core::{InternedString, Package, PackageId, Target};
 use crate::CargoResult;
@@ -53,7 +54,9 @@ struct State<'a, 'cfg> {
     unit_dependencies: UnitGraph<'a>,
     package_cache: HashMap<PackageId, &'a Package>,
     usr_resolve: &'a Resolve,
+    usr_features: &'a ResolvedFeatures,
     std_resolve: Option<&'a Resolve>,
+    std_features: Option<&'a ResolvedFeatures>,
     /// This flag is `true` while generating the dependencies for the standard
     /// library.
     is_std: bool,
@@ -62,10 +65,15 @@ struct State<'a, 'cfg> {
 pub fn build_unit_dependencies<'a, 'cfg>(
     bcx: &'a BuildContext<'a, 'cfg>,
     resolve: &'a Resolve,
-    std_resolve: Option<&'a Resolve>,
+    features: &'a ResolvedFeatures,
+    std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit<'a>],
     std_roots: &[Unit<'a>],
 ) -> CargoResult<UnitGraph<'a>> {
+    let (std_resolve, std_features) = match std_resolve {
+        Some((r, f)) => (Some(r), Some(f)),
+        None => (None, None),
+    };
     let mut state = State {
         bcx,
         downloads: bcx.packages.enable_download()?,
@@ -73,7 +81,9 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         unit_dependencies: HashMap::new(),
         package_cache: HashMap::new(),
         usr_resolve: resolve,
+        usr_features: features,
         std_resolve,
+        std_features,
         is_std: false,
     };
 
@@ -168,7 +178,7 @@ fn deps_of_roots<'a, 'cfg>(roots: &[Unit<'a>], mut state: &mut State<'a, 'cfg>) 
             } else if unit.target.is_custom_build() {
                 // This normally doesn't happen, except `clean` aggressively
                 // generates all units.
-                UnitFor::new_build()
+                UnitFor::new_build(false)
             } else if unit.target.for_host() {
                 // Proc macro / plugin should never have panic set.
                 UnitFor::new_compiler()
@@ -220,7 +230,7 @@ fn compute_deps<'a, 'cfg>(
     unit_for: UnitFor,
 ) -> CargoResult<Vec<UnitDep<'a>>> {
     if unit.mode.is_run_custom_build() {
-        return compute_deps_custom_build(unit, state);
+        return compute_deps_custom_build(unit, unit_for, state);
     } else if unit.mode.is_doc() {
         // Note: this does not include doc test.
         return compute_deps_doc(unit, state);
@@ -228,7 +238,7 @@ fn compute_deps<'a, 'cfg>(
 
     let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = state.resolve().deps(id).filter(|&(_id, deps)| {
+    let filtered_deps = state.resolve().deps(id).filter(|&(_id, deps)| {
         assert!(!deps.is_empty());
         deps.iter().any(|dep| {
             // If this target is a build command, then we only want build
@@ -250,8 +260,22 @@ fn compute_deps<'a, 'cfg>(
 
             // If this dependency is only available for certain platforms,
             // make sure we're only enabling it for that platform.
-            if !bcx.dep_platform_activated(dep, unit.kind) {
+            if !bcx.target_data.dep_platform_activated(dep, unit.kind) {
                 return false;
+            }
+
+            // If this is an optional dependency, and the new feature resolver
+            // did not enable it, don't include it.
+            if dep.is_optional() {
+                let features_for = match unit_for.is_for_build_dep() {
+                    true => FeaturesFor::BuildDep,
+                    false => FeaturesFor::NormalOrDev,
+                };
+
+                let feats = state.activated_features(id, features_for);
+                if !feats.contains(&dep.name_in_toml()) {
+                    return false;
+                }
             }
 
             // If we've gotten past all that, then this dependency is
@@ -259,9 +283,11 @@ fn compute_deps<'a, 'cfg>(
             true
         })
     });
+    // Separate line to avoid rustfmt indentation. Must collect due to `state` capture.
+    let filtered_deps: Vec<_> = filtered_deps.collect();
 
     let mut ret = Vec::new();
-    for (id, _) in deps {
+    for (id, _) in filtered_deps {
         let pkg = match state.get(id)? {
             Some(pkg) => pkg,
             None => continue,
@@ -271,7 +297,10 @@ fn compute_deps<'a, 'cfg>(
             None => continue,
         };
         let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = unit_for.with_for_host(lib.for_host());
+        let dep_unit_for = unit_for
+            .with_for_host(lib.for_host())
+            // If it is a custom build script, then it *only* has build dependencies.
+            .with_build_dep(unit.target.is_custom_build());
 
         if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
             let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
@@ -299,7 +328,7 @@ fn compute_deps<'a, 'cfg>(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(unit, state)?);
+    ret.extend(dep_build_script(unit, unit_for, state)?);
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
@@ -326,7 +355,7 @@ fn compute_deps<'a, 'cfg>(
                     t.is_bin() &&
                         // Skip binaries with required features that have not been selected.
                         t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                            unit.features.contains(&f.as_str())
+                            unit.features.contains(&InternedString::new(f.as_str()))
                         })
                 })
                 .map(|t| {
@@ -353,6 +382,7 @@ fn compute_deps<'a, 'cfg>(
 /// the returned set of units must all be run before `unit` is run.
 fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
+    unit_for: UnitFor,
     state: &mut State<'a, 'cfg>,
 ) -> CargoResult<Vec<UnitDep<'a>>> {
     if let Some(links) = unit.pkg.manifest().links() {
@@ -361,6 +391,9 @@ fn compute_deps_custom_build<'a, 'cfg>(
             return Ok(Vec::new());
         }
     }
+    // All dependencies of this unit should use profiles for custom
+    // builds.
+    let script_unit_for = UnitFor::new_build(unit_for.is_for_build_dep());
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.
@@ -375,9 +408,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
         unit,
         unit.pkg,
         unit.target,
-        // All dependencies of this unit should use profiles for custom
-        // builds.
-        UnitFor::new_build(),
+        script_unit_for,
         // Build scripts always compiled for the host.
         CompileKind::Host,
         CompileMode::Build,
@@ -396,7 +427,7 @@ fn compute_deps_doc<'a, 'cfg>(
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
-                DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
+                DepKind::Normal => bcx.target_data.dep_platform_activated(dep, unit.kind),
                 _ => false,
             })
         });
@@ -444,7 +475,7 @@ fn compute_deps_doc<'a, 'cfg>(
     }
 
     // Be sure to build/run the build script for documented libraries.
-    ret.extend(dep_build_script(unit, state)?);
+    ret.extend(dep_build_script(unit, UnitFor::new_normal(), state)?);
 
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
@@ -486,6 +517,7 @@ fn maybe_lib<'a>(
 /// build script.
 fn dep_build_script<'a>(
     unit: &Unit<'a>,
+    unit_for: UnitFor,
     state: &State<'a, '_>,
 ) -> CargoResult<Option<UnitDep<'a>>> {
     unit.pkg
@@ -499,12 +531,38 @@ fn dep_build_script<'a>(
                 .bcx
                 .profiles
                 .get_profile_run_custom_build(&unit.profile);
+            // UnitFor::new_build is used because we want the `host` flag set
+            // for all of our build dependencies (so they all get
+            // build-override profiles), including compiling the build.rs
+            // script itself.
+            //
+            // If `is_for_build_dep` here is `false`, that means we are a
+            // build.rs script for a normal dependency and we want to set the
+            // CARGO_FEATURE_* environment variables to the features as a
+            // normal dep.
+            //
+            // If `is_for_build_dep` here is `true`, that means that this
+            // package is being used as a build dependency, and so we only
+            // want to set CARGO_FEATURE_* variables for the build-dependency
+            // side of the graph.
+            //
+            // Keep in mind that the RunCustomBuild unit and the Compile
+            // build.rs unit use the same features. This is because some
+            // people use `cfg!` and `#[cfg]` expressions to check for enabled
+            // features instead of just checking `CARGO_FEATURE_*` at runtime.
+            // In the case with `-Zfeatures=build_dep`, and a shared
+            // dependency has different features enabled for normal vs. build,
+            // then the build.rs script will get compiled twice. I believe it
+            // is not feasible to only build it once because it would break a
+            // large number of scripts (they would think they have the wrong
+            // set of features enabled).
+            let script_unit_for = UnitFor::new_build(unit_for.is_for_build_dep());
             new_unit_dep_with_profile(
                 state,
                 unit,
                 unit.pkg,
                 t,
-                UnitFor::new_build(),
+                script_unit_for,
                 unit.kind,
                 CompileMode::RunCustomBuild,
                 profile,
@@ -569,7 +627,11 @@ fn new_unit_dep_with_profile<'a>(
     let public = state
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
-    let features = state.resolve().features_sorted(pkg.package_id());
+    let features_for = match unit_for.is_for_build_dep() {
+        true => FeaturesFor::BuildDep,
+        false => FeaturesFor::NormalOrDev,
+    };
+    let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state
         .bcx
         .units
@@ -672,6 +734,19 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         } else {
             self.usr_resolve
         }
+    }
+
+    fn activated_features(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+    ) -> Vec<InternedString> {
+        let features = if self.is_std {
+            self.std_features.unwrap()
+        } else {
+            self.usr_features
+        };
+        features.activated_features(pkg_id, features_for)
     }
 
     fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {

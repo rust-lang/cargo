@@ -24,7 +24,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        ResolveOpts::everything(),
+        &ResolveOpts::everything(),
         None,
         None,
         &[],
@@ -64,7 +64,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
-                        ResolveOpts::everything(),
+                        &ResolveOpts::everything(),
                         None,
                         None,
                         &[],
@@ -110,7 +110,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
-        ResolveOpts::everything(),
+        &ResolveOpts::everything(),
         Some(&previous_resolve),
         Some(&to_avoid),
         &[],

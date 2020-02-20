@@ -62,12 +62,14 @@ use crate::util::profile;
 
 use self::context::Context;
 use self::dep_cache::RegistryQueryer;
+use self::features::RequestedFeatures;
 use self::types::{ConflictMap, ConflictReason, DepsFrame};
 use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
+pub use self::features::HasDevUnits;
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::ResolveOpts;
 
@@ -76,6 +78,7 @@ mod context;
 mod dep_cache;
 mod encode;
 mod errors;
+pub mod features;
 mod resolve;
 mod types;
 
@@ -105,9 +108,6 @@ mod types;
 ///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
-///
-/// * `print_warnings` - whether or not to print backwards-compatibility
-///   warnings and such
 ///
 /// * `check_public_visible_dependencies` - a flag for whether to enforce the restrictions
 ///     introduced in the "public & private dependencies" RFC (1977). The current implementation
@@ -141,17 +141,27 @@ pub fn resolve(
         let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id(), cksum);
     }
+    let graph = cx.graph();
+    let replacements = cx.resolve_replacements(&registry);
+    let features = cx
+        .resolve_features
+        .iter()
+        .map(|(k, v)| (*k, v.iter().cloned().collect()))
+        .collect();
+    let summaries = cx
+        .activations
+        .into_iter()
+        .map(|(_key, (summary, _age))| (summary.package_id(), summary))
+        .collect();
     let resolve = Resolve::new(
-        cx.graph(),
-        cx.resolve_replacements(&registry),
-        cx.resolve_features
-            .iter()
-            .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
-            .collect(),
+        graph,
+        replacements,
+        features,
         cksums,
         BTreeMap::new(),
         Vec::new(),
         ResolveVersion::default_for_new_lockfiles(),
+        summaries,
     );
 
     check_cycles(&resolve)?;
@@ -161,11 +171,11 @@ pub fn resolve(
     Ok(resolve)
 }
 
-/// Recursively activates the dependencies for `top`, in depth-first order,
+/// Recursively activates the dependencies for `summaries`, in depth-first order,
 /// backtracking across possible candidates for each dependency as necessary.
 ///
 /// If all dependencies can be activated and resolved to a version in the
-/// dependency graph, cx.resolve is returned.
+/// dependency graph, `cx` is returned.
 fn activate_deps_loop(
     mut cx: Context,
     registry: &mut RegistryQueryer<'_>,
@@ -368,9 +378,11 @@ fn activate_deps_loop(
             let pid = candidate.package_id();
             let opts = ResolveOpts {
                 dev_deps: false,
-                features: Rc::clone(&features),
-                all_features: false,
-                uses_default_features: dep.uses_default_features(),
+                features: RequestedFeatures {
+                    features: Rc::clone(&features),
+                    all_features: false,
+                    uses_default_features: dep.uses_default_features(),
+                },
             };
             trace!(
                 "{}[{}]>{} trying {}",

@@ -1,4 +1,5 @@
-use crate::core::resolver::ResolveOpts;
+use crate::core::compiler::RustcTargetData;
+use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
@@ -24,7 +25,16 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         options.compile_opts.all_features,
         !options.compile_opts.no_default_features,
     );
-    let ws_resolve = ops::resolve_ws_with_opts(ws, opts, &specs)?;
+    let requested_kind = options.compile_opts.build_config.requested_kind;
+    let target_data = RustcTargetData::new(ws, requested_kind)?;
+    let ws_resolve = ops::resolve_ws_with_opts(
+        ws,
+        &target_data,
+        requested_kind,
+        &opts,
+        &specs,
+        HasDevUnits::No,
+    )?;
 
     let ids = specs
         .iter()
