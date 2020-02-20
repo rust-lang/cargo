@@ -51,7 +51,9 @@ fn simple_cross() {
     p.cargo("build -v --target").arg(&target).run();
     assert!(p.target_bin(&target, "foo").is_file());
 
-    p.process(&p.target_bin(&target, "foo")).run();
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(&target, "foo")).run();
+    }
 }
 
 #[cargo_test]
@@ -110,7 +112,9 @@ fn simple_cross_config() {
     p.cargo("build -v").run();
     assert!(p.target_bin(&target, "foo").is_file());
 
-    p.process(&p.target_bin(&target, "foo")).run();
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(&target, "foo")).run();
+    }
 }
 
 #[cargo_test]
@@ -144,7 +148,9 @@ fn simple_deps() {
     p.cargo("build --target").arg(&target).run();
     assert!(p.target_bin(&target, "foo").is_file());
 
-    p.process(&p.target_bin(&target, "foo")).run();
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(&target, "foo")).run();
+    }
 }
 
 #[cargo_test]
@@ -292,7 +298,7 @@ fn plugin_with_extra_dylib_dep() {
 
 #[cargo_test]
 fn cross_tests() {
-    if cross_compile::disabled() {
+    if !cross_compile::can_run_on_host() {
         return;
     }
 
@@ -382,7 +388,7 @@ fn no_cross_doctests() {
     p.cargo("test").with_stderr(&host_output).run();
 
     println!("b");
-    let target = cross_compile::host();
+    let target = rustc_host();
     p.cargo("test --target")
         .arg(&target)
         .with_stderr(&format!(
@@ -398,13 +404,33 @@ fn no_cross_doctests() {
 
     println!("c");
     let target = cross_compile::alternate();
-    p.cargo("test --target")
+
+    // This will build the library, but does not build or run doc tests.
+    // This should probably be a warning or error.
+    p.cargo("test -v --doc --target")
+        .arg(&target)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    if !cross_compile::can_run_on_host() {
+        return;
+    }
+
+    // This tests the library, but does not run the doc tests.
+    p.cargo("test -v --target")
         .arg(&target)
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
+[RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
 ",
             triple = target
         ))
@@ -413,7 +439,7 @@ fn no_cross_doctests() {
 
 #[cargo_test]
 fn simple_cargo_run() {
-    if cross_compile::disabled() {
+    if !cross_compile::can_run_on_host() {
         return;
     }
 
@@ -954,6 +980,8 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 }
 
 #[cargo_test]
+// Don't have a dylib cross target on macos.
+#[cfg_attr(target_os = "macos", ignore)]
 fn cross_test_dylib() {
     if cross_compile::disabled() {
         return;
