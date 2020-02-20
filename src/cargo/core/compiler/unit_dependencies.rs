@@ -264,11 +264,27 @@ fn compute_deps<'a, 'cfg>(
                 return false;
             }
 
+            // If this is an optional dependency, and the new feature resolver
+            // did not enable it, don't include it.
+            if dep.is_optional() {
+                let features_for = match unit_for.is_for_build_dep() {
+                    true => FeaturesFor::BuildDep,
+                    false => FeaturesFor::NormalOrDev,
+                };
+
+                let feats = state.activated_features(id, features_for);
+                if !feats.contains(&dep.name_in_toml()) {
+                    return false;
+                }
+            }
+
             // If we've gotten past all that, then this dependency is
             // actually used!
             true
         })
     });
+    // Separate line to avoid rustfmt indentation. Must collect due to `state` capture.
+    let filtered_deps: Vec<_> = filtered_deps.collect();
 
     let mut ret = Vec::new();
     for (id, _) in filtered_deps {

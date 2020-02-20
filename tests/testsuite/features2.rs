@@ -821,3 +821,75 @@ Consider enabling them by passing, e.g., `--features=\"bdep/f1\"`
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn disabled_shared_build_dep() {
+    // Check for situation where an optional dep of a shared dep is enabled in
+    // a normal dependency, but disabled in an optional one. The unit tree is:
+    // foo
+    // ├── foo build.rs
+    // |   └── common (BUILD dependency, NO FEATURES)
+    // └── common (Normal dependency, default features)
+    //     └── somedep
+    Package::new("somedep", "1.0.0")
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn f() { println!("hello from somedep"); }
+            "#,
+        )
+        .publish();
+    Package::new("common", "1.0.0")
+        .feature("default", &["somedep"])
+        .add_dep(Dependency::new("somedep", "1.0").optional(true))
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn check_somedep() -> bool {
+                #[cfg(feature="somedep")]
+                {
+                    extern crate somedep;
+                    somedep::f();
+                    true
+                }
+                #[cfg(not(feature="somedep"))]
+                {
+                    println!("no somedep");
+                    false
+                }
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            edition = "2018"
+
+            [dependencies]
+            common = "1.0"
+
+            [build-dependencies]
+            common = {version = "1.0", default-features = false}
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "fn main() { assert!(common::check_somedep()); }",
+        )
+        .file(
+            "build.rs",
+            "fn main() { assert!(!common::check_somedep()); }",
+        )
+        .build();
+
+    p.cargo("run -Zfeatures=build_dep -v")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("hello from somedep")
+        .run();
+}
