@@ -293,12 +293,26 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             self.activate_fv(pkg_id, fv, for_build)?;
         }
         if !self.processed_deps.insert((pkg_id, for_build)) {
-            // Already processed dependencies.
+            // Already processed dependencies. There's no need to process them
+            // again. This is primarily to avoid cycles, but also helps speed
+            // things up.
+            //
+            // This is safe because if another package comes along and adds a
+            // feature on this package, it will immediately add it (in
+            // `activate_fv`), and recurse as necessary right then and there.
+            // For example, consider we've already processed our dependencies,
+            // and another package comes along and enables one of our optional
+            // dependencies, it will do so immediately in the
+            // `FeatureValue::CrateFeature` branch, and then immediately
+            // recurse into that optional dependency. This also holds true for
+            // features that enable other features.
             return Ok(());
         }
         for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
             for (dep, dep_for_build) in deps {
                 if dep.is_optional() {
+                    // Optional dependencies are enabled in `activate_fv` when
+                    // a feature enables it.
                     continue;
                 }
                 // Recurse into the dependency.
