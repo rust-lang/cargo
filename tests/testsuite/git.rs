@@ -2314,6 +2314,7 @@ fn include_overrides_gitignore() {
         .with_stdout(
             "\
 Cargo.toml
+Cargo.toml.orig
 ignored.txt
 src/lib.rs
 ",

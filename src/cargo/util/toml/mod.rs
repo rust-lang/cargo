@@ -835,7 +835,11 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
-    pub fn prepare_for_publish(&self, config: &Config) -> CargoResult<TomlManifest> {
+    pub fn prepare_for_publish(
+        &self,
+        config: &Config,
+        package_root: &Path,
+    ) -> CargoResult<TomlManifest> {
         let mut package = self
             .package
             .as_ref()
@@ -843,6 +847,22 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
+        if let Some(license_file) = &package.license_file {
+            let license_path = Path::new(&license_file);
+            let abs_license_path = paths::normalize_path(&package_root.join(license_path));
+            if abs_license_path.strip_prefix(package_root).is_err() {
+                // This path points outside of the package root. `cargo package`
+                // will copy it into the root, so adjust the path to this location.
+                package.license_file = Some(
+                    license_path
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                );
+            }
+        }
         let all = |_d: &TomlDependency| true;
         return Ok(TomlManifest {
             package: Some(package),

@@ -1,7 +1,7 @@
 //! Tests for the `cargo package` command.
 
 use std;
-use std::fs::File;
+use std::fs::{read_to_string, File};
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -50,6 +50,7 @@ See [..]
             "\
 Cargo.lock
 Cargo.toml
+Cargo.toml.orig
 src/main.rs
 ",
         )
@@ -154,10 +155,11 @@ fn package_verbose() {
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] Cargo.toml
-[ARCHIVING] src/main.rs
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] Cargo.lock
+[ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
+[ARCHIVING] src/main.rs
 ",
         )
         .run();
@@ -193,9 +195,10 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
-[ARCHIVING] Cargo.toml
-[ARCHIVING] src/lib.rs
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
+[ARCHIVING] src/lib.rs
 ",
         )
         .run();
@@ -251,7 +254,7 @@ fn vcs_file_collision() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
+[ERROR] invalid inclusion of reserved file name .cargo_vcs_info.json \
 in package source
 ",
         )
@@ -370,7 +373,10 @@ fn exclude() {
 [WARNING] manifest has no description[..]
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
 [ARCHIVING] file_root_3
 [ARCHIVING] file_root_4
 [ARCHIVING] file_root_5
@@ -382,8 +388,6 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] some_dir/file_deep_4
 [ARCHIVING] some_dir/file_deep_5
 [ARCHIVING] src/main.rs
-[ARCHIVING] .cargo_vcs_info.json
-[ARCHIVING] Cargo.lock
 ",
         )
         .run();
@@ -397,6 +401,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
+Cargo.toml.orig
 file_root_3
 file_root_4
 file_root_5
@@ -443,12 +448,13 @@ fn include() {
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
 [PACKAGING] foo v0.0.1 ([..])
+[ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] .dotfile
+[ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
-[ARCHIVING] .cargo_vcs_info.json
-[ARCHIVING] Cargo.lock
 ",
         )
         .run();
@@ -572,6 +578,7 @@ fn no_duplicates_from_modified_tracked_files() {
             "\
 Cargo.lock
 Cargo.toml
+Cargo.toml.orig
 src/main.rs
 ",
         )
@@ -618,7 +625,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
             "\
 Cargo.lock
 Cargo.toml
-src[..]main.rs
+Cargo.toml.orig
+src/main.rs
 ",
         )
         .run();
@@ -648,11 +656,7 @@ fn package_weird_characters() {
             "\
 warning: [..]
 See [..]
-[PACKAGING] foo [..]
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  cannot package a filename with a special character `:`: src/:foo
+[ERROR] cannot package a filename with a special character `:`: src/:foo
 ",
         )
         .run();
@@ -1236,7 +1240,7 @@ fn include_cargo_toml_implicit() {
         .build();
 
     p.cargo("package --list")
-        .with_stdout("Cargo.toml\nsrc/lib.rs\n")
+        .with_stdout("Cargo.toml\nCargo.toml.orig\nsrc/lib.rs\n")
         .run();
 }
 
@@ -1284,6 +1288,7 @@ fn package_include_ignore_only() {
         "[]",
         &["src/lib.rs", "src/abc1.rs", "src/abc2.rs", "src/abc/mod.rs"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/abc/mod.rs\n\
          src/abc1.rs\n\
          src/abc2.rs\n\
@@ -1299,6 +1304,7 @@ fn gitignore_patterns() {
         "[]",
         &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          a/b/foo\n\
          a/foo\n\
          foo\n\
@@ -1311,6 +1317,7 @@ fn gitignore_patterns() {
         "[]",
         &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          foo\n\
          ",
     );
@@ -1320,6 +1327,7 @@ fn gitignore_patterns() {
         r#"["foo/"]"#, // exclude
         &["src/lib.rs", "foo", "a/foo", "x/foo/y", "bar"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          a/foo\n\
          bar\n\
          foo\n\
@@ -1343,6 +1351,7 @@ fn gitignore_patterns() {
             "z",
         ],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          c\n\
          other\n\
          src/lib.rs\n\
@@ -1354,6 +1363,7 @@ fn gitignore_patterns() {
         "[]",
         &["src/lib.rs", "a/foo/bar", "foo", "bar"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          a/foo/bar\n\
          ",
     );
@@ -1363,6 +1373,7 @@ fn gitignore_patterns() {
         "[]",
         &["src/lib.rs", "a/foo/bar", "foo/x/y/z"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          foo/x/y/z\n\
          ",
     );
@@ -1372,6 +1383,7 @@ fn gitignore_patterns() {
         "[]",
         &["src/lib.rs", "a/b", "a/x/b", "a/x/y/b"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          a/b\n\
          a/x/b\n\
          a/x/y/b\n\
@@ -1387,6 +1399,7 @@ fn gitignore_negate() {
         &["src/lib.rs", "foo.rs", "!important"],
         "!important\n\
          Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
     );
@@ -1400,6 +1413,7 @@ fn gitignore_negate() {
         "[]",
         &["src/lib.rs", "src/foo.rs"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
     );
@@ -1409,6 +1423,7 @@ fn gitignore_negate() {
         "[]",
         &["src/lib.rs", "foo.rs", "src/foo.rs", "src/bar/foo.rs"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
     );
@@ -1418,6 +1433,7 @@ fn gitignore_negate() {
         r#"["*.rs", "!foo.rs", "\\!important"]"#, // exclude
         &["src/lib.rs", "foo.rs", "!important"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          foo.rs\n\
          ",
     );
@@ -1430,6 +1446,7 @@ fn exclude_dot_files_and_directories_by_default() {
         "[]",
         &["src/lib.rs", ".dotfile", ".dotdir/file"],
         "Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
     );
@@ -1441,7 +1458,210 @@ fn exclude_dot_files_and_directories_by_default() {
         ".dotdir/file\n\
          .dotfile\n\
          Cargo.toml\n\
+         Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
     );
+}
+
+#[cargo_test]
+fn invalid_license_file_path() {
+    // Test warning when license-file points to a non-existent file.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = "does-not-exist"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .with_stderr(
+            "\
+[WARNING] license-file `does-not-exist` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
+This may become a hard error in the future.
+[PACKAGING] foo v1.0.0 ([..]/foo)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn license_file_implicit_include() {
+    // license-file should be automatically included even if not listed.
+    let p = git::new("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = "subdir/LICENSE"
+            description = "foo"
+            homepage = "foo"
+            include = ["src"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("subdir/LICENSE", "license text")
+    });
+
+    p.cargo("package --list")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+subdir/LICENSE
+",
+        )
+        .with_stderr("")
+        .run();
+
+    p.cargo("package --no-verify -v")
+        .with_stderr(
+            "\
+[PACKAGING] foo v1.0.0 [..]
+[ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
+[ARCHIVING] src/lib.rs
+[ARCHIVING] subdir/LICENSE
+",
+        )
+        .run();
+    let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-1.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "subdir/LICENSE",
+            "src/lib.rs",
+        ],
+        &[("subdir/LICENSE", "license text")],
+    );
+}
+
+#[cargo_test]
+fn relative_license_included() {
+    // license-file path outside of package will copy into root.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = "../LICENSE"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("../LICENSE", "license text")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout(
+            "\
+Cargo.toml
+Cargo.toml.orig
+LICENSE
+src/lib.rs
+",
+        )
+        .with_stderr("")
+        .run();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] foo v1.0.0 [..]
+[VERIFYING] foo v1.0.0 [..]
+[COMPILING] foo v1.0.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-1.0.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "LICENSE", "src/lib.rs"],
+        &[("LICENSE", "license text")],
+    );
+    let manifest =
+        std::fs::read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml")).unwrap();
+    assert!(manifest.contains("license-file = \"LICENSE\""));
+    let orig =
+        std::fs::read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml.orig")).unwrap();
+    assert!(orig.contains("license-file = \"../LICENSE\""));
+}
+
+#[cargo_test]
+fn relative_license_include_collision() {
+    // Can't copy a relative license-file if there is a file with that name already.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            license-file = "../LICENSE"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("../LICENSE", "outer license")
+        .file("LICENSE", "inner license")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout(
+            "\
+Cargo.toml
+Cargo.toml.orig
+LICENSE
+src/lib.rs
+",
+        )
+        .with_stderr("[WARNING] license-file `../LICENSE` appears to be [..]")
+        .run();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] license-file `../LICENSE` appears to be [..]
+[PACKAGING] foo v1.0.0 [..]
+[VERIFYING] foo v1.0.0 [..]
+[COMPILING] foo v1.0.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-1.0.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "LICENSE", "src/lib.rs"],
+        &[("LICENSE", "inner license")],
+    );
+    let manifest = read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml")).unwrap();
+    assert!(manifest.contains("license-file = \"LICENSE\""));
+    let orig = read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml.orig")).unwrap();
+    assert!(orig.contains("license-file = \"../LICENSE\""));
 }

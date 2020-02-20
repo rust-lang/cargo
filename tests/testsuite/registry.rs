@@ -365,10 +365,7 @@ fn package_with_path_deps() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `notyet` found
+[ERROR] no matching package named `notyet` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
@@ -380,8 +377,8 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("package")
         .with_stderr(
             "\
-[PACKAGING] foo v0.0.1 ([CWD])
 [UPDATING] `[..]` index
+[PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
