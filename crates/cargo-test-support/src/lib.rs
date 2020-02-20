@@ -1741,6 +1741,10 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         .env_remove("GIT_COMMITTER_NAME")
         .env_remove("GIT_COMMITTER_EMAIL")
         .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
+    if cfg!(target_os = "macos") {
+        // Work-around a bug in macOS 10.15, see `link_or_copy` for details.
+        p.env("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS", "1");
+    }
     p
 }
 
