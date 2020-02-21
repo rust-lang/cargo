@@ -5,16 +5,38 @@
 //! new behaviors. When `-Zfeatures` is not used, it will fall back to using
 //! the original `Resolve` feature computation. With `-Zfeatures` enabled,
 //! this will walk the dependency graph and compute the features using a
-//! different algorithm. One of its key characteristics is that it can avoid
-//! unifying features for shared dependencies in some situations.
+//! different algorithm.
+//!
+//! One of its key characteristics is that it can avoid unifying features for
+//! shared dependencies in some situations. See `FeatureOpts` for the
+//! different behaviors that can be enabled. If no extra options are enabled,
+//! then it should behave exactly the same as the dependency resolver's
+//! feature resolution. This can be verified by setting the
+//! `__CARGO_FORCE_NEW_FEATURES=compare` environment variable and running
+//! Cargo's test suite (or building other projects), and checking if it
+//! panics. Note: the `features2` tests will fail because they intentionally
+//! compare the old vs new behavior, so forcing the old behavior will
+//! naturally fail the tests.
 //!
 //! The preferred way to engage this new resolver is via
 //! `resolve_ws_with_opts`.
 //!
-//! There are many assumptions made about the resolver itself. It assumes
-//! validation has already been done on the feature maps, and doesn't do any
-//! validation itself. It assumes dev-dependencies within a dependency have
-//! been removed.
+//! This does not *replace* feature resolution in the dependency resolver, but
+//! instead acts as a second pass which can *narrow* the features selected in
+//! the dependency resolver. The dependency resolver still needs to do its own
+//! feature resolution in order to avoid selecting optional dependencies that
+//! are never enabled. The dependency resolver could, in theory, just assume
+//! all optional dependencies on all packages are enabled (and remove all
+//! knowledge of features), but that could introduce new requirements that
+//! might change old behavior or cause conflicts. Maybe some day in the future
+//! we could experiment with that, but it seems unlikely to work or be all
+//! that helpful.
+//!
+//! There are many assumptions made about the dependency resolver. This
+//! feature resolver assumes validation has already been done on the feature
+//! maps, and doesn't do any validation itself. It assumes dev-dependencies
+//! within a dependency have been removed. There are probably other
+//! assumptions that I am forgetting.
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::{DepKind, Dependency};
