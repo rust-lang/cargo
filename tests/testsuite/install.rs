@@ -3,8 +3,6 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
-use git2;
-
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::install::{

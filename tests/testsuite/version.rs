@@ -1,6 +1,5 @@
 //! Tests for displaying the cargo version.
 
-use cargo;
 use cargo_test_support::project;
 
 #[cargo_test]

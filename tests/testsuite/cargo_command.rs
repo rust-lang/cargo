@@ -6,7 +6,6 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use cargo;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;

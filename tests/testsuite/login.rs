@@ -9,7 +9,6 @@ use cargo::util::config::Config;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::registry::{self, registry_url};
 use cargo_test_support::{cargo_process, paths, t};
-use toml;
 
 const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";

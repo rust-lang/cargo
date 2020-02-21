@@ -1,6 +1,5 @@
 //! Tests for the `cargo package` command.
 
-use std;
 use std::fs::{read_to_string, File};
 use std::io::prelude::*;
 use std::path::Path;
@@ -11,7 +10,6 @@ use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
     registry, symlink_supported, t,
 };
-use git2;
 
 #[cargo_test]
 fn simple() {

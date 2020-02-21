@@ -120,9 +120,7 @@ use std::str;
 use std::time::{self, Duration};
 use std::usize;
 
-use cargo;
 use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
-use filetime;
 use serde_json::{self, Value};
 use url::Url;
 
