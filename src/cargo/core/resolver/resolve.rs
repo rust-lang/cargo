@@ -385,8 +385,7 @@ impl PartialEq for Resolve {
     fn eq(&self, other: &Resolve) -> bool {
         macro_rules! compare {
             ($($fields:ident)* | $($ignored:ident)*) => {
-                let Resolve { $($fields,)* $($ignored,)* } = self;
-                $(drop($ignored);)*
+                let Resolve { $($fields,)* $($ignored: _,)* } = self;
                 $($fields == &other.$fields)&&*
             }
         }

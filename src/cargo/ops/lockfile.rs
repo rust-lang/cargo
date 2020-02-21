@@ -1,7 +1,5 @@
 use std::io::prelude::*;
 
-use toml;
-
 use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;

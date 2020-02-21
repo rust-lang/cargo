@@ -1,6 +1,5 @@
 use crate::util::paths;
 use crate::util::{process, CargoResult};
-use git2;
 use std::path::Path;
 
 // Check if we are in an existing repo. We define that to be true if either:

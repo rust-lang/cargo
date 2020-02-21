@@ -1,9 +1,6 @@
-use clap;
-
-use clap::{AppSettings, Arg, ArgMatches};
-
 use cargo::core::features;
 use cargo::{self, CliResult, Config};
+use clap::{AppSettings, Arg, ArgMatches};
 
 use super::commands;
 use super::list_commands;
@@ -155,7 +152,7 @@ fn expand_aliases(
                 // capture those global options now.
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
-                let global_args = GlobalArgs::new(&args);
+                let global_args = GlobalArgs::new(args);
                 let new_args = cli()
                     .setting(AppSettings::NoBinaryName)
                     .get_matches_from_safe(alias)?;

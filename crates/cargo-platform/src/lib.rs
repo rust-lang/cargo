@@ -84,16 +84,14 @@ impl Platform {
                             )),
                         _ => (),
                     },
-                    Cfg::KeyPair(name, _) => match name.as_str() {
-                        "feature" =>
-                            warnings.push(String::from(
-                                "Found `feature = ...` in `target.'cfg(...)'.dependencies`. \
-                                 This key is not supported for selecting dependencies \
-                                 and will not work as expected. \
-                                 Use the [features] section instead: \
-                                 https://doc.rust-lang.org/cargo/reference/features.html"
-                            )),
-                        _ => (),
+                    Cfg::KeyPair(name, _) => if name.as_str() == "feature" {
+                        warnings.push(String::from(
+                            "Found `feature = ...` in `target.'cfg(...)'.dependencies`. \
+                             This key is not supported for selecting dependencies \
+                             and will not work as expected. \
+                             Use the [features] section instead: \
+                             https://doc.rust-lang.org/cargo/reference/features.html"
+                        ))
                     },
                 }
             }

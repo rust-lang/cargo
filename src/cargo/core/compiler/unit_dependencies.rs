@@ -267,10 +267,7 @@ fn compute_deps<'a, 'cfg>(
             // If this is an optional dependency, and the new feature resolver
             // did not enable it, don't include it.
             if dep.is_optional() {
-                let features_for = match unit_for.is_for_build_dep() {
-                    true => FeaturesFor::BuildDep,
-                    false => FeaturesFor::NormalOrDev,
-                };
+                let features_for = unit_for.map_to_features_for();
 
                 let feats = state.activated_features(id, features_for);
                 if !feats.contains(&dep.name_in_toml()) {
@@ -627,10 +624,7 @@ fn new_unit_dep_with_profile<'a>(
     let public = state
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
-    let features_for = match unit_for.is_for_build_dep() {
-        true => FeaturesFor::BuildDep,
-        false => FeaturesFor::NormalOrDev,
-    };
+    let features_for = unit_for.map_to_features_for();
     let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state
         .bcx

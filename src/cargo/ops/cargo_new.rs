@@ -15,8 +15,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::{from_utf8, FromStr};
 
-use toml;
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl {
     Git,

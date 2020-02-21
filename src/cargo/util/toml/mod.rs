@@ -1157,7 +1157,7 @@ impl TomlManifest {
                         .collect()
                 })
                 .unwrap_or_else(BTreeMap::new),
-            project.links.as_ref().map(|x| x.as_str()),
+            project.links.as_deref(),
             project.namespaced_features.unwrap_or(false),
         )?;
         let metadata = ManifestMetadata {

@@ -1,6 +1,3 @@
-use curl;
-use git2;
-
 use anyhow::Error;
 
 use crate::util::errors::{CargoResult, HttpNot200};

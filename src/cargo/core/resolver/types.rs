@@ -3,7 +3,6 @@ use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::Config;
-use im_rc;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;

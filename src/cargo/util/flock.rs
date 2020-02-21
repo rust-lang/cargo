@@ -4,8 +4,6 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
 use fs2::{lock_contended_error, FileExt};
-#[allow(unused_imports)]
-use libc;
 use termcolor::Color::Cyan;
 #[cfg(windows)]
 use winapi::shared::winerror::ERROR_INVALID_FUNCTION;

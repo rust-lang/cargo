@@ -271,8 +271,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let file_type = file_types
             .iter()
-            .filter(|file_type| file_type.flavor == FileFlavor::Normal)
-            .next()
+            .find(|file_type| file_type.flavor == FileFlavor::Normal)
             .expect("target must support `bin`");
 
         Ok(dest.join(file_type.filename(target.name())))
