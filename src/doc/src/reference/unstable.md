@@ -475,6 +475,10 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 CLI paths are relative to the current working directory.
 
 ## Features
+* Tracking Issues:
+  * [itarget #7914](https://github.com/rust-lang/cargo/issues/7914)
+  * [build_dep #7915](https://github.com/rust-lang/cargo/issues/7915)
+  * [dev_dep #7916](https://github.com/rust-lang/cargo/issues/7916)
 
 The `-Zfeatures` option causes Cargo to use a new feature resolver that can
 resolve features differently from before. It takes a comma separated list of
