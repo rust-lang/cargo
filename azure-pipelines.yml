@@ -93,6 +93,8 @@ jobs:
 - job: docs
   pool:
     vmImage: ubuntu-16.04
+  variables:
+    TOOLCHAIN: nightly
   steps:
     - template: ci/azure-install-rust.yml
     - bash: |
@@ -105,5 +107,11 @@ jobs:
       displayName: "Build documentation"
     - bash: cd src/doc && mdbook build --dest-dir ../../target/doc
       displayName: "Build mdbook documentation"
-  variables:
-    TOOLCHAIN: stable
+    - bash: |
+        set -e
+        rustup component add rust-docs
+        cd src/doc
+        curl -sSLo linkcheck.sh \
+          https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        sh linkcheck.sh --all cargo
+      displayName: "Check for broken links"
