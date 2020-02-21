@@ -10,7 +10,6 @@ use std::thread;
 
 use cargo_test_support::paths;
 use cargo_test_support::{basic_manifest, project};
-use git2;
 
 // Tests that HTTP auth is offered from `credential.helper`.
 #[cargo_test]

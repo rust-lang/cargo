@@ -9,11 +9,8 @@ use cargo_test_support::registry::{self, api_path, registry_url};
 fn setup(name: &str, content: Option<&str>) {
     let dir = api_path().join(format!("api/v1/crates/{}", name));
     dir.mkdir_p();
-    match content {
-        Some(body) => {
-            fs::write(dir.join("owners"), body).unwrap();
-        }
-        None => {}
+    if let Some(body) = content {
+        fs::write(dir.join("owners"), body).unwrap();
     }
 }
 

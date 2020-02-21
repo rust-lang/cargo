@@ -1,6 +1,5 @@
 //! Tests for including `Cargo.lock` when publishing/packaging.
 
-use std;
 use std::fs::File;
 
 use cargo_test_support::registry::Package;

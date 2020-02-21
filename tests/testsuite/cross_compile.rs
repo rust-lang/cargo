@@ -49,10 +49,10 @@ fn simple_cross() {
 
     let target = cross_compile::alternate();
     p.cargo("build -v --target").arg(&target).run();
-    assert!(p.target_bin(&target, "foo").is_file());
+    assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile::can_run_on_host() {
-        p.process(&p.target_bin(&target, "foo")).run();
+        p.process(&p.target_bin(target, "foo")).run();
     }
 }
 
@@ -110,10 +110,10 @@ fn simple_cross_config() {
 
     let target = cross_compile::alternate();
     p.cargo("build -v").run();
-    assert!(p.target_bin(&target, "foo").is_file());
+    assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile::can_run_on_host() {
-        p.process(&p.target_bin(&target, "foo")).run();
+        p.process(&p.target_bin(target, "foo")).run();
     }
 }
 
@@ -146,10 +146,10 @@ fn simple_deps() {
 
     let target = cross_compile::alternate();
     p.cargo("build --target").arg(&target).run();
-    assert!(p.target_bin(&target, "foo").is_file());
+    assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile::can_run_on_host() {
-        p.process(&p.target_bin(&target, "foo")).run();
+        p.process(&p.target_bin(target, "foo")).run();
     }
 }
 
