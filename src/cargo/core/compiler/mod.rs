@@ -558,6 +558,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
+    add_crate_versions_if_requested(bcx, unit, &mut rustdoc);
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
@@ -622,6 +623,21 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             .chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
     }))
+}
+
+fn add_crate_versions_if_requested(
+    bcx: &BuildContext<'_, '_>,
+    unit: &Unit<'_>,
+    rustdoc: &mut ProcessBuilder,
+) {
+    if !bcx.config.cli_unstable().crate_versions {
+        return;
+    }
+    rustdoc
+        .arg("-Z")
+        .arg("unstable-options")
+        .arg("--crate-version")
+        .arg(&unit.pkg.version().to_string());
 }
 
 // The path that we pass to rustc is actually fairly important because it will

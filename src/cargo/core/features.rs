@@ -342,6 +342,7 @@ pub struct CliUnstable {
     pub panic_abort_tests: bool,
     pub jobserver_per_rustc: bool,
     pub features: Option<Vec<String>>,
+    pub crate_versions: bool,
 }
 
 impl CliUnstable {
@@ -418,6 +419,7 @@ impl CliUnstable {
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "features" => self.features = Some(parse_features(v)),
+            "crate-versions" => self.crate_versions = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

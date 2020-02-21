@@ -541,3 +541,10 @@ The available options are:
 
 * `compare` — This option compares the resolved features to the old resolver,
   and will print any differences.
+
+### crate-versions
+* Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)
+
+The `-Z crate-versions` flag will make `cargo doc` include appropriate crate versions for the current crate and all of its dependencies (unless `--no-deps` was provided) in the compiled documentation.
+
+You can find an example screenshot for the cargo itself in the tracking issue.
