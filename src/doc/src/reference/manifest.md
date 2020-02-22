@@ -151,7 +151,7 @@ documentation = "https://docs.rs/bitflags"
 
 > **Note**: [crates.io] may not show certain sites if they are known to not be
 > hosting documentation and are possibly of malicious intent e.g., ad tracking
-> networks. At this time, the site `rust-ci.org` is not allowed.
+> networks. At this time; `rust-ci.org`, and `rustless.org` are not allowed.
 
 #### The `readme` field
 
