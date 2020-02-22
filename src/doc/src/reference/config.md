@@ -4,10 +4,12 @@ This document explains how Cargo’s configuration system works, as well as
 available keys or configuration. For configuration of a package through its
 manifest, see the [manifest format](manifest.md).
 
-### Hierarchical structure
+### How configuration files are found
 
 Cargo allows local configuration for a particular package as well as global
-configuration. It looks for configuration files in the current directory and
+configuration. It has two mechanisms for this.
+
+By default, it looks for configuration files in the current directory and
 all parent directories. If, for example, Cargo were invoked in
 `/projects/foo/bar/baz`, then the following configuration files would be
 probed for and unified in this order:
@@ -25,10 +27,24 @@ With this structure, you can specify configuration per-package, and even
 possibly check it into version control. You can also specify personal defaults
 with a configuration file in your home directory.
 
+Alternatively, if the `CARGO_CONFIG_PATH` environment variable is set, it is
+used as a `:`-delimited path of directories. Each of these directories is used
+in the order they appear in `CARGO_CONFIG_PATH`. For example the path
+`CARGO_CONFIG_PATH=.:..:/projects/common:/home/me` will search in:
+
+* `./.cargo/config`
+* `../.cargo/config`
+* `/projects/common/.cargo/config`
+* `/home/me/.cargo/config`
+
+No other directories are searched, including `CARGO_HOME`.
+
 If a key is specified in multiple config files, the values will get merged
-together. Numbers, strings, and booleans will use the value in the deeper
+together. Numbers, strings, and booleans will use the value in the first
+resolved config file - when using heirarchical search, the deeper
 config directory taking precedence over ancestor directories, where the
-home directory is the lowest priority. Arrays will be joined together.
+home directory is the lowest priority, and the earlier directory in `CARGO_CONFIG_PATH`
+when it is used. Arrays will be joined together.
 
 > **Note:** Cargo also reads config files without the `.toml` extension, such as
 > `.cargo/config`. Support for the `.toml` extension was added in version 1.39
