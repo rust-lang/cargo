@@ -36,7 +36,7 @@ pub fn resolve_std<'cfg>(
     requested_target: CompileKind,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
-    let src_path = detect_sysroot_src_path(ws)?;
+    let src_path = detect_sysroot_src_path(target_data)?;
     let to_patch = [
         "rustc-std-workspace-core",
         "rustc-std-workspace-alloc",
@@ -163,21 +163,19 @@ pub fn generate_std_roots<'a>(
         .collect::<CargoResult<Vec<_>>>()
 }
 
-fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
+fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf> {
     if let Some(s) = env::var_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
     // NOTE: This is temporary until we figure out how to acquire the source.
-    // If we decide to keep the sysroot probe, then BuildConfig will need to
-    // be restructured so that the TargetInfo is created earlier and passed
-    // in, so we don't have this extra call to rustc.
-    let rustc = ws.config().load_global_rustc(Some(ws))?;
-    let output = rustc.process().arg("--print=sysroot").exec_with_output()?;
-    let s = String::from_utf8(output.stdout)
-        .map_err(|e| anyhow::format_err!("rustc didn't return utf8 output: {:?}", e))?;
-    let sysroot = PathBuf::from(s.trim());
-    let src_path = sysroot.join("lib").join("rustlib").join("src").join("rust");
+    let src_path = target_data
+        .info(CompileKind::Host)
+        .sysroot
+        .join("lib")
+        .join("rustlib")
+        .join("src")
+        .join("rust");
     let lock = src_path.join("Cargo.lock");
     if !lock.exists() {
         anyhow::bail!(

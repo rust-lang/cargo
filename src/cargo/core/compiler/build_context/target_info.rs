@@ -29,6 +29,8 @@ pub struct TargetInfo {
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
+    /// Path to the sysroot.
+    pub sysroot: PathBuf,
     /// Path to the "lib" or "bin" directory that rustc uses for its dynamic
     /// libraries.
     pub sysroot_host_libdir: PathBuf,
@@ -134,13 +136,13 @@ impl TargetInfo {
                 output_err_info(&process, &output, &error)
             ),
         };
-        let mut sysroot_host_libdir = PathBuf::from(line);
-        if cfg!(windows) {
-            sysroot_host_libdir.push("bin");
+        let sysroot = PathBuf::from(line);
+        let sysroot_host_libdir = if cfg!(windows) {
+            sysroot.join("bin")
         } else {
-            sysroot_host_libdir.push("lib");
-        }
-        let mut sysroot_target_libdir = PathBuf::from(line);
+            sysroot.join("lib")
+        };
+        let mut sysroot_target_libdir = sysroot.clone();
         sysroot_target_libdir.push("lib");
         sysroot_target_libdir.push("rustlib");
         sysroot_target_libdir.push(match &kind {
@@ -162,6 +164,7 @@ impl TargetInfo {
         Ok(TargetInfo {
             crate_type_process,
             crate_types: RefCell::new(map),
+            sysroot,
             sysroot_host_libdir,
             sysroot_target_libdir,
             // recalculate `rustflags` from above now that we have `cfg`
