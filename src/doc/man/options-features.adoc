@@ -1,5 +1,11 @@
 === Feature Selection
 
+The feature flags allow you to control the enabled features for the "current"
+package. The "current" package is the package in the current directory, or the
+one specified in `--manifest-path`. If running in the root of a virtual
+workspace, then the default features are selected for all workspace members,
+or all features if `--all-features` is specified.
+
 When no feature options are given, the `default` feature is activated for
 every selected package.
 

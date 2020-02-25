@@ -2,12 +2,12 @@
 .\"     Title: cargo-fix
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-12-19
+.\"      Date: 2020-02-06
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-FIX" "1" "2019-12-19" "\ \&" "\ \&"
+.TH "CARGO\-FIX" "1" "2020-02-06" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -221,6 +221,12 @@ Fix all targets. This is equivalent to specifying \fB\-\-lib \-\-bins
 \-\-tests \-\-benches \-\-examples\fP.
 .RE
 .SS "Feature Selection"
+.sp
+The feature flags allow you to control the enabled features for the "current"
+package. The "current" package is the package in the current directory, or the
+one specified in \fB\-\-manifest\-path\fP. If running in the root of a virtual
+workspace, then the default features are selected for all workspace members,
+or all features if \fB\-\-all\-features\fP is specified.
 .sp
 When no feature options are given, the \fBdefault\fP feature is activated for
 every selected package.
