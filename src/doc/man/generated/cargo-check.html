@@ -137,6 +137,13 @@ manifest settings for the target.</p>
 <div class="sect2">
 <h3 id="cargo_check_feature_selection">Feature Selection</h3>
 <div class="paragraph">
+<p>The feature flags allow you to control the enabled features for the "current"
+package. The "current" package is the package in the current directory, or the
+one specified in <code>--manifest-path</code>. If running in the root of a virtual
+workspace, then the default features are selected for all workspace members,
+or all features if <code>--all-features</code> is specified.</p>
+</div>
+<div class="paragraph">
 <p>When no feature options are given, the <code>default</code> feature is activated for
 every selected package.</p>
 </div>
