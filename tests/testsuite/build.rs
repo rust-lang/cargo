@@ -4739,3 +4739,23 @@ fn build_with_relative_cargo_home_path() {
 
     p.cargo("build").env("CARGO_HOME", "./cargo_home/").run();
 }
+
+#[cargo_test]
+fn user_specific_cfgs_are_filtered_out() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {}"#)
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                assert!(std::env::var_os("CARGO_CFG_PROC_MACRO").is_none());
+                assert!(std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_none());
+            }"#,
+        )
+        .build();
+
+    p.cargo("rustc -- --cfg debug_assertions --cfg proc_macro")
+        .run();
+    p.process(&p.bin("foo")).run();
+}

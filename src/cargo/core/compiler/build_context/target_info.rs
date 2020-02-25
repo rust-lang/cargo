@@ -153,6 +153,7 @@ impl TargetInfo {
 
         let cfg = lines
             .map(|line| Ok(Cfg::from_str(line)?))
+            .filter(TargetInfo::not_user_specific_cfg)
             .collect::<CargoResult<Vec<_>>>()
             .chain_err(|| {
                 format!(
@@ -187,6 +188,15 @@ impl TargetInfo {
             )?,
             cfg,
         })
+    }
+
+    fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
+        if let Ok(Cfg::Name(cfg_name)) = cfg {
+            if cfg_name == "debug_assertions" || cfg_name == "proc_macro" {
+                return false;
+            }
+        }
+        true
     }
 
     /// All the target `cfg` settings.
