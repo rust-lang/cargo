@@ -931,7 +931,10 @@ fn dep_with_bad_submodule() {
     let expected = format!(
         "\
 [UPDATING] git repository [..]
-[ERROR] failed to load source for a dependency on `dep1`
+[ERROR] failed to get `dep1` as a dependency of `foo v0.5.0 [..]`
+
+Caused by:
+  failed to load source for dependency `dep1`
 
 Caused by:
   Unable to update {}
@@ -2382,20 +2385,24 @@ fn invalid_git_dependency_manifest() {
         .cargo("build")
         .with_status(101)
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             error: failed to load source for a dependency on `dep1`\n\
-             \n\
-             Caused by:\n  \
-             Unable to update {}\n\
-             \n\
-             Caused by:\n  \
-             failed to parse manifest at `[..]`\n\
-             \n\
-             Caused by:\n  \
-             could not parse input as TOML\n\
-             \n\
-             Caused by:\n  \
-             duplicate key: `categories` for key `project` at line 10 column 17",
+            "\
+[UPDATING] git repository `{}`
+[ERROR] failed to get `dep1` as a dependency of `foo v0.5.0 ([..])`
+
+Caused by:
+  failed to load source for dependency `dep1`
+
+Caused by:
+  Unable to update {}
+
+Caused by:
+  failed to parse manifest at `[..]`
+
+Caused by:
+  could not parse input as TOML
+
+Caused by:
+  duplicate key: `categories` for key `project` at line 10 column 17",
             path2url(&git_root),
             path2url(&git_root),
         ))

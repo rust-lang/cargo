@@ -256,8 +256,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .chain_err(|| {
                         anyhow::format_err!(
-                            "failed to load source for a dependency \
-                             on `{}`",
+                            "failed to load source for dependency `{}`",
                             dep.package_name()
                         )
                     })?;
@@ -517,8 +516,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .chain_err(|| {
                         anyhow::format_err!(
-                            "failed to load source for a dependency \
-                             on `{}`",
+                            "failed to load source for dependency `{}`",
                             dep.package_name()
                         )
                     })?;
