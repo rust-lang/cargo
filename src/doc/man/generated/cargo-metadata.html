@@ -14,8 +14,8 @@
 <h2 id="cargo_metadata_description">DESCRIPTION</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Output the resolved dependencies of a package, the concrete used versions
-including overrides, in JSON to stdout.</p>
+<p>Output JSON to stdout containing information about the workspace members and
+resolved dependencies of the current package.</p>
 </div>
 <div class="paragraph">
 <p>It is recommended to include the <code>--format-version</code> flag to future-proof
@@ -206,8 +206,9 @@ for a Rust API for reading the metadata.</p>
     "workspace_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
-    // The resolved dependency graph, with the concrete versions and features
-    // selected. The set depends on the enabled features.
+    // The resolved dependency graph for the entire workspace. The enabled
+    // features are based on the enabled features for the "current" package.
+    // Inactivated optional dependencies are not listed.
     //
     // This is null if --no-deps is specified.
     //

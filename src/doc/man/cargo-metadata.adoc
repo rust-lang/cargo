@@ -13,8 +13,8 @@ cargo-metadata - Machine-readable metadata about the current package
 
 == DESCRIPTION
 
-Output the resolved dependencies of a package, the concrete used versions
-including overrides, in JSON to stdout.
+Output JSON to stdout containing information about the workspace members and
+resolved dependencies of the current package.
 
 It is recommended to include the `--format-version` flag to future-proof
 your code to ensure the output is in the format you are expecting.
@@ -199,8 +199,9 @@ The output has the following format:
     "workspace_members": [
         "my-package 0.1.0 (path+file:///path/to/my-package)",
     ],
-    // The resolved dependency graph, with the concrete versions and features
-    // selected. The set depends on the enabled features.
+    // The resolved dependency graph for the entire workspace. The enabled
+    // features are based on the enabled features for the "current" package.
+    // Inactivated optional dependencies are not listed.
     //
     // This is null if --no-deps is specified.
     //

@@ -21,7 +21,7 @@ pub fn cli() -> App {
         )
         .arg(opt(
             "no-deps",
-            "Output information only about the root package \
+            "Output information only about the workspace members \
              and don't fetch dependencies",
         ))
         .arg_manifest_path()
