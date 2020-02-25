@@ -1018,7 +1018,7 @@ fn doc_all_member_dependency_same_name() {
 }
 
 #[cargo_test]
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_help_message() {
     let p = project()
         .file(
@@ -1044,7 +1044,7 @@ fn doc_workspace_open_help_message() {
 }
 
 #[cargo_test]
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project()
         .file(
@@ -1075,7 +1075,7 @@ fn doc_workspace_open_different_library_and_package_names() {
 }
 
 #[cargo_test]
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary() {
     let p = project()
         .file(
@@ -1107,7 +1107,7 @@ fn doc_workspace_open_binary() {
 }
 
 #[cargo_test]
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(not(windows))] // `echo` may not be available
 fn doc_workspace_open_binary_and_library() {
     let p = project()
         .file(
