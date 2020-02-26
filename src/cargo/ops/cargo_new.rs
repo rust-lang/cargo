@@ -164,7 +164,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
     };
 
     // Ban keywords + test list found at
-    // https://doc.rust-lang.org/grammar.html#keywords
+    // https://doc.rust-lang.org/reference/keywords.html
     let blacklist = [
         "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
         "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
