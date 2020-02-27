@@ -360,7 +360,10 @@ fn invalid_dir_bad() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to load source for a dependency on `bar`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 [..]`
+
+Caused by:
+  failed to load source for dependency `bar`
 
 Caused by:
   Unable to update registry `https://[..]`

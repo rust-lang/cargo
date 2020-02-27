@@ -270,7 +270,10 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .build();
 
     p.cargo("build --offline").with_status(101).with_stderr("\
-error: failed to load source for a dependency on `dep1`
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
+
+Caused by:
+  failed to load source for dependency `dep1`
 
 Caused by:
   Unable to update https://github.com/some_user/dep1.git

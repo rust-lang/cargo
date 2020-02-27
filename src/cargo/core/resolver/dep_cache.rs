@@ -16,8 +16,10 @@ use std::rc::Rc;
 use log::debug;
 
 use crate::core::interning::InternedString;
+use crate::core::resolver::context::Context;
+use crate::core::resolver::errors::describe_path;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
-use crate::util::errors::CargoResult;
+use crate::util::errors::{CargoResult, CargoResultExt};
 
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, ResolveOpts};
@@ -197,6 +199,7 @@ impl<'a> RegistryQueryer<'a> {
     /// next obvious question.
     pub fn build_deps(
         &mut self,
+        cx: &Context,
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
@@ -220,7 +223,13 @@ impl<'a> RegistryQueryer<'a> {
         let mut deps = deps
             .into_iter()
             .map(|(dep, features)| {
-                let candidates = self.query(&dep)?;
+                let candidates = self.query(&dep).chain_err(|| {
+                    anyhow::format_err!(
+                        "failed to get `{}` as a dependency of {}",
+                        dep.package_name(),
+                        describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),
+                    )
+                })?;
                 Ok((dep, candidates, features))
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;

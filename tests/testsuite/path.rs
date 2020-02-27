@@ -521,7 +521,10 @@ fn error_message_for_missing_manifest() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to load source for a dependency on `bar`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 [..]`
+
+Caused by:
+  failed to load source for dependency `bar`
 
 Caused by:
   Unable to update [CWD]/src/bar
@@ -1016,4 +1019,67 @@ fn workspace_produces_rlib() {
 
     assert!(p.root().join("target/debug/libtop.rlib").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+}
+
+#[cargo_test]
+fn deep_path_error() {
+    // Test for an error loading a path deep in the dependency graph.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            a = {path="a"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            [dependencies]
+            b = {path="../b"}
+           "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            [dependencies]
+            c = {path="../c"}
+           "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
+    ... which is depended on by `a v0.1.0 [..]`
+    ... which is depended on by `foo v0.1.0 [..]`
+
+Caused by:
+  failed to load source for dependency `c`
+
+Caused by:
+  Unable to update [..]/foo/c
+
+Caused by:
+  failed to read `[..]/foo/c/Cargo.toml`
+
+Caused by:
+  [..]
+",
+        )
+        .run();
 }

@@ -2203,7 +2203,7 @@ fn ws_warn_path() {
 
 #[cargo_test]
 fn invalid_missing() {
-    // Warnings include path to manifest.
+    // Make sure errors are not suppressed with -q.
     let p = project()
         .file(
             "Cargo.toml",
@@ -2223,16 +2223,20 @@ fn invalid_missing() {
         .with_status(101)
         .with_stderr(
             "\
-error: [..]
+[ERROR] failed to get `x` as a dependency of package `foo v0.1.0 [..]`
+
+Caused by:
+  failed to load source for dependency `x`
+
+Caused by:
+  Unable to update [..]/foo/x
+
+Caused by:
+  failed to read `[..]foo/x/Cargo.toml`
 
 Caused by:
   [..]
-
-Caused by:
-  [..]
-
-Caused by:
-  [..]",
+",
         )
         .run();
 }

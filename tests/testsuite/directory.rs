@@ -652,7 +652,10 @@ fn git_override_requires_lockfile() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to load source for a dependency on `git`
+[ERROR] failed to get `git` as a dependency of package `foo v0.0.1 ([..])`
+
+Caused by:
+  failed to load source for dependency `git`
 
 Caused by:
   Unable to update [..]

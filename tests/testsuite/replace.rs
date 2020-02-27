@@ -544,7 +544,10 @@ fn override_wrong_name() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-error: no matching package for override `[..]baz:0.1.0` found
+[ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([..])`
+
+Caused by:
+  no matching package for override `[..]baz:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
 ",
@@ -588,7 +591,10 @@ fn override_with_nothing() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-[ERROR] failed to load source for a dependency on `bar`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+
+Caused by:
+  failed to load source for dependency `bar`
 
 Caused by:
   Unable to update file://[..]
@@ -671,7 +677,10 @@ fn multiple_specs() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-error: overlapping replacement specifications found:
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+
+Caused by:
+  overlapping replacement specifications found:
 
   * [..]
   * [..]

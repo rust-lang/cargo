@@ -199,7 +199,10 @@ fn nightly_feature_requires_nightly_in_dep() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to load source for a dependency on `a`
+[ERROR] failed to get `a` as a dependency of package `b v0.0.1 ([..])`
+
+Caused by:
+  failed to load source for dependency `a`
 
 Caused by:
   Unable to update [..]
