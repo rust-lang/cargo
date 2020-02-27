@@ -133,7 +133,7 @@ fn http_auth_offered() {
         .with_stderr_contains(&format!(
             "\
 [UPDATING] git repository `http://{addr}/foo/bar`
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.1 [..]`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 [..]`
 
 Caused by:
   failed to load source for dependency `bar`

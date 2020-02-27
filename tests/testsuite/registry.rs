@@ -1558,7 +1558,7 @@ fn disallow_network() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `foo` as a dependency of `bar v0.5.0 [..]`
+[ERROR] failed to get `foo` as a dependency of package `bar v0.5.0 [..]`
 
 Caused by:
   failed to load source for dependency `foo`

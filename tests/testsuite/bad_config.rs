@@ -368,7 +368,7 @@ fn bad_git_dependency() {
         .with_stderr(
             "\
 [UPDATING] git repository `file:///`
-[ERROR] failed to get `foo` as a dependency of `foo v0.0.0 [..]`
+[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
 
 Caused by:
   failed to load source for dependency `foo`
@@ -904,7 +904,7 @@ fn bad_source_config2() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.0 [..]`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 [..]`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -950,7 +950,7 @@ fn bad_source_config3() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.0 [..]`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 [..]`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -998,7 +998,7 @@ fn bad_source_config4() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.0 ([..])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([..])`
 
 Caused by:
   failed to load source for dependency `bar`

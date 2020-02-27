@@ -544,7 +544,7 @@ fn override_wrong_name() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-[ERROR] failed to get `baz` as a dependency of `foo v0.0.1 ([..])`
+[ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
   no matching package for override `[..]baz:0.1.0` found
@@ -591,7 +591,7 @@ fn override_with_nothing() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.1 ([..])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -677,7 +677,7 @@ fn multiple_specs() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository [..]
-[ERROR] failed to get `bar` as a dependency of `foo v0.0.1 ([..])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
   overlapping replacement specifications found:
