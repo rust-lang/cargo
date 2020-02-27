@@ -31,7 +31,7 @@ pub fn hash_u64_file(mut file: &File) -> u64 {
         if n == 0 {
             break;
         }
-        hasher.write(&buf);
+        hasher.write(&buf[..n]);
     }
     hasher.finish()
 }
