@@ -747,7 +747,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
             let file_type = entry.file_type();
             if file_type.is_file() {
                 let file = File::open(entry.path())?;
-                let hash = util::hex::hash_u64_file(&file);
+                let hash = util::hex::hash_u64_file(&file)?;
                 result.insert(entry.path().to_path_buf(), hash);
             } else if file_type.is_symlink() {
                 let hash = util::hex::hash_u64(&fs::read_link(entry.path())?);

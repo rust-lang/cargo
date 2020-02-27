@@ -23,17 +23,17 @@ pub fn hash_u64<H: Hash>(hashable: H) -> u64 {
     hasher.finish()
 }
 
-pub fn hash_u64_file(mut file: &File) -> u64 {
+pub fn hash_u64_file(mut file: &File) -> std::io::Result<u64> {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     let mut buf = [0; 64 * 1024];
     loop {
-        let n = file.read(&mut buf).unwrap();
+        let n = file.read(&mut buf)?;
         if n == 0 {
             break;
         }
         hasher.write(&buf[..n]);
     }
-    hasher.finish()
+    Ok(hasher.finish())
 }
 
 pub fn short_hash<H: Hash>(hashable: &H) -> String {
