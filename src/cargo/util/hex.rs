@@ -1,6 +1,8 @@
 #![allow(deprecated)]
 
+use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
+use std::io::Read;
 
 pub fn to_hex(num: u64) -> String {
     hex::encode(&[
@@ -19,6 +21,19 @@ pub fn hash_u64<H: Hash>(hashable: H) -> u64 {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     hashable.hash(&mut hasher);
     hasher.finish()
+}
+
+pub fn hash_u64_file(mut file: &File) -> std::io::Result<u64> {
+    let mut hasher = SipHasher::new_with_keys(0, 0);
+    let mut buf = [0; 64 * 1024];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.write(&buf[..n]);
+    }
+    Ok(hasher.finish())
 }
 
 pub fn short_hash<H: Hash>(hashable: &H) -> String {
