@@ -562,7 +562,7 @@ fn compute_metadata<'a, 'cfg>(
         return None;
     }
 
-    let mut hasher = SipHasher::new_with_keys(0, 0);
+    let mut hasher = SipHasher::new();
 
     // This is a generic version number that can be changed to make
     // backwards-incompatible changes to any file structures in the output

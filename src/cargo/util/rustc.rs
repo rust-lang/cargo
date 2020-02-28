@@ -216,7 +216,7 @@ impl Drop for Cache {
 }
 
 fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
-    let mut hasher = SipHasher::new_with_keys(0, 0);
+    let mut hasher = SipHasher::new();
 
     let path = paths::resolve_executable(path)?;
     path.hash(&mut hasher);
@@ -260,7 +260,7 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
 }
 
 fn process_fingerprint(cmd: &ProcessBuilder) -> u64 {
-    let mut hasher = SipHasher::new_with_keys(0, 0);
+    let mut hasher = SipHasher::new();
     cmd.get_args().hash(&mut hasher);
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();
