@@ -741,15 +741,9 @@ fn get_environment_variable(variables: &[&str]) -> Option<String> {
 }
 
 fn discover_author() -> CargoResult<(String, Option<String>)> {
-    let cwd = env::current_dir()?;
-    let git_config = if let Ok(repo) = GitRepository::discover(&cwd) {
-        repo.config()
-            .ok()
-            .or_else(|| GitConfig::open_default().ok())
-    } else {
-        GitConfig::open_default().ok()
-    };
+    let git_config = find_git_config();
     let git_config = git_config.as_ref();
+
     let name_variables = [
         "CARGO_NAME",
         "GIT_AUTHOR_NAME",
@@ -796,4 +790,32 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     });
 
     Ok((name, email))
+}
+
+fn find_git_config() -> Option<GitConfig> {
+    match env::var("__CARGO_TEST_ROOT") {
+        Ok(test_root) => find_tests_git_config(test_root),
+        Err(_) => find_real_git_config(),
+    }
+}
+
+fn find_tests_git_config(cargo_test_root: String) -> Option<GitConfig> {
+    // Path where 'git config --local' puts variables when run from inside a test
+    let test_git_config = PathBuf::from(cargo_test_root).join(".git").join("config");
+
+    if test_git_config.exists() {
+        GitConfig::open(&test_git_config).ok()
+    } else {
+        GitConfig::open_default().ok()
+    }
+}
+
+fn find_real_git_config() -> Option<GitConfig> {
+    match env::current_dir() {
+        Ok(cwd) => GitRepository::discover(cwd)
+            .and_then(|repo| repo.config())
+            .or_else(|_| GitConfig::open_default())
+            .ok(),
+        Err(_) => GitConfig::open_default().ok(),
+    }
 }
