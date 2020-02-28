@@ -595,6 +595,9 @@ fn bench_autodiscover_2015() {
                 version = "0.0.1"
                 authors = []
                 edition = "2015"
+                
+                [features]
+                magic = []
 
                 [[bench]]
                 name = "bench_magic"

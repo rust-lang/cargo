@@ -34,7 +34,7 @@ use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
-use crate::core::{Package, PackageSet, Target};
+use crate::core::{FeatureValue, Package, PackageSet, Shell, Summary, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
@@ -417,6 +417,7 @@ pub fn create_bcx<'a, 'cfg>(
         &build_config.requested_kinds,
         build_config.mode,
         &resolve,
+        &workspace_resolve,
         &resolved_features,
         &pkg_set,
         &profiles,
@@ -701,6 +702,7 @@ fn generate_targets(
     requested_kinds: &[CompileKind],
     mode: CompileMode,
     resolve: &Resolve,
+    workspace_resolve: &Option<Resolve>,
     resolved_features: &features::ResolvedFeatures,
     package_set: &PackageSet<'_>,
     profiles: &Profiles,
@@ -929,6 +931,13 @@ fn generate_targets(
     {
         let unavailable_features = match target.required_features() {
             Some(rf) => {
+                warn_on_missing_features(
+                    workspace_resolve,
+                    rf,
+                    pkg.summary(),
+                    &mut config.shell(),
+                )?;
+
                 let features = features_map.entry(pkg).or_insert_with(|| {
                     resolve_all_features(resolve, resolved_features, package_set, pkg.package_id())
                 });
@@ -956,6 +965,68 @@ fn generate_targets(
         // else, silently skip target.
     }
     Ok(units.into_iter().collect())
+}
+
+fn warn_on_missing_features(
+    resolve: &Option<Resolve>,
+    required_features: &[String],
+    summary: &Summary,
+    shell: &mut Shell,
+) -> CargoResult<()> {
+    let resolve = match resolve {
+        None => return Ok(()),
+        Some(resolve) => resolve,
+    };
+
+    for feature in required_features {
+        match FeatureValue::new(feature.into(), summary) {
+            // No need to do anything here, since the feature must exist to be parsed as such
+            FeatureValue::Feature(_) => {}
+            // Possibly mislabeled feature that was not found
+            FeatureValue::Crate(krate) => {
+                if !summary
+                    .dependencies()
+                    .iter()
+                    .any(|dep| dep.name_in_toml() == krate && dep.is_optional())
+                {
+                    shell.warn(format!(
+                        "feature `{}` is not present in [features] section.",
+                        krate
+                    ))?;
+                }
+            }
+            // Handling of dependent_crate/dependent_crate_feature syntax
+            FeatureValue::CrateFeature(krate, feature) => {
+                match resolve
+                    .deps(summary.package_id())
+                    .find(|(_dep_id, deps)| deps.iter().any(|dep| dep.name_in_toml() == krate))
+                {
+                    Some((dep_id, _deps)) => {
+                        let dep_summary = resolve.summary(dep_id);
+                        if !dep_summary.features().contains_key(&feature)
+                            && !dep_summary
+                                .dependencies()
+                                .iter()
+                                .any(|dep| dep.name_in_toml() == feature && dep.is_optional())
+                        {
+                            shell.warn(format!(
+                                "feature `{}` does not exist in package `{}`.",
+                                feature, dep_id
+                            ))?;
+                        }
+                    }
+                    None => {
+                        shell.warn(format!(
+                            "dependency `{}` specified in required-features as `{}/{}` \
+                             does not exist.",
+                            krate, krate, feature
+                        ))?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Gets all of the features enabled for a package, plus its dependencies'
