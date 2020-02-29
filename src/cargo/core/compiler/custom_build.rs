@@ -364,6 +364,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // state informing what variables were discovered via our script as
         // well.
         paths::write(&output_file, &output.stdout)?;
+        log::debug!(
+            "rewinding custom script output mtime {:?} to {}",
+            output_file,
+            timestamp
+        );
         filetime::set_file_times(output_file, timestamp, timestamp)?;
         paths::write(&err_file, &output.stderr)?;
         paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
