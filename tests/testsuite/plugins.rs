@@ -375,7 +375,7 @@ fn panic_abort_plugins() {
             "bar/src/lib.rs",
             r#"
             #![feature(rustc_private)]
-            extern crate syntax;
+            extern crate rustc_ast;
         "#,
         )
         .build();
@@ -427,7 +427,7 @@ fn shared_panic_abort_plugins() {
             "bar/src/lib.rs",
             r#"
             #![feature(rustc_private)]
-            extern crate syntax;
+            extern crate rustc_ast;
             extern crate baz;
         "#,
         )
