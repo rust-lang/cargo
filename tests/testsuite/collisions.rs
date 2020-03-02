@@ -91,6 +91,8 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 }
 
 #[cargo_test]
+// --out-dir and examples are currently broken on MSVC.
+// See https://github.com/rust-lang/cargo/issues/7493
 #[cfg(not(target_env = "msvc"))]
 fn collision_export() {
     // `--out-dir` combines some things which can cause conflicts.
@@ -100,7 +102,9 @@ fn collision_export() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --out-dir=out -Z unstable-options --bins --examples")
+    // -j1 to avoid issues with two processes writing to the same file at the
+    // same time.
+    p.cargo("build -j1 --out-dir=out -Z unstable-options --bins --examples")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("\
 [WARNING] `--out-dir` filename collision.
