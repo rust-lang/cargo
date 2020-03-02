@@ -322,6 +322,7 @@ fn rustc<'a, 'cfg>(
                     rustc_dep_info_loc.display()
                 ))
             })?;
+            debug!("rewinding mtime of {:?} to {}", dep_info_loc, timestamp);
             filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
         }
 

@@ -192,7 +192,9 @@ pub fn set_invocation_time(path: &Path) -> CargoResult<FileTime> {
         &timestamp,
         b"This file has an mtime of when this was started.",
     )?;
-    mtime(&timestamp)
+    let ft = mtime(&timestamp)?;
+    log::debug!("invocation time for {:?} is {}", path, ft);
+    Ok(ft)
 }
 
 #[cfg(unix)]

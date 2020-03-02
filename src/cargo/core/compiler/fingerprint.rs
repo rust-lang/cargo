@@ -796,7 +796,7 @@ impl Fingerprint {
                 // This path failed to report its `mtime`. It probably doesn't
                 // exists, so leave ourselves as stale and bail out.
                 Err(e) => {
-                    log::debug!("failed to get mtime of {:?}: {}", output, e);
+                    debug!("failed to get mtime of {:?}: {}", output, e);
                     return Ok(());
                 }
             };
@@ -830,26 +830,26 @@ impl Fingerprint {
             // If our dependency edge only requires the rmeta file to be present
             // then we only need to look at that one output file, otherwise we
             // need to consider all output files to see if we're out of date.
-            let dep_mtime = if dep.only_requires_rmeta {
+            let (dep_path, dep_mtime) = if dep.only_requires_rmeta {
                 dep_mtimes
                     .iter()
-                    .filter_map(|(path, mtime)| {
-                        if path.extension().and_then(|s| s.to_str()) == Some("rmeta") {
-                            Some(mtime)
-                        } else {
-                            None
-                        }
+                    .filter(|(path, _mtime)| {
+                        path.extension().and_then(|s| s.to_str()) == Some("rmeta")
                     })
                     .next()
                     .expect("failed to find rmeta")
             } else {
-                match dep_mtimes.values().max() {
-                    Some(mtime) => mtime,
+                match dep_mtimes.iter().max_by_key(|kv| kv.1) {
+                    Some(dep_mtime) => dep_mtime,
                     // If our dependencies is up to date and has no filesystem
                     // interactions, then we can move on to the next dependency.
                     None => continue,
                 }
             };
+            debug!(
+                "max dep mtime for {:?} is {:?} {}",
+                pkg_root, dep_path, dep_mtime
+            );
 
             // If the dependency is newer than our own output then it was
             // recompiled previously. We transitively become stale ourselves in
@@ -861,7 +861,7 @@ impl Fingerprint {
             if dep_mtime > max_mtime {
                 info!(
                     "dependency on `{}` is newer than we are {} > {} {:?}",
-                    dep.pkg_id, dep_mtime, max_mtime, pkg_root
+                    dep.name, dep_mtime, max_mtime, pkg_root
                 );
                 return Ok(());
             }
@@ -1410,6 +1410,7 @@ fn compare_old_fingerprint(
     if mtime_on_use {
         // update the mtime so other cleaners know we used it
         let t = FileTime::from_system_time(SystemTime::now());
+        debug!("mtime-on-use forcing {:?} to {}", loc, t);
         filetime::set_file_times(loc, t, t)?;
     }
 
