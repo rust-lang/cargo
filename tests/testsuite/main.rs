@@ -24,6 +24,7 @@ mod cache_messages;
 mod cargo_alias_config;
 mod cargo_command;
 mod cargo_features;
+mod cargo_targets;
 mod cfg;
 mod check;
 mod clean;

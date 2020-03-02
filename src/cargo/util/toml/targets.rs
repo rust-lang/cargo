@@ -172,7 +172,7 @@ fn clean_lib(
         None => return Ok(None),
     };
 
-    validate_has_name(lib, "library", "lib")?;
+    validate_target_name(lib, "library", "lib", warnings)?;
 
     let path = match (lib.path.as_ref(), inferred) {
         (Some(path), _) => package_root.join(&path.0),
@@ -264,7 +264,7 @@ fn clean_bins(
     );
 
     for bin in &bins {
-        validate_has_name(bin, "binary", "bin")?;
+        validate_target_name(bin, "binary", "bin", warnings)?;
 
         let name = bin.name();
 
@@ -529,7 +529,7 @@ fn clean_targets_with_legacy_path(
     );
 
     for target in &toml_targets {
-        validate_has_name(target, target_kind_human, target_kind)?;
+        validate_target_name(target, target_kind_human, target_kind, warnings)?;
     }
 
     validate_unique_names(&toml_targets, target_kind)?;
@@ -720,15 +720,25 @@ fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
         .collect()
 }
 
-fn validate_has_name(
+fn validate_target_name(
     target: &TomlTarget,
     target_kind_human: &str,
     target_kind: &str,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
     match target.name {
         Some(ref name) => {
             if name.trim().is_empty() {
                 anyhow::bail!("{} target names cannot be empty", target_kind_human)
+            }
+            if cfg!(windows) {
+                if restricted_names::is_windows_reserved(name) {
+                    warnings.push(format!(
+                        "{} target `{}` is a reserved Windows filename, \
+                        this target will not work on Windows platforms",
+                        target_kind_human, name
+                    ));
+                }
             }
         }
         None => anyhow::bail!(
