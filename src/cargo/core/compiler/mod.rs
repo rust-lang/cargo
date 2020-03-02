@@ -37,7 +37,6 @@ pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
-pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
 use self::unit_dependencies::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};

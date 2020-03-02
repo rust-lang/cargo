@@ -644,7 +644,7 @@ fn bad_registry_name() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  Invalid character ` ` in registry name: `bad name`",
+  invalid character ` ` in registry name: `bad name`, [..]",
         )
         .run();
 
@@ -661,7 +661,7 @@ Caused by:
             .arg("--registry")
             .arg("bad name")
             .with_status(101)
-            .with_stderr("[ERROR] Invalid character ` ` in registry name: `bad name`")
+            .with_stderr("[ERROR] invalid character ` ` in registry name: `bad name`, [..]")
             .run();
     }
 }

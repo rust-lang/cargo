@@ -126,11 +126,7 @@ fn existing() {
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] Invalid character `.` in crate name: `foo.rs`
-use --name to override crate name",
-        )
+        .with_stderr("[ERROR] invalid character `.` in crate name: `foo.rs`, [..]")
         .run();
 }
 
@@ -138,10 +134,7 @@ use --name to override crate name",
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
-        .with_stderr(
-            "[ERROR] The name `test` cannot be used as a crate name\n\
-             use --name to override crate name",
-        )
+        .with_stderr("[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]")
         .run();
 }
 
@@ -150,8 +143,18 @@ fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
         .with_stderr(
-            "[ERROR] The name `incremental` cannot be used as a crate name\n\
-             use --name to override crate name",
+            "[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]",
+        )
+        .run();
+
+    cargo_process("new --lib incremental")
+        .env("USER", "foo")
+        .with_stderr(
+            "\
+[WARNING] the name `incremental` will not support binary executables with that name, \
+it conflicts with cargo's build directory names
+[CREATED] library `incremental` package
+",
         )
         .run();
 }
@@ -160,9 +163,20 @@ fn reserved_binary_name() {
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
+        .with_stderr("[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword")
+        .run();
+}
+
+#[cargo_test]
+fn std_name() {
+    cargo_process("new core")
+        .env("USER", "foo")
         .with_stderr(
-            "[ERROR] The name `pub` cannot be used as a crate name\n\
-             use --name to override crate name",
+            "\
+[WARNING] the name `core` is part of Rust's standard library
+It is recommended to use a different name to avoid problems.
+[CREATED] binary (application) `core` package
+",
         )
         .run();
 }
@@ -483,7 +497,10 @@ fn unknown_flags() {
 fn explicit_invalid_name_not_suggested() {
     cargo_process("new --name 10-invalid a")
         .with_status(101)
-        .with_stderr("[ERROR] Package names starting with a digit cannot be used as a crate name")
+        .with_stderr(
+            "[ERROR] the name `10-invalid` cannot be used as a crate name, \
+            the name cannot start with a digit",
+        )
         .run();
 }
 
@@ -557,4 +574,62 @@ fn lockfile_constant_during_new() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
     let after = fs::read_to_string(paths::root().join("foo/Cargo.lock")).unwrap();
     assert_eq!(before, after);
+}
+
+#[cargo_test]
+fn restricted_windows_name() {
+    if cfg!(windows) {
+        cargo_process("new nul")
+            .env("USER", "foo")
+            .with_status(101)
+            .with_stderr("[ERROR] cannot use name `nul`, it is a reserved Windows filename")
+            .run();
+    } else {
+        cargo_process("new nul")
+            .env("USER", "foo")
+            .with_stderr(
+                "\
+[WARNING] the name `nul` is a reserved Windows filename
+This package will not work on Windows platforms.
+[CREATED] binary (application) `nul` package
+",
+            )
+            .run();
+    }
+}
+
+#[cargo_test]
+fn non_ascii_name() {
+    cargo_process("new Привет")
+        .env("USER", "foo")
+        .with_stderr(
+            "\
+[WARNING] the name `Привет` contains non-ASCII characters
+Support for non-ASCII crate names is experimental and only valid on the nightly toolchain.
+[CREATED] binary (application) `Привет` package
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_ascii_name_invalid() {
+    // These are alphanumeric characters, but not Unicode XID.
+    cargo_process("new ⒶⒷⒸ")
+        .env("USER", "foo")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
+            the first character must be a Unicode XID start character (most letters or `_`)",
+        )
+        .run();
+
+    cargo_process("new a¼")
+        .env("USER", "foo")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] invalid character `¼` in crate name: `a¼`, \
+            characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)",
+        )
+        .run();
 }

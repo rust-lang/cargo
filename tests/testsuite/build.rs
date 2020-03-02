@@ -299,7 +299,7 @@ fn cargo_compile_with_invalid_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Invalid character `:` in package name: `foo::bar`
+  invalid character `:` in package name: `foo::bar`, [..]
 ",
         )
         .run();

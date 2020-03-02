@@ -18,8 +18,9 @@ use super::{
     LibKind, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
     TomlExampleTarget, TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
-use crate::core::{compiler, Edition, Feature, Features, Target};
+use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::restricted_names;
 
 pub fn targets(
     features: &Features,
@@ -286,7 +287,7 @@ fn clean_bins(
             ));
         }
 
-        if compiler::is_bad_artifact_name(&name) {
+        if restricted_names::is_conflicting_artifact_name(&name) {
             anyhow::bail!("the binary target name `{}` is forbidden", name)
         }
     }

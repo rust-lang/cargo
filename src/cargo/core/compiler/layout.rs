@@ -129,12 +129,6 @@ pub struct Layout {
     _lock: FileLock,
 }
 
-pub fn is_bad_artifact_name(name: &str) -> bool {
-    ["deps", "examples", "build", "incremental"]
-        .iter()
-        .any(|&reserved| reserved == name)
-}
-
 impl Layout {
     /// Calculate the paths for build output, lock the build directory, and return as a Layout.
     ///
