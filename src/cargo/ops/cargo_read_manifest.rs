@@ -193,7 +193,26 @@ fn read_nested_packages(
     if !source_id.is_registry() {
         for p in nested.iter() {
             let path = util::normalize_path(&path.join(p));
-            read_nested_packages(&path, all_packages, source_id, config, visited, errors)?;
+            let result =
+                read_nested_packages(&path, all_packages, source_id, config, visited, errors);
+            // Ignore broken manifests found on git repositories.
+            //
+            // A well formed manifest might still fail to load due to reasons
+            // like referring to a "path" that requires an extra build step.
+            //
+            // See https://github.com/rust-lang/cargo/issues/6822.
+            if let Err(err) = result {
+                if source_id.is_git() {
+                    info!(
+                        "skipping nested package found at `{}`: {:?}",
+                        path.display(),
+                        &err,
+                    );
+                    errors.push(err);
+                } else {
+                    return Err(err);
+                }
+            }
         }
     }
 

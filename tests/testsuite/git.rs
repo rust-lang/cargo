@@ -323,6 +323,16 @@ fn cargo_compile_with_malformed_nested_paths() {
             "#,
             )
             .file("vendor/dep2/Cargo.toml", "!INVALID!")
+            .file(
+                "vendor/dep3/Cargo.toml",
+                r#"
+                [project]
+                name = "dep3"
+                version = "0.5.0"
+                [dependencies]
+                subdep1 = { path = "../require-extra-build-step" }"#,
+            )
+            .file("vendor/dep3/src/lib.rs", "")
     });
 
     let p = project()
