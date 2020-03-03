@@ -1,7 +1,7 @@
 //! Tests for the new feature resolver.
 
-use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn inactivate_targets() {
@@ -891,5 +891,43 @@ fn disabled_shared_build_dep() {
     p.cargo("run -Zfeatures=build_dep -v")
         .masquerade_as_nightly_cargo()
         .with_stdout("hello from somedep")
+        .run();
+}
+
+#[cargo_test]
+fn required_features_inactive_dep() {
+    // required-features with an inactivated dep.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [target.'cfg(whatever)'.dependencies]
+            bar = {path="bar"}
+
+            [[bin]]
+            name = "foo"
+            required-features = ["feat1"]
+
+            [features]
+            feat1 = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zfeatures=itarget")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[FINISHED] [..]")
+        .run();
+
+    p.cargo("check -Zfeatures=itarget --features=feat1")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[CHECKING] foo[..]\n[FINISHED] [..]")
         .run();
 }
