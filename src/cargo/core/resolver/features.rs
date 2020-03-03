@@ -194,8 +194,8 @@ impl ResolvedFeatures {
     }
 
     /// Variant of `activated_features` that returns an empty Vec if this is
-    /// not a valid pkg_id/is_build combination. Used by `cargo clean` which
-    /// doesn't know the exact set.
+    /// not a valid pkg_id/is_build combination. Used in places which do
+    /// not know which packages are activated (like `cargo clean`).
     pub fn activated_features_unverified(
         &self,
         pkg_id: PackageId,

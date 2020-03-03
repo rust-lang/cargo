@@ -956,8 +956,8 @@ fn resolve_all_features(
             } else {
                 FeaturesFor::NormalOrDev
             };
-            for feature in resolved_features.activated_features(dep_id, features_for) {
-                features.insert(dep.name_in_toml().to_string() + "/" + &feature);
+            for feature in resolved_features.activated_features_unverified(dep_id, features_for) {
+                features.insert(format!("{}/{}", dep.name_in_toml(), feature));
             }
         }
     }
