@@ -13,14 +13,14 @@ use log::debug;
 use tar::{Archive, Builder, EntryType, Header};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::{Feature, Verbosity, Workspace};
+use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::toml::TomlManifest;
-use crate::util::{self, Config, FileLock};
+use crate::util::{self, restricted_names, Config, FileLock};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -142,7 +142,7 @@ fn build_ar_list(
     let root = pkg.root();
     for src_file in src_files {
         let rel_path = src_file.strip_prefix(&root)?.to_path_buf();
-        check_filename(&rel_path)?;
+        check_filename(&rel_path, &mut ws.config().shell())?;
         let rel_str = rel_path
             .to_str()
             .ok_or_else(|| {
@@ -804,7 +804,7 @@ fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf,
 //
 // To help out in situations like this, issue about weird filenames when
 // packaging as a "heads up" that something may not work on other platforms.
-fn check_filename(file: &Path) -> CargoResult<()> {
+fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
     let name = match file.file_name() {
         Some(name) => name,
         None => return Ok(()),
@@ -824,6 +824,26 @@ fn check_filename(file: &Path) -> CargoResult<()> {
             c,
             file.display()
         )
+    }
+    let mut check_windows = |name| -> CargoResult<()> {
+        if restricted_names::is_windows_reserved(name) {
+            shell.warn(format!(
+                "file {} is a reserved Windows filename, \
+                it will not work on Windows platforms",
+                file.display()
+            ))?;
+        }
+        Ok(())
+    };
+    for component in file.iter() {
+        if let Some(component) = component.to_str() {
+            check_windows(component)?;
+        }
+    }
+    if file.extension().is_some() {
+        if let Some(stem) = file.file_stem().and_then(|s| s.to_str()) {
+            check_windows(stem)?;
+        }
     }
     Ok(())
 }

@@ -1663,3 +1663,37 @@ src/lib.rs
     let orig = read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml.orig")).unwrap();
     assert!(orig.contains("license-file = \"../LICENSE\""));
 }
+
+#[cargo_test]
+#[cfg(not(windows))] // Don't want to create invalid files on Windows.
+fn package_restricted_windows() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "pub mod con;\npub mod aux;")
+        .file("src/con.rs", "pub fn f() {}")
+        .file("src/aux/mod.rs", "pub fn f() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
+[WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms
+[PACKAGING] foo [..]
+[VERIFYING] foo [..]
+[COMPILING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
