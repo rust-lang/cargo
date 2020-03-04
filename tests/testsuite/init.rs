@@ -342,9 +342,8 @@ fn invalid_dir_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] Invalid character `.` in crate name: `foo.bar`
-use --name to override crate name
-",
+[ERROR] invalid character `.` in crate name: `foo.bar`, [..]
+use --name to override crate name",
         )
         .run();
 
@@ -361,7 +360,7 @@ fn reserved_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] The name `test` cannot be used as a crate name\n\
+[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]\n\
 use --name to override crate name
 ",
         )
