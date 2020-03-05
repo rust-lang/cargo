@@ -192,7 +192,10 @@ impl TargetInfo {
 
     fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
         if let Ok(Cfg::Name(cfg_name)) = cfg {
-            if cfg_name == "debug_assertions" || cfg_name == "proc_macro" {
+            // This should also include "debug_assertions", but it causes
+            // regressions. Maybe some day in the distant future it can be
+            // added (and possibly change the warning to an error).
+            if cfg_name == "proc_macro" {
                 return false;
             }
         }
