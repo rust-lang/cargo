@@ -228,6 +228,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         }
     }
     for (k, v) in cfg_map {
+        if k == "debug_assertions" {
+            // This cfg is always true and misleading, so avoid setting it.
+            // That is because Cargo queries rustc without any profile settings.
+            continue;
+        }
         let k = format!("CARGO_CFG_{}", super::envify(&k));
         match v {
             Some(list) => {
