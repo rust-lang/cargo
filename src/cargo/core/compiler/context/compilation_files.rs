@@ -421,9 +421,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 Some(types) => {
                     for file_type in types {
                         let path = out_dir.join(file_type.filename(&file_stem));
-                        let hardlink = link_stem
-                            .as_ref()
-                            .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                        // Don't create hardlink for tests
+                        let hardlink = if unit.mode.is_any_test() {
+                            None
+                        } else {
+                            link_stem
+                                .as_ref()
+                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)))
+                        };
                         let export_path = if unit.target.is_custom_build() {
                             None
                         } else {
