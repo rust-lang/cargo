@@ -1247,3 +1247,19 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn both_index_and_registry() {
+    let p = project().file("src/lib.rs", "").build();
+    for cmd in &["publish", "owner", "search", "yank --vers 1.0.0"] {
+        p.cargo(cmd)
+            .arg("--registry=foo")
+            .arg("--index=foo")
+            .with_status(101)
+            .with_stderr(
+                "[ERROR] both `--index` and `--registry` \
+                should not be set at the same time",
+            )
+            .run();
+    }
+}

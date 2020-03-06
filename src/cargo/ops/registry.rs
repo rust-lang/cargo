@@ -369,6 +369,10 @@ fn registry(
     force_update: bool,
     validate_token: bool,
 ) -> CargoResult<(Registry, SourceId)> {
+    if index.is_some() && registry.is_some() {
+        // Otherwise we would silently ignore one or the other.
+        bail!("both `--index` and `--registry` should not be set at the same time");
+    }
     // Parse all configuration options
     let RegistryConfig {
         token: token_config,
