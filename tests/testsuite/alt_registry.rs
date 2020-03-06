@@ -298,7 +298,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
-    p.cargo("publish --index")
+    p.cargo("publish --token sekrit --index")
         .arg(fakeio_url.to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
@@ -413,17 +413,18 @@ fn alt_registry_and_crates_io_deps() {
 
 #[cargo_test]
 fn block_publish_due_to_no_token() {
-    let p = project().file("src/main.rs", "fn main() {}").build();
-
-    // Setup the registry by publishing a package
-    Package::new("bar", "0.0.1").alternative(true).publish();
+    registry::init();
+    let p = project().file("src/lib.rs", "").build();
 
     fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
 
     // Now perform the actual publish
     p.cargo("publish --registry alternative")
         .with_status(101)
-        .with_stderr_contains("error: no upload token found, please run `cargo login`")
+        .with_stderr_contains(
+            "error: no upload token found, \
+            please run `cargo login` or pass `--token`",
+        )
         .run();
 }
 

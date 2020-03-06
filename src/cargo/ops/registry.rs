@@ -378,7 +378,26 @@ fn registry(
         token: token_config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
-    let token = token.or(token_config);
+    let token = match (&index, &token, &token_config) {
+        // No token.
+        (None, None, None) => {
+            if validate_token {
+                bail!("no upload token found, please run `cargo login` or pass `--token`");
+            }
+            None
+        }
+        // Token on command-line.
+        (_, Some(_), _) => token,
+        // Token in config, no --index, loading from config is OK for crates.io.
+        (None, None, Some(_)) => token_config,
+        // --index, no --token
+        (Some(_), None, _) => {
+            if validate_token {
+                bail!("command-line argument --index requires --token to be specified")
+            }
+            None
+        }
+    };
     let sid = get_source_id(config, index_config.or(index), registry)?;
     if !sid.is_remote_registry() {
         bail!(
@@ -408,9 +427,6 @@ fn registry(
             .ok_or_else(|| format_err!("{} does not support API commands", sid))?
     };
     let handle = http_handle(config)?;
-    if validate_token && token.is_none() {
-        bail!("no upload token found, please run `cargo login`");
-    };
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 

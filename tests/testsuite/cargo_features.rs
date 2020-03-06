@@ -323,8 +323,7 @@ fn publish_allowed() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("publish --index")
-        .arg(registry::registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .masquerade_as_nightly_cargo()
         .run();
 }

@@ -4,7 +4,7 @@ use cargo::util::paths::remove_dir_all;
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{self, registry_path, registry_url, Dependency, Package};
+use cargo_test_support::registry::{self, registry_path, Dependency, Package};
 use cargo_test_support::{basic_manifest, project, t};
 use std::fs::{self, File};
 use std::path::Path;
@@ -896,8 +896,7 @@ fn bad_license_file() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("publish -v --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish -v --token sekrit")
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();

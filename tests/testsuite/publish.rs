@@ -89,8 +89,7 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-verify --token sekrit")
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -131,16 +130,17 @@ fn old_token_location() {
     fs::remove_file(&credentials).unwrap();
 
     // Verify can't publish without a token.
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-verify")
         .with_status(101)
-        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .with_stderr_contains(
+            "[ERROR] no upload token found, \
+            please run `cargo login` or pass `--token`",
+        )
         .run();
 
     fs::write(&credentials, r#"token = "api-token""#).unwrap();
 
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-verify")
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -177,7 +177,7 @@ fn simple_with_host() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --host")
+    p.cargo("publish --no-verify --token sekrit --host")
         .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
@@ -224,7 +224,7 @@ fn simple_with_index_and_host() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --index")
+    p.cargo("publish --no-verify --token sekrit --index")
         .arg(registry_url().to_string())
         .arg("--host")
         .arg(registry_url().to_string())
@@ -274,8 +274,7 @@ fn git_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish -v --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish -v --no-verify --token sekrit")
         .with_status(101)
         .with_stderr(
             "\
@@ -313,8 +312,7 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .with_status(101)
         .with_stderr(
             "\
@@ -383,8 +381,7 @@ fn dont_publish_dirty() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .with_status(101)
         .with_stderr(
             "\
@@ -424,9 +421,7 @@ fn publish_clean() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --token sekrit").run();
 
     validate_upload_foo_clean();
 }
@@ -455,11 +450,7 @@ fn publish_in_sub_repo() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish")
-        .cwd("bar")
-        .arg("--index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --token sekrit").cwd("bar").run();
 
     validate_upload_foo_clean();
 }
@@ -489,9 +480,7 @@ fn publish_when_ignored() {
         .file(".gitignore", "baz")
         .build();
 
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --token sekrit").run();
 
     publish::validate_upload(
         CLEAN_FOO_JSON,
@@ -530,11 +519,7 @@ fn ignore_when_crate_ignored() {
         "#,
         )
         .nocommit_file("bar/src/main.rs", "fn main() {}");
-    p.cargo("publish")
-        .cwd("bar")
-        .arg("--index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --token sekrit").cwd("bar").run();
 
     publish::validate_upload(
         CLEAN_FOO_JSON,
@@ -571,8 +556,7 @@ fn new_crate_rejected() {
         "#,
         )
         .nocommit_file("src/main.rs", "fn main() {}");
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .with_status(101)
         .with_stderr_contains(
             "[ERROR] 3 files in the working directory contain \
@@ -821,8 +805,7 @@ fn publish_with_select_features() {
         )
         .build();
 
-    p.cargo("publish --features required --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --features required --token sekrit")
         .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
         .run();
 }
@@ -855,8 +838,7 @@ fn publish_with_all_features() {
         )
         .build();
 
-    p.cargo("publish --all-features --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --all-features --token sekrit")
         .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
         .run();
 }
@@ -889,8 +871,7 @@ fn publish_with_no_default_features() {
         )
         .build();
 
-    p.cargo("publish --no-default-features --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-default-features --token sekrit")
         .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
         .run();
@@ -931,8 +912,7 @@ fn publish_with_patch() {
     p.cargo("build").run();
 
     // Check that verify fails with patched crate which has new functionality.
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .with_stderr_contains("[..]newfunc[..]")
         .with_status(101)
         .run();
@@ -940,9 +920,7 @@ fn publish_with_patch() {
     // Remove the usage of new functionality and try again.
     p.change_file("src/main.rs", "extern crate bar; pub fn main() {}");
 
-    p.cargo("publish --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --token sekrit").run();
 
     // Note, use of `registry` in the deps here is an artifact that this
     // publishes to a fake, local registry that is pretending to be crates.io.
@@ -1010,7 +988,10 @@ fn publish_checks_for_token_before_verify() {
     // Assert upload token error before the package is verified
     p.cargo("publish")
         .with_status(101)
-        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .with_stderr_contains(
+            "[ERROR] no upload token found, \
+            please run `cargo login` or pass `--token`",
+        )
         .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
         .run();
 
@@ -1037,7 +1018,7 @@ fn publish_with_bad_source() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("publish")
+    p.cargo("publish --token sekrit")
         .with_status(101)
         .with_stderr(
             "\
@@ -1058,7 +1039,7 @@ Check for a source-replacement in .cargo/config.
         "#,
     );
 
-    p.cargo("publish")
+    p.cargo("publish --token sekrit")
         .with_status(101)
         .with_stderr(
             "\
@@ -1112,9 +1093,7 @@ fn publish_git_with_version() {
         .build();
 
     p.cargo("run").with_stdout("2").run();
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("publish --no-verify --token sekrit").run();
 
     publish::validate_upload_with_contents(
         r#"
@@ -1203,8 +1182,7 @@ fn publish_dev_dep_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-verify --token sekrit")
         .with_stderr(
             "\
 [UPDATING] [..]
@@ -1279,8 +1257,7 @@ fn credentials_ambiguous_filename() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish --no-verify --token sekrit")
         .with_stderr_contains(
             "\
 [WARNING] Both `[..]/credentials` and `[..]/credentials.toml` exist. Using `[..]/credentials`
@@ -1289,4 +1266,32 @@ fn credentials_ambiguous_filename() {
         .run();
 
     validate_upload_foo();
+}
+
+#[cargo_test]
+fn index_requires_token() {
+    // --index will not load registry.token to avoid possibly leaking
+    // crates.io token to another server.
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr("[ERROR] command-line argument --index requires --token to be specified")
+        .run();
 }

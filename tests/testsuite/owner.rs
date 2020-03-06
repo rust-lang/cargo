@@ -4,7 +4,7 @@ use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
-use cargo_test_support::registry::{self, api_path, registry_url};
+use cargo_test_support::registry::{self, api_path};
 
 fn setup(name: &str, content: Option<&str>) {
     let dir = api_path().join(format!("api/v1/crates/{}", name));
@@ -43,9 +43,7 @@ fn simple_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -l --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("owner -l --token sekrit").run();
 }
 
 #[cargo_test]
@@ -68,8 +66,7 @@ fn simple_add() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -a username --index")
-        .arg(registry_url().to_string())
+    p.cargo("owner -a username --token sekrit")
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
@@ -98,8 +95,7 @@ fn simple_remove() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -r username --index")
-        .arg(registry_url().to_string())
+    p.cargo("owner -r username --token sekrit")
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index
