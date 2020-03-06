@@ -25,8 +25,13 @@ use crate::util::IntoUrl;
 use crate::util::{paths, validate_package_name};
 use crate::version;
 
+/// Registry settings loaded from config files.
+///
+/// This is loaded based on the `--registry` flag and the config settings.
 pub struct RegistryConfig {
+    /// The index URL. If `None`, use crates.io.
     pub index: Option<String>,
+    /// The authentication token.
     pub token: Option<String>,
 }
 
@@ -316,10 +321,15 @@ fn transmit(
     }
 }
 
+/// Returns the index and token from the config file for the given registry.
+///
+/// `registry` is typically the registry specified on the command-line. If
+/// `None`, returns the default index.
 pub fn registry_configuration(
     config: &Config,
     registry: Option<String>,
 ) -> CargoResult<RegistryConfig> {
+    // `registry.default` is handled in command-line parsing.
     let (index, token) = match registry {
         Some(registry) => {
             validate_package_name(&registry, "registry name", "")?;
@@ -344,6 +354,17 @@ pub fn registry_configuration(
     Ok(RegistryConfig { index, token })
 }
 
+/// Returns the `Registry` and `Source` based on command-line and config settings.
+///
+/// * `token`: The token from the command-line. If not set, uses the token
+///   from the config.
+/// * `index`: The index URL from the command-line. This is ignored if
+///   `registry` is set.
+/// * `registry`: The registry name from the command-line. If neither
+///   `registry`, or `index` are set, then uses `crates-io`, honoring
+///   `[source]` replacement if defined.
+/// * `force_update`: If `true`, forces the index to be updated.
+/// * `validate_token`: If `true`, the token must be set.
 fn registry(
     config: &Config,
     token: Option<String>,
@@ -739,6 +760,10 @@ pub fn yank(
     Ok(())
 }
 
+/// Gets the SourceId for an index or registry setting.
+///
+/// The `index` and `reg` values are from the command-line or config settings.
+/// If both are None, returns the source for crates.io.
 fn get_source_id(
     config: &Config,
     index: Option<String>,
