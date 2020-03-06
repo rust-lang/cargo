@@ -1016,12 +1016,15 @@ impl Config {
         )
     }
 
-    /// Gets the index for the default registry.
-    pub fn get_default_registry_index(&self) -> CargoResult<Option<Url>> {
-        Ok(match self.get_string("registry.index")? {
-            Some(index) => Some(self.resolve_registry_index(index)?),
-            None => None,
-        })
+    /// Returns an error if `registry.index` is set.
+    pub fn check_registry_index_not_set(&self) -> CargoResult<()> {
+        if self.get_string("registry.index")?.is_some() {
+            bail!(
+                "the `registry.index` config value is no longer supported\n\
+                Use `[source]` replacement to alter the default index for crates.io."
+            );
+        }
+        Ok(())
     }
 
     fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {

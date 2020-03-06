@@ -4,8 +4,6 @@ use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
 use std::ptr;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Mutex;
 
 use log::trace;
@@ -14,7 +12,6 @@ use serde::ser;
 use url::Url;
 
 use crate::core::PackageId;
-use crate::ops;
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
@@ -189,22 +186,8 @@ impl SourceId {
     /// a `.cargo/config`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
         config.crates_io_source_id(|| {
-            let cfg = ops::registry_configuration(config, None)?;
-            let url = if let Some(ref index) = cfg.index {
-                static WARNED: AtomicBool = AtomicBool::new(false);
-                if !WARNED.swap(true, SeqCst) {
-                    config.shell().warn(
-                        "custom registry support via \
-                         the `registry.index` configuration is \
-                         being removed, this functionality \
-                         will not work in the future",
-                    )?;
-                }
-                &index[..]
-            } else {
-                CRATES_IO_INDEX
-            };
-            let url = url.into_url()?;
+            config.check_registry_index_not_set()?;
+            let url = CRATES_IO_INDEX.into_url().unwrap();
             SourceId::for_registry(&url)
         })
     }

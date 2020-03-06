@@ -2079,3 +2079,53 @@ fn readonly_registry_still_works() {
         t!(fs::set_permissions(path, perms));
     }
 }
+
+#[cargo_test]
+fn registry_index_rejected() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [registry]
+            index = "https://example.com/"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
+
+    p.cargo("login")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
+}

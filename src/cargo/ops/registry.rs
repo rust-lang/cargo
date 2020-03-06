@@ -324,7 +324,7 @@ fn transmit(
 /// Returns the index and token from the config file for the given registry.
 ///
 /// `registry` is typically the registry specified on the command-line. If
-/// `None`, returns the default index.
+/// `None`, `index` is set to `None` to indicate it should use crates.io.
 pub fn registry_configuration(
     config: &Config,
     registry: Option<String>,
@@ -341,13 +341,9 @@ pub fn registry_configuration(
             )
         }
         None => {
-            // Checking for default index and token
-            (
-                config
-                    .get_default_registry_index()?
-                    .map(|url| url.to_string()),
-                config.get_string("registry.token")?.map(|p| p.val),
-            )
+            // Use crates.io default.
+            config.check_registry_index_not_set()?;
+            (None, config.get_string("registry.token")?.map(|p| p.val))
         }
     };
 
