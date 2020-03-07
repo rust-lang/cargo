@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use anyhow::{bail, format_err};
-use crates_io::{NewCrate, NewCrateDependency, Registry};
+use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
@@ -378,27 +378,8 @@ fn registry(
         token: token_config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
-    let token = match (&index, &token, &token_config) {
-        // No token.
-        (None, None, None) => {
-            if validate_token {
-                bail!("no upload token found, please run `cargo login` or pass `--token`");
-            }
-            None
-        }
-        // Token on command-line.
-        (_, Some(_), _) => token,
-        // Token in config, no --index, loading from config is OK for crates.io.
-        (None, None, Some(_)) => token_config,
-        // --index, no --token
-        (Some(_), None, _) => {
-            if validate_token {
-                bail!("command-line argument --index requires --token to be specified")
-            }
-            None
-        }
-    };
-    let sid = get_source_id(config, index_config.or(index), registry)?;
+    let opt_index = index_config.as_ref().or(index.as_ref());
+    let sid = get_source_id(config, opt_index, registry.as_ref())?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -425,6 +406,50 @@ fn registry(
 
         cfg.and_then(|cfg| cfg.api)
             .ok_or_else(|| format_err!("{} does not support API commands", sid))?
+    };
+    let token = match (&index, &token, &token_config) {
+        // No token.
+        (None, None, None) => {
+            if validate_token {
+                bail!("no upload token found, please run `cargo login` or pass `--token`");
+            }
+            None
+        }
+        // Token on command-line.
+        (_, Some(_), _) => token,
+        // Token in config, no --index, loading from config is OK for crates.io.
+        (None, None, Some(_)) => {
+            // Check `is_default_registry` so that the crates.io index can
+            // change config.json's "api" value, and this won't affect most
+            // people. It will affect those using source replacement, but
+            // hopefully that's a relatively small set of users.
+            if registry.is_none()
+                && !sid.is_default_registry()
+                && !crates_io::is_url_crates_io(&api_host)
+            {
+                if validate_token {
+                    config.shell().warn(
+                        "using `registry.token` config value with source \
+                        replacement is deprecated\n\
+                        This may become a hard error in the future; \
+                        see <https://github.com/rust-lang/cargo/issues/xxx>.\n\
+                        Use the --token command-line flag to remove this warning.",
+                    )?;
+                    token_config
+                } else {
+                    None
+                }
+            } else {
+                token_config
+            }
+        }
+        // --index, no --token
+        (Some(_), None, _) => {
+            if validate_token {
+                bail!("command-line argument --index requires --token to be specified")
+            }
+            None
+        }
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
@@ -782,8 +807,8 @@ pub fn yank(
 /// If both are None, returns the source for crates.io.
 fn get_source_id(
     config: &Config,
-    index: Option<String>,
-    reg: Option<String>,
+    index: Option<&String>,
+    reg: Option<&String>,
 ) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, &r),

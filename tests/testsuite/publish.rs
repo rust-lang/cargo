@@ -144,6 +144,9 @@ fn old_token_location() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
+[WARNING] using `registry.token` config value with source replacement is deprecated
+This may become a hard error in the future[..]
+Use the --token command-line flag to remove this warning.
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
@@ -1273,6 +1276,8 @@ fn index_requires_token() {
     // --index will not load registry.token to avoid possibly leaking
     // crates.io token to another server.
     registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
 
     let p = project()
         .file(
@@ -1292,6 +1297,47 @@ fn index_requires_token() {
     p.cargo("publish --no-verify --index")
         .arg(registry_url().to_string())
         .with_status(101)
-        .with_stderr("[ERROR] command-line argument --index requires --token to be specified")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] command-line argument --index requires --token to be specified
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn registry_token_with_source_replacement() {
+    // publish with source replacement without --token
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[WARNING] using `registry.token` config value with source replacement is deprecated
+This may become a hard error in the future[..]
+Use the --token command-line flag to remove this warning.
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
+",
+        )
         .run();
 }
