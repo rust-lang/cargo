@@ -93,6 +93,28 @@ pub struct JobQueue<'a, 'cfg> {
 ///
 /// It is created from JobQueue when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
+///
+/// # Message queue
+///
+/// Each thread running a process uses the message queue to send messages back
+/// to the main thread. The main thread coordinates everything, and handles
+/// printing output.
+///
+/// It is important to be careful which messages use `push` vs `push_bounded`.
+/// `push` is for priority messages (like tokens, or "finished") where the
+/// sender shouldn't block. We want to handle those so real work can proceed
+/// ASAP.
+///
+/// `push_bounded` is only for messages being printed to stdout/stderr. Being
+/// bounded prevents a flood of messages causing a large amount of memory
+/// being used.
+///
+/// `push` also avoids blocking which helps avoid deadlocks. For example, when
+/// the diagnostic server thread is dropped, it waits for the thread to exit.
+/// But if the thread is blocked on a full queue, and there is a critical
+/// error, the drop will deadlock. This should be fixed at some point in the
+/// future. The jobserver thread has a similar problem, though it will time
+/// out after 1 second.
 struct DrainState<'a, 'cfg> {
     // This is the length of the DependencyQueue when starting out
     total_units: usize,
@@ -212,11 +234,11 @@ impl<'a> JobState<'a> {
     }
 
     pub fn stdout(&self, stdout: String) {
-        self.messages.push(Message::Stdout(stdout));
+        self.messages.push_bounded(Message::Stdout(stdout));
     }
 
     pub fn stderr(&self, stderr: String) {
-        self.messages.push(Message::Stderr(stderr));
+        self.messages.push_bounded(Message::Stderr(stderr));
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file
@@ -341,7 +363,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let state = DrainState {
             total_units: self.queue.len(),
             queue: self.queue,
-            messages: Arc::new(Queue::new()),
+            // 100 here is somewhat arbitrary. It is a few screenfulls of
+            // output, and hopefully at most a few megabytes of memory for
+            // typical messages.
+            messages: Arc::new(Queue::new(100)),
             active: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -370,6 +395,9 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // Create a helper thread to manage the diagnostics for rustfix if
         // necessary.
         let messages = state.messages.clone();
+        // It is important that this uses `push` instead of `push_bounded` for
+        // now. If someone wants to fix this to be bounded, the `drop`
+        // implementation needs to be changed to avoid possible deadlocks.
         let _diagnostic_server = cx
             .bcx
             .build_config
@@ -578,10 +606,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         // to run above to calculate CPU usage over time. To do this we
         // listen for a message with a timeout, and on timeout we run the
         // previous parts of the loop again.
-        let mut events = Vec::new();
-        while let Some(event) = self.messages.try_pop() {
-            events.push(event);
-        }
+        let mut events = self.messages.try_pop_all();
         info!(
             "tokens in use: {}, rustc_tokens: {:?}, waiting_rustcs: {:?} (events this tick: {})",
             self.tokens.len(),
@@ -815,15 +840,10 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         };
 
         match fresh {
-            Freshness::Fresh => {
-                self.timings.add_fresh();
-                doit();
-            }
-            Freshness::Dirty => {
-                self.timings.add_dirty();
-                scope.spawn(move |_| doit());
-            }
+            Freshness::Fresh => self.timings.add_fresh(),
+            Freshness::Dirty => self.timings.add_dirty(),
         }
+        scope.spawn(move |_| doit());
 
         Ok(())
     }
