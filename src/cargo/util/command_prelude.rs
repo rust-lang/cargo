@@ -150,6 +150,10 @@ pub trait AppExt: Sized {
         ))
     }
 
+    fn arg_unit_graph(self) -> Self {
+        self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
+    }
+
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -438,11 +442,17 @@ pub trait ArgMatchesExt {
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
+        build_config.unit_graph = self._is_present("unit-graph");
         if build_config.build_plan {
             config
                 .cli_unstable()
                 .fail_if_stable_opt("--build-plan", 5579)?;
         };
+        if build_config.unit_graph {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--unit-graph", 0)?;
+        }
 
         let opts = CompileOptions {
             config,

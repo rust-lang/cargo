@@ -29,6 +29,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_unit_graph()
         .after_help(
             "\
 The specified target for the current package (or package specified by SPEC if

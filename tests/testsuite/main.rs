@@ -103,6 +103,7 @@ mod standard_lib;
 mod test;
 mod timings;
 mod tool_paths;
+mod unit_graph;
 mod update;
 mod vendor;
 mod verify_project;

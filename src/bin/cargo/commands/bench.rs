@@ -44,6 +44,7 @@ pub fn cli() -> App {
             "no-fail-fast",
             "Run all benchmarks regardless of failure",
         ))
+        .arg_unit_graph()
         .after_help(
             "\
 The benchmark filtering argument BENCHNAME and all the arguments following the

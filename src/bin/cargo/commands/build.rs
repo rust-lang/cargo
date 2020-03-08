@@ -41,6 +41,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_build_plan()
+        .arg_unit_graph()
         .after_help(
             "\
 All packages in the workspace are built if the `--workspace` flag is supplied. The

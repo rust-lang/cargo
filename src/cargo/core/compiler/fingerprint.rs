@@ -202,7 +202,7 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
-use crate::core::compiler::unit_dependencies::UnitDep;
+use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::{InternedString, Package};
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};

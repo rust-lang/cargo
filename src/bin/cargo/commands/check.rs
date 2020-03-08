@@ -33,6 +33,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_unit_graph()
         .after_help(
             "\
 If the `--package` argument is given, then SPEC is a package ID specification

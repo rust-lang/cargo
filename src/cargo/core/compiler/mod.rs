@@ -15,6 +15,7 @@ pub mod standard_lib;
 mod timings;
 mod unit;
 pub mod unit_dependencies;
+pub mod unit_graph;
 
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -38,7 +39,7 @@ pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
 use self::output_depinfo::output_depinfo;
-use self::unit_dependencies::UnitDep;
+use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, PanicStrategy, Profile};
