@@ -365,7 +365,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             queue: self.queue,
             // 100 here is somewhat arbitrary. It is a few screenfulls of
             // output, and hopefully at most a few megabytes of memory for
-            // typical messages.
+            // typical messages. If you change this, please update the test
+            // caching_large_output, too.
             messages: Arc::new(Queue::new(100)),
             active: HashMap::new(),
             compiled: HashSet::new(),
