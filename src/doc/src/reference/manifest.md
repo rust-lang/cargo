@@ -95,6 +95,7 @@ Versioning](https://semver.org/), so make sure you follow some basic rules:
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
+<a id="the-authors-field-optional"></a>
 #### The `authors` field
 
 The `authors` field lists people or organizations that are considered the
@@ -106,6 +107,7 @@ brackets at the end of each author.
 
 > **Note**: [crates.io] requires at least one author to be listed.
 
+<a id="the-edition-field-optional"></a>
 #### The `edition` field
 
 You can opt in to a specific [Rust Edition] for your package with the
@@ -137,6 +139,7 @@ description = "A short description of my package"
 
 > **Note**: [crates.io] requires the `description` to be set.
 
+<a id="the-documentation-field-optional"></a>
 #### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
@@ -259,6 +262,7 @@ categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 > match one of the strings available at <https://crates.io/category_slugs>, and
 > must match exactly.
 
+<a id="the-workspace--field-optional"></a>
 #### The `workspace` field
 
 The `workspace` field can be used to configure the workspace that this package
@@ -280,6 +284,7 @@ table defined. That is, a crate cannot both be a root crate in a workspace
 For more information, see the [workspaces chapter](workspaces.md).
 
 <a id="package-build"></a>
+<a id="the-build-field-optional"></a>
 #### The `build` field
 
 The `build` field specifies a file in the package root which is a [build
@@ -299,6 +304,7 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
+<a id="the-links-field-optional"></a>
 #### The `links` field
 
 The `links` field specifies the name of a native library that is being linked
@@ -313,6 +319,7 @@ script guide.
 links = "foo"
 ```
 
+<a id="the-exclude-and-include-fields-optional"></a>
 #### The `exclude` and `include` fields
 
 You can explicitly specify that a set of file patterns should be ignored or
@@ -375,6 +382,7 @@ if any of those files change.
 
 [gitignore]: https://git-scm.com/docs/gitignore
 
+<a id="the-publish--field-optional"></a>
 #### The `publish` field
 
 The `publish` field can be used to prevent a package from being published to a
@@ -396,6 +404,7 @@ allowed to be published to.
 publish = ["some-registry-name"]
 ```
 
+<a id="the-metadata-table-optional"></a>
 #### The `metadata` table
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
@@ -539,7 +548,7 @@ more detail.
         "#integration-tests": "cargo-targets.html#integration-tests",
         "#configuring-a-target": "cargo-targets.html#configuring-a-target",
         "#target-auto-discovery": "cargo-targets.html#target-auto-discovery",
-        "#the-required-features-field": "cargo-targets.html#the-required-features-field",
+        "#the-required-features-field-optional": "cargo-targets.html#the-required-features-field",
         "#building-dynamic-or-static-libraries": "cargo-targets.html#the-crate-type-field",
         "#the-workspace-section": "workspaces.html#the-workspace-section",
         "#virtual-manifest": "workspaces.html",
