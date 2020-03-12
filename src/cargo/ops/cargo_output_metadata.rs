@@ -184,11 +184,7 @@ fn build_resolve_graph_r(
             CompileKind::Host => true,
         })
         .filter_map(|(dep_id, deps)| {
-            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
-            // Duplicates may appear if the same package is used by different
-            // members of a workspace with different features selected.
-            dep_kinds.sort_unstable();
-            dep_kinds.dedup();
+            let dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))

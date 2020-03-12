@@ -254,8 +254,8 @@ impl Context {
             .collect()
     }
 
-    pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
-        let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
+    pub fn graph(&self) -> Graph<PackageId, std::collections::HashSet<Dependency>> {
+        let mut graph: Graph<PackageId, std::collections::HashSet<Dependency>> = Graph::new();
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));

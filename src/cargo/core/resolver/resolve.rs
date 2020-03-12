@@ -18,7 +18,7 @@ pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
     /// from `Cargo.toml`. We need a `Vec` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
-    graph: Graph<PackageId, Vec<Dependency>>,
+    graph: Graph<PackageId, HashSet<Dependency>>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
@@ -70,7 +70,7 @@ pub enum ResolveVersion {
 
 impl Resolve {
     pub fn new(
-        graph: Graph<PackageId, Vec<Dependency>>,
+        graph: Graph<PackageId, HashSet<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, Vec<InternedString>>,
         checksums: HashMap<PackageId, Option<String>>,
@@ -264,7 +264,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter().cloned()
     }
 
-    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
+    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
@@ -272,10 +272,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &[Dependency])> {
+    ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.graph
             .edges(&pkg)
-            .map(|(id, deps)| (*id, deps.as_slice()))
+            .map(|(id, deps)| (*id, deps))
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
@@ -325,8 +325,9 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<String> {
+        let empty_set: HashSet<Dependency> = HashSet::new();
         let deps = if from == to {
-            &[]
+            &empty_set
         } else {
             self.dependencies_listed(from, to)
         };
@@ -349,7 +350,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok(name)
     }
 
-    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &[Dependency] {
+    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)
