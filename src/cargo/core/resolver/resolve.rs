@@ -273,9 +273,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self,
         pkg: PackageId,
     ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
-        self.graph
-            .edges(&pkg)
-            .map(|(id, deps)| (*id, deps))
+        self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {

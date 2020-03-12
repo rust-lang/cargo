@@ -610,9 +610,10 @@ fn activate(
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
         // add a edge from candidate to parent in the parents graph
-        cx.parents.link(candidate_pid, parent_pid)
-        // and associate dep with that edge
-        .insert(dep.clone());
+        cx.parents
+            .link(candidate_pid, parent_pid)
+            // and associate dep with that edge
+            .insert(dep.clone());
         if let Some(public_dependency) = cx.public_dependency.as_mut() {
             public_dependency.add_edge(
                 candidate_pid,
