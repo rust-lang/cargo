@@ -878,6 +878,7 @@ fn dep_with_submodule() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
+[UPDATING] git submodule `file://[..]/dep2`
 [COMPILING] dep1 [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
@@ -941,6 +942,7 @@ fn dep_with_bad_submodule() {
     let expected = format!(
         "\
 [UPDATING] git repository [..]
+[UPDATING] git submodule `file://[..]/dep2`
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
 
 Caused by:
@@ -1182,6 +1184,7 @@ fn dep_with_changed_submodule() {
     p.cargo("run")
         .with_stderr(
             "[UPDATING] git repository `[..]`\n\
+             [UPDATING] git submodule `file://[..]/dep2`\n\
              [COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
@@ -1229,6 +1232,7 @@ fn dep_with_changed_submodule() {
         .with_stderr("")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
+             [UPDATING] git submodule `file://[..]/dep3`\n\
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
              ",
             git_project.url()

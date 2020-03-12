@@ -392,6 +392,9 @@ impl<'a> GitCheckout<'a> {
             };
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
+            cargo_config
+                .shell()
+                .status("Updating", format!("git submodule `{}`", url))?;
             fetch(&mut repo, url, refspec, cargo_config).chain_err(|| {
                 format!(
                     "failed to fetch submodule `{}` from {}",
