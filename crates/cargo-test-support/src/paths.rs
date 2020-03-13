@@ -1,3 +1,4 @@
+use crate::{basic_manifest, project};
 use filetime::{self, FileTime};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -9,7 +10,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
-use crate::{basic_manifest, project};
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
