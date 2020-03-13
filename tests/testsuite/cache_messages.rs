@@ -447,7 +447,6 @@ fn caching_large_output() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn rustc_workspace_wrapper() {
     use cargo_test_support::paths;
 
@@ -460,9 +459,9 @@ fn rustc_workspace_wrapper() {
         .build();
 
     p.cargo("check -Zunstable-options -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();
 
     // Check without a wrapper should rebuild
@@ -479,7 +478,7 @@ fn rustc_workspace_wrapper() {
 
     // Again, reading from the cache.
     p.cargo("check -Zunstable-options -v")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[FRESH] foo [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")

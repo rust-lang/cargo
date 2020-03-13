@@ -1111,7 +1111,6 @@ fn does_not_crash_with_rustc_workspace_wrapper() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn uses_workspace_wrapper_and_primary_wrapper_override() {
     // We don't have /usr/bin/env on Windows.
     let p = project()
@@ -1127,9 +1126,9 @@ fn uses_workspace_wrapper_and_primary_wrapper_override() {
         .build();
 
     p.cargo("fix --allow-no-vcs --verbose -Zunstable-options")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc src/lib.rs --crate-name foo [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc src/lib.rs --crate-name foo [..]")
         .run();
 }
 

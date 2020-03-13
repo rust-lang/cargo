@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use crate::{basic_manifest, project};
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
@@ -265,21 +266,23 @@ pub fn sysroot() -> String {
     sysroot.trim().to_string()
 }
 
-#[cfg(unix)]
-pub fn echo_wrapper() -> std::io::Result<std::path::PathBuf> {
-    use std::os::unix::fs::PermissionsExt;
-    let wrapper_path = root().join("rustc-echo-wrapper");
-    std::fs::write(
-        &wrapper_path,
-        r#"#! /bin/bash
-
-       echo "WRAPPER CALLED: $*"
-       "$@""#,
-    )?;
-
-    let mut perms = std::fs::metadata(&wrapper_path)?.permissions();
-    perms.set_mode(0o755);
-    std::fs::set_permissions(&wrapper_path, perms)?;
-
-    Ok(wrapper_path)
+pub fn echo_wrapper() -> std::path::PathBuf {
+    let p = project()
+        .at("rustc-echo-wrapper")
+        .file("Cargo.toml", &basic_manifest("rustc-echo-wrapper", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let args = std::env::args().collect::<Vec<_>>();
+                eprintln!("WRAPPER CALLED: {}", args[1..].join(" "));
+                let status = std::process::Command::new(&args[1])
+                    .args(&args[2..]).status().unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    p.cargo("build").run();
+    p.bin("rustc-echo-wrapper")
 }

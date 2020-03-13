@@ -783,7 +783,6 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn rustc_workspace_wrapper_affects_all_workspace_members() {
     use cargo_test_support::paths;
     let p = project()
@@ -801,15 +800,14 @@ fn rustc_workspace_wrapper_affects_all_workspace_members() {
         .build();
 
     p.cargo("check -Zunstable-options")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn rustc_workspace_wrapper_includes_path_deps() {
     use cargo_test_support::paths;
     let p = project()
@@ -836,16 +834,15 @@ fn rustc_workspace_wrapper_includes_path_deps() {
         .build();
 
     p.cargo("check --workspace -Zunstable-options")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn rustc_workspace_wrapper_respects_primary_units() {
     use cargo_test_support::paths;
     let p = project()
@@ -863,15 +860,14 @@ fn rustc_workspace_wrapper_respects_primary_units() {
         .build();
 
     p.cargo("check -p bar -Zunstable-options")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn rustc_workspace_wrapper_excludes_published_deps() {
     use cargo_test_support::paths;
     let p = project()
@@ -898,10 +894,10 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
     Package::new("baz", "1.0.0").publish();
 
     p.cargo("check --workspace -v -Zunstable-options")
-        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper().unwrap())
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
-        .with_stdout_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
         .with_stderr_contains("[CHECKING] baz [..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
