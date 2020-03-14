@@ -463,7 +463,6 @@ impl<'cfg> RegistrySource<'cfg> {
 
         let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);
-        tar.set_preserve_mtime(false);
         let prefix = unpack_dir.file_name().unwrap();
         let parent = unpack_dir.parent().unwrap();
         for entry in tar.entries()? {
