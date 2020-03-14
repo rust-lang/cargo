@@ -190,7 +190,7 @@
 
 ### Nightly only
 - `build-std` now uses `--extern` instead of `--sysroot` to find sysroot
-  pacakges.
+  packages.
   [#7699](https://github.com/rust-lang/cargo/pull/7699)
 - Added `--config` command-line option to set config settings.
   [#7649](https://github.com/rust-lang/cargo/pull/7649)
@@ -1131,7 +1131,7 @@
   [#5984](https://github.com/rust-lang/cargo/pull/5984)
   [#5989](https://github.com/rust-lang/cargo/pull/5989)
 - Added support for `target.'cfg(…)'.runner` config value to specify the
-  run/test/bench runner for config-expressioned targets.
+  run/test/bench runner for targets that use config expressions.
   [#5959](https://github.com/rust-lang/cargo/pull/5959)
 
 ### Changed
