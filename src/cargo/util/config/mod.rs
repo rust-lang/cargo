@@ -314,9 +314,19 @@ impl Config {
                 .into_path_unlocked()
         });
         let wrapper = self.maybe_get_tool("rustc_wrapper", &self.build_config()?.rustc_wrapper);
+        let rustc_workspace_wrapper = self.maybe_get_tool(
+            "rustc_workspace_wrapper",
+            &self.build_config()?.rustc_workspace_wrapper,
+        );
+
+        if !self.cli_unstable().unstable_options && rustc_workspace_wrapper.is_some() {
+            bail!("Usage of `RUSTC_WORKSPACE_WRAPPER` requires `-Z unstable-options`")
+        }
+
         Rustc::new(
             self.get_tool("rustc", &self.build_config()?.rustc),
             wrapper,
+            rustc_workspace_wrapper,
             &self
                 .home()
                 .join("bin")
@@ -1645,15 +1655,6 @@ impl Drop for PackageCacheLock<'_> {
     }
 }
 
-/// returns path to clippy-driver binary
-///
-/// Allows override of the path via `CARGO_CLIPPY_DRIVER` env variable
-pub fn clippy_driver() -> PathBuf {
-    env::var("CARGO_CLIPPY_DRIVER")
-        .unwrap_or_else(|_| "clippy-driver".into())
-        .into()
-}
-
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoHttpConfig {
@@ -1714,6 +1715,7 @@ pub struct CargoBuildConfig {
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
     pub rustc_wrapper: Option<PathBuf>,
+    pub rustc_workspace_wrapper: Option<PathBuf>,
     pub rustc: Option<PathBuf>,
     pub rustdoc: Option<PathBuf>,
     pub out_dir: Option<ConfigRelativePath>,

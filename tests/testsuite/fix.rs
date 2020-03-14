@@ -3,7 +3,8 @@
 use std::fs::File;
 
 use cargo_test_support::git;
-use cargo_test_support::{basic_manifest, command_is_available, project};
+use cargo_test_support::paths;
+use cargo_test_support::{basic_manifest, project};
 
 use std::io::Write;
 
@@ -1068,11 +1069,8 @@ fn doesnt_rebuild_dependencies() {
 }
 
 #[cargo_test]
+#[cfg(unix)]
 fn does_not_crash_with_rustc_wrapper() {
-    // We don't have /usr/bin/env on Windows.
-    if cfg!(windows) {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1087,6 +1085,49 @@ fn does_not_crash_with_rustc_wrapper() {
 
     p.cargo("fix --allow-no-vcs")
         .env("RUSTC_WRAPPER", "/usr/bin/env")
+        .run();
+}
+
+#[cargo_test]
+#[cfg(unix)]
+fn does_not_crash_with_rustc_workspace_wrapper() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs --verbose -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", "/usr/bin/env")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn uses_workspace_wrapper_and_primary_wrapper_override() {
+    // We don't have /usr/bin/env on Windows.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs --verbose -Zunstable-options")
+        .env("RUSTC_WORKSPACE_WRAPPER", paths::echo_wrapper())
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("WRAPPER CALLED: rustc src/lib.rs --crate-name foo [..]")
         .run();
 }
 
@@ -1249,47 +1290,6 @@ fn fix_in_existing_repo_weird_ignore() {
         .with_status(101)
         .run();
     p.cargo("fix").cwd("src").run();
-}
-
-#[cargo_test]
-fn fix_with_clippy() {
-    if !command_is_available("clippy-driver") {
-        return;
-    }
-
-    let p = project()
-        .file(
-            "src/lib.rs",
-            "
-                pub fn foo() {
-                    let mut v = Vec::<String>::new();
-                    let _ = v.iter_mut().filter(|&ref a| a.is_empty());
-                }
-    ",
-        )
-        .build();
-
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FIXING] src/lib.rs (1 fix)
-[FINISHED] [..]
-";
-
-    p.cargo("fix -Zunstable-options --clippy --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(stderr)
-        .with_stdout("")
-        .run();
-
-    assert_eq!(
-        p.read_file("src/lib.rs"),
-        "
-                pub fn foo() {
-                    let mut v = Vec::<String>::new();
-                    let _ = v.iter_mut().filter(|a| a.is_empty());
-                }
-    "
-    );
 }
 
 #[cargo_test]

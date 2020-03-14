@@ -1679,6 +1679,7 @@ thread_local!(
 pub static RUSTC: Rustc = Rustc::new(
     PathBuf::from("rustc"),
     None,
+    None,
     Path::new("should be path to rustup rustc, but we don't care in tests"),
     None,
 ).unwrap()

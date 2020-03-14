@@ -616,11 +616,11 @@ fn compute_metadata<'a, 'cfg>(
 
     bcx.rustc().verbose_version.hash(&mut hasher);
 
-    if cx.is_primary_package(unit) {
+    if cx.bcx.ws.is_member(unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
-        if let Some(proc) = &cx.bcx.build_config.primary_unit_rustc {
-            proc.get_program().hash(&mut hasher);
+        if let Some(path) = &cx.bcx.rustc().workspace_wrapper {
+            path.hash(&mut hasher);
         }
     }
 
