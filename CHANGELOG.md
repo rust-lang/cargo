@@ -118,7 +118,7 @@
 - Added new feature resolver.
   [#7820](https://github.com/rust-lang/cargo/pull/7820)
 - Rustdoc docs now automatically include the version of the package in the
-  side bar.
+  side bar (requires `-Z crate-versions` flag).
   [#7903](https://github.com/rust-lang/cargo/pull/7903)
 
 ## Cargo 1.42 (2020-03-12)
