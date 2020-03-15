@@ -1407,6 +1407,65 @@ fn doc_example() {
 }
 
 #[cargo_test]
+fn doc_hidden_items() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            #[doc(hidden)]
+            pub fn foo_hidden() {}
+            fn foo() {}
+            #[doc(hidden)]
+            pub struct FooStructHidden;
+            struct FooStruct;
+            #[doc(hidden)]
+            pub enum FooEnumHidden {}
+            enum FooEnum {}
+            #[doc(hidden)]
+            pub trait FooTraitHidden {}
+            trait FooTrait {}
+            #[doc(hidden)]
+            pub type FooTypeHidden = u32;
+            type FooType = u32;
+            #[doc(hidden)]
+            pub mod foo_mod_hidden {}
+            mod foo_mod {}
+        ",
+        )
+        .build();
+
+    p.cargo("doc --document-hidden-items")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+        assert!(p.root().join("target/doc/foo/index.html").is_file());
+        assert!(p.root().join("target/doc/foo/fn.foo_hidden.html").is_file());
+        assert!(p.root().join("target/doc/foo/struct.FooStructHidden.html").is_file());
+        assert!(p.root().join("target/doc/foo/enum.FooEnumHidden.html").is_file());
+        assert!(p.root().join("target/doc/foo/trait.FooTraitHidden.html").is_file());
+        assert!(p.root().join("target/doc/foo/type.FooTypeHidden.html").is_file());
+        assert!(p.root().join("target/doc/foo/foo_mod_hidden/index.html").is_file());
+}
+
+#[cargo_test]
 fn bin_private_items() {
     let p = project()
         .file(
