@@ -30,6 +30,11 @@ struct Inner {
     checksum: Option<String>,
     links: Option<InternedString>,
     namespaced_features: bool,
+    /// Whether or not this package is a proc-macro library.
+    ///
+    /// This was added in 2020. Packages published before this will always be
+    /// `false`.
+    proc_macro: bool,
 }
 
 impl Summary {
@@ -39,6 +44,7 @@ impl Summary {
         features: &BTreeMap<K, Vec<impl AsRef<str>>>,
         links: Option<impl Into<InternedString>>,
         namespaced_features: bool,
+        proc_macro: bool,
     ) -> CargoResult<Summary>
     where
         K: Borrow<str> + Ord + Display,
@@ -68,6 +74,7 @@ impl Summary {
                 checksum: None,
                 links: links.map(|l| l.into()),
                 namespaced_features,
+                proc_macro,
             }),
         })
     }
