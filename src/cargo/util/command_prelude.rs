@@ -451,7 +451,7 @@ pub trait ArgMatchesExt {
         if build_config.unit_graph {
             config
                 .cli_unstable()
-                .fail_if_stable_opt("--unit-graph", 0)?;
+                .fail_if_stable_opt("--unit-graph", 8002)?;
         }
 
         let opts = CompileOptions {

@@ -554,7 +554,7 @@ The `-Z crate-versions` flag will make `cargo doc` include appropriate crate ver
 You can find an example screenshot for the cargo itself in the tracking issue.
 
 ### unit-graph
-* Tracking Issue: TODO
+* Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
 
 The `--unit-graph` flag can be passed to any build command (`build`, `check`,
 `run`, `test`, `bench`, `doc`, etc.) to emit a JSON object to stdout which
@@ -566,6 +566,15 @@ depends on.
 ```
 cargo +nightly build --unit-graph -Z unstable-options
 ```
+
+This structure provides a more complete view of the dependency relationship as
+Cargo sees it. In particular, the "features" field supports the new feature
+resolver where a dependency can be built multiple times with different
+features. `cargo metadata` fundamentally cannot represent the relationship of
+features between different dependency kinds, and features now depend on which
+command is run and which packages and targets are selected. Additionally it
+can provide details about intra-package dependencies like build scripts or
+tests.
 
 The following is a description of the JSON structure:
 
