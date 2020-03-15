@@ -17,6 +17,7 @@ pub fn cli() -> App {
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))
+        .arg(opt("document-hidden-items", "Document items that have doc(hidden)"))
         .arg_jobs()
         .arg_targets_lib_bin(
             "Document only this package's library",
@@ -55,6 +56,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
+    if args.is_present("document-hidden-items") {
+        compile_opts.local_rustdoc_args = Some(vec!["-Z".to_string(), "unstable-options".to_string(), "--document-hidden-items".to_string()]);
+    }
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
 
     let doc_opts = DocOptions {
