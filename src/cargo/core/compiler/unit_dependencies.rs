@@ -178,9 +178,11 @@ fn deps_of_roots<'a, 'cfg>(roots: &[Unit<'a>], mut state: &mut State<'a, 'cfg>) 
             } else if unit.target.is_custom_build() {
                 // This normally doesn't happen, except `clean` aggressively
                 // generates all units.
-                UnitFor::new_build(false)
+                UnitFor::new_host(false)
+            } else if unit.target.proc_macro() {
+                UnitFor::new_host(true)
             } else if unit.target.for_host() {
-                // Proc macro / plugin should never have panic set.
+                // Plugin should never have panic set.
                 UnitFor::new_compiler()
             } else {
                 UnitFor::new_normal()
@@ -297,7 +299,7 @@ fn compute_deps<'a, 'cfg>(
         let dep_unit_for = unit_for
             .with_for_host(lib.for_host())
             // If it is a custom build script, then it *only* has build dependencies.
-            .with_build_dep(unit.target.is_custom_build());
+            .with_host_features(unit.target.is_custom_build() || lib.proc_macro());
 
         if bcx.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host() {
             let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
@@ -388,9 +390,10 @@ fn compute_deps_custom_build<'a, 'cfg>(
             return Ok(Vec::new());
         }
     }
-    // All dependencies of this unit should use profiles for custom
-    // builds.
-    let script_unit_for = UnitFor::new_build(unit_for.is_for_build_dep());
+    // All dependencies of this unit should use profiles for custom builds.
+    // If this is a build script of a proc macro, make sure it uses host
+    // features.
+    let script_unit_for = UnitFor::new_host(unit_for.is_for_host_features());
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself.
@@ -445,7 +448,9 @@ fn compute_deps_doc<'a, 'cfg>(
         // Rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
-        let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
+        let dep_unit_for = UnitFor::new_normal()
+            .with_for_host(lib.for_host())
+            .with_host_features(lib.proc_macro());
         let lib_unit_dep = new_unit_dep(
             state,
             unit,
@@ -528,32 +533,32 @@ fn dep_build_script<'a>(
                 .bcx
                 .profiles
                 .get_profile_run_custom_build(&unit.profile);
-            // UnitFor::new_build is used because we want the `host` flag set
+            // UnitFor::new_host is used because we want the `host` flag set
             // for all of our build dependencies (so they all get
             // build-override profiles), including compiling the build.rs
             // script itself.
             //
-            // If `is_for_build_dep` here is `false`, that means we are a
+            // If `is_for_host_features` here is `false`, that means we are a
             // build.rs script for a normal dependency and we want to set the
             // CARGO_FEATURE_* environment variables to the features as a
             // normal dep.
             //
-            // If `is_for_build_dep` here is `true`, that means that this
-            // package is being used as a build dependency, and so we only
-            // want to set CARGO_FEATURE_* variables for the build-dependency
+            // If `is_for_host_features` here is `true`, that means that this
+            // package is being used as a build dependency or proc-macro, and
+            // so we only want to set CARGO_FEATURE_* variables for the host
             // side of the graph.
             //
             // Keep in mind that the RunCustomBuild unit and the Compile
             // build.rs unit use the same features. This is because some
             // people use `cfg!` and `#[cfg]` expressions to check for enabled
             // features instead of just checking `CARGO_FEATURE_*` at runtime.
-            // In the case with `-Zfeatures=build_dep`, and a shared
+            // In the case with `-Zfeatures=host_dep`, and a shared
             // dependency has different features enabled for normal vs. build,
             // then the build.rs script will get compiled twice. I believe it
             // is not feasible to only build it once because it would break a
             // large number of scripts (they would think they have the wrong
             // set of features enabled).
-            let script_unit_for = UnitFor::new_build(unit_for.is_for_build_dep());
+            let script_unit_for = UnitFor::new_host(unit_for.is_for_host_features());
             new_unit_dep_with_profile(
                 state,
                 unit,

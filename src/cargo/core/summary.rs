@@ -106,6 +106,9 @@ impl Summary {
     pub fn namespaced_features(&self) -> bool {
         self.inner.namespaced_features
     }
+    pub fn proc_macro(&self) -> bool {
+        self.inner.proc_macro
+    }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         Rc::make_mut(&mut self.inner).package_id = id;

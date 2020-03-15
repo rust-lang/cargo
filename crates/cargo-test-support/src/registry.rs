@@ -144,6 +144,7 @@ pub struct Package {
     local: bool,
     alternative: bool,
     invalid_json: bool,
+    proc_macro: bool,
 }
 
 #[derive(Clone)]
@@ -242,6 +243,7 @@ impl Package {
             local: false,
             alternative: false,
             invalid_json: false,
+            proc_macro: false,
         }
     }
 
@@ -345,6 +347,12 @@ impl Package {
         self
     }
 
+    /// Specifies whether or not this is a proc macro.
+    pub fn proc_macro(&mut self, proc_macro: bool) -> &mut Package {
+        self.proc_macro = proc_macro;
+        self
+    }
+
     /// Adds an entry in the `[features]` section.
     pub fn feature(&mut self, name: &str, deps: &[&str]) -> &mut Package {
         let deps = deps.iter().map(|s| s.to_string()).collect();
@@ -413,6 +421,7 @@ impl Package {
             "cksum": cksum,
             "features": self.features,
             "yanked": self.yanked,
+            "pm": self.proc_macro,
         })
         .to_string();
 
@@ -497,6 +506,9 @@ impl Package {
                 assert_eq!(registry, "alternative");
                 manifest.push_str(&format!("registry-index = \"{}\"", alt_registry_url()));
             }
+        }
+        if self.proc_macro {
+            manifest.push_str("[lib]\nproc-macro = true\n");
         }
 
         let dst = self.archive_dst();

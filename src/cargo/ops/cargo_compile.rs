@@ -749,10 +749,14 @@ fn generate_targets<'a>(
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
-        let features = Vec::from(resolved_features.activated_features(
-            pkg.package_id(),
-            FeaturesFor::NormalOrDev, // Root units are never build dependencies.
-        ));
+        let features_for = if target.proc_macro() {
+            FeaturesFor::HostDep
+        } else {
+            // Root units are never build dependencies.
+            FeaturesFor::NormalOrDev
+        };
+        let features =
+            Vec::from(resolved_features.activated_features(pkg.package_id(), features_for));
         bcx.units.intern(
             pkg,
             target,
@@ -950,9 +954,10 @@ fn resolve_all_features(
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
+        let is_proc_macro = resolve_with_overrides.summary(dep_id).proc_macro();
         for dep in deps {
-            let features_for = if dep.is_build() {
-                FeaturesFor::BuildDep
+            let features_for = if is_proc_macro || dep.is_build() {
+                FeaturesFor::HostDep
             } else {
                 FeaturesFor::NormalOrDev
             };

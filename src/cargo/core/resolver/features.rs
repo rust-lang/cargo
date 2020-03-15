@@ -50,7 +50,7 @@ use std::rc::Rc;
 /// Map of activated features.
 ///
 /// The key is `(PackageId, bool)` where the bool is `true` if these
-/// are features for a build dependency.
+/// are features for a build dependency or proc-macro.
 type ActivateMap = HashMap<(PackageId, bool), BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
@@ -68,8 +68,8 @@ struct FeatureOpts {
     package_features: bool,
     /// -Zfeatures is enabled, use new resolver.
     new_resolver: bool,
-    /// Build deps will not share share features with other dep kinds.
-    decouple_build_deps: bool,
+    /// Build deps and proc-macros will not share share features with other dep kinds.
+    decouple_host_deps: bool,
     /// Dev dep features will not be activated unless needed.
     decouple_dev_deps: bool,
     /// Targets that are not in use will not activate features.
@@ -91,10 +91,11 @@ pub enum HasDevUnits {
 }
 
 /// Flag to indicate if features are requested for a build dependency or not.
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum FeaturesFor {
     NormalOrDev,
-    BuildDep,
+    /// Build dependency or proc-macro.
+    HostDep,
 }
 
 impl FeatureOpts {
@@ -106,17 +107,16 @@ impl FeatureOpts {
             opts.new_resolver = true;
             for opt in feat_opts {
                 match opt.as_ref() {
-                    "build_dep" => opts.decouple_build_deps = true,
+                    "build_dep" | "host_dep" => opts.decouple_host_deps = true,
                     "dev_dep" => opts.decouple_dev_deps = true,
                     "itarget" => opts.ignore_inactive_targets = true,
                     "all" => {
-                        opts.decouple_build_deps = true;
+                        opts.decouple_host_deps = true;
                         opts.decouple_dev_deps = true;
                         opts.ignore_inactive_targets = true;
                     }
                     "compare" => opts.compare = true,
                     "ws" => unimplemented!(),
-                    "host" => unimplemented!(),
                     s => anyhow::bail!("-Zfeatures flag `{}` is not supported", s),
                 }
             }
@@ -213,7 +213,7 @@ impl ResolvedFeatures {
         if let Some(legacy) = &self.legacy {
             legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
         } else {
-            let is_build = self.opts.decouple_build_deps && features_for == FeaturesFor::BuildDep;
+            let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
             if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
                 fs.iter().cloned().collect()
             } else if verify {
@@ -294,7 +294,19 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let member_features = self.ws.members_with_features(specs, requested_features)?;
         for (member, requested_features) in &member_features {
             let fvs = self.fvs_from_requested(member.package_id(), requested_features);
-            self.activate_pkg(member.package_id(), &fvs, false)?;
+            let for_host = self.opts.decouple_host_deps
+                && self.resolve.summary(member.package_id()).proc_macro();
+            self.activate_pkg(member.package_id(), &fvs, for_host)?;
+            if for_host {
+                // Also activate without for_host. This is needed if the
+                // proc-macro includes other targets (like binaries or tests),
+                // or running in `cargo test`. Note that in a workspace, if
+                // the proc-macro is selected on the command like (like with
+                // `--workspace`), this forces feature unification with normal
+                // dependencies. This is part of the bigger problem where
+                // features depend on which packages are built.
+                self.activate_pkg(member.package_id(), &fvs, false)?;
+            }
         }
         Ok(())
     }
@@ -303,18 +315,18 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         &mut self,
         pkg_id: PackageId,
         fvs: &[FeatureValue],
-        for_build: bool,
+        for_host: bool,
     ) -> CargoResult<()> {
         // Add an empty entry to ensure everything is covered. This is intended for
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
         self.activated_features
-            .entry((pkg_id, for_build))
+            .entry((pkg_id, for_host))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
-            self.activate_fv(pkg_id, fv, for_build)?;
+            self.activate_fv(pkg_id, fv, for_host)?;
         }
-        if !self.processed_deps.insert((pkg_id, for_build)) {
+        if !self.processed_deps.insert((pkg_id, for_host)) {
             // Already processed dependencies. There's no need to process them
             // again. This is primarily to avoid cycles, but also helps speed
             // things up.
@@ -330,8 +342,8 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // features that enable other features.
             return Ok(());
         }
-        for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-            for (dep, dep_for_build) in deps {
+        for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+            for (dep, dep_for_host) in deps {
                 if dep.is_optional() {
                     // Optional dependencies are enabled in `activate_fv` when
                     // a feature enables it.
@@ -339,7 +351,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 }
                 // Recurse into the dependency.
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
+                self.activate_pkg(dep_pkg_id, &fvs, dep_for_host)?;
             }
         }
         Ok(())
@@ -350,42 +362,42 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         &mut self,
         pkg_id: PackageId,
         fv: &FeatureValue,
-        for_build: bool,
+        for_host: bool,
     ) -> CargoResult<()> {
         match fv {
             FeatureValue::Feature(f) => {
-                self.activate_rec(pkg_id, *f, for_build)?;
+                self.activate_rec(pkg_id, *f, for_host)?;
             }
             FeatureValue::Crate(dep_name) => {
                 // Activate the feature name on self.
-                self.activate_rec(pkg_id, *dep_name, for_build)?;
+                self.activate_rec(pkg_id, *dep_name, for_host)?;
                 // Activate the optional dep.
-                for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-                    for (dep, dep_for_build) in deps {
+                for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+                    for (dep, dep_for_host) in deps {
                         if dep.name_in_toml() != *dep_name {
                             continue;
                         }
                         let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                        self.activate_pkg(dep_pkg_id, &fvs, dep_for_build)?;
+                        self.activate_pkg(dep_pkg_id, &fvs, dep_for_host)?;
                     }
                 }
             }
             FeatureValue::CrateFeature(dep_name, dep_feature) => {
                 // Activate a feature within a dependency.
-                for (dep_pkg_id, deps) in self.deps(pkg_id, for_build) {
-                    for (dep, dep_for_build) in deps {
+                for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
+                    for (dep, dep_for_host) in deps {
                         if dep.name_in_toml() != *dep_name {
                             continue;
                         }
                         if dep.is_optional() {
                             // Activate the crate on self.
                             let fv = FeatureValue::Crate(*dep_name);
-                            self.activate_fv(pkg_id, &fv, for_build)?;
+                            self.activate_fv(pkg_id, &fv, for_host)?;
                         }
                         // Activate the feature on the dependency.
                         let summary = self.resolve.summary(dep_pkg_id);
                         let fv = FeatureValue::new(*dep_feature, summary);
-                        self.activate_fv(dep_pkg_id, &fv, dep_for_build)?;
+                        self.activate_fv(dep_pkg_id, &fv, dep_for_host)?;
                     }
                 }
             }
@@ -399,11 +411,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         &mut self,
         pkg_id: PackageId,
         feature_to_enable: InternedString,
-        for_build: bool,
+        for_host: bool,
     ) -> CargoResult<()> {
         let enabled = self
             .activated_features
-            .entry((pkg_id, for_build))
+            .entry((pkg_id, for_host))
             .or_insert_with(BTreeSet::new);
         if !enabled.insert(feature_to_enable) {
             // Already enabled.
@@ -426,7 +438,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             }
         };
         for fv in fvs {
-            self.activate_fv(pkg_id, fv, for_build)?;
+            self.activate_fv(pkg_id, fv, for_host)?;
         }
         Ok(())
     }
@@ -462,9 +474,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 .collect();
             // Add optional deps.
             // Top-level requested features can never apply to
-            // build-dependencies, so for_build is `false` here.
+            // build-dependencies, so for_host is `false` here.
             for (_dep_pkg_id, deps) in self.deps(pkg_id, false) {
-                for (dep, _dep_for_build) in deps {
+                for (dep, _dep_for_host) in deps {
                     if dep.is_optional() {
                         // This may result in duplicates, but that should be ok.
                         fvs.push(FeatureValue::Crate(dep.name_in_toml()));
@@ -491,14 +503,14 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn deps(
         &self,
         pkg_id: PackageId,
-        for_build: bool,
+        for_host: bool,
     ) -> Vec<(PackageId, Vec<(&'a Dependency, bool)>)> {
         // Helper for determining if a platform is activated.
         let platform_activated = |dep: &Dependency| -> bool {
             // We always care about build-dependencies, and they are always
             // Host. If we are computing dependencies "for a build script",
             // even normal dependencies are host-only.
-            if for_build || dep.is_build() {
+            if for_host || dep.is_build() {
                 return self
                     .target_data
                     .dep_platform_activated(dep, CompileKind::Host);
@@ -510,6 +522,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
+                let is_proc_macro = self.resolve.summary(dep_id).proc_macro();
                 let deps = deps
                     .iter()
                     .filter(|dep| {
@@ -525,9 +538,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         true
                     })
                     .map(|dep| {
-                        let dep_for_build =
-                            for_build || (self.opts.decouple_build_deps && dep.is_build());
-                        (dep, dep_for_build)
+                        let dep_for_host = for_host
+                            || (self.opts.decouple_host_deps && (dep.is_build() || is_proc_macro));
+                        (dep, dep_for_host)
                     })
                     .collect::<Vec<_>>();
                 (dep_id, deps)

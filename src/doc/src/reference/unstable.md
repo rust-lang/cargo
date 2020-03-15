@@ -507,8 +507,8 @@ The available options are:
   When building this example for a non-Windows platform, the `f2` feature will
   *not* be enabled.
 
-* `build_dep` — Prevents features enabled on build dependencies from being
-  enabled for normal dependencies. For example:
+* `host_dep` — Prevents features enabled on build dependencies or proc-macros
+  from being enabled for normal dependencies. For example:
 
   ```toml
   [dependencies]
@@ -521,6 +521,9 @@ The available options are:
   When building the build script, the `log` crate will be built with the `std`
   feature. When building the library of your package, it will not enable the
   feature.
+
+  Note that proc-macro decoupling requires changes to the registry, so it
+  won't be decoupled until the registry is updated to support the new field.
 
 * `dev_dep` — Prevents features enabled on dev dependencies from being enabled
   for normal dependencies. For example:

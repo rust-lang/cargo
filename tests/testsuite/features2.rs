@@ -1,5 +1,6 @@
 //! Tests for the new feature resolver.
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
 
@@ -183,8 +184,8 @@ fn inactive_target_optional() {
 }
 
 #[cargo_test]
-fn decouple_build_deps() {
-    // Basic test for `build_dep` decouple.
+fn decouple_host_deps() {
+    // Basic test for `host_dep` decouple.
     Package::new("common", "1.0.0")
         .feature("f1", &[])
         .file(
@@ -229,14 +230,14 @@ fn decouple_build_deps() {
         .with_stderr_contains("[..]unresolved import `common::bar`[..]")
         .run();
 
-    p.cargo("check -Zfeatures=build_dep")
+    p.cargo("check -Zfeatures=host_dep")
         .masquerade_as_nightly_cargo()
         .run();
 }
 
 #[cargo_test]
-fn decouple_build_deps_nested() {
-    // `build_dep` decouple of transitive dependencies.
+fn decouple_host_deps_nested() {
+    // `host_dep` decouple of transitive dependencies.
     Package::new("common", "1.0.0")
         .feature("f1", &[])
         .file(
@@ -294,7 +295,7 @@ fn decouple_build_deps_nested() {
         .with_stderr_contains("[..]unresolved import `common::bar`[..]")
         .run();
 
-    p.cargo("check -Zfeatures=build_dep")
+    p.cargo("check -Zfeatures=host_dep")
         .masquerade_as_nightly_cargo()
         .run();
 }
@@ -590,7 +591,7 @@ fn build_script_runtime_features() {
         .run();
 
     // Normal only.
-    p.cargo("run -Zfeatures=dev_dep,build_dep")
+    p.cargo("run -Zfeatures=dev_dep,host_dep")
         .env("CARGO_FEATURE_EXPECT", "1")
         .masquerade_as_nightly_cargo()
         .run();
@@ -604,7 +605,7 @@ fn build_script_runtime_features() {
         .run();
 
     // normal + dev unify
-    p.cargo("test -Zfeatures=build_dep")
+    p.cargo("test -Zfeatures=host_dep")
         .env("CARGO_FEATURE_EXPECT", "3")
         .masquerade_as_nightly_cargo()
         .run();
@@ -767,7 +768,7 @@ fn all_feature_opts() {
 }
 
 #[cargo_test]
-fn required_features_build_dep() {
+fn required_features_host_dep() {
     // Check that required-features handles build-dependencies correctly.
     let p = project()
         .file(
@@ -817,13 +818,13 @@ Consider enabling them by passing, e.g., `--features=\"bdep/f1\"`
         )
         .run();
 
-    p.cargo("run --features bdep/f1 -Zfeatures=build_dep")
+    p.cargo("run --features bdep/f1 -Zfeatures=host_dep")
         .masquerade_as_nightly_cargo()
         .run();
 }
 
 #[cargo_test]
-fn disabled_shared_build_dep() {
+fn disabled_shared_host_dep() {
     // Check for situation where an optional dep of a shared dep is enabled in
     // a normal dependency, but disabled in an optional one. The unit tree is:
     // foo
@@ -888,7 +889,7 @@ fn disabled_shared_build_dep() {
         )
         .build();
 
-    p.cargo("run -Zfeatures=build_dep -v")
+    p.cargo("run -Zfeatures=host_dep -v")
         .masquerade_as_nightly_cargo()
         .with_stdout("hello from somedep")
         .run();
@@ -929,5 +930,181 @@ fn required_features_inactive_dep() {
     p.cargo("check -Zfeatures=itarget --features=feat1")
         .masquerade_as_nightly_cargo()
         .with_stderr("[CHECKING] foo[..]\n[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test]
+fn decouple_proc_macro() {
+    // proc macro features are not shared
+    Package::new("common", "1.0.0")
+        .feature("somefeat", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            pub const fn foo() -> bool { cfg!(feature="somefeat") }
+            #[cfg(feature="somefeat")]
+            pub const FEAT_ONLY_CONST: bool = true;
+            "#,
+        )
+        .publish();
+    Package::new("pm", "1.0.0")
+        .proc_macro(true)
+        .feature_dep("common", "1.0", &["somefeat"])
+        .file(
+            "src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            extern crate common;
+            #[proc_macro]
+            pub fn foo(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+                assert!(common::foo());
+                "".parse().unwrap()
+            }
+            "#,
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            edition = "2018"
+
+            [dependencies]
+            pm = "1.0"
+            common = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! Test with docs.
+            //!
+            //! ```rust
+            //! pm::foo!{}
+            //! fn main() {
+            //!   let expected = std::env::var_os("TEST_EXPECTS_ENABLED").is_some();
+            //!   assert_eq!(expected, common::foo(), "common is wrong");
+            //! }
+            //! ```
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            pm::foo!{}
+            fn main() {
+                println!("it is {}", common::foo());
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .env("TEST_EXPECTS_ENABLED", "1")
+        .with_stdout("it is true")
+        .run();
+
+    p.cargo("run -Zfeatures=host_dep")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("it is false")
+        .run();
+
+    // Make sure the test is fallible.
+    p.cargo("test --doc")
+        .with_status(101)
+        .with_stdout_contains("[..]common is wrong[..]")
+        .run();
+
+    p.cargo("test --doc").env("TEST_EXPECTS_ENABLED", "1").run();
+
+    p.cargo("test --doc -Zfeatures=host_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.cargo("doc").run();
+    assert!(p
+        .build_dir()
+        .join("doc/common/constant.FEAT_ONLY_CONST.html")
+        .exists());
+    // cargo doc should clean in-between runs, but it doesn't, and leaves stale files.
+    // https://github.com/rust-lang/cargo/issues/6783 (same for removed items)
+    p.build_dir().join("doc").rm_rf();
+
+    p.cargo("doc -Zfeatures=host_dep")
+        .masquerade_as_nightly_cargo()
+        .run();
+    assert!(!p
+        .build_dir()
+        .join("doc/common/constant.FEAT_ONLY_CONST.html")
+        .exists());
+}
+
+#[cargo_test]
+fn proc_macro_ws() {
+    // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "pm"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            feat1 = []
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "pm/Cargo.toml",
+            r#"
+            [package]
+            name = "pm"
+            version = "0.1.0"
+
+            [lib]
+            proc-macro = true
+
+            [dependencies]
+            foo = { path = "../foo", features=["feat1"] }
+            "#,
+        )
+        .file("pm/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -p pm -Zfeatures=host_dep -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]--cfg[..]feat1[..]")
+        .run();
+    // This may be surprising that `foo` doesn't get built separately. It is
+    // because pm might have other units (binaries, tests, etc.), and so the
+    // feature resolver must assume that normal deps get unified with it. This
+    // is related to the bigger issue where the features selected in a
+    // workspace depend on which packages are selected.
+    p.cargo("check --workspace -Zfeatures=host_dep -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[FRESH] foo v0.1.0 [..]
+[FRESH] pm v0.1.0 [..]
+[FINISHED] dev [..]
+",
+        )
+        .run();
+    // Selecting just foo will build without unification.
+    p.cargo("check -p foo -Zfeatures=host_dep -v")
+        .masquerade_as_nightly_cargo()
+        // Make sure `foo` is built without feat1
+        .with_stderr_line_without(&["[RUNNING] `rustc --crate-name foo"], &["--cfg[..]feat1"])
         .run();
 }
