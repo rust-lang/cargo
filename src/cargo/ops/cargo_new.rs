@@ -375,8 +375,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
         bin: opts.kind.is_bin(),
-        edition: opts.edition.as_ref().map(|s| &**s),
-        registry: opts.registry.as_ref().map(|s| &**s),
+        edition: opts.edition.as_deref(),
+        registry: opts.registry.as_deref(),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -465,8 +465,8 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         name,
         bin: has_bin,
         source_files: src_paths_types,
-        edition: opts.edition.as_ref().map(|s| &**s),
-        registry: opts.registry.as_ref().map(|s| &**s),
+        edition: opts.edition.as_deref(),
+        registry: opts.registry.as_deref(),
     };
 
     mk(config, &mkopts).chain_err(|| {

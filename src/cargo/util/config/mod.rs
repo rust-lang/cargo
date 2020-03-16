@@ -703,7 +703,7 @@ impl Config {
         // Ignore errors in the configuration files.
         let term = self.get::<TermConfig>("term").unwrap_or_default();
 
-        let color = color.or_else(|| term.color.as_ref().map(|s| s.as_ref()));
+        let color = color.or_else(|| term.color.as_deref());
 
         let verbosity = match (verbose, term.verbose, quiet) {
             (true, _, false) | (_, Some(true), false) => Verbosity::Verbose,

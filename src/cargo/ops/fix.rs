@@ -697,7 +697,7 @@ impl FixArgs {
     }
 
     fn next_edition(&self) -> &str {
-        match self.enabled_edition.as_ref().map(|s| &**s) {
+        match self.enabled_edition.as_deref() {
             // 2015 -> 2018,
             None | Some("2015") => "2018",
 

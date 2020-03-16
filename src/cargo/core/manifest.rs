@@ -490,7 +490,7 @@ impl Manifest {
         &self.patch
     }
     pub fn links(&self) -> Option<&str> {
-        self.links.as_ref().map(|s| &s[..])
+        self.links.as_deref()
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
@@ -541,7 +541,7 @@ impl Manifest {
     }
 
     pub fn default_run(&self) -> Option<&str> {
-        self.default_run.as_ref().map(|s| &s[..])
+        self.default_run.as_deref()
     }
 
     pub fn metabuild(&self) -> Option<&Vec<String>> {

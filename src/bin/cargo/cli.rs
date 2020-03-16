@@ -179,9 +179,7 @@ fn config_configure(
     let quiet =
         args.is_present("quiet") || subcommand_args.is_present("quiet") || global_args.quiet;
     let global_color = global_args.color; // Extract so it can take reference.
-    let color = args
-        .value_of("color")
-        .or_else(|| global_color.as_ref().map(|s| s.as_ref()));
+    let color = args.value_of("color").or_else(|| global_color.as_deref());
     let frozen = args.is_present("frozen") || global_args.frozen;
     let locked = args.is_present("locked") || global_args.locked;
     let offline = args.is_present("offline") || global_args.offline;

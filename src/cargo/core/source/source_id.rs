@@ -326,7 +326,7 @@ impl SourceId {
 
     /// Gets the value of the precise field.
     pub fn precise(self) -> Option<&'static str> {
-        self.inner.precise.as_ref().map(|s| &s[..])
+        self.inner.precise.as_deref()
     }
 
     /// Gets the Git reference if this is a git source, otherwise `None`.

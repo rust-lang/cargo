@@ -375,14 +375,13 @@ impl Package {
             .map(|dep| {
                 // In the index, the `registry` is null if it is from the same registry.
                 // In Cargo.toml, it is None if it is from crates.io.
-                let registry_url =
-                    match (self.alternative, dep.registry.as_ref().map(|s| s.as_ref())) {
-                        (false, None) => None,
-                        (false, Some("alternative")) => Some(alt_registry_url().to_string()),
-                        (true, None) => Some(CRATES_IO_INDEX.to_string()),
-                        (true, Some("alternative")) => None,
-                        _ => panic!("registry_dep currently only supports `alternative`"),
-                    };
+                let registry_url = match (self.alternative, dep.registry.as_deref()) {
+                    (false, None) => None,
+                    (false, Some("alternative")) => Some(alt_registry_url().to_string()),
+                    (true, None) => Some(CRATES_IO_INDEX.to_string()),
+                    (true, Some("alternative")) => None,
+                    _ => panic!("registry_dep currently only supports `alternative`"),
+                };
                 serde_json::json!({
                     "name": dep.name,
                     "req": dep.vers,
