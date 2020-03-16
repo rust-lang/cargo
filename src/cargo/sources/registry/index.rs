@@ -336,7 +336,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // along the way produce helpful "did you mean?" suggestions.
         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let summaries = Summaries::parse(
-                index_version.as_ref().map(|s| &**s),
+                index_version.as_deref(),
                 root,
                 &cache_root,
                 path.as_ref(),

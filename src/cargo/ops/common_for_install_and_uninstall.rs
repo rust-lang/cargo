@@ -500,7 +500,7 @@ impl InstallInfo {
             && self.all_features == opts.all_features
             && self.no_default_features == opts.no_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
-            && (self.target.is_none() || self.target.as_ref().map(|t| t.as_ref()) == Some(target))
+            && (self.target.is_none() || self.target.as_deref() == Some(target))
             && &self.bins == exes
     }
 }
@@ -594,7 +594,7 @@ where
         } else {
             None
         };
-        let vers = vers.as_ref().map(|s| &**s);
+        let vers = vers.as_deref();
         let vers_spec = if vers.is_none() && source.source_id().is_registry() {
             // Avoid pre-release versions from crate.io
             // unless explicitly asked for

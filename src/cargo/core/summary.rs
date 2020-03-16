@@ -91,7 +91,7 @@ impl Summary {
         &self.inner.features
     }
     pub fn checksum(&self) -> Option<&str> {
-        self.inner.checksum.as_ref().map(|s| &s[..])
+        self.inner.checksum.as_deref()
     }
     pub fn links(&self) -> Option<InternedString> {
         self.inner.links

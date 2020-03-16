@@ -1624,7 +1624,7 @@ impl DetailedTomlDependency {
             None => (name_in_toml, None),
         };
 
-        let version = self.version.as_ref().map(|v| &v[..]);
+        let version = self.version.as_deref();
         let mut dep = match cx.pkgid {
             Some(id) => Dependency::parse(pkg_name, version, new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(pkg_name, version, new_source_id)?,

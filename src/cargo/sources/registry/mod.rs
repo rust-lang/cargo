@@ -315,7 +315,7 @@ impl<'a> RegistryDependency<'a> {
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }
-        let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
+        let kind = match kind.as_deref().unwrap_or("") {
             "dev" => DepKind::Development,
             "build" => DepKind::Build,
             _ => DepKind::Normal,

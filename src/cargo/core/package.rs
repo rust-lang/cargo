@@ -87,14 +87,14 @@ impl ser::Serialize for Package {
         let summary = self.manifest.summary();
         let package_id = summary.package_id();
         let manmeta = self.manifest.metadata();
-        let license = manmeta.license.as_ref().map(String::as_ref);
-        let license_file = manmeta.license_file.as_ref().map(String::as_ref);
-        let description = manmeta.description.as_ref().map(String::as_ref);
+        let license = manmeta.license.as_deref();
+        let license_file = manmeta.license_file.as_deref();
+        let description = manmeta.description.as_deref();
         let authors = manmeta.authors.as_ref();
         let categories = manmeta.categories.as_ref();
         let keywords = manmeta.keywords.as_ref();
-        let readme = manmeta.readme.as_ref().map(String::as_ref);
-        let repository = manmeta.repository.as_ref().map(String::as_ref);
+        let readme = manmeta.readme.as_deref();
+        let repository = manmeta.repository.as_deref();
         // Filter out metabuild targets. They are an internal implementation
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
