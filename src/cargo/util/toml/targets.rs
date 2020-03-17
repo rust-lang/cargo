@@ -731,14 +731,12 @@ fn validate_target_name(
             if name.trim().is_empty() {
                 anyhow::bail!("{} target names cannot be empty", target_kind_human)
             }
-            if cfg!(windows) {
-                if restricted_names::is_windows_reserved(name) {
-                    warnings.push(format!(
-                        "{} target `{}` is a reserved Windows filename, \
+            if cfg!(windows) && restricted_names::is_windows_reserved(name) {
+                warnings.push(format!(
+                    "{} target `{}` is a reserved Windows filename, \
                         this target will not work on Windows platforms",
-                        target_kind_human, name
-                    ));
-                }
+                    target_kind_human, name
+                ));
             }
         }
         None => anyhow::bail!(

@@ -389,7 +389,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .jobserver
             .clone()
             .into_helper_thread(move |token| {
-                drop(messages.push(Message::Token(token)));
+                messages.push(Message::Token(token));
             })
             .chain_err(|| "failed to create helper thread for jobserver management")?;
 
@@ -405,7 +405,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             .rustfix_diagnostic_server
             .borrow_mut()
             .take()
-            .map(move |srv| srv.start(move |msg| drop(messages.push(Message::FixDiagnostic(msg)))));
+            .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
         crossbeam_utils::thread::scope(move |scope| state.drain_the_queue(cx, plan, scope, &helper))
             .expect("child threads shouldn't panic")
@@ -634,7 +634,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                 }
             }
         }
-        return events;
+        events
     }
 
     fn drain_the_queue(
