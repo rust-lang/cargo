@@ -999,27 +999,33 @@ fn merge_config_profiles(
         Some(profiles) => profiles.get_all().clone(),
         None => BTreeMap::new(),
     };
-    // List of profile names to check if defined in config only.
-    let mut check_to_add = vec![requested_profile];
+    // Set of profile names to check if defined in config only.
+    let mut check_to_add = HashSet::new();
+    check_to_add.insert(requested_profile);
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
         if let Some(config_profile) = get_config_profile(name, config, features)? {
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
-            check_to_add.push(*inherits);
+            check_to_add.insert(*inherits);
         }
+    }
+    // Add the built-in profiles. This is important for things like `cargo
+    // test` which implicitly use the "dev" profile for dependencies.
+    for name in &["dev", "release", "test", "bench"] {
+        check_to_add.insert(InternedString::new(name));
     }
     // Add config-only profiles.
     // Need to iterate repeatedly to get all the inherits values.
-    let mut current = Vec::new();
+    let mut current = HashSet::new();
     while !check_to_add.is_empty() {
         std::mem::swap(&mut current, &mut check_to_add);
-        for name in current.drain(..) {
+        for name in current.drain() {
             if !profiles.contains_key(&name) {
                 if let Some(config_profile) = get_config_profile(&name, config, features)? {
                     if let Some(inherits) = &config_profile.inherits {
-                        check_to_add.push(*inherits);
+                        check_to_add.insert(*inherits);
                     }
                     profiles.insert(name, config_profile);
                 }
