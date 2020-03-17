@@ -24,7 +24,7 @@ fn cargo_build_plan_simple() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": "{...}",
                 "package_name": "foo",
@@ -84,7 +84,7 @@ fn cargo_build_plan_single_dep() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": [
                     "[..]/foo/target/debug/deps/libbar-[..].rlib",
@@ -101,7 +101,7 @@ fn cargo_build_plan_single_dep() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [0],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": [
                     "[..]/foo/target/debug/deps/libfoo-[..].rlib",
@@ -152,7 +152,7 @@ fn cargo_build_plan_build_script() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": [
                     "[..]/foo/target/debug/build/[..]/build_script_build-[..]"
@@ -168,7 +168,7 @@ fn cargo_build_plan_build_script() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [0],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": [],
                 "package_name": "foo",
@@ -182,7 +182,7 @@ fn cargo_build_plan_build_script() {
                 "cwd": "[..]/cit/[..]/foo",
                 "deps": [1],
                 "env": "{...}",
-                "kind": "Host",
+                "kind": null,
                 "links": "{...}",
                 "outputs": "{...}",
                 "package_name": "foo",

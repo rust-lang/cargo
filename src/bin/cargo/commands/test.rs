@@ -54,6 +54,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_unit_graph()
         .after_help(
             "\
 The test filtering argument TESTNAME and all the arguments following the

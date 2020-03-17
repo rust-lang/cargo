@@ -1,4 +1,4 @@
-use super::unit_dependencies::UnitGraph;
+use super::unit_graph::UnitGraph;
 use crate::core::{PackageId, Resolve};
 use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};

@@ -24,6 +24,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_unit_graph()
         .after_help(
             "\
 If neither `--bin` nor `--example` are given, then if the package only has one

@@ -374,6 +374,7 @@ impl Profiles {
     /// times).
     pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
         let mut result = Profile::default();
+        result.name = for_unit_profile.name;
         result.root = for_unit_profile.root;
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
@@ -578,10 +579,11 @@ pub enum ProfileRoot {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, PartialOrd, Ord, serde::Serialize)]
 pub struct Profile {
     pub name: InternedString,
     pub opt_level: InternedString,
+    #[serde(skip)] // named profiles are unstable
     pub root: ProfileRoot,
     pub lto: Lto,
     // `None` means use rustc default.
@@ -743,8 +745,21 @@ pub enum Lto {
     Named(InternedString),
 }
 
+impl serde::ser::Serialize for Lto {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        match self {
+            Lto::Bool(b) => b.to_string().serialize(s),
+            Lto::Named(n) => n.serialize(s),
+        }
+    }
+}
+
 /// The `panic` setting.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PanicStrategy {
     Unwind,
     Abort,

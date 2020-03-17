@@ -552,3 +552,136 @@ The available options are:
 The `-Z crate-versions` flag will make `cargo doc` include appropriate crate versions for the current crate and all of its dependencies (unless `--no-deps` was provided) in the compiled documentation.
 
 You can find an example screenshot for the cargo itself in the tracking issue.
+
+### unit-graph
+* Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
+
+The `--unit-graph` flag can be passed to any build command (`build`, `check`,
+`run`, `test`, `bench`, `doc`, etc.) to emit a JSON object to stdout which
+represents Cargo's internal unit graph. Nothing is actually built, and the
+command returns immediately after printing. Each "unit" corresponds to an
+execution of the compiler. These objects also include which unit each unit
+depends on.
+
+```
+cargo +nightly build --unit-graph -Z unstable-options
+```
+
+This structure provides a more complete view of the dependency relationship as
+Cargo sees it. In particular, the "features" field supports the new feature
+resolver where a dependency can be built multiple times with different
+features. `cargo metadata` fundamentally cannot represent the relationship of
+features between different dependency kinds, and features now depend on which
+command is run and which packages and targets are selected. Additionally it
+can provide details about intra-package dependencies like build scripts or
+tests.
+
+The following is a description of the JSON structure:
+
+```javascript
+{
+  /* Version of the JSON output structure. If any backwards incompatible
+     changes are made, this value will be increased.
+  */
+  "version": 1,
+  /* Array of all build units. */
+  "units": [
+    {
+      /* An opaque string which indicates the package.
+         Information about the package can be obtained from `cargo metadata`.
+      */
+      "pkg_id": "my-package 0.1.0 (path+file:///path/to/my-package)",
+      /* The Cargo target. See the `cargo metadata` documentation for more
+         information about these fields.
+         https://doc.rust-lang.org/cargo/commands/cargo-metadata.html
+      */
+      "target": {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "my-package",
+        "src_path": "/path/to/my-package/src/lib.rs",
+        "edition": "2018",
+        "doctest": true
+      },
+      /* The profile settings for this unit.
+         These values may not match the profile defined in the manifest.
+         Units can use modified profile settings. For example, the "panic"
+         setting can be overridden for tests to force it to "unwind".
+      */
+      "profile": {
+        /* The profile name these settings are derived from. */
+        "name": "dev",
+        /* The optimization level as a string. */
+        "opt_level": "0",
+        /* The LTO setting as a string. */
+        "lto": "false",
+        /* The codegen units as an integer.
+           `null` if it should use the compiler's default.
+        */
+        "codegen_units": null,
+        /* The debug information level as an integer.
+           `null` if it should use the compiler's default (0).
+        */
+        "debuginfo": 2,
+        /* Whether or not debug-assertions are enabled. */
+        "debug_assertions": true,
+        /* Whether or not overflow-checks are enabled. */
+        "overflow_checks": true,
+        /* Whether or not rpath is enabled. */
+        "rpath": false,
+        /* Whether or not incremental is enabled. */
+        "incremental": true,
+        /* The panic strategy, "unwind" or "abort". */
+        "panic": "unwind"
+      },
+      /* Which platform this target is being built for.
+         A value of `null` indicates it is for the host.
+         Otherwise it is a string of the target triple (such as
+         "x86_64-unknown-linux-gnu").
+      */
+      "platform": null,
+      /* The "mode" for this unit. Valid values:
+
+         * "test" — Build using `rustc` as a test.
+         * "build" — Build using `rustc`.
+         * "check" — Build using `rustc` in "check" mode.
+         * "doc" — Build using `rustdoc`.
+         * "doctest" — Test using `rustdoc`.
+         * "run-custom-build" — Represents the execution of a build script.
+      */
+      "mode": "build",
+      /* Array of features enabled on this unit as strings. */
+      "features": ["somefeat"],
+      /* Whether or not this is a standard-library unit,
+         part of the unstable build-std feature.
+         If not set, treat as `false`.
+      */
+      "is_std": false,
+      /* Array of dependencies of this unit. */
+      "dependencies": [
+        {
+          /* Index in the "units" array for the dependency. */
+          "index": 1,
+          /* The name that this dependency will be referred as. */
+          "extern_crate_name": "unicode_xid",
+          /* Whether or not this dependency is "public",
+             part of the unstable public-dependency feature.
+             If not set, the public-dependency feature is not enabled.
+          */
+          "public": false,
+          /* Whether or not this dependency is injected into the prelude,
+             currently used by the build-std feature.
+             If not set, treat as `false`.
+          */
+          "noprelude": false
+        }
+      ]
+    },
+    // ...
+  ],
+  /* Array of indices in the "units" array that are the "roots" of the
+     dependency graph.
+  */
+  "roots": [0],
+}
+```

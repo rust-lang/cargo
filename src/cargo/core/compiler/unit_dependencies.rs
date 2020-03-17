@@ -15,6 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
+use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::Unit;
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::DepKind;
@@ -26,25 +27,6 @@ use crate::core::{InternedString, Package, PackageId, Target};
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
-
-/// The dependency graph of Units.
-pub type UnitGraph<'a> = HashMap<Unit<'a>, Vec<UnitDep<'a>>>;
-
-/// A unit dependency.
-#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-pub struct UnitDep<'a> {
-    /// The dependency unit.
-    pub unit: Unit<'a>,
-    /// The purpose of this dependency (a dependency for a test, or a build
-    /// script, etc.).
-    pub unit_for: UnitFor,
-    /// The name the parent uses to refer to this dependency.
-    pub extern_crate_name: InternedString,
-    /// Whether or not this is a public dependency.
-    pub public: bool,
-    /// If `true`, the dependency should not be added to Rust's prelude.
-    pub noprelude: bool,
-}
 
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {

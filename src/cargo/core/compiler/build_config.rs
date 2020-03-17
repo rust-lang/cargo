@@ -22,6 +22,8 @@ pub struct BuildConfig {
     pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
+    /// Output the unit graph to stdout instead of actually compiling.
+    pub unit_graph: bool,
     /// An optional override of the rustc process for primary units
     pub primary_unit_rustc: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
@@ -79,6 +81,7 @@ impl BuildConfig {
             message_format: MessageFormat::Human,
             force_rebuild: false,
             build_plan: false,
+            unit_graph: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
         })

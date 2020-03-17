@@ -30,6 +30,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
+        .arg_unit_graph()
         .after_help(
             "\
 By default the documentation for the local package and all dependencies is

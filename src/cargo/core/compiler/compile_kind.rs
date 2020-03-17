@@ -9,7 +9,7 @@ use std::path::Path;
 /// compilations, where cross compilations happen at the request of `--target`
 /// and host compilations happen for things like build scripts and procedural
 /// macros.
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 pub enum CompileKind {
     /// Attached to a unit that is compiled for the "host" system or otherwise
     /// is compiled without a `--target` flag. This is used for procedural
@@ -37,6 +37,18 @@ impl CompileKind {
             CompileKind::Host => CompileKind::Host,
             CompileKind::Target(_) if target.for_host() => CompileKind::Host,
             CompileKind::Target(n) => CompileKind::Target(n),
+        }
+    }
+}
+
+impl serde::ser::Serialize for CompileKind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        match self {
+            CompileKind::Host => None::<&str>.serialize(s),
+            CompileKind::Target(t) => Some(t.name).serialize(s),
         }
     }
 }

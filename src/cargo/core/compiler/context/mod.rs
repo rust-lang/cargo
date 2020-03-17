@@ -16,7 +16,7 @@ use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
-use super::unit_dependencies::{UnitDep, UnitGraph};
+use super::unit_graph::{UnitDep, UnitGraph};
 use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
 mod compilation_files;
