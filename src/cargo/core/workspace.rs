@@ -588,35 +588,47 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(());
         }
 
-        let mut roots = Vec::new();
-        {
-            let mut names = BTreeMap::new();
-            for member in self.members.iter() {
-                let package = self.packages.get(member);
-                match *package.workspace_config() {
-                    WorkspaceConfig::Root(_) => {
-                        roots.push(member.parent().unwrap().to_path_buf());
-                    }
-                    WorkspaceConfig::Member { .. } => {}
-                }
-                let name = match *package {
-                    MaybePackage::Package(ref p) => p.name(),
-                    MaybePackage::Virtual(_) => continue,
-                };
-                if let Some(prev) = names.insert(name, member) {
-                    anyhow::bail!(
-                        "two packages named `{}` in this workspace:\n\
+        self.validate_unique_names()?;
+        self.validate_workspace_roots()?;
+        self.validate_members()?;
+        self.error_if_manifest_not_in_members()?;
+        self.validate_manifest()
+    }
+
+    fn validate_unique_names(&self) -> CargoResult<()> {
+        let mut names = BTreeMap::new();
+        for member in self.members.iter() {
+            let package = self.packages.get(member);
+            let name = match *package {
+                MaybePackage::Package(ref p) => p.name(),
+                MaybePackage::Virtual(_) => continue,
+            };
+            if let Some(prev) = names.insert(name, member) {
+                anyhow::bail!(
+                    "two packages named `{}` in this workspace:\n\
                          - {}\n\
                          - {}",
-                        name,
-                        prev.display(),
-                        member.display()
-                    );
-                }
+                    name,
+                    prev.display(),
+                    member.display()
+                );
             }
         }
+        Ok(())
+    }
 
+    fn validate_workspace_roots(&self) -> CargoResult<()> {
+        let roots: Vec<PathBuf> = self
+            .members
+            .iter()
+            .filter(|&member| {
+                let config = self.packages.get(member).workspace_config();
+                matches!(config, WorkspaceConfig::Root(_))
+            })
+            .map(|member| member.parent().unwrap().to_path_buf())
+            .collect();
         match roots.len() {
+            1 => Ok(()),
             0 => anyhow::bail!(
                 "`package.workspace` configuration points to a crate \
                  which is not configured with [workspace]: \n\
@@ -625,7 +637,6 @@ impl<'cfg> Workspace<'cfg> {
                 self.current_manifest.display(),
                 self.root_manifest.as_ref().unwrap().display()
             ),
-            1 => {}
             _ => {
                 anyhow::bail!(
                     "multiple workspace roots found in the same workspace:\n{}",
@@ -637,7 +648,9 @@ impl<'cfg> Workspace<'cfg> {
                 );
             }
         }
+    }
 
+    fn validate_members(&mut self) -> CargoResult<()> {
         for member in self.members.clone() {
             let root = self.find_root(&member)?;
             if root == self.root_manifest {
@@ -665,62 +678,68 @@ impl<'cfg> Workspace<'cfg> {
                 }
             }
         }
+        Ok(())
+    }
 
-        if !self.members.contains(&self.current_manifest) {
-            let root = self.root_manifest.as_ref().unwrap();
-            let root_dir = root.parent().unwrap();
-            let current_dir = self.current_manifest.parent().unwrap();
-            let root_pkg = self.packages.get(root);
+    fn error_if_manifest_not_in_members(&mut self) -> CargoResult<()> {
+        if self.members.contains(&self.current_manifest) {
+            return Ok(());
+        }
 
-            // FIXME: Make this more generic by using a relative path resolver between member and
-            // root.
-            let members_msg = match current_dir.strip_prefix(root_dir) {
-                Ok(rel) => format!(
-                    "this may be fixable by adding `{}` to the \
+        let root = self.root_manifest.as_ref().unwrap();
+        let root_dir = root.parent().unwrap();
+        let current_dir = self.current_manifest.parent().unwrap();
+        let root_pkg = self.packages.get(root);
+
+        // FIXME: Make this more generic by using a relative path resolver between member and root.
+        let members_msg = match current_dir.strip_prefix(root_dir) {
+            Ok(rel) => format!(
+                "this may be fixable by adding `{}` to the \
                      `workspace.members` array of the manifest \
                      located at: {}",
-                    rel.display(),
-                    root.display()
-                ),
-                Err(_) => format!(
-                    "this may be fixable by adding a member to \
+                rel.display(),
+                root.display()
+            ),
+            Err(_) => format!(
+                "this may be fixable by adding a member to \
                      the `workspace.members` array of the \
                      manifest located at: {}",
-                    root.display()
-                ),
-            };
-            let extra = match *root_pkg {
-                MaybePackage::Virtual(_) => members_msg,
-                MaybePackage::Package(ref p) => {
-                    let has_members_list = match *p.manifest().workspace_config() {
-                        WorkspaceConfig::Root(ref root_config) => root_config.has_members_list(),
-                        WorkspaceConfig::Member { .. } => unreachable!(),
-                    };
-                    if !has_members_list {
-                        format!(
-                            "this may be fixable by ensuring that this \
+                root.display()
+            ),
+        };
+        let extra = match *root_pkg {
+            MaybePackage::Virtual(_) => members_msg,
+            MaybePackage::Package(ref p) => {
+                let has_members_list = match *p.manifest().workspace_config() {
+                    WorkspaceConfig::Root(ref root_config) => root_config.has_members_list(),
+                    WorkspaceConfig::Member { .. } => unreachable!(),
+                };
+                if !has_members_list {
+                    format!(
+                        "this may be fixable by ensuring that this \
                              crate is depended on by the workspace \
                              root: {}",
-                            root.display()
-                        )
-                    } else {
-                        members_msg
-                    }
+                        root.display()
+                    )
+                } else {
+                    members_msg
                 }
-            };
-            anyhow::bail!(
-                "current package believes it's in a workspace when it's not:\n\
+            }
+        };
+        anyhow::bail!(
+            "current package believes it's in a workspace when it's not:\n\
                  current:   {}\n\
                  workspace: {}\n\n{}\n\
                  Alternatively, to keep it out of the workspace, add the package \
                  to the `workspace.exclude` array, or add an empty `[workspace]` \
                  table to the package's manifest.",
-                self.current_manifest.display(),
-                root.display(),
-                extra
-            );
-        }
+            self.current_manifest.display(),
+            root.display(),
+            extra
+        );
+    }
 
+    fn validate_manifest(&mut self) -> CargoResult<()> {
         if let Some(ref root_manifest) = self.root_manifest {
             for pkg in self
                 .members()
@@ -751,7 +770,6 @@ impl<'cfg> Workspace<'cfg> {
                 }
             }
         }
-
         Ok(())
     }
 
