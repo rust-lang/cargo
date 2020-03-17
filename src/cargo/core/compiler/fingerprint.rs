@@ -833,10 +833,9 @@ impl Fingerprint {
             let (dep_path, dep_mtime) = if dep.only_requires_rmeta {
                 dep_mtimes
                     .iter()
-                    .filter(|(path, _mtime)| {
+                    .find(|(path, _mtime)| {
                         path.extension().and_then(|s| s.to_str()) == Some("rmeta")
                     })
-                    .next()
                     .expect("failed to find rmeta")
             } else {
                 match dep_mtimes.iter().max_by_key(|kv| kv.1) {
