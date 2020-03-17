@@ -1,6 +1,7 @@
 //! Tests for profiles defined in config files.
 
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
 
 #[cargo_test]
@@ -452,5 +453,40 @@ fn named_env_profile() {
         .env("CARGO_PROFILE_OTHER_CODEGEN_UNITS", "1")
         .env("CARGO_PROFILE_OTHER_INHERITS", "dev")
         .with_stderr_contains("[..]-C codegen-units=1 [..]")
+        .run();
+}
+
+#[cargo_test]
+fn test_with_dev_profile() {
+    // `cargo test` uses "dev" profile for dependencies.
+    Package::new("somedep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            somedep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("test --lib --no-run -v")
+        .env("CARGO_PROFILE_DEV_DEBUG", "0")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+[DOWNLOADED] [..]
+[COMPILING] somedep v1.0.0
+[RUNNING] `rustc --crate-name somedep [..]-C debuginfo=0[..]
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..]-C debuginfo=2[..]
+[FINISHED] [..]
+",
+        )
         .run();
 }
