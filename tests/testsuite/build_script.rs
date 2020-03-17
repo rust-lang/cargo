@@ -3554,6 +3554,8 @@ fn rename_with_link_search_path() {
 }
 
 #[cargo_test]
+// Don't have a cdylib cross target on macos.
+#[cfg_attr(target_os = "macos", ignore)]
 fn rename_with_link_search_path_cross() {
     if cross_compile::disabled() {
         return;

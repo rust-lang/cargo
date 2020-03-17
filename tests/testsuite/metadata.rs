@@ -1,6 +1,5 @@
 //! Tests for the `cargo metadata` command.
 
-use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host};
 
@@ -1911,6 +1910,9 @@ fn filter_platform() {
     Package::new("host-dep", "0.0.1").publish();
     Package::new("alt-dep", "0.0.1").publish();
     Package::new("cfg-dep", "0.0.1").publish();
+    // Just needs to be a valid target that is different from host.
+    // Presumably nobody runs these tests on wasm. 🙃
+    let alt_target = "wasm32-unknown-unknown";
     let p = project()
         .file(
             "Cargo.toml",
@@ -1933,7 +1935,7 @@ fn filter_platform() {
                 cfg-dep = "0.0.1"
                 "#,
                 rustc_host(),
-                alternate()
+                alt_target
             ),
         )
         .file("src/lib.rs", "")
@@ -2177,7 +2179,7 @@ fn filter_platform() {
       "links": null
     }
     "#
-    .replace("$ALT_TRIPLE", &alternate())
+    .replace("$ALT_TRIPLE", alt_target)
     .replace("$HOST_TRIPLE", &rustc_host());
 
     // Normal metadata, no filtering, returns *everything*.
@@ -2281,7 +2283,7 @@ fn filter_platform() {
   "workspace_root": "[..]/foo"
 }
 "#
-            .replace("$ALT_TRIPLE", &alternate())
+            .replace("$ALT_TRIPLE", alt_target)
             .replace("$HOST_TRIPLE", &rustc_host())
             .replace("$ALT_DEP", alt_dep)
             .replace("$CFG_DEP", cfg_dep)
@@ -2293,7 +2295,7 @@ fn filter_platform() {
 
     // Filter on alternate, removes cfg and host.
     p.cargo("metadata --filter-platform")
-        .arg(alternate())
+        .arg(alt_target)
         .with_json(
             &r#"
 {
@@ -2355,7 +2357,7 @@ fn filter_platform() {
   "workspace_root": "[..]foo"
 }
 "#
-            .replace("$ALT_TRIPLE", &alternate())
+            .replace("$ALT_TRIPLE", alt_target)
             .replace("$ALT_DEP", alt_dep)
             .replace("$NORMAL_DEP", normal_dep)
             .replace("$FOO", &foo),

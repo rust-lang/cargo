@@ -26,12 +26,12 @@ jobs:
 
 - job: macOS
   pool:
-    vmImage: macos-10.13
+    vmImage: macos-10.15
   steps:
     - template: ci/azure-test-all.yml
   variables:
     TOOLCHAIN: stable
-    OTHER_TARGET: i686-apple-darwin
+    OTHER_TARGET: x86_64-apple-ios
 
 - job: Windows
   pool:

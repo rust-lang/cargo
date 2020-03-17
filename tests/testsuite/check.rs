@@ -64,7 +64,7 @@ fn check_fail() {
 
     foo.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]this function takes 0 parameters but 1 parameter was supplied")
+        .with_stderr_contains("[..]this function takes 0[..]")
         .run();
 }
 
