@@ -4,8 +4,6 @@ trigger:
     - '*'
     exclude:
     - master
-pr:
-- master
 
 jobs:
 - job: Linux
