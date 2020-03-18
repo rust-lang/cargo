@@ -1534,12 +1534,50 @@ fn crate_versions() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    let doc_file = p.root().join("target/doc/foo/index.html");
-    let mut doc_html = String::new();
-    File::open(&doc_file)
-        .unwrap()
-        .read_to_string(&mut doc_html)
-        .unwrap();
+    let output_path = p.root().join("target/doc/foo/index.html");
+    let output_documentation = fs::read_to_string(&output_path).unwrap();
 
-    assert!(doc_html.contains("Version 1.2.4"));
+    assert!(output_documentation.contains("Version 1.2.4"));
+}
+
+#[cargo_test]
+fn crate_versions_flag_is_overridden() {
+    // Testing unstable flag
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.2.4"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let output_documentation = || {
+        let output_path = p.root().join("target/doc/foo/index.html");
+        fs::read_to_string(&output_path).unwrap()
+    };
+    let asserts = |html: String| {
+        assert!(!html.contains("1.2.4"));
+        assert!(html.contains("Version 2.0.3"));
+    };
+
+    p.cargo("-Z crate-versions doc")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTDOCFLAGS", "-Z unstable-options --crate-version 2.0.3")
+        .run();
+    asserts(output_documentation());
+
+    p.build_dir().rm_rf();
+
+    p.cargo("-Z crate-versions rustdoc -- -Z unstable-options --crate-version 2.0.3")
+        .masquerade_as_nightly_cargo()
+        .run();
+    asserts(output_documentation());
 }
