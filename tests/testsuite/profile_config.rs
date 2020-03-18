@@ -414,7 +414,7 @@ fn named_config_profile() {
     assert_eq!(p.overflow_checks, true); // "dev" built-in (ignore package override)
 
     // build-override
-    let bo = profiles.get_profile(a_pkg, true, UnitFor::new_build(false), CompileMode::Build);
+    let bo = profiles.get_profile(a_pkg, true, UnitFor::new_host(false), CompileMode::Build);
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
     assert_eq!(bo.opt_level, "1"); // SAME as normal

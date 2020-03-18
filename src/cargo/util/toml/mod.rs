@@ -1146,19 +1146,23 @@ impl TomlManifest {
             features.require(Feature::namespaced_features())?;
         }
 
+        let summary_features = me
+            .features
+            .as_ref()
+            .map(|x| {
+                x.iter()
+                    .map(|(k, v)| (k.as_str(), v.iter().collect()))
+                    .collect()
+            })
+            .unwrap_or_else(BTreeMap::new);
+        let proc_macro = targets.iter().any(|target| target.proc_macro());
         let summary = Summary::new(
             pkgid,
             deps,
-            &me.features
-                .as_ref()
-                .map(|x| {
-                    x.iter()
-                        .map(|(k, v)| (k.as_str(), v.iter().collect()))
-                        .collect()
-                })
-                .unwrap_or_else(BTreeMap::new),
+            &summary_features,
             project.links.as_deref(),
             project.namespaced_features.unwrap_or(false),
+            proc_macro,
         )?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),

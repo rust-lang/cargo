@@ -239,7 +239,11 @@ explaining the format of the entry.
     "yanked": false,
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
-    "links": null
+    "links": null,
+    // This is `true` if the package is a proc-macro.
+    // Note: This field was added in Rust 1.44. Packages published with
+    // earlier versions will not set this field.
+    "pm": false,
 }
 ```
 
@@ -404,6 +408,10 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
     // The `links` string value from the package's manifest, or null if not
     // specified. This field is optional and defaults to null.
     "links": null,
+    // This is `true` if the package is a proc-macro.
+    // Note: This field was added in Rust 1.44. Packages published with
+    // earlier versions will not set this field.
+    "proc_macro": false,
 }
 ```
 

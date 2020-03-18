@@ -217,6 +217,7 @@ pub struct RegistryConfig {
     pub api: Option<String>,
 }
 
+/// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
     name: InternedString,
@@ -225,8 +226,21 @@ pub struct RegistryPackage<'a> {
     deps: Vec<RegistryDependency<'a>>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
     cksum: String,
+    /// If `true`, Cargo will skip this version when resolving.
+    ///
+    /// This was added in 2014. Everything in the crates.io index has this set
+    /// now, so this probably doesn't need to be an option anymore.
     yanked: Option<bool>,
+    /// Native library name this package links to.
+    ///
+    /// Added early 2018 (see https://github.com/rust-lang/cargo/pull/4978),
+    /// can be `None` if published before then.
     links: Option<InternedString>,
+    /// Whether or not this package is a proc-macro library.
+    ///
+    /// If `None`, then the status is unknown (crate was published before this
+    /// field was added), and generally should be treated as `false.`
+    pm: Option<bool>,
 }
 
 #[test]
