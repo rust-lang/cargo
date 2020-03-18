@@ -11,7 +11,9 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::str;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+const CARGO_WARNING: &str = "cargo:warning=";
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash, Default)]
@@ -343,9 +345,13 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         state.running(&cmd);
         let timestamp = paths::set_invocation_time(&script_run_dir)?;
         let prefix = format!("[{} {}] ", id.name(), id.version());
+        let mut warnings_in_case_of_panic = Vec::new();
         let output = cmd
             .exec_with_streaming(
                 &mut |stdout| {
+                    if stdout.starts_with(CARGO_WARNING) {
+                        warnings_in_case_of_panic.push(stdout[CARGO_WARNING.len()..].to_owned());
+                    }
                     if extra_verbose {
                         state.stdout(format!("{}{}", prefix, stdout));
                     }
@@ -359,7 +365,19 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 },
                 true,
             )
-            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_name))?;
+            .chain_err(|| format!("failed to run custom build command for `{}`", pkg_name));
+
+        if let Err(error) = output {
+            insert_warnings_in_build_outputs(
+                build_script_outputs,
+                id,
+                metadata_hash,
+                warnings_in_case_of_panic,
+            );
+            return Err(error);
+        }
+
+        let output = output.unwrap();
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it
@@ -427,6 +445,22 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         job.before(fresh);
     }
     Ok(job)
+}
+
+fn insert_warnings_in_build_outputs(
+    build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
+    id: PackageId,
+    metadata_hash: Metadata,
+    warnings: Vec<String>,
+) {
+    let build_output_with_only_warnings = BuildOutput {
+        warnings,
+        ..BuildOutput::default()
+    };
+    build_script_outputs
+        .lock()
+        .unwrap()
+        .insert(id, metadata_hash, build_output_with_only_warnings);
 }
 
 impl BuildOutput {
