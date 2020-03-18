@@ -2981,6 +2981,39 @@ warning: bar
 }
 
 #[cargo_test]
+fn warnings_emitted_when_build_script_panics() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:warning=foo");
+                println!("cargo:warning=bar");
+                panic!();
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr_contains("warning: foo\nwarning: bar")
+        .run();
+}
+
+#[cargo_test]
 fn warnings_hidden_for_upstream() {
     Package::new("bar", "0.1.0")
         .file(
