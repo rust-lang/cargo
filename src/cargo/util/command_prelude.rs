@@ -362,13 +362,13 @@ pub trait ArgMatchesExt {
         }
     }
 
-    fn compile_options<'a>(
+    fn compile_options(
         &self,
-        config: &'a Config,
+        config: &Config,
         mode: CompileMode,
-        workspace: Option<&Workspace<'a>>,
+        workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
-    ) -> CargoResult<CompileOptions<'a>> {
+    ) -> CargoResult<CompileOptions> {
         let spec = Packages::from_flags(
             // TODO Integrate into 'workspace'
             self._is_present("workspace") || self._is_present("all"),
@@ -455,7 +455,6 @@ pub trait ArgMatchesExt {
         }
 
         let opts = CompileOptions {
-            config,
             build_config,
             features: self._values_of("features"),
             all_features: self._is_present("all-features"),
@@ -487,13 +486,13 @@ pub trait ArgMatchesExt {
         Ok(opts)
     }
 
-    fn compile_options_for_single_package<'a>(
+    fn compile_options_for_single_package(
         &self,
-        config: &'a Config,
+        config: &Config,
         mode: CompileMode,
-        workspace: Option<&Workspace<'a>>,
+        workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
-    ) -> CargoResult<CompileOptions<'a>> {
+    ) -> CargoResult<CompileOptions> {
         let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
         Ok(compile_opts)
@@ -566,7 +565,7 @@ about this warning.";
     fn check_optional_opts(
         &self,
         workspace: &Workspace<'_>,
-        compile_opts: &CompileOptions<'_>,
+        compile_opts: &CompileOptions,
     ) -> CargoResult<()> {
         if self.is_present_with_zero_values("example") {
             print_available_examples(workspace, compile_opts)?;

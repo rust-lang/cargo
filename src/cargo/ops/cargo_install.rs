@@ -35,20 +35,22 @@ impl Drop for Transaction {
 }
 
 pub fn install(
+    config: &Config,
     root: Option<&str>,
     krates: Vec<&str>,
     source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions<'_>,
+    opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
 ) -> CargoResult<()> {
-    let root = resolve_root(root, opts.config)?;
-    let map = SourceConfigMap::new(opts.config)?;
+    let root = resolve_root(root, config)?;
+    let map = SourceConfigMap::new(config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         install_one(
+            config,
             &root,
             &map,
             krates.into_iter().next(),
@@ -69,6 +71,7 @@ pub fn install(
             let root = root.clone();
             let map = map.clone();
             match install_one(
+                config,
                 &root,
                 &map,
                 Some(krate),
@@ -82,7 +85,7 @@ pub fn install(
             ) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    crate::display_error(&e, &mut opts.config.shell());
+                    crate::display_error(&e, &mut config.shell());
                     failed.push(krate)
                 }
             }
@@ -100,7 +103,7 @@ pub fn install(
             ));
         }
         if !succeeded.is_empty() || !failed.is_empty() {
-            opts.config.shell().status("Summary", summary.join(" "))?;
+            config.shell().status("Summary", summary.join(" "))?;
         }
 
         (!succeeded.is_empty(), !failed.is_empty())
@@ -117,7 +120,7 @@ pub fn install(
             }
         }
 
-        opts.config.shell().warn(&format!(
+        config.shell().warn(&format!(
             "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",
             dst.display()
@@ -132,19 +135,18 @@ pub fn install(
 }
 
 fn install_one(
+    config: &Config,
     root: &Filesystem,
     map: &SourceConfigMap<'_>,
     krate: Option<&str>,
     source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions<'_>,
+    opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
-    let config = opts.config;
-
     let pkg = if source_id.is_git() {
         select_pkg(
             GitSource::new(source_id, config)?,

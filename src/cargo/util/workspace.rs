@@ -7,7 +7,7 @@ use std::fmt::Write;
 fn get_available_targets<'a>(
     filter_fn: fn(&Target) -> bool,
     ws: &'a Workspace<'_>,
-    options: &'a CompileOptions<'_>,
+    options: &'a CompileOptions,
 ) -> CargoResult<Vec<&'a Target>> {
     let packages = options.spec.get_packages(ws)?;
 
@@ -29,7 +29,7 @@ fn get_available_targets<'a>(
 fn print_available(
     filter_fn: fn(&Target) -> bool,
     ws: &Workspace<'_>,
-    options: &CompileOptions<'_>,
+    options: &CompileOptions,
     option_name: &str,
     plural_name: &str,
 ) -> CargoResult<()> {
@@ -49,27 +49,18 @@ fn print_available(
     bail!("{}", output)
 }
 
-pub fn print_available_examples(
-    ws: &Workspace<'_>,
-    options: &CompileOptions<'_>,
-) -> CargoResult<()> {
+pub fn print_available_examples(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available(Target::is_example, ws, options, "--example", "examples")
 }
 
-pub fn print_available_binaries(
-    ws: &Workspace<'_>,
-    options: &CompileOptions<'_>,
-) -> CargoResult<()> {
+pub fn print_available_binaries(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available(Target::is_bin, ws, options, "--bin", "binaries")
 }
 
-pub fn print_available_benches(
-    ws: &Workspace<'_>,
-    options: &CompileOptions<'_>,
-) -> CargoResult<()> {
+pub fn print_available_benches(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available(Target::is_bench, ws, options, "--bench", "benches")
 }
 
-pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions<'_>) -> CargoResult<()> {
+pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available(Target::is_test, ws, options, "--test", "tests")
 }

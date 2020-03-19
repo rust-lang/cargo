@@ -156,6 +156,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         ops::install_list(root, config)?;
     } else {
         ops::install(
+            config,
             root,
             krates,
             source,

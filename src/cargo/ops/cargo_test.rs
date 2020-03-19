@@ -5,17 +5,17 @@ use crate::core::shell::Verbosity;
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{CargoTestError, ProcessError, Test};
+use crate::util::{CargoTestError, Config, ProcessError, Test};
 
-pub struct TestOptions<'a> {
-    pub compile_opts: ops::CompileOptions<'a>,
+pub struct TestOptions {
+    pub compile_opts: ops::CompileOptions,
     pub no_run: bool,
     pub no_fail_fast: bool,
 }
 
 pub fn run_tests(
     ws: &Workspace<'_>,
-    options: &TestOptions<'_>,
+    options: &TestOptions,
     test_args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -23,14 +23,14 @@ pub fn run_tests(
     if options.no_run {
         return Ok(None);
     }
-    let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
+    let (test, mut errors) = run_unit_tests(ws.config(), options, test_args, &compilation)?;
 
     // If we have an error and want to fail fast, then return.
     if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(test, errors)));
     }
 
-    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
+    let (doctest, docerrors) = run_doc_tests(ws.config(), options, test_args, &compilation)?;
     let test = if docerrors.is_empty() { test } else { doctest };
     errors.extend(docerrors);
     if errors.is_empty() {
@@ -42,7 +42,7 @@ pub fn run_tests(
 
 pub fn run_benches(
     ws: &Workspace<'_>,
-    options: &TestOptions<'_>,
+    options: &TestOptions,
     args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -54,7 +54,7 @@ pub fn run_benches(
     let mut args = args.to_vec();
     args.push("--bench");
 
-    let (test, errors) = run_unit_tests(options, &args, &compilation)?;
+    let (test, errors) = run_unit_tests(ws.config(), options, &args, &compilation)?;
 
     match errors.len() {
         0 => Ok(None),
@@ -62,10 +62,7 @@ pub fn run_benches(
     }
 }
 
-fn compile_tests<'a>(
-    ws: &Workspace<'a>,
-    options: &TestOptions<'a>,
-) -> CargoResult<Compilation<'a>> {
+fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<Compilation<'a>> {
     let mut compilation = ops::compile(ws, &options.compile_opts)?;
     compilation
         .tests
@@ -75,12 +72,12 @@ fn compile_tests<'a>(
 
 /// Runs the unit and integration tests of a package.
 fn run_unit_tests(
-    options: &TestOptions<'_>,
+    config: &Config,
+    options: &TestOptions,
     test_args: &[&str],
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
-    let config = options.compile_opts.config;
-    let cwd = options.compile_opts.config.cwd();
+    let cwd = config.cwd();
 
     let mut errors = Vec::new();
 
@@ -133,12 +130,12 @@ fn run_unit_tests(
 }
 
 fn run_doc_tests(
-    options: &TestOptions<'_>,
+    config: &Config,
+    options: &TestOptions,
     test_args: &[&str],
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
-    let config = options.compile_opts.config;
 
     // The unstable doctest-xcompile feature enables both per-target-ignores and
     // cross-compiling doctests. As a side effect, this feature also gates running

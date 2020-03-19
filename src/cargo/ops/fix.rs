@@ -53,10 +53,9 @@ use rustfix::{self, CodeFix};
 
 use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
-use crate::util;
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::ProcessBuilder;
+use crate::util::{self, Config, ProcessBuilder};
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
@@ -69,7 +68,7 @@ pub struct FixOptions<'a> {
     pub edition: bool,
     pub prepare_for: Option<&'a str>,
     pub idioms: bool,
-    pub compile_opts: CompileOptions<'a>,
+    pub compile_opts: CompileOptions,
     pub allow_dirty: bool,
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
@@ -77,7 +76,7 @@ pub struct FixOptions<'a> {
 }
 
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
-    check_version_control(opts)?;
+    check_version_control(ws.config(), opts)?;
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
@@ -116,7 +115,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
         server.configure(&mut wrapper);
     }
 
-    let rustc = opts.compile_opts.config.load_global_rustc(Some(ws))?;
+    let rustc = ws.config().load_global_rustc(Some(ws))?;
     wrapper.arg(&rustc.path);
 
     // primary crates are compiled using a cargo subprocess to do extra work of applying fixes and
@@ -127,11 +126,10 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
+fn check_version_control(config: &Config, opts: &FixOptions<'_>) -> CargoResult<()> {
     if opts.allow_no_vcs {
         return Ok(());
     }
-    let config = opts.compile_opts.config;
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
         anyhow::bail!(
             "no VCS found for this package and `cargo fix` can potentially \
