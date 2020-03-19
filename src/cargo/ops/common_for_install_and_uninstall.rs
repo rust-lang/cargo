@@ -525,13 +525,20 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum NeedsUpdate {
+    True,
+    False,
+    TryWithoutFirst,
+}
+
 /// Gets a Package based on command-line requirements.
 pub fn select_pkg<'a, T>(
     mut source: T,
     name: Option<&str>,
     vers: Option<&str>,
     config: &Config,
-    needs_update: bool,
+    needs_update: NeedsUpdate,
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
 ) -> CargoResult<Package>
 where
@@ -542,7 +549,7 @@ where
     // with other global Cargos
     let _lock = config.acquire_package_cache_lock()?;
 
-    if needs_update {
+    if let NeedsUpdate::True = needs_update {
         source.update()?;
     }
 
@@ -603,8 +610,21 @@ where
             vers
         };
         let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
-        let deps = source.query_vec(&dep)?;
-        match deps.iter().map(|p| p.package_id()).max() {
+        let deps = (|| {
+            if let Some(vers_spec) = vers_spec {
+                if semver::VersionReq::parse(vers_spec).unwrap().is_exact() {
+                    let deps = source.query_vec(&dep)?;
+                    if deps.len() == 1 {
+                        return Ok(deps);
+                    }
+                }
+            }
+            if needs_update != NeedsUpdate::False {
+                source.update()?;
+            }
+            source.query_vec(&dep)
+        })();
+        match deps?.iter().map(|p| p.package_id()).max() {
             Some(pkgid) => {
                 let pkg = Box::new(&mut source).download_now(pkgid, config)?;
                 Ok(pkg)

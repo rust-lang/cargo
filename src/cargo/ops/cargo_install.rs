@@ -151,7 +151,7 @@ fn install_one(
             krate,
             vers,
             config,
-            true,
+            NeedsUpdate::True,
             &mut |git| git.read_packages(),
         )?
     } else if source_id.is_path() {
@@ -180,7 +180,7 @@ fn install_one(
             }
         }
         src.update()?;
-        select_pkg(src, krate, vers, config, false, &mut |path| {
+        select_pkg(src, krate, vers, config, NeedsUpdate::False, &mut |path| {
             path.read_packages()
         })?
     } else {
@@ -189,7 +189,11 @@ fn install_one(
             krate,
             vers,
             config,
-            is_first_install,
+            if is_first_install {
+                NeedsUpdate::TryWithoutFirst
+            } else {
+                NeedsUpdate::False
+            },
             &mut |_| {
                 bail!(
                     "must specify a crate to install from \
