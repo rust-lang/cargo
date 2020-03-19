@@ -71,6 +71,9 @@ man:cargo-metadata[1]::
 man:cargo-pkgid[1]::
     Print a fully qualified package specification.
 
+man:cargo-tree[1]::
+    Display a tree visualization of a dependency graph.
+
 man:cargo-update[1]::
     Update dependencies as recorded in the local lock file.
 

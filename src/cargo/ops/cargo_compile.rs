@@ -351,12 +351,8 @@ pub fn compile_ws<'a>(
 
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
-    // Vec<PackageIdSpec> to a Vec<&PackageId>.
-    let to_build_ids = specs
-        .iter()
-        .map(|s| s.query(resolve.iter()))
-        .collect::<CargoResult<Vec<_>>>()?;
-
+    // Vec<PackageIdSpec> to a Vec<PackageId>.
+    let to_build_ids = resolve.specs_to_ids(&specs)?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
     // Dependencies will be downloaded during build_unit_dependencies.
@@ -753,12 +749,8 @@ fn generate_targets<'a>(
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
-        let features_for = if target.proc_macro() {
-            FeaturesFor::HostDep
-        } else {
-            // Root units are never build dependencies.
-            FeaturesFor::NormalOrDev
-        };
+        // No need to worry about build-dependencies, roots are never build dependencies.
+        let features_for = FeaturesFor::from_for_host(target.proc_macro());
         let features =
             Vec::from(resolved_features.activated_features(pkg.package_id(), features_for));
         bcx.units.intern(
@@ -969,11 +961,7 @@ pub fn resolve_all_features(
             .expect("packages downloaded")
             .proc_macro();
         for dep in deps {
-            let features_for = if is_proc_macro || dep.is_build() {
-                FeaturesFor::HostDep
-            } else {
-                FeaturesFor::NormalOrDev
-            };
+            let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
             for feature in resolved_features.activated_features_unverified(dep_id, features_for) {
                 features.insert(format!("{}/{}", dep.name_in_toml(), feature));
             }

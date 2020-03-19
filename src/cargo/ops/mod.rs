@@ -48,4 +48,5 @@ mod fix;
 mod lockfile;
 mod registry;
 mod resolve;
+pub mod tree;
 mod vendor;

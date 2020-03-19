@@ -36,10 +36,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         HasDevUnits::No,
     )?;
 
-    let ids = specs
-        .iter()
-        .map(|s| s.query(ws_resolve.targeted_resolve.iter()))
-        .collect::<CargoResult<Vec<_>>>()?;
+    let ids = ws_resolve.targeted_resolve.specs_to_ids(&specs)?;
     let pkgs = ws_resolve.pkg_set.get_many(ids)?;
 
     let mut lib_names = HashMap::new();

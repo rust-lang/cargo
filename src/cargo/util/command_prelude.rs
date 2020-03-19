@@ -37,6 +37,20 @@ pub trait AppExt: Sized {
             ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
+    /// Variant of arg_package_spec that does not include the `--all` flag
+    /// (but does include `--workspace`). Used to avoid confusion with
+    /// historical uses of `--all`.
+    fn arg_package_spec_no_all(
+        self,
+        package: &'static str,
+        all: &'static str,
+        exclude: &'static str,
+    ) -> Self {
+        self.arg_package_spec_simple(package)
+            ._arg(opt("workspace", all))
+            ._arg(multi_opt("exclude", "SPEC", exclude))
+    }
+
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
         self._arg(multi_opt("package", "SPEC", package).short("p"))
     }
@@ -362,6 +376,15 @@ pub trait ArgMatchesExt {
         }
     }
 
+    fn packages_from_flags(&self) -> CargoResult<Packages> {
+        Packages::from_flags(
+            // TODO Integrate into 'workspace'
+            self._is_present("workspace") || self._is_present("all"),
+            self._values_of("exclude"),
+            self._values_of("package"),
+        )
+    }
+
     fn compile_options(
         &self,
         config: &Config,
@@ -369,13 +392,7 @@ pub trait ArgMatchesExt {
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
-        let spec = Packages::from_flags(
-            // TODO Integrate into 'workspace'
-            self._is_present("workspace") || self._is_present("all"),
-            self._values_of("exclude"),
-            self._values_of("package"),
-        )?;
-
+        let spec = self.packages_from_flags()?;
         let mut message_format = None;
         let default_json = MessageFormat::Json {
             short: false,

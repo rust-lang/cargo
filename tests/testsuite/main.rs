@@ -103,6 +103,8 @@ mod standard_lib;
 mod test;
 mod timings;
 mod tool_paths;
+mod tree;
+mod tree_graph_features;
 mod unit_graph;
 mod update;
 mod vendor;

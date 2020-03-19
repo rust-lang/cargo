@@ -92,11 +92,21 @@ pub enum HasDevUnits {
 }
 
 /// Flag to indicate if features are requested for a build dependency or not.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FeaturesFor {
     NormalOrDev,
     /// Build dependency or proc-macro.
     HostDep,
+}
+
+impl FeaturesFor {
+    pub fn from_for_host(for_host: bool) -> FeaturesFor {
+        if for_host {
+            FeaturesFor::HostDep
+        } else {
+            FeaturesFor::NormalOrDev
+        }
+    }
 }
 
 impl FeatureOpts {

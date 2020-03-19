@@ -1,5 +1,6 @@
 use crate::core::{InternedString, Target};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::Config;
 use serde::Serialize;
 use std::path::Path;
 
@@ -38,6 +39,32 @@ impl CompileKind {
             CompileKind::Target(_) if target.for_host() => CompileKind::Host,
             CompileKind::Target(n) => CompileKind::Target(n),
         }
+    }
+
+    /// Creates a new `CompileKind` based on the requested target.
+    ///
+    /// If no target is given, this consults the config if the default is set.
+    /// Otherwise returns `CompileKind::Host`.
+    pub fn from_requested_target(
+        config: &Config,
+        target: Option<&str>,
+    ) -> CargoResult<CompileKind> {
+        let kind = match target {
+            Some(s) => CompileKind::Target(CompileTarget::new(s)?),
+            None => match &config.build_config()?.target {
+                Some(val) => {
+                    let value = if val.raw_value().ends_with(".json") {
+                        let path = val.clone().resolve_path(config);
+                        path.to_str().expect("must be utf-8 in toml").to_string()
+                    } else {
+                        val.raw_value().to_string()
+                    };
+                    CompileKind::Target(CompileTarget::new(&value)?)
+                }
+                None => CompileKind::Host,
+            },
+        };
+        Ok(kind)
     }
 }
 
