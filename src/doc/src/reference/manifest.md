@@ -149,10 +149,6 @@ automatically link your crate to the corresponding [docs.rs] page.
 documentation = "https://docs.rs/bitflags"
 ```
 
-> **Note**: [crates.io] may not show certain sites if they are known to not be
-> hosting documentation and are possibly of malicious intent e.g., ad tracking
-> networks. At this time; `rust-ci.org`, and `rustless.org` are not allowed.
-
 #### The `readme` field
 
 The `readme` field should be the path to a file in the package root (relative
