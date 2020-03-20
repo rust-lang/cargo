@@ -16,8 +16,7 @@
 //! graph of `Unit`s, which capture these properties.
 
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
-use crate::core::compiler::Unit;
-use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
+use crate::core::compiler::{BuildContext, CompileKind, CompileMode, Unit};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
@@ -27,6 +26,7 @@ use crate::ops::resolve_all_features;
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {
@@ -329,7 +329,7 @@ fn compute_deps<'a, 'cfg>(
                     new_unit_dep(
                         state,
                         unit,
-                        unit.pkg,
+                        &unit.pkg,
                         t,
                         UnitFor::new_normal(),
                         unit.kind.for_target(t),
@@ -374,8 +374,8 @@ fn compute_deps_custom_build<'a, 'cfg>(
     let unit_dep = new_unit_dep(
         state,
         unit,
-        unit.pkg,
-        unit.target,
+        &unit.pkg,
+        &unit.target,
         script_unit_for,
         // Build scripts always compiled for the host.
         CompileKind::Host,
@@ -465,7 +465,7 @@ fn maybe_lib<'a>(
             new_unit_dep(
                 state,
                 unit,
-                unit.pkg,
+                &unit.pkg,
                 t,
                 unit_for,
                 unit.kind.for_target(t),
@@ -527,7 +527,7 @@ fn dep_build_script<'a>(
             new_unit_dep_with_profile(
                 state,
                 unit,
-                unit.pkg,
+                &unit.pkg,
                 t,
                 script_unit_for,
                 unit.kind,
@@ -560,8 +560,8 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 fn new_unit_dep<'a>(
     state: &State<'a, '_>,
     parent: &Unit<'a>,
-    pkg: &'a Package,
-    target: &'a Target,
+    pkg: &Rc<Package>,
+    target: &Rc<Target>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -578,8 +578,8 @@ fn new_unit_dep<'a>(
 fn new_unit_dep_with_profile<'a>(
     state: &State<'a, '_>,
     parent: &Unit<'a>,
-    pkg: &'a Package,
-    target: &'a Target,
+    pkg: &Rc<Package>,
+    target: &Rc<Target>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -717,7 +717,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
-    fn get(&self, id: PackageId) -> &'a Package {
+    fn get(&self, id: PackageId) -> &'a Rc<Package> {
         self.bcx
             .packages
             .get_one(id)

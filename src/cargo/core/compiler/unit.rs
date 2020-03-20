@@ -1,11 +1,13 @@
 use crate::core::compiler::{CompileKind, CompileMode};
-use crate::core::{profiles::Profile, InternedString, Package, Target};
+use crate::core::manifest::{LibKind, Target, TargetKind};
+use crate::core::{profiles::Profile, InternedString, Package};
 use crate::util::hex::short_hash;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::rc::Rc;
 
 /// All information needed to define a unit.
 ///
@@ -23,19 +25,19 @@ use std::ops::Deref;
 /// all that out.
 #[derive(Clone, Copy, PartialOrd, Ord)]
 pub struct Unit<'a> {
-    inner: &'a UnitInner<'a>,
+    inner: &'a UnitInner,
 }
 
 /// Internal fields of `Unit` which `Unit` will dereference to.
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct UnitInner<'a> {
+pub struct UnitInner {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
-    pub pkg: &'a Package,
+    pub pkg: Rc<Package>,
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
-    pub target: &'a Target,
+    pub target: Rc<Target>,
     /// The profile contains information about *how* the build should be run, including debug
     /// level, etc.
     pub profile: Profile,
@@ -55,7 +57,7 @@ pub struct UnitInner<'a> {
     pub is_std: bool,
 }
 
-impl UnitInner<'_> {
+impl UnitInner {
     /// Returns whether compilation of this unit requires all upstream artifacts
     /// to be available.
     ///
@@ -76,23 +78,23 @@ impl<'a> Unit<'a> {
 // Just hash the pointer for fast hashing
 impl<'a> Hash for Unit<'a> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        (self.inner as *const UnitInner<'a>).hash(hasher)
+        (self.inner as *const UnitInner).hash(hasher)
     }
 }
 
 // Just equate the pointer since these are interned
 impl<'a> PartialEq for Unit<'a> {
     fn eq(&self, other: &Unit<'a>) -> bool {
-        self.inner as *const UnitInner<'a> == other.inner as *const UnitInner<'a>
+        self.inner as *const UnitInner == other.inner as *const UnitInner
     }
 }
 
 impl<'a> Eq for Unit<'a> {}
 
 impl<'a> Deref for Unit<'a> {
-    type Target = UnitInner<'a>;
+    type Target = UnitInner;
 
-    fn deref(&self) -> &UnitInner<'a> {
+    fn deref(&self) -> &UnitInner {
         self.inner
     }
 }
@@ -117,17 +119,17 @@ impl<'a> fmt::Debug for Unit<'a> {
 /// efficient hash/equality implementation for `Unit`. All units are
 /// manufactured through an interner which guarantees that each equivalent value
 /// is only produced once.
-pub struct UnitInterner<'a> {
-    state: RefCell<InternerState<'a>>,
+pub struct UnitInterner {
+    state: RefCell<InternerState>,
 }
 
-struct InternerState<'a> {
-    cache: HashSet<Box<UnitInner<'a>>>,
+struct InternerState {
+    cache: HashSet<Box<UnitInner>>,
 }
 
-impl<'a> UnitInterner<'a> {
+impl UnitInterner {
     /// Creates a new blank interner
-    pub fn new() -> UnitInterner<'a> {
+    pub fn new() -> UnitInterner {
         UnitInterner {
             state: RefCell::new(InternerState {
                 cache: HashSet::new(),
@@ -139,17 +141,38 @@ impl<'a> UnitInterner<'a> {
     /// will all be equivalent to the provided arguments, although they may not
     /// be the exact same instance.
     pub fn intern(
-        &'a self,
-        pkg: &'a Package,
-        target: &'a Target,
+        &self,
+        pkg: &Rc<Package>,
+        target: &Rc<Target>,
         profile: Profile,
         kind: CompileKind,
         mode: CompileMode,
         features: Vec<InternedString>,
         is_std: bool,
-    ) -> Unit<'a> {
+    ) -> Unit<'_> {
+        let target = match (is_std, target.kind()) {
+            // This is a horrible hack to support build-std. `libstd` declares
+            // itself with both rlib and dylib. We don't want the dylib for a
+            // few reasons:
+            //
+            // - dylibs don't have a hash in the filename. If you do something
+            //   (like switch rustc versions), it will stomp on the dylib
+            //   file, invalidating the entire cache (because std is a dep of
+            //   everything).
+            // - We don't want to publicize the presence of dylib for the
+            //   standard library.
+            //
+            // At some point in the future, it would be nice to have a
+            // first-class way of overriding or specifying crate-types.
+            (true, TargetKind::Lib(crate_types)) if crate_types.contains(&LibKind::Dylib) => {
+                let mut new_target = Target::clone(target);
+                new_target.set_kind(TargetKind::Lib(vec![LibKind::Rlib]));
+                Rc::new(new_target)
+            }
+            _ => Rc::clone(target),
+        };
         let inner = self.intern_inner(&UnitInner {
-            pkg,
+            pkg: Rc::clone(pkg),
             target,
             profile,
             kind,
@@ -178,16 +201,16 @@ impl<'a> UnitInterner<'a> {
     // Ideally we'd use an off-the-shelf interner from crates.io which avoids a
     // small amount of unsafety here, but at the time this was written one
     // wasn't obviously available.
-    fn intern_inner(&'a self, item: &UnitInner<'a>) -> &'a UnitInner<'a> {
+    fn intern_inner(&self, item: &UnitInner) -> &UnitInner {
         let mut me = self.state.borrow_mut();
         if let Some(item) = me.cache.get(item) {
-            // note that `item` has type `&Box<UnitInner<'a>`. Use `&**` to
-            // convert that to `&UnitInner<'a>`, then do some trickery to extend
+            // note that `item` has type `&Box<UnitInner>`. Use `&**` to
+            // convert that to `&UnitInner`, then do some trickery to extend
             // the lifetime to the `'a` on the function here.
-            return unsafe { &*(&**item as *const UnitInner<'a>) };
+            return unsafe { &*(&**item as *const UnitInner) };
         }
         me.cache.insert(Box::new(item.clone()));
         let item = me.cache.get(item).unwrap();
-        unsafe { &*(&**item as *const UnitInner<'a>) }
+        unsafe { &*(&**item as *const UnitInner) }
     }
 }

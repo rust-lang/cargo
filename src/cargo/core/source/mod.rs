@@ -56,7 +56,8 @@ pub trait Source {
         let mut sources = SourceMap::new();
         sources.insert(self);
         let pkg_set = PackageSet::new(&[package], sources, config)?;
-        Ok(pkg_set.get_one(package)?.clone())
+        let pkg = pkg_set.get_one(package)?;
+        Ok(Package::clone(pkg))
     }
 
     fn finish_download(&mut self, package: PackageId, contents: Vec<u8>) -> CargoResult<Package>;

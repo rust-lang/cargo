@@ -177,7 +177,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // `Profiles::get_profile_run_custom_build` so that those flags get
     // carried over.
     let to_exec = to_exec.into_os_string();
-    let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
+    let mut cmd = cx.compilation.host_process(to_exec, &unit.pkg)?;
     let debug = unit.profile.debuginfo.unwrap_or(0) != 0;
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())

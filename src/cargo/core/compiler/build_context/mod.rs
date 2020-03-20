@@ -32,7 +32,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub packages: &'a PackageSet<'cfg>,
 
     /// Source of interning new units as they're created.
-    pub units: &'a UnitInterner<'a>,
+    pub units: &'a UnitInterner,
 
     /// Information about rustc and the target platform.
     pub target_data: RustcTargetData,
@@ -45,7 +45,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         config: &'cfg Config,
         build_config: &'a BuildConfig,
         profiles: Profiles,
-        units: &'a UnitInterner<'a>,
+        units: &'a UnitInterner,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
         target_data: RustcTargetData,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {

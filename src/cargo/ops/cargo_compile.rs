@@ -26,6 +26,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::core::compiler::standard_lib;
@@ -37,7 +38,7 @@ use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
-use crate::core::{LibKind, Package, PackageSet, Target};
+use crate::core::{Package, PackageSet, Target};
 use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
@@ -340,9 +341,8 @@ pub fn compile_ws<'a>(
             // requested_target to an enum, or some other approach.
             anyhow::bail!("-Zbuild-std requires --target");
         }
-        let (mut std_package_set, std_resolve, std_features) =
+        let (std_package_set, std_resolve, std_features) =
             standard_lib::resolve_std(ws, &target_data, build_config.requested_kind, crates)?;
-        remove_dylib_crate_type(&mut std_package_set)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -667,8 +667,8 @@ impl CompileFilter {
 /// not the target requires its features to be present.
 #[derive(Debug)]
 struct Proposal<'a> {
-    pkg: &'a Package,
-    target: &'a Target,
+    pkg: &'a Rc<Package>,
+    target: &'a Rc<Target>,
     /// Indicates whether or not all required features *must* be present. If
     /// false, and the features are not available, then it will be silently
     /// skipped. Generally, targets specified by name (`--bin foo`) are
@@ -681,7 +681,7 @@ struct Proposal<'a> {
 /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
 fn generate_targets<'a>(
     ws: &Workspace<'_>,
-    packages: &[&'a Package],
+    packages: &[&'a Rc<Package>],
     filter: &CompileFilter,
     default_arch_kind: CompileKind,
     resolve: &'a Resolve,
@@ -689,7 +689,7 @@ fn generate_targets<'a>(
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Helper for creating a `Unit` struct.
-    let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
+    let new_unit = |pkg: &Rc<Package>, target: &Rc<Target>, target_mode: CompileMode| {
         let unit_for = if target_mode.is_any_test() {
             // NOTE: the `UnitFor` here is subtle. If you have a profile
             // with `panic` set, the `panic` flag is cleared for
@@ -968,7 +968,7 @@ pub fn resolve_all_features(
 
 /// Given a list of all targets for a package, filters out only the targets
 /// that are automatically included when the user doesn't specify any targets.
-fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
+fn filter_default_targets(targets: &[Rc<Target>], mode: CompileMode) -> Vec<&Rc<Target>> {
     match mode {
         CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
         CompileMode::Test => targets
@@ -996,7 +996,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
 
 /// Returns a list of proposed targets based on command-line target selection flags.
 fn list_rule_targets<'a>(
-    packages: &[&'a Package],
+    packages: &[&'a Rc<Package>],
     rule: &FilterRule,
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
@@ -1024,7 +1024,7 @@ fn list_rule_targets<'a>(
 
 /// Finds the targets for a specifically named target.
 fn find_named_targets<'a>(
-    packages: &[&'a Package],
+    packages: &[&'a Rc<Package>],
     target_name: &str,
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
@@ -1050,7 +1050,7 @@ fn find_named_targets<'a>(
 }
 
 fn filter_targets<'a>(
-    packages: &[&'a Package],
+    packages: &[&'a Rc<Package>],
     predicate: impl Fn(&Target) -> bool,
     requires_features: bool,
     mode: CompileMode,
@@ -1067,36 +1067,4 @@ fn filter_targets<'a>(
         }
     }
     proposals
-}
-
-/// When using `-Zbuild-std` we're building the standard library, but a
-/// technical detail of the standard library right now is that it builds itself
-/// as both an `rlib` and a `dylib`. We don't actually want to really publicize
-/// the `dylib` and in general it's a pain to work with, so when building libstd
-/// we want to remove the `dylib` crate type.
-///
-/// Cargo doesn't have a fantastic way of doing that right now, so let's hack
-/// around it a bit and (ab)use the fact that we have mutable access to
-/// `PackageSet` here to rewrite downloaded packages. We iterate over all `path`
-/// packages (which should download immediately and not actually cause blocking
-/// here) and edit their manifests to only list one `LibKind` for an `Rlib`.
-fn remove_dylib_crate_type(set: &mut PackageSet<'_>) -> CargoResult<()> {
-    let ids = set
-        .package_ids()
-        .filter(|p| p.source_id().is_path())
-        .collect::<Vec<_>>();
-    set.get_many(ids.iter().cloned())?;
-
-    for id in ids {
-        let pkg = set.lookup_mut(id).expect("should be downloaded now");
-
-        for target in pkg.manifest_mut().targets_mut() {
-            if let TargetKind::Lib(crate_types) = target.kind_mut() {
-                crate_types.truncate(0);
-                crate_types.push(LibKind::Rlib);
-            }
-        }
-    }
-
-    Ok(())
 }

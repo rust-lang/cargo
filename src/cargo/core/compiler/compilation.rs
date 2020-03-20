@@ -2,6 +2,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use cargo_platform::CfgExpr;
 use semver::Version;
@@ -14,9 +15,9 @@ use crate::util::{self, config, join_paths, process, CargoResult, Config, Proces
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
     /// The package being doc-tested.
-    pub package: Package,
+    pub package: Rc<Package>,
     /// The target being tested (currently always the package's lib).
-    pub target: Target,
+    pub target: Rc<Target>,
     /// Arguments needed to pass to rustdoc to run this test.
     pub args: Vec<OsString>,
     /// Whether or not -Zunstable-options is needed.
@@ -27,7 +28,7 @@ pub struct Doctest {
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
     /// `(package, target, path_to_test_exe)`
-    pub tests: Vec<(Package, Target, PathBuf)>,
+    pub tests: Vec<(Rc<Package>, Rc<Target>, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,

@@ -109,6 +109,14 @@ fn basic() {
     p.cargo("build").build_std().target_host().run();
     p.cargo("run").build_std().target_host().run();
     p.cargo("test").build_std().target_host().run();
+
+    // Check for hack that removes dylibs.
+    let deps_dir = Path::new("target")
+        .join(rustc_host())
+        .join("debug")
+        .join("deps");
+    assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
+    assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
 }
 
 #[cargo_test(build_std)]

@@ -3,12 +3,13 @@ use crate::ops::CompileOptions;
 use crate::util::CargoResult;
 use anyhow::bail;
 use std::fmt::Write;
+use std::rc::Rc;
 
 fn get_available_targets<'a>(
     filter_fn: fn(&Target) -> bool,
     ws: &'a Workspace<'_>,
     options: &'a CompileOptions,
-) -> CargoResult<Vec<&'a Target>> {
+) -> CargoResult<Vec<&'a Rc<Target>>> {
     let packages = options.spec.get_packages(ws)?;
 
     let mut targets: Vec<_> = packages

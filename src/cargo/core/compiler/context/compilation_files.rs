@@ -631,7 +631,7 @@ fn compute_metadata<'a, 'cfg>(
 
     hash_rustc_version(bcx, &mut hasher);
 
-    if cx.bcx.ws.is_member(unit.pkg) {
+    if cx.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
         if let Some(path) = &cx.bcx.rustc().workspace_wrapper {

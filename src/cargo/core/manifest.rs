@@ -25,7 +25,7 @@ pub enum EitherManifest {
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
-    targets: Vec<Target>,
+    targets: Vec<Rc<Target>>,
     links: Option<String>,
     warnings: Warnings,
     exclude: Vec<String>,
@@ -392,7 +392,7 @@ compact_debug! {
 impl Manifest {
     pub fn new(
         summary: Summary,
-        targets: Vec<Target>,
+        targets: Vec<Rc<Target>>,
         exclude: Vec<String>,
         include: Vec<String>,
         links: Option<String>,
@@ -459,10 +459,11 @@ impl Manifest {
     pub fn summary_mut(&mut self) -> &mut Summary {
         &mut self.summary
     }
-    pub fn targets(&self) -> &[Target] {
+    pub fn targets(&self) -> &[Rc<Target>] {
         &self.targets
     }
-    pub fn targets_mut(&mut self) -> &mut [Target] {
+    pub fn targets_mut(&mut self) -> &mut [Rc<Target>] {
+        // TOOD: Remove
         &mut self.targets
     }
     pub fn version(&self) -> &Version {
@@ -754,9 +755,6 @@ impl Target {
     pub fn kind(&self) -> &TargetKind {
         &self.kind
     }
-    pub fn kind_mut(&mut self) -> &mut TargetKind {
-        &mut self.kind
-    }
     pub fn tested(&self) -> bool {
         self.tested
     }
@@ -927,6 +925,10 @@ impl Target {
     }
     pub fn set_doc(&mut self, doc: bool) -> &mut Target {
         self.doc = doc;
+        self
+    }
+    pub fn set_kind(&mut self, kind: TargetKind) -> &mut Target {
+        self.kind = kind;
         self
     }
 

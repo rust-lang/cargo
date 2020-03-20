@@ -1286,7 +1286,7 @@ fn calculate_run_custom_build<'a, 'cfg>(
     // the whole crate.
     let (gen_local, overridden) = build_script_local_fingerprints(cx, unit);
     let deps = &cx.build_explicit_deps[unit];
-    let local = (gen_local)(deps, Some(&|| pkg_fingerprint(cx.bcx, unit.pkg)))?.unwrap();
+    let local = (gen_local)(deps, Some(&|| pkg_fingerprint(cx.bcx, &unit.pkg)))?.unwrap();
     let output = deps.build_script_output.clone();
 
     // Include any dependencies of our execution, which is typically just the

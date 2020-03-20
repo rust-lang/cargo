@@ -97,7 +97,7 @@ pub fn emit_serialized_unit_graph(
                 .collect();
             SerializedUnit {
                 pkg_id: unit.pkg.package_id(),
-                target: unit.target,
+                target: &unit.target,
                 profile: &unit.profile,
                 platform: unit.kind,
                 mode: unit.mode,

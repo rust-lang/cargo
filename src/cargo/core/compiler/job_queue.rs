@@ -932,15 +932,15 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
             Dirty => {
                 if unit.mode.is_doc() {
                     self.documented.insert(unit.pkg.package_id());
-                    config.shell().status("Documenting", unit.pkg)?;
+                    config.shell().status("Documenting", &unit.pkg)?;
                 } else if unit.mode.is_doc_test() {
                     // Skip doc test.
                 } else {
                     self.compiled.insert(unit.pkg.package_id());
                     if unit.mode.is_check() {
-                        config.shell().status("Checking", unit.pkg)?;
+                        config.shell().status("Checking", &unit.pkg)?;
                     } else {
-                        config.shell().status("Compiling", unit.pkg)?;
+                        config.shell().status("Compiling", &unit.pkg)?;
                     }
                 }
             }
@@ -950,7 +950,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     && !(unit.mode.is_doc_test() && self.compiled.contains(&unit.pkg.package_id()))
                 {
                     self.compiled.insert(unit.pkg.package_id());
-                    config.shell().verbose(|c| c.status("Fresh", unit.pkg))?;
+                    config.shell().verbose(|c| c.status("Fresh", &unit.pkg))?;
                 }
             }
         }

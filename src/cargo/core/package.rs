@@ -5,6 +5,7 @@ use std::fmt;
 use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -106,6 +107,7 @@ impl ser::Serialize for Package {
             .targets()
             .iter()
             .filter(|t| t.src_path().is_path())
+            .map(|t| &**t) // Converts &Rc<Target> to &Target
             .collect();
 
         SerializedPackage {
@@ -177,7 +179,7 @@ impl Package {
         self.manifest.summary()
     }
     /// Gets the targets specified in the manifest.
-    pub fn targets(&self) -> &[Target] {
+    pub fn targets(&self) -> &[Rc<Target>] {
         self.manifest.targets()
     }
     /// Gets the current package version.
@@ -274,7 +276,7 @@ impl hash::Hash for Package {
 /// This is primarily used to convert a set of `PackageId`s to `Package`s. It
 /// will download as needed, or used the cached download if available.
 pub struct PackageSet<'cfg> {
-    packages: HashMap<PackageId, LazyCell<Package>>,
+    packages: HashMap<PackageId, LazyCell<Rc<Package>>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
     multi: Multi,
@@ -438,14 +440,17 @@ impl<'cfg> PackageSet<'cfg> {
         })
     }
 
-    pub fn get_one(&self, id: PackageId) -> CargoResult<&Package> {
+    pub fn get_one(&self, id: PackageId) -> CargoResult<&Rc<Package>> {
         if let Some(pkg) = self.packages.get(&id).and_then(|slot| slot.borrow()) {
             return Ok(pkg);
         }
         Ok(self.get_many(Some(id))?.remove(0))
     }
 
-    pub fn get_many(&self, ids: impl IntoIterator<Item = PackageId>) -> CargoResult<Vec<&Package>> {
+    pub fn get_many(
+        &self,
+        ids: impl IntoIterator<Item = PackageId>,
+    ) -> CargoResult<Vec<&Rc<Package>>> {
         let mut pkgs = Vec::new();
         let mut downloads = self.enable_download()?;
         for id in ids {
@@ -546,15 +551,6 @@ impl<'cfg> PackageSet<'cfg> {
         let other_sources = set.sources.into_inner();
         sources.add_source_map(other_sources);
     }
-
-    /// Get mutable access to an already downloaded package, if it's already
-    /// downoaded and it's part of this set. Does not actually attempt to
-    /// download anything if it's not already downloaded.
-    pub fn lookup_mut(&mut self, id: PackageId) -> Option<&mut Package> {
-        self.packages
-            .get_mut(&id)
-            .and_then(|cell| cell.borrow_mut())
-    }
 }
 
 // When dynamically linked against libcurl, we want to ignore some failures
@@ -580,13 +576,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// Returns `None` if the package is queued up for download and will
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
-    pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
+    pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Rc<Package>>> {
         Ok(self
             .start_inner(id)
             .chain_err(|| format!("failed to download `{}`", id))?)
     }
 
-    fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
+    fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Rc<Package>>> {
         // First up see if we've already cached this package, in which case
         // there's nothing to do.
         let slot = self
@@ -611,7 +607,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let (url, descriptor) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
-                assert!(slot.fill(pkg).is_ok());
+                assert!(slot.fill(Rc::new(pkg)).is_ok());
                 return Ok(Some(slot.borrow().unwrap()));
             }
             MaybePackage::Download { url, descriptor } => (url, descriptor),
@@ -724,7 +720,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// # Panics
     ///
     /// This function will panic if there are no remaining downloads.
-    pub fn wait(&mut self) -> CargoResult<&'a Package> {
+    pub fn wait(&mut self) -> CargoResult<&'a Rc<Package>> {
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
             let (token, result) = self.wait_for_curl()?;
@@ -837,7 +833,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .set(self.next_speed_check.get() + finish_dur);
 
         let slot = &self.set.packages[&dl.id];
-        assert!(slot.fill(pkg).is_ok());
+        assert!(slot.fill(Rc::new(pkg)).is_ok());
         Ok(slot.borrow().unwrap())
     }
 

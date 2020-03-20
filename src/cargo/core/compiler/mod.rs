@@ -139,7 +139,7 @@ fn compile<'a, 'cfg: 'a>(
             let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
                 replay_output_cache(
                     unit.pkg.package_id(),
-                    unit.target,
+                    &unit.target,
                     cx.files().message_cache_path(unit),
                     cx.bcx.build_config.message_format,
                     cx.bcx.config.shell().supports_color(),
@@ -212,7 +212,7 @@ fn rustc<'a, 'cfg>(
     }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
-    let target = unit.target.clone();
+    let target = Target::clone(&unit.target);
     let mode = unit.mode;
 
     exec.init(cx, unit);
@@ -408,7 +408,7 @@ fn link_targets<'a, 'cfg>(
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
     let executable = cx.get_executable(unit)?;
-    let mut target = unit.target.clone();
+    let mut target = Target::clone(&unit.target);
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
         let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
@@ -541,11 +541,11 @@ fn prepare_rustc<'a, 'cfg>(
     unit: &Unit<'a>,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
-    let is_workspace = cx.bcx.ws.is_member(unit.pkg);
+    let is_workspace = cx.bcx.ws.is_member(&unit.pkg);
 
     let mut base = cx
         .compilation
-        .rustc_process(unit.pkg, is_primary, is_workspace)?;
+        .rustc_process(&unit.pkg, is_primary, is_workspace)?;
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
@@ -561,7 +561,7 @@ fn prepare_rustc<'a, 'cfg>(
 
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(&unit.pkg, &unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -599,7 +599,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let package_id = unit.pkg.package_id();
-    let target = unit.target.clone();
+    let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let pkg_id = unit.pkg.package_id();
     let script_metadata = cx.find_build_script_metadata(*unit);
@@ -786,7 +786,7 @@ fn build_base_args<'a, 'cfg>(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| p != unit.pkg));
+        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| p != &*unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }

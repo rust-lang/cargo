@@ -225,7 +225,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id(),
-                target: unit_time.unit.target,
+                target: &unit_time.unit.target,
                 mode: unit_time.unit.mode,
                 duration: unit_time.duration,
                 rmeta_time: unit_time.rmeta_time,
