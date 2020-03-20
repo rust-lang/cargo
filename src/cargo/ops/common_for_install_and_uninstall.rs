@@ -13,7 +13,7 @@ use crate::core::{Dependency, Package, PackageId, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, ToSemver};
+use crate::util::Config;
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -525,20 +525,13 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum NeedsUpdate {
-    True,
-    False,
-    TryWithoutFirst,
-}
-
 /// Gets a Package based on command-line requirements.
 pub fn select_pkg<'a, T>(
-    mut source: T,
+    source: &mut T,
     name: Option<&str>,
-    vers: Option<&str>,
+    vers: Option<VersionReq>,
     config: &Config,
-    needs_update: NeedsUpdate,
+    needs_update: bool,
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
 ) -> CargoResult<Package>
 where
@@ -549,84 +542,17 @@ where
     // with other global Cargos
     let _lock = config.acquire_package_cache_lock()?;
 
-    if let NeedsUpdate::True = needs_update {
+    if needs_update {
         source.update()?;
     }
 
     if let Some(name) = name {
-        let vers = if let Some(v) = vers {
-            // If the version begins with character <, >, =, ^, ~ parse it as a
-            // version range, otherwise parse it as a specific version
-            let first = v
-                .chars()
-                .next()
-                .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
-
-            let is_req = "<>=^~".contains(first) || v.contains('*');
-            if is_req {
-                match v.parse::<VersionReq>() {
-                    Ok(v) => Some(v.to_string()),
-                    Err(_) => bail!(
-                        "the `--vers` provided, `{}`, is \
-                         not a valid semver version requirement\n\n\
-                         Please have a look at \
-                         https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
-                         for the correct format",
-                        v
-                    ),
-                }
-            } else {
-                match v.to_semver() {
-                    Ok(v) => Some(format!("={}", v)),
-                    Err(e) => {
-                        let mut msg = format!(
-                            "the `--vers` provided, `{}`, is \
-                             not a valid semver version: {}\n",
-                            v, e
-                        );
-
-                        // If it is not a valid version but it is a valid version
-                        // requirement, add a note to the warning
-                        if v.parse::<VersionReq>().is_ok() {
-                            msg.push_str(&format!(
-                                "\nif you want to specify semver range, \
-                                 add an explicit qualifier, like ^{}",
-                                v
-                            ));
-                        }
-                        bail!(msg);
-                    }
-                }
-            }
-        } else {
-            None
-        };
-        let vers = vers.as_deref();
-        let vers_spec = if vers.is_none() && source.source_id().is_registry() {
-            // Avoid pre-release versions from crate.io
-            // unless explicitly asked for
-            Some("*")
-        } else {
-            vers
-        };
-        let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
-        let deps = (|| {
-            if let Some(vers_spec) = vers_spec {
-                if semver::VersionReq::parse(vers_spec).unwrap().is_exact() {
-                    let deps = source.query_vec(&dep)?;
-                    if deps.len() == 1 {
-                        return Ok(deps);
-                    }
-                }
-            }
-            if needs_update != NeedsUpdate::False {
-                source.update()?;
-            }
-            source.query_vec(&dep)
-        })();
-        match deps?.iter().map(|p| p.package_id()).max() {
+        let vers = vers.map(|v| v.to_string());
+        let dep = Dependency::parse_no_deprecated(name, vers.as_deref(), source.source_id())?;
+        let deps = source.query_vec(&dep)?;
+        match deps.iter().map(|p| p.package_id()).max() {
             Some(pkgid) => {
-                let pkg = Box::new(&mut source).download_now(pkgid, config)?;
+                let pkg = Box::new(source).download_now(pkgid, config)?;
                 Ok(pkg)
             }
             None => {
@@ -642,7 +568,7 @@ where
             }
         }
     } else {
-        let candidates = list_all(&mut source)?;
+        let candidates = list_all(source)?;
         let binaries = candidates
             .iter()
             .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);

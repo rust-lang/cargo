@@ -84,8 +84,8 @@ pub fn uninstall_one(
 fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
     let tracker = InstallTracker::load(config, root)?;
     let source_id = SourceId::for_path(config.cwd())?;
-    let src = path_source(source_id, config)?;
-    let pkg = select_pkg(src, None, None, config, NeedsUpdate::True, &mut |path| {
+    let mut src = path_source(source_id, config)?;
+    let pkg = select_pkg(&mut src, None, None, config, true, &mut |path| {
         path.read_packages()
     })?;
     let pkgid = pkg.package_id();

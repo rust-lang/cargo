@@ -14,7 +14,8 @@ use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{paths, Config, Filesystem};
+use crate::util::{paths, Config, Filesystem, Rustc, ToSemver};
+use semver::VersionReq;
 
 struct Transaction {
     bins: Vec<PathBuf>,
@@ -145,13 +146,22 @@ fn install_one(
 ) -> CargoResult<()> {
     let config = opts.config;
 
+    let dst = root.join("bin").into_path_unlocked();
+
+    let is_installed = |pkg: &Package, rustc: &Rustc, target: &str| -> CargoResult<bool> {
+        let tracker = InstallTracker::load(config, root)?;
+        let (freshness, _duplicates) =
+            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
+        Ok(freshness == Freshness::Fresh)
+    };
+
     let pkg = if source_id.is_git() {
         select_pkg(
-            GitSource::new(source_id, config)?,
+            &mut GitSource::new(source_id, config)?,
             krate,
-            vers,
+            None,
             config,
-            NeedsUpdate::True,
+            true,
             &mut |git| git.read_packages(),
         )?
     } else if source_id.is_path() {
@@ -180,20 +190,48 @@ fn install_one(
             }
         }
         src.update()?;
-        select_pkg(src, krate, vers, config, NeedsUpdate::False, &mut |path| {
+        select_pkg(&mut src, krate, None, config, false, &mut |path| {
             path.read_packages()
         })?
     } else {
+        let mut source = map.load(source_id, &HashSet::new())?;
+        let vers = if let Some(vers) = vers {
+            Some(parse_semver_req(vers)?)
+        } else if source.source_id().is_registry() {
+            Some(VersionReq::any())
+        } else {
+            None
+        };
+        if krate.is_some() && !no_track {
+            if let Some(vers) = vers.clone() {
+                if vers.is_exact() {
+                    if let Ok(pkg) =
+                        select_pkg(&mut source, krate, Some(vers), config, false, &mut |_| {
+                            bail!("(Ignored)")
+                        })
+                    {
+                        let (_ws, rustc, target) =
+                            make_ws_rustc_target(&config, opts, &source_id, pkg.clone())?;
+                        if let Ok(installed) = is_installed(&pkg, &rustc, &target) {
+                            if installed {
+                                let msg = format!(
+                                    "package `{}` is already installed, use --force to override",
+                                    pkg
+                                );
+                                config.shell().status("Ignored", &msg)?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+        }
         select_pkg(
-            map.load(source_id, &HashSet::new())?,
+            &mut source,
             krate,
             vers,
             config,
-            if is_first_install {
-                NeedsUpdate::TryWithoutFirst
-            } else {
-                NeedsUpdate::False
-            },
+            is_first_install,
             &mut |_| {
                 bail!(
                     "must specify a crate to install from \
@@ -204,17 +242,12 @@ fn install_one(
         )?
     };
 
-    let (mut ws, git_package) = if source_id.is_git() {
-        // Don't use ws.current() in order to keep the package source as a git source so that
-        // install tracking uses the correct source.
-        (Workspace::new(pkg.manifest_path(), config)?, Some(&pkg))
-    } else if source_id.is_path() {
-        (Workspace::new(pkg.manifest_path(), config)?, None)
+    let git_package = if source_id.is_git() {
+        Some(pkg.clone())
     } else {
-        (Workspace::ephemeral(pkg, config, None, false)?, None)
+        None
     };
-    ws.set_ignore_lock(config.lock_update_allowed());
-    ws.set_require_optional_deps(false);
+    let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg)?;
 
     let mut td_opt = None;
     let mut needs_cleanup = false;
@@ -232,7 +265,9 @@ fn install_one(
         ws.set_target_dir(target_dir);
     }
 
-    let pkg = git_package.map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
+    let pkg = git_package
+        .as_ref()
+        .map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
 
     if from_cwd {
         if pkg.manifest().edition() == Edition::Edition2015 {
@@ -259,16 +294,6 @@ fn install_one(
         bail!("specified package `{}` has no binaries", pkg);
     }
 
-    // Preflight checks to check up front whether we'll overwrite something.
-    // We have to check this again afterwards, but may as well avoid building
-    // anything if we're gonna throw it away anyway.
-    let dst = root.join("bin").into_path_unlocked();
-    let rustc = config.load_global_rustc(Some(&ws))?;
-    let target = match &opts.build_config.requested_kind {
-        CompileKind::Host => rustc.host.as_str(),
-        CompileKind::Target(target) => target.short_name(),
-    };
-
     // Helper for --no-track flag to make sure it doesn't overwrite anything.
     let no_track_duplicates = || -> CargoResult<BTreeMap<String, Option<PackageId>>> {
         let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(pkg, &opts.filter)
@@ -293,10 +318,7 @@ fn install_one(
         // Check for conflicts.
         no_track_duplicates()?;
     } else {
-        let tracker = InstallTracker::load(config, root)?;
-        let (freshness, _duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
-        if freshness == Freshness::Fresh {
+        if is_installed(&pkg, &rustc, &target)? {
             let msg = format!(
                 "package `{}` is already installed, use --force to override",
                 pkg
@@ -304,8 +326,6 @@ fn install_one(
             config.shell().status("Ignored", &msg)?;
             return Ok(());
         }
-        // Unlock while building.
-        drop(tracker);
     }
 
     config.shell().status("Installing", pkg)?;
@@ -349,7 +369,7 @@ fn install_one(
     } else {
         let tracker = InstallTracker::load(config, root)?;
         let (_freshness, duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
+            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
         (Some(tracker), duplicates)
     };
 
@@ -416,7 +436,7 @@ fn install_one(
             &successful_bins,
             vers.map(|s| s.to_string()),
             opts,
-            target,
+            &target,
             &rustc.verbose_version,
         );
 
@@ -488,6 +508,79 @@ fn install_one(
             )?;
         }
         Ok(())
+    }
+}
+
+fn make_ws_rustc_target<'cfg>(
+    config: &'cfg Config,
+    opts: &ops::CompileOptions<'_>,
+    source_id: &SourceId,
+    pkg: Package,
+) -> CargoResult<(Workspace<'cfg>, Rustc, String)> {
+    let mut ws = if source_id.is_git() {
+        // Don't use ws.current() in order to keep the package source as a git source so that
+        // install tracking uses the correct source.
+        Workspace::new(pkg.manifest_path(), config)?
+    } else if source_id.is_path() {
+        Workspace::new(pkg.manifest_path(), config)?
+    } else {
+        Workspace::ephemeral(pkg, config, None, false)?
+    };
+    ws.set_ignore_lock(config.lock_update_allowed());
+    ws.set_require_optional_deps(false);
+
+    let rustc = config.load_global_rustc(Some(&ws))?;
+    let target = match &opts.build_config.requested_kind {
+        CompileKind::Host => rustc.host.as_str().to_owned(),
+        CompileKind::Target(target) => target.short_name().to_owned(),
+    };
+
+    Ok((ws, rustc, target))
+}
+
+fn parse_semver_req(v: &str) -> CargoResult<VersionReq> {
+    // If the version begins with character <, >, =, ^, ~ parse it as a
+    // version range, otherwise parse it as a specific version
+    let first = v
+        .chars()
+        .next()
+        .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
+
+    let is_req = "<>=^~".contains(first) || v.contains('*');
+    if is_req {
+        match v.parse::<VersionReq>() {
+            Ok(v) => Ok(v),
+            Err(_) => bail!(
+                "the `--vers` provided, `{}`, is \
+                     not a valid semver version requirement\n\n\
+                     Please have a look at \
+                     https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
+                     for the correct format",
+                v
+            ),
+        }
+    } else {
+        match v.to_semver() {
+            Ok(v) => Ok(VersionReq::exact(&v)),
+            Err(e) => {
+                let mut msg = format!(
+                    "the `--vers` provided, `{}`, is \
+                         not a valid semver version: {}\n",
+                    v, e
+                );
+
+                // If it is not a valid version but it is a valid version
+                // requirement, add a note to the warning
+                if v.parse::<VersionReq>().is_ok() {
+                    msg.push_str(&format!(
+                        "\nif you want to specify semver range, \
+                             add an explicit qualifier, like ^{}",
+                        v
+                    ));
+                }
+                bail!(msg);
+            }
+        }
     }
 }
 
