@@ -46,8 +46,7 @@ use crate::util::{closest_msg, profile, CargoResult};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]
-pub struct CompileOptions<'a> {
-    pub config: &'a Config,
+pub struct CompileOptions {
     /// Configuration information for a rustc build
     pub build_config: BuildConfig,
     /// Extra features to build for the root package
@@ -79,10 +78,9 @@ pub struct CompileOptions<'a> {
     pub export_dir: Option<PathBuf>,
 }
 
-impl<'a> CompileOptions<'a> {
-    pub fn new(config: &'a Config, mode: CompileMode) -> CargoResult<CompileOptions<'a>> {
+impl<'a> CompileOptions {
+    pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
-            config,
             build_config: BuildConfig::new(config, None, &None, mode)?,
             features: Vec::new(),
             all_features: false,
@@ -242,10 +240,7 @@ pub enum CompileFilter {
     },
 }
 
-pub fn compile<'a>(
-    ws: &Workspace<'a>,
-    options: &CompileOptions<'a>,
-) -> CargoResult<Compilation<'a>> {
+pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<Compilation<'a>> {
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     compile_with_exec(ws, options, &exec)
 }
@@ -254,7 +249,7 @@ pub fn compile<'a>(
 /// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
-    options: &CompileOptions<'a>,
+    options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
@@ -263,11 +258,10 @@ pub fn compile_with_exec<'a>(
 
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
-    options: &CompileOptions<'a>,
+    options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let CompileOptions {
-        config,
         ref build_config,
         ref spec,
         ref features,
@@ -280,6 +274,7 @@ pub fn compile_ws<'a>(
         rustdoc_document_private_items,
         ref export_dir,
     } = *options;
+    let config = ws.config();
 
     match build_config.mode {
         CompileMode::Test

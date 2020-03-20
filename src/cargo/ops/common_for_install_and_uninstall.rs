@@ -159,7 +159,7 @@ impl InstallTracker {
         dst: &Path,
         pkg: &Package,
         force: bool,
-        opts: &CompileOptions<'_>,
+        opts: &CompileOptions,
         target: &str,
         _rustc: &str,
     ) -> CargoResult<(Freshness, BTreeMap<String, Option<PackageId>>)> {
@@ -267,7 +267,7 @@ impl InstallTracker {
         package: &Package,
         bins: &BTreeSet<String>,
         version_req: Option<String>,
-        opts: &CompileOptions<'_>,
+        opts: &CompileOptions,
         target: &str,
         rustc: &str,
     ) {
@@ -401,7 +401,7 @@ impl CrateListingV2 {
         pkg: &Package,
         bins: &BTreeSet<String>,
         version_req: Option<String>,
-        opts: &CompileOptions<'_>,
+        opts: &CompileOptions,
         target: &str,
         rustc: &str,
     ) {
@@ -490,12 +490,7 @@ impl InstallInfo {
     /// Determine if this installation is "up to date", or if it needs to be reinstalled.
     ///
     /// This does not do Package/Source/Version checking.
-    fn is_up_to_date(
-        &self,
-        opts: &CompileOptions<'_>,
-        target: &str,
-        exes: &BTreeSet<String>,
-    ) -> bool {
+    fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
         self.features == feature_set(&opts.features)
             && self.all_features == opts.all_features
             && self.no_default_features == opts.no_default_features

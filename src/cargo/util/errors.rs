@@ -259,7 +259,7 @@ impl CargoTestError {
         }
     }
 
-    pub fn hint(&self, ws: &Workspace<'_>, opts: &CompileOptions<'_>) -> String {
+    pub fn hint(&self, ws: &Workspace<'_>, opts: &CompileOptions) -> String {
         match self.test {
             Test::UnitTest {
                 ref kind,
