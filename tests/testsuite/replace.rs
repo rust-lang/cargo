@@ -549,7 +549,7 @@ fn override_wrong_name() {
 Caused by:
   no matching package for override `[..]baz:0.1.0` found
 location searched: file://[..]
-version required: = 0.1.0
+version required: =0.1.0
 ",
         )
         .run();
