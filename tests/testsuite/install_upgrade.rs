@@ -826,3 +826,35 @@ fn already_installed_updates_yank_status_on_upgrade() {
         )
         .run();
 }
+
+#[cargo_test]
+fn partially_already_installed_does_one_update() {
+    pkg("foo", "1.0.0");
+    cargo_process("install foo  --version=1.0.0").run();
+    pkg("bar", "1.0.0");
+    pkg("baz", "1.0.0");
+    cargo_process("install foo bar baz --version=1.0.0")
+        .with_stderr(
+            "\
+[IGNORED] package `foo v1.0.0` is already installed[..]
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry [..])
+[INSTALLING] bar v1.0.0
+[COMPILING] bar v1.0.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
+[INSTALLED] package `bar v1.0.0` (executable `bar[EXE]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v1.0.0 (registry [..])
+[INSTALLING] baz v1.0.0
+[COMPILING] baz v1.0.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/baz[EXE]
+[INSTALLED] package `baz v1.0.0` (executable `baz[EXE]`)
+[SUMMARY] Successfully installed foo, bar, baz!
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+}

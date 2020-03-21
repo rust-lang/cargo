@@ -67,7 +67,7 @@ pub fn install(
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
-        let mut first = true;
+        let mut did_update = false;
         for krate in krates {
             let root = root.clone();
             let map = map.clone();
@@ -82,15 +82,19 @@ pub fn install(
                 opts,
                 force,
                 no_track,
-                first,
+                !did_update,
             ) {
-                Ok(()) => succeeded.push(krate),
+                Ok(still_needs_update) => {
+                    succeeded.push(krate);
+                    did_update |= !still_needs_update;
+                }
                 Err(e) => {
                     crate::display_error(&e, &mut config.shell());
-                    failed.push(krate)
+                    failed.push(krate);
+                    // We assume an update was performed if we got an error.
+                    did_update = true;
                 }
             }
-            first = false;
         }
 
         let mut summary = vec![];
@@ -135,6 +139,7 @@ pub fn install(
     Ok(())
 }
 
+// Returns whether a subsequent call should attempt to update again.
 fn install_one(
     config: &Config,
     root: &Filesystem,
@@ -146,8 +151,8 @@ fn install_one(
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
-    is_first_install: bool,
-) -> CargoResult<()> {
+    needs_update_if_source_is_index: bool,
+) -> CargoResult<bool> {
     let dst = root.join("bin").into_path_unlocked();
 
     let is_installed = |pkg: &Package, rustc: &Rustc, target: &str| -> CargoResult<bool> {
@@ -221,7 +226,7 @@ fn install_one(
                                     pkg
                                 );
                                 config.shell().status("Ignored", &msg)?;
-                                return Ok(());
+                                return Ok(true);
                             }
                         }
                     }
@@ -233,7 +238,7 @@ fn install_one(
             krate,
             vers,
             config,
-            is_first_install,
+            needs_update_if_source_is_index,
             &mut |_| {
                 bail!(
                     "must specify a crate to install from \
@@ -326,7 +331,7 @@ fn install_one(
                 pkg
             );
             config.shell().status("Ignored", &msg)?;
-            return Ok(());
+            return Ok(false);
         }
     }
 
@@ -484,7 +489,7 @@ fn install_one(
             "Installed",
             format!("package `{}` {}", pkg, executables(successful_bins.iter())),
         )?;
-        Ok(())
+        Ok(false)
     } else {
         if !to_install.is_empty() {
             config.shell().status(
@@ -509,7 +514,7 @@ fn install_one(
                 ),
             )?;
         }
-        Ok(())
+        Ok(false)
     }
 }
 
