@@ -2185,7 +2185,7 @@ fn rebuild_preserves_out_dir() {
     foo.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 ([CWD])
+[COMPILING BUILD SCRIPT] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

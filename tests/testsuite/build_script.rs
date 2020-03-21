@@ -702,7 +702,7 @@ fn only_rerun_build_script() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([CWD])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([CWD])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -808,7 +808,7 @@ fn testing_and_such() {
     p.cargo("test -vj1")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([CWD])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([CWD])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
@@ -839,7 +839,7 @@ fn testing_and_such() {
     p.cargo("run")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([CWD])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
@@ -2016,7 +2016,7 @@ fn cfg_override_test() {
     p.cargo("test -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([CWD])
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
@@ -2415,7 +2415,7 @@ fn adding_an_override_invalidates() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..]
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2455,7 +2455,7 @@ fn changing_an_override_invalidates() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..]
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=foo`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2479,7 +2479,7 @@ fn changing_an_override_invalidates() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..]
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2522,7 +2522,7 @@ fn fresh_builds_possible_with_link_libs() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..]
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2576,7 +2576,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..]
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2626,7 +2626,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2644,7 +2644,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2682,7 +2682,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2696,7 +2696,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]

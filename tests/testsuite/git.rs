@@ -2319,7 +2319,7 @@ fn include_overrides_gitignore() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING BUILD SCRIPT] foo v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]

@@ -734,7 +734,7 @@ fn path_dep_build_cmd() {
 
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+            "[COMPILING BUILD SCRIPT] bar v0.5.0 ([CWD]/bar)\n\
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",

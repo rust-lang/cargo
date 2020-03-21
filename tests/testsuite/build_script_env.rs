@@ -31,7 +31,7 @@ fn rerun_if_env_changes() {
         .env("FOO", "bar")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
@@ -40,7 +40,7 @@ fn rerun_if_env_changes() {
         .env("FOO", "baz")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
@@ -52,7 +52,7 @@ fn rerun_if_env_changes() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
@@ -87,7 +87,7 @@ fn rerun_if_env_or_file_changes() {
         .env("FOO", "bar")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
@@ -102,7 +102,7 @@ fn rerun_if_env_or_file_changes() {
         .env("FOO", "bar")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING BUILD SCRIPT] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
