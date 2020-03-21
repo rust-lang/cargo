@@ -934,7 +934,9 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     if unit.mode.is_check() {
                         config.shell().status("Checking", unit.pkg)?;
                     } else if unit.mode.is_run_custom_build() {
-                        config.shell().status("Compiling build script for", unit.pkg)?;
+                        config
+                            .shell()
+                            .status("Compiling build script for", unit.pkg)?;
                     } else {
                         config.shell().status("Compiling", unit.pkg)?;
                     }
