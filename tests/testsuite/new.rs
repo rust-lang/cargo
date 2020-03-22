@@ -25,6 +25,7 @@ fn simple_lib() {
     assert!(paths::root().join("foo/Cargo.toml").is_file());
     assert!(paths::root().join("foo/src/lib.rs").is_file());
     assert!(!paths::root().join("foo/.gitignore").is_file());
+    assert!(!paths::root().join("foo/README.md").is_file());
 
     let lib = paths::root().join("foo/src/lib.rs");
     let mut contents = String::new();
@@ -57,6 +58,7 @@ fn simple_bin() {
     assert!(paths::root().join("foo").is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
     assert!(paths::root().join("foo/src/main.rs").is_file());
+    assert!(paths::root().join("foo/README.md").is_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
     assert!(paths::root()
@@ -84,6 +86,7 @@ fn simple_git() {
     assert!(paths::root().join("foo/src/lib.rs").is_file());
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
+    assert!(!paths::root().join("foo/README.md").is_file());
 
     let fp = paths::root().join("foo/.gitignore");
     let mut contents = String::new();

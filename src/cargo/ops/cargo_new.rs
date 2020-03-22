@@ -724,7 +724,7 @@ edition = {}
             &path.join("README.md"),
             format!(
                 r#"TODO: add a description of this crate's purpose
-    cargo install [{}]
+cargo install [{}]
         "#,
                 name,
             )
