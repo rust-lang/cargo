@@ -420,7 +420,6 @@ impl Package {
             "cksum": cksum,
             "features": self.features,
             "yanked": self.yanked,
-            "pm": self.proc_macro,
         })
         .to_string();
 

@@ -1,6 +1,6 @@
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::hash;
 use std::mem;
@@ -17,7 +17,10 @@ use semver::Version;
 use serde::ser;
 use serde::Serialize;
 
+use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::dependency::DepKind;
 use crate::core::interning::InternedString;
+use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
 use crate::core::{FeatureMap, SourceMap, Summary};
@@ -188,6 +191,10 @@ impl Package {
     /// Returns `true` if the package is set to publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
         self.manifest.publish()
+    }
+    /// Returns `true` if this package is a proc-macro.
+    pub fn proc_macro(&self) -> bool {
+        self.targets().iter().any(|target| target.proc_macro())
     }
 
     /// Returns `true` if the package uses a custom build script for any target.
@@ -432,6 +439,9 @@ impl<'cfg> PackageSet<'cfg> {
     }
 
     pub fn get_one(&self, id: PackageId) -> CargoResult<&Package> {
+        if let Some(pkg) = self.packages.get(&id).and_then(|slot| slot.borrow()) {
+            return Ok(pkg);
+        }
         Ok(self.get_many(Some(id))?.remove(0))
     }
 
@@ -446,6 +456,75 @@ impl<'cfg> PackageSet<'cfg> {
         }
         downloads.success = true;
         Ok(pkgs)
+    }
+
+    /// Downloads any packages accessible from the give root ids.
+    pub fn download_accessible(
+        &self,
+        resolve: &Resolve,
+        root_ids: &[PackageId],
+        has_dev_units: HasDevUnits,
+        requested_kind: CompileKind,
+        target_data: &RustcTargetData,
+    ) -> CargoResult<()> {
+        fn collect_used_deps(
+            used: &mut BTreeSet<PackageId>,
+            resolve: &Resolve,
+            pkg_id: PackageId,
+            has_dev_units: HasDevUnits,
+            requested_kind: CompileKind,
+            target_data: &RustcTargetData,
+        ) -> CargoResult<()> {
+            if !used.insert(pkg_id) {
+                return Ok(());
+            }
+            let filtered_deps = resolve.deps(pkg_id).filter(|&(_id, deps)| {
+                deps.iter().any(|dep| {
+                    if dep.kind() == DepKind::Development && has_dev_units == HasDevUnits::No {
+                        return false;
+                    }
+                    // This is overly broad, since not all target-specific
+                    // dependencies are used both for target and host. To tighten this
+                    // up, this function would need to track "for_host" similar to how
+                    // unit dependencies handles it.
+                    if !target_data.dep_platform_activated(dep, requested_kind)
+                        && !target_data.dep_platform_activated(dep, CompileKind::Host)
+                    {
+                        return false;
+                    }
+                    true
+                })
+            });
+            for (dep_id, _deps) in filtered_deps {
+                collect_used_deps(
+                    used,
+                    resolve,
+                    dep_id,
+                    has_dev_units,
+                    requested_kind,
+                    target_data,
+                )?;
+            }
+            Ok(())
+        }
+
+        // This is sorted by PackageId to get consistent behavior and error
+        // messages for Cargo's testsuite. Perhaps there is a better ordering
+        // that optimizes download time?
+        let mut to_download = BTreeSet::new();
+
+        for id in root_ids {
+            collect_used_deps(
+                &mut to_download,
+                resolve,
+                *id,
+                has_dev_units,
+                requested_kind,
+                target_data,
+            )?;
+        }
+        self.get_many(to_download.into_iter())?;
+        Ok(())
     }
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {

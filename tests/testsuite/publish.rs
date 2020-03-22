@@ -23,7 +23,6 @@ const CLEAN_FOO_JSON: &str = r#"
         "license_file": null,
         "links": null,
         "name": "foo",
-        "proc_macro": false,
         "readme": null,
         "readme_file": null,
         "repository": "foo",
@@ -48,7 +47,6 @@ fn validate_upload_foo() {
           "license_file": null,
           "links": null,
           "name": "foo",
-          "proc_macro": false,
           "readme": null,
           "readme_file": null,
           "repository": null,
@@ -981,7 +979,6 @@ fn publish_with_patch() {
           "license_file": null,
           "links": null,
           "name": "foo",
-          "proc_macro": false,
           "readme": null,
           "readme_file": null,
           "repository": null,
@@ -1151,7 +1148,6 @@ fn publish_git_with_version() {
           "license_file": null,
           "links": null,
           "name": "foo",
-          "proc_macro": false,
           "readme": null,
           "readme_file": null,
           "repository": null,
@@ -1239,7 +1235,6 @@ fn publish_dev_dep_no_version() {
           "license_file": null,
           "links": null,
           "name": "foo",
-          "proc_macro": false,
           "readme": null,
           "readme_file": null,
           "repository": "foo",
@@ -1299,67 +1294,4 @@ fn credentials_ambiguous_filename() {
         .run();
 
     validate_upload_foo();
-}
-
-#[cargo_test]
-fn publish_proc_macro() {
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            edition = "2018"
-            homepage = "https://example.com"
-
-            [lib]
-            proc-macro = true
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify --index")
-        .arg(registry_url().to_string())
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[UPLOADING] foo v0.0.1 ([CWD])
-",
-        )
-        .run();
-
-    publish::validate_upload(
-        r#"
-        {
-          "authors": [],
-          "badges": {},
-          "categories": [],
-          "deps": [],
-          "description": "foo",
-          "documentation": null,
-          "features": {},
-          "homepage": "https://example.com",
-          "keywords": [],
-          "license": "MIT",
-          "license_file": null,
-          "links": null,
-          "name": "foo",
-          "proc_macro": true,
-          "readme": null,
-          "readme_file": null,
-          "repository": null,
-          "vers": "0.0.1"
-          }
-        "#,
-        "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
-    );
 }

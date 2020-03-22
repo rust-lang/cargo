@@ -236,11 +236,6 @@ pub struct RegistryPackage<'a> {
     /// Added early 2018 (see https://github.com/rust-lang/cargo/pull/4978),
     /// can be `None` if published before then.
     links: Option<InternedString>,
-    /// Whether or not this package is a proc-macro library.
-    ///
-    /// If `None`, then the status is unknown (crate was published before this
-    /// field was added), and generally should be treated as `false.`
-    pm: Option<bool>,
 }
 
 #[test]

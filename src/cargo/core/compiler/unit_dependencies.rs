@@ -19,7 +19,6 @@ use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::Unit;
 use crate::core::compiler::{BuildContext, CompileKind, CompileMode};
 use crate::core::dependency::DepKind;
-use crate::core::package::Downloads;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -31,10 +30,7 @@ use std::collections::{HashMap, HashSet};
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {
     bcx: &'a BuildContext<'a, 'cfg>,
-    waiting_on_download: HashSet<PackageId>,
-    downloads: Downloads<'a, 'cfg>,
     unit_dependencies: UnitGraph<'a>,
-    package_cache: HashMap<PackageId, &'a Package>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
     std_resolve: Option<&'a Resolve>,
@@ -58,10 +54,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     };
     let mut state = State {
         bcx,
-        downloads: bcx.packages.enable_download()?,
-        waiting_on_download: HashSet::new(),
         unit_dependencies: HashMap::new(),
-        package_cache: HashMap::new(),
         usr_resolve: resolve,
         usr_features: features,
         std_resolve,
@@ -141,44 +134,32 @@ fn attach_std_deps<'a, 'cfg>(
 /// Compute all the dependencies of the given root units.
 /// The result is stored in state.unit_dependencies.
 fn deps_of_roots<'a, 'cfg>(roots: &[Unit<'a>], mut state: &mut State<'a, 'cfg>) -> CargoResult<()> {
-    // Loop because we are downloading while building the dependency graph.
-    // The partially-built unit graph is discarded through each pass of the
-    // loop because it is incomplete because not all required Packages have
-    // been downloaded.
-    loop {
-        for unit in roots.iter() {
-            state.get(unit.pkg.package_id())?;
+    for unit in roots.iter() {
+        state.get(unit.pkg.package_id());
 
-            // Dependencies of tests/benches should not have `panic` set.
-            // We check the global test mode to see if we are running in `cargo
-            // test` in which case we ensure all dependencies have `panic`
-            // cleared, and avoid building the lib thrice (once with `panic`, once
-            // without, once for `--test`). In particular, the lib included for
-            // Doc tests and examples are `Build` mode here.
-            let unit_for = if unit.mode.is_any_test() || state.bcx.build_config.test() {
-                UnitFor::new_test(state.bcx.config)
-            } else if unit.target.is_custom_build() {
-                // This normally doesn't happen, except `clean` aggressively
-                // generates all units.
-                UnitFor::new_host(false)
-            } else if unit.target.proc_macro() {
-                UnitFor::new_host(true)
-            } else if unit.target.for_host() {
-                // Plugin should never have panic set.
-                UnitFor::new_compiler()
-            } else {
-                UnitFor::new_normal()
-            };
-            deps_of(unit, &mut state, unit_for)?;
-        }
-
-        if !state.waiting_on_download.is_empty() {
-            state.finish_some_downloads()?;
-            state.unit_dependencies.clear();
+        // Dependencies of tests/benches should not have `panic` set.
+        // We check the global test mode to see if we are running in `cargo
+        // test` in which case we ensure all dependencies have `panic`
+        // cleared, and avoid building the lib thrice (once with `panic`, once
+        // without, once for `--test`). In particular, the lib included for
+        // Doc tests and examples are `Build` mode here.
+        let unit_for = if unit.mode.is_any_test() || state.bcx.build_config.test() {
+            UnitFor::new_test(state.bcx.config)
+        } else if unit.target.is_custom_build() {
+            // This normally doesn't happen, except `clean` aggressively
+            // generates all units.
+            UnitFor::new_host(false)
+        } else if unit.target.proc_macro() {
+            UnitFor::new_host(true)
+        } else if unit.target.for_host() {
+            // Plugin should never have panic set.
+            UnitFor::new_compiler()
         } else {
-            break;
-        }
+            UnitFor::new_normal()
+        };
+        deps_of(unit, &mut state, unit_for)?;
     }
+
     Ok(())
 }
 
@@ -269,10 +250,7 @@ fn compute_deps<'a, 'cfg>(
 
     let mut ret = Vec::new();
     for (id, _) in filtered_deps {
-        let pkg = match state.get(id)? {
-            Some(pkg) => pkg,
-            None => continue,
-        };
+        let pkg = state.get(id);
         let lib = match pkg.targets().iter().find(|t| t.is_lib()) {
             Some(t) => t,
             None => continue,
@@ -419,10 +397,7 @@ fn compute_deps_doc<'a, 'cfg>(
     // the documentation of the library being built.
     let mut ret = Vec::new();
     for (id, _deps) in deps {
-        let dep = match state.get(id)? {
-            Some(dep) => dep,
-            None => continue,
-        };
+        let dep = state.get(id);
         let lib = match dep.targets().iter().find(|t| t.is_lib()) {
             Some(lib) => lib,
             None => continue,
@@ -730,44 +705,10 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
-    fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
-        if let Some(pkg) = self.package_cache.get(&id) {
-            return Ok(Some(pkg));
-        }
-        if !self.waiting_on_download.insert(id) {
-            return Ok(None);
-        }
-        if let Some(pkg) = self.downloads.start(id)? {
-            self.package_cache.insert(id, pkg);
-            self.waiting_on_download.remove(&id);
-            return Ok(Some(pkg));
-        }
-        Ok(None)
-    }
-
-    /// Completes at least one downloading, maybe waiting for more to complete.
-    ///
-    /// This function will block the current thread waiting for at least one
-    /// crate to finish downloading. The function may continue to download more
-    /// crates if it looks like there's a long enough queue of crates to keep
-    /// downloading. When only a handful of packages remain this function
-    /// returns, and it's hoped that by returning we'll be able to push more
-    /// packages to download into the queue.
-    fn finish_some_downloads(&mut self) -> CargoResult<()> {
-        assert!(self.downloads.remaining() > 0);
-        loop {
-            let pkg = self.downloads.wait()?;
-            self.waiting_on_download.remove(&pkg.package_id());
-            self.package_cache.insert(pkg.package_id(), pkg);
-
-            // Arbitrarily choose that 5 or more packages concurrently download
-            // is a good enough number to "fill the network pipe". If we have
-            // less than this let's recompute the whole unit dependency graph
-            // again and try to find some more packages to download.
-            if self.downloads.remaining() < 5 {
-                break;
-            }
-        }
-        Ok(())
+    fn get(&self, id: PackageId) -> &'a Package {
+        self.bcx
+            .packages
+            .get_one(id)
+            .unwrap_or_else(|_| panic!("expected {} to be downloaded", id))
     }
 }

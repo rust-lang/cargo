@@ -356,6 +356,7 @@ pub fn compile_ws<'a>(
         .iter()
         .map(|s| s.query(resolve.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
+
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
     // Dependencies will be downloaded during build_unit_dependencies.
@@ -907,7 +908,12 @@ fn generate_targets<'a>(
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map.entry(pkg).or_insert_with(|| {
-                    resolve_all_features(resolve, resolved_features, pkg.package_id())
+                    resolve_all_features(
+                        resolve,
+                        resolved_features,
+                        &bcx.packages,
+                        pkg.package_id(),
+                    )
                 });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }
@@ -944,6 +950,7 @@ fn generate_targets<'a>(
 fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     resolved_features: &features::ResolvedFeatures,
+    package_set: &PackageSet<'_>,
     package_id: PackageId,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
@@ -955,7 +962,10 @@ fn resolve_all_features(
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
-        let is_proc_macro = resolve_with_overrides.summary(dep_id).proc_macro();
+        let is_proc_macro = package_set
+            .get_one(dep_id)
+            .expect("packages downloaded")
+            .proc_macro();
         for dep in deps {
             let features_for = if is_proc_macro || dep.is_build() {
                 FeaturesFor::HostDep

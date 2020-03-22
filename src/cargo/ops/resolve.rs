@@ -126,10 +126,24 @@ pub fn resolve_ws_with_opts<'cfg>(
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
+    let member_ids = ws
+        .members_with_features(&specs, &opts.features)?
+        .into_iter()
+        .map(|(p, _fts)| p.package_id())
+        .collect::<Vec<_>>();
+    pkg_set.download_accessible(
+        &resolved_with_overrides,
+        &member_ids,
+        has_dev_units,
+        requested_target,
+        &target_data,
+    )?;
+
     let resolved_features = FeatureResolver::resolve(
         ws,
         target_data,
         &resolved_with_overrides,
+        &pkg_set,
         &opts.features,
         specs,
         requested_target,
@@ -159,7 +173,7 @@ fn resolve_with_registry<'cfg>(
         true,
     )?;
 
-    if !ws.is_ephemeral() {
+    if !ws.is_ephemeral() && ws.require_optional_deps() {
         ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)

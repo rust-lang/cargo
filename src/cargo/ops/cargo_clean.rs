@@ -7,9 +7,11 @@ use crate::core::compiler::unit_dependencies;
 use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{FeatureResolver, HasDevUnits, RequestedFeatures};
+use crate::core::resolver::features::HasDevUnits;
+use crate::core::resolver::ResolveOpts;
 use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
+use crate::ops::resolve::WorkspaceResolve;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::Config;
@@ -57,15 +59,34 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     if opts.spec.is_empty() {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
-    let (packages, resolve) = ops::resolve_ws(ws)?;
-
-    let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     build_config.requested_profile = opts.requested_profile;
     let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
+    let resolve_opts = ResolveOpts::everything();
+    let specs = opts
+        .spec
+        .iter()
+        .map(|spec| PackageIdSpec::parse(spec))
+        .collect::<CargoResult<Vec<_>>>()?;
+    let ws_resolve = ops::resolve_ws_with_opts(
+        ws,
+        &target_data,
+        build_config.requested_kind,
+        &resolve_opts,
+        &specs,
+        HasDevUnits::Yes,
+    )?;
+    let WorkspaceResolve {
+        pkg_set,
+        targeted_resolve: resolve,
+        resolved_features: features,
+        ..
+    } = ws_resolve;
+
+    let interner = UnitInterner::new();
     let bcx = BuildContext::new(
         ws,
-        &packages,
+        &pkg_set,
         opts.config,
         &build_config,
         profiles,
@@ -73,27 +94,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         HashMap::new(),
         target_data,
     )?;
-    let requested_features = RequestedFeatures::new_all(true);
-    let specs = opts
-        .spec
-        .iter()
-        .map(|spec| PackageIdSpec::parse(spec))
-        .collect::<CargoResult<Vec<_>>>()?;
-    let features = FeatureResolver::resolve(
-        ws,
-        &bcx.target_data,
-        &resolve,
-        &requested_features,
-        &specs,
-        bcx.build_config.requested_kind,
-        HasDevUnits::Yes,
-    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
-        let pkg = packages.get_one(pkgid)?;
+        let pkg = pkg_set.get_one(pkgid)?;
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
