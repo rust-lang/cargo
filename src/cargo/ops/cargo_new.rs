@@ -716,6 +716,22 @@ edition = {}
         .as_bytes(),
     )?;
 
+    // Create README for binary crates
+    // Eventually, we will do something similar for library and workspace crates
+
+    if opts.bin {
+        paths::write(
+            &path.join("README.md"),
+            format!(
+                r#"TODO: add a description of this crate's purpose
+    cargo install [{}]
+        "#,
+                name,
+            )
+            .as_bytes(),
+        )?;
+    }
+
     // Create all specified source files (with respective parent directories) if they don't exist.
 
     for i in &opts.source_files {
