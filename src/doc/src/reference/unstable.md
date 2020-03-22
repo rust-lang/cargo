@@ -581,7 +581,7 @@ tests.
 
 The following is a description of the JSON structure:
 
-```javascript
+```json5
 {
   /* Version of the JSON output structure. If any backwards incompatible
      changes are made, this value will be increased.

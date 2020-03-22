@@ -118,7 +118,7 @@ named `config.json` which contains JSON information used by Cargo for
 accessing the registry. This is an example of what the [crates.io] config file
 looks like:
 
-```javascript
+```json5
 {
     "dl": "https://crates.io/api/v1/crates",
     "api": "https://crates.io"
@@ -181,7 +181,7 @@ Each line in a package file contains a JSON object that describes a published
 version of the package. The following is a pretty-printed example with comments
 explaining the format of the entry.
 
-```javascript
+```json5
 {
     // The name of the package.
     // This must only contain alphanumeric, `-`, or `_` characters.
@@ -266,7 +266,7 @@ Responses use a 200 response code for both success and errors. Cargo looks at
 the JSON response to determine if there was success or failure. Failure
 responses have a JSON object with the following structure:
 
-```javascript
+```json5
 {
     // Array of errors to display to the user.
     "errors": [
@@ -319,7 +319,7 @@ restrictions imposed by [crates.io] are included only to illustrate some
 suggestions on types of validation that may be done, and should not be
 considered as an exhaustive list of restrictions [crates.io] imposes.
 
-```javascript
+```json5
 {
     // The name of the package.
     "name": "foo",
@@ -417,7 +417,7 @@ considered as an exhaustive list of restrictions [crates.io] imposes.
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Optional object of warnings to display to the user.
     "warnings": {
@@ -442,7 +442,7 @@ The yank endpoint will set the `yank` field of the given version of a crate to
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Indicates the delete succeeded, always true.
     "ok": true,
@@ -460,7 +460,7 @@ to `false` in the index.
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Indicates the delete succeeded, always true.
     "ok": true,
@@ -485,7 +485,7 @@ The owners endpoint returns a list of owners of the crate.
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Array of owners of the crate.
     "users": [
@@ -515,7 +515,7 @@ added.
 
 The request should include the following JSON object:
 
-```javascript
+```json5
 {
     // Array of `login` strings of owners to add.
     "users": ["login_name"]
@@ -524,7 +524,7 @@ The request should include the following JSON object:
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Indicates the add succeeded, always true.
     "ok": true,
@@ -542,7 +542,7 @@ A successful response includes the JSON object:
 A DELETE request will remove an owner from a crate. The request should include
 the following JSON object:
 
-```javascript
+```json5
 {
     // Array of `login` strings of owners to remove.
     "users": ["login_name"]
@@ -551,7 +551,7 @@ the following JSON object:
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Indicates the remove succeeded, always true.
     "ok": true
@@ -571,7 +571,7 @@ the server.
 
 A successful response includes the JSON object:
 
-```javascript
+```json5
 {
     // Array of results.
     "crates": [

@@ -26,7 +26,7 @@ for a Rust API for reading the metadata.
 
 The output has the following format:
 
-[source,javascript]
+[source,json5]
 ----
 {
     /* Array of all packages in the workspace.

@@ -57,7 +57,7 @@ warnings and errors. See the [rustc JSON chapter](../../rustc/json.md) for
 details on `rustc`'s message format, which is embedded in the following
 structure:
 
-```javascript
+```json5
 {
     /* The "reason" indicates the kind of message. */
     "reason": "compiler-message",
@@ -119,7 +119,7 @@ structure:
 For every compilation step, a "compiler-artifact" message is emitted with the
 following structure:
 
-```javascript
+```json5
 {
     /* The "reason" indicates the kind of message. */
     "reason": "compiler-artifact",
@@ -183,7 +183,7 @@ script. Note that this is emitted even if the build script is not run; it will
 display the previously cached value. More details about build script output
 may be found in [the chapter on build scripts](build-scripts.md).
 
-```javascript
+```json5
 {
     /* The "reason" indicates the kind of message. */
     "reason": "build-script-executed",
