@@ -1108,3 +1108,80 @@ fn proc_macro_ws() {
         .with_stderr_line_without(&["[RUNNING] `rustc --crate-name foo"], &["--cfg[..]feat1"])
         .run();
 }
+
+#[cargo_test]
+fn has_dev_dep_for_test() {
+    // Check for a bug where the decision on whether or not "dev dependencies"
+    // should be used did not consider `check --profile=test`.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dev-dependencies]
+            dep = { path = 'dep', features = ['f1'] }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            #[test]
+            fn t1() {
+                dep::f();
+            }
+            "#,
+        )
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+
+            [features]
+            f1 = []
+            "#,
+        )
+        .file(
+            "dep/src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            pub fn f() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -v --profile=test -Zfeatures=dev_dep")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] dep v0.1.0 [..]
+[RUNNING] `rustc --crate-name dep [..]
+[CHECKING] foo v0.1.0 [..]
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check -v --profile=test")
+        .with_stderr(
+            "\
+[FRESH] dep [..]
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
