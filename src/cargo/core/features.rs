@@ -406,6 +406,8 @@ impl CliUnstable {
             "package-features" => self.package_features = parse_empty(k, v)?,
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
+            // Keep this around for rust 1.43.0 because its rustbuild still uses it
+            "config-profile" => {}
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
