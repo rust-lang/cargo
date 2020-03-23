@@ -31,7 +31,7 @@ env_logger = "0.7.0"
 pretty_env_logger = { version = "0.4", optional = true }
 anyhow = "1.0"
 filetime = "0.2"
-flate2 = { version = "1.0.3", features = ["zlib"] }
+flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
 fs2 = "0.4"
 git2 = "0.13.0"
 git2-curl = "0.14.0"
