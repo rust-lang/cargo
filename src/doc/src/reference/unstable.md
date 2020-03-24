@@ -1003,3 +1003,22 @@ cargo logout -Z credential-process`
 [`credentials` file]: config.md#credentials
 [crates.io]: https://crates.io/
 [config file]: config.md
+
+### rust-version
+* RFC: [#2495](https://github.com/rust-lang/rfcs/blob/master/text/2495-min-rust-version.md)
+* rustc Tracking Issue: [#65262](https://github.com/rust-lang/rust/issues/65262)
+
+The `-Z rust-version` flag enables the reading the `rust-version` field in the
+Cargo manifest `package` section. This can be used by a package to state a minimal
+version of the compiler required to build the package. An error is generated if
+the version of rustc is older than the stated `rust-version`. The
+`--ignore-rust-version` flag can be used to override the check.
+
+```toml
+cargo-features = ["rust-version"]
+
+[package]
+name = "mypackage"
+version = "0.0.1"
+rust-version = "1.42"
+```

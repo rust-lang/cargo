@@ -78,6 +78,9 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
+    /// Whether the build process should check the minimum Rust version
+    /// defined in the cargo metadata for a crate.
+    pub honor_rust_version: bool,
 }
 
 impl<'a> CompileOptions {
@@ -95,6 +98,7 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: true,
         })
     }
 }
@@ -306,6 +310,7 @@ pub fn create_bcx<'a, 'cfg>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
+        honor_rust_version,
     } = *options;
     let config = ws.config();
 
@@ -548,6 +553,36 @@ pub fn create_bcx<'a, 'cfg>(
                     .or_default()
                     .extend(args);
             }
+        }
+    }
+
+    if honor_rust_version {
+        // Remove any pre-release identifiers for easier comparison
+        let current_version = &target_data.rustc.version;
+        let untagged_version = semver::Version::new(
+            current_version.major,
+            current_version.minor,
+            current_version.patch,
+        );
+
+        for unit in unit_graph.keys() {
+            let version = match unit.pkg.rust_version() {
+                Some(v) => v,
+                None => continue,
+            };
+
+            let req = semver::VersionReq::parse(version).unwrap();
+            if req.matches(&untagged_version) {
+                continue;
+            }
+
+            anyhow::bail!(
+                "package `{}` cannot be built because it requires rustc {} or newer, \
+                 while the currently active rustc version is {}",
+                unit.pkg,
+                version,
+                current_version,
+            );
         }
     }
 

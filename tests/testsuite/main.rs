@@ -103,6 +103,7 @@ mod rename_deps;
 mod replace;
 mod required_features;
 mod run;
+mod rust_version;
 mod rustc;
 mod rustc_info_cache;
 mod rustdoc;

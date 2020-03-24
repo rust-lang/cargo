@@ -212,6 +212,16 @@ pub trait AppExt: Sized {
     fn arg_dry_run(self, dry_run: &'static str) -> Self {
         self._arg(opt("dry-run", dry_run))
     }
+
+    fn arg_ignore_rust_version(self) -> Self {
+        self._arg(
+            opt(
+                "ignore-rust-version",
+                "Ignore `rust-version` specification in packages",
+            )
+            .hidden(true), // nightly only (`rust-version` feature)
+        )
+    }
 }
 
 impl AppExt for App {
@@ -488,7 +498,14 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: !self._is_present("ignore-rust-version"),
         };
+
+        if !opts.honor_rust_version {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--ignore-rust-version", 8072)?;
+        }
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;

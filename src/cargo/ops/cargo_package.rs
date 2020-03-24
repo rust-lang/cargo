@@ -701,6 +701,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
             target_rustc_args: rustc_args,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
+            honor_rust_version: true,
         },
         &exec,
     )?;

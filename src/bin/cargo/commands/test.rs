@@ -53,6 +53,7 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_unit_graph()
         .after_help("Run `cargo help test` for more detailed information.\n")
