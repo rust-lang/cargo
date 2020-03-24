@@ -255,7 +255,6 @@ fn transmit(
             )
         })
         .collect::<BTreeMap<String, Vec<String>>>();
-    let proc_macro = pkg.targets().iter().any(|target| target.proc_macro());
 
     let publish = registry.publish(
         &NewCrate {
@@ -276,7 +275,6 @@ fn transmit(
             license_file: license_file.clone(),
             badges: badges.clone(),
             links: links.clone(),
-            proc_macro,
         },
         tarball,
     );

@@ -322,7 +322,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to download `baz v1.0.0`
+[ERROR] failed to download `bar v0.1.0`
 
 Caused by:
   can't make HTTP request in the offline mode
