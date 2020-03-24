@@ -681,9 +681,9 @@ impl BuildDeps {
 ///
 /// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
-pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> CargoResult<()> {
+pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
     let mut ret = HashMap::new();
-    for unit in units {
+    for unit in &cx.bcx.roots {
         build(&mut ret, cx, unit)?;
     }
     cx.build_scripts
@@ -706,7 +706,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         // If there is a build script override, pre-fill the build output.
         if unit.mode.is_run_custom_build() {
             if let Some(links) = unit.pkg.manifest().links() {
-                if let Some(output) = cx.bcx.script_override(links, unit.kind) {
+                if let Some(output) = cx.bcx.target_data.script_override(links, unit.kind) {
                     let metadata = cx.get_run_build_script_metadata(unit);
                     cx.build_script_outputs.lock().unwrap().insert(
                         unit.pkg.package_id(),

@@ -586,7 +586,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     add_error_format_and_color(cx, &mut rustdoc, false)?;
 
-    if let Some(args) = bcx.extra_args_for(unit) {
+    if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
 
@@ -839,7 +839,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
-    if let Some(args) = bcx.extra_args_for(unit) {
+    if let Some(args) = cx.bcx.extra_args_for(unit) {
         cmd.args(args);
     }
 

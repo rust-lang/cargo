@@ -7,14 +7,13 @@
 //! rough outline is:
 //!
 //! - Resolve the dependency graph (see `ops::resolve`).
-//! - Download any packages needed (see `PackageSet`). Note that dependency
-//!   downloads are deferred until `build_unit_dependencies`.
+//! - Download any packages needed (see `PackageSet`).
 //! - Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each `Unit` corresponds to a compiler
 //!   invocation. This is done in this module (`generate_targets`).
+//! - Build the graph of `Unit` dependencies (see
+//!   `core::compiler::context::unit_dependencies`).
 //! - Create a `Context` which will perform the following steps:
-//!     - Build the graph of `Unit` dependencies (see
-//!       `core::compiler::context::unit_dependencies`).
 //!     - Prepare the `target` directory (see `Layout`).
 //!     - Create a job queue (see `JobQueue`). The queue checks the
 //!       fingerprint of each `Unit` to determine if it should run or be
@@ -25,13 +24,11 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
-use crate::core::compiler::unit_graph;
+use crate::core::compiler::{standard_lib, unit_graph};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -46,6 +43,13 @@ use crate::util::config::Config;
 use crate::util::{closest_msg, profile, CargoResult};
 
 /// Contains information about how a package should be compiled.
+///
+/// Note on distinction between `CompileOptions` and `BuildConfig`:
+/// `BuildConfig` contains values that need to be retained after
+/// `BuildContext` is created. The other fields are no longer necessary. Think
+/// of it as `CompileOptions` are high-level settings requested on the
+/// command-line, and `BuildConfig` are low-level settings for actually
+/// driving `rustc`.
 #[derive(Debug)]
 pub struct CompileOptions {
     /// Configuration information for a rustc build
@@ -71,12 +75,6 @@ pub struct CompileOptions {
     /// Whether the `--document-private-items` flags was specified and should
     /// be forwarded to `rustdoc`.
     pub rustdoc_document_private_items: bool,
-    /// The directory to copy final artifacts to. Note that even if `out_dir` is
-    /// set, a copy of artifacts still could be found a `target/(debug\release)`
-    /// as usual.
-    // Note that, although the cmd-line flag name is `out-dir`, in code we use
-    // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
-    pub export_dir: Option<PathBuf>,
 }
 
 impl<'a> CompileOptions {
@@ -94,7 +92,6 @@ impl<'a> CompileOptions {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            export_dir: None,
         })
     }
 }
@@ -262,6 +259,23 @@ pub fn compile_ws<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
+    let interner = UnitInterner::new();
+    let bcx = create_bcx(ws, options, &interner)?;
+    if options.build_config.unit_graph {
+        unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
+        return Ok(Compilation::new(&bcx)?);
+    }
+
+    let _p = profile::start("compiling");
+    let cx = Context::new(&bcx)?;
+    cx.compile(exec)
+}
+
+pub fn create_bcx<'a, 'cfg>(
+    ws: &'a Workspace<'cfg>,
+    options: &'a CompileOptions,
+    interner: &'a UnitInterner,
+) -> CargoResult<BuildContext<'a, 'cfg>> {
     let CompileOptions {
         ref build_config,
         ref spec,
@@ -273,7 +287,6 @@ pub fn compile_ws<'a>(
         ref target_rustc_args,
         ref local_rustdoc_args,
         rustdoc_document_private_items,
-        ref export_dir,
     } = *options;
     let config = ws.config();
 
@@ -298,12 +311,6 @@ pub fn compile_ws<'a>(
         }
     }
 
-    let profiles = Profiles::new(
-        ws.profiles(),
-        config,
-        build_config.requested_profile,
-        ws.features(),
-    )?;
     let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
 
     let specs = spec.to_package_id_specs(ws)?;
@@ -391,22 +398,16 @@ pub fn compile_ws<'a>(
         );
     }
 
+    let profiles = Profiles::new(
+        ws.profiles(),
+        config,
+        build_config.requested_profile,
+        ws.features(),
+    )?;
     profiles.validate_packages(
         ws.profiles(),
         &mut config.shell(),
         workspace_resolve.as_ref().unwrap_or(&resolve),
-    )?;
-
-    let interner = UnitInterner::new();
-    let mut bcx = BuildContext::new(
-        ws,
-        &pkg_set,
-        config,
-        build_config,
-        profiles,
-        &interner,
-        HashMap::new(),
-        target_data,
     )?;
 
     let units = generate_targets(
@@ -414,9 +415,12 @@ pub fn compile_ws<'a>(
         &to_builds,
         filter,
         build_config.requested_kind,
+        build_config.mode,
         &resolve,
         &resolved_features,
-        &bcx,
+        &pkg_set,
+        &profiles,
+        &interner,
     )?;
 
     let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
@@ -434,16 +438,19 @@ pub fn compile_ws<'a>(
         }
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
-            &bcx,
             &crates,
             std_resolve,
             std_features,
             build_config.requested_kind,
+            &pkg_set,
+            &interner,
+            &profiles,
         )?
     } else {
         Vec::new()
     };
 
+    let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
         if units.len() != 1 {
             anyhow::bail!(
@@ -453,7 +460,7 @@ pub fn compile_ws<'a>(
                 extra_args_name
             );
         }
-        bcx.extra_compiler_args.insert(units[0], args);
+        extra_compiler_args.insert(units[0], args);
     }
     for unit in &units {
         if unit.mode.is_doc() || unit.mode.is_doc_test() {
@@ -469,32 +476,37 @@ pub fn compile_ws<'a>(
             }
 
             if let Some(args) = extra_args {
-                bcx.extra_compiler_args.insert(*unit, args.clone());
+                extra_compiler_args.insert(*unit, args.clone());
             }
         }
     }
 
-    let unit_dependencies = build_unit_dependencies(
-        &bcx,
+    let unit_graph = build_unit_dependencies(
+        ws,
+        &pkg_set,
         &resolve,
         &resolved_features,
         std_resolve_features.as_ref(),
         &units,
         &std_roots,
+        build_config.mode,
+        &target_data,
+        &profiles,
+        &interner,
     )?;
 
-    if bcx.build_config.unit_graph {
-        unit_graph::emit_serialized_unit_graph(&units, &unit_dependencies)?;
-        return Ok(Compilation::new(&bcx, build_config.requested_kind)?);
-    }
+    let bcx = BuildContext::new(
+        ws,
+        pkg_set,
+        build_config,
+        profiles,
+        extra_compiler_args,
+        target_data,
+        units,
+        unit_graph,
+    )?;
 
-    let ret = {
-        let _p = profile::start("compiling");
-        let cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
-        cx.compile(&units, export_dir.clone(), exec)?
-    };
-
-    Ok(ret)
+    Ok(bcx)
 }
 
 impl FilterRule {
@@ -679,15 +691,19 @@ struct Proposal<'a> {
 
 /// Generates all the base targets for the packages the user has requested to
 /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
-fn generate_targets<'a>(
+fn generate_targets<'unit>(
     ws: &Workspace<'_>,
-    packages: &[&'a Rc<Package>],
+    packages: &[&Rc<Package>],
     filter: &CompileFilter,
     default_arch_kind: CompileKind,
-    resolve: &'a Resolve,
+    mode: CompileMode,
+    resolve: &Resolve,
     resolved_features: &features::ResolvedFeatures,
-    bcx: &BuildContext<'a, '_>,
-) -> CargoResult<Vec<Unit<'a>>> {
+    package_set: &PackageSet<'_>,
+    profiles: &Profiles,
+    interner: &'unit UnitInterner,
+) -> CargoResult<Vec<Unit<'unit>>> {
+    let config = ws.config();
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &Rc<Package>, target: &Rc<Target>, target_mode: CompileMode| {
         let unit_for = if target_mode.is_any_test() {
@@ -709,7 +725,7 @@ fn generate_targets<'a>(
             //
             // Forcing the lib to be compiled three times during `cargo
             // test` is probably also not desirable.
-            UnitFor::new_test(bcx.config)
+            UnitFor::new_test(config)
         } else if target.for_host() {
             // Proc macro / plugin should not have `panic` set.
             UnitFor::new_compiler()
@@ -746,14 +762,13 @@ fn generate_targets<'a>(
         };
         let kind = default_arch_kind.for_target(target);
         let profile =
-            bcx.profiles
-                .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
+            profiles.get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
         // No need to worry about build-dependencies, roots are never build dependencies.
         let features_for = FeaturesFor::from_for_host(target.proc_macro());
         let features =
             Vec::from(resolved_features.activated_features(pkg.package_id(), features_for));
-        bcx.units.intern(
+        interner.intern(
             pkg,
             target,
             profile,
@@ -772,14 +787,14 @@ fn generate_targets<'a>(
             required_features_filterable,
         } => {
             for pkg in packages {
-                let default = filter_default_targets(pkg.targets(), bcx.build_config.mode);
+                let default = filter_default_targets(pkg.targets(), mode);
                 proposals.extend(default.into_iter().map(|target| Proposal {
                     pkg,
                     target,
                     requires_features: !required_features_filterable,
-                    mode: bcx.build_config.mode,
+                    mode,
                 }));
-                if bcx.build_config.mode == CompileMode::Test {
+                if mode == CompileMode::Test {
                     if let Some(t) = pkg
                         .targets()
                         .iter()
@@ -805,11 +820,9 @@ fn generate_targets<'a>(
         } => {
             if *lib != LibRule::False {
                 let mut libs = Vec::new();
-                for proposal in
-                    filter_targets(packages, Target::is_lib, false, bcx.build_config.mode)
-                {
+                for proposal in filter_targets(packages, Target::is_lib, false, mode) {
                     let Proposal { target, pkg, .. } = proposal;
-                    if bcx.build_config.mode.is_doc_test() && !target.doctestable() {
+                    if mode.is_doc_test() && !target.doctestable() {
                         ws.config().shell().warn(format!(
                             "doc tests are not supported for crate type(s) `{}` in package `{}`",
                             target.rustc_crate_types().join(", "),
@@ -836,10 +849,10 @@ fn generate_targets<'a>(
                 FilterRule::All => Target::tested,
                 FilterRule::Just(_) => Target::is_test,
             };
-            let test_mode = match bcx.build_config.mode {
+            let test_mode = match mode {
                 CompileMode::Build => CompileMode::Test,
                 CompileMode::Check { .. } => CompileMode::Check { test: true },
-                _ => bcx.build_config.mode,
+                _ => mode,
             };
             // If `--benches` was specified, add all targets that would be
             // generated by `cargo bench`.
@@ -847,10 +860,10 @@ fn generate_targets<'a>(
                 FilterRule::All => Target::benched,
                 FilterRule::Just(_) => Target::is_bench,
             };
-            let bench_mode = match bcx.build_config.mode {
+            let bench_mode = match mode {
                 CompileMode::Build => CompileMode::Bench,
                 CompileMode::Check { .. } => CompileMode::Check { test: true },
-                _ => bcx.build_config.mode,
+                _ => mode,
             };
 
             proposals.extend(list_rule_targets(
@@ -858,14 +871,14 @@ fn generate_targets<'a>(
                 bins,
                 "bin",
                 Target::is_bin,
-                bcx.build_config.mode,
+                mode,
             )?);
             proposals.extend(list_rule_targets(
                 packages,
                 examples,
                 "example",
                 Target::is_example,
-                bcx.build_config.mode,
+                mode,
             )?);
             proposals.extend(list_rule_targets(
                 packages,
@@ -902,7 +915,7 @@ fn generate_targets<'a>(
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map.entry(pkg).or_insert_with(|| {
-                    resolve_all_features(resolve, resolved_features, bcx.packages, pkg.package_id())
+                    resolve_all_features(resolve, resolved_features, package_set, pkg.package_id())
                 });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }

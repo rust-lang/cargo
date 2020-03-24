@@ -87,10 +87,7 @@ pub struct Compilation<'cfg> {
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new<'a>(
-        bcx: &BuildContext<'a, 'cfg>,
-        default_kind: CompileKind,
-    ) -> CargoResult<Compilation<'cfg>> {
+    pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
         let mut rustc = bcx.rustc().process();
         let mut primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let mut rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
@@ -104,6 +101,7 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
+        let default_kind = bcx.build_config.requested_kind;
         Ok(Compilation {
             // TODO: deprecated; remove.
             native_dirs: BTreeSet::new(),

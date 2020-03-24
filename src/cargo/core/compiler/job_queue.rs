@@ -269,11 +269,11 @@ impl<'a> JobState<'a> {
 }
 
 impl<'a, 'cfg> JobQueue<'a, 'cfg> {
-    pub fn new(bcx: &BuildContext<'a, 'cfg>, root_units: &[Unit<'a>]) -> JobQueue<'a, 'cfg> {
+    pub fn new(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a, 'cfg> {
         JobQueue {
             queue: DependencyQueue::new(),
             counts: HashMap::new(),
-            timings: Timings::new(bcx, root_units),
+            timings: Timings::new(bcx, &bcx.roots),
         }
     }
 

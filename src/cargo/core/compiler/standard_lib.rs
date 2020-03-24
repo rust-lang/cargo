@@ -1,7 +1,8 @@
 //! Code for building the standard library.
 
-use crate::core::compiler::{BuildContext, CompileKind, CompileMode, RustcTargetData, Unit};
-use crate::core::profiles::UnitFor;
+use crate::core::compiler::UnitInterner;
+use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
@@ -120,20 +121,22 @@ pub fn resolve_std<'cfg>(
 /// Generate a list of root `Unit`s for the standard library.
 ///
 /// The given slice of crate names is the root set.
-pub fn generate_std_roots<'a>(
-    bcx: &BuildContext<'a, '_>,
+pub fn generate_std_roots<'unit>(
     crates: &[String],
-    std_resolve: &'a Resolve,
+    std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
     kind: CompileKind,
-) -> CargoResult<Vec<Unit<'a>>> {
+    package_set: &PackageSet<'_>,
+    interner: &'unit UnitInterner,
+    profiles: &Profiles,
+) -> CargoResult<Vec<Unit<'unit>>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;
     // Convert PackageId to Package.
-    let std_pkgs = bcx.packages.get_many(std_ids)?;
+    let std_pkgs = package_set.get_many(std_ids)?;
     // Generate a list of Units.
     std_pkgs
         .into_iter()
@@ -148,15 +151,11 @@ pub fn generate_std_roots<'a>(
             // in time is minimal, and the difference in caching is
             // significant.
             let mode = CompileMode::Build;
-            let profile = bcx.profiles.get_profile(
-                pkg.package_id(),
-                /*is_member*/ false,
-                unit_for,
-                mode,
-            );
+            let profile =
+                profiles.get_profile(pkg.package_id(), /*is_member*/ false, unit_for, mode);
             let features =
                 std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-            Ok(bcx.units.intern(
+            Ok(interner.intern(
                 pkg, lib, profile, kind, mode, features, /*is_std*/ true,
             ))
         })

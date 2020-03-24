@@ -65,12 +65,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     )?;
 
     if let Some(out_dir) = args.value_of_path("out-dir", config) {
-        compile_opts.export_dir = Some(out_dir);
+        compile_opts.build_config.export_dir = Some(out_dir);
     } else if let Some(out_dir) = config.build_config()?.out_dir.as_ref() {
         let out_dir = out_dir.resolve_path(config);
-        compile_opts.export_dir = Some(out_dir);
+        compile_opts.build_config.export_dir = Some(out_dir);
     }
-    if compile_opts.export_dir.is_some() {
+    if compile_opts.build_config.export_dir.is_some() {
         config
             .cli_unstable()
             .fail_if_stable_opt("--out-dir", 6790)?;

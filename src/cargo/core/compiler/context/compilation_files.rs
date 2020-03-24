@@ -119,15 +119,12 @@ impl OutputFile {
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
-        roots: &[Unit<'a>],
+        cx: &Context<'a, 'cfg>,
         host: Layout,
         target: HashMap<CompileTarget, Layout>,
-        export_dir: Option<PathBuf>,
-        ws: &'a Workspace<'cfg>,
-        cx: &Context<'a, 'cfg>,
     ) -> CompilationFiles<'a, 'cfg> {
         let mut metas = HashMap::new();
-        for unit in roots {
+        for unit in &cx.bcx.roots {
             metadata_of(unit, cx, &mut metas);
         }
         let outputs = metas
@@ -136,11 +133,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(|unit| (unit, LazyCell::new()))
             .collect();
         CompilationFiles {
-            ws,
+            ws: &cx.bcx.ws,
             host,
             target,
-            export_dir,
-            roots: roots.to_vec(),
+            export_dir: cx.bcx.build_config.export_dir.clone(),
+            roots: cx.bcx.roots.clone(),
             metas,
             outputs,
         }

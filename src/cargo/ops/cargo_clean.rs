@@ -4,8 +4,10 @@ use std::fs;
 use std::path::Path;
 
 use crate::core::compiler::unit_dependencies;
-use crate::core::compiler::{BuildConfig, BuildContext, CompileKind, CompileMode, Context};
-use crate::core::compiler::{RustcTargetData, UnitInterner};
+use crate::core::compiler::BuildContext;
+use crate::core::compiler::{
+    BuildConfig, CompileKind, CompileMode, Context, RustcTargetData, UnitInterner,
+};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::HasDevUnits;
 use crate::core::resolver::ResolveOpts;
@@ -91,16 +93,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     } = ws_resolve;
 
     let interner = UnitInterner::new();
-    let bcx = BuildContext::new(
-        ws,
-        &pkg_set,
-        opts.config,
-        &build_config,
-        profiles,
-        &interner,
-        HashMap::new(),
-        target_data,
-    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -114,15 +106,14 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                 for mode in CompileMode::all_modes() {
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
-                            bcx.profiles
-                                .get_profile_run_custom_build(&bcx.profiles.get_profile(
-                                    pkg.package_id(),
-                                    ws.is_member(pkg),
-                                    *unit_for,
-                                    CompileMode::Build,
-                                ))
+                            profiles.get_profile_run_custom_build(&profiles.get_profile(
+                                pkg.package_id(),
+                                ws.is_member(pkg),
+                                *unit_for,
+                                CompileMode::Build,
+                            ))
                         } else {
-                            bcx.profiles.get_profile(
+                            profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
                                 *unit_for,
@@ -134,7 +125,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                         let features_for = unit_for.map_to_features_for();
                         let features =
                             features.activated_features_unverified(pkg.package_id(), features_for);
-                        units.push(bcx.units.intern(
+                        units.push(interner.intern(
                             pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
                         ));
                     }
@@ -143,12 +134,34 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    let unit_dependencies =
-        unit_dependencies::build_unit_dependencies(&bcx, &resolve, &features, None, &units, &[])?;
-    let mut cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
-    cx.prepare_units(None, &units)?;
+    let unit_graph = unit_dependencies::build_unit_dependencies(
+        ws,
+        &pkg_set,
+        &resolve,
+        &features,
+        None,
+        &units,
+        &[],
+        build_config.mode,
+        &target_data,
+        &profiles,
+        &interner,
+    )?;
+    let extra_args = HashMap::new();
+    let bcx = BuildContext::new(
+        ws,
+        pkg_set,
+        &build_config,
+        profiles,
+        extra_args,
+        target_data,
+        units,
+        unit_graph,
+    )?;
+    let mut cx = Context::new(&bcx)?;
+    cx.prepare_units()?;
 
-    for unit in units.iter() {
+    for unit in &bcx.roots {
         if unit.mode.is_doc() || unit.mode.is_doc_test() {
             // Cleaning individual rustdoc crates is currently not supported.
             // For example, the search index would need to be rebuilt to fully

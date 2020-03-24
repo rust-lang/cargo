@@ -492,7 +492,6 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            export_dir: None,
         };
 
         if let Some(ws) = workspace {
