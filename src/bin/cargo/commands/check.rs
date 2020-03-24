@@ -12,6 +12,7 @@ pub fn cli() -> App {
             "Package(s) to check",
             "Check all packages in the workspace",
             "Exclude packages from the check",
+            "Exclude project sources from the check, but include all their external dependencies (unstable)",
         )
         .arg_jobs()
         .arg_targets_all(

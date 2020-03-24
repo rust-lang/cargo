@@ -196,6 +196,10 @@ impl Package {
     pub fn proc_macro(&self) -> bool {
         self.targets().iter().any(|target| target.proc_macro())
     }
+    /// Returns `true` if the source of package comes from filesystem.
+    pub fn is_local(&self) -> bool {
+        self.package_id().source_id().is_path()
+    }
 
     /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {

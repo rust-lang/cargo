@@ -69,6 +69,7 @@ mod minimal_versions;
 mod net_config;
 mod new;
 mod offline;
+mod only_external;
 mod out_dir;
 mod owner;
 mod package;

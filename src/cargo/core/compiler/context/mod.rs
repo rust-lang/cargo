@@ -129,6 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         units: &[Unit<'a>],
         export_dir: Option<PathBuf>,
         exec: &Arc<dyn Executor>,
+        build_only_external: bool,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx, units);
         let mut plan = BuildPlan::new();
@@ -145,7 +146,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // function which will run everything in order with proper
             // parallelism.
             let force_rebuild = self.bcx.build_config.force_rebuild;
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+            super::compile(
+                &mut self,
+                &mut queue,
+                &mut plan,
+                unit,
+                exec,
+                force_rebuild,
+                build_only_external,
+            )?;
         }
 
         // Now that we've got the full job queue and we've done all our

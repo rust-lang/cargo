@@ -495,7 +495,12 @@ pub fn compile_ws<'a>(
     let ret = {
         let _p = profile::start("compiling");
         let cx = Context::new(config, &bcx, unit_dependencies, build_config.requested_kind)?;
-        cx.compile(&units, export_dir.clone(), exec)?
+        cx.compile(
+            &units,
+            export_dir.clone(),
+            exec,
+            build_config.build_only_external,
+        )?
     };
 
     Ok(ret)

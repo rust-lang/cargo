@@ -45,6 +45,7 @@ pub fn cli() -> App {
             "Package to run tests for",
             "Test all packages in the workspace",
             "Exclude packages from the test",
+            "Exclude project sources from the test, but include all their external dependencies (unstable)",
         )
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
