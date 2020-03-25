@@ -2121,7 +2121,7 @@ fn freshness_ignores_excluded() {
     foo.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]) (build-script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2175,7 +2175,7 @@ fn rebuild_preserves_out_dir() {
         .env("FIRST", "1")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]) (build-script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -2185,7 +2185,7 @@ fn rebuild_preserves_out_dir() {
     foo.cargo("build")
         .with_stderr(
             "\
-[COMPILING BUILD SCRIPT] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]) (build-script)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )

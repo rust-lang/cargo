@@ -1225,7 +1225,7 @@ fn test_twice_with_build_cmd() {
     p.cargo("test")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD]) (build-script)
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo",

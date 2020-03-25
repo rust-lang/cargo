@@ -933,10 +933,10 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     self.compiled.insert(unit.pkg.package_id());
                     if unit.mode.is_check() {
                         config.shell().status("Checking", unit.pkg)?;
-                    } else if unit.mode.is_run_custom_build() {
+                    } else if unit.target.is_custom_build() {
                         config
                             .shell()
-                            .status("Compiling build script for", unit.pkg)?;
+                            .status("Compiling", format!("{} (build-script)", unit.pkg))?;
                     } else {
                         config.shell().status("Compiling", unit.pkg)?;
                     }

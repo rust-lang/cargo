@@ -198,7 +198,7 @@ fn build_script() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..]) (build-script)
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..]`

@@ -632,7 +632,7 @@ fn fixes_missing_ampersand() {
     p.cargo("fix --all-targets --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+        .with_stderr_contains("[COMPILING] foo v0.0.1 ([..]) (build-script)")
         .with_stderr_contains("[FIXING] build.rs (1 fix)")
         // Don't assert number of fixes for this one, as we don't know if we're
         // fixing it once or twice! We run this all concurrently, and if we

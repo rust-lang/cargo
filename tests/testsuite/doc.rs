@@ -29,7 +29,7 @@ fn simple() {
     p.cargo("doc")
         .with_stderr(
             "\
-[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD]) (build-script)
 [..] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

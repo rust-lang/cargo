@@ -1873,7 +1873,7 @@ fn simulated_docker_deps_stay_cached() {
 [FRESH] regdep_env [..]
 [FRESH] regdep_old_style [..]
 [FRESH] regdep_rerun [..]
-[COMPILING BUILD SCRIPT] foo [..]
+[COMPILING] foo [..] (build-script)
 [RUNNING] [..]/foo-[..]/build-script-build[..]
 [RUNNING] `rustc --crate-name foo[..]
 [FINISHED] [..]
@@ -2104,7 +2104,7 @@ fn rerun_if_changes() {
         .env("FOO", "1")
         .with_stderr(
             "\
-[COMPILING BUILD SCRIPT] foo [..]
+[COMPILING] foo [..] (build-script)
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] [..]
@@ -2121,7 +2121,7 @@ fn rerun_if_changes() {
         .env("BAR", "1")
         .with_stderr(
             "\
-[COMPILING BUILD SCRIPT] foo [..]
+[COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] [..]
@@ -2138,7 +2138,7 @@ fn rerun_if_changes() {
         .env("BAR", "2")
         .with_stderr(
             "\
-[COMPILING BUILD SCRIPT] foo [..]
+[COMPILING] foo [..]
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] [..]
