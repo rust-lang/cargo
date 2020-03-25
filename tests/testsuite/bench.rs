@@ -1022,7 +1022,7 @@ fn bench_twice_with_build_cmd() {
     p.cargo("bench")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD]) (build-script)
 [FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
         )

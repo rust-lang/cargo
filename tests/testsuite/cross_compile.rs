@@ -513,7 +513,7 @@ fn cross_with_a_build_script() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ([CWD])
+[COMPILING] foo v0.0.0 ([CWD]) (build-script)
 [RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
 [RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
@@ -609,7 +609,7 @@ fn build_script_needed_for_host_and_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1)")
+        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1) (build-script)")
         .with_stderr_contains(
             "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
         )
@@ -620,7 +620,7 @@ fn build_script_needed_for_host_and_target() {
             "[RUNNING] `rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
             host = host
         ))
-        .with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD])")
+        .with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD]) (build-script)")
         .with_stderr_contains(&format!(
             "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
              -L /path/to/{host}`",
@@ -756,7 +756,7 @@ fn plugin_build_script_right_arch() {
         .arg(cross_compile::alternate())
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..]) (build-script)
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -828,7 +828,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] d2/src/lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..]) (build-script)
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
