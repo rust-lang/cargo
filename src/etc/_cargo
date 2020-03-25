@@ -129,12 +129,6 @@ _cargo() {
                     _arguments -s -S $common $manifest
                         ;;
 
-                git-checkout)
-                    _arguments -s -S $common \
-                        '--reference=:reference' \
-                        '--url=:url:_urls'
-                        ;;
-
                 help)
                     _cargo_cmds
                         ;;
