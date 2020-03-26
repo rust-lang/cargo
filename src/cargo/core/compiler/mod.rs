@@ -113,48 +113,51 @@ fn compile<'a, 'cfg: 'a>(
         return Ok(());
     }
 
-    // Build up the work to be done to compile this unit, enqueuing it once
-    // we've got everything constructed.
-    let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
-    fingerprint::prepare_init(cx, unit)?;
+    let skipped_units = bcx.skip_units.borrow();
+    if !skipped_units.contains(unit) {
+        // Build up the work to be done to compile this unit, enqueuing it once
+        // we've got everything constructed.
+        let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
+        fingerprint::prepare_init(cx, unit)?;
 
-    let job = if unit.mode.is_run_custom_build() {
-        custom_build::prepare(cx, unit)?
-    } else if unit.mode.is_doc_test() {
-        // We run these targets later, so this is just a no-op for now.
-        Job::new(Work::noop(), Freshness::Fresh)
-    } else if build_plan {
-        Job::new(rustc(cx, unit, &exec.clone())?, Freshness::Dirty)
-    } else {
-        let force = exec.force_rebuild(unit) || force_rebuild;
-        let mut job = fingerprint::prepare_target(cx, unit, force)?;
-        job.before(if job.freshness() == Freshness::Dirty {
-            let work = if unit.mode.is_doc() {
-                rustdoc(cx, unit)?
-            } else {
-                rustc(cx, unit, exec)?
-            };
-            work.then(link_targets(cx, unit, false)?)
+        let job = if unit.mode.is_run_custom_build() {
+            custom_build::prepare(cx, unit)?
+        } else if unit.mode.is_doc_test() {
+            // We run these targets later, so this is just a no-op for now.
+            Job::new(Work::noop(), Freshness::Fresh)
+        } else if build_plan {
+            Job::new(rustc(cx, unit, &exec.clone())?, Freshness::Dirty)
         } else {
-            let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
-                replay_output_cache(
-                    unit.pkg.package_id(),
-                    unit.target,
-                    cx.files().message_cache_path(unit),
-                    cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().supports_color(),
-                )
+            let force = exec.force_rebuild(unit) || force_rebuild;
+            let mut job = fingerprint::prepare_target(cx, unit, force)?;
+            job.before(if job.freshness() == Freshness::Dirty {
+                let work = if unit.mode.is_doc() {
+                    rustdoc(cx, unit)?
+                } else {
+                    rustc(cx, unit, exec)?
+                };
+                work.then(link_targets(cx, unit, false)?)
             } else {
-                Work::noop()
-            };
-            // Need to link targets on both the dirty and fresh.
-            work.then(link_targets(cx, unit, true)?)
-        });
+                let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
+                    replay_output_cache(
+                        unit.pkg.package_id(),
+                        unit.target,
+                        cx.files().message_cache_path(unit),
+                        cx.bcx.build_config.message_format,
+                        cx.bcx.config.shell().supports_color(),
+                    )
+                } else {
+                    Work::noop()
+                };
+                // Need to link targets on both the dirty and fresh.
+                work.then(link_targets(cx, unit, true)?)
+            });
 
-        job
-    };
-    jobs.enqueue(cx, unit, job)?;
-    drop(p);
+            job
+        };
+        jobs.enqueue(cx, unit, job)?;
+        drop(p);
+    }
 
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.

@@ -6,7 +6,8 @@ use crate::core::{PackageId, PackageSet};
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
 use crate::util::Rustc;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str;
 
@@ -36,6 +37,9 @@ pub struct BuildContext<'a, 'cfg> {
 
     /// Information about rustc and the target platform.
     pub target_data: RustcTargetData,
+
+    /// Units which should be skipped, use in dependency builds
+    pub skip_units: RefCell<HashSet<Unit<'a>>>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -58,6 +62,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             extra_compiler_args,
             units,
             target_data,
+            skip_units: RefCell::new(HashSet::new()),
         })
     }
 

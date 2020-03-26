@@ -29,7 +29,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::core::compiler::standard_lib;
-use crate::core::compiler::unit_dependencies::build_unit_dependencies;
+use crate::core::compiler::unit_dependencies::{
+    build_unit_dependencies, filter_locals, filter_roots,
+};
 use crate::core::compiler::unit_graph;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
@@ -60,6 +62,10 @@ pub struct CompileOptions {
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
+    /// Only build dependencies of the selected packages
+    pub deps_only: bool,
+    /// Only build remote dependencies of the selected packages
+    pub deps_remote_only: bool,
     /// Extra arguments to be passed to rustdoc (single target only)
     pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
@@ -89,6 +95,8 @@ impl<'a> CompileOptions {
             filter: CompileFilter::Default {
                 required_features_filterable: false,
             },
+            deps_only: false,
+            deps_remote_only: false,
             target_rustdoc_args: None,
             target_rustc_args: None,
             local_rustdoc_args: None,
@@ -268,6 +276,8 @@ pub fn compile_ws<'a>(
         all_features,
         no_default_features,
         ref filter,
+        deps_only,
+        deps_remote_only,
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref local_rustdoc_args,
@@ -486,6 +496,12 @@ pub fn compile_ws<'a>(
         &units,
         &std_roots,
     )?;
+
+    if deps_only {
+        filter_roots(&bcx, ws, &unit_dependencies);
+    } else if deps_remote_only {
+        filter_locals(&bcx, &unit_dependencies);
+    }
 
     if bcx.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&units, &unit_dependencies)?;

@@ -712,6 +712,8 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,
             },
+            deps_only: false,
+            deps_remote_only: false,
             target_rustdoc_args: None,
             target_rustc_args: rustc_args,
             local_rustdoc_args: None,

@@ -22,10 +22,11 @@ use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
-use crate::core::{InternedString, Package, PackageId, Target};
+use crate::core::{InternedString, Package, PackageId, Target, Workspace};
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'cfg> {
@@ -711,4 +712,53 @@ impl<'a, 'cfg> State<'a, 'cfg> {
             .get_one(id)
             .unwrap_or_else(|_| panic!("expected {} to be downloaded", id))
     }
+}
+
+pub fn filter_roots<'a, 'cfg>(
+    bcx: &BuildContext<'a, 'cfg>,
+    ws: &Workspace<'cfg>,
+    graph: &UnitGraph<'a>,
+) {
+    let ws_members = graph.keys().filter(|unit| ws.is_member(unit.pkg)).cloned();
+    let root_set = HashSet::<_>::from_iter(ws_members);
+    bcx.skip_units.replace(root_set);
+}
+
+pub fn filter_locals<'a, 'cfg>(bcx: &BuildContext<'a, 'cfg>, graph: &UnitGraph<'a>) {
+    fn is_local(unit: &Unit<'_>) -> bool {
+        unit.pkg.package_id().source_id().is_path()
+    }
+
+    // Construct a hashset of local units to be skipped
+    let iter_locals = graph.keys().filter(|ref unit| is_local(unit)).cloned();
+    let mut to_skip = HashSet::<_>::from_iter(iter_locals);
+
+    // Not all local dependencies can always be skipped.
+    // When a local dependency is a patch of a remote one,
+    // we can't remove it if another remote package depends on the patched one.
+    // Here we look at all remote pkgs, go through their dependencies,
+    // and remove the local ones from the to_skip set.
+    // This needs to be done recursively, because a dependency may be patched
+    // along with some of its transitive dependencies, this would typically
+    // happen with a workspace package and/or a package with proc macros.
+    fn unskip_deps_of<'a>(
+        unit: &Unit<'a>,
+        to_remove: &mut HashSet<Unit<'a>>,
+        graph: &UnitGraph<'a>,
+    ) {
+        let deps = &graph[unit];
+        for dep in deps {
+            if is_local(&dep.unit) {
+                to_remove.remove(&dep.unit);
+                unskip_deps_of(&dep.unit, to_remove, graph);
+            }
+        }
+    }
+    for unit in graph.keys() {
+        if !is_local(&unit) {
+            unskip_deps_of(unit, &mut to_skip, graph);
+        }
+    }
+
+    bcx.skip_units.replace(to_skip);
 }

@@ -42,6 +42,8 @@ pub fn cli() -> App {
         .arg_message_format()
         .arg_build_plan()
         .arg_unit_graph()
+        .arg_deps()
+        .arg_deps_remote()
         .after_help(
             "\
 All packages in the workspace are built if the `--workspace` flag is supplied. The
@@ -63,6 +65,19 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(&ws),
         ProfileChecking::Checked,
     )?;
+
+    compile_opts.deps_only = args.is_present_with_zero_values("dependencies");
+    if compile_opts.deps_only {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--dependencies", 2644)?;
+    };
+    compile_opts.deps_remote_only = args.is_present_with_zero_values("remote-dependencies");
+    if compile_opts.deps_only {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--remote-dependencies", 2644)?;
+    };
 
     if let Some(out_dir) = args.value_of_path("out-dir", config) {
         compile_opts.export_dir = Some(out_dir);

@@ -154,6 +154,20 @@ pub trait AppExt: Sized {
         self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
     }
 
+    fn arg_deps(self) -> Self {
+        self._arg(opt(
+            "dependencies",
+            "Build dependencies of the selected packages (unstable)",
+        ).conflicts_with("remote-dependencies"))
+    }
+
+    fn arg_deps_remote(self) -> Self {
+        self._arg(opt(
+            "remote-dependencies",
+            "Build remote dependencies of the selected packages (unstable)",
+        ).conflicts_with("dependencies"))
+    }
+
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -472,6 +486,8 @@ pub trait ArgMatchesExt {
                 self._is_present("benches"),
                 self._is_present("all-targets"),
             ),
+            deps_only: false,
+            deps_remote_only: false,
             target_rustdoc_args: None,
             target_rustc_args: None,
             local_rustdoc_args: None,
