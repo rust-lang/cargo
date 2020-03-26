@@ -56,7 +56,6 @@ _cargo()
 	local opt__fetch="$opt_common $opt_mani $opt_lock --target"
 	local opt__fix="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_jobs $opt_targets $opt_lock --release --target --message-format --broken-code --edition --edition-idioms --allow-no-vcs --allow-dirty --allow-staged --profile --target-dir"
 	local opt__generate_lockfile="$opt_common $opt_mani $opt_lock"
-	local opt__git_checkout="$opt_common $opt_lock --reference --url"
 	local opt__help="$opt_help"
 	local opt__init="$opt_common $opt_lock --bin --lib --name --vcs --edition --registry"
 	local opt__install="$opt_common $opt_feat $opt_jobs $opt_lock $opt_force --bin --bins --branch --debug --example --examples --git --list --path --rev --root --tag --version --registry --target --profile --no-track"
