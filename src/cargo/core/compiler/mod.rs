@@ -653,8 +653,6 @@ fn crate_version_flag_already_present(rustdoc: &ProcessBuilder) -> bool {
 
 fn append_crate_version_flag(unit: &Unit<'_>, rustdoc: &mut ProcessBuilder) {
     rustdoc
-        .arg("-Z")
-        .arg("unstable-options")
         .arg(RUSTDOC_CRATE_VERSION_FLAG)
         .arg(unit.pkg.version().to_string());
 }
