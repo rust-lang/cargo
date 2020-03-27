@@ -23,6 +23,7 @@ use crate::core::profiles::{Profile, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
 use crate::core::{InternedString, Package, PackageId, Target};
+use crate::ops::resolve_all_features;
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
@@ -309,13 +310,20 @@ fn compute_deps<'a, 'cfg>(
                 .targets()
                 .iter()
                 .filter(|t| {
-                    let no_required_features = Vec::new();
-
-                    t.is_bin() &&
-                        // Skip binaries with required features that have not been selected.
-                        t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                            unit.features.contains(&InternedString::new(f.as_str()))
-                        })
+                    // Skip binaries with required features that have not been selected.
+                    match t.required_features() {
+                        Some(rf) if t.is_bin() => {
+                            let features = resolve_all_features(
+                                state.resolve(),
+                                state.features(),
+                                bcx.packages,
+                                id,
+                            );
+                            rf.iter().all(|f| features.contains(f))
+                        }
+                        None if t.is_bin() => true,
+                        _ => false,
+                    }
                 })
                 .map(|t| {
                     new_unit_dep(
@@ -692,16 +700,20 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         }
     }
 
+    fn features(&self) -> &'a ResolvedFeatures {
+        if self.is_std {
+            self.std_features.unwrap()
+        } else {
+            self.usr_features
+        }
+    }
+
     fn activated_features(
         &self,
         pkg_id: PackageId,
         features_for: FeaturesFor,
     ) -> Vec<InternedString> {
-        let features = if self.is_std {
-            self.std_features.unwrap()
-        } else {
-            self.usr_features
-        };
+        let features = self.features();
         features.activated_features(pkg_id, features_for)
     }
 
