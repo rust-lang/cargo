@@ -4,6 +4,7 @@ use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
 use cargo_test_support::is_nightly;
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
 
 #[cargo_test]
@@ -910,7 +911,17 @@ fn dep_feature_in_cmd_line() {
         )
         .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
-        .file("tests/foo.rs", "#[test]\nfn test() {}")
+        .file(
+            "tests/foo.rs",
+            r#"
+            #[test]
+            fn bin_is_built() {
+                let s = format!("target/debug/foo{}", std::env::consts::EXE_SUFFIX);
+                let p = std::path::Path::new(&s);
+                assert!(p.exists(), "foo does not exist");
+            }
+            "#,
+        )
         .file(
             "benches/foo.rs",
             r#"
@@ -936,7 +947,9 @@ fn dep_feature_in_cmd_line() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    // This is a no-op
+    p.cargo("build").with_stderr("[FINISHED] dev [..]").run();
+    assert!(!p.bin("foo").is_file());
 
     // bin
     p.cargo("build --bin=foo")
@@ -967,19 +980,23 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     assert!(p.bin("examples/foo").is_file());
 
     // test
+    // This is a no-op, since no tests are enabled
     p.cargo("test")
         .with_stderr("[FINISHED] test [unoptimized + debuginfo] target(s) in [..]")
         .with_stdout("")
         .run();
 
+    // Delete the target directory so this can check if the main.rs gets built.
+    p.build_dir().rm_rf();
     p.cargo("test --test=foo --features bar/a")
         .with_stderr(
             "\
+[COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
         )
-        .with_stdout_contains("test test ... ok")
+        .with_stdout_contains("test bin_is_built ... ok")
         .run();
 
     // bench
