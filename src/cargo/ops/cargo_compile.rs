@@ -949,7 +949,7 @@ fn generate_targets<'a>(
 ///
 /// Dependencies are added as `dep_name/feat_name` because `required-features`
 /// wants to support that syntax.
-fn resolve_all_features(
+pub fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     resolved_features: &features::ResolvedFeatures,
     package_set: &PackageSet<'_>,
