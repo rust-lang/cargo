@@ -298,7 +298,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let member_features = self.ws.members_with_features(specs, requested_features)?;
         for (member, requested_features) in &member_features {
             let fvs = self.fvs_from_requested(member.package_id(), requested_features);
-            let for_host = self.opts.decouple_host_deps && self.is_proc_macro(member.package_id());
+            let for_host = self.is_proc_macro(member.package_id());
             self.activate_pkg(member.package_id(), &fvs, for_host)?;
             if for_host {
                 // Also activate without for_host. This is needed if the
@@ -324,7 +324,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
         self.activated_features
-            .entry((pkg_id, for_host))
+            .entry((pkg_id, self.opts.decouple_host_deps && for_host))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
             self.activate_fv(pkg_id, fv, for_host)?;
@@ -418,7 +418,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> CargoResult<()> {
         let enabled = self
             .activated_features
-            .entry((pkg_id, for_host))
+            .entry((pkg_id, self.opts.decouple_host_deps && for_host))
             .or_insert_with(BTreeSet::new);
         if !enabled.insert(feature_to_enable) {
             // Already enabled.
@@ -541,8 +541,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         true
                     })
                     .map(|dep| {
-                        let dep_for_host = for_host
-                            || (self.opts.decouple_host_deps && (dep.is_build() || is_proc_macro));
+                        let dep_for_host = for_host || dep.is_build() || is_proc_macro;
                         (dep, dep_for_host)
                     })
                     .collect::<Vec<_>>();
