@@ -1,8 +1,9 @@
 //! Tests for the new feature resolver.
 
+use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, rustc_host};
 
 #[cargo_test]
 fn inactivate_targets() {
@@ -180,6 +181,49 @@ fn inactive_target_optional() {
     p.cargo("run -Zfeatures=itarget --features common")
         .masquerade_as_nightly_cargo()
         .with_stdout("common")
+        .run();
+}
+
+#[cargo_test]
+fn itarget_proc_macro() {
+    // itarget inside a proc-macro while cross-compiling
+    if cross_compile::disabled() {
+        return;
+    }
+    Package::new("hostdep", "1.0.0").publish();
+    Package::new("pm", "1.0.0")
+        .proc_macro(true)
+        .target_dep("hostdep", "1.0", &rustc_host())
+        .file("src/lib.rs", "extern crate hostdep;")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pm = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("check -Zfeatures=itarget")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("check --target").arg(alternate()).run();
+    p.cargo("check -Zfeatures=itarget --target")
+        .arg(alternate())
+        .masquerade_as_nightly_cargo()
+        .run();
+    // For good measure, just make sure things don't break.
+    p.cargo("check -Zfeatures=all --target")
+        .arg(alternate())
+        .masquerade_as_nightly_cargo()
         .run();
 }
 
@@ -1183,5 +1227,65 @@ fn has_dev_dep_for_test() {
 [FINISHED] [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn build_dep_activated() {
+    // Build dependencies always match the host for [target.*.build-dependencies].
+    if cross_compile::disabled() {
+        return;
+    }
+    Package::new("somedep", "1.0.0")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("targetdep", "1.0.0").publish();
+    Package::new("hostdep", "1.0.0")
+        // Check that "for_host" is sticky.
+        .target_dep("somedep", "1.0", &rustc_host())
+        .feature("feat1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            extern crate somedep;
+
+            #[cfg(not(feature="feat1"))]
+            compile_error!{"feat1 missing"}
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            # This should never be selected.
+            [target.'{}'.build-dependencies]
+            targetdep = "1.0"
+
+            [target.'{}'.build-dependencies]
+            hostdep = {{version="1.0", features=["feat1"]}}
+            "#,
+                alternate(),
+                rustc_host()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("check -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("check --target").arg(alternate()).run();
+    p.cargo("check -Zfeatures=all --target")
+        .arg(alternate())
+        .masquerade_as_nightly_cargo()
         .run();
 }
