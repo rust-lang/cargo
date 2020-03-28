@@ -517,7 +517,7 @@ fn is_installed(
 /// Checks if vers can only be satisfied by exactly one version of a package in a registry, and it's
 /// already installed. If this is the case, we can skip interacting with a registry to check if
 /// newer versions may be installable, as no newer version can exist.
-fn installed_exact_package<'a, T>(
+fn installed_exact_package<T>(
     krate: &Option<&str>,
     vers: &VersionReq,
     source: &mut T,
@@ -528,7 +528,7 @@ fn installed_exact_package<'a, T>(
     force: bool,
 ) -> CargoResult<Option<Package>>
 where
-    T: Source + 'a,
+    T: Source,
 {
     if krate.is_none() {
         // We can't check for an installed crate if we don't know the crate name.

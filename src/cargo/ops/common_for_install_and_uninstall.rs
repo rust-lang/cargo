@@ -521,7 +521,7 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
 }
 
 /// Gets a Package based on command-line requirements.
-pub fn select_pkg<'a, T>(
+pub fn select_pkg<T>(
     source: &mut T,
     name: Option<&str>,
     vers: Option<&VersionReq>,
@@ -530,7 +530,7 @@ pub fn select_pkg<'a, T>(
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
 ) -> CargoResult<Package>
 where
-    T: Source + 'a,
+    T: Source,
 {
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
