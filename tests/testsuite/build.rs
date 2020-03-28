@@ -493,6 +493,41 @@ Caused by:
 }
 
 #[cargo_test]
+fn cargo_compile_with_uppercase_o_in_dep_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            crossbeam = "O.0.2"
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  failed to parse the version requirement `O.0.2` for dependency `crossbeam`
+
+Caused by:
+  requirement `O.0.2` contains uppercase 'o' `O` instead of zero `0`
+
+Caused by:
+  the given version requirement is invalid
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_without_manifest() {
     let p = project().no_manifest().build();
 

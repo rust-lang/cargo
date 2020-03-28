@@ -126,7 +126,17 @@ this warning.
         }
         Err(e) => {
             let err: CargoResult<VersionReq> = Err(e.into());
-            let v: VersionReq = err.chain_err(|| {
+            let v = if req.contains('O') {
+                err.chain_err(|| {
+                    format!(
+                        "requirement `{}` contains uppercase 'o' `O` instead of zero `0`",
+                        req
+                    )
+                })
+            } else {
+                err
+            };
+            let v = v.chain_err(|| {
                 format!(
                     "failed to parse the version requirement `{}` for dependency `{}`",
                     req, name
