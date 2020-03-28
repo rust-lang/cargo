@@ -524,7 +524,7 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
 pub fn select_pkg<'a, T>(
     source: &mut T,
     name: Option<&str>,
-    vers: Option<VersionReq>,
+    vers: Option<&VersionReq>,
     config: &Config,
     needs_update: bool,
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,

@@ -155,13 +155,6 @@ fn install_one(
 ) -> CargoResult<bool> {
     let dst = root.join("bin").into_path_unlocked();
 
-    let is_installed = |pkg: &Package, rustc: &Rustc, target: &str| -> CargoResult<bool> {
-        let tracker = InstallTracker::load(config, root)?;
-        let (freshness, _duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, target, &rustc.verbose_version)?;
-        Ok(freshness == Freshness::Fresh)
-    };
-
     let pkg = if source_id.is_git() {
         select_pkg(
             &mut GitSource::new(source_id, config)?,
@@ -203,40 +196,27 @@ fn install_one(
     } else {
         let mut source = map.load(source_id, &HashSet::new())?;
         let vers = if let Some(vers) = vers {
-            Some(parse_semver_req(vers)?)
+            let vers = parse_semver_req(vers)?;
+            if let Ok(Some(pkg)) =
+                installed_exact_package(&krate, &vers, &mut source, config, opts, root, &dst, force)
+            {
+                let msg = format!(
+                    "package `{}` is already installed, use --force to override",
+                    pkg
+                );
+                config.shell().status("Ignored", &msg)?;
+                return Ok(true);
+            }
+            Some(vers)
         } else if source.source_id().is_registry() {
             Some(VersionReq::any())
         } else {
             None
         };
-        if krate.is_some() && !no_track {
-            if let Some(vers) = vers.clone() {
-                if vers.is_exact() {
-                    if let Ok(pkg) =
-                        select_pkg(&mut source, krate, Some(vers), config, false, &mut |_| {
-                            bail!("(Ignored)")
-                        })
-                    {
-                        let (_ws, rustc, target) =
-                            make_ws_rustc_target(&config, opts, &source_id, pkg.clone())?;
-                        if let Ok(installed) = is_installed(&pkg, &rustc, &target) {
-                            if installed {
-                                let msg = format!(
-                                    "package `{}` is already installed, use --force to override",
-                                    pkg
-                                );
-                                config.shell().status("Ignored", &msg)?;
-                                return Ok(true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
         select_pkg(
             &mut source,
             krate,
-            vers,
+            vers.as_ref(),
             config,
             needs_update_if_source_is_index,
             &mut |_| {
@@ -325,7 +305,7 @@ fn install_one(
         // Check for conflicts.
         no_track_duplicates()?;
     } else {
-        if is_installed(&pkg, &rustc, &target)? {
+        if is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force)? {
             let msg = format!(
                 "package `{}` is already installed, use --force to override",
                 pkg
@@ -516,6 +496,65 @@ fn install_one(
         }
         Ok(false)
     }
+}
+
+fn is_installed(
+    pkg: &Package,
+    config: &Config,
+    opts: &ops::CompileOptions,
+    rustc: &Rustc,
+    target: &str,
+    root: &Filesystem,
+    dst: &Path,
+    force: bool,
+) -> CargoResult<bool> {
+    let tracker = InstallTracker::load(config, root)?;
+    let (freshness, _duplicates) =
+        tracker.check_upgrade(dst, pkg, force, opts, target, &rustc.verbose_version)?;
+    Ok(freshness == Freshness::Fresh)
+}
+
+/// Checks if vers can only be satisfied by exactly one version of a package in a registry, and it's
+/// already installed. If this is the case, we can skip interacting with a registry to check if
+/// newer versions may be installable, as no newer version can exist.
+fn installed_exact_package<'a, T>(
+    krate: &Option<&str>,
+    vers: &VersionReq,
+    source: &mut T,
+    config: &Config,
+    opts: &ops::CompileOptions,
+    root: &Filesystem,
+    dst: &Path,
+    force: bool,
+) -> CargoResult<Option<Package>>
+where
+    T: Source + 'a,
+{
+    if krate.is_none() {
+        // We can't check for an installed crate if we don't know the crate name.
+        return Ok(None);
+    }
+    if !vers.is_exact() {
+        // If the version isn't exact, we may need to update the registry and look for a newer
+        // version - we can't know if the package is installed without doing so.
+        return Ok(None);
+    }
+    // Try getting the package from the registry  without updating it, to avoid a potentially
+    // expensive network call in the case that the package is already installed.
+    // If this fails, the caller will possibly do an index update and try again, this is just a
+    // best-effort check to see if we can avoid hitting the network.
+    if let Ok(pkg) = select_pkg(source, *krate, Some(vers), config, false, &mut |_| {
+        // Don't try to do anything clever here - if this function returns false, the caller will do
+        // a more in-depth check possibly including an update from the index.
+        bail!("(Ignored)")
+    }) {
+        let (_ws, rustc, target) =
+            make_ws_rustc_target(&config, opts, &source.source_id(), pkg.clone())?;
+        if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force) {
+            return Ok(Some(pkg));
+        }
+    }
+    Ok(None)
 }
 
 fn make_ws_rustc_target<'cfg>(
