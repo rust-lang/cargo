@@ -379,7 +379,7 @@ impl ColorChoice {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))]
+#[cfg(unix)]
 mod imp {
     use super::Shell;
     use std::mem;
@@ -405,18 +405,6 @@ mod imp {
         // to the end of line.
         // https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
         let _ = shell.err.as_write().write_all(b"\x1B[K");
-    }
-}
-
-#[cfg(all(
-    unix,
-    not(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))
-))]
-mod imp {
-    pub(super) use super::default_err_erase_line as err_erase_line;
-
-    pub fn stderr_width() -> Option<usize> {
-        None
     }
 }
 
@@ -476,13 +464,7 @@ mod imp {
     }
 }
 
-#[cfg(any(
-    all(
-        unix,
-        not(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))
-    ),
-    windows,
-))]
+#[cfg(windows)]
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);
