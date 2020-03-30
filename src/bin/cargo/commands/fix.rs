@@ -10,7 +10,7 @@ pub fn cli() -> App {
             "Package(s) to fix",
             "Fix all packages in the workspace",
             "Exclude packages from the fixes",
-            "Exclude project sources from the fixes, but include all their external dependencies (unstable)",
+            "Exclude project sources from the fixes (unstable)",
         )
         .arg_jobs()
         .arg_targets_all(

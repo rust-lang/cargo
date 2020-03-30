@@ -33,7 +33,7 @@ pub fn cli() -> App {
             "Package to run benchmarks for",
             "Benchmark all packages in the workspace",
             "Exclude packages from the benchmark",
-            "Exclude project sources from the benchmark, but include all their external dependencies (unstable)",
+            "Exclude project sources from the benchmark (unstable)",
         )
         .arg_jobs()
         .arg_features()

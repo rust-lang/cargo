@@ -12,7 +12,7 @@ pub fn cli() -> App {
             "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",
             "Exclude packages from the build",
-            "Exclude project sources from the build, but include all their external dependencies (unstable)",
+            "Exclude project sources from the build (unstable)",
         )
         .arg_jobs()
         .arg_targets_all(

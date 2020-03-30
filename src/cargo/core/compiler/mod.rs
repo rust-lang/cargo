@@ -106,7 +106,7 @@ fn compile<'a, 'cfg: 'a>(
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
-    build_only_external: bool,
+    exclude_project_sources: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
@@ -114,7 +114,7 @@ fn compile<'a, 'cfg: 'a>(
         return Ok(());
     }
 
-    let unit_excluded = build_only_external && unit.pkg.is_local();
+    let unit_excluded = exclude_project_sources && unit.pkg.is_local();
 
     if !unit_excluded {
         // Build up the work to be done to compile this unit, enqueuing it once
@@ -164,7 +164,15 @@ fn compile<'a, 'cfg: 'a>(
     // Be sure to compile all dependencies of this target as well even if the target itself is excluded.
     let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(cx, jobs, plan, &dep.unit, exec, false, build_only_external)?;
+        compile(
+            cx,
+            jobs,
+            plan,
+            &dep.unit,
+            exec,
+            false,
+            exclude_project_sources,
+        )?;
     }
     if build_plan && !unit_excluded {
         plan.add(cx, unit)?;

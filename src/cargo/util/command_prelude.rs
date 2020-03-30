@@ -30,13 +30,16 @@ pub trait AppExt: Sized {
         package: &'static str,
         all: &'static str,
         exclude: &'static str,
-        build_only_external: &'static str,
+        exclude_project_sources: &'static str,
     ) -> Self {
         self.arg_package_spec_simple(package)
             ._arg(opt("all", "Alias for --workspace (deprecated)"))
             ._arg(opt("workspace", all))
             ._arg(multi_opt("exclude", "SPEC", exclude))
-            ._arg(opt("only-external", build_only_external))
+            ._arg(opt(
+                "exclude-project-sources",
+                exclude_project_sources,
+            ))
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
@@ -455,11 +458,11 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
-        build_config.build_only_external = self._is_present("only-external");
-        if build_config.build_only_external {
+        build_config.exclude_project_sources = self._is_present("exclude-project-sources");
+        if build_config.exclude_project_sources {
             config
                 .cli_unstable()
-                .fail_if_stable_opt("--only-external", 2644)?;
+                .fail_if_stable_opt("--exclude-project-sources", 2644)?;
         };
 
         let opts = CompileOptions {

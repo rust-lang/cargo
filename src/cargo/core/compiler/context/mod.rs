@@ -129,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         units: &[Unit<'a>],
         export_dir: Option<PathBuf>,
         exec: &Arc<dyn Executor>,
-        build_only_external: bool,
+        exclude_project_sources: bool,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx, units);
         let mut plan = BuildPlan::new();
@@ -153,7 +153,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 unit,
                 exec,
                 force_rebuild,
-                build_only_external,
+                exclude_project_sources,
             )?;
         }
 

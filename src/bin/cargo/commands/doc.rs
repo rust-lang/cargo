@@ -14,7 +14,7 @@ pub fn cli() -> App {
             "Package to document",
             "Document all packages in the workspace",
             "Exclude packages from the build",
-            "Exclude project sources from the build, but include all their external dependencies (unstable)",
+            "Exclude project sources from the build (unstable)",
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg(opt("document-private-items", "Document private items"))

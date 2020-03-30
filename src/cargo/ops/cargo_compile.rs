@@ -499,7 +499,7 @@ pub fn compile_ws<'a>(
             &units,
             export_dir.clone(),
             exec,
-            build_config.build_only_external,
+            build_config.exclude_project_sources,
         )?
     };
 

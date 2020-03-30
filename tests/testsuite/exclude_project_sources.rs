@@ -1,10 +1,10 @@
-//! Tests for --only-external feature.
+//! Tests for --exclude-project-sources feature.
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, git, project};
 
 #[cargo_test]
-fn build_only_external_when_all_projects_are_local() {
+fn exclude_project_sources_when_there_are_no_external_dependencies() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -32,7 +32,7 @@ fn build_only_external_when_all_projects_are_local() {
 
     p.cargo("clean").run();
 
-    p.cargo("build --only-external -Z unstable-options")
+    p.cargo("build --exclude-project-sources -Z unstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("[COMPILING] foo [..]")
         .with_stderr_does_not_contain("[COMPILING] bar [..]")
@@ -44,7 +44,7 @@ fn build_only_external_when_all_projects_are_local() {
 }
 
 #[cargo_test]
-fn build_only_external_when_there_are_some_external_project() {
+fn exclude_project_sources_when_there_are_external_dependencies() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -74,7 +74,7 @@ fn build_only_external_when_there_are_some_external_project() {
 
     p.cargo("clean").run();
 
-    p.cargo("build --only-external -Z unstable-options")
+    p.cargo("build --exclude-project-sources -Z unstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("[COMPILING] foo [..]")
         .with_stderr_contains("[COMPILING] bar [..]")
@@ -87,7 +87,7 @@ fn build_only_external_when_there_are_some_external_project() {
 }
 
 #[cargo_test]
-fn build_only_external_when_there_are_transitive_external_dependencies() {
+fn exclude_project_sources_when_there_are_transitive_external_dependencies() {
     let transitive = git::new("baz", |project| {
         project
             .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
@@ -132,7 +132,7 @@ fn build_only_external_when_there_are_transitive_external_dependencies() {
 
     p.cargo("clean").run();
 
-    p.cargo("build --only-external -Z unstable-options")
+    p.cargo("build --exclude-project-sources -Z unstable-options")
         .masquerade_as_nightly_cargo()
         .with_stderr_does_not_contain("[COMPILING] foo [..]")
         .with_stderr_does_not_contain("[COMPILING] bar [..]")
