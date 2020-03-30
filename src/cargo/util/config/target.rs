@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
-/// Config definition of a [target.'cfg(…)'] table.
+/// Config definition of a `[target.'cfg(…)']` table.
 ///
 /// This is a subset of `TargetConfig`.
 #[derive(Debug, Deserialize)]
@@ -19,7 +19,7 @@ pub struct TargetCfgConfig {
     pub other: BTreeMap<String, toml::Value>,
 }
 
-/// Config definition of a [target] table.
+/// Config definition of a `[target]` table.
 #[derive(Debug)]
 pub struct TargetConfig {
     /// Process to run as a wrapper for `cargo run`, `test`, and `bench` commands.
