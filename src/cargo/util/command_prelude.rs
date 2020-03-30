@@ -36,10 +36,7 @@ pub trait AppExt: Sized {
             ._arg(opt("all", "Alias for --workspace (deprecated)"))
             ._arg(opt("workspace", all))
             ._arg(multi_opt("exclude", "SPEC", exclude))
-            ._arg(opt(
-                "exclude-project-sources",
-                exclude_project_sources,
-            ))
+            ._arg(opt("exclude-project-sources", exclude_project_sources))
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
