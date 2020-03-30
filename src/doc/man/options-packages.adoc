@@ -25,7 +25,7 @@ virtual workspace will include all workspace members (equivalent to passing
     `--workspace` flag. This flag may be specified multiple times.
 
 *--exclude-project-sources*::
-    Exclude project sources but include _all_ their git and registry dependencies. This option allows building project dependencies separately, and storing their binaries in a Docker image for later use.
+    Exclude project sources, while keeping _all_ their git and registry dependencies included. This option is designed for building project dependencies separately, and storing their binaries in a Docker image for later use.
 +
 This option is unstable and available only on the
 link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel]
