@@ -28,7 +28,7 @@ current directory.
 
 == OPTIONS
 
-=== Owner Options
+=== Yank Options
 
 *--vers* _VERSION_::
     The version to yank or un-yank.
