@@ -122,7 +122,8 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
 
     // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
     // bounds' access by making sure the index is within the array bounds.
-    let last_tail_index = last.highlight_end.min(last.text.len()) - 1;
+    // `saturating_sub` is used in case of an empty file
+    let last_tail_index = last.highlight_end.min(last.text.len()).saturating_sub(1);
     let last_slice = last.text.chars().collect::<Vec<char>>();
 
     if span.text.len() > 1 {
