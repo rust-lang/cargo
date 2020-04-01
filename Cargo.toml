@@ -27,6 +27,7 @@ crossbeam-utils = "0.7"
 crypto-hash = "0.3.1"
 curl = { version = "0.4.23", features = ["http2"] }
 curl-sys = "0.4.22"
+directories = "2.0"
 env_logger = "0.7.0"
 pretty_env_logger = { version = "0.4", optional = true }
 anyhow = "1.0"

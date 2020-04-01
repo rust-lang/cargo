@@ -138,7 +138,7 @@ fn new_credentials_is_used_instead_old() {
         .arg(TOKEN)
         .run();
 
-    let mut config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    let mut config = Config::new(Shell::new(), cargo_home(), cargo_home()).unwrap();
     let _ = config.values();
     let _ = config.load_credentials();
 
