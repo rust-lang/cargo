@@ -193,7 +193,7 @@ fn linker() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name foo src/foo.rs [..]--crate-type bin \
-    --emit=[..]link -C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
     --target {target} \

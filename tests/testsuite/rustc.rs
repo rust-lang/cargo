@@ -18,7 +18,7 @@ fn build_lib_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -40,7 +40,7 @@ fn lib() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
@@ -63,12 +63,12 @@ fn build_main_and_allow_unstable_options() {
             "\
 [COMPILING] {name} v{version} ([CWD])
 [RUNNING] `rustc --crate-name {name} src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs [..]--crate-type bin \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
@@ -108,10 +108,10 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src/bin/bar.rs [..]--crate-type bin --emit=[..]link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]\
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -147,10 +147,10 @@ fn build_with_args_to_one_of_multiple_tests() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link \
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -261,7 +261,7 @@ fn targets_selected_all() {
         )
         // unit test
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();

@@ -1230,6 +1230,14 @@ impl Execs {
             }
             MatchKind::Unordered => {
                 let mut a = actual.lines().collect::<Vec<_>>();
+                // match more-constrained lines first, although in theory we'll
+                // need some sort of recursive match here. This handles the case
+                // that you expect "a\n[..]b" and two lines are printed out,
+                // "ab\n"a", where technically we do match unordered but a naive
+                // search fails to find this. This simple sort at least gets the
+                // test suite to pass for now, but we may need to get more fancy
+                // if tests start failing again.
+                a.sort_by_key(|s| s.len());
                 let e = out.lines();
 
                 for e_line in e {

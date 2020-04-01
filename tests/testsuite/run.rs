@@ -632,14 +632,14 @@ fn example_with_release_flag() {
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link \
-        -C opt-level=3 \
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/deps \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
         --emit=[..]link \
-        -C opt-level=3 \
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/examples \
         -L dependency=[CWD]/target/release/deps \
@@ -660,14 +660,14 @@ fast2",
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs [..]--crate-type lib \
-        --emit=[..]link \
+        --emit=[..]link[..]\
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/deps \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
-        --emit=[..]link \
+        --emit=[..]link[..]\
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/examples \
