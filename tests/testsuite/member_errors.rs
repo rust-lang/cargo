@@ -149,7 +149,8 @@ fn member_manifest_version_error() {
         Shell::from_write(Box::new(Vec::new())),
         cargo_home(),
         cargo_home(),
-    );
+    )
+    .unwrap();
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();

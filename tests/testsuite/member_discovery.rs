@@ -37,7 +37,8 @@ fn bad_file_member_exclusion() {
         Shell::from_write(Box::new(Vec::new())),
         cargo_home(),
         cargo_home(),
-    );
+    )
+    .unwrap();
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     assert_eq!(ws.members().count(), 1);
     assert_eq!(ws.members().next().unwrap().name(), "bar");

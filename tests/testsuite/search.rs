@@ -148,7 +148,8 @@ fn not_update() {
         Shell::from_write(Box::new(Vec::new())),
         paths::root(),
         paths::home().join(".cargo"),
-    );
+    )
+    .unwrap();
     let lock = cfg.acquire_package_cache_lock().unwrap();
     let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();

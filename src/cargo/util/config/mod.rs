@@ -82,6 +82,9 @@ use crate::util::{FileLock, Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 mod de;
 use de::Deserializer;
 
+mod dirs;
+use dirs::CargoDirs;
+
 mod value;
 pub use value::{Definition, OptValue, Value};
 
@@ -122,8 +125,8 @@ macro_rules! get_value_typed {
 /// relating to cargo itself.
 #[derive(Debug)]
 pub struct Config {
-    /// The location of the user's Cargo home directory. OS-dependent.
-    home_path: Filesystem,
+    /// The location of the user's 'home' directory. OS-dependent.
+    dirs: CargoDirs,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
     /// A collection of configuration options
@@ -191,7 +194,7 @@ impl Config {
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
-    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
+    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> CargoResult<Config> {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
         static INIT: Once = Once::new();
 
@@ -227,8 +230,8 @@ impl Config {
             _ => true,
         };
 
-        Config {
-            home_path: Filesystem::new(homedir),
+        Ok(Config {
+            dirs: CargoDirs::new(homedir)?,
             shell: RefCell::new(shell),
             cwd,
             search_stop_path: None,
@@ -264,7 +267,7 @@ impl Config {
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
-        }
+        })
     }
 
     /// Creates a new Config instance, with all default settings.
@@ -281,32 +284,32 @@ impl Config {
                  This probably means that $HOME was not set."
             )
         })?;
-        Ok(Config::new(shell, cwd, homedir))
+        Config::new(shell, cwd, homedir)
     }
 
     /// Gets the user's Cargo home directory (OS-dependent).
     pub fn home(&self) -> &Filesystem {
-        &self.home_path
+        &self.dirs.data_dir
     }
 
     /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
-        self.home_path.join("git")
+        self.dirs.data_dir.join("git")
     }
 
     /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
     pub fn registry_index_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("index")
+        self.dirs.data_dir.join("registry").join("index")
     }
 
     /// Gets the Cargo registry cache directory (`<cargo_home>/registry/path`).
     pub fn registry_cache_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("cache")
+        self.dirs.cache_dir.clone()
     }
 
     /// Gets the Cargo registry source directory (`<cargo_home>/registry/src`).
     pub fn registry_source_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("src")
+        self.dirs.data_dir.join("registry").join("src")
     }
 
     /// Gets the default Cargo registry.
@@ -870,7 +873,7 @@ impl Config {
         // This definition path is ignored, this is just a temporary container
         // representing the entire file.
         let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
-        let home = self.home_path.clone().into_path_unlocked();
+        let home = self.dirs.home_dir.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
             let value = self.load_file(path)?;
@@ -1137,7 +1140,7 @@ impl Config {
 
     /// Loads credentials config from the credentials file, if present.
     pub fn load_credentials(&mut self) -> CargoResult<()> {
-        let home_path = self.home_path.clone().into_path_unlocked();
+        let home_path = self.dirs.data_dir.clone().into_path_unlocked();
         let credentials = match self.get_file_path(&home_path, "credentials", true)? {
             Some(credentials) => credentials,
             None => return Ok(()),
@@ -1316,7 +1319,7 @@ impl Config {
             "package cache lock is not currently held, Cargo forgot to call \
              `acquire_package_cache_lock` before we got to this stack frame",
         );
-        assert!(ret.starts_with(self.home_path.as_path_unlocked()));
+        assert!(ret.starts_with(self.dirs.cache_dir.as_path_unlocked()));
         ret
     }
 
@@ -1353,11 +1356,11 @@ impl Config {
                 // someone else on the system we should synchronize with them,
                 // but if we can't even do that then we did our best and we just
                 // keep on chugging elsewhere.
-                match self.home_path.open_rw(path, self, desc) {
+                match self.dirs.data_dir.open_rw(path, self, desc) {
                     Ok(lock) => *slot = Some((Some(lock), 1)),
                     Err(e) => {
                         if maybe_readonly(&e) {
-                            let lock = self.home_path.open_ro(path, self, desc).ok();
+                            let lock = self.dirs.data_dir.open_ro(path, self, desc).ok();
                             *slot = Some((lock, 1));
                             return Ok(PackageCacheLock(self));
                         }
@@ -1677,7 +1680,7 @@ pub fn save_credentials(
     // If 'credentials.toml' exists, we should write to that, otherwise
     // use the legacy 'credentials'. There's no need to print the warning
     // here, because it would already be printed at load time.
-    let home_path = cfg.home_path.clone().into_path_unlocked();
+    let home_path = cfg.dirs.data_dir.clone().into_path_unlocked();
     let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
@@ -1687,8 +1690,9 @@ pub fn save_credentials(
     };
 
     let mut file = {
-        cfg.home_path.create_dir()?;
-        cfg.home_path
+        cfg.dirs.data_dir.create_dir()?;
+        cfg.dirs
+            .data_dir
             .open_rw(filename, cfg, "credentials' config file")?
     };
 

@@ -431,7 +431,7 @@ fn cargo_compile_api_exposes_artifact_paths() {
         .build();
 
     let shell = Shell::from_write(Box::new(Vec::new()));
-    let config = Config::new(shell, env::current_dir().unwrap(), paths::home());
+    let config = Config::new(shell, env::current_dir().unwrap(), paths::home()).unwrap();
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
 

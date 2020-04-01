@@ -28,6 +28,7 @@ crypto-hash = "0.3.1"
 curl = { version = "0.4.23", features = ["http2"] }
 curl-sys = "0.4.22"
 env_logger = "0.8.1"
+directories = "1.0"
 pretty_env_logger = { version = "0.4", optional = true }
 anyhow = "1.0"
 filetime = "0.2.9"

@@ -75,7 +75,7 @@ impl ConfigBuilder {
         let shell = Shell::from_write(output);
         let cwd = self.cwd.clone().unwrap_or_else(|| paths::root());
         let homedir = paths::home();
-        let mut config = Config::new(shell, cwd, homedir);
+        let mut config = Config::new(shell, cwd, homedir)?;
         config.set_env(self.env.clone());
         config.set_search_stop_path(paths::root());
         config.configure(
