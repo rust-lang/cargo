@@ -15,7 +15,7 @@ use std::str::FromStr;
 mod format;
 mod graph;
 
-pub use {graph::Edge, graph::Node};
+pub use {graph::EdgeKind, graph::Node};
 
 pub struct TreeOptions {
     pub features: Vec<String>,
@@ -257,10 +257,10 @@ fn print_node<'a>(
     print_stack.push(node_index);
 
     for kind in &[
-        Edge::Dep(DepKind::Normal),
-        Edge::Dep(DepKind::Build),
-        Edge::Dep(DepKind::Development),
-        Edge::Feature,
+        EdgeKind::Dep(DepKind::Normal),
+        EdgeKind::Dep(DepKind::Build),
+        EdgeKind::Dep(DepKind::Development),
+        EdgeKind::Feature,
     ] {
         print_dependencies(
             graph,
@@ -289,7 +289,7 @@ fn print_dependencies<'a>(
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
-    kind: &Edge,
+    kind: &EdgeKind,
 ) {
     let deps = graph.connected_nodes(node_index, kind);
     if deps.is_empty() {
@@ -297,10 +297,10 @@ fn print_dependencies<'a>(
     }
 
     let name = match kind {
-        Edge::Dep(DepKind::Normal) => None,
-        Edge::Dep(DepKind::Build) => Some("[build-dependencies]"),
-        Edge::Dep(DepKind::Development) => Some("[dev-dependencies]"),
-        Edge::Feature => None,
+        EdgeKind::Dep(DepKind::Normal) => None,
+        EdgeKind::Dep(DepKind::Build) => Some("[build-dependencies]"),
+        EdgeKind::Dep(DepKind::Development) => Some("[dev-dependencies]"),
+        EdgeKind::Feature => None,
     };
 
     if let Prefix::Indent = prefix {

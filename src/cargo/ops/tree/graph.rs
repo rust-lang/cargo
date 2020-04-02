@@ -27,21 +27,31 @@ pub enum Node {
     },
 }
 
+/// The kind of edge, for separating dependencies into different sections.
 #[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
-pub enum Edge {
+pub enum EdgeKind {
     Dep(DepKind),
     Feature,
 }
 
+/// Set of outgoing edges for a single node.
+///
+/// Edges are separated by the edge kind (`DepKind` or `Feature`). This is
+/// primarily done so that the output can easily display separate sections
+/// like `[build-dependencies]`.
+///
+/// The value is a `Vec` because each edge kind can have multiple outgoing
+/// edges. For example, package "foo" can have multiple normal dependencies.
 #[derive(Clone)]
-struct Edges(HashMap<Edge, Vec<usize>>);
+struct Edges(HashMap<EdgeKind, Vec<usize>>);
 
 impl Edges {
     fn new() -> Edges {
         Edges(HashMap::new())
     }
 
-    fn add_edge(&mut self, kind: Edge, index: usize) {
+    /// Adds an edge pointing to the given node.
+    fn add_edge(&mut self, kind: EdgeKind, index: usize) {
         let indexes = self.0.entry(kind).or_default();
         if !indexes.contains(&index) {
             indexes.push(index)
@@ -52,6 +62,9 @@ impl Edges {
 /// A graph of dependencies.
 pub struct Graph<'a> {
     nodes: Vec<Node>,
+    /// The indexes of `edges` correspond to the `nodes`. That is, `edges[0]`
+    /// is the set of outgoing edges for `nodes[0]`. They should always be in
+    /// sync.
     edges: Vec<Edges>,
     /// Index maps a node to an index, for fast lookup.
     index: HashMap<Node, usize>,
@@ -92,7 +105,7 @@ impl<'a> Graph<'a> {
     }
 
     /// Returns a list of nodes the given node index points to for the given kind.
-    pub fn connected_nodes(&self, from: usize, kind: &Edge) -> Vec<usize> {
+    pub fn connected_nodes(&self, from: usize, kind: &EdgeKind) -> Vec<usize> {
         match self.edges[from].0.get(kind) {
             Some(indexes) => {
                 // Created a sorted list for consistent output.
@@ -358,7 +371,7 @@ fn add_pkg(
                         InternedString::new("default"),
                         Some(from_index),
                         dep_index,
-                        Edge::Dep(dep.kind()),
+                        EdgeKind::Dep(dep.kind()),
                     );
                 }
                 for feature in dep.features() {
@@ -367,15 +380,15 @@ fn add_pkg(
                         *feature,
                         Some(from_index),
                         dep_index,
-                        Edge::Dep(dep.kind()),
+                        EdgeKind::Dep(dep.kind()),
                     );
                 }
                 if !dep.uses_default_features() && dep.features().is_empty() {
                     // No features, use a direct connection.
-                    graph.edges[from_index].add_edge(Edge::Dep(dep.kind()), dep_index);
+                    graph.edges[from_index].add_edge(EdgeKind::Dep(dep.kind()), dep_index);
                 }
             } else {
-                graph.edges[from_index].add_edge(Edge::Dep(dep.kind()), dep_index);
+                graph.edges[from_index].add_edge(EdgeKind::Dep(dep.kind()), dep_index);
             }
         }
     }
@@ -401,7 +414,7 @@ fn add_feature(
     name: InternedString,
     from: Option<usize>,
     to: usize,
-    kind: Edge,
+    kind: EdgeKind,
 ) -> usize {
     // `to` *must* point to a package node.
     assert!(matches! {graph.nodes[to], Node::Package{..}});
@@ -416,7 +429,7 @@ fn add_feature(
     if let Some(from) = from {
         graph.edges[from].add_edge(kind, node_index);
     }
-    graph.edges[node_index].add_edge(Edge::Feature, to);
+    graph.edges[node_index].add_edge(EdgeKind::Feature, to);
     node_index
 }
 
@@ -460,14 +473,15 @@ fn add_cli_features(
             for (dep_index, is_optional) in graph.dep_name_map[&package_index][&dep_name].clone() {
                 if is_optional {
                     // Activate the optional dep on self.
-                    let index = add_feature(graph, dep_name, None, package_index, Edge::Feature);
+                    let index =
+                        add_feature(graph, dep_name, None, package_index, EdgeKind::Feature);
                     graph.cli_features.insert(index);
                 }
-                let index = add_feature(graph, feat_name, None, dep_index, Edge::Feature);
+                let index = add_feature(graph, feat_name, None, dep_index, EdgeKind::Feature);
                 graph.cli_features.insert(index);
             }
         } else {
-            let index = add_feature(graph, name, None, package_index, Edge::Feature);
+            let index = add_feature(graph, name, None, package_index, EdgeKind::Feature);
             graph.cli_features.insert(index);
         }
     }
@@ -522,8 +536,13 @@ fn add_feature_rec(
     for fv in fvs {
         match fv {
             FeatureValue::Feature(fv_name) | FeatureValue::Crate(fv_name) => {
-                let feat_index =
-                    add_feature(graph, *fv_name, Some(from), package_index, Edge::Feature);
+                let feat_index = add_feature(
+                    graph,
+                    *fv_name,
+                    Some(from),
+                    package_index,
+                    EdgeKind::Feature,
+                );
                 add_feature_rec(
                     graph,
                     resolve,
@@ -552,10 +571,16 @@ fn add_feature_rec(
                     let dep_pkg_id = graph.package_id_for_index(dep_index);
                     if is_optional {
                         // Activate the optional dep on self.
-                        add_feature(graph, *dep_name, Some(from), package_index, Edge::Feature);
+                        add_feature(
+                            graph,
+                            *dep_name,
+                            Some(from),
+                            package_index,
+                            EdgeKind::Feature,
+                        );
                     }
                     let feat_index =
-                        add_feature(graph, *fv_name, Some(from), dep_index, Edge::Feature);
+                        add_feature(graph, *fv_name, Some(from), dep_index, EdgeKind::Feature);
                     add_feature_rec(graph, resolve, *fv_name, dep_pkg_id, feat_index, dep_index);
                 }
             }
