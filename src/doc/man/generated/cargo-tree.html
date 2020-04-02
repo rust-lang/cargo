@@ -133,14 +133,22 @@ strings will be replaced with the corresponding value:</p>
 </ul>
 </div>
 </dd>
-<dt class="hdlist1"><strong>--no-indent</strong></dt>
+<dt class="hdlist1"><strong>--prefix</strong> <em>PREFIX</em></dt>
 <dd>
-<p>Display the dependencies as a list (rather than a tree).</p>
-</dd>
-<dt class="hdlist1"><strong>--prefix-depth</strong></dt>
-<dd>
-<p>Display the dependencies as a list (rather than a tree), but prefixed with
-the depth.</p>
+<p>Sets how each line is displayed. The <em>PREFIX</em> value can be one of:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>indent</code> (default) — Shows each line indented as a tree.</p>
+</li>
+<li>
+<p><code>depth</code> — Show as a list, with the numeric depth printed before each entry.</p>
+</li>
+<li>
+<p><code>none</code> — Show as a flat list.</p>
+</li>
+</ul>
+</div>
 </dd>
 </dl>
 </div>

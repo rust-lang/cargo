@@ -99,12 +99,12 @@ strings will be replaced with the corresponding value:
 - `{r}` — The package repository URL.
 - `{f}` — Comma-separated list of package features that are enabled.
 
-*--no-indent*::
-    Display the dependencies as a list (rather than a tree).
-
-*--prefix-depth*::
-    Display the dependencies as a list (rather than a tree), but prefixed with
-    the depth.
+*--prefix* _PREFIX_::
+    Sets how each line is displayed. The _PREFIX_ value can be one of:
++
+- `indent` (default) — Shows each line indented as a tree.
+- `depth` — Show as a list, with the numeric depth printed before each entry.
+- `none` — Show as a flat list.
 
 === Package Selection
 

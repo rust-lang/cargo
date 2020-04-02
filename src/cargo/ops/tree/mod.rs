@@ -30,10 +30,8 @@ pub struct TreeOptions {
     pub no_filter_targets: bool,
     pub no_dev_dependencies: bool,
     pub invert: bool,
-    /// Displays a list, with no indentation.
-    pub no_indent: bool,
-    /// Displays a list, with a number indicating the depth instead of using indentation.
-    pub prefix_depth: bool,
+    /// The style of prefix for each line.
+    pub prefix: Prefix,
     /// If `true`, duplicates will be repeated.
     /// If `false`, duplicates will be marked with `*`, and their dependencies
     /// won't be shown.
@@ -68,10 +66,23 @@ impl FromStr for Charset {
 }
 
 #[derive(Clone, Copy)]
-enum Prefix {
+pub enum Prefix {
     None,
     Indent,
     Depth,
+}
+
+impl FromStr for Prefix {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Prefix, &'static str> {
+        match s {
+            "none" => Ok(Prefix::None),
+            "indent" => Ok(Prefix::Indent),
+            "depth" => Ok(Prefix::Depth),
+            _ => Err("invalid prefix"),
+        }
+    }
 }
 
 struct Symbols {
@@ -174,14 +185,6 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
         Charset::Ascii => &ASCII_SYMBOLS,
     };
 
-    let prefix = if opts.prefix_depth {
-        Prefix::Depth
-    } else if opts.no_indent {
-        Prefix::None
-    } else {
-        Prefix::Indent
-    };
-
     // The visited deps is used to display a (*) whenever a dep has
     // already been printed (ignored with --no-dedupe).
     let mut visited_deps = HashSet::new();
@@ -203,7 +206,7 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
             root_index,
             &format,
             symbols,
-            prefix,
+            opts.prefix,
             opts.no_dedupe,
             &mut visited_deps,
             &mut levels_continue,

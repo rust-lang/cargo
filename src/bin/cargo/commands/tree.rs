@@ -22,14 +22,21 @@ pub fn cli() -> App {
         ))
         .arg(opt("no-dev-dependencies", "Skip dev dependencies"))
         .arg(opt("invert", "Invert the tree direction").short("i"))
-        .arg(opt(
-            "no-indent",
-            "Display the dependencies as a list (rather than a tree)",
-        ))
-        .arg(opt(
-            "prefix-depth",
-            "Display the dependencies as a list (rather than a tree), but prefixed with the depth",
-        ))
+        .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
+        .arg(
+            Arg::with_name("prefix-depth")
+                .long("prefix-depth")
+                .hidden(true),
+        )
+        .arg(
+            opt(
+                "prefix",
+                "Change the prefix (indentation) of how each entry is displayed",
+            )
+            .value_name("PREFIX")
+            .possible_values(&["depth", "indent", "none"])
+            .default_value("indent"),
+        )
         .arg(opt(
             "no-dedupe",
             "Do not de-duplicate (repeats all shared dependencies)",
@@ -58,8 +65,21 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+    if args.is_present("no-indent") {
+        return Err(
+            anyhow::format_err!("the --no-indent flag has been changed to --prefix=none").into(),
+        );
+    }
+    if args.is_present("prefix-depth") {
+        return Err(anyhow::format_err!(
+            "the --prefix-depth flag has been changed to --prefix=depth"
+        )
+        .into());
+    }
     let ws = args.workspace(config)?;
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let prefix = tree::Prefix::from_str(args.value_of("prefix").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let opts = tree::TreeOptions {
         features: values(args, "features"),
@@ -70,8 +90,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         no_filter_targets: args.is_present("no-filter-targets"),
         no_dev_dependencies: args.is_present("no-dev-dependencies"),
         invert: args.is_present("invert"),
-        no_indent: args.is_present("no-indent"),
-        prefix_depth: args.is_present("prefix-depth"),
+        prefix,
         no_dedupe: args.is_present("no-dedupe"),
         duplicates: args.is_present("duplicates"),
         charset,

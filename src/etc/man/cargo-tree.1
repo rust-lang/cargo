@@ -2,12 +2,12 @@
 .\"     Title: cargo-tree
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-03-30
+.\"      Date: 2020-04-02
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-TREE" "1" "2020-03-30" "\ \&" "\ \&"
+.TH "CARGO\-TREE" "1" "2020-04-02" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -172,15 +172,42 @@ strings will be replaced with the corresponding value:
 .RE
 .RE
 .sp
-\fB\-\-no\-indent\fP
+\fB\-\-prefix\fP \fIPREFIX\fP
 .RS 4
-Display the dependencies as a list (rather than a tree).
+Sets how each line is displayed. The \fIPREFIX\fP value can be one of:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBindent\fP (default) — Shows each line indented as a tree.
 .RE
 .sp
-\fB\-\-prefix\-depth\fP
 .RS 4
-Display the dependencies as a list (rather than a tree), but prefixed with
-the depth.
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBdepth\fP — Show as a list, with the numeric depth printed before each entry.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnone\fP — Show as a flat list.
+.RE
 .RE
 .SS "Package Selection"
 .sp

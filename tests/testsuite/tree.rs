@@ -630,7 +630,7 @@ common v1.0.0
 fn no_indent() {
     let p = make_simple_proj();
 
-    p.cargo("tree --no-indent")
+    p.cargo("tree --prefix=none")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -651,7 +651,7 @@ b v1.0.0 (*)
 fn prefix_depth() {
     let p = make_simple_proj();
 
-    p.cargo("tree --prefix-depth")
+    p.cargo("tree --prefix=depth")
         .with_stdout(
             "\
 0foo v0.1.0 ([..]/foo)
