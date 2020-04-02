@@ -108,8 +108,13 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     let text_slice = span.text[0].text.chars().collect::<Vec<char>>();
 
     // We subtract `1` because these highlights are 1-based
-    let start = span.text[0].highlight_start - 1;
-    let end = span.text[0].highlight_end - 1;
+    // Check the `min` so that it doesn't attempt to index out-of-bounds when
+    // the span points to the "end" of the line. For example, a line of
+    // "foo\n" with a highlight_start of 5 is intended to highlight *after*
+    // the line. This needs to compensate since the newline has been removed
+    // from the text slice.
+    let start = (span.text[0].highlight_start - 1).min(text_slice.len());
+    let end = (span.text[0].highlight_end - 1).min(text_slice.len());
     let lead = text_slice[indent..start].iter().collect();
     let mut body: String = text_slice[start..end].iter().collect();
 
@@ -122,7 +127,8 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
 
     // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
     // bounds' access by making sure the index is within the array bounds.
-    let last_tail_index = last.highlight_end.min(last.text.len()) - 1;
+    // `saturating_sub` is used in case of an empty file
+    let last_tail_index = last.highlight_end.min(last.text.len()).saturating_sub(1);
     let last_slice = last.text.chars().collect::<Vec<char>>();
 
     if span.text.len() > 1 {

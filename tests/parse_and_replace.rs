@@ -54,6 +54,9 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
 fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error> {
     let res = compile(file, mode)?;
     let stderr = String::from_utf8(res.stderr)?;
+    if stderr.contains("is only accepted on the nightly compiler") {
+        panic!("rustfix tests require a nightly compiler");
+    }
 
     match res.status.code() {
         Some(0) | Some(1) | Some(101) => Ok(stderr),
@@ -160,7 +163,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
         ))?;
         let expected_suggestions =
             rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
-                .context("could not load expected suggesitons")?;
+                .context("could not load expected suggestions")?;
 
         ensure!(
             expected_suggestions == suggestions,

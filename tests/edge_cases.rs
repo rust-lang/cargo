@@ -2,29 +2,24 @@ use rustfix;
 use std::collections::HashSet;
 use std::fs;
 
-#[test]
-fn multiple_fix_options_yield_no_suggestions() {
-    let json = fs::read_to_string("./tests/edge-cases/skip-multi-option-lints.json").unwrap();
-    let expected_suggestions =
-        rustfix::get_suggestions_from_json(&json, &HashSet::new(), rustfix::Filter::Everything)
+macro_rules! expect_empty_json_test {
+    ($name:ident, $file:expr) => {
+        #[test]
+        fn $name() {
+            let json = fs::read_to_string(concat!("./tests/edge-cases/", $file)).unwrap();
+            let expected_suggestions = rustfix::get_suggestions_from_json(
+                &json,
+                &HashSet::new(),
+                rustfix::Filter::Everything,
+            )
             .unwrap();
-    assert!(expected_suggestions.is_empty());
+            assert!(expected_suggestions.is_empty());
+        }
+    };
 }
 
-#[test]
-fn out_of_bounds_test() {
-    let json = fs::read_to_string("./tests/edge-cases/out_of_bounds.recorded.json").unwrap();
-    let expected_suggestions =
-        rustfix::get_suggestions_from_json(&json, &HashSet::new(), rustfix::Filter::Everything)
-            .unwrap();
-    assert!(expected_suggestions.is_empty());
-}
-
-#[test]
-fn utf8_identifiers_test() {
-    let json = fs::read_to_string("./tests/edge-cases/utf8_idents.recorded.json").unwrap();
-    let expected_suggestions =
-        rustfix::get_suggestions_from_json(&json, &HashSet::new(), rustfix::Filter::Everything)
-            .unwrap();
-    assert!(expected_suggestions.is_empty());
-}
+expect_empty_json_test! {multiple_fix_options_yield_no_suggestions, "skip-multi-option-lints.json"}
+expect_empty_json_test! {out_of_bounds_test, "out_of_bounds.recorded.json"}
+expect_empty_json_test! {utf8_identifiers_test, "utf8_idents.recorded.json"}
+expect_empty_json_test! {empty, "empty.json"}
+expect_empty_json_test! {no_main, "no_main.json"}

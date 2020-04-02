@@ -1,0 +1,33 @@
+{
+  "message": "`main` function not found in crate `no_main`",
+  "code": {
+    "code": "E0601",
+    "explanation": "No `main` function was found in a binary crate. To fix this error, add a\n`main` function. For example:\n\n```\nfn main() {\n    // Your program will start here.\n    println!(\"Hello world!\");\n}\n```\n\nIf you don't know the basics of Rust, you can go look to the Rust Book to get\nstarted: https://doc.rust-lang.org/book/\n"
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "no_main.rs",
+      "byte_start": 26,
+      "byte_end": 26,
+      "line_start": 1,
+      "line_end": 1,
+      "column_start": 27,
+      "column_end": 27,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "// This file has no main.",
+          "highlight_start": 27,
+          "highlight_end": 27
+        }
+      ],
+      "label": "consider adding a `main` function to `no_main.rs`",
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    }
+  ],
+  "children": [],
+  "rendered": "error[E0601]: `main` function not found in crate `no_main`\n --> no_main.rs:1:27\n  |\n1 | // This file has no main.\n  |                           ^ consider adding a `main` function to `no_main.rs`\n\n"
+}
