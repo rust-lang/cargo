@@ -414,13 +414,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --no-filter-targets --target")
-        .arg(alternate())
-        .with_status(101)
-        .with_stderr("[ERROR] cannot specify both `--target` and `--no-filter-targets`")
-        .run();
-
-    p.cargo("tree --no-filter-targets")
+    p.cargo("tree --target=all")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)

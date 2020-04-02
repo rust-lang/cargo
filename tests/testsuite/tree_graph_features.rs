@@ -344,7 +344,7 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
-    p.cargo("tree --graph-features --all-features --no-filter-targets")
+    p.cargo("tree --graph-features --all-features --target=all")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)

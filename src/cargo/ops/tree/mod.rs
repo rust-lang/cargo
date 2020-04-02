@@ -24,10 +24,7 @@ pub struct TreeOptions {
     /// The packages to display the tree for.
     pub packages: Packages,
     /// The platform to filter for.
-    /// If `None`, use the host platform.
-    pub target: Option<String>,
-    /// If `true`, ignores the `target` field and returns all targets.
-    pub no_filter_targets: bool,
+    pub target: Target,
     pub no_dev_dependencies: bool,
     pub invert: bool,
     /// The style of prefix for each line.
@@ -46,6 +43,23 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
+}
+
+#[derive(PartialEq)]
+pub enum Target {
+    Host,
+    Specific(String),
+    All,
+}
+
+impl Target {
+    pub fn from_cli(target: Option<&str>) -> Target {
+        match target {
+            None => Target::Host,
+            Some("all") => Target::All,
+            Some(target) => Target::Specific(target.to_string()),
+        }
+    }
 }
 
 pub enum Charset {
@@ -108,13 +122,16 @@ static ASCII_SYMBOLS: Symbols = Symbols {
 
 /// Entry point for the `cargo tree` command.
 pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()> {
-    if opts.no_filter_targets && opts.target.is_some() {
-        bail!("cannot specify both `--target` and `--no-filter-targets`");
-    }
     if opts.graph_features && opts.duplicates {
         bail!("the `--graph-features` flag does not support `--duplicates`");
     }
-    let requested_kind = CompileKind::from_requested_target(ws.config(), opts.target.as_deref())?;
+    let requested_target = match &opts.target {
+        Target::All | Target::Host => None,
+        Target::Specific(t) => Some(t.as_ref()),
+    };
+    // TODO: Target::All is broken with -Zfeatures=itarget. To handle that properly,
+    // `FeatureResolver` will need to be taught what "all" means.
+    let requested_kind = CompileKind::from_requested_target(ws.config(), requested_target)?;
     let target_data = RustcTargetData::new(ws, requested_kind)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
     let resolve_opts = ResolveOpts::new(

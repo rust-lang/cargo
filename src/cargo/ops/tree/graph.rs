@@ -315,6 +315,7 @@ fn add_pkg(
     let mut dep_name_map: HashMap<InternedString, HashSet<(usize, bool)>> = HashMap::new();
     let mut deps: Vec<_> = resolve.deps(package_id).collect();
     deps.sort_unstable_by_key(|(dep_id, _)| *dep_id);
+    let show_all_targets = opts.target == super::Target::All;
     for (dep_id, deps) in deps {
         let mut deps: Vec<_> = deps
             .iter()
@@ -328,7 +329,7 @@ fn add_pkg(
                     (_, DepKind::Development) => node_kind,
                 };
                 // Filter out inactivated targets.
-                if !opts.no_filter_targets && !target_data.dep_platform_activated(dep, kind) {
+                if !show_all_targets && !target_data.dep_platform_activated(dep, kind) {
                     return false;
                 }
                 // Filter out dev-dependencies if requested.

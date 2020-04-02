@@ -16,10 +16,6 @@ pub fn cli() -> App {
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform)",
         )
-        .arg(opt(
-            "no-filter-targets",
-            "Return dependencies for all targets",
-        ))
         .arg(opt("no-dev-dependencies", "Skip dev dependencies"))
         .arg(opt("invert", "Invert the tree direction").short("i"))
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
@@ -81,13 +77,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let prefix = tree::Prefix::from_str(args.value_of("prefix").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let target = tree::Target::from_cli(args.value_of("target"));
     let opts = tree::TreeOptions {
         features: values(args, "features"),
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
         packages: args.packages_from_flags()?,
-        target: args.target(),
-        no_filter_targets: args.is_present("no-filter-targets"),
+        target,
         no_dev_dependencies: args.is_present("no-dev-dependencies"),
         invert: args.is_present("invert"),
         prefix,

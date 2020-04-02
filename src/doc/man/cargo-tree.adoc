@@ -68,11 +68,8 @@ only one instance is built.
 
 *--target* _TRIPLE_::
     Filter dependencies matching the given target-triple.
-    The default is the host platform.
-
-*--no-filter-targets*::
-    Show dependencies for all target platforms. Cannot be specified with
-    `--target`.
+    The default is the host platform. Use the value `all` to include *all*
+    targets.
 
 *--graph-features*::
     Runs in a special mode where features are included as individual nodes.
