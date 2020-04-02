@@ -59,7 +59,7 @@ foo v0.1.0 ([..]/foo)
 │   │   └── optdep feature \"default\"
 │   │       ├── optdep v1.0.0
 │   │       └── optdep feature \"cat\"
-│   │           └── optdep v1.0.0 (*)
+│   │           └── optdep v1.0.0
 │   └── defaultdep feature \"f1\"
 │       ├── defaultdep v1.0.0 (*)
 │       └── defaultdep feature \"optdep\"
@@ -139,11 +139,11 @@ a v0.1.0 ([..]/foo/a)
 ├── b feature \"default\" (command-line)
 │   ├── b v0.1.0 ([..]/foo/b)
 │   └── b feature \"feat1\"
-│       └── b v0.1.0 ([..]/foo/b) (*)
+│       └── b v0.1.0 ([..]/foo/b)
 └── b feature \"feat2\"
-    └── b v0.1.0 ([..]/foo/b) (*)
+    └── b v0.1.0 ([..]/foo/b)
 
-b v0.1.0 ([..]/foo/b) (*)
+b v0.1.0 ([..]/foo/b)
 ",
         )
         .run();
@@ -154,7 +154,7 @@ b v0.1.0 ([..]/foo/b) (*)
 a v0.1.0 ([..]/foo/a)
 ├── a feature \"a1\"
 │   └── a feature \"default\" (command-line)
-└── a feature \"default\" (command-line) (*)
+└── a feature \"default\" (command-line)
 
 b v0.1.0 ([..]/foo/b)
 ├── b feature \"default\" (command-line)
@@ -218,7 +218,7 @@ foo v0.1.0 ([..]/foo)
 ├── foo feature \"default\" (command-line)
 ├── foo feature \"f1\" (command-line)
 └── foo feature \"opt\"
-    └── foo feature \"f1\" (command-line) (*)
+    └── foo feature \"f1\" (command-line)
 ",
         )
         .run();
@@ -234,9 +234,9 @@ notopt v1.0.0
 └── notopt feature \"default\"
     └── foo v0.1.0 ([..]/foo)
         ├── foo feature \"default\" (command-line)
-        ├── foo feature \"f1\" (command-line) (*)
+        ├── foo feature \"f1\" (command-line)
         └── foo feature \"opt\"
-            └── foo feature \"f1\" (command-line) (*)
+            └── foo feature \"f1\" (command-line)
 ",
         )
         .run();
@@ -247,7 +247,7 @@ notopt v1.0.0
 notopt v1.0.0
 ├── notopt feature \"animal\" (command-line)
 ├── notopt feature \"cat\"
-│   └── notopt feature \"animal\" (command-line) (*)
+│   └── notopt feature \"animal\" (command-line)
 └── notopt feature \"default\"
     └── foo v0.1.0 ([..]/foo)
         └── foo feature \"default\" (command-line)
@@ -277,7 +277,7 @@ opt2 v1.0.0
     └── foo v0.1.0 ([..]/foo)
         ├── foo feature \"f1\" (command-line)
         │   └── foo feature \"f2\" (command-line)
-        ├── foo feature \"f2\" (command-line) (*)
+        ├── foo feature \"f2\" (command-line)
         ├── foo feature \"opt\" (command-line)
         │   └── foo feature \"f1\" (command-line) (*)
         └── foo feature \"opt2\" (command-line)

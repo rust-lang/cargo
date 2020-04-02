@@ -47,7 +47,7 @@ foo v0.1.0 ([..]/foo)
 ├── a v1.0.0
 │   └── b v1.0.0
 │       └── c v1.0.0
-└── c v1.0.0 (*)
+└── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
     └── b v1.0.0 (*)
@@ -109,7 +109,7 @@ b v0.1.0 ([..]/foo/b)
 ├── c v1.0.0 ([..]/foo/c)
 └── somedep v1.0.0
 
-c v1.0.0 ([..]/foo/c) (*)
+c v1.0.0 ([..]/foo/c)
 ",
         )
         .run();
@@ -379,7 +379,7 @@ foo v0.1.0 ([..]/foo)
 └── pm_host v1.0.0
 [build-dependencies]
 └── build_host_dep v1.0.0
-    └── hostdep v1.0.0 (*)
+    └── hostdep v1.0.0
 ",
         )
         .run();
@@ -430,8 +430,8 @@ foo v0.1.0 ([..]/foo)
 └── targetdep v1.0.0
 [build-dependencies]
 ├── build_host_dep v1.0.0
-│   ├── hostdep v1.0.0 (*)
-│   └── targetdep v1.0.0 (*)
+│   ├── hostdep v1.0.0
+│   └── targetdep v1.0.0
 └── build_target_dep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
@@ -561,7 +561,7 @@ foo v0.1.0 ([..]/foo)
 │   └── c v1.0.0
 ├── b2 v1.0.0
 │   └── d v1.0.0
-└── c v1.0.0 (*)
+└── c v1.0.0
 ",
         )
         .run();
@@ -572,7 +572,7 @@ foo v0.1.0 ([..]/foo)
 c v1.0.0
 ├── b1 v1.0.0
 │   └── foo v0.1.0 ([..]/foo)
-└── foo v0.1.0 ([..]/foo) (*)
+└── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -608,7 +608,7 @@ foo v0.1.0 ([..]/foo)
 └── common v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-    └── common v1.0.0 (*)
+    └── common v1.0.0
 ",
         )
         .run();
@@ -620,7 +620,7 @@ common v1.0.0
 ├── bdep v1.0.0
 │   [build-dependencies]
 │   └── foo v0.1.0 ([..]/foo)
-└── foo v0.1.0 ([..]/foo) (*)
+└── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -637,7 +637,7 @@ foo v0.1.0 ([..]/foo)
 a v1.0.0
 b v1.0.0
 c v1.0.0
-c v1.0.0 (*)
+c v1.0.0
 bdep v1.0.0
 b v1.0.0 (*)
 devdep v1.0.0
@@ -658,7 +658,7 @@ fn prefix_depth() {
 1a v1.0.0
 2b v1.0.0
 3c v1.0.0
-1c v1.0.0 (*)
+1c v1.0.0
 1bdep v1.0.0
 2b v1.0.0 (*)
 1devdep v1.0.0
@@ -821,7 +821,7 @@ dog v1.0.0
 └── a v0.1.0 ([..]/foo/a)
 
 dog v2.0.0
-└── a v0.1.0 ([..]/foo/a) (*)
+└── a v0.1.0 ([..]/foo/a)
 ",
         )
         .run();
@@ -834,7 +834,7 @@ cat v1.0.0
     └── b v0.1.0 ([..]/foo/b)
 
 cat v2.0.0
-└── b v0.1.0 ([..]/foo/b) (*)
+└── b v0.1.0 ([..]/foo/b)
 ",
         )
         .run();
@@ -850,7 +850,7 @@ foo v0.1.0 ([..]/foo)
 |-- a v1.0.0
 |   `-- b v1.0.0
 |       `-- c v1.0.0
-`-- c v1.0.0 (*)
+`-- c v1.0.0
 [build-dependencies]
 `-- bdep v1.0.0
     `-- b v1.0.0 (*)
@@ -1076,7 +1076,7 @@ optdep v1.0.0
 └── bar v1.0.0
     └── foo v0.1.0 ([..]/foo)
     [build-dependencies]
-    └── foo v0.1.0 ([..]/foo) (*)
+    └── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -1103,7 +1103,7 @@ bar v1.0.0
 
 bar v1.0.0
 [build-dependencies]
-└── foo v0.1.0 ([..]/foo) (*)
+└── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -1191,7 +1191,7 @@ somedep v1.0.0
 somedep v1.0.0
 ├── foo v0.1.0 ([..]/foo)
 └── pm v1.0.0
-    └── foo v0.1.0 ([..]/foo) (*)
+    └── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
@@ -1205,7 +1205,7 @@ somedep v1.0.0
 
 somedep v1.0.0
 └── pm v1.0.0
-    └── foo v0.1.0 ([..]/foo) (*)
+    └── foo v0.1.0 ([..]/foo)
 ",
         )
         .run();

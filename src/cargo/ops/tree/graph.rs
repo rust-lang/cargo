@@ -117,6 +117,11 @@ impl<'a> Graph<'a> {
         }
     }
 
+    /// Returns `true` if the given node has any outgoing edges.
+    pub fn has_outgoing_edges(&self, index: usize) -> bool {
+        !self.edges[index].0.is_empty()
+    }
+
     /// Gets a node by index.
     pub fn node(&self, index: usize) -> &Node {
         &self.nodes[index]

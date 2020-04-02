@@ -249,7 +249,15 @@ fn print_node<'a>(
     }
 
     let in_cycle = print_stack.contains(&node_index);
-    let star = if new && !in_cycle { "" } else { " (*)" };
+    // If this node does not have any outgoing edges, don't include the (*)
+    // since there isn't really anything "deduplicated", and it generally just
+    // adds noise.
+    let has_deps = graph.has_outgoing_edges(node_index);
+    let star = if (new && !in_cycle) || !has_deps {
+        ""
+    } else {
+        " (*)"
+    };
     println!("{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
