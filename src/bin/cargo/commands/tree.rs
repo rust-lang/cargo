@@ -83,14 +83,21 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    if args.is_present("no-indent") {
-        return Err(format_err!("the --no-indent flag has been changed to --prefix=none").into());
-    }
-    if args.is_present("prefix-depth") {
-        return Err(
-            format_err!("the --prefix-depth flag has been changed to --prefix=depth").into(),
-        );
-    }
+    let prefix = if args.is_present("no-indent") {
+        config
+            .shell()
+            .warn("the --no-indent flag has been changed to --prefix=none")?;
+        "none"
+    } else if args.is_present("prefix-depth") {
+        config
+            .shell()
+            .warn("the --prefix-depth flag has been changed to --prefix=depth")?;
+        "depth"
+    } else {
+        args.value_of("prefix").unwrap()
+    };
+    let prefix = tree::Prefix::from_str(prefix).map_err(|e| anyhow::anyhow!("{}", e))?;
+
     if args.is_present("all") {
         return Err(format_err!(
             "The `cargo tree` --all flag has been changed to --no-dedupe.\n\
@@ -98,22 +105,30 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         )
         .into());
     }
-    if args.is_present("all-targets") {
-        return Err(format_err!("the --all-targets flag has been changed to --target=all").into());
-    }
-    if args.is_present("no-dev-dependencies") {
-        return Err(format_err!(
-            "the --no-dev-dependencies flag has changed to --dep-kinds=no-dev"
-        )
-        .into());
-    }
+
+    let target = if args.is_present("all-targets") {
+        config
+            .shell()
+            .warn("the --all-targets flag has been changed to --target=all")?;
+        Some("all")
+    } else {
+        args.value_of("target")
+    };
+    let target = tree::Target::from_cli(target);
+
+    let dep_kinds = if args.is_present("no-dev-dependencies") {
+        config
+            .shell()
+            .warn("the --no-dev-dependencies flag has changed to --dep-kinds=no-dev")?;
+        Some("no-dev")
+    } else {
+        args.value_of("dep-kinds")
+    };
+    let dep_kinds = parse_dep_kinds(dep_kinds)?;
+
     let ws = args.workspace(config)?;
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    let prefix = tree::Prefix::from_str(args.value_of("prefix").unwrap())
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
-    let target = tree::Target::from_cli(args.value_of("target"));
-    let dep_kinds = parse_dep_kinds(args.value_of("dep-kinds"))?;
     let opts = tree::TreeOptions {
         features: values(args, "features"),
         all_features: args.is_present("all-features"),
