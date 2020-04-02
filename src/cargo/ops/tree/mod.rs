@@ -182,14 +182,15 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
         Prefix::Indent
     };
 
+    // The visited deps is used to display a (*) whenever a dep has
+    // already been printed (ignored with --no-dedupe).
+    let mut visited_deps = HashSet::new();
+
     for (i, root_index) in roots.into_iter().enumerate() {
         if i != 0 {
             println!();
         }
 
-        // The visited deps is used to display a (*) whenever a dep has
-        // already been printed (ignored with --no-dedupe).
-        let mut visited_deps = HashSet::new();
         // A stack of bools used to determine where | symbols should appear
         // when printing a line.
         let mut levels_continue = vec![];

@@ -143,7 +143,7 @@ a v0.1.0 ([..]/foo/a)
 └── b feature \"feat2\"
     └── b v0.1.0 ([..]/foo/b) (*)
 
-b v0.1.0 ([..]/foo/b)
+b v0.1.0 ([..]/foo/b) (*)
 ",
         )
         .run();
@@ -158,10 +158,7 @@ a v0.1.0 ([..]/foo/a)
 
 b v0.1.0 ([..]/foo/b)
 ├── b feature \"default\" (command-line)
-│   └── a v0.1.0 ([..]/foo/a)
-│       ├── a feature \"a1\"
-│       │   └── a feature \"default\" (command-line)
-│       └── a feature \"default\" (command-line) (*)
+│   └── a v0.1.0 ([..]/foo/a) (*)
 ├── b feature \"feat1\"
 │   └── b feature \"default\" (command-line) (*)
 └── b feature \"feat2\"
