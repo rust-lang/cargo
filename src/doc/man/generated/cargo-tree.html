@@ -74,9 +74,37 @@ duplicate with the older version can be updated to the newer version so that
 only one instance is built.</p>
 </div>
 </dd>
-<dt class="hdlist1"><strong>--no-dev-dependencies</strong></dt>
+<dt class="hdlist1"><strong>--dep-kinds</strong> KINDS</dt>
 <dd>
-<p>Do not include dev-dependencies.</p>
+<p>The dependency kinds to display. Takes a comma separated list of values:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>all</code> (default) — Show all dependency kinds.</p>
+</li>
+<li>
+<p><code>normal</code> — Show normal dependencies.</p>
+</li>
+<li>
+<p><code>build</code> — Show build dependencies.</p>
+</li>
+<li>
+<p><code>dev</code> — Show development dependencies.</p>
+</li>
+<li>
+<p><code>no-normal</code> — Do not include normal dependencies.</p>
+</li>
+<li>
+<p><code>no-build</code> — Do not include build dependencies.</p>
+</li>
+<li>
+<p><code>no-dev</code> — Do not include development dependencies.</p>
+<div class="paragraph">
+<p>The <code>no-</code> prefixed options cannot be mixed with the other kinds.</p>
+</div>
+</li>
+</ul>
+</div>
 </dd>
 <dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
 <dd>

@@ -333,7 +333,7 @@ fn add_pkg(
                     return false;
                 }
                 // Filter out dev-dependencies if requested.
-                if opts.no_dev_dependencies && dep.kind() == DepKind::Development {
+                if !opts.dep_kinds.contains(&dep.kind()) {
                     return false;
                 }
                 if dep.is_optional() {

@@ -87,9 +87,88 @@ duplicate with the older version can be updated to the newer version so that
 only one instance is built.
 .RE
 .sp
-\fB\-\-no\-dev\-dependencies\fP
+\fB\-\-dep\-kinds\fP KINDS
 .RS 4
-Do not include dev\-dependencies.
+The dependency kinds to display. Takes a comma separated list of values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBall\fP (default) — Show all dependency kinds.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnormal\fP — Show normal dependencies.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBbuild\fP — Show build dependencies.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBdev\fP — Show development dependencies.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBno\-normal\fP — Do not include normal dependencies.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBno\-build\fP — Do not include build dependencies.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBno\-dev\fP — Do not include development dependencies.
+.sp
+The \fBno\-\fP prefixed options cannot be mixed with the other kinds.
+.RE
 .RE
 .sp
 \fB\-\-target\fP \fITRIPLE\fP

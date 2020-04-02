@@ -25,7 +25,8 @@ pub struct TreeOptions {
     pub packages: Packages,
     /// The platform to filter for.
     pub target: Target,
-    pub no_dev_dependencies: bool,
+    /// The dependency kinds to display.
+    pub dep_kinds: HashSet<DepKind>,
     pub invert: bool,
     /// The style of prefix for each line.
     pub prefix: Prefix,
@@ -140,10 +141,10 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         opts.all_features,
         !opts.no_default_features,
     );
-    let has_dev = if opts.no_dev_dependencies {
-        HasDevUnits::No
-    } else {
+    let has_dev = if opts.dep_kinds.contains(&DepKind::Development) {
         HasDevUnits::Yes
+    } else {
+        HasDevUnits::No
     };
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,

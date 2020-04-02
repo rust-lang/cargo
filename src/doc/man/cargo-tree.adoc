@@ -63,8 +63,18 @@ packages. You can then investigate if the package that depends on the
 duplicate with the older version can be updated to the newer version so that
 only one instance is built.
 
-*--no-dev-dependencies*::
-    Do not include dev-dependencies.
+*--dep-kinds* KINDS::
+    The dependency kinds to display. Takes a comma separated list of values:
+
+        - `all` (default) — Show all dependency kinds.
+        - `normal` — Show normal dependencies.
+        - `build` — Show build dependencies.
+        - `dev` — Show development dependencies.
+        - `no-normal` — Do not include normal dependencies.
+        - `no-build` — Do not include build dependencies.
+        - `no-dev` — Do not include development dependencies.
++
+The `no-` prefixed options cannot be mixed with the other kinds.
 
 *--target* _TRIPLE_::
     Filter dependencies matching the given target-triple.

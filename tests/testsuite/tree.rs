@@ -435,8 +435,25 @@ foo v0.1.0 ([..]/foo)
 }
 
 #[cargo_test]
-fn no_dev_dependencies() {
-    Package::new("devdep", "1.0.0").publish();
+fn dep_kinds() {
+    Package::new("inner-devdep", "1.0.0").publish();
+    Package::new("inner-builddep", "1.0.0").publish();
+    Package::new("inner-normal", "1.0.0").publish();
+    Package::new("normaldep", "1.0.0")
+        .dep("inner-normal", "1.0")
+        .dev_dep("inner-devdep", "1.0")
+        .build_dep("inner-builddep", "1.0")
+        .publish();
+    Package::new("devdep", "1.0.0")
+        .dep("inner-normal", "1.0")
+        .dev_dep("inner-devdep", "1.0")
+        .build_dep("inner-builddep", "1.0")
+        .publish();
+    Package::new("builddep", "1.0.0")
+        .dep("inner-normal", "1.0")
+        .dev_dep("inner-devdep", "1.0")
+        .build_dep("inner-builddep", "1.0")
+        .publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -445,8 +462,14 @@ fn no_dev_dependencies() {
             name = "foo"
             version = "0.1.0"
 
+            [dependencies]
+            normaldep = "1.0"
+
             [dev-dependencies]
             devdep = "1.0"
+
+            [build-dependencies]
+            builddep = "1.0"
             "#,
         )
         .file("src/lib.rs", "")
@@ -455,17 +478,64 @@ fn no_dev_dependencies() {
     p.cargo("tree")
         .with_stdout(
             "\
-foo v0.1.0 ([..]foo)
+foo v0.1.0 ([..]/foo)
+└── normaldep v1.0.0
+    └── inner-normal v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+[build-dependencies]
+└── builddep v1.0.0
+    └── inner-normal v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
+    └── inner-normal v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
 ",
         )
         .run();
 
-    p.cargo("tree --no-dev-dependencies")
+    p.cargo("tree --dep-kinds=no-dev")
         .with_stdout(
             "\
-foo v0.1.0 ([..]foo)
+foo v0.1.0 ([..]/foo)
+└── normaldep v1.0.0
+    └── inner-normal v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+[build-dependencies]
+└── builddep v1.0.0
+    └── inner-normal v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree --dep-kinds=normal")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── normaldep v1.0.0
+    └── inner-normal v1.0.0
+",
+        )
+        .run();
+
+    p.cargo("tree --dep-kinds=dev,build")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+[build-dependencies]
+└── builddep v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
+[dev-dependencies]
+└── devdep v1.0.0
+    [build-dependencies]
+    └── inner-builddep v1.0.0
 ",
         )
         .run();
@@ -959,7 +1029,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --no-dev-dependencies")
+    p.cargo("tree --dep-kinds=normal")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -982,7 +1052,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --no-dev-dependencies -Zfeatures=dev_dep")
+    p.cargo("tree --dep-kinds=normal -Zfeatures=dev_dep")
         .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
