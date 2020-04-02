@@ -13,6 +13,11 @@ pub fn cli() -> App {
             "Exclude specific workspace members",
         )
         .arg(Arg::with_name("all").long("all").short("a").hidden(true))
+        .arg(
+            Arg::with_name("all-targets")
+                .long("all-targets")
+                .hidden(true),
+        )
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform)",
@@ -79,6 +84,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             If you are looking to display all workspace members, use the --workspace flag."
         )
         .into());
+    }
+    if args.is_present("all-targets") {
+        return Err(
+            anyhow::format_err!("the --all-targets flag has been changed to --target=all").into(),
+        );
     }
     let ws = args.workspace(config)?;
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
