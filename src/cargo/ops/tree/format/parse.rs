@@ -1,12 +1,34 @@
+//! Parser for the `--format` string for `cargo tree`.
+
 use std::iter;
 use std::str;
 
 pub enum RawChunk<'a> {
+    /// Raw text to include in the output.
     Text(&'a str),
+    /// A substitution to place in the output. For example, the argument "p"
+    /// emits the package name.
     Argument(&'a str),
+    /// Indicates an error in the format string. The given string is a
+    /// human-readable message explaining the error.
     Error(&'static str),
 }
 
+/// `cargo tree` format parser.
+///
+/// The format string indicates how each package should be displayed. It
+/// includes simple markers surrounded in curly braces that will be
+/// substituted with their corresponding values. For example, the text
+/// "{p} license:{l}" will substitute the `{p}` with the package name/version
+/// (and optionally source), and the `{l}` will be the license from
+/// `Cargo.toml`.
+///
+/// Substitutions are alphabetic characters between curly braces, like `{p}`
+/// or `{foo}`. The actual interpretation of these are done in the `Pattern`
+/// struct.
+///
+/// Bare curly braces can be included in the output with double braces like
+/// `{{` will include a single `{`, similar to Rust's format strings.
 pub struct Parser<'a> {
     s: &'a str,
     it: iter::Peekable<str::CharIndices<'a>>,

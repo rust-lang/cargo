@@ -1,6 +1,6 @@
 use self::parse::{Parser, RawChunk};
 use super::{Graph, Node};
-use anyhow::{anyhow, Error};
+use anyhow::{bail, Error};
 use std::fmt;
 
 mod parse;
@@ -27,9 +27,9 @@ impl Pattern {
                 RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("f") => Chunk::Features,
                 RawChunk::Argument(a) => {
-                    return Err(anyhow!("unsupported pattern `{}`", a));
+                    bail!("unsupported pattern `{}`", a);
                 }
-                RawChunk::Error(err) => return Err(anyhow!("{}", err)),
+                RawChunk::Error(err) => bail!("{}", err),
             };
             chunks.push(chunk);
         }
@@ -63,8 +63,8 @@ impl<'a> fmt::Display for Display<'a> {
             } => {
                 let package = self.graph.package_for_id(*package_id);
                 for chunk in &self.pattern.0 {
-                    match *chunk {
-                        Chunk::Raw(ref s) => fmt.write_str(s)?,
+                    match chunk {
+                        Chunk::Raw(s) => fmt.write_str(s)?,
                         Chunk::Package => {
                             write!(fmt, "{} v{}", package.name(), package.version())?;
 
@@ -74,12 +74,12 @@ impl<'a> fmt::Display for Display<'a> {
                             }
                         }
                         Chunk::License => {
-                            if let Some(ref license) = package.manifest().metadata().license {
+                            if let Some(license) = &package.manifest().metadata().license {
                                 write!(fmt, "{}", license)?;
                             }
                         }
                         Chunk::Repository => {
-                            if let Some(ref repository) = package.manifest().metadata().repository {
+                            if let Some(repository) = &package.manifest().metadata().repository {
                                 write!(fmt, "{}", repository)?;
                             }
                         }
@@ -98,6 +98,8 @@ impl<'a> fmt::Display for Display<'a> {
                             write!(fmt, " (command-line)")?;
                         }
                     }
+                    // The node_index in Node::Feature must point to a package
+                    // node, see `add_feature`.
                     _ => panic!("unexpected feature node {:?}", for_node),
                 }
             }

@@ -291,10 +291,10 @@ fn print_dependencies<'a>(
     print_stack: &mut Vec<usize>,
     kind: &Edge,
 ) {
-    let deps = match graph.connected_nodes(node_index, kind) {
-        Some(deps) => deps,
-        None => return,
-    };
+    let deps = graph.connected_nodes(node_index, kind);
+    if deps.is_empty() {
+        return;
+    }
 
     let name = match kind {
         Edge::Dep(DepKind::Normal) => None,

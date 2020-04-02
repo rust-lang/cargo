@@ -92,17 +92,15 @@ impl<'a> Graph<'a> {
     }
 
     /// Returns a list of nodes the given node index points to for the given kind.
-    ///
-    /// Returns None if there are none.
-    pub fn connected_nodes(&self, from: usize, kind: &Edge) -> Option<Vec<usize>> {
+    pub fn connected_nodes(&self, from: usize, kind: &Edge) -> Vec<usize> {
         match self.edges[from].0.get(kind) {
             Some(indexes) => {
                 // Created a sorted list for consistent output.
                 let mut indexes = indexes.clone();
                 indexes.sort_unstable_by(|a, b| self.nodes[*a].cmp(&self.nodes[*b]));
-                Some(indexes)
+                indexes
             }
-            None => None,
+            None => Vec::new(),
         }
     }
 
@@ -123,6 +121,8 @@ impl<'a> Graph<'a> {
             })
             .map(|(i, node)| (node, i))
             .collect();
+        // Sort for consistent output (the same command should always return
+        // the same output). "unstable" since nodes should always be unique.
         result.sort_unstable();
         result.into_iter().map(|(_node, i)| i).collect()
     }
@@ -403,13 +403,15 @@ fn add_feature(
     to: usize,
     kind: Edge,
 ) -> usize {
+    // `to` *must* point to a package node.
+    assert!(matches! {graph.nodes[to], Node::Package{..}});
     let node = Node::Feature {
         node_index: to,
         name,
     };
-    let (node_index, _new) = match graph.index.get(&node) {
-        Some(idx) => (*idx, false),
-        None => (graph.add_node(node), true),
+    let node_index = match graph.index.get(&node) {
+        Some(idx) => *idx,
+        None => graph.add_node(node),
     };
     if let Some(from) = from {
         graph.edges[from].add_edge(kind, node_index);
