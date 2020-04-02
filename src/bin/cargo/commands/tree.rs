@@ -12,6 +12,7 @@ pub fn cli() -> App {
             "Display the tree for all packages in the workspace",
             "Exclude specific workspace members",
         )
+        .arg(Arg::with_name("all").long("all").short("a").hidden(true))
         .arg_features()
         .arg_target_triple(
             "Filter dependencies matching the given target-triple (default host platform)",
@@ -69,6 +70,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if args.is_present("prefix-depth") {
         return Err(anyhow::format_err!(
             "the --prefix-depth flag has been changed to --prefix=depth"
+        )
+        .into());
+    }
+    if args.is_present("all") {
+        return Err(anyhow::format_err!(
+            "The `cargo tree` --all flag has been changed to --no-dedupe.\n\
+            If you are looking to display all workspace members, use the --workspace flag."
         )
         .into());
     }
