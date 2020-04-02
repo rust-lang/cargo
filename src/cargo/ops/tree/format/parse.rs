@@ -79,7 +79,7 @@ impl<'a> Parser<'a> {
     fn text(&mut self, start: usize) -> RawChunk<'a> {
         while let Some(&(pos, ch)) = self.it.peek() {
             match ch {
-                '{' | '}' | ')' => return RawChunk::Text(&self.s[start..pos]),
+                '{' | '}' => return RawChunk::Text(&self.s[start..pos]),
                 _ => {
                     self.it.next();
                 }
@@ -110,7 +110,11 @@ impl<'a> Iterator for Parser<'a> {
             }
             Some(&(_, '}')) => {
                 self.it.next();
-                Some(RawChunk::Error("unexpected '}'"))
+                if self.consume('}') {
+                    Some(RawChunk::Text("}"))
+                } else {
+                    Some(RawChunk::Error("unexpected '}'"))
+                }
             }
             Some(&(i, _)) => Some(self.text(i)),
             None => None,

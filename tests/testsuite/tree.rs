@@ -903,6 +903,10 @@ Caused by:
         .with_status(101)
         .run();
 
+    p.cargo("tree --format {p}-{{hello}}")
+        .with_stdout("foo v0.1.0 ([..]/foo)-{hello}")
+        .run();
+
     p.cargo("tree --format")
         .arg("{p} {l} {r}")
         .with_stdout("foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo")
