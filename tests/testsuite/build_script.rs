@@ -1139,19 +1139,19 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
 [RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link -C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin \
-    --emit=[..]link \
+    --emit=[..]link[..]\
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
     -L [..]target/debug/deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link -C debuginfo=2 \
+    --emit=[..]link[..]-C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target/debug/deps`

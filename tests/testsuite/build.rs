@@ -1149,13 +1149,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic -C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1177,13 +1177,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic -C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1581,7 +1581,7 @@ fn verbose_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -1599,8 +1599,8 @@ fn verbose_release_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
-        -C opt-level=3 \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
@@ -1650,15 +1650,15 @@ fn verbose_release_build_deps() {
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
         --emit=[..]link \
-        -C prefer-dynamic \
-        -C opt-level=3 \
+        -C prefer-dynamic[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
-        -C opt-level=3 \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps \
@@ -4205,15 +4205,15 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --test=t1")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 [..]",
         )
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .run();
 
@@ -4222,16 +4222,16 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --bench=b1")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name b1 benches/b1.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name b1 benches/b1.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 [..]",
         )
         .with_stderr_does_not_contain("opt-level")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .run();
 }
@@ -4252,7 +4252,7 @@ fn targets_selected_default() {
         )
         // Unit tests.
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4269,7 +4269,7 @@ fn targets_selected_all() {
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4286,7 +4286,7 @@ fn all_targets_no_lib() {
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4726,7 +4726,7 @@ fn build_lib_only() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
