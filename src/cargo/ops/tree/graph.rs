@@ -333,7 +333,7 @@ fn add_pkg(
                     return false;
                 }
                 // Filter out dev-dependencies if requested.
-                if !opts.dep_kinds.contains(&dep.kind()) {
+                if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
                     return false;
                 }
                 if dep.is_optional() {

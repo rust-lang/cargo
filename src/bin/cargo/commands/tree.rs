@@ -1,7 +1,7 @@
 use crate::command_prelude::*;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
-use cargo::ops::tree;
+use cargo::ops::tree::{self, EdgeKind};
 use cargo::util::CargoResult;
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -32,12 +32,13 @@ pub fn cli() -> App {
                 .hidden(true),
         )
         .arg(
-            opt(
-                "dep-kinds",
-                "Dependency kinds to display \
-                 (normal, build, dev, no-dev, no-build, no-normal, all)",
+            multi_opt(
+                "edges",
+                "KINDS",
+                "The kinds of dependencies to display \
+                 (features, normal, build, dev, all, no-dev, no-build, no-normal)",
             )
-            .value_name("KINDS"),
+            .short("e"),
         )
         .arg(opt("invert", "Invert the tree direction").short("i"))
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
@@ -79,7 +80,6 @@ pub fn cli() -> App {
                 .short("f")
                 .default_value("{p}"),
         )
-        .arg(opt("graph-features", "Include features in the tree"))
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
@@ -116,15 +116,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let target = tree::Target::from_cli(target);
 
-    let dep_kinds = if args.is_present("no-dev-dependencies") {
-        config
-            .shell()
-            .warn("the --no-dev-dependencies flag has changed to --dep-kinds=no-dev")?;
-        Some("no-dev")
-    } else {
-        args.value_of("dep-kinds")
-    };
-    let dep_kinds = parse_dep_kinds(dep_kinds)?;
+    let edge_kinds = parse_edge_kinds(config, args)?;
+    let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
     let ws = args.workspace(config)?;
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
@@ -135,44 +128,57 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         no_default_features: args.is_present("no-default-features"),
         packages: args.packages_from_flags()?,
         target,
-        dep_kinds,
+        edge_kinds,
         invert: args.is_present("invert"),
         prefix,
         no_dedupe: args.is_present("no-dedupe"),
         duplicates: args.is_present("duplicates"),
         charset,
         format: args.value_of("format").unwrap().to_string(),
-        graph_features: args.is_present("graph-features"),
+        graph_features,
     };
 
     tree::build_and_print(&ws, &opts)?;
     Ok(())
 }
 
-fn parse_dep_kinds(kinds: Option<&str>) -> CargoResult<HashSet<DepKind>> {
-    let kinds: Vec<&str> = kinds.unwrap_or("all").split(',').collect();
+fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashSet<EdgeKind>> {
+    let mut kinds: Vec<&str> = args
+        .values_of("edges")
+        .map_or_else(|| Vec::new(), |es| es.flat_map(|e| e.split(',')).collect());
+    if args.is_present("no-dev-dependencies") {
+        config
+            .shell()
+            .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
+        kinds.push("no-dev");
+    }
+    if kinds.len() == 0 {
+        kinds.extend(&["normal", "build", "dev"]);
+    }
+
     let mut result = HashSet::new();
-    let insert_all = |result: &mut HashSet<DepKind>| {
-        result.insert(DepKind::Normal);
-        result.insert(DepKind::Build);
-        result.insert(DepKind::Development);
+    let insert_defaults = |result: &mut HashSet<EdgeKind>| {
+        result.insert(EdgeKind::Dep(DepKind::Normal));
+        result.insert(EdgeKind::Dep(DepKind::Build));
+        result.insert(EdgeKind::Dep(DepKind::Development));
     };
     let unknown = |k| {
         bail!(
-            "unknown dependency kind `{}`, valid values are \
+            "unknown edge kind `{}`, valid values are \
                 \"normal\", \"build\", \"dev\", \
                 \"no-normal\", \"no-build\", \"no-dev\", \
-                or \"all\"",
+                \"features\", or \"all\"",
             k
         )
     };
     if kinds.iter().any(|k| k.starts_with("no-")) {
-        insert_all(&mut result);
+        insert_defaults(&mut result);
         for kind in &kinds {
             match *kind {
-                "no-normal" => result.remove(&DepKind::Normal),
-                "no-build" => result.remove(&DepKind::Build),
-                "no-dev" => result.remove(&DepKind::Development),
+                "no-normal" => result.remove(&EdgeKind::Dep(DepKind::Normal)),
+                "no-build" => result.remove(&EdgeKind::Dep(DepKind::Build)),
+                "no-dev" => result.remove(&EdgeKind::Dep(DepKind::Development)),
+                "features" => result.insert(EdgeKind::Feature),
                 "normal" | "build" | "dev" | "all" => {
                     bail!("`no-` dependency kinds cannot be mixed with other dependency kinds")
                 }
@@ -181,20 +187,29 @@ fn parse_dep_kinds(kinds: Option<&str>) -> CargoResult<HashSet<DepKind>> {
         }
         return Ok(result);
     }
-    for kind in kinds {
-        match kind {
-            "all" => insert_all(&mut result),
+    for kind in &kinds {
+        match *kind {
+            "all" => {
+                insert_defaults(&mut result);
+                result.insert(EdgeKind::Feature);
+            }
+            "features" => {
+                result.insert(EdgeKind::Feature);
+            }
             "normal" => {
-                result.insert(DepKind::Normal);
+                result.insert(EdgeKind::Dep(DepKind::Normal));
             }
             "build" => {
-                result.insert(DepKind::Build);
+                result.insert(EdgeKind::Dep(DepKind::Build));
             }
             "dev" => {
-                result.insert(DepKind::Development);
+                result.insert(EdgeKind::Dep(DepKind::Development));
             }
             k => return unknown(k),
         }
+    }
+    if kinds.len() == 1 && kinds[0] == "features" {
+        insert_defaults(&mut result);
     }
     Ok(result)
 }

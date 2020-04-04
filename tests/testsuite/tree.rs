@@ -497,7 +497,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --dep-kinds=no-dev")
+    p.cargo("tree -e no-dev")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -514,7 +514,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --dep-kinds=normal")
+    p.cargo("tree -e normal")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -524,7 +524,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --dep-kinds=dev,build")
+    p.cargo("tree -e dev,build")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1029,7 +1029,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --dep-kinds=normal")
+    p.cargo("tree -e normal")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -1052,7 +1052,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --dep-kinds=normal -Zfeatures=dev_dep")
+    p.cargo("tree -e normal -Zfeatures=dev_dep")
         .masquerade_as_nightly_cargo()
         .with_stdout(
             "\

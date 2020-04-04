@@ -14,7 +14,8 @@ cargo-tree - Display a tree visualization of a dependency graph
 
 == DESCRIPTION
 
-This command will display a tree of dependencies to the terminal. An example of a simple project that depends on the "rand" package:
+This command will display a tree of dependencies to the terminal. An example
+of a simple project that depends on the "rand" package:
 
 ----
 myproject v0.1.0 (/myproject)
@@ -35,6 +36,24 @@ myproject v0.1.0 (/myproject)
 Packages marked with `(*)` have been "de-duplicated". The dependencies for the
 package have already been shown elswhere in the graph, and so are not
 repeated. Use the `--no-dedupe` option to repeat the duplicates.
+
+The `-e` flag can be used to select the dependency kinds to display. The
+"features" kind changes the output to display the features enabled by
+each dependency. For example, `cargo tree -e features`:
+
+----
+myproject v0.1.0 (/myproject)
+└── log feature "serde"
+    └── log v0.4.8
+        ├── serde v1.0.106
+        └── cfg-if feature "default"
+            └── cfg-if v0.1.10
+----
+
+In this tree, `myproject` depends on `log` with the `serde` feature. `log` in
+turn depends on `cfg-if` with "default" features. When using `-e features` it
+can be helpful to use `-i` and `-p` flags to show how the features flow into a
+package. See the examples below for more detail.
 
 == OPTIONS
 
@@ -63,30 +82,29 @@ packages. You can then investigate if the package that depends on the
 duplicate with the older version can be updated to the newer version so that
 only one instance is built.
 
-*--dep-kinds* KINDS::
+*-e* _KINDS_::
+*--edges* _KINDS_::
     The dependency kinds to display. Takes a comma separated list of values:
-
-        - `all` (default) — Show all dependency kinds.
++
+        - `all` — Show all edge kinds.
         - `normal` — Show normal dependencies.
         - `build` — Show build dependencies.
         - `dev` — Show development dependencies.
+        - `features` — Show features enabled by each dependency. If this is
+          the only kind given, then it will automatically include the other
+          dependency kinds.
         - `no-normal` — Do not include normal dependencies.
         - `no-build` — Do not include build dependencies.
         - `no-dev` — Do not include development dependencies.
 +
-The `no-` prefixed options cannot be mixed with the other kinds.
+The `no-` prefixed options cannot be mixed with the other dependency kinds.
++
+The default is `normal,build,dev`.
 
 *--target* _TRIPLE_::
     Filter dependencies matching the given target-triple.
     The default is the host platform. Use the value `all` to include *all*
     targets.
-
-*--graph-features*::
-    Runs in a special mode where features are included as individual nodes.
-    This is intended to be used to help explain why a feature is enabled on
-    any particular package. It is recommended to use with the `-p` and `-i`
-    flags to show how the features flow into the package. See the examples
-    below for more detail.
 
 === Tree Formatting Options
 
@@ -158,9 +176,11 @@ include::section-exit-status.adoc[]
 
 . Explain why features are enabled for the given package:
 
-    cargo tree --graph-features -i -p syn
+    cargo tree -e features -i -p syn
 +
-An example of what this would display:
+The `-e features` flag is used to show features. The `-i` flag is used to
+invert the graph so that it displays the packages that depend on `syn` (not
+what `syn` depends on). An example of what this would display:
 +
 ----
 syn v1.0.17
@@ -187,9 +207,9 @@ syn v1.0.17
 ----
 +
 To read this graph, you can follow the chain for each feature from the root to
-see why it was included. For example, the "full" feature was added by the
-`rustversion` crate which was included from `myproject` (with the default
-features), and `myproject` was the package selected on the command-line. All
+see why it is included. For example, the "full" feature is added by the
+`rustversion` crate which is included from `myproject` (with the default
+features), and `myproject` is the package selected on the command-line. All
 of the other `syn` features are added by the "default" feature ("quote" is
 added by "printing" and "proc-macro", both of which are default features).
 +

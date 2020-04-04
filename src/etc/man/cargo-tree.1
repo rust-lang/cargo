@@ -2,12 +2,12 @@
 .\"     Title: cargo-tree
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-04-02
+.\"      Date: 2020-04-03
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-TREE" "1" "2020-04-02" "\ \&" "\ \&"
+.TH "CARGO\-TREE" "1" "2020-04-03" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -34,7 +34,8 @@ cargo\-tree \- Display a tree visualization of a dependency graph
 \fBcargo tree [\fIOPTIONS\fP]\fP
 .SH "DESCRIPTION"
 .sp
-This command will display a tree of dependencies to the terminal. An example of a simple project that depends on the "rand" package:
+This command will display a tree of dependencies to the terminal. An example
+of a simple project that depends on the "rand" package:
 .sp
 .if n .RS 4
 .nf
@@ -57,6 +58,26 @@ myproject v0.1.0 (/myproject)
 Packages marked with \fB(*)\fP have been "de\-duplicated". The dependencies for the
 package have already been shown elswhere in the graph, and so are not
 repeated. Use the \fB\-\-no\-dedupe\fP option to repeat the duplicates.
+.sp
+The \fB\-e\fP flag can be used to select the dependency kinds to display. The
+"features" kind changes the output to display the features enabled by
+each dependency. For example, \fBcargo tree \-e features\fP:
+.sp
+.if n .RS 4
+.nf
+myproject v0.1.0 (/myproject)
+└── log feature "serde"
+    └── log v0.4.8
+        ├── serde v1.0.106
+        └── cfg\-if feature "default"
+            └── cfg\-if v0.1.10
+.fi
+.if n .RE
+.sp
+In this tree, \fBmyproject\fP depends on \fBlog\fP with the \fBserde\fP feature. \fBlog\fP in
+turn depends on \fBcfg\-if\fP with "default" features. When using \fB\-e features\fP it
+can be helpful to use \fB\-i\fP and \fB\-p\fP flags to show how the features flow into a
+package. See the examples below for more detail.
 .SH "OPTIONS"
 .SS "Tree Options"
 .sp
@@ -87,7 +108,7 @@ duplicate with the older version can be updated to the newer version so that
 only one instance is built.
 .RE
 .sp
-\fB\-\-dep\-kinds\fP KINDS
+\fB\-e\fP \fIKINDS\fP, \fB\-\-edges\fP \fIKINDS\fP
 .RS 4
 The dependency kinds to display. Takes a comma separated list of values:
 .sp
@@ -99,7 +120,7 @@ The dependency kinds to display. Takes a comma separated list of values:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-\fBall\fP (default) — Show all dependency kinds.
+\fBall\fP — Show all edge kinds.
 .RE
 .sp
 .RS 4
@@ -143,6 +164,19 @@ The dependency kinds to display. Takes a comma separated list of values:
 .  sp -1
 .  IP \(bu 2.3
 .\}
+\fBfeatures\fP — Show features enabled by each dependency. If this is
+the only kind given, then it will automatically include the other
+dependency kinds.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
 \fBno\-normal\fP — Do not include normal dependencies.
 .RE
 .sp
@@ -166,9 +200,11 @@ The dependency kinds to display. Takes a comma separated list of values:
 .  IP \(bu 2.3
 .\}
 \fBno\-dev\fP — Do not include development dependencies.
-.sp
-The \fBno\-\fP prefixed options cannot be mixed with the other kinds.
 .RE
+.sp
+The \fBno\-\fP prefixed options cannot be mixed with the other dependency kinds.
+.sp
+The default is \fBnormal,build,dev\fP.
 .RE
 .sp
 \fB\-\-target\fP \fITRIPLE\fP
@@ -176,15 +212,6 @@ The \fBno\-\fP prefixed options cannot be mixed with the other kinds.
 Filter dependencies matching the given target\-triple.
 The default is the host platform. Use the value \fBall\fP to include \fBall\fP
 targets.
-.RE
-.sp
-\fB\-\-graph\-features\fP
-.RS 4
-Runs in a special mode where features are included as individual nodes.
-This is intended to be used to help explain why a feature is enabled on
-any particular package. It is recommended to use with the \fB\-p\fP and \fB\-i\fP
-flags to show how the features flow into the package. See the examples
-below for more detail.
 .RE
 .SS "Tree Formatting Options"
 .sp
@@ -545,11 +572,13 @@ Explain why features are enabled for the given package:
 .sp
 .if n .RS 4
 .nf
-cargo tree \-\-graph\-features \-i \-p syn
+cargo tree \-e features \-i \-p syn
 .fi
 .if n .RE
 .sp
-An example of what this would display:
+The \fB\-e features\fP flag is used to show features. The \fB\-i\fP flag is used to
+invert the graph so that it displays the packages that depend on \fBsyn\fP (not
+what \fBsyn\fP depends on). An example of what this would display:
 .sp
 .if n .RS 4
 .nf
@@ -578,9 +607,9 @@ syn v1.0.17
 .if n .RE
 .sp
 To read this graph, you can follow the chain for each feature from the root to
-see why it was included. For example, the "full" feature was added by the
-\fBrustversion\fP crate which was included from \fBmyproject\fP (with the default
-features), and \fBmyproject\fP was the package selected on the command\-line. All
+see why it is included. For example, the "full" feature is added by the
+\fBrustversion\fP crate which is included from \fBmyproject\fP (with the default
+features), and \fBmyproject\fP is the package selected on the command\-line. All
 of the other \fBsyn\fP features are added by the "default" feature ("quote" is
 added by "printing" and "proc\-macro", both of which are default features).
 .sp

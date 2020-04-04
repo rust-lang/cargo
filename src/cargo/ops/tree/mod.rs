@@ -26,7 +26,7 @@ pub struct TreeOptions {
     /// The platform to filter for.
     pub target: Target,
     /// The dependency kinds to display.
-    pub dep_kinds: HashSet<DepKind>,
+    pub edge_kinds: HashSet<EdgeKind>,
     pub invert: bool,
     /// The style of prefix for each line.
     pub prefix: Prefix,
@@ -124,7 +124,7 @@ static ASCII_SYMBOLS: Symbols = Symbols {
 /// Entry point for the `cargo tree` command.
 pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()> {
     if opts.graph_features && opts.duplicates {
-        bail!("the `--graph-features` flag does not support `--duplicates`");
+        bail!("the `-e features` flag does not support `--duplicates`");
     }
     let requested_target = match &opts.target {
         Target::All | Target::Host => None,
@@ -141,7 +141,10 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         opts.all_features,
         !opts.no_default_features,
     );
-    let has_dev = if opts.dep_kinds.contains(&DepKind::Development) {
+    let has_dev = if opts
+        .edge_kinds
+        .contains(&EdgeKind::Dep(DepKind::Development))
+    {
         HasDevUnits::Yes
     } else {
         HasDevUnits::No

@@ -14,7 +14,8 @@
 <h2 id="cargo_tree_description">DESCRIPTION</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This command will display a tree of dependencies to the terminal. An example of a simple project that depends on the "rand" package:</p>
+<p>This command will display a tree of dependencies to the terminal. An example
+of a simple project that depends on the "rand" package:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -37,6 +38,27 @@
 <p>Packages marked with <code>(*)</code> have been "de-duplicated". The dependencies for the
 package have already been shown elswhere in the graph, and so are not
 repeated. Use the <code>--no-dedupe</code> option to repeat the duplicates.</p>
+</div>
+<div class="paragraph">
+<p>The <code>-e</code> flag can be used to select the dependency kinds to display. The
+"features" kind changes the output to display the features enabled by
+each dependency. For example, <code>cargo tree -e features</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>myproject v0.1.0 (/myproject)
+└── log feature "serde"
+    └── log v0.4.8
+        ├── serde v1.0.106
+        └── cfg-if feature "default"
+            └── cfg-if v0.1.10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In this tree, <code>myproject</code> depends on <code>log</code> with the <code>serde</code> feature. <code>log</code> in
+turn depends on <code>cfg-if</code> with "default" features. When using <code>-e features</code> it
+can be helpful to use <code>-i</code> and <code>-p</code> flags to show how the features flow into a
+package. See the examples below for more detail.</p>
 </div>
 </div>
 </div>
@@ -74,13 +96,14 @@ duplicate with the older version can be updated to the newer version so that
 only one instance is built.</p>
 </div>
 </dd>
-<dt class="hdlist1"><strong>--dep-kinds</strong> KINDS</dt>
+<dt class="hdlist1"><strong>-e</strong> <em>KINDS</em></dt>
+<dt class="hdlist1"><strong>--edges</strong> <em>KINDS</em></dt>
 <dd>
 <p>The dependency kinds to display. Takes a comma separated list of values:</p>
 <div class="ulist">
 <ul>
 <li>
-<p><code>all</code> (default) — Show all dependency kinds.</p>
+<p><code>all</code> — Show all edge kinds.</p>
 </li>
 <li>
 <p><code>normal</code> — Show normal dependencies.</p>
@@ -92,6 +115,11 @@ only one instance is built.</p>
 <p><code>dev</code> — Show development dependencies.</p>
 </li>
 <li>
+<p><code>features</code> — Show features enabled by each dependency. If this is
+the only kind given, then it will automatically include the other
+dependency kinds.</p>
+</li>
+<li>
 <p><code>no-normal</code> — Do not include normal dependencies.</p>
 </li>
 <li>
@@ -99,11 +127,14 @@ only one instance is built.</p>
 </li>
 <li>
 <p><code>no-dev</code> — Do not include development dependencies.</p>
-<div class="paragraph">
-<p>The <code>no-</code> prefixed options cannot be mixed with the other kinds.</p>
-</div>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>The <code>no-</code> prefixed options cannot be mixed with the other dependency kinds.</p>
+</div>
+<div class="paragraph">
+<p>The default is <code>normal,build,dev</code>.</p>
 </div>
 </dd>
 <dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
@@ -111,14 +142,6 @@ only one instance is built.</p>
 <p>Filter dependencies matching the given target-triple.
 The default is the host platform. Use the value <code>all</code> to include <strong>all</strong>
 targets.</p>
-</dd>
-<dt class="hdlist1"><strong>--graph-features</strong></dt>
-<dd>
-<p>Runs in a special mode where features are included as individual nodes.
-This is intended to be used to help explain why a feature is enabled on
-any particular package. It is recommended to use with the <code>-p</code> and <code>-i</code>
-flags to show how the features flow into the package. See the examples
-below for more detail.</p>
 </dd>
 </dl>
 </div>
@@ -417,11 +440,13 @@ semver-incompatible versions appear in the tree (like 1.0.0 and 2.0.0).</p>
 <p>Explain why features are enabled for the given package:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo tree --graph-features -i -p syn</pre>
+<pre>cargo tree -e features -i -p syn</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>An example of what this would display:</p>
+<p>The <code>-e features</code> flag is used to show features. The <code>-i</code> flag is used to
+invert the graph so that it displays the packages that depend on <code>syn</code> (not
+what <code>syn</code> depends on). An example of what this would display:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -450,9 +475,9 @@ semver-incompatible versions appear in the tree (like 1.0.0 and 2.0.0).</p>
 </div>
 <div class="paragraph">
 <p>To read this graph, you can follow the chain for each feature from the root to
-see why it was included. For example, the "full" feature was added by the
-<code>rustversion</code> crate which was included from <code>myproject</code> (with the default
-features), and <code>myproject</code> was the package selected on the command-line. All
+see why it is included. For example, the "full" feature is added by the
+<code>rustversion</code> crate which is included from <code>myproject</code> (with the default
+features), and <code>myproject</code> is the package selected on the command-line. All
 of the other <code>syn</code> features are added by the "default" feature ("quote" is
 added by "printing" and "proc-macro", both of which are default features).</p>
 </div>

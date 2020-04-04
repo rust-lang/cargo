@@ -1,4 +1,4 @@
-//! Tests for the `cargo tree` command with --graph-features option.
+//! Tests for the `cargo tree` command with -e features option.
 
 use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
@@ -49,7 +49,7 @@ fn dep_feature_various() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree --graph-features")
+    p.cargo("tree -e features")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -132,7 +132,7 @@ fn graph_features_ws_interdependent() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("tree --graph-features")
+    p.cargo("tree -e features")
         .with_stdout(
             "\
 a v0.1.0 ([..]/foo/a)
@@ -148,7 +148,7 @@ b v0.1.0 ([..]/foo/b)
         )
         .run();
 
-    p.cargo("tree --graph-features -i")
+    p.cargo("tree -e features -i")
         .with_stdout(
             "\
 a v0.1.0 ([..]/foo/a)
@@ -199,7 +199,7 @@ fn slash_feature_name() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree --graph-features --features f1")
+    p.cargo("tree -e features --features f1")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -211,7 +211,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --graph-features --features f1 -i")
+    p.cargo("tree -e features --features f1 -i")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -223,7 +223,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --graph-features --features f1 -p notopt -i")
+    p.cargo("tree -e features --features f1 -p notopt -i")
         .with_stdout(
             "\
 notopt v1.0.0
@@ -241,7 +241,7 @@ notopt v1.0.0
         )
         .run();
 
-    p.cargo("tree --graph-features --features notopt/animal -p notopt -i")
+    p.cargo("tree -e features --features notopt/animal -p notopt -i")
         .with_stdout(
             "\
 notopt v1.0.0
@@ -255,7 +255,7 @@ notopt v1.0.0
         )
         .run();
 
-    p.cargo("tree --graph-features --all-features")
+    p.cargo("tree -e features --all-features")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -269,7 +269,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --graph-features --all-features -p opt2 -i")
+    p.cargo("tree -e features --all-features -p opt2 -i")
         .with_stdout(
             "\
 opt2 v1.0.0
@@ -326,7 +326,7 @@ fn features_enables_inactive_target() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("tree --graph-features")
+    p.cargo("tree -e features")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -335,7 +335,7 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
-    p.cargo("tree --graph-features --all-features")
+    p.cargo("tree -e features --all-features")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -344,7 +344,7 @@ foo v0.1.0 ([..]/foo)
 ",
         )
         .run();
-    p.cargo("tree --graph-features --all-features --target=all")
+    p.cargo("tree -e features --all-features --target=all")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
