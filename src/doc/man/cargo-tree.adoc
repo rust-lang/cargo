@@ -52,17 +52,24 @@ myproject v0.1.0 (/myproject)
 
 In this tree, `myproject` depends on `log` with the `serde` feature. `log` in
 turn depends on `cfg-if` with "default" features. When using `-e features` it
-can be helpful to use `-i` and `-p` flags to show how the features flow into a
-package. See the examples below for more detail.
+can be helpful to use `-i` flag to show how the features flow into a package.
+See the examples below for more detail.
 
 == OPTIONS
 
 === Tree Options
 
-*-i*::
-*--invert*::
-    Invert the tree. Typically this flag is used with the `-p` flag to show
-    the dependencies for a specific package.
+*-i* _SPEC_::
+*--invert* _SPEC_::
+    Show the reverse dependencies for the given package. This flag will invert
+    the tree and display the packages that depend on the given package.
++
+Note that in a workspace, by default it will only display the package's
+reverse dependencies inside the tree of the workspace member in the current
+directory. The `--workspace` flag can be used to extend it so that it will
+show the package's reverse dependencies across the entire workspace. The `-p`
+flag can be used to display the package's reverse dependencies only with the
+subtree of the package given to `-p`.
 
 *--no-dedupe*::
     Do not de-duplicate repeated dependencies. Usually, when a package has
@@ -161,9 +168,9 @@ include::section-exit-status.adoc[]
 
     cargo tree
 
-. Display all the packages that depend on the specified package:
+. Display all the packages that depend on the `syn` package:
 
-    cargo tree -i -p syn
+    cargo tree -i syn
 
 . Show the features enabled on each package:
 
@@ -174,13 +181,13 @@ include::section-exit-status.adoc[]
 
     cargo tree -d
 
-. Explain why features are enabled for the given package:
+. Explain why features are enabled for the `syn` package:
 
-    cargo tree -e features -i -p syn
+    cargo tree -e features -i syn
 +
 The `-e features` flag is used to show features. The `-i` flag is used to
-invert the graph so that it displays the packages that depend on `syn` (not
-what `syn` depends on). An example of what this would display:
+invert the graph so that it displays the packages that depend on `syn`. An
+example of what this would display:
 +
 ----
 syn v1.0.17

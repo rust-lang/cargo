@@ -582,7 +582,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --invert")
+    p.cargo("tree --invert foo")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -630,7 +630,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree --invert -p c")
+    p.cargo("tree --invert c")
         .with_stdout(
             "\
 c v1.0.0
@@ -644,7 +644,7 @@ c v1.0.0
 
 #[cargo_test]
 fn invert_with_build_dep() {
-    // -i with -p for a common dependency between normal and build deps.
+    // -i for a common dependency between normal and build deps.
     Package::new("common", "1.0.0").publish();
     Package::new("bdep", "1.0.0").dep("common", "1.0").publish();
     let p = project()
@@ -677,7 +677,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -i -p common")
+    p.cargo("tree -i common")
         .with_stdout(
             "\
 common v1.0.0
@@ -1136,8 +1136,8 @@ bar v1.0.0
         )
         .run();
 
-    // invert -p
-    p.cargo("tree -i -p optdep")
+    // invert
+    p.cargo("tree -i optdep")
         .with_stdout(
             "\
 optdep v1.0.0
@@ -1149,7 +1149,7 @@ optdep v1.0.0
         )
         .run();
 
-    p.cargo("tree -i -p optdep -Zfeatures=host_dep")
+    p.cargo("tree -i optdep -Zfeatures=host_dep")
         .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
@@ -1252,8 +1252,8 @@ somedep v1.0.0
         )
         .run();
 
-    // invert -p
-    p.cargo("tree -i -p somedep")
+    // invert
+    p.cargo("tree -i somedep")
         .with_stdout(
             "\
 somedep v1.0.0
@@ -1264,7 +1264,7 @@ somedep v1.0.0
         )
         .run();
 
-    p.cargo("tree -i -p somedep -Zfeatures=host_dep")
+    p.cargo("tree -i somedep -Zfeatures=host_dep")
         .masquerade_as_nightly_cargo()
         .with_stdout(
             "\

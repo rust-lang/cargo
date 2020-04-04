@@ -84,6 +84,20 @@ class MonoPostprocessor < Extensions::Postprocessor
   end
 end
 
+# Man pages are ASCII only. Unfortunately asciidoc doesn't process these
+# characters for us. The `cargo tree` manpage needs a little assistance.
+class SpecialCharPostprocessor < Extensions::Postprocessor
+  def process document, output
+    if document.basebackend? 'manpage'
+      output = output.gsub(/│/, '|')
+        .gsub(/├/, '|')
+        .gsub(/└/, '`')
+        .gsub(/─/, '\-')
+    end
+    output
+  end
+end
+
 # General utility for converting text. Example:
 #
 #   convert:lowercase[{somevar}]
@@ -107,4 +121,5 @@ Extensions.register :uri_schemes do
   inline_macro LinkCargoInlineMacro
   inline_macro ConvertInlineMacro
   postprocessor MonoPostprocessor
+  postprocessor SpecialCharPostprocessor
 end

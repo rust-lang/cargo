@@ -57,8 +57,8 @@ each dependency. For example, <code>cargo tree -e features</code>:</p>
 <div class="paragraph">
 <p>In this tree, <code>myproject</code> depends on <code>log</code> with the <code>serde</code> feature. <code>log</code> in
 turn depends on <code>cfg-if</code> with "default" features. When using <code>-e features</code> it
-can be helpful to use <code>-i</code> and <code>-p</code> flags to show how the features flow into a
-package. See the examples below for more detail.</p>
+can be helpful to use <code>-i</code> flag to show how the features flow into a package.
+See the examples below for more detail.</p>
 </div>
 </div>
 </div>
@@ -69,11 +69,19 @@ package. See the examples below for more detail.</p>
 <h3 id="cargo_tree_tree_options">Tree Options</h3>
 <div class="dlist">
 <dl>
-<dt class="hdlist1"><strong>-i</strong></dt>
-<dt class="hdlist1"><strong>--invert</strong></dt>
+<dt class="hdlist1"><strong>-i</strong> <em>SPEC</em></dt>
+<dt class="hdlist1"><strong>--invert</strong> <em>SPEC</em></dt>
 <dd>
-<p>Invert the tree. Typically this flag is used with the <code>-p</code> flag to show
-the dependencies for a specific package.</p>
+<p>Show the reverse dependencies for the given package. This flag will invert
+the tree and display the packages that depend on the given package.</p>
+<div class="paragraph">
+<p>Note that in a workspace, by default it will only display the package&#8217;s
+reverse dependencies inside the tree of the workspace member in the current
+directory. The <code>--workspace</code> flag can be used to extend it so that it will
+show the package&#8217;s reverse dependencies across the entire workspace. The <code>-p</code>
+flag can be used to display the package&#8217;s reverse dependencies only with the
+subtree of the package given to <code>-p</code>.</p>
+</div>
 </dd>
 <dt class="hdlist1"><strong>--no-dedupe</strong></dt>
 <dd>
@@ -412,10 +420,10 @@ details on environment variables that Cargo reads.</p>
 </div>
 </li>
 <li>
-<p>Display all the packages that depend on the specified package:</p>
+<p>Display all the packages that depend on the <code>syn</code> package:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo tree -i -p syn</pre>
+<pre>cargo tree -i syn</pre>
 </div>
 </div>
 </li>
@@ -437,16 +445,16 @@ semver-incompatible versions appear in the tree (like 1.0.0 and 2.0.0).</p>
 </div>
 </li>
 <li>
-<p>Explain why features are enabled for the given package:</p>
+<p>Explain why features are enabled for the <code>syn</code> package:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo tree -e features -i -p syn</pre>
+<pre>cargo tree -e features -i syn</pre>
 </div>
 </div>
 <div class="paragraph">
 <p>The <code>-e features</code> flag is used to show features. The <code>-i</code> flag is used to
-invert the graph so that it displays the packages that depend on <code>syn</code> (not
-what <code>syn</code> depends on). An example of what this would display:</p>
+invert the graph so that it displays the packages that depend on <code>syn</code>. An
+example of what this would display:</p>
 </div>
 <div class="listingblock">
 <div class="content">

@@ -148,7 +148,7 @@ b v0.1.0 ([..]/foo/b)
         )
         .run();
 
-    p.cargo("tree -e features -i")
+    p.cargo("tree -e features -i a -i b")
         .with_stdout(
             "\
 a v0.1.0 ([..]/foo/a)
@@ -211,7 +211,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -e features --features f1 -i")
+    p.cargo("tree -e features --features f1 -i foo")
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
@@ -223,7 +223,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -e features --features f1 -p notopt -i")
+    p.cargo("tree -e features --features f1 -i notopt")
         .with_stdout(
             "\
 notopt v1.0.0
@@ -241,7 +241,7 @@ notopt v1.0.0
         )
         .run();
 
-    p.cargo("tree -e features --features notopt/animal -p notopt -i")
+    p.cargo("tree -e features --features notopt/animal -i notopt")
         .with_stdout(
             "\
 notopt v1.0.0
@@ -269,7 +269,7 @@ foo v0.1.0 ([..]/foo)
         )
         .run();
 
-    p.cargo("tree -e features --all-features -p opt2 -i")
+    p.cargo("tree -e features --all-features -i opt2")
         .with_stdout(
             "\
 opt2 v1.0.0

@@ -2,6 +2,7 @@ use crate::command_prelude::*;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
 use cargo::ops::tree::{self, EdgeKind};
+use cargo::ops::Packages;
 use cargo::util::CargoResult;
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -40,7 +41,14 @@ pub fn cli() -> App {
             )
             .short("e"),
         )
-        .arg(opt("invert", "Invert the tree direction").short("i"))
+        .arg(
+            optional_multi_opt(
+                "invert",
+                "SPEC",
+                "Invert the tree direction and focus on the given package",
+            )
+            .short("i"),
+        )
         .arg(Arg::with_name("no-indent").long("no-indent").hidden(true))
         .arg(
             Arg::with_name("prefix-depth")
@@ -119,6 +127,37 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let edge_kinds = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
+    let packages = args.packages_from_flags()?;
+    let mut invert = args
+        .values_of("invert")
+        .map_or_else(|| Vec::new(), |is| is.map(|s| s.to_string()).collect());
+    if args.is_present_with_zero_values("invert") {
+        match &packages {
+            Packages::Packages(ps) => {
+                // Backwards compatibility with old syntax of `cargo tree -i -p foo`.
+                invert.extend(ps.clone());
+            }
+            _ => {
+                return Err(format_err!(
+                    "The `-i` flag requires a package name.\n\
+\n\
+The `-i` flag is used to inspect the reverse dependencies of a specific\n\
+package. It will invert the tree and display the packages that depend on the\n\
+given package.\n\
+\n\
+Note that in a workspace, by default it will only display the package's\n\
+reverse dependencies inside the tree of the workspace member in the current\n\
+directory. The --workspace flag can be used to extend it so that it will show\n\
+the package's reverse dependencies across the entire workspace. The -p flag\n\
+can be used to display the package's reverse dependencies only with the\n\
+subtree of the package given to -p.\n\
+"
+                )
+                .into());
+            }
+        }
+    }
+
     let ws = args.workspace(config)?;
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -126,10 +165,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         features: values(args, "features"),
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
-        packages: args.packages_from_flags()?,
+        packages,
         target,
         edge_kinds,
-        invert: args.is_present("invert"),
+        invert,
         prefix,
         no_dedupe: args.is_present("no-dedupe"),
         duplicates: args.is_present("duplicates"),

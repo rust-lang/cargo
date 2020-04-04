@@ -40,18 +40,18 @@ of a simple project that depends on the "rand" package:
 .if n .RS 4
 .nf
 myproject v0.1.0 (/myproject)
-└── rand v0.7.3
-    ├── getrandom v0.1.14
-    │   ├── cfg\-if v0.1.10
-    │   └── libc v0.2.68
-    ├── libc v0.2.68 (*)
-    ├── rand_chacha v0.2.2
-    │   ├── ppv\-lite86 v0.2.6
-    │   └── rand_core v0.5.1
-    │       └── getrandom v0.1.14 (*)
-    └── rand_core v0.5.1 (*)
+`\-\- rand v0.7.3
+    |\-\- getrandom v0.1.14
+    |   |\-\- cfg\-if v0.1.10
+    |   `\-\- libc v0.2.68
+    |\-\- libc v0.2.68 (*)
+    |\-\- rand_chacha v0.2.2
+    |   |\-\- ppv\-lite86 v0.2.6
+    |   `\-\- rand_core v0.5.1
+    |       `\-\- getrandom v0.1.14 (*)
+    `\-\- rand_core v0.5.1 (*)
 [build\-dependencies]
-└── cc v1.0.50
+`\-\- cc v1.0.50
 .fi
 .if n .RE
 .sp
@@ -66,25 +66,32 @@ each dependency. For example, \fBcargo tree \-e features\fP:
 .if n .RS 4
 .nf
 myproject v0.1.0 (/myproject)
-└── log feature "serde"
-    └── log v0.4.8
-        ├── serde v1.0.106
-        └── cfg\-if feature "default"
-            └── cfg\-if v0.1.10
+`\-\- log feature "serde"
+    `\-\- log v0.4.8
+        |\-\- serde v1.0.106
+        `\-\- cfg\-if feature "default"
+            `\-\- cfg\-if v0.1.10
 .fi
 .if n .RE
 .sp
 In this tree, \fBmyproject\fP depends on \fBlog\fP with the \fBserde\fP feature. \fBlog\fP in
 turn depends on \fBcfg\-if\fP with "default" features. When using \fB\-e features\fP it
-can be helpful to use \fB\-i\fP and \fB\-p\fP flags to show how the features flow into a
-package. See the examples below for more detail.
+can be helpful to use \fB\-i\fP flag to show how the features flow into a package.
+See the examples below for more detail.
 .SH "OPTIONS"
 .SS "Tree Options"
 .sp
-\fB\-i\fP, \fB\-\-invert\fP
+\fB\-i\fP \fISPEC\fP, \fB\-\-invert\fP \fISPEC\fP
 .RS 4
-Invert the tree. Typically this flag is used with the \fB\-p\fP flag to show
-the dependencies for a specific package.
+Show the reverse dependencies for the given package. This flag will invert
+the tree and display the packages that depend on the given package.
+.sp
+Note that in a workspace, by default it will only display the package\(cqs
+reverse dependencies inside the tree of the workspace member in the current
+directory. The \fB\-\-workspace\fP flag can be used to extend it so that it will
+show the package\(cqs reverse dependencies across the entire workspace. The \fB\-p\fP
+flag can be used to display the package\(cqs reverse dependencies only with the
+subtree of the package given to \fB\-p\fP.
 .RE
 .sp
 \fB\-\-no\-dedupe\fP
@@ -516,11 +523,11 @@ cargo tree
 .  sp -1
 .  IP " 2." 4.2
 .\}
-Display all the packages that depend on the specified package:
+Display all the packages that depend on the \fBsyn\fP package:
 .sp
 .if n .RS 4
 .nf
-cargo tree \-i \-p syn
+cargo tree \-i syn
 .fi
 .if n .RE
 .RE
@@ -568,41 +575,41 @@ cargo tree \-d
 .  sp -1
 .  IP " 5." 4.2
 .\}
-Explain why features are enabled for the given package:
+Explain why features are enabled for the \fBsyn\fP package:
 .sp
 .if n .RS 4
 .nf
-cargo tree \-e features \-i \-p syn
+cargo tree \-e features \-i syn
 .fi
 .if n .RE
 .sp
 The \fB\-e features\fP flag is used to show features. The \fB\-i\fP flag is used to
-invert the graph so that it displays the packages that depend on \fBsyn\fP (not
-what \fBsyn\fP depends on). An example of what this would display:
+invert the graph so that it displays the packages that depend on \fBsyn\fP. An
+example of what this would display:
 .sp
 .if n .RS 4
 .nf
 syn v1.0.17
-├── syn feature "clone\-impls"
-│   └── syn feature "default"
-│       └── rustversion v1.0.2
-│           └── rustversion feature "default"
-│               └── myproject v0.1.0 (/myproject)
-│                   └── myproject feature "default" (command\-line)
-├── syn feature "default" (*)
-├── syn feature "derive"
-│   └── syn feature "default" (*)
-├── syn feature "full"
-│   └── rustversion v1.0.2 (*)
-├── syn feature "parsing"
-│   └── syn feature "default" (*)
-├── syn feature "printing"
-│   └── syn feature "default" (*)
-├── syn feature "proc\-macro"
-│   └── syn feature "default" (*)
-└── syn feature "quote"
-    ├── syn feature "printing" (*)
-    └── syn feature "proc\-macro" (*)
+|\-\- syn feature "clone\-impls"
+|   `\-\- syn feature "default"
+|       `\-\- rustversion v1.0.2
+|           `\-\- rustversion feature "default"
+|               `\-\- myproject v0.1.0 (/myproject)
+|                   `\-\- myproject feature "default" (command\-line)
+|\-\- syn feature "default" (*)
+|\-\- syn feature "derive"
+|   `\-\- syn feature "default" (*)
+|\-\- syn feature "full"
+|   `\-\- rustversion v1.0.2 (*)
+|\-\- syn feature "parsing"
+|   `\-\- syn feature "default" (*)
+|\-\- syn feature "printing"
+|   `\-\- syn feature "default" (*)
+|\-\- syn feature "proc\-macro"
+|   `\-\- syn feature "default" (*)
+`\-\- syn feature "quote"
+    |\-\- syn feature "printing" (*)
+    `\-\- syn feature "proc\-macro" (*)
 .fi
 .if n .RE
 .sp

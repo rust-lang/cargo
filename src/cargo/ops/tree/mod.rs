@@ -4,7 +4,7 @@ use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
-use crate::core::{Package, PackageId, Workspace};
+use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
 use anyhow::{bail, Context};
@@ -27,7 +27,7 @@ pub struct TreeOptions {
     pub target: Target,
     /// The dependency kinds to display.
     pub edge_kinds: HashSet<EdgeKind>,
-    pub invert: bool,
+    pub invert: Vec<String>,
     /// The style of prefix for each line.
     pub prefix: Prefix,
     /// If `true`, duplicates will be repeated.
@@ -177,7 +177,15 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         opts,
     )?;
 
-    let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&specs)?;
+    let root_specs = if opts.invert.is_empty() {
+        specs
+    } else {
+        opts.invert
+            .iter()
+            .map(|p| PackageIdSpec::parse(p))
+            .collect::<CargoResult<Vec<PackageIdSpec>>>()?
+    };
+    let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
     let root_indexes = graph.indexes_from_ids(&root_ids);
 
     let root_indexes = if opts.duplicates {
@@ -188,7 +196,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         root_indexes
     };
 
-    if opts.invert || opts.duplicates {
+    if !opts.invert.is_empty() || opts.duplicates {
         graph.invert();
     }
 
