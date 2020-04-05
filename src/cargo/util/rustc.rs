@@ -25,6 +25,8 @@ pub struct Rustc {
     pub workspace_wrapper: Option<PathBuf>,
     /// Verbose version information (the output of `rustc -vV`)
     pub verbose_version: String,
+    /// The rustc version (`1.23.4-beta.2`), this comes from verbose_version.
+    pub version: semver::Version,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: InternedString,
     cache: Mutex<Cache>,
@@ -51,25 +53,34 @@ impl Rustc {
         cmd.arg("-vV");
         let verbose_version = cache.cached_output(&cmd)?.0;
 
-        let host = {
-            let triple = verbose_version
+        let extract = |field: &str| -> CargoResult<&str> {
+            verbose_version
                 .lines()
-                .find(|l| l.starts_with("host: "))
-                .map(|l| &l[6..])
+                .find(|l| l.starts_with(field))
+                .map(|l| &l[field.len()..])
                 .ok_or_else(|| {
                     anyhow::format_err!(
-                        "`rustc -vV` didn't have a line for `host:`, got:\n{}",
+                        "`rustc -vV` didn't have a line for `{}`, got:\n{}",
+                        field.trim(),
                         verbose_version
                     )
-                })?;
-            InternedString::new(triple)
+                })
         };
+
+        let host = InternedString::new(extract("host: ")?);
+        let version = semver::Version::parse(extract("release: ")?).chain_err(|| {
+            format!(
+                "rustc version does not appear to be a valid semver version, from:\n{}",
+                verbose_version
+            )
+        })?;
 
         Ok(Rustc {
             path,
             wrapper,
             workspace_wrapper,
             verbose_version,
+            version,
             host,
             cache: Mutex::new(cache),
         })
