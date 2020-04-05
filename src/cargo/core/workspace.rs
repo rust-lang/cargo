@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::slice;
 
 use glob::glob;
@@ -11,7 +12,7 @@ use url::Url;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::RequestedFeatures;
-use crate::core::{Dependency, PackageId, PackageIdSpec};
+use crate::core::{Dependency, InternedString, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;
@@ -877,60 +878,154 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, RequestedFeatures::new_all(true)))
                 .collect());
         }
-        if self.config().cli_unstable().package_features {
-            if specs.len() > 1 && !requested_features.features.is_empty() {
-                anyhow::bail!("cannot specify features for more than one package");
-            }
-            let members: Vec<(&Package, RequestedFeatures)> = self
-                .members()
-                .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
-                .map(|m| (m, requested_features.clone()))
-                .collect();
-            if members.is_empty() {
-                // `cargo build -p foo`, where `foo` is not a member.
-                // Do not allow any command-line flags (defaults only).
-                if !(requested_features.features.is_empty()
-                    && !requested_features.all_features
-                    && requested_features.uses_default_features)
-                {
-                    anyhow::bail!("cannot specify features for packages outside of workspace");
-                }
-                // Add all members from the workspace so we can ensure `-p nonmember`
-                // is in the resolve graph.
-                return Ok(self
-                    .members()
-                    .map(|m| (m, RequestedFeatures::new_all(false)))
-                    .collect());
-            }
-            Ok(members)
+        if self.config().cli_unstable().package_features
+            || self.config().cli_unstable().package_features2
+        {
+            self.members_with_features_pf(specs, requested_features)
         } else {
-            let ms = self.members().filter_map(|member| {
-                let member_id = member.package_id();
-                match self.current_opt() {
-                    // The features passed on the command-line only apply to
-                    // the "current" package (determined by the cwd).
-                    Some(current) if member_id == current.package_id() => {
-                        Some((member, requested_features.clone()))
+            self.members_with_features_stable(specs, requested_features)
+        }
+    }
+
+    /// New command-line feature selection with -Zpackage-features or -Zpackage-features2.
+    fn members_with_features_pf(
+        &self,
+        specs: &[PackageIdSpec],
+        requested_features: &RequestedFeatures,
+    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        let pf2 = self.config().cli_unstable().package_features2;
+        if specs.len() > 1 && !requested_features.features.is_empty() && !pf2 {
+            anyhow::bail!("cannot specify features for more than one package");
+        }
+        // Keep track of which features matched *any* member, to produce an error
+        // if any of them did not match anywhere.
+        let mut found: BTreeSet<InternedString> = BTreeSet::new();
+
+        // Returns the requested features for the given member.
+        // This filters out any named features that the member does not have.
+        let mut matching_features = |member: &Package| -> RequestedFeatures {
+            // This new behavior is only enabled for -Zpackage-features2
+            if !pf2 {
+                return requested_features.clone();
+            }
+            if requested_features.features.is_empty() || requested_features.all_features {
+                return requested_features.clone();
+            }
+            // Only include features this member defines.
+            let summary = member.summary();
+            let member_features = summary.features();
+            let mut features = BTreeSet::new();
+
+            // Checks if a member contains the given feature.
+            let contains = |feature: InternedString| -> bool {
+                member_features.contains_key(&feature)
+                    || summary
+                        .dependencies()
+                        .iter()
+                        .any(|dep| dep.is_optional() && dep.name_in_toml() == feature)
+            };
+
+            for feature in requested_features.features.iter() {
+                let mut split = feature.splitn(2, '/');
+                let split = (split.next().unwrap(), split.next());
+                if let (pkg, Some(pkg_feature)) = split {
+                    let pkg = InternedString::new(pkg);
+                    let pkg_feature = InternedString::new(pkg_feature);
+                    if summary
+                        .dependencies()
+                        .iter()
+                        .any(|dep| dep.name_in_toml() == pkg)
+                    {
+                        // pkg/feat for a dependency.
+                        // Will rely on the dependency resolver to validate `feat`.
+                        features.insert(*feature);
+                        found.insert(*feature);
+                    } else if pkg == member.name() && contains(pkg_feature) {
+                        // member/feat where "feat" is a feature in member.
+                        features.insert(pkg_feature);
+                        found.insert(*feature);
                     }
-                    _ => {
-                        // Ignore members that are not enabled on the command-line.
-                        if specs.iter().any(|spec| spec.matches(member_id)) {
-                            // -p for a workspace member that is not the
-                            // "current" one, don't use the local
-                            // `--features`, only allow `--all-features`.
-                            Some((
-                                member,
-                                RequestedFeatures::new_all(requested_features.all_features),
-                            ))
-                        } else {
-                            // This member was not requested on the command-line, skip.
-                            None
-                        }
+                } else if contains(*feature) {
+                    // feature exists in this member.
+                    features.insert(*feature);
+                    found.insert(*feature);
+                }
+            }
+            RequestedFeatures {
+                features: Rc::new(features),
+                all_features: false,
+                uses_default_features: requested_features.uses_default_features,
+            }
+        };
+
+        let members: Vec<(&Package, RequestedFeatures)> = self
+            .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+            .map(|m| (m, matching_features(m)))
+            .collect();
+        if members.is_empty() {
+            // `cargo build -p foo`, where `foo` is not a member.
+            // Do not allow any command-line flags (defaults only).
+            if !(requested_features.features.is_empty()
+                && !requested_features.all_features
+                && requested_features.uses_default_features)
+            {
+                anyhow::bail!("cannot specify features for packages outside of workspace");
+            }
+            // Add all members from the workspace so we can ensure `-p nonmember`
+            // is in the resolve graph.
+            return Ok(self
+                .members()
+                .map(|m| (m, RequestedFeatures::new_all(false)))
+                .collect());
+        }
+        if pf2 && *requested_features.features != found {
+            let missing: Vec<_> = requested_features
+                .features
+                .difference(&found)
+                .copied()
+                .collect();
+            // TODO: typo suggestions would be good here.
+            anyhow::bail!(
+                "none of the selected packages contains these features: {}",
+                missing.join(", ")
+            );
+        }
+        Ok(members)
+    }
+
+    /// This is the current "stable" behavior for command-line feature selection.
+    fn members_with_features_stable(
+        &self,
+        specs: &[PackageIdSpec],
+        requested_features: &RequestedFeatures,
+    ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
+        let ms = self.members().filter_map(|member| {
+            let member_id = member.package_id();
+            match self.current_opt() {
+                // The features passed on the command-line only apply to
+                // the "current" package (determined by the cwd).
+                Some(current) if member_id == current.package_id() => {
+                    Some((member, requested_features.clone()))
+                }
+                _ => {
+                    // Ignore members that are not enabled on the command-line.
+                    if specs.iter().any(|spec| spec.matches(member_id)) {
+                        // -p for a workspace member that is not the
+                        // "current" one, don't use the local
+                        // `--features`, only allow `--all-features`.
+                        Some((
+                            member,
+                            RequestedFeatures::new_all(requested_features.all_features),
+                        ))
+                    } else {
+                        // This member was not requested on the command-line, skip.
+                        None
                     }
                 }
-            });
-            Ok(ms.collect())
-        }
+            }
+        });
+        Ok(ms.collect())
     }
 }
 

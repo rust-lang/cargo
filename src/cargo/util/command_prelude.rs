@@ -288,7 +288,9 @@ pub trait ArgMatchesExt {
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
-        if ws.is_virtual() && !config.cli_unstable().package_features {
+        let unstable =
+            config.cli_unstable().package_features || config.cli_unstable().package_features2;
+        if ws.is_virtual() && !unstable {
             // --all-features is actually honored. In general, workspaces and
             // feature flags are a bit of a mess right now.
             for flag in &["features", "no-default-features"] {
