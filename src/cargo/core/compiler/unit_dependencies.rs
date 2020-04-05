@@ -581,7 +581,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 fn new_unit_dep<'unit>(
     state: &State<'_, 'unit, '_>,
     parent: &Unit<'unit>,
-    pkg: &Rc<Package>,
+    pkg: &Package,
     target: &Rc<Target>,
     unit_for: UnitFor,
     kind: CompileKind,
@@ -597,7 +597,7 @@ fn new_unit_dep<'unit>(
 fn new_unit_dep_with_profile<'unit>(
     state: &State<'_, 'unit, '_>,
     parent: &Unit<'unit>,
-    pkg: &Rc<Package>,
+    pkg: &Package,
     target: &Rc<Target>,
     unit_for: UnitFor,
     kind: CompileKind,
@@ -735,7 +735,7 @@ impl<'a, 'unit, 'cfg> State<'a, 'unit, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
-    fn get(&self, id: PackageId) -> &'a Rc<Package> {
+    fn get(&self, id: PackageId) -> &'a Package {
         self.package_set
             .get_one(id)
             .unwrap_or_else(|_| panic!("expected {} to be downloaded", id))

@@ -33,7 +33,7 @@ pub struct Unit<'a> {
 pub struct UnitInner {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
-    pub pkg: Rc<Package>,
+    pub pkg: Package,
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
@@ -142,7 +142,7 @@ impl UnitInterner {
     /// be the exact same instance.
     pub fn intern(
         &self,
-        pkg: &Rc<Package>,
+        pkg: &Package,
         target: &Rc<Target>,
         profile: Profile,
         kind: CompileKind,
@@ -172,7 +172,7 @@ impl UnitInterner {
             _ => Rc::clone(target),
         };
         let inner = self.intern_inner(&UnitInner {
-            pkg: Rc::clone(pkg),
+            pkg: pkg.clone(),
             target,
             profile,
             kind,

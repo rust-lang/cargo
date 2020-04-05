@@ -679,7 +679,7 @@ impl CompileFilter {
 /// not the target requires its features to be present.
 #[derive(Debug)]
 struct Proposal<'a> {
-    pkg: &'a Rc<Package>,
+    pkg: &'a Package,
     target: &'a Rc<Target>,
     /// Indicates whether or not all required features *must* be present. If
     /// false, and the features are not available, then it will be silently
@@ -693,7 +693,7 @@ struct Proposal<'a> {
 /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
 fn generate_targets<'unit>(
     ws: &Workspace<'_>,
-    packages: &[&Rc<Package>],
+    packages: &[&Package],
     filter: &CompileFilter,
     default_arch_kind: CompileKind,
     mode: CompileMode,
@@ -705,7 +705,7 @@ fn generate_targets<'unit>(
 ) -> CargoResult<Vec<Unit<'unit>>> {
     let config = ws.config();
     // Helper for creating a `Unit` struct.
-    let new_unit = |pkg: &Rc<Package>, target: &Rc<Target>, target_mode: CompileMode| {
+    let new_unit = |pkg: &Package, target: &Rc<Target>, target_mode: CompileMode| {
         let unit_for = if target_mode.is_any_test() {
             // NOTE: the `UnitFor` here is subtle. If you have a profile
             // with `panic` set, the `panic` flag is cleared for
@@ -1009,7 +1009,7 @@ fn filter_default_targets(targets: &[Rc<Target>], mode: CompileMode) -> Vec<&Rc<
 
 /// Returns a list of proposed targets based on command-line target selection flags.
 fn list_rule_targets<'a>(
-    packages: &[&'a Rc<Package>],
+    packages: &[&'a Package],
     rule: &FilterRule,
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
@@ -1037,7 +1037,7 @@ fn list_rule_targets<'a>(
 
 /// Finds the targets for a specifically named target.
 fn find_named_targets<'a>(
-    packages: &[&'a Rc<Package>],
+    packages: &[&'a Package],
     target_name: &str,
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
@@ -1063,7 +1063,7 @@ fn find_named_targets<'a>(
 }
 
 fn filter_targets<'a>(
-    packages: &[&'a Rc<Package>],
+    packages: &[&'a Package],
     predicate: impl Fn(&Target) -> bool,
     requires_features: bool,
     mode: CompileMode,

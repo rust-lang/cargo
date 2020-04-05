@@ -167,7 +167,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
-                        Rc::clone(&unit.pkg),
+                        unit.pkg.clone(),
                         Rc::clone(&unit.target),
                         output.path.clone(),
                     ));
@@ -200,7 +200,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 self.compilation.to_doc_test.push(compilation::Doctest {
-                    package: Rc::clone(&unit.pkg),
+                    package: unit.pkg.clone(),
                     target: Rc::clone(&unit.target),
                     args,
                     unstable_opts,

@@ -15,7 +15,7 @@ use crate::util::{self, config, join_paths, process, CargoResult, Config, Proces
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
     /// The package being doc-tested.
-    pub package: Rc<Package>,
+    pub package: Package,
     /// The target being tested (currently always the package's lib).
     pub target: Rc<Target>,
     /// Arguments needed to pass to rustdoc to run this test.
@@ -28,7 +28,7 @@ pub struct Doctest {
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
     /// `(package, target, path_to_test_exe)`
-    pub tests: Vec<(Rc<Package>, Rc<Target>, PathBuf)>,
+    pub tests: Vec<(Package, Rc<Target>, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,

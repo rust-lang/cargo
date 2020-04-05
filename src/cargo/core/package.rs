@@ -38,6 +38,11 @@ use crate::util::{self, internal, Config, Progress, ProgressStyle};
 // TODO: is `manifest_path` a relic?
 #[derive(Clone)]
 pub struct Package {
+    inner: Rc<PackageInner>,
+}
+
+#[derive(Clone)]
+struct PackageInner {
     /// The package's manifest.
     manifest: Manifest,
     /// The root of the package.
@@ -88,9 +93,9 @@ impl ser::Serialize for Package {
     where
         S: ser::Serializer,
     {
-        let summary = self.manifest.summary();
+        let summary = self.manifest().summary();
         let package_id = summary.package_id();
-        let manmeta = self.manifest.metadata();
+        let manmeta = self.manifest().metadata();
         let license = manmeta.license.as_deref();
         let license_file = manmeta.license_file.as_deref();
         let description = manmeta.description.as_deref();
@@ -103,7 +108,7 @@ impl ser::Serialize for Package {
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
         let targets: Vec<&Target> = self
-            .manifest
+            .manifest()
             .targets()
             .iter()
             .filter(|t| t.src_path().is_path())
@@ -121,16 +126,16 @@ impl ser::Serialize for Package {
             dependencies: summary.dependencies(),
             targets,
             features: summary.features(),
-            manifest_path: &self.manifest_path,
-            metadata: self.manifest.custom_metadata(),
+            manifest_path: self.manifest_path(),
+            metadata: self.manifest().custom_metadata(),
             authors,
             categories,
             keywords,
             readme,
             repository,
-            edition: &self.manifest.edition().to_string(),
-            links: self.manifest.links(),
-            metabuild: self.manifest.metabuild(),
+            edition: &self.manifest().edition().to_string(),
+            links: self.manifest().links(),
+            metabuild: self.manifest().metabuild(),
             publish: self.publish().as_ref(),
         }
         .serialize(s)
@@ -141,26 +146,28 @@ impl Package {
     /// Creates a package from a manifest and its location.
     pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
-            manifest,
-            manifest_path: manifest_path.to_path_buf(),
+            inner: Rc::new(PackageInner {
+                manifest,
+                manifest_path: manifest_path.to_path_buf(),
+            }),
         }
     }
 
     /// Gets the manifest dependencies.
     pub fn dependencies(&self) -> &[Dependency] {
-        self.manifest.dependencies()
+        self.manifest().dependencies()
     }
     /// Gets the manifest.
     pub fn manifest(&self) -> &Manifest {
-        &self.manifest
+        &self.inner.manifest
     }
     /// Gets the manifest.
     pub fn manifest_mut(&mut self) -> &mut Manifest {
-        &mut self.manifest
+        &mut Rc::make_mut(&mut self.inner).manifest
     }
     /// Gets the path to the manifest.
     pub fn manifest_path(&self) -> &Path {
-        &self.manifest_path
+        &self.inner.manifest_path
     }
     /// Gets the name of the package.
     pub fn name(&self) -> InternedString {
@@ -168,19 +175,19 @@ impl Package {
     }
     /// Gets the `PackageId` object for the package (fully defines a package).
     pub fn package_id(&self) -> PackageId {
-        self.manifest.package_id()
+        self.manifest().package_id()
     }
     /// Gets the root folder of the package.
     pub fn root(&self) -> &Path {
-        self.manifest_path.parent().unwrap()
+        self.manifest_path().parent().unwrap()
     }
     /// Gets the summary for the package.
     pub fn summary(&self) -> &Summary {
-        self.manifest.summary()
+        self.manifest().summary()
     }
     /// Gets the targets specified in the manifest.
     pub fn targets(&self) -> &[Rc<Target>] {
-        self.manifest.targets()
+        self.manifest().targets()
     }
     /// Gets the current package version.
     pub fn version(&self) -> &Version {
@@ -188,11 +195,11 @@ impl Package {
     }
     /// Gets the package authors.
     pub fn authors(&self) -> &Vec<String> {
-        &self.manifest.metadata().authors
+        &self.manifest().metadata().authors
     }
     /// Returns `true` if the package is set to publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
-        self.manifest.publish()
+        self.manifest().publish()
     }
     /// Returns `true` if this package is a proc-macro.
     pub fn proc_macro(&self) -> bool {
@@ -206,8 +213,10 @@ impl Package {
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Package {
         Package {
-            manifest: self.manifest.map_source(to_replace, replace_with),
-            manifest_path: self.manifest_path,
+            inner: Rc::new(PackageInner {
+                manifest: self.manifest().clone().map_source(to_replace, replace_with),
+                manifest_path: self.manifest_path().to_owned(),
+            }),
         }
     }
 
@@ -276,7 +285,7 @@ impl hash::Hash for Package {
 /// This is primarily used to convert a set of `PackageId`s to `Package`s. It
 /// will download as needed, or used the cached download if available.
 pub struct PackageSet<'cfg> {
-    packages: HashMap<PackageId, LazyCell<Rc<Package>>>,
+    packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
     multi: Multi,
@@ -440,7 +449,7 @@ impl<'cfg> PackageSet<'cfg> {
         })
     }
 
-    pub fn get_one(&self, id: PackageId) -> CargoResult<&Rc<Package>> {
+    pub fn get_one(&self, id: PackageId) -> CargoResult<&Package> {
         if let Some(pkg) = self.packages.get(&id).and_then(|slot| slot.borrow()) {
             return Ok(pkg);
         }
@@ -450,7 +459,7 @@ impl<'cfg> PackageSet<'cfg> {
     pub fn get_many(
         &self,
         ids: impl IntoIterator<Item = PackageId>,
-    ) -> CargoResult<Vec<&Rc<Package>>> {
+    ) -> CargoResult<Vec<&Package>> {
         let mut pkgs = Vec::new();
         let mut downloads = self.enable_download()?;
         for id in ids {
@@ -576,13 +585,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// Returns `None` if the package is queued up for download and will
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
-    pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Rc<Package>>> {
+    pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         Ok(self
             .start_inner(id)
             .chain_err(|| format!("failed to download `{}`", id))?)
     }
 
-    fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Rc<Package>>> {
+    fn start_inner(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         // First up see if we've already cached this package, in which case
         // there's nothing to do.
         let slot = self
@@ -607,7 +616,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let (url, descriptor) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
-                assert!(slot.fill(Rc::new(pkg)).is_ok());
+                assert!(slot.fill(pkg).is_ok());
                 return Ok(Some(slot.borrow().unwrap()));
             }
             MaybePackage::Download { url, descriptor } => (url, descriptor),
@@ -720,7 +729,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// # Panics
     ///
     /// This function will panic if there are no remaining downloads.
-    pub fn wait(&mut self) -> CargoResult<&'a Rc<Package>> {
+    pub fn wait(&mut self) -> CargoResult<&'a Package> {
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
             let (token, result) = self.wait_for_curl()?;
@@ -833,7 +842,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .set(self.next_speed_check.get() + finish_dur);
 
         let slot = &self.set.packages[&dl.id];
-        assert!(slot.fill(Rc::new(pkg)).is_ok());
+        assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
     }
 
