@@ -3169,6 +3169,8 @@ fn compiler_json_error_format() {
         "filenames": "{...}",
         "fresh": $FRESH
     }
+
+    {"reason": "build-finished", "success": true}
 "#
         .replace("$FRESH", fresh)
     };
@@ -3249,6 +3251,8 @@ fn message_format_json_forward_stderr() {
         "filenames": "{...}",
         "fresh": false
     }
+
+    {"reason": "build-finished", "success": true}
 "#,
         )
         .run();

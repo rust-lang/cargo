@@ -1628,6 +1628,8 @@ fn json_artifact_includes_executable_for_benchmark() {
                     "src_path": "[..]/foo/benches/benchmark.rs"
                 }
             }
+
+            {"reason": "build-finished", "success": true}
         "#,
         )
         .run();
