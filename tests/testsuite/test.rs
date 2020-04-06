@@ -129,7 +129,7 @@ fn cargo_test_overflow_checks() {
             use std::panic;
             pub fn main() {
                 let r = panic::catch_unwind(|| {
-                    [1, i32::max_value()].iter().sum::<i32>();
+                    [1, i32::MAX].iter().sum::<i32>();
                 });
                 assert!(r.is_err());
             }"#,

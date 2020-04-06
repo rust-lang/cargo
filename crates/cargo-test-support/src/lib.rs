@@ -118,7 +118,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
-use std::usize;
 
 use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
 use serde_json::{self, Value};
