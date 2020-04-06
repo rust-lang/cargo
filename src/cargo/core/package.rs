@@ -112,7 +112,6 @@ impl ser::Serialize for Package {
             .targets()
             .iter()
             .filter(|t| t.src_path().is_path())
-            .map(|t| &**t) // Converts &Rc<Target> to &Target
             .collect();
 
         SerializedPackage {
@@ -186,7 +185,7 @@ impl Package {
         self.manifest().summary()
     }
     /// Gets the targets specified in the manifest.
-    pub fn targets(&self) -> &[Rc<Target>] {
+    pub fn targets(&self) -> &[Target] {
         self.manifest().targets()
     }
     /// Gets the current package version.

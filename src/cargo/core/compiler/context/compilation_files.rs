@@ -526,7 +526,7 @@ fn metadata_of<'a, 'cfg>(
 ) -> Option<Metadata> {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
-        metas.insert(*unit, meta);
+        metas.insert(unit.clone(), meta);
         for dep in cx.unit_deps(unit) {
             metadata_of(&dep.unit, cx, metas);
         }

@@ -722,7 +722,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
         // If a package has a build script, add itself as something to inspect for linking.
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             let script_meta = cx
-                .find_build_script_metadata(*unit)
+                .find_build_script_metadata(unit.clone())
                 .expect("has_custom_build should have RunCustomBuild");
             add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
@@ -736,7 +736,8 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut dependencies: Vec<Unit<'_>> = cx.unit_deps(unit).iter().map(|d| d.unit).collect();
+        let mut dependencies: Vec<Unit<'_>> =
+            cx.unit_deps(unit).iter().map(|d| d.unit.clone()).collect();
         dependencies.sort_by_key(|u| u.pkg.package_id());
 
         for dep_unit in dependencies.iter() {
@@ -751,7 +752,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
             }
         }
 
-        match out.entry(*unit) {
+        match out.entry(unit.clone()) {
             Entry::Vacant(entry) => Ok(entry.insert(ret)),
             Entry::Occupied(_) => panic!("cyclic dependencies in `build_map`"),
         }
@@ -773,7 +774,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
         let output_file = script_run_dir.join("output");
         let (prev_output, _) = prev_build_output(cx, unit);
         let deps = BuildDeps::new(&output_file, prev_output.as_ref());
-        cx.build_explicit_deps.insert(*unit, deps);
+        cx.build_explicit_deps.insert(unit.clone(), deps);
         Ok(())
     }
 }

@@ -1193,7 +1193,7 @@ fn calculate<'a, 'cfg>(
     fingerprint.check_filesystem(&mut cx.mtime_cache, unit.pkg.root(), &target_root)?;
 
     let fingerprint = Arc::new(fingerprint);
-    cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
+    cx.fingerprints.insert(unit.clone(), Arc::clone(&fingerprint));
     Ok(fingerprint)
 }
 

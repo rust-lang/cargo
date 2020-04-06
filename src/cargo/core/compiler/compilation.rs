@@ -2,7 +2,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use cargo_platform::CfgExpr;
 use semver::Version;
@@ -17,7 +16,7 @@ pub struct Doctest {
     /// The package being doc-tested.
     pub package: Package,
     /// The target being tested (currently always the package's lib).
-    pub target: Rc<Target>,
+    pub target: Target,
     /// Arguments needed to pass to rustdoc to run this test.
     pub args: Vec<OsString>,
     /// Whether or not -Zunstable-options is needed.
@@ -28,7 +27,7 @@ pub struct Doctest {
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
     /// `(package, target, path_to_test_exe)`
-    pub tests: Vec<(Package, Rc<Target>, PathBuf)>,
+    pub tests: Vec<(Package, Target, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,

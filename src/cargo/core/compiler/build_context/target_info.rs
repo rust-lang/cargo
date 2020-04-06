@@ -104,12 +104,13 @@ impl TargetInfo {
             .args(&rustflags)
             .env_remove("RUSTC_LOG");
 
-        let mut embed_bitcode_test = process.clone();
-        embed_bitcode_test.arg("-Cembed-bitcode");
-        let supports_embed_bitcode = match kind {
-            CompileKind::Host => Some(rustc.cached_output(&embed_bitcode_test).is_ok()),
-            _ => None,
-        };
+        // let mut embed_bitcode_test = process.clone();
+        // embed_bitcode_test.arg("-Cembed-bitcode");
+        // let supports_embed_bitcode = match kind {
+        //     CompileKind::Host => Some(rustc.cached_output(&embed_bitcode_test).is_ok()),
+        //     _ => None,
+        // };
+        let supports_embed_bitcode = Some(false);
 
         if let CompileKind::Target(target) = kind {
             process.arg("--target").arg(target.rustc_target());

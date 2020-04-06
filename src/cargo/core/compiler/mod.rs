@@ -109,7 +109,7 @@ fn compile<'a, 'cfg: 'a>(
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
-    if !cx.compiled.insert(*unit) {
+    if !cx.compiled.insert(unit.clone()) {
         return Ok(());
     }
 
@@ -226,7 +226,7 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let script_metadata = cx.find_build_script_metadata(*unit);
+    let script_metadata = cx.find_build_script_metadata(unit.clone());
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -550,7 +550,7 @@ fn prepare_rustc<'a, 'cfg>(
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
         base.arg("-Zjobserver-token-requests");
-        assert!(cx.rustc_clients.insert(*unit, client).is_none());
+        assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
     } else {
         base.inherit_jobserver(&cx.jobserver);
     }
@@ -602,7 +602,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let pkg_id = unit.pkg.package_id();
-    let script_metadata = cx.find_build_script_metadata(*unit);
+    let script_metadata = cx.find_build_script_metadata(unit.clone());
 
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {

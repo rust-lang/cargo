@@ -301,7 +301,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 } else {
                     Artifact::All
                 };
-                (dep.unit, artifact)
+                (dep.unit.clone(), artifact)
             })
             .collect::<HashMap<_, _>>();
 
@@ -328,7 +328,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // transitively contains the `Metadata` edge.
         if unit.requires_upstream_objects() {
             for dep in dependencies {
-                depend_on_deps_of_deps(cx, &mut queue_deps, dep.unit);
+                depend_on_deps_of_deps(cx, &mut queue_deps, dep.unit.clone());
             }
 
             fn depend_on_deps_of_deps<'a>(
@@ -337,14 +337,14 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 unit: Unit<'a>,
             ) {
                 for dep in cx.unit_deps(&unit) {
-                    if deps.insert(dep.unit, Artifact::All).is_none() {
-                        depend_on_deps_of_deps(cx, deps, dep.unit);
+                    if deps.insert(dep.unit.clone(), Artifact::All).is_none() {
+                        depend_on_deps_of_deps(cx, deps, dep.unit.clone());
                     }
                 }
             }
         }
 
-        self.queue.queue(*unit, job, queue_deps);
+        self.queue.queue(unit.clone(), job, queue_deps);
         *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
         Ok(())
     }
@@ -499,7 +499,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     .config
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
-                self.timings.unit_start(id, self.active[&id]);
+                self.timings.unit_start(id, self.active[&id].clone());
             }
             Message::BuildPlanMsg(module_name, cmd, filenames) => {
                 plan.update(&module_name, &cmd, &filenames)?;
@@ -541,7 +541,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
                     // in there as we'll get another `Finish` later on.
                     Artifact::Metadata => {
                         info!("end (meta): {:?}", id);
-                        self.active[&id]
+                        self.active[&id].clone()
                     }
                 };
                 info!("end ({:?}): {:?}", unit, result);
@@ -784,7 +784,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
 
         info!("start {}: {:?}", id, unit);
 
-        assert!(self.active.insert(id, *unit).is_none());
+        assert!(self.active.insert(id, unit.clone()).is_none());
         *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
 
         let messages = self.messages.clone();
@@ -862,7 +862,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         cx: &mut Context<'a, '_>,
     ) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
-        let metadata = match cx.find_build_script_metadata(*unit) {
+        let metadata = match cx.find_build_script_metadata(unit.clone()) {
             Some(metadata) => metadata,
             None => return Ok(()),
         };

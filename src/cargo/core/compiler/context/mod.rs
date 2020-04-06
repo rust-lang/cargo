@@ -1,7 +1,6 @@
 #![allow(deprecated)]
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
@@ -168,7 +167,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
-                        Rc::clone(&unit.target),
+                        unit.target.clone(),
                         output.path.clone(),
                     ));
                 } else if unit.target.is_executable() {
@@ -201,7 +200,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     package: unit.pkg.clone(),
-                    target: Rc::clone(&unit.target),
+                    target: unit.target.clone(),
                     args,
                     unstable_opts,
                 });
@@ -343,7 +342,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 unit_dep.unit.mode.is_run_custom_build()
                     && unit_dep.unit.pkg.package_id() == unit.pkg.package_id()
             })
-            .map(|unit_dep| unit_dep.unit)
+            .map(|unit_dep| unit_dep.unit.clone())
     }
 
     /// Returns the metadata hash for the RunCustomBuild Unit associated with
@@ -488,7 +487,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         for (key, deps) in self.bcx.unit_graph.iter() {
             for dep in deps {
                 if self.only_requires_rmeta(key, &dep.unit) {
-                    self.rmeta_required.insert(dep.unit);
+                    self.rmeta_required.insert(dep.unit.clone());
                 }
             }
         }

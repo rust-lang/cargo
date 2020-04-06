@@ -24,7 +24,6 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
@@ -460,7 +459,7 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(units[0], args);
+        extra_compiler_args.insert(units[0].clone(), args);
     }
     for unit in &units {
         if unit.mode.is_doc() || unit.mode.is_doc_test() {
@@ -476,7 +475,7 @@ pub fn create_bcx<'a, 'cfg>(
             }
 
             if let Some(args) = extra_args {
-                extra_compiler_args.insert(*unit, args.clone());
+                extra_compiler_args.insert(unit.clone(), args.clone());
             }
         }
     }
@@ -680,7 +679,7 @@ impl CompileFilter {
 #[derive(Debug)]
 struct Proposal<'a> {
     pkg: &'a Package,
-    target: &'a Rc<Target>,
+    target: &'a Target,
     /// Indicates whether or not all required features *must* be present. If
     /// false, and the features are not available, then it will be silently
     /// skipped. Generally, targets specified by name (`--bin foo`) are
@@ -705,7 +704,7 @@ fn generate_targets<'unit>(
 ) -> CargoResult<Vec<Unit<'unit>>> {
     let config = ws.config();
     // Helper for creating a `Unit` struct.
-    let new_unit = |pkg: &Package, target: &Rc<Target>, target_mode: CompileMode| {
+    let new_unit = |pkg: &Package, target: &Target, target_mode: CompileMode| {
         let unit_for = if target_mode.is_any_test() {
             // NOTE: the `UnitFor` here is subtle. If you have a profile
             // with `panic` set, the `panic` flag is cleared for
@@ -981,7 +980,7 @@ pub fn resolve_all_features(
 
 /// Given a list of all targets for a package, filters out only the targets
 /// that are automatically included when the user doesn't specify any targets.
-fn filter_default_targets(targets: &[Rc<Target>], mode: CompileMode) -> Vec<&Rc<Target>> {
+fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
     match mode {
         CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
         CompileMode::Test => targets

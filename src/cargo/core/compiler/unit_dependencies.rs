@@ -28,7 +28,6 @@ use crate::util::Config;
 use crate::CargoResult;
 use log::trace;
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 
 /// Collection of stuff used while creating the `UnitGraph`.
 struct State<'a, 'unit, 'cfg> {
@@ -134,7 +133,7 @@ fn attach_std_deps<'unit>(
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots.iter().map(|unit| UnitDep {
-                unit: *unit,
+                unit: unit.clone(),
                 unit_for: UnitFor::new_normal(),
                 extern_crate_name: unit.pkg.name(),
                 // TODO: Does this `public` make sense?
@@ -198,7 +197,7 @@ fn deps_of<'unit>(
     // affect anything else in the hierarchy.
     if !state.unit_dependencies.contains_key(unit) {
         let unit_deps = compute_deps(unit, state, unit_for)?;
-        state.unit_dependencies.insert(*unit, unit_deps.clone());
+        state.unit_dependencies.insert(unit.clone(), unit_deps.clone());
         for unit_dep in unit_deps {
             deps_of(&unit_dep.unit, state, unit_dep.unit_for)?;
         }
@@ -582,7 +581,7 @@ fn new_unit_dep<'unit>(
     state: &State<'_, 'unit, '_>,
     parent: &Unit<'unit>,
     pkg: &Package,
-    target: &Rc<Target>,
+    target: &Target,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -598,7 +597,7 @@ fn new_unit_dep_with_profile<'unit>(
     state: &State<'_, 'unit, '_>,
     parent: &Unit<'unit>,
     pkg: &Package,
-    target: &Rc<Target>,
+    target: &Target,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -651,7 +650,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph<'_>) {
             for dep in deps {
                 if dep.unit.mode == CompileMode::RunCustomBuild {
                     reverse_deps_map
-                        .entry(dep.unit)
+                        .entry(dep.unit.clone())
                         .or_insert_with(HashSet::new)
                         .insert(unit);
                 }
@@ -698,7 +697,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph<'_>) {
 
             if !to_add.is_empty() {
                 // (RunCustomBuild, set(other RunCustomBuild))
-                new_deps.push((*unit, to_add));
+                new_deps.push((unit.clone(), to_add));
             }
         }
     }

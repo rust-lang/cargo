@@ -54,7 +54,7 @@ fn add_deps_for_unit<'a, 'b>(
     unit: &Unit<'a>,
     visited: &mut HashSet<Unit<'a>>,
 ) -> CargoResult<()> {
-    if !visited.insert(*unit) {
+    if !visited.insert(unit.clone()) {
         return Ok(());
     }
 
@@ -80,7 +80,7 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Add rerun-if-changed dependencies
-    if let Some(metadata) = cx.find_build_script_metadata(*unit) {
+    if let Some(metadata) = cx.find_build_script_metadata(unit.clone()) {
         if let Some(output) = cx
             .build_script_outputs
             .lock()

@@ -193,7 +193,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         let t = d_as_f64(self.start.elapsed());
         unit_time.rmeta_time = Some(t - unit_time.start);
         assert!(unit_time.unlocked_rmeta_units.is_empty());
-        unit_time.unlocked_rmeta_units.extend(unlocked);
+        unit_time.unlocked_rmeta_units.extend(unlocked.iter().cloned().cloned());
     }
 
     /// Mark that a unit has finished running.
@@ -209,7 +209,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
         let t = d_as_f64(self.start.elapsed());
         unit_time.duration = t - unit_time.start;
         assert!(unit_time.unlocked_units.is_empty());
-        unit_time.unlocked_units.extend(unlocked);
+        unit_time.unlocked_units.extend(unlocked.iter().cloned().cloned());
         if self.report_info {
             let msg = format!(
                 "{}{} in {:.1}s",
@@ -460,7 +460,7 @@ impl<'a, 'cfg> Timings<'a, 'cfg> {
             .unit_times
             .iter()
             .enumerate()
-            .map(|(i, ut)| (ut.unit, i))
+            .map(|(i, ut)| (ut.unit.clone(), i))
             .collect();
         #[derive(serde::Serialize)]
         struct UnitData {

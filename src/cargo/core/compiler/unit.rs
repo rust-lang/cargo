@@ -1,4 +1,6 @@
 use crate::core::compiler::{CompileKind, CompileMode};
+use std::marker;
+use std::rc::Rc;
 use crate::core::manifest::{LibKind, Target, TargetKind};
 use crate::core::{profiles::Profile, InternedString, Package};
 use crate::util::hex::short_hash;
@@ -7,7 +9,6 @@ use std::collections::HashSet;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use std::rc::Rc;
 
 /// All information needed to define a unit.
 ///
@@ -23,8 +24,10 @@ use std::rc::Rc;
 /// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
 /// whether you want a debug or release build. There is enough information in this struct to figure
 /// all that out.
-#[derive(Clone, Copy, PartialOrd, Ord)]
+#[derive(Clone, PartialOrd, Ord)]
 pub struct Unit<'a> {
+    // inner: Rc<UnitInner>,
+    // _wut: marker::PhantomData<&'a ()>,
     inner: &'a UnitInner,
 }
 
@@ -37,7 +40,7 @@ pub struct UnitInner {
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
-    pub target: Rc<Target>,
+    pub target: Target,
     /// The profile contains information about *how* the build should be run, including debug
     /// level, etc.
     pub profile: Profile,
@@ -78,14 +81,14 @@ impl<'a> Unit<'a> {
 // Just hash the pointer for fast hashing
 impl<'a> Hash for Unit<'a> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        (self.inner as *const UnitInner).hash(hasher)
+        (&*self.inner as *const UnitInner).hash(hasher)
     }
 }
 
 // Just equate the pointer since these are interned
 impl<'a> PartialEq for Unit<'a> {
     fn eq(&self, other: &Unit<'a>) -> bool {
-        self.inner as *const UnitInner == other.inner as *const UnitInner
+        &*self.inner as *const UnitInner == &*other.inner as *const UnitInner
     }
 }
 
@@ -95,7 +98,7 @@ impl<'a> Deref for Unit<'a> {
     type Target = UnitInner;
 
     fn deref(&self) -> &UnitInner {
-        self.inner
+        &*self.inner
     }
 }
 
@@ -124,6 +127,7 @@ pub struct UnitInterner {
 }
 
 struct InternerState {
+    // cache: HashSet<Rc<UnitInner>>,
     cache: HashSet<Box<UnitInner>>,
 }
 
@@ -143,7 +147,7 @@ impl UnitInterner {
     pub fn intern(
         &self,
         pkg: &Package,
-        target: &Rc<Target>,
+        target: &Target,
         profile: Profile,
         kind: CompileKind,
         mode: CompileMode,
@@ -167,9 +171,9 @@ impl UnitInterner {
             (true, TargetKind::Lib(crate_types)) if crate_types.contains(&LibKind::Dylib) => {
                 let mut new_target = Target::clone(target);
                 new_target.set_kind(TargetKind::Lib(vec![LibKind::Rlib]));
-                Rc::new(new_target)
+                new_target
             }
-            _ => Rc::clone(target),
+            _ => target.clone(),
         };
         let inner = self.intern_inner(&UnitInner {
             pkg: pkg.clone(),
@@ -180,32 +184,25 @@ impl UnitInterner {
             features,
             is_std,
         });
+        // Unit { inner, _wut: marker::PhantomData }
         Unit { inner }
     }
 
-    // Ok so interning here is a little unsafe, hence the usage of `unsafe`
-    // internally. The primary issue here is that we've got an internal cache of
-    // `UnitInner` instances added so far, but we may need to mutate it to add
-    // it, and the mutation for an interner happens behind a shared borrow.
-    //
-    // Our goal though is to escape the lifetime `borrow_mut` to the same
-    // lifetime as the borrowed passed into this function. That's where `unsafe`
-    // comes into play. What we're subverting here is resizing internally in the
-    // `HashSet` as well as overwriting previous keys in the `HashSet`.
-    //
-    // As a result we store `Box<UnitInner>` internally to have an extra layer
-    // of indirection. That way `*const UnitInner` is a stable address that
-    // doesn't change with `HashSet` resizing. Furthermore we're careful to
-    // never overwrite an entry once inserted.
-    //
-    // Ideally we'd use an off-the-shelf interner from crates.io which avoids a
-    // small amount of unsafety here, but at the time this was written one
-    // wasn't obviously available.
-    fn intern_inner(&self, item: &UnitInner) -> &UnitInner {
+    // fn intern_inner(&self, item: &UnitInner) -> Rc<UnitInner> {
+    //     let mut me = self.state.borrow_mut();
+    //     if let Some(item) = me.cache.get(item) {
+    //         return item.clone();
+    //     }
+    //     let item = Rc::new(item.clone());
+    //     me.cache.insert(item.clone());
+    //     return item;
+    // }
+
+    fn intern_inner<'a>(&'a self, item: &UnitInner) -> &'a UnitInner {
         let mut me = self.state.borrow_mut();
         if let Some(item) = me.cache.get(item) {
-            // note that `item` has type `&Box<UnitInner>`. Use `&**` to
-            // convert that to `&UnitInner`, then do some trickery to extend
+            // note that `item` has type `&Box<UnitInner<'a>`. Use `&**` to
+            // convert that to `&UnitInner<'a>`, then do some trickery to extend
             // the lifetime to the `'a` on the function here.
             return unsafe { &*(&**item as *const UnitInner) };
         }
