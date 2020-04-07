@@ -23,6 +23,10 @@ Rust packages.
 
 The reference covers the details of various areas of Cargo.
 
+**[Cargo Commands](commands/index.md)**
+
+The commands will let you interact with Cargo using its command-line interface.
+
 **[Frequently Asked Questions](faq.md)**
 
 **Appendicies:**
