@@ -3175,13 +3175,13 @@ fn compiler_json_error_format() {
 
     // Use `jobs=1` to ensure that the order of messages is consistent.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(&output("false"))
+        .with_json_contains_unordered(&output("false"))
         .run();
 
     // With fresh build, we should repeat the artifacts,
     // and replay the cached compiler warnings.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(&output("true"))
+        .with_json_contains_unordered(&output("true"))
         .run();
 }
 
@@ -3210,7 +3210,7 @@ fn message_format_json_forward_stderr() {
         .build();
 
     p.cargo("rustc --release --bin foo --message-format JSON")
-        .with_json(
+        .with_json_contains_unordered(
             r#"
     {
         "reason":"compiler-message",
