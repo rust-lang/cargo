@@ -190,6 +190,7 @@
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
+use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -276,6 +277,15 @@ pub fn prepare_target<'a, 'cfg>(
     if compare.is_ok() && !force {
         return Ok(Job::new(Work::noop(), Fresh));
     }
+
+    // Delete the old fingerprint file if it exists. This protects the following scenario:
+    // 1. The fingerprint already exists, but is dirty due to an mtime failure.
+    // 2. The build starts.
+    // 3. The build is interrupted (particularly when linking with gcc), such
+    //    as with Ctrl-C. This leaves the output file in a partially written state.
+    // 4. The next time Cargo runs, the fingerprint appears fresh, so it
+    //    refuses to build, even though the output file is corrupt.
+    drop(fs::remove_file(&loc));
 
     let write_fingerprint = if unit.mode.is_run_custom_build() {
         // For build scripts the `local` field of the fingerprint may change
