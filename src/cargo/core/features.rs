@@ -343,6 +343,7 @@ pub struct CliUnstable {
     pub jobserver_per_rustc: bool,
     pub features: Option<Vec<String>>,
     pub crate_versions: bool,
+    pub separate_nightlies: bool,
 }
 
 impl CliUnstable {
@@ -420,6 +421,7 @@ impl CliUnstable {
             "jobserver-per-rustc" => self.jobserver_per_rustc = parse_empty(k, v)?,
             "features" => self.features = Some(parse_features(v)),
             "crate-versions" => self.crate_versions = parse_empty(k, v)?,
+            "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

@@ -644,7 +644,7 @@ fn compute_metadata<'a, 'cfg>(
 
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
     let vers = &bcx.rustc().version;
-    if vers.pre.is_empty() {
+    if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
         // For stable, keep the artifacts separate. This helps if someone is
         // testing multiple versions, to avoid recompiles.
         bcx.rustc().verbose_version.hash(hasher);
