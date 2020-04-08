@@ -36,8 +36,7 @@
 //! Fingerprints and Metadata are similar, and track some of the same things.
 //! The Metadata contains information that is required to keep Units separate.
 //! The Fingerprint includes additional information that should cause a
-//! recompile, but it is desired to reuse the same filenames. Generally the
-//! items in the Metadata do not need to be in the Fingerprint. A comparison
+//! recompile, but it is desired to reuse the same filenames. A comparison
 //! of what is tracked:
 //!
 //! Value                                      | Fingerprint | Metadata
@@ -54,8 +53,7 @@
 //! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
 //! package_id                                 |             | ✓
 //! authors, description, homepage, repo       | ✓           |
-//! Target src path                            | ✓           |
-//! Target path relative to ws                 | ✓           |
+//! Target src path relative to ws             | ✓           |
 //! Target flags (test/bench/for_host/edition) | ✓           |
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
@@ -64,11 +62,17 @@
 //!
 //! [^1]: Build script and bin dependencies are not included.
 //!
-//! [^3]: The mtime is only tracked for workspace members and path
-//!       dependencies. Git dependencies track the git revision.
+//! [^3]: See below for details on mtime tracking.
 //!
 //! [^4]: `__CARGO_DEFAULT_LIB_METADATA` is set by rustbuild to embed the
 //!        release channel (bootstrap/stable/beta/nightly) in libstd.
+//!
+//! When deciding what should go in the Metadata vs the Fingerprint, consider
+//! that some files (like dylibs) do not have a hash in their filename. Thus,
+//! if a value changes, only the fingerprint will detect the change. Fields
+//! that are only in Metadata generally aren't relevant to the fingerprint
+//! because they fundamentally change the output (like target vs host changes
+//! the directory where it is emitted).
 //!
 //! ## Fingerprint files
 //!
@@ -83,9 +87,7 @@
 //!   `CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
 //!   used to display this log information.
 //! - A "dep-info" file which contains a list of source filenames for the
-//!   target. This is produced by reading the output of `rustc
-//!   --emit=dep-info` and packing it into a condensed format. Cargo uses this
-//!   to check the mtime of every file to see if any of them have changed.
+//!   target. See below for details.
 //! - An `invoked.timestamp` file whose filesystem mtime is updated every time
 //!   the Unit is built. This is an experimental feature used for cleaning
 //!   unused artifacts.
@@ -109,6 +111,103 @@
 //! dependency information. Since a Fingerprint includes the Fingerprints of
 //! all dependencies, when it is updated, by using `Arc` clones, it
 //! automatically picks up the updates to its dependencies.
+//!
+//! ### dep-info files
+//!
+//! Cargo passes the `--emit=dep-info` flag to `rustc` so that `rustc` will
+//! generate a "dep info" file (with the `.d` extension). This is a
+//! Makefile-like syntax that includes all of the source files used to build
+//! the crate. This file is used by Cargo to know which files to check to see
+//! if the crate will need to be rebuilt.
+//!
+//! After `rustc` exits successfully, Cargo will read the dep info file and
+//! translate it into a binary format that is stored in the fingerprint
+//! directory (`translate_dep_info`). The mtime of the fingerprint dep-info
+//! file itself is used as the reference for comparing the source files to
+//! determine if any of the source files have been modified (see below for
+//! more detail).
+//!
+//! There is also a third dep-info file. Cargo will extend the file created by
+//! rustc with some additional information and saves this into the output
+//! directory. This is intended for build system integration. See the
+//! `output_depinfo` module for more detail.
+//!
+//! #### -Zbinary-dep-depinfo
+//!
+//! `rustc` has an experimental flag `-Zbinary-dep-depinfo`. This causes
+//! `rustc` to include binary files (like rlibs) in the dep-info file. This is
+//! primarily to support rustc development, so that Cargo can check the
+//! implicit dependency to the standard library (which lives in the sysroot).
+//! We want Cargo to recompile whenever the standard library rlib/dylibs
+//! change, and this is a generic mechanism to make that work.
+//!
+//! ### Mtime comparison
+//!
+//! The use of modification timestamps is the most common way a unit will be
+//! determined to be dirty or fresh between builds. There are many subtle
+//! issues and edge cases with mtime comparisons. This gives a high-level
+//! overview, but you'll need to read the code for the gritty details. Mtime
+//! handling is different for different unit kinds. The different styles are
+//! driven by the `Fingerprint.local` field, which is set based on the unit
+//! kind.
+//!
+//! The status of whether or not the mtime is "stale" or "up-to-date" is
+//! stored in `Fingerprint.fs_status`.
+//!
+//! All units will compare the mtime of its newest output file with the mtimes
+//! of the outputs of all its dependencies. If any output file is missing,
+//! then the unit is stale. If any dependency is newer, the unit is stale.
+//!
+//! #### Normal package mtime handling
+//!
+//! `LocalFingerprint::CheckDepinfo` is used for checking the mtime of
+//! packages. It compares the mtime of the input files (the source files) to
+//! the mtime of the dep-info file (which is written last after a build is
+//! finished). If the dep-info is missing, the unit is stale (it has never
+//! been built). The list of input files comes from the dep-info file. See the
+//! section above for details on dep-info files.
+//!
+//! Also note that although registry and git packages use `CheckDepInfo`, none
+//! of their source files are included in the dep-info (see
+//! `translate_dep_info`), so for those kinds no mtime checking is done
+//! (unless `-Zbinary-dep-depinfo` is used). Repository and git packages are
+//! static, so there is no need to check anything.
+//!
+//! When a build is complete, the mtime of the dep-info file in the
+//! fingerprint directory is modified to rewind it to the time when the build
+//! started. This is done by creating an `invoked.timestamp` file when the
+//! build starts to capture the start time. The mtime is rewound to the start
+//! to handle the case where the user modifies a source file while a build is
+//! running. Cargo can't know whether or not the file was included in the
+//! build, so it takes a conservative approach of assuming the file was *not*
+//! included, and it should be rebuilt during the next build.
+//!
+//! #### Rustdoc mtime handling
+//!
+//! Rustdoc does not emit a dep-info file, so Cargo currently has a relatively
+//! simple system for detecting rebuilds. `LocalFingerprint::Precalculated` is
+//! used for rustdoc units. For registry packages, this is the package
+//! version. For git packages, it is the git hash. For path packages, it is
+//! the a string of the mtime of the newest file in the package.
+//!
+//! There are some known bugs with how this works, so it should be improved at
+//! some point.
+//!
+//! #### Build script mtime handling
+//!
+//! Build script mtime handling runs in different modes. There is the "old
+//! style" where the build script does not emit any `rerun-if` directives. In
+//! this mode, Cargo will use `LocalFingerprint::Precalculated`. See the
+//! "rustdoc" section above how it works.
+//!
+//! In the new-style, each `rerun-if` directive is translated to the
+//! corresponding `LocalFingerprint` variant. The `RerunIfChanged` variant
+//! compares the mtime of the given filenames against the mtime of the
+//! "output" file.
+//!
+//! Similar to normal units, the build script "output" file mtime is rewound
+//! to the time just before the build script is executed to handle mid-build
+//! modifications.
 //!
 //! ## Considerations for inclusion in a fingerprint
 //!
@@ -484,9 +583,8 @@ impl<'de> Deserialize<'de> for DepFingerprint {
 #[derive(Debug, Serialize, Deserialize, Hash)]
 enum LocalFingerprint {
     /// This is a precalculated fingerprint which has an opaque string we just
-    /// hash as usual. This variant is primarily used for git/crates.io
-    /// dependencies where the source never changes so we can quickly conclude
-    /// that there's some string we can hash and it won't really change much.
+    /// hash as usual. This variant is primarily used for rustdoc where we
+    /// don't have a dep-info file to compare against.
     ///
     /// This is also used for build scripts with no `rerun-if-*` statements, but
     /// that's overall a mistake and causes bugs in Cargo. We shouldn't use this
@@ -1072,19 +1170,16 @@ fn calculate_normal<'a, 'cfg>(
         .collect::<CargoResult<Vec<_>>>()?;
     deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
 
-    // Afterwards calculate our own fingerprint information. We specially
-    // handle `path` packages to ensure we track files on the filesystem
-    // correctly, but otherwise upstream packages like from crates.io or git
-    // get bland fingerprints because they don't change without their
-    // `PackageId` changing.
+    // Afterwards calculate our own fingerprint information.
     let target_root = target_root(cx);
-    let local = if use_dep_info(unit) {
+    let local = if unit.mode.is_doc() {
+        // rustdoc does not have dep-info files.
+        let fingerprint = pkg_fingerprint(cx.bcx, unit.pkg)?;
+        vec![LocalFingerprint::Precalculated(fingerprint)]
+    } else {
         let dep_info = dep_info_loc(cx, unit);
         let dep_info = dep_info.strip_prefix(&target_root).unwrap().to_path_buf();
         vec![LocalFingerprint::CheckDepInfo { dep_info }]
-    } else {
-        let fingerprint = pkg_fingerprint(cx.bcx, unit.pkg)?;
-        vec![LocalFingerprint::Precalculated(fingerprint)]
     };
 
     // Figure out what the outputs of our unit is, and we'll be storing them
@@ -1126,12 +1221,6 @@ fn calculate_normal<'a, 'cfg>(
         fs_status: FsStatus::Stale,
         outputs,
     })
-}
-
-/// Whether or not the fingerprint should track the dependencies from the
-/// dep-info file for this unit.
-fn use_dep_info(unit: &Unit<'_>) -> bool {
-    !unit.mode.is_doc()
 }
 
 /// Calculate a fingerprint for an "execute a build script" unit.  This is an
@@ -1588,7 +1677,8 @@ impl DepInfoPathType {
 /// included. If it is false, then package-relative paths are skipped and
 /// ignored (typically used for registry or git dependencies where we assume
 /// the source never changes, and we don't want the cost of running `stat` on
-/// all those files).
+/// all those files). See the module-level docs for the note about
+/// `-Zbinary-dep-depinfo` for more details on why this is done.
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
