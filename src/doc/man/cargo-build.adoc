@@ -37,6 +37,15 @@ include::options-target-triple.adoc[]
 
 include::options-release.adoc[]
 
+*--dependencies*::
+    Only build dependencies of the selected packages,
+    but not the selected packages themselves.
+
+*--remote-dependencies*::
+    Only build remote (ie. git and registry) dependencies of the selected packages.
+    If a remote dependency is patched, it is only built if another remote package
+    depends on it.
+
 === Output Options
 
 include::options-target-dir.adoc[]
