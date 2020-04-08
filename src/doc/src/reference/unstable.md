@@ -549,14 +549,14 @@ The available options are:
 * `compare` — This option compares the resolved features to the old resolver,
   and will print any differences.
 
-### package-features2
-* Tracking Issue: TODO
+### package-features
+* Tracking Issue: [#5364](https://github.com/rust-lang/cargo/issues/5364)
 
-The `-Zpackage-features2` flag changes the way features can be passed on the
+The `-Zpackage-features` flag changes the way features can be passed on the
 command-line for a workspace. The normal behavior can be confusing, as the
 features passed are always enabled on the package in the current directory,
 even if that package is not selected with a `-p` flag. Feature flags also do
-not work in the root of a virtual workspace. `-Zpackage-features2` tries to
+not work in the root of a virtual workspace. `-Zpackage-features` tries to
 make feature flags behave in a more intuitive manner.
 
 * `cargo build -p other_member --features …` — This now only enables the given

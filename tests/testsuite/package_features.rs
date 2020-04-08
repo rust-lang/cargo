@@ -1,4 +1,4 @@
-//! Tests for -Zpackage-features2
+//! Tests for -Zpackage-features
 
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project};
@@ -61,7 +61,7 @@ fn virtual_no_default_features() {
         )
         .run();
 
-    p.cargo("check --no-default-features -Zpackage-features2")
+    p.cargo("check --no-default-features -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
@@ -73,13 +73,13 @@ fn virtual_no_default_features() {
         )
         .run();
 
-    p.cargo("check --features foo -Zpackage-features2")
+    p.cargo("check --features foo -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: foo")
         .run();
 
-    p.cargo("check --features a/dep1,b/f1,b/f2,f2 -Zpackage-features2")
+    p.cargo("check --features a/dep1,b/f1,b/f2,f2 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("[ERROR] none of the selected packages contains these features: b/f2, f2")
@@ -129,7 +129,7 @@ fn virtual_features() {
         )
         .run();
 
-    p.cargo("check --features f1 -Zpackage-features2")
+    p.cargo("check --features f1 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
@@ -206,7 +206,7 @@ fn virtual_with_specific() {
         )
         .run();
 
-    p.cargo("check -p a -p b --features f1,f2,f3 -Zpackage-features2")
+    p.cargo("check -p a -p b --features f1,f2,f3 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stderr_unordered(
             "\
@@ -280,7 +280,7 @@ fn other_member_from_current() {
         .with_stdout("f3f4")
         .run();
 
-    p.cargo("run -p bar --features f1 -Zpackage-features2")
+    p.cargo("run -p bar --features f1 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stdout("f1")
         .run();
@@ -290,7 +290,7 @@ fn other_member_from_current() {
         .with_stderr("[ERROR] Package `foo[..]` does not have these features: `f2`")
         .run();
 
-    p.cargo("run -p bar --features f1,f2 -Zpackage-features2")
+    p.cargo("run -p bar --features f1,f2 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stdout("f1f2")
         .run();
@@ -299,7 +299,7 @@ fn other_member_from_current() {
         .with_stdout("f1f3")
         .run();
 
-    p.cargo("run -p bar --features bar/f1 -Zpackage-features2")
+    p.cargo("run -p bar --features bar/f1 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_stdout("f1")
         .run();
@@ -375,7 +375,7 @@ fn virtual_member_slash() {
         )
         .run();
 
-    p.cargo("check -p a -Zpackage-features2")
+    p.cargo("check -p a -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
@@ -383,7 +383,7 @@ fn virtual_member_slash() {
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features a/f1 -Zpackage-features2")
+    p.cargo("check -p a --features a/f1 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
@@ -391,7 +391,7 @@ fn virtual_member_slash() {
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features a/f2 -Zpackage-features2")
+    p.cargo("check -p a --features a/f2 -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]f1 is set[..]")
@@ -399,19 +399,74 @@ fn virtual_member_slash() {
         .with_stderr_does_not_contain("[..]b is set[..]")
         .run();
 
-    p.cargo("check -p a --features b/bfeat -Zpackage-features2")
+    p.cargo("check -p a --features b/bfeat -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]bfeat is set[..]")
         .run();
 
-    p.cargo("check -p a --no-default-features -Zpackage-features2")
+    p.cargo("check -p a --no-default-features -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .run();
 
-    p.cargo("check -p a --no-default-features --features b -Zpackage-features2")
+    p.cargo("check -p a --no-default-features --features b -Zpackage-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[..]b is set[..]")
+        .run();
+}
+
+#[cargo_test]
+fn non_member() {
+    // -p for a non-member
+    Package::new("dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = "1.0"
+
+            [features]
+            f1 = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Zpackage-features -p dep --features f1")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "[UPDATING][..]\n[ERROR] cannot specify features for packages outside of workspace",
+        )
+        .run();
+
+    p.cargo("build -Zpackage-features -p dep --all-features")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
+        .run();
+
+    p.cargo("build -Zpackage-features -p dep --no-default-features")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("[ERROR] cannot specify features for packages outside of workspace")
+        .run();
+
+    p.cargo("build -Zpackage-features -p dep")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[DOWNLOADING] [..]
+[DOWNLOADED] [..]
+[COMPILING] dep [..]
+[FINISHED] [..]
+",
+        )
         .run();
 }

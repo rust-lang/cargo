@@ -878,25 +878,19 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, RequestedFeatures::new_all(true)))
                 .collect());
         }
-        if self.config().cli_unstable().package_features
-            || self.config().cli_unstable().package_features2
-        {
+        if self.config().cli_unstable().package_features {
             self.members_with_features_pf(specs, requested_features)
         } else {
             self.members_with_features_stable(specs, requested_features)
         }
     }
 
-    /// New command-line feature selection with -Zpackage-features or -Zpackage-features2.
+    /// New command-line feature selection with -Zpackage-features.
     fn members_with_features_pf(
         &self,
         specs: &[PackageIdSpec],
         requested_features: &RequestedFeatures,
     ) -> CargoResult<Vec<(&Package, RequestedFeatures)>> {
-        let pf2 = self.config().cli_unstable().package_features2;
-        if specs.len() > 1 && !requested_features.features.is_empty() && !pf2 {
-            anyhow::bail!("cannot specify features for more than one package");
-        }
         // Keep track of which features matched *any* member, to produce an error
         // if any of them did not match anywhere.
         let mut found: BTreeSet<InternedString> = BTreeSet::new();
@@ -904,10 +898,6 @@ impl<'cfg> Workspace<'cfg> {
         // Returns the requested features for the given member.
         // This filters out any named features that the member does not have.
         let mut matching_features = |member: &Package| -> RequestedFeatures {
-            // This new behavior is only enabled for -Zpackage-features2
-            if !pf2 {
-                return requested_features.clone();
-            }
             if requested_features.features.is_empty() || requested_features.all_features {
                 return requested_features.clone();
             }
@@ -979,7 +969,7 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, RequestedFeatures::new_all(false)))
                 .collect());
         }
-        if pf2 && *requested_features.features != found {
+        if *requested_features.features != found {
             let missing: Vec<_> = requested_features
                 .features
                 .difference(&found)
