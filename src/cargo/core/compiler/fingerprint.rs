@@ -376,6 +376,24 @@ pub fn prepare_target<'a, 'cfg>(
         return Ok(Job::new(Work::noop(), Fresh));
     }
 
+    // Clear out the old fingerprint file if it exists. This protects when
+    // compilation is interrupted leaving a corrupt file. For example, a
+    // project with a lib.rs and integration test:
+    //
+    // 1. Build the integration test.
+    // 2. Make a change to lib.rs.
+    // 3. Build the integration test, hit Ctrl-C while linking (with gcc).
+    // 4. Build the integration test again.
+    //
+    // Without this line, then step 4 will think the integration test is
+    // "fresh" because the mtime of the output file is newer than all of its
+    // dependencies. But the executable is corrupt and needs to be rebuilt.
+    // Clearing the fingerprint ensures that Cargo never mistakes it as
+    // up-to-date until after a successful build.
+    if loc.exists() {
+        paths::write(&loc, b"")?;
+    }
+
     let write_fingerprint = if unit.mode.is_run_custom_build() {
         // For build scripts the `local` field of the fingerprint may change
         // while we're executing it. For example it could be in the legacy
@@ -1501,7 +1519,10 @@ fn compare_old_fingerprint(
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
     let old_fingerprint: Fingerprint = serde_json::from_str(&old_fingerprint_json)
         .chain_err(|| internal("failed to deserialize json"))?;
-    debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
+    // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
+    if !old_fingerprint_short.is_empty() {
+        debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
+    }
     let result = new_fingerprint.compare(&old_fingerprint);
     assert!(result.is_err());
     result
