@@ -401,6 +401,13 @@ impl Project {
             .expect("failed to glob")
     }
 
+    /// Checks whether a dependency library is built
+    /// within the workspace taget dir. Debug build is assumed.
+    pub fn dep_built(&self, name: &str) -> bool {
+        let pattern = format!("target/debug/deps/lib{}-*.rlib", name);
+        self.glob(&pattern).next().is_some()
+    }
+
     /// Changes the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body).mk()
