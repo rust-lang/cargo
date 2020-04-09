@@ -911,6 +911,37 @@ required by package `foo v0.0.1 ([CWD])`
         .run();
 }
 
+// Ensure that renamed deps have a valid name
+#[cargo_test]
+fn cargo_compile_with_invalid_dep_rename() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "buggin"
+            version = "0.1.0"
+
+            [dependencies]
+            "haha this isn't a valid name 🐛" = { package = "libc", version = "0.1" }
+        "#,
+        )
+        .file("src/main.rs", &main_file(r#""What's good?""#, &[]))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  invalid character ` ` in dependency name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn cargo_compile_with_filename() {
     let p = project()
