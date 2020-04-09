@@ -614,7 +614,7 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    bcx.rustc().verbose_version.hash(&mut hasher);
+    hash_rustc_version(bcx, &mut hasher);
 
     if cx.bcx.ws.is_member(unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
@@ -640,4 +640,36 @@ fn compute_metadata<'a, 'cfg>(
     unit.is_std.hash(&mut hasher);
 
     Some(Metadata(hasher.finish()))
+}
+
+fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
+    let vers = &bcx.rustc().version;
+    if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
+        // For stable, keep the artifacts separate. This helps if someone is
+        // testing multiple versions, to avoid recompiles.
+        bcx.rustc().verbose_version.hash(hasher);
+        return;
+    }
+    // On "nightly"/"beta"/"dev"/etc, keep each "channel" separate. Don't hash
+    // the date/git information, so that whenever someone updates "nightly",
+    // they won't have a bunch of stale artifacts in the target directory.
+    //
+    // This assumes that the first segment is the important bit ("nightly",
+    // "beta", "dev", etc.). Skip other parts like the `.3` in `-beta.3`.
+    vers.pre[0].hash(hasher);
+    // Keep "host" since some people switch hosts to implicitly change
+    // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
+    // to consider hashing `unit.kind.short_name()` instead.
+    bcx.rustc().host.hash(hasher);
+    // None of the other lines are important. Currently they are:
+    // binary: rustc  <-- or "rustdoc"
+    // commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
+    // commit-date: 2020-03-21
+    // host: x86_64-apple-darwin
+    // release: 1.44.0-nightly
+    // LLVM version: 9.0
+    //
+    // The backend version ("LLVM version") might become more relevant in
+    // the future when cranelift sees more use, and people want to switch
+    // between different backends without recompiling.
 }
