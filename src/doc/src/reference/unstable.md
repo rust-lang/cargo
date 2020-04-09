@@ -474,7 +474,7 @@ cargo +nightly -Zunstable-options -Zconfig-include --config somefile.toml build
 
 CLI paths are relative to the current working directory.
 
-## Features
+### Features
 * Tracking Issues:
   * [itarget #7914](https://github.com/rust-lang/cargo/issues/7914)
   * [build_dep #7915](https://github.com/rust-lang/cargo/issues/7915)
@@ -548,6 +548,31 @@ The available options are:
 
 * `compare` — This option compares the resolved features to the old resolver,
   and will print any differences.
+
+### package-features
+* Tracking Issue: [#5364](https://github.com/rust-lang/cargo/issues/5364)
+
+The `-Zpackage-features` flag changes the way features can be passed on the
+command-line for a workspace. The normal behavior can be confusing, as the
+features passed are always enabled on the package in the current directory,
+even if that package is not selected with a `-p` flag. Feature flags also do
+not work in the root of a virtual workspace. `-Zpackage-features` tries to
+make feature flags behave in a more intuitive manner.
+
+* `cargo build -p other_member --features …` — This now only enables the given
+  features as defined in `other_member` (ignores whatever is in the current
+  directory).
+* `cargo build -p a -p b --features …` — This now enables the given features
+  on both `a` and `b`. Not all packages need to define every feature, it only
+  enables matching features. It is still an error if none of the packages
+  define a given feature.
+* `--features` and `--no-default-features` are now allowed in the root of a
+  virtual workspace.
+* `member_name/feature_name` syntax may now be used on the command-line to
+  enable features for a specific member.
+
+The ability to set features for non-workspace members is no longer allowed, as
+the resolver fundamentally does not support that ability.
 
 ### crate-versions
 * Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)

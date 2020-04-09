@@ -73,6 +73,7 @@ mod offline;
 mod out_dir;
 mod owner;
 mod package;
+mod package_features;
 mod patch;
 mod path;
 mod paths;

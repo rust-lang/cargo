@@ -62,7 +62,14 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     build_config.requested_profile = opts.requested_profile;
     let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
-    let resolve_opts = ResolveOpts::everything();
+    // Resolve for default features. In the future, `cargo clean` should be rewritten
+    // so that it doesn't need to guess filename hashes.
+    let resolve_opts = ResolveOpts::new(
+        /*dev_deps*/ true,
+        &[],
+        /*all features*/ false,
+        /*default*/ true,
+    );
     let specs = opts
         .spec
         .iter()
