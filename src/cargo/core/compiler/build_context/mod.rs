@@ -26,7 +26,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub profiles: Profiles,
     pub build_config: &'a BuildConfig,
     /// Extra compiler args for either `rustc` or `rustdoc`.
-    pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
+    pub extra_compiler_args: HashMap<Unit, Vec<String>>,
     /// Package downloader.
     ///
     /// This holds ownership of the `Package` objects.
@@ -34,9 +34,9 @@ pub struct BuildContext<'a, 'cfg> {
     /// Information about rustc and the target platform.
     pub target_data: RustcTargetData,
     /// The root units of `unit_graph` (units requested on the command-line).
-    pub roots: Vec<Unit<'a>>,
+    pub roots: Vec<Unit>,
     /// The dependency graph of units to compile.
-    pub unit_graph: UnitGraph<'a>,
+    pub unit_graph: UnitGraph,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -45,10 +45,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         packages: PackageSet<'cfg>,
         build_config: &'a BuildConfig,
         profiles: Profiles,
-        extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
+        extra_compiler_args: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData,
-        roots: Vec<Unit<'a>>,
-        unit_graph: UnitGraph<'a>,
+        roots: Vec<Unit>,
+        unit_graph: UnitGraph,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         Ok(BuildContext {
             ws,
@@ -91,11 +91,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit<'_>) -> &[String] {
+    pub fn rustflags_args(&self, unit: &Unit) -> &[String] {
         &self.target_data.info(unit.kind).rustflags
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> &[String] {
+    pub fn rustdocflags_args(&self, unit: &Unit) -> &[String] {
         &self.target_data.info(unit.kind).rustdocflags
     }
 
@@ -103,7 +103,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
-    pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
+    pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
 }

@@ -1,6 +1,4 @@
 use crate::core::compiler::{CompileKind, CompileMode};
-use std::marker;
-use std::rc::Rc;
 use crate::core::manifest::{LibKind, Target, TargetKind};
 use crate::core::{profiles::Profile, InternedString, Package};
 use crate::util::hex::short_hash;
@@ -9,6 +7,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::rc::Rc;
 
 /// All information needed to define a unit.
 ///
@@ -25,10 +24,8 @@ use std::ops::Deref;
 /// whether you want a debug or release build. There is enough information in this struct to figure
 /// all that out.
 #[derive(Clone, PartialOrd, Ord)]
-pub struct Unit<'a> {
-    // inner: Rc<UnitInner>,
-    // _wut: marker::PhantomData<&'a ()>,
-    inner: &'a UnitInner,
+pub struct Unit {
+    inner: Rc<UnitInner>,
 }
 
 /// Internal fields of `Unit` which `Unit` will dereference to.
@@ -72,29 +69,29 @@ impl UnitInner {
     }
 }
 
-impl<'a> Unit<'a> {
+impl Unit {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
     }
 }
 
 // Just hash the pointer for fast hashing
-impl<'a> Hash for Unit<'a> {
+impl Hash for Unit {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        (&*self.inner as *const UnitInner).hash(hasher)
+        std::ptr::hash(&*self.inner, hasher)
     }
 }
 
 // Just equate the pointer since these are interned
-impl<'a> PartialEq for Unit<'a> {
-    fn eq(&self, other: &Unit<'a>) -> bool {
-        &*self.inner as *const UnitInner == &*other.inner as *const UnitInner
+impl PartialEq for Unit {
+    fn eq(&self, other: &Unit) -> bool {
+        std::ptr::eq(&*self.inner, &*other.inner)
     }
 }
 
-impl<'a> Eq for Unit<'a> {}
+impl Eq for Unit {}
 
-impl<'a> Deref for Unit<'a> {
+impl Deref for Unit {
     type Target = UnitInner;
 
     fn deref(&self) -> &UnitInner {
@@ -102,7 +99,7 @@ impl<'a> Deref for Unit<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Unit<'a> {
+impl fmt::Debug for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Unit")
             .field("pkg", &self.pkg)
@@ -127,8 +124,7 @@ pub struct UnitInterner {
 }
 
 struct InternerState {
-    // cache: HashSet<Rc<UnitInner>>,
-    cache: HashSet<Box<UnitInner>>,
+    cache: HashSet<Rc<UnitInner>>,
 }
 
 impl UnitInterner {
@@ -153,7 +149,7 @@ impl UnitInterner {
         mode: CompileMode,
         features: Vec<InternedString>,
         is_std: bool,
-    ) -> Unit<'_> {
+    ) -> Unit {
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
             // itself with both rlib and dylib. We don't want the dylib for a
@@ -184,30 +180,16 @@ impl UnitInterner {
             features,
             is_std,
         });
-        // Unit { inner, _wut: marker::PhantomData }
         Unit { inner }
     }
 
-    // fn intern_inner(&self, item: &UnitInner) -> Rc<UnitInner> {
-    //     let mut me = self.state.borrow_mut();
-    //     if let Some(item) = me.cache.get(item) {
-    //         return item.clone();
-    //     }
-    //     let item = Rc::new(item.clone());
-    //     me.cache.insert(item.clone());
-    //     return item;
-    // }
-
-    fn intern_inner<'a>(&'a self, item: &UnitInner) -> &'a UnitInner {
+    fn intern_inner(&self, item: &UnitInner) -> Rc<UnitInner> {
         let mut me = self.state.borrow_mut();
         if let Some(item) = me.cache.get(item) {
-            // note that `item` has type `&Box<UnitInner<'a>`. Use `&**` to
-            // convert that to `&UnitInner<'a>`, then do some trickery to extend
-            // the lifetime to the `'a` on the function here.
-            return unsafe { &*(&**item as *const UnitInner) };
+            return item.clone();
         }
-        me.cache.insert(Box::new(item.clone()));
-        let item = me.cache.get(item).unwrap();
-        unsafe { &*(&**item as *const UnitInner) }
+        let item = Rc::new(item.clone());
+        me.cache.insert(item.clone());
+        return item;
     }
 }

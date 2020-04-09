@@ -30,10 +30,10 @@ use log::trace;
 use std::collections::{HashMap, HashSet};
 
 /// Collection of stuff used while creating the `UnitGraph`.
-struct State<'a, 'unit, 'cfg> {
+struct State<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     config: &'cfg Config,
-    unit_dependencies: UnitGraph<'unit>,
+    unit_dependencies: UnitGraph,
     package_set: &'a PackageSet<'cfg>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
@@ -45,22 +45,22 @@ struct State<'a, 'unit, 'cfg> {
     global_mode: CompileMode,
     target_data: &'a RustcTargetData,
     profiles: &'a Profiles,
-    interner: &'unit UnitInterner,
+    interner: &'a UnitInterner,
 }
 
-pub fn build_unit_dependencies<'a, 'unit, 'cfg>(
+pub fn build_unit_dependencies<'a, 'cfg>(
     ws: &'a Workspace<'cfg>,
     package_set: &'a PackageSet<'cfg>,
     resolve: &'a Resolve,
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
-    roots: &[Unit<'unit>],
-    std_roots: &[Unit<'unit>],
+    roots: &[Unit],
+    std_roots: &[Unit],
     global_mode: CompileMode,
     target_data: &'a RustcTargetData,
     profiles: &'a Profiles,
-    interner: &'unit UnitInterner,
-) -> CargoResult<UnitGraph<'unit>> {
+    interner: &'a UnitInterner,
+) -> CargoResult<UnitGraph> {
     let (std_resolve, std_features) = match std_resolve {
         Some((r, f)) => (Some(r), Some(f)),
         None => (None, None),
@@ -106,10 +106,10 @@ pub fn build_unit_dependencies<'a, 'unit, 'cfg>(
 }
 
 /// Compute all the dependencies for the standard library.
-fn calc_deps_of_std<'unit>(
-    mut state: &mut State<'_, 'unit, '_>,
-    std_roots: &[Unit<'unit>],
-) -> CargoResult<Option<UnitGraph<'unit>>> {
+fn calc_deps_of_std(
+    mut state: &mut State<'_, '_>,
+    std_roots: &[Unit],
+) -> CargoResult<Option<UnitGraph>> {
     if std_roots.is_empty() {
         return Ok(None);
     }
@@ -124,11 +124,7 @@ fn calc_deps_of_std<'unit>(
 }
 
 /// Add the standard library units to the `unit_dependencies`.
-fn attach_std_deps<'unit>(
-    state: &mut State<'_, 'unit, '_>,
-    std_roots: &[Unit<'unit>],
-    std_unit_deps: UnitGraph<'unit>,
-) {
+fn attach_std_deps(state: &mut State<'_, '_>, std_roots: &[Unit], std_unit_deps: UnitGraph) {
     // Attach the standard library as a dependency of every target unit.
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
@@ -152,10 +148,7 @@ fn attach_std_deps<'unit>(
 
 /// Compute all the dependencies of the given root units.
 /// The result is stored in state.unit_dependencies.
-fn deps_of_roots<'unit>(
-    roots: &[Unit<'unit>],
-    mut state: &mut State<'_, 'unit, '_>,
-) -> CargoResult<()> {
+fn deps_of_roots(roots: &[Unit], mut state: &mut State<'_, '_>) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -184,11 +177,7 @@ fn deps_of_roots<'unit>(
 }
 
 /// Compute the dependencies of a single unit.
-fn deps_of<'unit>(
-    unit: &Unit<'unit>,
-    state: &mut State<'_, 'unit, '_>,
-    unit_for: UnitFor,
-) -> CargoResult<()> {
+fn deps_of(unit: &Unit, state: &mut State<'_, '_>, unit_for: UnitFor) -> CargoResult<()> {
     // Currently the `unit_dependencies` map does not include `unit_for`. This should
     // be safe for now. `TestDependency` only exists to clear the `panic`
     // flag, and you'll never ask for a `unit` with `panic` set as a
@@ -197,7 +186,9 @@ fn deps_of<'unit>(
     // affect anything else in the hierarchy.
     if !state.unit_dependencies.contains_key(unit) {
         let unit_deps = compute_deps(unit, state, unit_for)?;
-        state.unit_dependencies.insert(unit.clone(), unit_deps.clone());
+        state
+            .unit_dependencies
+            .insert(unit.clone(), unit_deps.clone());
         for unit_dep in unit_deps {
             deps_of(&unit_dep.unit, state, unit_dep.unit_for)?;
         }
@@ -209,11 +200,11 @@ fn deps_of<'unit>(
 /// for that package.
 /// This returns a `Vec` of `(Unit, UnitFor)` pairs. The `UnitFor`
 /// is the profile type that should be used for dependencies of the unit.
-fn compute_deps<'unit>(
-    unit: &Unit<'unit>,
-    state: &mut State<'_, 'unit, '_>,
+fn compute_deps(
+    unit: &Unit,
+    state: &mut State<'_, '_>,
     unit_for: UnitFor,
-) -> CargoResult<Vec<UnitDep<'unit>>> {
+) -> CargoResult<Vec<UnitDep>> {
     if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, unit_for, state);
     } else if unit.mode.is_doc() {
@@ -355,7 +346,7 @@ fn compute_deps<'unit>(
                         CompileMode::Build,
                     )
                 })
-                .collect::<CargoResult<Vec<UnitDep<'unit>>>>()?,
+                .collect::<CargoResult<Vec<UnitDep>>>()?,
         );
     }
 
@@ -366,11 +357,11 @@ fn compute_deps<'unit>(
 ///
 /// The `unit` provided must represent an execution of a build script, and
 /// the returned set of units must all be run before `unit` is run.
-fn compute_deps_custom_build<'unit>(
-    unit: &Unit<'unit>,
+fn compute_deps_custom_build(
+    unit: &Unit,
     unit_for: UnitFor,
-    state: &mut State<'_, 'unit, '_>,
-) -> CargoResult<Vec<UnitDep<'unit>>> {
+    state: &mut State<'_, '_>,
+) -> CargoResult<Vec<UnitDep>> {
     if let Some(links) = unit.pkg.manifest().links() {
         if state
             .target_data
@@ -408,10 +399,7 @@ fn compute_deps_custom_build<'unit>(
 }
 
 /// Returns the dependencies necessary to document a package.
-fn compute_deps_doc<'unit>(
-    unit: &Unit<'unit>,
-    state: &mut State<'_, 'unit, '_>,
-) -> CargoResult<Vec<UnitDep<'unit>>> {
+fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<UnitDep>> {
     let target_data = state.target_data;
     let deps = state
         .resolve()
@@ -474,11 +462,11 @@ fn compute_deps_doc<'unit>(
     Ok(ret)
 }
 
-fn maybe_lib<'unit>(
-    unit: &Unit<'unit>,
-    state: &mut State<'_, 'unit, '_>,
+fn maybe_lib(
+    unit: &Unit,
+    state: &mut State<'_, '_>,
     unit_for: UnitFor,
-) -> CargoResult<Option<UnitDep<'unit>>> {
+) -> CargoResult<Option<UnitDep>> {
     unit.pkg
         .targets()
         .iter()
@@ -505,11 +493,11 @@ fn maybe_lib<'unit>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'unit>(
-    unit: &Unit<'unit>,
+fn dep_build_script(
+    unit: &Unit,
     unit_for: UnitFor,
-    state: &State<'_, 'unit, '_>,
-) -> CargoResult<Option<UnitDep<'unit>>> {
+    state: &State<'_, '_>,
+) -> CargoResult<Option<UnitDep>> {
     unit.pkg
         .targets()
         .iter()
@@ -577,15 +565,15 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 /// Create a new Unit for a dependency from `parent` to `pkg` and `target`.
-fn new_unit_dep<'unit>(
-    state: &State<'_, 'unit, '_>,
-    parent: &Unit<'unit>,
+fn new_unit_dep(
+    state: &State<'_, '_>,
+    parent: &Unit,
     pkg: &Package,
     target: &Target,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
-) -> CargoResult<UnitDep<'unit>> {
+) -> CargoResult<UnitDep> {
     let profile =
         state
             .profiles
@@ -593,16 +581,16 @@ fn new_unit_dep<'unit>(
     new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
 }
 
-fn new_unit_dep_with_profile<'unit>(
-    state: &State<'_, 'unit, '_>,
-    parent: &Unit<'unit>,
+fn new_unit_dep_with_profile(
+    state: &State<'_, '_>,
+    parent: &Unit,
     pkg: &Package,
     target: &Target,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
     profile: Profile,
-) -> CargoResult<UnitDep<'unit>> {
+) -> CargoResult<UnitDep> {
     // TODO: consider making extern_crate_name return InternedString?
     let extern_crate_name = InternedString::new(&state.resolve().extern_crate_name(
         parent.pkg.package_id(),
@@ -636,7 +624,7 @@ fn new_unit_dep_with_profile<'unit>(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph<'_>) {
+fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
     let mut new_deps = Vec::new();
 
     {
@@ -708,7 +696,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph<'_>) {
     }
 }
 
-impl<'a, 'unit, 'cfg> State<'a, 'unit, 'cfg> {
+impl<'a, 'cfg> State<'a, 'cfg> {
     fn resolve(&self) -> &'a Resolve {
         if self.is_std {
             self.std_resolve.unwrap()

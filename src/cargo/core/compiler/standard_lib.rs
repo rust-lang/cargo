@@ -121,15 +121,15 @@ pub fn resolve_std<'cfg>(
 /// Generate a list of root `Unit`s for the standard library.
 ///
 /// The given slice of crate names is the root set.
-pub fn generate_std_roots<'unit>(
+pub fn generate_std_roots(
     crates: &[String],
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
     kind: CompileKind,
     package_set: &PackageSet<'_>,
-    interner: &'unit UnitInterner,
+    interner: &UnitInterner,
     profiles: &Profiles,
-) -> CargoResult<Vec<Unit<'unit>>> {
+) -> CargoResult<Vec<Unit>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
         .iter()

@@ -7,13 +7,13 @@ use std::collections::HashMap;
 use std::io::Write;
 
 /// The dependency graph of Units.
-pub type UnitGraph<'a> = HashMap<Unit<'a>, Vec<UnitDep<'a>>>;
+pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;
 
 /// A unit dependency.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-pub struct UnitDep<'a> {
+pub struct UnitDep {
     /// The dependency unit.
-    pub unit: Unit<'a>,
+    pub unit: Unit,
     /// The purpose of this dependency (a dependency for a test, or a build
     /// script, etc.).
     pub unit_for: UnitFor,
@@ -61,15 +61,12 @@ struct SerializedUnitDep {
     // internal detail that is mostly used for building the graph.
 }
 
-pub fn emit_serialized_unit_graph(
-    root_units: &[Unit<'_>],
-    unit_graph: &UnitGraph<'_>,
-) -> CargoResult<()> {
+pub fn emit_serialized_unit_graph(root_units: &[Unit], unit_graph: &UnitGraph) -> CargoResult<()> {
     let is_nightly = nightly_features_allowed();
-    let mut units: Vec<(&Unit<'_>, &Vec<UnitDep<'_>>)> = unit_graph.iter().collect();
+    let mut units: Vec<(&Unit, &Vec<UnitDep>)> = unit_graph.iter().collect();
     units.sort_unstable();
     // Create a map for quick lookup for dependencies.
-    let indices: HashMap<&Unit<'_>, usize> = units
+    let indices: HashMap<&Unit, usize> = units
         .iter()
         .enumerate()
         .map(|(i, val)| (val.0, i))

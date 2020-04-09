@@ -80,10 +80,10 @@ use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 /// queueing of compilation steps for each package. Packages enqueue units of
 /// work and then later on the entire graph is converted to DrainState and
 /// executed.
-pub struct JobQueue<'a, 'cfg> {
-    queue: DependencyQueue<Unit<'a>, Artifact, Job>,
+pub struct JobQueue<'cfg> {
+    queue: DependencyQueue<Unit, Artifact, Job>,
     counts: HashMap<PackageId, usize>,
-    timings: Timings<'a, 'cfg>,
+    timings: Timings<'cfg>,
 }
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -114,19 +114,19 @@ pub struct JobQueue<'a, 'cfg> {
 /// error, the drop will deadlock. This should be fixed at some point in the
 /// future. The jobserver thread has a similar problem, though it will time
 /// out after 1 second.
-struct DrainState<'a, 'cfg> {
+struct DrainState<'cfg> {
     // This is the length of the DependencyQueue when starting out
     total_units: usize,
 
-    queue: DependencyQueue<Unit<'a>, Artifact, Job>,
+    queue: DependencyQueue<Unit, Artifact, Job>,
     messages: Arc<Queue<Message>>,
-    active: HashMap<JobId, Unit<'a>>,
+    active: HashMap<JobId, Unit>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
     progress: Progress<'cfg>,
     next_id: u32,
-    timings: Timings<'a, 'cfg>,
+    timings: Timings<'cfg>,
 
     /// Tokens that are currently owned by this Cargo, and may be "associated"
     /// with a rustc process. They may also be unused, though if so will be
@@ -147,7 +147,7 @@ struct DrainState<'a, 'cfg> {
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
-    pending_queue: Vec<(Unit<'a>, Job)>,
+    pending_queue: Vec<(Unit, Job)>,
     print: DiagnosticPrinter<'cfg>,
 
     // How many jobs we've finished
@@ -268,8 +268,8 @@ impl<'a> JobState<'a> {
     }
 }
 
-impl<'a, 'cfg> JobQueue<'a, 'cfg> {
-    pub fn new(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a, 'cfg> {
+impl<'cfg> JobQueue<'cfg> {
+    pub fn new(bcx: &BuildContext<'_, 'cfg>) -> JobQueue<'cfg> {
         JobQueue {
             queue: DependencyQueue::new(),
             counts: HashMap::new(),
@@ -277,12 +277,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         }
     }
 
-    pub fn enqueue(
-        &mut self,
-        cx: &Context<'a, 'cfg>,
-        unit: &Unit<'a>,
-        job: Job,
-    ) -> CargoResult<()> {
+    pub fn enqueue(&mut self, cx: &Context<'_, 'cfg>, unit: &Unit, job: Job) -> CargoResult<()> {
         let dependencies = cx.unit_deps(unit);
         let mut queue_deps = dependencies
             .iter()
@@ -331,10 +326,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 depend_on_deps_of_deps(cx, &mut queue_deps, dep.unit.clone());
             }
 
-            fn depend_on_deps_of_deps<'a>(
-                cx: &Context<'a, '_>,
-                deps: &mut HashMap<Unit<'a>, Artifact>,
-                unit: Unit<'a>,
+            fn depend_on_deps_of_deps(
+                cx: &Context<'_, '_>,
+                deps: &mut HashMap<Unit, Artifact>,
+                unit: Unit,
             ) {
                 for dep in cx.unit_deps(&unit) {
                     if deps.insert(dep.unit.clone(), Artifact::All).is_none() {
@@ -354,7 +349,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(mut self, cx: &mut Context<'a, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -411,10 +406,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
     }
 }
 
-impl<'a, 'cfg> DrainState<'a, 'cfg> {
+impl<'cfg> DrainState<'cfg> {
     fn spawn_work_if_possible(
         &mut self,
-        cx: &mut Context<'a, '_>,
+        cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
         scope: &Scope<'_>,
         has_errored: bool,
@@ -488,7 +483,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
 
     fn handle_event(
         &mut self,
-        cx: &mut Context<'a, '_>,
+        cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
         plan: &mut BuildPlan,
         event: Message,
@@ -638,9 +633,9 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
 
     fn drain_the_queue(
         mut self,
-        cx: &mut Context<'a, '_>,
+        cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
-        scope: &Scope<'a>,
+        scope: &Scope<'_>,
         jobserver_helper: &HelperThread,
     ) -> CargoResult<()> {
         trace!("queue: {:#?}", self.queue);
@@ -752,7 +747,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
         ));
     }
 
-    fn name_for_progress(&self, unit: &Unit<'_>) -> String {
+    fn name_for_progress(&self, unit: &Unit) -> String {
         let pkg_name = unit.pkg.name();
         match unit.mode {
             CompileMode::Doc { .. } => format!("{}(doc)", pkg_name),
@@ -774,9 +769,9 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     /// Executes a job, pushing the spawned thread's handled onto `threads`.
     fn run(
         &mut self,
-        unit: &Unit<'a>,
+        unit: &Unit,
         job: Job,
-        cx: &Context<'a, '_>,
+        cx: &Context<'_, '_>,
         scope: &Scope<'_>,
     ) -> CargoResult<()> {
         let id = JobId(self.next_id);
@@ -858,8 +853,8 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     fn emit_warnings(
         &mut self,
         msg: Option<&str>,
-        unit: &Unit<'a>,
-        cx: &mut Context<'a, '_>,
+        unit: &Unit,
+        cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
         let metadata = match cx.find_build_script_metadata(unit.clone()) {
@@ -890,9 +885,9 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     fn finish(
         &mut self,
         id: JobId,
-        unit: &Unit<'a>,
+        unit: &Unit,
         artifact: Artifact,
-        cx: &mut Context<'a, '_>,
+        cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
         if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
             self.emit_warnings(None, unit, cx)?;
@@ -917,7 +912,7 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
     fn note_working_on(
         &mut self,
         config: &Config,
-        unit: &Unit<'a>,
+        unit: &Unit,
         fresh: Freshness,
     ) -> CargoResult<()> {
         if (self.compiled.contains(&unit.pkg.package_id()) && !unit.mode.is_doc())

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 /// Validate `links` field does not conflict between packages.
-pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph<'_>) -> CargoResult<()> {
+pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<()> {
     // NOTE: This is the *old* links validator. Links are usually validated in
     // the resolver. However, the `links` field was added to the index in
     // early 2018 (see https://github.com/rust-lang/cargo/pull/4978). However,

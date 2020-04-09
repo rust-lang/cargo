@@ -34,18 +34,18 @@ pub struct Context<'a, 'cfg> {
     /// Dependencies (like rerun-if-changed) declared by a build script.
     /// This is *only* populated from the output from previous runs.
     /// If the build script hasn't ever been run, then it must be run.
-    pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
+    pub build_explicit_deps: HashMap<Unit, BuildDeps>,
     /// Fingerprints used to detect if a unit is out-of-date.
-    pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
+    pub fingerprints: HashMap<Unit, Arc<Fingerprint>>,
     /// Cache of file mtimes to reduce filesystem hits.
     pub mtime_cache: HashMap<PathBuf, FileTime>,
     /// A set used to track which units have been compiled.
     /// A unit may appear in the job graph multiple times as a dependency of
     /// multiple packages, but it only needs to run once.
-    pub compiled: HashSet<Unit<'a>>,
+    pub compiled: HashSet<Unit>,
     /// Linking information for each `Unit`.
     /// See `build_map` for details.
-    pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
+    pub build_scripts: HashMap<Unit, Arc<BuildScripts>>,
     /// Job server client to manage concurrency with other processes.
     pub jobserver: Client,
     /// "Primary" packages are the ones the user selected on the command-line
@@ -66,12 +66,12 @@ pub struct Context<'a, 'cfg> {
     /// A set of units which are compiling rlibs and are expected to produce
     /// metadata files in addition to the rlib itself. This is only filled in
     /// when `pipelining` above is enabled.
-    rmeta_required: HashSet<Unit<'a>>,
+    rmeta_required: HashSet<Unit>,
 
     /// When we're in jobserver-per-rustc process mode, this keeps those
     /// jobserver clients for each Unit (which eventually becomes a rustc
     /// process).
-    pub rustc_clients: HashMap<Unit<'a>, Client>,
+    pub rustc_clients: HashMap<Unit, Client>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -253,7 +253,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the executable for the specified unit (if any).
-    pub fn get_executable(&mut self, unit: &Unit<'a>) -> CargoResult<Option<PathBuf>> {
+    pub fn get_executable(&mut self, unit: &Unit) -> CargoResult<Option<PathBuf>> {
         for output in self.outputs(unit)?.iter() {
             if output.flavor == FileFlavor::DebugInfo {
                 continue;
@@ -320,19 +320,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the filenames that the given unit will generate.
-    pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
+    pub fn outputs(&self, unit: &Unit) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
     /// Direct dependencies for the given unit.
-    pub fn unit_deps(&self, unit: &Unit<'a>) -> &[UnitDep<'a>] {
+    pub fn unit_deps(&self, unit: &Unit) -> &[UnitDep] {
         &self.bcx.unit_graph[unit]
     }
 
     /// Returns the RunCustomBuild Unit associated with the given Unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_unit(&self, unit: Unit<'a>) -> Option<Unit<'a>> {
+    pub fn find_build_script_unit(&self, unit: Unit) -> Option<Unit> {
         if unit.mode.is_run_custom_build() {
             return Some(unit);
         }
@@ -349,20 +349,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_metadata(&self, unit: Unit<'a>) -> Option<Metadata> {
+    pub fn find_build_script_metadata(&self, unit: Unit) -> Option<Metadata> {
         let script_unit = self.find_build_script_unit(unit)?;
         Some(self.get_run_build_script_metadata(&script_unit))
     }
 
     /// Returns the metadata hash for a RunCustomBuild unit.
-    pub fn get_run_build_script_metadata(&self, unit: &Unit<'a>) -> Metadata {
+    pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
         assert!(unit.mode.is_run_custom_build());
         self.files()
             .metadata(unit)
             .expect("build script should always have hash")
     }
 
-    pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
+    pub fn is_primary_package(&self, unit: &Unit) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
     }
 
@@ -380,21 +380,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn check_collistions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
-        let describe_collision =
-            |unit: &Unit<'_>, other_unit: &Unit<'_>, path: &PathBuf| -> String {
-                format!(
-                    "The {} target `{}` in package `{}` has the same output \
+        let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
+            format!(
+                "The {} target `{}` in package `{}` has the same output \
                      filename as the {} target `{}` in package `{}`.\n\
                      Colliding filename is: {}\n",
-                    unit.target.kind().description(),
-                    unit.target.name(),
-                    unit.pkg.package_id(),
-                    other_unit.target.kind().description(),
-                    other_unit.target.name(),
-                    other_unit.pkg.package_id(),
-                    path.display()
-                )
-            };
+                unit.target.kind().description(),
+                unit.target.name(),
+                unit.pkg.package_id(),
+                other_unit.target.kind().description(),
+                other_unit.target.name(),
+                other_unit.pkg.package_id(),
+                path.display()
+            )
+        };
         let suggestion =
             "Consider changing their names to be unique or compiling them separately.\n\
              This may become a hard error in the future; see \
@@ -402,8 +401,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let rustdoc_suggestion =
             "This is a known bug where multiple crates with the same name use\n\
              the same path; see <https://github.com/rust-lang/cargo/issues/6313>.";
-        let report_collision = |unit: &Unit<'_>,
-                                other_unit: &Unit<'_>,
+        let report_collision = |unit: &Unit,
+                                other_unit: &Unit,
                                 path: &PathBuf,
                                 suggestion: &str|
          -> CargoResult<()> {
@@ -495,7 +494,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns whether when `parent` depends on `dep` if it only requires the
     /// metadata file from `dep`.
-    pub fn only_requires_rmeta(&self, parent: &Unit<'a>, dep: &Unit<'a>) -> bool {
+    pub fn only_requires_rmeta(&self, parent: &Unit, dep: &Unit) -> bool {
         // this is only enabled when pipelining is enabled
         self.pipelining
             // We're only a candidate for requiring an `rmeta` file if we
@@ -510,7 +509,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns whether when `unit` is built whether it should emit metadata as
     /// well because some compilations rely on that.
-    pub fn rmeta_required(&self, unit: &Unit<'a>) -> bool {
+    pub fn rmeta_required(&self, unit: &Unit) -> bool {
         self.rmeta_required.contains(unit) || self.bcx.config.cli_unstable().timings.is_some()
     }
 

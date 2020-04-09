@@ -102,7 +102,7 @@ pub struct BuildDeps {
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
+pub fn prepare(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "build script prepare: {}/{}",
         unit.pkg,
@@ -147,7 +147,7 @@ fn emit_build_output(
     state.stdout(msg);
 }
 
-fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Job> {
+fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
     let dependencies = cx.unit_deps(unit);
@@ -617,11 +617,7 @@ impl BuildOutput {
     }
 }
 
-fn prepare_metabuild<'a, 'cfg>(
-    cx: &Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-    deps: &[String],
-) -> CargoResult<()> {
+fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> CargoResult<()> {
     let mut output = Vec::new();
     let available_deps = cx.unit_deps(unit);
     // Filter out optional dependencies, and look up the actual lib name.
@@ -681,7 +677,7 @@ impl BuildDeps {
 ///
 /// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
-pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
+pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
     let mut ret = HashMap::new();
     for unit in &cx.bcx.roots {
         build(&mut ret, cx, unit)?;
@@ -692,10 +688,10 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
 
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
-    fn build<'a, 'b, 'cfg>(
-        out: &'a mut HashMap<Unit<'b>, BuildScripts>,
-        cx: &mut Context<'b, 'cfg>,
-        unit: &Unit<'b>,
+    fn build<'a>(
+        out: &'a mut HashMap<Unit, BuildScripts>,
+        cx: &mut Context<'_, '_>,
+        unit: &Unit,
     ) -> CargoResult<&'a BuildScripts> {
         // Do a quick pre-flight check to see if we've already calculated the
         // set of dependencies.
@@ -736,7 +732,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut dependencies: Vec<Unit<'_>> =
+        let mut dependencies: Vec<Unit> =
             cx.unit_deps(unit).iter().map(|d| d.unit.clone()).collect();
         dependencies.sort_by_key(|u| u.pkg.package_id());
 
@@ -766,10 +762,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
         }
     }
 
-    fn parse_previous_explicit_deps<'a, 'cfg>(
-        cx: &mut Context<'a, 'cfg>,
-        unit: &Unit<'a>,
-    ) -> CargoResult<()> {
+    fn parse_previous_explicit_deps(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
         let script_run_dir = cx.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");
         let (prev_output, _) = prev_build_output(cx, unit);
@@ -784,10 +777,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>) -> CargoResult<()> {
 ///
 /// Also returns the directory containing the output, typically used later in
 /// processing.
-fn prev_build_output<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-) -> (Option<BuildOutput>, PathBuf) {
+fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutput>, PathBuf) {
     let script_out_dir = cx.files().build_script_out_dir(unit);
     let script_run_dir = cx.files().build_script_run_dir(unit);
     let root_output_file = script_run_dir.join("root-output");

@@ -690,7 +690,7 @@ struct Proposal<'a> {
 
 /// Generates all the base targets for the packages the user has requested to
 /// compile. Dependencies for these targets are computed later in `unit_dependencies`.
-fn generate_targets<'unit>(
+fn generate_targets(
     ws: &Workspace<'_>,
     packages: &[&Package],
     filter: &CompileFilter,
@@ -700,8 +700,8 @@ fn generate_targets<'unit>(
     resolved_features: &features::ResolvedFeatures,
     package_set: &PackageSet<'_>,
     profiles: &Profiles,
-    interner: &'unit UnitInterner,
-) -> CargoResult<Vec<Unit<'unit>>> {
+    interner: &UnitInterner,
+) -> CargoResult<Vec<Unit>> {
     let config = ws.config();
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &Package, target: &Target, target_mode: CompileMode| {
