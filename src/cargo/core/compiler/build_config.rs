@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileKind, CompileTarget};
+use crate::core::compiler::CompileKind;
 use crate::core::interning::InternedString;
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
@@ -45,22 +45,8 @@ impl BuildConfig {
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
-        let requested_kind = match requested_target {
-            Some(s) => CompileKind::Target(CompileTarget::new(s)?),
-            None => match &cfg.target {
-                Some(val) => {
-                    let value = if val.raw_value().ends_with(".json") {
-                        let path = val.clone().resolve_path(config);
-                        path.to_str().expect("must be utf-8 in toml").to_string()
-                    } else {
-                        val.raw_value().to_string()
-                    };
-                    CompileKind::Target(CompileTarget::new(&value)?)
-                }
-                None => CompileKind::Host,
-            },
-        };
-
+        let requested_kind =
+            CompileKind::from_requested_target(config, requested_target.as_deref())?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
         }

@@ -59,6 +59,7 @@
         * [cargo locate-project](commands/cargo-locate-project.md)
         * [cargo metadata](commands/cargo-metadata.md)
         * [cargo pkgid](commands/cargo-pkgid.md)
+        * [cargo tree](commands/cargo-tree.md)
         * [cargo update](commands/cargo-update.md)
         * [cargo vendor](commands/cargo-vendor.md)
         * [cargo verify-project](commands/cargo-verify-project.md)

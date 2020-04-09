@@ -305,6 +305,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         PackageIdSpec::query_str(spec, self.iter())
     }
 
+    pub fn specs_to_ids(&self, specs: &[PackageIdSpec]) -> CargoResult<Vec<PackageId>> {
+        specs.iter().map(|s| s.query(self.iter())).collect()
+    }
+
     pub fn unused_patches(&self) -> &[PackageId] {
         &self.unused_patches
     }
