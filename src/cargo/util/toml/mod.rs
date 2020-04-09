@@ -1082,6 +1082,7 @@ impl TomlManifest {
                 };
                 for (n, v) in dependencies.iter() {
                     let dep = v.to_dependency(n, cx, kind)?;
+                    validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                     cx.deps.push(dep);
                 }
 
