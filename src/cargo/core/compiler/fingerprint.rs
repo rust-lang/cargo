@@ -5,23 +5,30 @@
 //! (needs to be recompiled) or "fresh" (it does not need to be recompiled).
 //! There are several mechanisms that influence a Unit's freshness:
 //!
-//! - The `Metadata` hash isolates each Unit on the filesystem by being
-//!   embedded in the filename. If something in the hash changes, then the
-//!   output files will be missing, and the Unit will be dirty (missing
-//!   outputs are considered "dirty").
-//! - The `Fingerprint` is another hash, saved to the filesystem in the
-//!   `.fingerprint` directory, that tracks information about the inputs to a
-//!   Unit. If any of the inputs changes from the last compilation, then the
-//!   Unit is considered dirty. A missing fingerprint (such as during the
-//!   first build) is also considered dirty.
-//! - Whether or not input files are actually present. For example a build
-//!   script which says it depends on a nonexistent file `foo` is always rerun.
-//! - Propagation throughout the dependency graph of file modification time
-//!   information, used to detect changes on the filesystem. Each `Fingerprint`
-//!   keeps track of what files it'll be processing, and when necessary it will
-//!   check the `mtime` of each file (last modification time) and compare it to
-//!   dependencies and output to see if files have been changed or if a change
-//!   needs to force recompiles of downstream dependencies.
+//! - The `Fingerprint` is a hash, saved to the filesystem in the
+//!   `.fingerprint` directory, that tracks information about the Unit. If the
+//!   fingerprint is missing (such as the first time the unit is being
+//!   compiled), then the unit is dirty. If any of the fingerprint fields
+//!   change (like the name of the source file), then the Unit is considered
+//!   dirty.
+//!
+//!   The `Fingerprint` also tracks the fingerprints of all its dependencies,
+//!   so a change in a dependency will propagate the "dirty" status up.
+//!
+//! - Filesystem mtime tracking is also used to check if a unit is dirty.
+//!   See the section below on "Mtime comparison" for more details. There
+//!   are essentially two parts to mtime tracking:
+//!
+//!   1. The mtime of a Unit's output files is compared to the mtime of all
+//!      its dependencies' output file mtimes (see `check_filesystem`). If any
+//!      output is missing, or is older than a dependency's output, then the
+//!      unit is dirty.
+//!   2. The mtime of a Unit's source files is compared to the mtime of its
+//!      dep-info file in the fingerprint directory (see `find_stale_file`).
+//!      The dep-info file is used as an anchor to know when the last build of
+//!      the unit was done. See the "dep-info files" section below for more
+//!      details. If any input files are missing, or are newer than the
+//!      dep-info, then the unit is dirty.
 //!
 //! Note: Fingerprinting is not a perfect solution. Filesystem mtime tracking
 //! is notoriously imprecise and problematic. Only a small part of the
@@ -32,6 +39,12 @@
 //! platform-dependent.
 //!
 //! ## Fingerprints and Metadata
+//!
+//! The `Metadata` hash is a hash added to the output filenames to isolate
+//! each unit. See the documentation in the `compilation_files` module for
+//! more details. NOTE: Not all output files are isolated via filename hashes
+//! (like dylibs), but the fingerprint directory always has the `Metadata`
+//! hash in its directory name.
 //!
 //! Fingerprints and Metadata are similar, and track some of the same things.
 //! The Metadata contains information that is required to keep Units separate.
@@ -69,10 +82,11 @@
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
-//! if a value changes, only the fingerprint will detect the change. Fields
-//! that are only in Metadata generally aren't relevant to the fingerprint
-//! because they fundamentally change the output (like target vs host changes
-//! the directory where it is emitted).
+//! if a value changes, only the fingerprint will detect the change (consider,
+//! for example, swapping between different features). Fields that are only in
+//! Metadata generally aren't relevant to the fingerprint because they
+//! fundamentally change the output (like target vs host changes the directory
+//! where it is emitted).
 //!
 //! ## Fingerprint files
 //!
@@ -378,19 +392,35 @@ pub fn prepare_target<'a, 'cfg>(
 
     // Clear out the old fingerprint file if it exists. This protects when
     // compilation is interrupted leaving a corrupt file. For example, a
-    // project with a lib.rs and integration test:
+    // project with a lib.rs and integration test (two units):
     //
-    // 1. Build the integration test.
-    // 2. Make a change to lib.rs.
-    // 3. Build the integration test, hit Ctrl-C while linking (with gcc).
+    // 1. Build the library and integration test.
+    // 2. Make a change to lib.rs (NOT the integration test).
+    // 3. Build the integration test, hit Ctrl-C while linking. With gcc, this
+    //    will leave behind an incomplete executable (zero size, or partially
+    //    written). NOTE: The library builds successfully, it is the linking
+    //    of the integration test that we are interrupting.
     // 4. Build the integration test again.
     //
-    // Without this line, then step 4 will think the integration test is
-    // "fresh" because the mtime of the output file is newer than all of its
-    // dependencies. But the executable is corrupt and needs to be rebuilt.
-    // Clearing the fingerprint ensures that Cargo never mistakes it as
-    // up-to-date until after a successful build.
+    // Without the following line, then step 3 will leave a valid fingerprint
+    // on the disk. Then step 4 will think the integration test is "fresh"
+    // because:
+    //
+    // - There is a valid fingerprint hash on disk (written in step 1).
+    // - The mtime of the output file (the corrupt integration executable
+    //   written in step 3) is newer than all of its dependencies.
+    // - The mtime of the integration test fingerprint dep-info file (written
+    //   in step 1) is newer than the integration test's source files, because
+    //   we haven't modified any of its source files.
+    //
+    // But the executable is corrupt and needs to be rebuilt. Clearing the
+    // fingerprint at step 3 ensures that Cargo never mistakes a partially
+    // written output as up-to-date.
     if loc.exists() {
+        // Truncate instead of delete so that compare_old_fingerprint will
+        // still log the reason for the fingerprint failure instead of just
+        // reporting "failed to read fingerprint" during the next build if
+        // this build fails.
         paths::write(&loc, b"")?;
     }
 

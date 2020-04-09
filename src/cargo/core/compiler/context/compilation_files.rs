@@ -13,13 +13,19 @@ use crate::core::compiler::{CompileMode, CompileTarget, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
-/// The `Metadata` is a hash used to make unique file names for each unit in a build.
+/// The `Metadata` is a hash used to make unique file names for each unit in a
+/// build. It is also use for symbol mangling.
+///
 /// For example:
 /// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
 /// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
+///
 /// In general this must include all things that need to be distinguished in different parts of
 /// the same build. This is absolutely required or we override things before
 /// we get chance to use them.
+///
+/// It is also used for symbol mangling, because if you have two versions of
+/// the same crate linked together, their symbols need to be differentiated.
 ///
 /// We use a hash because it is an easy way to guarantee
 /// that all the inputs can be converted to a valid path.
@@ -38,6 +44,15 @@ use crate::util::{self, CargoResult};
 /// If we add something that we should not have, for this reason, we get the correct output but take
 /// more space than needed. This makes not including something in `Metadata`
 /// a form of cache invalidation.
+///
+/// You should also avoid anything that would interfere with reproducible
+/// builds. For example, *any* absolute path should be avoided. This is one
+/// reason that `RUSTFLAGS` is not in `Metadata`, because it often has
+/// absolute paths (like `--remap-path-prefix` which is fundamentally used for
+/// reproducible builds and has absolute paths in it). Also, in some cases the
+/// mangled symbols need to be stable between different builds with different
+/// settings. For example, profile-guided optimizations need to swap
+/// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
 ///
 /// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
 /// rebuild is needed.
