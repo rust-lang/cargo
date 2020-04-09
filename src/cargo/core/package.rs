@@ -455,10 +455,7 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(self.get_many(Some(id))?.remove(0))
     }
 
-    pub fn get_many(
-        &self,
-        ids: impl IntoIterator<Item = PackageId>,
-    ) -> CargoResult<Vec<&Package>> {
+    pub fn get_many(&self, ids: impl IntoIterator<Item = PackageId>) -> CargoResult<Vec<&Package>> {
         let mut pkgs = Vec::new();
         let mut downloads = self.enable_download()?;
         for id in ids {
