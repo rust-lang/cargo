@@ -6,6 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
@@ -2322,4 +2323,88 @@ LLVM version: 9.0
     assert_eq!(check("stable2", true), stable2_name);
     assert_eq!(check("beta1", true), beta1_name);
     assert_eq!(check("nightly1", true), nightly1_name);
+}
+
+#[cargo_test]
+fn linking_interrupted() {
+    // Interrupt during the linking phase shouldn't leave test executable as "fresh".
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    // Create a linker that we can interrupt.
+    let linker = project()
+        .at("linker")
+        .file("Cargo.toml", &basic_manifest("linker", "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r#"
+            use std::io::Read;
+
+            fn main() {
+                // Figure out the output filename.
+                let output = match std::env::args().find(|a| a.starts_with("/OUT:")) {
+                    Some(s) => s[5..].to_string(),
+                    None => {
+                        let mut args = std::env::args();
+                        loop {
+                            if args.next().unwrap() == "-o" {
+                                break;
+                            }
+                        }
+                        args.next().unwrap()
+                    }
+                };
+                std::fs::remove_file(&output).unwrap();
+                std::fs::write(&output, "").unwrap();
+                // Tell the test that we are ready to be interrupted.
+                let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
+                // Wait for the test to tell us to exit.
+                let _ = socket.read(&mut [0; 1]);
+            }
+            "#
+            .replace("__ADDR__", &addr.to_string()),
+        )
+        .build();
+    linker.cargo("build").run();
+
+    // Build it once so that the fingerprint gets saved to disk.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("tests/t1.rs", "")
+        .build();
+    p.cargo("test --test t1 --no-run").run();
+    // Make a change, start a build, then interrupt it.
+    p.change_file("src/lib.rs", "// modified");
+    let linker_env = format!(
+        "CARGO_TARGET_{}_LINKER",
+        rustc_host().to_uppercase().replace('-', "_")
+    );
+    let mut cmd = p
+        .cargo("test --test t1 --no-run")
+        .env(&linker_env, linker.bin("linker"))
+        .build_command();
+    let mut child = cmd
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    // Wait for linking to start.
+    let mut conn = listener.accept().unwrap().0;
+
+    // Interrupt the child.
+    child.kill().unwrap();
+    // Note: rustc and the linker are still running, let them exit here.
+    conn.write(b"X").unwrap();
+
+    // Build again, shouldn't be fresh.
+    p.cargo("test --test t1")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] target/debug/deps/t1[..]
+",
+        )
+        .run();
 }
