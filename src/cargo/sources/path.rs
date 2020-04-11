@@ -96,6 +96,15 @@ impl<'cfg> PathSource<'cfg> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like .gitignore to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+        self._list_files(pkg).chain_err(|| {
+            format!(
+                "failed to determine list of files in {}",
+                pkg.root().display()
+            )
+        })
+    }
+
+    fn _list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
 
@@ -415,7 +424,12 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut max = FileTime::zero();
         let mut max_path = PathBuf::new();
-        for file in self.list_files(pkg)? {
+        for file in self.list_files(pkg).chain_err(|| {
+            format!(
+                "failed to determine the most recently modified file in {}",
+                pkg.root().display()
+            )
+        })? {
             // An `fs::stat` error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was `rm`-ed -- either way,

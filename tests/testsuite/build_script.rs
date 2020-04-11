@@ -3985,12 +3985,21 @@ fn build_script_scan_eacces() {
         .build();
     let path = p.root().join("secrets");
     fs::set_permissions(&path, fs::Permissions::from_mode(0)).unwrap();
-    // "Caused by" is a string from libc such as the following:
+    // The last "Caused by" is a string from libc such as the following:
     //   Permission denied (os error 13)
     p.cargo("build")
         .with_stderr(
             "\
-[ERROR] cannot read \"[..]/foo/secrets\"
+[ERROR] failed to determine package fingerprint for build script for foo v0.0.1 ([..]/foo)
+
+Caused by:
+  failed to determine the most recently modified file in [..]/foo
+
+Caused by:
+  failed to determine list of files in [..]/foo
+
+Caused by:
+  cannot read \"[..]/foo/secrets\"
 
 Caused by:
   [..]
