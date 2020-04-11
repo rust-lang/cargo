@@ -3977,7 +3977,9 @@ fn links_interrupted_can_restart() {
 fn build_script_scan_eacces() {
     // build.rs causes a scan of the whole project, which can be a problem if
     // a directory is not accessible.
+    use cargo_test_support::git;
     use std::os::unix::fs::PermissionsExt;
+
     let p = project()
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
@@ -4007,5 +4009,28 @@ Caused by:
         )
         .with_status(101)
         .run();
+
+    // Try `package.exclude` to skip a directory.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+        [package]
+        name = "foo"
+        version = "0.0.1"
+        exclude = ["secrets"]
+        "#,
+    );
+    p.cargo("build").run();
+
+    // Try with git. This succeeds because the git status walker ignores
+    // directories it can't access.
+    p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
+    p.build_dir().rm_rf();
+    let repo = git::init(&p.root());
+    git::add(&repo);
+    git::commit(&repo);
+    p.cargo("build").run();
+
+    // Restore permissions so that the directory can be deleted.
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }

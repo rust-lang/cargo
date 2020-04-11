@@ -120,17 +120,21 @@ impl<'cfg> PathSource<'cfg> {
         }
         let ignore_include = include_builder.build()?;
 
-        let ignore_should_package = |relative_path: &Path| -> CargoResult<bool> {
+        let ignore_should_package = |relative_path: &Path, is_dir: bool| -> CargoResult<bool> {
             // "Include" and "exclude" options are mutually exclusive.
             if no_include_option {
-                match ignore_exclude
-                    .matched_path_or_any_parents(relative_path, /* is_dir */ false)
-                {
+                match ignore_exclude.matched_path_or_any_parents(relative_path, is_dir) {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
                     Match::Whitelist(_) => Ok(true),
                 }
             } else {
+                if is_dir {
+                    // Generally, include directives don't list every
+                    // directory (nor should they!). Just skip all directory
+                    // checks, and only check files.
+                    return Ok(true);
+                }
                 match ignore_include
                     .matched_path_or_any_parents(relative_path, /* is_dir */ false)
                 {
@@ -141,7 +145,7 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        let mut filter = |path: &Path| -> CargoResult<bool> {
+        let mut filter = |path: &Path, is_dir: bool| -> CargoResult<bool> {
             let relative_path = path.strip_prefix(root)?;
 
             let rel = relative_path.as_os_str();
@@ -151,7 +155,7 @@ impl<'cfg> PathSource<'cfg> {
                 return Ok(true);
             }
 
-            ignore_should_package(relative_path)
+            ignore_should_package(relative_path, is_dir)
         };
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
@@ -171,7 +175,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         root: &Path,
-        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> Option<CargoResult<Vec<PathBuf>>> {
         // If this package is in a Git repository, then we really do want to
         // query the Git repository as it takes into account items such as
@@ -214,7 +218,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
@@ -298,7 +302,10 @@ impl<'cfg> PathSource<'cfg> {
                 continue;
             }
 
-            if is_dir.unwrap_or_else(|| file_path.is_dir()) {
+            // `is_dir` is None for symlinks. The `unwrap` checks if the
+            // symlink points to a directory.
+            let is_dir = is_dir.unwrap_or_else(|| file_path.is_dir());
+            if is_dir {
                 warn!("  found submodule {}", file_path.display());
                 let rel = file_path.strip_prefix(root)?;
                 let rel = rel.to_str().ok_or_else(|| {
@@ -316,7 +323,8 @@ impl<'cfg> PathSource<'cfg> {
                         PathSource::walk(&file_path, &mut ret, false, filter)?;
                     }
                 }
-            } else if (*filter)(&file_path)? {
+            } else if (*filter)(&file_path, is_dir)? {
+                assert!(!is_dir);
                 // We found a file!
                 warn!("  found {}", file_path.display());
                 ret.push(file_path);
@@ -347,29 +355,28 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk_except_dot_files_and_dirs(
         &self,
         pkg: &Package,
-        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let mut exclude_dot_files_dir_builder = GitignoreBuilder::new(root);
         exclude_dot_files_dir_builder.add_line(None, ".*")?;
         let ignore_dot_files_and_dirs = exclude_dot_files_dir_builder.build()?;
 
-        let mut filter_ignore_dot_files_and_dirs = |path: &Path| -> CargoResult<bool> {
-            let relative_path = path.strip_prefix(root)?;
-            match ignore_dot_files_and_dirs
-                .matched_path_or_any_parents(relative_path, /* is_dir */ false)
-            {
-                Match::Ignore(_) => Ok(false),
-                _ => filter(path),
-            }
-        };
+        let mut filter_ignore_dot_files_and_dirs =
+            |path: &Path, is_dir: bool| -> CargoResult<bool> {
+                let relative_path = path.strip_prefix(root)?;
+                match ignore_dot_files_and_dirs.matched_path_or_any_parents(relative_path, is_dir) {
+                    Match::Ignore(_) => Ok(false),
+                    _ => filter(path, is_dir),
+                }
+            };
         self.list_files_walk(pkg, &mut filter_ignore_dot_files_and_dirs)
     }
 
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
@@ -380,12 +387,14 @@ impl<'cfg> PathSource<'cfg> {
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> CargoResult<()> {
-        if !path.is_dir() {
-            if (*filter)(path)? {
-                ret.push(path.to_path_buf());
-            }
+        let is_dir = path.is_dir();
+        if !is_root && !(*filter)(path, is_dir)? {
+            return Ok(());
+        }
+        if !is_dir {
+            ret.push(path.to_path_buf());
             return Ok(());
         }
         // Don't recurse into any sub-packages that we have.
