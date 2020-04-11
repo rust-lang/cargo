@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use crate::core::compiler::{Compilation, Doctest};
+use crate::core::compiler::{Compilation, CompileKind, Doctest};
 use crate::core::shell::Verbosity;
 use crate::core::Workspace;
 use crate::ops;
@@ -163,7 +163,9 @@ fn run_doc_tests(
             .arg(&target.crate_name());
 
         if doctest_xcompile {
-            p.arg("--target").arg(&compilation.target);
+            if let CompileKind::Target(target) = options.compile_opts.build_config.requested_kind {
+                p.arg("--target").arg(target.rustc_target());
+            }
             p.arg("-Zunstable-options");
             p.arg("--enable-per-target-ignores");
         }
