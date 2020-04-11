@@ -469,6 +469,7 @@ fn ignore_lockfile_inner() {
             "\
 [PACKAGING] bar v0.0.1 ([..])
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] .gitignore
 [ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig

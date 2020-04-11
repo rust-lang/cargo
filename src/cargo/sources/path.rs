@@ -177,40 +177,49 @@ impl<'cfg> PathSource<'cfg> {
         root: &Path,
         filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
     ) -> Option<CargoResult<Vec<PathBuf>>> {
-        // If this package is in a Git repository, then we really do want to
-        // query the Git repository as it takes into account items such as
-        // `.gitignore`. We're not quite sure where the Git repository is,
-        // however, so we do a bit of a probe.
-        //
-        // We walk this package's path upwards and look for a sibling
-        // `Cargo.toml` and `.git` directory. If we find one then we assume that
-        // we're part of that repository.
-        let mut cur = root;
-        loop {
-            if cur.join("Cargo.toml").is_file() {
-                // If we find a Git repository next to this `Cargo.toml`, we still
-                // check to see if we are indeed part of the index. If not, then
-                // this is likely an unrelated Git repo, so keep going.
-                if let Ok(repo) = git2::Repository::open(cur) {
-                    let index = match repo.index() {
-                        Ok(index) => index,
-                        Err(err) => return Some(Err(err.into())),
-                    };
-                    let path = root.strip_prefix(cur).unwrap().join("Cargo.toml");
-                    if index.get_path(&path, 0).is_some() {
-                        return Some(self.list_files_git(pkg, &repo, filter));
-                    }
-                }
+        let repo = match git2::Repository::discover(root) {
+            Ok(repo) => repo,
+            Err(_) => return None,
+        };
+        let index = match repo.index() {
+            Ok(index) => index,
+            Err(err) => {
+                let e = anyhow::Error::new(err).context(format!(
+                    "failed to open git index at {}",
+                    repo.path().display()
+                ));
+                return Some(Err(e));
             }
-            // Don't cross submodule boundaries.
-            if cur.join(".git").is_dir() {
-                break;
+        };
+        let repo_root = match repo.workdir() {
+            Some(dir) => dir,
+            None => {
+                return Some(Err(anyhow::format_err!(
+                    "did not expect repo at {} to be bare",
+                    repo.path().display()
+                )))
             }
-            match cur.parent() {
-                Some(parent) => cur = parent,
-                None => break,
+        };
+        let repo_relative_path = match root.strip_prefix(repo_root) {
+            Ok(path) => path,
+            Err(err) => {
+                let e = anyhow::Error::new(err).context(format!(
+                    "expected git repo {} to be parent of package {}",
+                    repo.path().display(),
+                    root.display()
+                ));
+                return Some(Err(e));
             }
+        };
+        // Git requires forward-slashes.
+        let repo_safe_path = repo_relative_path
+            .join("Cargo.toml")
+            .to_string_lossy()
+            .replace('\\', "/");
+        if index.get_path(Path::new(&repo_safe_path), 0).is_some() {
+            return Some(self.list_files_git(pkg, &repo, filter));
         }
+        // Package Cargo.toml is not in git, don't use git to guide our selection.
         None
     }
 
