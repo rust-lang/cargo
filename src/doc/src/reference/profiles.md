@@ -186,8 +186,8 @@ possibly reducing compile time, but may produce slower code.
 
 This option takes an integer greater than 0.
 
-This option is ignored if [incremental](#incremental) is enabled, in which
-case `rustc` uses an internal heuristic to split the crate.
+The default is 256 for [incremental](#incremental) builds, and 16 for
+non-incremental builds.
 
 [`-C codegen-units` flag]: ../../rustc/codegen-options/index.html#codegen-units
 
@@ -217,7 +217,7 @@ overflow-checks = true
 lto = false
 panic = 'unwind'
 incremental = true
-codegen-units = 16  # Note: ignored because `incremental` is enabled.
+codegen-units = 256
 rpath = false
 ```
 
@@ -258,7 +258,7 @@ overflow-checks = true
 lto = false
 panic = 'unwind'    # This setting is always ignored.
 incremental = true
-codegen-units = 16  # Note: ignored because `incremental` is enabled.
+codegen-units = 256
 rpath = false
 ```
 
