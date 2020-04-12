@@ -69,9 +69,6 @@ pub struct Compilation<'cfg> {
     /// Flags to pass to rustdoc when invoked from cargo test, per package.
     pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
-    pub host: String,
-    pub target: String,
-
     config: &'cfg Config,
 
     /// Rustc process to be used by default
@@ -129,8 +126,6 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
-            host: bcx.host_triple().to_string(),
-            target: bcx.target_data.short_name(&default_kind).to_string(),
             target_runner: target_runner(bcx, default_kind)?,
         })
     }
