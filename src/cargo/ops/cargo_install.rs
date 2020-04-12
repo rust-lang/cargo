@@ -67,6 +67,8 @@ pub fn install(
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
+        // "Tracks whether or not the source (such as a registry or git repo) has been updated.
+        // This is used to avoid updating it multiple times when installing multiple crates.
         let mut did_update = false;
         for krate in krates {
             let root = root.clone();
@@ -140,6 +142,10 @@ pub fn install(
 }
 
 // Returns whether a subsequent call should attempt to update again.
+// The `needs_update_if_source_is_index` parameter indicates whether or not the source index should
+// be updated. This is used ensure it is only updated once when installing multiple crates.
+// The return value here is used so that the caller knows what to pass to the
+// `needs_update_if_source_is_index` parameter when `install_one` is called again.
 fn install_one(
     config: &Config,
     root: &Filesystem,
@@ -546,7 +552,7 @@ where
     if let Ok(pkg) = select_pkg(source, *krate, Some(vers), config, false, &mut |_| {
         // Don't try to do anything clever here - if this function returns false, the caller will do
         // a more in-depth check possibly including an update from the index.
-        bail!("(Ignored)")
+        Ok(vec![])
     }) {
         let (_ws, rustc, target) =
             make_ws_rustc_target(&config, opts, &source.source_id(), pkg.clone())?;
