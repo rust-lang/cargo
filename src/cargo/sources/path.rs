@@ -160,8 +160,8 @@ impl<'cfg> PathSource<'cfg> {
 
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
         if no_include_option {
-            if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
-                return result;
+            if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter)? {
+                return Ok(result);
             }
             // no include option and not git repo discovered (see rust-lang/cargo#7183).
             return self.list_files_walk_except_dot_files_and_dirs(pkg, &mut filter);
@@ -176,51 +176,44 @@ impl<'cfg> PathSource<'cfg> {
         pkg: &Package,
         root: &Path,
         filter: &mut dyn FnMut(&Path, bool) -> CargoResult<bool>,
-    ) -> Option<CargoResult<Vec<PathBuf>>> {
+    ) -> CargoResult<Option<Vec<PathBuf>>> {
         let repo = match git2::Repository::discover(root) {
             Ok(repo) => repo,
-            Err(_) => return None,
-        };
-        let index = match repo.index() {
-            Ok(index) => index,
-            Err(err) => {
-                let e = anyhow::Error::new(err).context(format!(
-                    "failed to open git index at {}",
-                    repo.path().display()
-                ));
-                return Some(Err(e));
+            Err(e) => {
+                log::debug!(
+                    "could not discover git repo at or above {}: {}",
+                    root.display(),
+                    e
+                );
+                return Ok(None);
             }
         };
-        let repo_root = match repo.workdir() {
-            Some(dir) => dir,
-            None => {
-                return Some(Err(anyhow::format_err!(
-                    "did not expect repo at {} to be bare",
-                    repo.path().display()
-                )))
-            }
-        };
-        let repo_relative_path = match root.strip_prefix(repo_root) {
-            Ok(path) => path,
-            Err(err) => {
-                let e = anyhow::Error::new(err).context(format!(
-                    "expected git repo {} to be parent of package {}",
-                    repo.path().display(),
-                    root.display()
-                ));
-                return Some(Err(e));
-            }
-        };
+        let index = repo
+            .index()
+            .chain_err(|| format!("failed to open git index at {}", repo.path().display()))?;
+        let repo_root = repo.workdir().ok_or_else(|| {
+            anyhow::format_err!(
+                "did not expect repo at {} to be bare",
+                repo.path().display()
+            )
+        })?;
+        let repo_relative_path = root.strip_prefix(repo_root).chain_err(|| {
+            format!(
+                "expected git repo {} to be parent of package {}",
+                repo.path().display(),
+                root.display()
+            )
+        })?;
         // Git requires forward-slashes.
         let repo_safe_path = repo_relative_path
             .join("Cargo.toml")
             .to_string_lossy()
             .replace('\\', "/");
         if index.get_path(Path::new(&repo_safe_path), 0).is_some() {
-            return Some(self.list_files_git(pkg, &repo, filter));
+            return Ok(Some(self.list_files_git(pkg, &repo, filter)?));
         }
         // Package Cargo.toml is not in git, don't use git to guide our selection.
-        None
+        Ok(None)
     }
 
     fn list_files_git(
