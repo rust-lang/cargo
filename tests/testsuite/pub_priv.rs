@@ -37,15 +37,9 @@ fn exported_priv_warning() {
 
     p.cargo("build --message-format=short")
         .masquerade_as_nightly_cargo()
-        .with_stderr(
+        .with_stderr_contains(
             "\
-[UPDATING] `[..]` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
-[COMPILING] priv_dep v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
 src/lib.rs:3:13: warning: type `priv_dep::FromPriv` from private dependency 'priv_dep' in public interface
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "
         )
         .run()
