@@ -5,6 +5,7 @@ use std::env;
 use crate::core::PackageId;
 use crate::core::{PackageIdSpec, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
+use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::paths;
 use crate::util::Config;
@@ -85,9 +86,12 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
     let tracker = InstallTracker::load(config, root)?;
     let source_id = SourceId::for_path(config.cwd())?;
     let mut src = path_source(source_id, config)?;
-    let pkg = select_pkg(&mut src, &None, config, true, &mut |path| {
-        path.read_packages()
-    })?;
+    let pkg = select_pkg(
+        &mut src,
+        DependencyOrListAllFn::ListAllFn(|path: &mut PathSource<'_>| path.read_packages()),
+        config,
+        true,
+    )?;
     let pkgid = pkg.package_id();
     uninstall_pkgid(root, tracker, pkgid, bins, config)
 }

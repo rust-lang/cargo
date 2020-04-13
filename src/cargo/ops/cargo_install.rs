@@ -14,7 +14,7 @@ use crate::core::{
 };
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
-use crate::sources::{GitSource, SourceConfigMap};
+use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{paths, Config, Filesystem, Rustc, ToSemver};
 use semver::VersionReq;
@@ -190,12 +190,16 @@ fn install_one(
     };
 
     let pkg = if source_id.is_git() {
+        let dep_or_list_all_fn = if let Some(dep) = dependency {
+            DependencyOrListAllFn::Dependency(dep)
+        } else {
+            DependencyOrListAllFn::ListAllFn(|git: &mut GitSource<'_>| git.read_packages())
+        };
         select_pkg(
             &mut GitSource::new(source_id, config)?,
-            &dependency.as_ref(),
+            dep_or_list_all_fn,
             config,
             true,
-            &mut |git| git.read_packages(),
         )?
     } else if source_id.is_path() {
         let mut src = path_source(source_id, config)?;
@@ -223,37 +227,38 @@ fn install_one(
             }
         }
         src.update()?;
-        select_pkg(&mut src, &dependency.as_ref(), config, false, &mut |path| {
-            path.read_packages()
-        })?
+
+        let dep_or_list_all_fn = if let Some(dep) = dependency {
+            DependencyOrListAllFn::Dependency(dep)
+        } else {
+            DependencyOrListAllFn::ListAllFn(|path: &mut PathSource<'_>| path.read_packages())
+        };
+        select_pkg(&mut src, dep_or_list_all_fn, config, false)?
     } else {
-        if !krate.is_some() {
+        if !dependency.is_some() {
             bail!(
                 "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
             )
         }
+        let dep = dependency.unwrap(); // Verified with is_some/bail above.
         let mut source = map.load(source_id, &HashSet::new())?;
-        // This should always be true - else we would have bailed on the krate.is_some() check.
-        if let Some(dep) = &dependency {
-            if let Ok(Some(pkg)) =
-                installed_exact_package(dep, &mut source, config, opts, root, &dst, force)
-            {
-                let msg = format!(
-                    "package `{}` is already installed, use --force to override",
-                    pkg
-                );
-                config.shell().status("Ignored", &msg)?;
-                return Ok(true);
-            }
+        if let Ok(Some(pkg)) =
+            installed_exact_package(dep.clone(), &mut source, config, opts, root, &dst, force)
+        {
+            let msg = format!(
+                "package `{}` is already installed, use --force to override",
+                pkg
+            );
+            config.shell().status("Ignored", &msg)?;
+            return Ok(true);
         }
         select_pkg(
             &mut source,
-            &dependency.as_ref(),
+            DependencyOrListAllFn::<fn(&mut Box<dyn Source>) -> CargoResult<Vec<Package>>>::Dependency(dep),
             config,
             needs_update_if_source_is_index,
-            &mut |_| Ok(vec![]),
         )?
     };
 
@@ -546,7 +551,7 @@ fn is_installed(
 /// already installed. If this is the case, we can skip interacting with a registry to check if
 /// newer versions may be installable, as no newer version can exist.
 fn installed_exact_package<T>(
-    dep: &Dependency,
+    dep: Dependency,
     source: &mut T,
     config: &Config,
     opts: &ops::CompileOptions,
@@ -566,11 +571,12 @@ where
     // expensive network call in the case that the package is already installed.
     // If this fails, the caller will possibly do an index update and try again, this is just a
     // best-effort check to see if we can avoid hitting the network.
-    if let Ok(pkg) = select_pkg(source, &Some(dep), config, false, &mut |_| {
-        // Don't try to do anything clever here - if this function returns false, the caller will do
-        // a more in-depth check possibly including an update from the index.
-        Ok(vec![])
-    }) {
+    if let Ok(pkg) = select_pkg(
+        source,
+        DependencyOrListAllFn::<fn(&mut T) -> CargoResult<Vec<Package>>>::Dependency(dep),
+        config,
+        false,
+    ) {
         let (_ws, rustc, target) =
             make_ws_rustc_target(&config, opts, &source.source_id(), pkg.clone())?;
         if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force) {
