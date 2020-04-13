@@ -5,7 +5,6 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, format_err};
-use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::Freshness;
@@ -523,8 +522,7 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
 /// Gets a Package based on command-line requirements.
 pub fn select_pkg<T>(
     source: &mut T,
-    name: Option<&str>,
-    vers: Option<&VersionReq>,
+    dep: &Option<&Dependency>,
     config: &Config,
     needs_update: bool,
     list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
@@ -541,26 +539,19 @@ where
         source.update()?;
     }
 
-    if let Some(name) = name {
-        let vers = vers.map(|v| v.to_string());
-        let dep = Dependency::parse_no_deprecated(name, vers.as_deref(), source.source_id())?;
+    if let &Some(dep) = dep {
         let deps = source.query_vec(&dep)?;
         match deps.iter().map(|p| p.package_id()).max() {
             Some(pkgid) => {
                 let pkg = Box::new(source).download_now(pkgid, config)?;
                 Ok(pkg)
             }
-            None => {
-                let vers_info = vers
-                    .map(|v| format!(" with version `{}`", v))
-                    .unwrap_or_default();
-                bail!(
-                    "could not find `{}` in {}{}",
-                    name,
-                    source.source_id(),
-                    vers_info
-                )
-            }
+            None => bail!(
+                "could not find `{}` in {} with version `{}`",
+                dep.package_name(),
+                source.source_id(),
+                dep.version_req(),
+            ),
         }
     } else {
         let candidates = list_all(source)?;

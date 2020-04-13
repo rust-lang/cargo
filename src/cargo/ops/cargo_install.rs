@@ -9,7 +9,9 @@ use tempfile::Builder as TempFileBuilder;
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, RustcTargetData};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
-use crate::core::{Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Workspace};
+use crate::core::{
+    Dependency, Edition, Package, PackageId, PackageIdSpec, Source, SourceId, Workspace,
+};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
@@ -161,11 +163,36 @@ fn install_one(
 ) -> CargoResult<bool> {
     let dst = root.join("bin").into_path_unlocked();
 
+    let dependency = {
+        if let Some(krate) = krate {
+            let vers = if source_id.is_git() || source_id.is_path() {
+                // We explicitly ignore the version flag for these source types.
+                None
+            } else if let Some(vers_flag) = vers {
+                Some(parse_semver_flag(vers_flag)?.to_string())
+            } else {
+                if source_id.is_registry() {
+                    // Avoid pre-release versions from crate.io
+                    // unless explicitly asked for
+                    Some(String::from("*"))
+                } else {
+                    None
+                }
+            };
+            Some(Dependency::parse_no_deprecated(
+                krate,
+                vers.as_deref(),
+                source_id,
+            )?)
+        } else {
+            None
+        }
+    };
+
     let pkg = if source_id.is_git() {
         select_pkg(
             &mut GitSource::new(source_id, config)?,
-            krate,
-            None,
+            &dependency.as_ref(),
             config,
             true,
             &mut |git| git.read_packages(),
@@ -196,15 +223,22 @@ fn install_one(
             }
         }
         src.update()?;
-        select_pkg(&mut src, krate, None, config, false, &mut |path| {
+        select_pkg(&mut src, &dependency.as_ref(), config, false, &mut |path| {
             path.read_packages()
         })?
     } else {
+        if !krate.is_some() {
+            bail!(
+                "must specify a crate to install from \
+                     crates.io, or use --path or --git to \
+                     specify alternate source"
+            )
+        }
         let mut source = map.load(source_id, &HashSet::new())?;
-        let vers = if let Some(vers) = vers {
-            let vers = parse_semver_req(vers)?;
+        // This should always be true - else we would have bailed on the krate.is_some() check.
+        if let Some(dep) = &dependency {
             if let Ok(Some(pkg)) =
-                installed_exact_package(&krate, &vers, &mut source, config, opts, root, &dst, force)
+                installed_exact_package(dep, &mut source, config, opts, root, &dst, force)
             {
                 let msg = format!(
                     "package `{}` is already installed, use --force to override",
@@ -213,25 +247,13 @@ fn install_one(
                 config.shell().status("Ignored", &msg)?;
                 return Ok(true);
             }
-            Some(vers)
-        } else if source.source_id().is_registry() {
-            Some(VersionReq::any())
-        } else {
-            None
-        };
+        }
         select_pkg(
             &mut source,
-            krate,
-            vers.as_ref(),
+            &dependency.as_ref(),
             config,
             needs_update_if_source_is_index,
-            &mut |_| {
-                bail!(
-                    "must specify a crate to install from \
-                     crates.io, or use --path or --git to \
-                     specify alternate source"
-                )
-            },
+            &mut |_| Ok(vec![]),
         )?
     };
 
@@ -524,8 +546,7 @@ fn is_installed(
 /// already installed. If this is the case, we can skip interacting with a registry to check if
 /// newer versions may be installable, as no newer version can exist.
 fn installed_exact_package<T>(
-    krate: &Option<&str>,
-    vers: &VersionReq,
+    dep: &Dependency,
     source: &mut T,
     config: &Config,
     opts: &ops::CompileOptions,
@@ -536,11 +557,7 @@ fn installed_exact_package<T>(
 where
     T: Source,
 {
-    if krate.is_none() {
-        // We can't check for an installed crate if we don't know the crate name.
-        return Ok(None);
-    }
-    if !vers.is_exact() {
+    if !dep.version_req().is_exact() {
         // If the version isn't exact, we may need to update the registry and look for a newer
         // version - we can't know if the package is installed without doing so.
         return Ok(None);
@@ -549,7 +566,7 @@ where
     // expensive network call in the case that the package is already installed.
     // If this fails, the caller will possibly do an index update and try again, this is just a
     // best-effort check to see if we can avoid hitting the network.
-    if let Ok(pkg) = select_pkg(source, *krate, Some(vers), config, false, &mut |_| {
+    if let Ok(pkg) = select_pkg(source, &Some(dep), config, false, &mut |_| {
         // Don't try to do anything clever here - if this function returns false, the caller will do
         // a more in-depth check possibly including an update from the index.
         Ok(vec![])
@@ -590,7 +607,9 @@ fn make_ws_rustc_target<'cfg>(
     Ok((ws, rustc, target))
 }
 
-fn parse_semver_req(v: &str) -> CargoResult<VersionReq> {
+/// Parses x.y.z as if it were =x.y.z, and gives CLI-specific error messages in the case of invalid
+/// values.
+fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
     // If the version begins with character <, >, =, ^, ~ parse it as a
     // version range, otherwise parse it as a specific version
     let first = v
