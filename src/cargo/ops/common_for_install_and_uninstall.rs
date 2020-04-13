@@ -519,6 +519,8 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
+/// Either the specific dependency to be selected, or a function which can be executed to list all
+/// packages known in a source so that one can be selected from that list.
 pub enum DependencyOrListAllFn<F> {
     Dependency(Dependency),
     ListAllFn(F),
