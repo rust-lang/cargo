@@ -42,7 +42,7 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::resolver::types::FeaturesSet;
 use crate::core::resolver::Resolve;
-use crate::core::{FeatureValue, InternedString, PackageId, PackageIdSpec, Workspace};
+use crate::core::{FeatureValue, InternedString, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::{CargoResult, Config};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -85,17 +85,28 @@ struct FeatureOpts {
 /// dependencies are computed, and can result in longer build times with
 /// `cargo test` because the lib may need to be built 3 times instead of
 /// twice.
+#[derive(Copy, Clone, PartialEq)]
 pub enum HasDevUnits {
     Yes,
     No,
 }
 
 /// Flag to indicate if features are requested for a build dependency or not.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FeaturesFor {
     NormalOrDev,
     /// Build dependency or proc-macro.
     HostDep,
+}
+
+impl FeaturesFor {
+    pub fn from_for_host(for_host: bool) -> FeaturesFor {
+        if for_host {
+            FeaturesFor::HostDep
+        } else {
+            FeaturesFor::NormalOrDev
+        }
+    }
 }
 
 impl FeatureOpts {
@@ -231,6 +242,7 @@ pub struct FeatureResolver<'a, 'cfg> {
     /// The platform to build for, requested by the user.
     requested_target: CompileKind,
     resolve: &'a Resolve,
+    package_set: &'a PackageSet<'cfg>,
     /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
     /// Map of features activated for each package.
@@ -247,6 +259,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         ws: &Workspace<'cfg>,
         target_data: &RustcTargetData,
         resolve: &Resolve,
+        package_set: &'a PackageSet<'cfg>,
         requested_features: &RequestedFeatures,
         specs: &[PackageIdSpec],
         requested_target: CompileKind,
@@ -269,6 +282,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             target_data,
             requested_target,
             resolve,
+            package_set,
             opts,
             activated_features: HashMap::new(),
             processed_deps: HashSet::new(),
@@ -294,8 +308,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let member_features = self.ws.members_with_features(specs, requested_features)?;
         for (member, requested_features) in &member_features {
             let fvs = self.fvs_from_requested(member.package_id(), requested_features);
-            let for_host = self.opts.decouple_host_deps
-                && self.resolve.summary(member.package_id()).proc_macro();
+            let for_host = self.is_proc_macro(member.package_id());
             self.activate_pkg(member.package_id(), &fvs, for_host)?;
             if for_host {
                 // Also activate without for_host. This is needed if the
@@ -321,7 +334,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         // finding bugs where the resolver missed something it should have visited.
         // Remove this in the future if `activated_features` uses an empty default.
         self.activated_features
-            .entry((pkg_id, for_host))
+            .entry((pkg_id, self.opts.decouple_host_deps && for_host))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
             self.activate_fv(pkg_id, fv, for_host)?;
@@ -415,7 +428,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     ) -> CargoResult<()> {
         let enabled = self
             .activated_features
-            .entry((pkg_id, for_host))
+            .entry((pkg_id, self.opts.decouple_host_deps && for_host))
             .or_insert_with(BTreeSet::new);
         if !enabled.insert(feature_to_enable) {
             // Already enabled.
@@ -522,7 +535,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
-                let is_proc_macro = self.resolve.summary(dep_id).proc_macro();
+                let is_proc_macro = self.is_proc_macro(dep_id);
                 let deps = deps
                     .iter()
                     .filter(|dep| {
@@ -538,8 +551,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         true
                     })
                     .map(|dep| {
-                        let dep_for_host = for_host
-                            || (self.opts.decouple_host_deps && (dep.is_build() || is_proc_macro));
+                        let dep_for_host = for_host || dep.is_build() || is_proc_macro;
                         (dep, dep_for_host)
                     })
                     .collect::<Vec<_>>();
@@ -565,5 +577,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         if found {
             panic!("feature mismatch");
         }
+    }
+
+    fn is_proc_macro(&self, package_id: PackageId) -> bool {
+        self.package_set
+            .get_one(package_id)
+            .expect("packages downloaded")
+            .proc_macro()
     }
 }

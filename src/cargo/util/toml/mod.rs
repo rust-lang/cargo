@@ -1082,6 +1082,7 @@ impl TomlManifest {
                 };
                 for (n, v) in dependencies.iter() {
                     let dep = v.to_dependency(n, cx, kind)?;
+                    validate_package_name(dep.name_in_toml().as_str(), "dependency name", "")?;
                     cx.deps.push(dep);
                 }
 
@@ -1155,14 +1156,12 @@ impl TomlManifest {
                     .collect()
             })
             .unwrap_or_else(BTreeMap::new);
-        let proc_macro = targets.iter().any(|target| target.proc_macro());
         let summary = Summary::new(
             pkgid,
             deps,
             &summary_features,
             project.links.as_deref(),
             project.namespaced_features.unwrap_or(false),
-            proc_macro,
         )?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),

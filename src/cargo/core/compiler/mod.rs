@@ -653,8 +653,6 @@ fn crate_version_flag_already_present(rustdoc: &ProcessBuilder) -> bool {
 
 fn append_crate_version_flag(unit: &Unit<'_>, rustdoc: &mut ProcessBuilder) {
     rustdoc
-        .arg("-Z")
-        .arg("unstable-options")
         .arg(RUSTDOC_CRATE_VERSION_FLAG)
         .arg(unit.pkg.version().to_string());
 }
@@ -803,14 +801,30 @@ fn build_base_args<'a, 'cfg>(
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
     // exclusive.
-    if unit.target.can_lto() && !unit.target.for_host() {
-        match *lto {
-            Lto::Bool(false) => {}
-            Lto::Bool(true) => {
+    let lto_possible = unit.target.can_lto() && !unit.target.for_host();
+    match lto {
+        Lto::Bool(true) => {
+            if lto_possible {
                 cmd.args(&["-C", "lto"]);
             }
-            Lto::Named(ref s) => {
+        }
+        Lto::Named(s) => {
+            if lto_possible {
                 cmd.arg("-C").arg(format!("lto={}", s));
+            }
+        }
+        // If LTO isn't being enabled then there's no need for bitcode to be
+        // present in the intermediate artifacts, so shave off some build time
+        // by removing it.
+        Lto::Bool(false) => {
+            if cx
+                .bcx
+                .target_data
+                .info(CompileKind::Host)
+                .supports_embed_bitcode
+                .unwrap()
+            {
+                cmd.arg("-Cembed-bitcode=no");
             }
         }
     }

@@ -23,7 +23,7 @@ to use the vendored sources, which you will need to add to `.cargo/config`.
 
 == OPTIONS
 
-=== Owner Options
+=== Vendor Options
 
 *-s* _MANIFEST_::
 *--sync* _MANIFEST_::

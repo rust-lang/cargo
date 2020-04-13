@@ -6,13 +6,13 @@ use std::io;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::sleep_ms;
-use cargo_test_support::{basic_manifest, is_coarse_mtime, project};
+use cargo_test_support::{basic_manifest, is_coarse_mtime, project, rustc_host, sleep_ms};
 
 #[cargo_test]
 fn modifying_and_moving() {
@@ -1427,8 +1427,8 @@ fn reuse_panic_pm() {
         .with_stderr_unordered(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C debuginfo=2 [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort -C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
 [COMPILING] somepm [..]
 [RUNNING] `rustc --crate-name somepm [..]
 [COMPILING] foo [..]
@@ -2148,5 +2148,263 @@ fn rerun_if_changes() {
     p.cargo("build")
         .env("BAR", "2")
         .with_stderr("[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test]
+fn channel_shares_filenames() {
+    // Test that different "nightly" releases use the same output filename.
+
+    // Create separate rustc binaries to emulate running different toolchains.
+    let nightly1 = format!(
+        "\
+rustc 1.44.0-nightly (38114ff16 2020-03-21)
+binary: rustc
+commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
+commit-date: 2020-03-21
+host: {}
+release: 1.44.0-nightly
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let nightly2 = format!(
+        "\
+rustc 1.44.0-nightly (a5b09d354 2020-03-31)
+binary: rustc
+commit-hash: a5b09d35473615e7142f5570f5c5fad0caf68bd2
+commit-date: 2020-03-31
+host: {}
+release: 1.44.0-nightly
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let beta1 = format!(
+        "\
+rustc 1.43.0-beta.3 (4c587bbda 2020-03-25)
+binary: rustc
+commit-hash: 4c587bbda04ab55aaf56feab11dfdfe387a85d7a
+commit-date: 2020-03-25
+host: {}
+release: 1.43.0-beta.3
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let beta2 = format!(
+        "\
+rustc 1.42.0-beta.5 (4e1c5f0e9 2020-02-28)
+binary: rustc
+commit-hash: 4e1c5f0e9769a588b91c977e3d81e140209ef3a2
+commit-date: 2020-02-28
+host: {}
+release: 1.42.0-beta.5
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let stable1 = format!(
+        "\
+rustc 1.42.0 (b8cedc004 2020-03-09)
+binary: rustc
+commit-hash: b8cedc00407a4c56a3bda1ed605c6fc166655447
+commit-date: 2020-03-09
+host: {}
+release: 1.42.0
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let stable2 = format!(
+        "\
+rustc 1.41.1 (f3e1a954d 2020-02-24)
+binary: rustc
+commit-hash: f3e1a954d2ead4e2fc197c7da7d71e6c61bad196
+commit-date: 2020-02-24
+host: {}
+release: 1.41.1
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let compiler = project()
+        .at("compiler")
+        .file("Cargo.toml", &basic_manifest("compiler", "0.1.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                if std::env::args_os().any(|a| a == "-vV") {
+                    print!("{}", env!("FUNKY_VERSION_TEST"));
+                    return;
+                }
+                let mut cmd = std::process::Command::new("rustc");
+                cmd.args(std::env::args_os().skip(1));
+                assert!(cmd.status().unwrap().success());
+            }
+            "#,
+        )
+        .build();
+
+    let makeit = |version, vv| {
+        // Force a rebuild.
+        compiler.target_debug_dir().join("deps").rm_rf();
+        compiler.cargo("build").env("FUNKY_VERSION_TEST", vv).run();
+        fs::rename(compiler.bin("compiler"), compiler.bin(version)).unwrap();
+    };
+    makeit("nightly1", nightly1);
+    makeit("nightly2", nightly2);
+    makeit("beta1", beta1);
+    makeit("beta2", beta2);
+    makeit("stable1", stable1);
+    makeit("stable2", stable2);
+
+    // Run `cargo check` with different rustc versions to observe its behavior.
+    let p = project().file("src/lib.rs", "").build();
+
+    // Runs `cargo check` and returns the rmeta filename created.
+    // Checks that the freshness matches the given value.
+    let check = |version, fresh| -> String {
+        let output = p
+            .cargo("check --message-format=json")
+            .env("RUSTC", compiler.bin(version))
+            .exec_with_output()
+            .unwrap();
+        // Collect the filenames generated.
+        let mut artifacts: Vec<_> = std::str::from_utf8(&output.stdout)
+            .unwrap()
+            .lines()
+            .filter_map(|line| {
+                let value: serde_json::Value = serde_json::from_str(line).unwrap();
+                if value["reason"].as_str().unwrap() == "compiler-artifact" {
+                    assert_eq!(value["fresh"].as_bool().unwrap(), fresh);
+                    let filenames = value["filenames"].as_array().unwrap();
+                    assert_eq!(filenames.len(), 1);
+                    Some(filenames[0].to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        // Should only generate one rmeta file.
+        assert_eq!(artifacts.len(), 1);
+        artifacts.pop().unwrap()
+    };
+
+    let nightly1_name = check("nightly1", false);
+    assert_eq!(check("nightly1", true), nightly1_name);
+    assert_eq!(check("nightly2", false), nightly1_name); // same as before
+    assert_eq!(check("nightly2", true), nightly1_name);
+    // Should rebuild going back to nightly1.
+    assert_eq!(check("nightly1", false), nightly1_name);
+
+    let beta1_name = check("beta1", false);
+    assert_ne!(beta1_name, nightly1_name);
+    assert_eq!(check("beta1", true), beta1_name);
+    assert_eq!(check("beta2", false), beta1_name); // same as before
+    assert_eq!(check("beta2", true), beta1_name);
+    // Should rebuild going back to beta1.
+    assert_eq!(check("beta1", false), beta1_name);
+
+    let stable1_name = check("stable1", false);
+    assert_ne!(stable1_name, nightly1_name);
+    assert_ne!(stable1_name, beta1_name);
+    let stable2_name = check("stable2", false);
+    assert_ne!(stable1_name, stable2_name);
+    // Check everything is fresh.
+    assert_eq!(check("stable1", true), stable1_name);
+    assert_eq!(check("stable2", true), stable2_name);
+    assert_eq!(check("beta1", true), beta1_name);
+    assert_eq!(check("nightly1", true), nightly1_name);
+}
+
+#[cargo_test]
+fn linking_interrupted() {
+    // Interrupt during the linking phase shouldn't leave test executable as "fresh".
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    // Create a linker that we can interrupt.
+    let linker = project()
+        .at("linker")
+        .file("Cargo.toml", &basic_manifest("linker", "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r#"
+            use std::io::Read;
+
+            fn main() {
+                // Figure out the output filename.
+                let output = match std::env::args().find(|a| a.starts_with("/OUT:")) {
+                    Some(s) => s[5..].to_string(),
+                    None => {
+                        let mut args = std::env::args();
+                        loop {
+                            if args.next().unwrap() == "-o" {
+                                break;
+                            }
+                        }
+                        args.next().unwrap()
+                    }
+                };
+                std::fs::remove_file(&output).unwrap();
+                std::fs::write(&output, "").unwrap();
+                // Tell the test that we are ready to be interrupted.
+                let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
+                // Wait for the test to tell us to exit.
+                let _ = socket.read(&mut [0; 1]);
+            }
+            "#
+            .replace("__ADDR__", &addr.to_string()),
+        )
+        .build();
+    linker.cargo("build").run();
+
+    // Build it once so that the fingerprint gets saved to disk.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("tests/t1.rs", "")
+        .build();
+    p.cargo("test --test t1 --no-run").run();
+    // Make a change, start a build, then interrupt it.
+    p.change_file("src/lib.rs", "// modified");
+    let linker_env = format!(
+        "CARGO_TARGET_{}_LINKER",
+        rustc_host().to_uppercase().replace('-', "_")
+    );
+    let mut cmd = p
+        .cargo("test --test t1 --no-run")
+        .env(&linker_env, linker.bin("linker"))
+        .build_command();
+    let mut child = cmd
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    // Wait for linking to start.
+    let mut conn = listener.accept().unwrap().0;
+
+    // Interrupt the child.
+    child.kill().unwrap();
+    // Note: rustc and the linker are still running, let them exit here.
+    conn.write(b"X").unwrap();
+
+    // Build again, shouldn't be fresh.
+    p.cargo("test --test t1")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] target/debug/deps/t1[..]
+",
+        )
         .run();
 }

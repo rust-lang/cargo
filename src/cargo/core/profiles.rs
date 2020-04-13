@@ -998,11 +998,7 @@ impl UnitFor {
     }
 
     pub(crate) fn map_to_features_for(&self) -> FeaturesFor {
-        if self.is_for_host_features() {
-            FeaturesFor::HostDep
-        } else {
-            FeaturesFor::NormalOrDev
-        }
+        FeaturesFor::from_for_host(self.is_for_host_features())
     }
 }
 

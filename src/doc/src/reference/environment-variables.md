@@ -98,7 +98,7 @@ supported environment variables are:
 * `CARGO_REGISTRIES_<name>_TOKEN` — Authentication token of a registry, see [`registries.<name>.token`].
 * `CARGO_REGISTRY_DEFAULT` — Default registry for the `--registry` flag, see [`registry.default`].
 * `CARGO_REGISTRY_TOKEN` — Authentication token for [crates.io], see [`registry.token`].
-* `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`].
+* `CARGO_TARGET_<triple>_LINKER` — The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
 * `CARGO_TARGET_<triple>_RUNNER` — The executable runner, see [`target.<triple>.runner`].
 * `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
 * `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].

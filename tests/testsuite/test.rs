@@ -3363,6 +3363,8 @@ fn json_artifact_includes_test_flag() {
         "filenames":["[..]/foo-[..]"],
         "fresh": false
     }
+
+    {"reason": "build-finished", "success": true}
 "#,
         )
         .run();
@@ -3395,6 +3397,8 @@ fn json_artifact_includes_executable_for_library_tests() {
                     "src_path": "[..]/foo/src/lib.rs"
                 }
             }
+
+            {"reason": "build-finished", "success": true}
         "#,
         )
         .run();
@@ -3429,6 +3433,8 @@ fn json_artifact_includes_executable_for_integration_tests() {
                     "src_path": "[..]/foo/tests/integration_test.rs"
                 }
             }
+
+            {"reason": "build-finished", "success": true}
         "#,
         )
         .run();

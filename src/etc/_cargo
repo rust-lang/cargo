@@ -129,12 +129,6 @@ _cargo() {
                     _arguments -s -S $common $manifest
                         ;;
 
-                git-checkout)
-                    _arguments -s -S $common \
-                        '--reference=:reference' \
-                        '--url=:url:_urls'
-                        ;;
-
                 help)
                     _cargo_cmds
                         ;;
@@ -275,6 +269,21 @@ _cargo() {
                         '(--lib --doc --bin --example --bench)--test=[test name]' \
                         '(--lib --doc --bin --example --test)--bench=[benchmark name]' \
                         '*: :_default'
+                        ;;
+
+                tree)
+                    _arguments -s -S $common $features $triple $manifest \
+                        '(-p --package)'{-p+,--package=}'[package to use as the root]:package:_cargo_package_names' \
+                        '--no-filter-targets[return dependencies for all targets]' \
+                        '--no-dev-dependencies[skip dev dependencies]' \
+                        '(-i --invert)'{-i,--invert}'[invert the tree]' \
+                        '--no-indent[display as a list]' \
+                        '--prefix-depth[display as a list with numeric depth]' \
+                        '--no-dedupe[repeat shared dependencies]' \
+                        '(-d --duplicates)'{-d,--duplicates}'[packages with multiple versions]' \
+                        '--charset=[utf8 or ascii]' \
+                        '(-f --format)'{-f,--format=}'[format string]' \
+                        '--graph-features[show features]' \
                         ;;
 
                 uninstall)

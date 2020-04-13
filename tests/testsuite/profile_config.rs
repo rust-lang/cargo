@@ -283,7 +283,7 @@ fn profile_config_override_precedence() {
         .with_stderr(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..] -C opt-level=2 -C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name bar [..] -C opt-level=2[..]-C codegen-units=2 [..]
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]-C codegen-units=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",

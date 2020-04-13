@@ -911,6 +911,37 @@ required by package `foo v0.0.1 ([CWD])`
         .run();
 }
 
+// Ensure that renamed deps have a valid name
+#[cargo_test]
+fn cargo_compile_with_invalid_dep_rename() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "buggin"
+            version = "0.1.0"
+
+            [dependencies]
+            "haha this isn't a valid name 🐛" = { package = "libc", version = "0.1" }
+        "#,
+        )
+        .file("src/main.rs", &main_file(r#""What's good?""#, &[]))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  invalid character ` ` in dependency name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn cargo_compile_with_filename() {
     let p = project()
@@ -1149,13 +1180,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic -C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1177,13 +1208,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type dylib \
         --emit=[..]link \
-        -C prefer-dynamic -C debuginfo=2 \
+        -C prefer-dynamic[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1581,7 +1612,7 @@ fn verbose_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -1599,8 +1630,8 @@ fn verbose_release_build() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
-        -C opt-level=3 \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
@@ -1650,15 +1681,15 @@ fn verbose_release_build_deps() {
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
         --emit=[..]link \
-        -C prefer-dynamic \
-        -C opt-level=3 \
+        -C prefer-dynamic[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
-        -C opt-level=3 \
+        --emit=[..]link[..]\
+        -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps \
@@ -3169,19 +3200,21 @@ fn compiler_json_error_format() {
         "filenames": "{...}",
         "fresh": $FRESH
     }
+
+    {"reason": "build-finished", "success": true}
 "#
         .replace("$FRESH", fresh)
     };
 
     // Use `jobs=1` to ensure that the order of messages is consistent.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(&output("false"))
+        .with_json_contains_unordered(&output("false"))
         .run();
 
     // With fresh build, we should repeat the artifacts,
     // and replay the cached compiler warnings.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json(&output("true"))
+        .with_json_contains_unordered(&output("true"))
         .run();
 }
 
@@ -3210,7 +3243,7 @@ fn message_format_json_forward_stderr() {
         .build();
 
     p.cargo("rustc --release --bin foo --message-format JSON")
-        .with_json(
+        .with_json_contains_unordered(
             r#"
     {
         "reason":"compiler-message",
@@ -3249,6 +3282,8 @@ fn message_format_json_forward_stderr() {
         "filenames": "{...}",
         "fresh": false
     }
+
+    {"reason": "build-finished", "success": true}
 "#,
         )
         .run();
@@ -4205,15 +4240,15 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --test=t1")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 [..]",
         )
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .run();
 
@@ -4222,16 +4257,16 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --bench=b1")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name b1 benches/b1.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name b1 benches/b1.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 [..]",
         )
         .with_stderr_does_not_contain("opt-level")
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
-             --emit=[..]link -C debuginfo=2 [..]",
+             --emit=[..]link[..]-C debuginfo=2 [..]",
         )
         .run();
 }
@@ -4252,7 +4287,7 @@ fn targets_selected_default() {
         )
         // Unit tests.
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4269,7 +4304,7 @@ fn targets_selected_all() {
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4286,7 +4321,7 @@ fn all_targets_no_lib() {
         )
         // Unit tests.
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 --test [..]",
         )
         .run();
@@ -4726,7 +4761,7 @@ fn build_lib_only() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
-        --emit=[..]link -C debuginfo=2 \
+        --emit=[..]link[..]-C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`

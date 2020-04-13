@@ -13,13 +13,19 @@ use crate::core::compiler::{CompileMode, CompileTarget, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
-/// The `Metadata` is a hash used to make unique file names for each unit in a build.
+/// The `Metadata` is a hash used to make unique file names for each unit in a
+/// build. It is also use for symbol mangling.
+///
 /// For example:
 /// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
 /// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
+///
 /// In general this must include all things that need to be distinguished in different parts of
 /// the same build. This is absolutely required or we override things before
 /// we get chance to use them.
+///
+/// It is also used for symbol mangling, because if you have two versions of
+/// the same crate linked together, their symbols need to be differentiated.
 ///
 /// We use a hash because it is an easy way to guarantee
 /// that all the inputs can be converted to a valid path.
@@ -38,6 +44,15 @@ use crate::util::{self, CargoResult};
 /// If we add something that we should not have, for this reason, we get the correct output but take
 /// more space than needed. This makes not including something in `Metadata`
 /// a form of cache invalidation.
+///
+/// You should also avoid anything that would interfere with reproducible
+/// builds. For example, *any* absolute path should be avoided. This is one
+/// reason that `RUSTFLAGS` is not in `Metadata`, because it often has
+/// absolute paths (like `--remap-path-prefix` which is fundamentally used for
+/// reproducible builds and has absolute paths in it). Also, in some cases the
+/// mangled symbols need to be stable between different builds with different
+/// settings. For example, profile-guided optimizations need to swap
+/// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
 ///
 /// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
 /// rebuild is needed.
@@ -614,7 +629,7 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    bcx.rustc().verbose_version.hash(&mut hasher);
+    hash_rustc_version(bcx, &mut hasher);
 
     if cx.bcx.ws.is_member(unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
@@ -640,4 +655,36 @@ fn compute_metadata<'a, 'cfg>(
     unit.is_std.hash(&mut hasher);
 
     Some(Metadata(hasher.finish()))
+}
+
+fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
+    let vers = &bcx.rustc().version;
+    if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
+        // For stable, keep the artifacts separate. This helps if someone is
+        // testing multiple versions, to avoid recompiles.
+        bcx.rustc().verbose_version.hash(hasher);
+        return;
+    }
+    // On "nightly"/"beta"/"dev"/etc, keep each "channel" separate. Don't hash
+    // the date/git information, so that whenever someone updates "nightly",
+    // they won't have a bunch of stale artifacts in the target directory.
+    //
+    // This assumes that the first segment is the important bit ("nightly",
+    // "beta", "dev", etc.). Skip other parts like the `.3` in `-beta.3`.
+    vers.pre[0].hash(hasher);
+    // Keep "host" since some people switch hosts to implicitly change
+    // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
+    // to consider hashing `unit.kind.short_name()` instead.
+    bcx.rustc().host.hash(hasher);
+    // None of the other lines are important. Currently they are:
+    // binary: rustc  <-- or "rustdoc"
+    // commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
+    // commit-date: 2020-03-21
+    // host: x86_64-apple-darwin
+    // release: 1.44.0-nightly
+    // LLVM version: 9.0
+    //
+    // The backend version ("LLVM version") might become more relevant in
+    // the future when cranelift sees more use, and people want to switch
+    // between different backends without recompiling.
 }

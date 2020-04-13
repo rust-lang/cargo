@@ -17,8 +17,10 @@ virtual workspace will include all workspace members (equivalent to passing
 *--workspace*::
     {actionverb} all members in the workspace.
 
+ifndef::noall[]
 *--all*::
     Deprecated alias for `--workspace`.
+endif::noall[]
 
 *--exclude* _SPEC_...::
     Exclude the specified packages. Must be used in conjunction with the

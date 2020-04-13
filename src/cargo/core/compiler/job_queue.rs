@@ -70,12 +70,11 @@ use super::job::{
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
 use crate::core::{PackageId, TargetKind};
-use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
-use crate::util::Queue;
-use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
-use crate::util::{Config, DependencyQueue};
-use crate::util::{Progress, ProgressStyle};
+use crate::util::machine_message::{self, Message as _};
+use crate::util::{self, internal, profile};
+use crate::util::{CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// queueing of compilation steps for each package. Packages enqueue units of
@@ -701,6 +700,13 @@ impl<'a, 'cfg> DrainState<'a, 'cfg> {
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
         self.timings.finished(cx.bcx, &error)?;
+        if cx.bcx.build_config.emit_json() {
+            let msg = machine_message::BuildFinished {
+                success: error.is_none(),
+            }
+            .to_json_string();
+            cx.bcx.config.shell().stdout_println(msg);
+        }
 
         if let Some(e) = error {
             Err(e)

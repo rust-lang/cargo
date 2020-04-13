@@ -351,11 +351,8 @@ pub fn compile_ws<'a>(
 
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
-    // Vec<PackageIdSpec> to a Vec<&PackageId>.
-    let to_build_ids = specs
-        .iter()
-        .map(|s| s.query(resolve.iter()))
-        .collect::<CargoResult<Vec<_>>>()?;
+    // Vec<PackageIdSpec> to a Vec<PackageId>.
+    let to_build_ids = resolve.specs_to_ids(&specs)?;
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
     // Dependencies will be downloaded during build_unit_dependencies.
@@ -608,16 +605,18 @@ impl CompileFilter {
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
-            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { .. } => match *self
-            {
-                CompileFilter::Default { .. } => false,
-                CompileFilter::Only {
-                    ref examples,
-                    ref tests,
-                    ref benches,
-                    ..
-                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-            },
+            CompileMode::Check { test: true } => true,
+            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { test: false } => {
+                match *self {
+                    CompileFilter::Default { .. } => false,
+                    CompileFilter::Only {
+                        ref examples,
+                        ref tests,
+                        ref benches,
+                        ..
+                    } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+                }
+            }
             CompileMode::RunCustomBuild => panic!("Invalid mode"),
         }
     }
@@ -750,12 +749,8 @@ fn generate_targets<'a>(
             bcx.profiles
                 .get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
 
-        let features_for = if target.proc_macro() {
-            FeaturesFor::HostDep
-        } else {
-            // Root units are never build dependencies.
-            FeaturesFor::NormalOrDev
-        };
+        // No need to worry about build-dependencies, roots are never build dependencies.
+        let features_for = FeaturesFor::from_for_host(target.proc_macro());
         let features =
             Vec::from(resolved_features.activated_features(pkg.package_id(), features_for));
         bcx.units.intern(
@@ -907,7 +902,12 @@ fn generate_targets<'a>(
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map.entry(pkg).or_insert_with(|| {
-                    resolve_all_features(resolve, resolved_features, pkg.package_id())
+                    resolve_all_features(
+                        resolve,
+                        resolved_features,
+                        &bcx.packages,
+                        pkg.package_id(),
+                    )
                 });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }
@@ -941,9 +941,10 @@ fn generate_targets<'a>(
 ///
 /// Dependencies are added as `dep_name/feat_name` because `required-features`
 /// wants to support that syntax.
-fn resolve_all_features(
+pub fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     resolved_features: &features::ResolvedFeatures,
+    package_set: &PackageSet<'_>,
     package_id: PackageId,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
@@ -955,13 +956,12 @@ fn resolve_all_features(
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
-        let is_proc_macro = resolve_with_overrides.summary(dep_id).proc_macro();
+        let is_proc_macro = package_set
+            .get_one(dep_id)
+            .expect("packages downloaded")
+            .proc_macro();
         for dep in deps {
-            let features_for = if is_proc_macro || dep.is_build() {
-                FeaturesFor::HostDep
-            } else {
-                FeaturesFor::NormalOrDev
-            };
+            let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
             for feature in resolved_features.activated_features_unverified(dep_id, features_for) {
                 features.insert(format!("{}/{}", dep.name_in_toml(), feature));
             }

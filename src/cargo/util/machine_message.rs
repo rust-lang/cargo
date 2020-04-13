@@ -90,3 +90,14 @@ impl<'a> Message for TimingInfo<'a> {
         "timing-info"
     }
 }
+
+#[derive(Serialize)]
+pub struct BuildFinished {
+    pub success: bool,
+}
+
+impl Message for BuildFinished {
+    fn reason(&self) -> &str {
+        "build-finished"
+    }
+}

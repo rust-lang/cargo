@@ -11,11 +11,6 @@ steps:
   displayName: "Install gcc-multilib (linux)"
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
 
-# Some tests rely on a clippy command to run, so let's try to install clippy to
-# we can be sure to run those tests.
-- bash: rustup component add clippy || echo "clippy not available"
-  displayName: "Install clippy (maybe)"
-
 # Some tests also rely on rustfmt
 - bash: rustup component add rustfmt || echo "rustfmt not available"
   displayName: "Install rustfmt (maybe)"

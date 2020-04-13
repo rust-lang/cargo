@@ -64,7 +64,10 @@ fn cargo_renders() {
 
     p.cargo("build --message-format json-render-diagnostics")
         .with_status(101)
-        .with_stdout("{\"reason\":\"compiler-artifact\",[..]")
+        .with_stdout(
+            "{\"reason\":\"compiler-artifact\",[..]\n\
+             {\"reason\":\"build-finished\",\"success\":false}",
+        )
         .with_stderr_contains(
             "\
 [COMPILING] bar [..]
