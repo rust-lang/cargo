@@ -1087,6 +1087,38 @@ Caused by:
 }
 
 #[cargo_test]
+fn test_edition_from_the_future() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"[package]
+                edition = "2038"
+                name = "foo"
+                version = "99.99.99"
+                authors = []
+            "#,
+        )
+        .file("src/main.rs", r#""#)
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  failed to parse the `edition` key
+
+Caused by:
+  this version of Cargo is older than the `2038` edition, and only supports `2015` and `2018` editions.
+"
+            .to_string(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn do_not_package_if_src_was_modified() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
