@@ -144,7 +144,7 @@ fn run_doc_tests(
     let mut runtool: &Option<(std::path::PathBuf, Vec<String>)> = &None;
     if doctest_xcompile {
         runtool = compilation.target_runner();
-    } else if options.compile_opts.build_config.requested_kind.is_host() {
+    } else if compilation.host != compilation.target {
         return Ok((Test::Doc, errors));
     }
 
