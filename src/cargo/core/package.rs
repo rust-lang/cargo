@@ -934,7 +934,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         }
 
         // If we've spent too long not actually receiving any data we time out.
-        if now - self.updated_at.get() > self.timeout.dur {
+        if now > self.updated_at.get() + self.timeout.dur {
             self.updated_at.set(now);
             let msg = format!(
                 "failed to download any data for `{}` within {}s",
