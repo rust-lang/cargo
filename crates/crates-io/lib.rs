@@ -64,6 +64,7 @@ pub struct NewCrateDependency {
     pub name: String,
     pub features: Vec<String>,
     pub version_req: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
     pub kind: String,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -344,7 +344,6 @@ fn publish_with_registry_dependency() {
                 "kind": "normal",
                 "name": "bar",
                 "optional": false,
-                "target": null,
                 "version_req": "^0.0.1"
               }
             ],
@@ -506,7 +505,6 @@ fn publish_with_crates_io_dep() {
                 "name": "bar",
                 "optional": false,
                 "registry": "https://github.com/rust-lang/crates.io-index",
-                "target": null,
                 "version_req": "^0.0.1"
               }
             ],

@@ -966,7 +966,6 @@ fn publish_with_patch() {
               "name": "bar",
               "optional": false,
               "registry": "https://github.com/rust-lang/crates.io-index",
-              "target": null,
               "version_req": "^1.0"
             }
           ],
@@ -1135,7 +1134,6 @@ fn publish_git_with_version() {
               "name": "dep1",
               "optional": false,
               "registry": "https://github.com/rust-lang/crates.io-index",
-              "target": null,
               "version_req": "^1.0"
             }
           ],
