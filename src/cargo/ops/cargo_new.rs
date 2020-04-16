@@ -762,12 +762,12 @@ mod tests {
     }
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
-        let msg = format!(
+        crate::display_warning_with_error(
             "compiling this new crate may not work due to invalid \
-             workspace configuration\n\n{:?}",
-            e,
+             workspace configuration",
+            &e,
+            &mut config.shell(),
         );
-        config.shell().warn(msg)?;
     }
 
     Ok(())

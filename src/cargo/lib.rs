@@ -117,7 +117,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
     debug!("display_error; err={:?}", err);
-    let has_verbose = _display_error(err, shell);
+    let has_verbose = _display_error(err, shell, true);
     if has_verbose {
         drop(writeln!(
             shell.err(),
@@ -140,7 +140,15 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
     }
 }
 
-fn _display_error(err: &Error, shell: &mut Shell) -> bool {
+/// Displays a warning, with an error object providing detailed information
+/// and context.
+pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
+    drop(shell.warn(warning));
+    drop(writeln!(shell.err(), ""));
+    _display_error(err, shell, false);
+}
+
+fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
     let verbosity = shell.verbosity();
     let is_verbose = |e: &(dyn std::error::Error + 'static)| -> bool {
         verbosity != Verbose && e.downcast_ref::<VerboseError>().is_some()
@@ -149,7 +157,11 @@ fn _display_error(err: &Error, shell: &mut Shell) -> bool {
     if is_verbose(err.as_ref()) {
         return true;
     }
-    drop(shell.error(&err));
+    if as_err {
+        drop(shell.error(&err));
+    } else {
+        drop(writeln!(shell.err(), "{}", err));
+    }
     for cause in err.chain().skip(1) {
         // If we're not in verbose mode then print remaining errors until one
         // marked as `VerboseError` appears.
