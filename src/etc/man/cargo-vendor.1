@@ -2,12 +2,12 @@
 .\"     Title: cargo-vendor
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-03-30
+.\"      Date: 2020-04-16
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-VENDOR" "1" "2020-03-30" "\ \&" "\ \&"
+.TH "CARGO\-VENDOR" "1" "2020-04-16" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -41,7 +41,7 @@ dependencies specified. Additional manifests beyond the default one can be
 specified with the \fB\-s\fP option.
 .sp
 The \fBcargo vendor\fP command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to \fB.cargo/config\fP.
+to use the vendored sources, which you will need to add to \fB.cargo/config.toml\fP.
 .SH "OPTIONS"
 .SS "Vendor Options"
 .sp
@@ -59,7 +59,7 @@ existing contents of the vendor directory
 .sp
 \fB\-\-respect\-source\-config\fP
 .RS 4
-Instead of ignoring \fB[source]\fP configuration by default in \fB.cargo/config\fP
+Instead of ignoring \fB[source]\fP configuration by default in \fB.cargo/config.toml\fP
 read it and use it when downloading crates from crates.io, for example
 .RE
 .sp

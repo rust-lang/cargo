@@ -31,7 +31,7 @@ chapter][registries].
 
 ### Configuration
 
-Configuration of replacement sources is done through [`.cargo/config`][config]
+Configuration of replacement sources is done through [`.cargo/config.toml`][config]
 and the full set of available keys are:
 
 ```toml
@@ -42,7 +42,7 @@ and the full set of available keys are:
 # Under the `source` table are a number of other tables whose keys are a
 # name for the relevant source. For example this section defines a new
 # source, called `my-vendor-source`, which comes from a directory
-# located at `vendor` relative to the directory containing this `.cargo/config`
+# located at `vendor` relative to the directory containing this `.cargo/config.toml`
 # file
 [source.my-vendor-source]
 directory = "vendor"

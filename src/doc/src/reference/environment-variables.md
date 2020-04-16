@@ -294,7 +294,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
                        use it as well.
 * `RUSTC_LINKER` — The path to the linker binary that Cargo has resolved to use
                    for the current target, if specified. The linker can be
-                   changed by editing `.cargo/config`; see the documentation
+                   changed by editing `.cargo/config.toml`; see the documentation
                    about [cargo configuration][cargo-config] for more
                    information.
 

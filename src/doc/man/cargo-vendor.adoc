@@ -19,7 +19,7 @@ dependencies specified. Additional manifests beyond the default one can be
 specified with the `-s` option.
 
 The `cargo vendor` command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to `.cargo/config`.
+to use the vendored sources, which you will need to add to `.cargo/config.toml`.
 
 == OPTIONS
 
@@ -35,7 +35,7 @@ to use the vendored sources, which you will need to add to `.cargo/config`.
     existing contents of the vendor directory
 
 *--respect-source-config*::
-    Instead of ignoring `[source]` configuration by default in `.cargo/config`
+    Instead of ignoring `[source]` configuration by default in `.cargo/config.toml`
     read it and use it when downloading crates from crates.io, for example
 
 *--versioned-dirs*::
