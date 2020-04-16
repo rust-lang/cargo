@@ -464,10 +464,12 @@ fn cross_doctests() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name foo [..]--test[..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
 [DOCTEST] foo
+[RUNNING] `rustdoc [..]
 ",
             triple = target
         ))
