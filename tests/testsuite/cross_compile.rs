@@ -460,6 +460,7 @@ fn cross_doctests() {
     // This tests the library and runs the doc tests.
     p.cargo("test -v -Z doctest-xcompile --target")
         .arg(&target)
+        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
