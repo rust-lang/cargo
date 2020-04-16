@@ -1037,8 +1037,7 @@ fn new_warns_you_this_will_not_work() {
         .env("USER", "foo")
         .with_stderr(
             "\
-warning: compiling this new crate may not work due to invalid workspace \
-configuration
+warning: compiling this new crate may not work due to invalid workspace configuration
 
 current package believes it's in a workspace when it's not:
 current: [..]
@@ -1065,8 +1064,10 @@ fn new_warning_with_corrupt_ws() {
 failed to parse manifest at `[..]foo/Cargo.toml`
 
 Caused by:
-    0: could not parse input as TOML
-    1: expected an equals, found eof at line 1 column 5
+  could not parse input as TOML
+
+Caused by:
+  expected an equals, found eof at line 1 column 5
      Created binary (application) `bar` package
 ",
         )
