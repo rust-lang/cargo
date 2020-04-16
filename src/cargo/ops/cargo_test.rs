@@ -164,6 +164,7 @@ fn run_doc_tests(
 
         if doctest_xcompile {
             if let CompileKind::Target(target) = options.compile_opts.build_config.requested_kind {
+                // use `rustc_target()` to properly handle JSON target paths
                 p.arg("--target").arg(target.rustc_target());
             }
             p.arg("-Zunstable-options");
