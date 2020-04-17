@@ -438,45 +438,6 @@ fn no_cross_doctests() {
 }
 
 #[cargo_test]
-fn cross_doctests() {
-    if cross_compile::disabled() || !cross_compile::can_run_on_host() || !is_nightly() {
-        return;
-    }
-
-    let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-            //! ```
-            //! extern crate foo;
-            //! assert!(true);
-            //! ```
-        "#,
-        )
-        .build();
-
-    let target = cross_compile::alternate();
-
-    // This tests the library and runs the doc tests.
-    p.cargo("test -v -Z doctest-xcompile --target")
-        .arg(&target)
-        .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo [..]
-[RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
-[DOCTEST] foo
-[RUNNING] `rustdoc [..]
-",
-            triple = target
-        ))
-        .run();
-}
-
-#[cargo_test]
 fn simple_cargo_run() {
     if !cross_compile::can_run_on_host() {
         return;
