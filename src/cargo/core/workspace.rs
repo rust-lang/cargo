@@ -12,6 +12,7 @@ use url::Url;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::RequestedFeatures;
+use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, InternedString, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
@@ -84,6 +85,9 @@ pub struct Workspace<'cfg> {
     // If `true`, then the resolver will ignore any existing `Cargo.lock`
     // file. This is set for `cargo install` without `--locked`.
     ignore_lock: bool,
+
+    /// The resolver behavior specified with the `resolver` field.
+    resolve_behavior: ResolveBehavior,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -143,6 +147,11 @@ impl<'cfg> Workspace<'cfg> {
         ws.target_dir = config.target_dir()?;
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
+        ws.resolve_behavior = match ws.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().resolve_behavior(),
+            MaybePackage::Virtual(vm) => vm.resolve_behavior(),
+        }
+        .unwrap_or(ResolveBehavior::V1);
         ws.validate()?;
         Ok(ws)
     }
@@ -164,6 +173,7 @@ impl<'cfg> Workspace<'cfg> {
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
+            resolve_behavior: ResolveBehavior::V1,
         }
     }
 
@@ -176,6 +186,7 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(current_manifest, config);
         ws.root_manifest = Some(root_path.join("Cargo.toml"));
         ws.target_dir = config.target_dir()?;
+        ws.resolve_behavior = manifest.resolve_behavior().unwrap_or(ResolveBehavior::V1);
         ws.packages
             .packages
             .insert(root_path, MaybePackage::Virtual(manifest));
@@ -203,6 +214,10 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
+        ws.resolve_behavior = package
+            .manifest()
+            .resolve_behavior()
+            .unwrap_or(ResolveBehavior::V1);
         let key = ws.current_manifest.parent().unwrap();
         let id = package.package_id();
         let package = MaybePackage::Package(package);
@@ -578,6 +593,18 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    pub fn resolve_behavior(&self) -> ResolveBehavior {
+        self.resolve_behavior
+    }
+
+    pub fn allows_unstable_package_features(&self) -> bool {
+        self.config().cli_unstable().package_features
+            || match self.resolve_behavior() {
+                ResolveBehavior::V1 => false,
+                ResolveBehavior::V2 => true,
+            }
+    }
+
     /// Validates a workspace, ensuring that a number of invariants are upheld:
     ///
     /// 1. A workspace only has one root.
@@ -769,6 +796,12 @@ impl<'cfg> Workspace<'cfg> {
                 if !manifest.patch().is_empty() {
                     emit_warning("patch")?;
                 }
+                if let Some(behavior) = manifest.resolve_behavior() {
+                    // Only warn if they don't match.
+                    if behavior != self.resolve_behavior {
+                        emit_warning("resolver")?;
+                    }
+                }
             }
         }
         Ok(())
@@ -878,7 +911,7 @@ impl<'cfg> Workspace<'cfg> {
                 .map(|m| (m, RequestedFeatures::new_all(true)))
                 .collect());
         }
-        if self.config().cli_unstable().package_features {
+        if self.allows_unstable_package_features() {
             self.members_with_features_pf(specs, requested_features)
         } else {
             self.members_with_features_stable(specs, requested_features)

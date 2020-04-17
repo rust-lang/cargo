@@ -15,8 +15,9 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
-use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
+use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
@@ -805,6 +806,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
+    resolver: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -813,6 +815,7 @@ pub struct TomlWorkspace {
     #[serde(rename = "default-members")]
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
+    resolver: Option<String>,
 }
 
 impl TomlProject {
@@ -836,9 +839,10 @@ struct Context<'a, 'b> {
 impl TomlManifest {
     pub fn prepare_for_publish(
         &self,
-        config: &Config,
+        ws: &Workspace<'_>,
         package_root: &Path,
     ) -> CargoResult<TomlManifest> {
+        let config = ws.config();
         let mut package = self
             .package
             .as_ref()
@@ -846,6 +850,19 @@ impl TomlManifest {
             .unwrap()
             .clone();
         package.workspace = None;
+        let mut cargo_features = self.cargo_features.clone();
+        package.resolver = ws.resolve_behavior().to_manifest();
+        if package.resolver.is_some() {
+            // This should be removed when stabilizing.
+            match &mut cargo_features {
+                None => cargo_features = Some(vec!["resolver".to_string()]),
+                Some(feats) => {
+                    if !feats.iter().any(|feat| feat == "resolver") {
+                        feats.push("resolver".to_string());
+                    }
+                }
+            }
+        }
         if let Some(license_file) = &package.license_file {
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
@@ -927,7 +944,7 @@ impl TomlManifest {
             patch: None,
             workspace: None,
             badges: self.badges.clone(),
-            cargo_features: self.cargo_features.clone(),
+            cargo_features,
         });
 
         fn map_deps(
@@ -1014,6 +1031,25 @@ impl TomlManifest {
         if project.metabuild.is_some() {
             features.require(Feature::metabuild())?;
         }
+
+        if project.resolver.is_some()
+            || me
+                .workspace
+                .as_ref()
+                .map_or(false, |ws| ws.resolver.is_some())
+        {
+            features.require(Feature::resolver())?;
+        }
+        let resolve_behavior = match (
+            project.resolver.as_ref(),
+            me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
+        ) {
+            (None, None) => None,
+            (Some(s), None) | (None, Some(s)) => Some(ResolveBehavior::from_manifest(s)?),
+            (Some(_), Some(_)) => {
+                bail!("cannot specify `resolver` field in both `[workspace]` and `[package]`")
+            }
+        };
 
         // If we have no lib at all, use the inferred lib, if available.
         // If we have a lib with a path, we're done.
@@ -1256,6 +1292,7 @@ impl TomlManifest {
             project.default_run.clone(),
             Rc::clone(me),
             project.metabuild.clone().map(|sov| sov.0),
+            resolve_behavior,
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(
@@ -1347,6 +1384,19 @@ impl TomlManifest {
         if let Some(profiles) = &profiles {
             profiles.validate(&features, &mut warnings)?;
         }
+        if me
+            .workspace
+            .as_ref()
+            .map_or(false, |ws| ws.resolver.is_some())
+        {
+            features.require(Feature::resolver())?;
+        }
+        let resolve_behavior = me
+            .workspace
+            .as_ref()
+            .and_then(|ws| ws.resolver.as_deref())
+            .map(|r| ResolveBehavior::from_manifest(r))
+            .transpose()?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 root,
@@ -1359,7 +1409,14 @@ impl TomlManifest {
             }
         };
         Ok((
-            VirtualManifest::new(replace, patch, workspace_config, profiles, features),
+            VirtualManifest::new(
+                replace,
+                patch,
+                workspace_config,
+                profiles,
+                features,
+                resolve_behavior,
+            ),
             nested_paths,
         ))
     }

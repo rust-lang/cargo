@@ -41,9 +41,9 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::resolver::types::FeaturesSet;
-use crate::core::resolver::Resolve;
+use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, InternedString, PackageId, PackageIdSpec, PackageSet, Workspace};
-use crate::util::{CargoResult, Config};
+use crate::util::CargoResult;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
@@ -110,9 +110,9 @@ impl FeaturesFor {
 }
 
 impl FeatureOpts {
-    fn new(config: &Config, has_dev_units: HasDevUnits) -> CargoResult<FeatureOpts> {
+    fn new(ws: &Workspace<'_>, has_dev_units: HasDevUnits) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
-        let unstable_flags = config.cli_unstable();
+        let unstable_flags = ws.config().cli_unstable();
         opts.package_features = unstable_flags.package_features;
         let mut enable = |feat_opts: &Vec<String>| {
             opts.new_resolver = true;
@@ -136,6 +136,12 @@ impl FeatureOpts {
         if let Some(feat_opts) = unstable_flags.features.as_ref() {
             enable(feat_opts)?;
         }
+        match ws.resolve_behavior() {
+            ResolveBehavior::V1 => {}
+            ResolveBehavior::V2 => {
+                enable(&vec!["all".to_string()]).unwrap();
+            }
+        }
         // This env var is intended for testing only.
         if let Ok(env_opts) = std::env::var("__CARGO_FORCE_NEW_FEATURES") {
             if env_opts == "1" {
@@ -146,6 +152,7 @@ impl FeatureOpts {
             }
         }
         if let HasDevUnits::Yes = has_dev_units {
+            // Dev deps cannot be decoupled when they are in use.
             opts.decouple_dev_deps = false;
         }
         Ok(opts)
@@ -268,7 +275,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         use crate::util::profile;
         let _p = profile::start("resolve features");
 
-        let opts = FeatureOpts::new(ws.config(), has_dev_units)?;
+        let opts = FeatureOpts::new(ws, has_dev_units)?;
         if !opts.new_resolver {
             // Legacy mode.
             return Ok(ResolvedFeatures {

@@ -473,6 +473,27 @@ impl Package {
     }
 
     fn make_archive(&self) {
+        let dst = self.archive_dst();
+        t!(fs::create_dir_all(dst.parent().unwrap()));
+        let f = t!(File::create(&dst));
+        let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
+
+        if !self.files.iter().any(|(name, _)| name == "Cargo.toml") {
+            self.append_manifest(&mut a);
+        }
+        if self.files.is_empty() {
+            self.append(&mut a, "src/lib.rs", "");
+        } else {
+            for &(ref name, ref contents) in self.files.iter() {
+                self.append(&mut a, name, contents);
+            }
+        }
+        for &(ref name, ref contents) in self.extra_files.iter() {
+            self.append_extra(&mut a, name, contents);
+        }
+    }
+
+    fn append_manifest<W: Write>(&self, ar: &mut Builder<W>) {
         let mut manifest = format!(
             r#"
             [package]
@@ -508,21 +529,7 @@ impl Package {
             manifest.push_str("[lib]\nproc-macro = true\n");
         }
 
-        let dst = self.archive_dst();
-        t!(fs::create_dir_all(dst.parent().unwrap()));
-        let f = t!(File::create(&dst));
-        let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
-        self.append(&mut a, "Cargo.toml", &manifest);
-        if self.files.is_empty() {
-            self.append(&mut a, "src/lib.rs", "");
-        } else {
-            for &(ref name, ref contents) in self.files.iter() {
-                self.append(&mut a, name, contents);
-            }
-        }
-        for &(ref name, ref contents) in self.extra_files.iter() {
-            self.append_extra(&mut a, name, contents);
-        }
+        self.append(ar, "Cargo.toml", &manifest);
     }
 
     fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, contents: &str) {

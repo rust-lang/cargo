@@ -10,6 +10,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::core::interning::InternedString;
+use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
@@ -44,6 +45,7 @@ pub struct Manifest {
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
+    resolve_behavior: Option<ResolveBehavior>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -66,6 +68,7 @@ pub struct VirtualManifest {
     profiles: Option<TomlProfiles>,
     warnings: Warnings,
     features: Features,
+    resolve_behavior: Option<ResolveBehavior>,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -410,6 +413,7 @@ impl Manifest {
         default_run: Option<String>,
         original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
+        resolve_behavior: Option<ResolveBehavior>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -432,6 +436,7 @@ impl Manifest {
             default_run,
             publish_lockfile,
             metabuild,
+            resolve_behavior,
         }
     }
 
@@ -501,6 +506,13 @@ impl Manifest {
         &self.features
     }
 
+    /// The style of resolver behavior to use, declared with the `resolver` field.
+    ///
+    /// Returns `None` if it is not specified.
+    pub fn resolve_behavior(&self) -> Option<ResolveBehavior> {
+        self.resolve_behavior
+    }
+
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
@@ -564,6 +576,7 @@ impl VirtualManifest {
         workspace: WorkspaceConfig,
         profiles: Option<TomlProfiles>,
         features: Features,
+        resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -572,6 +585,7 @@ impl VirtualManifest {
             profiles,
             warnings: Warnings::new(),
             features,
+            resolve_behavior,
         }
     }
 
@@ -601,6 +615,13 @@ impl VirtualManifest {
 
     pub fn features(&self) -> &Features {
         &self.features
+    }
+
+    /// The style of resolver behavior to use, declared with the `resolver` field.
+    ///
+    /// Returns `None` if it is not specified.
+    pub fn resolve_behavior(&self) -> Option<ResolveBehavior> {
+        self.resolve_behavior
     }
 }
 
