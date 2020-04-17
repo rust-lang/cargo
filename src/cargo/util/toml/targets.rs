@@ -557,7 +557,7 @@ fn clean_targets_with_legacy_path(
 
 fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
     let lib = package_root.join("src").join("lib.rs");
-    if fs::metadata(&lib).is_ok() {
+    if lib.exists() {
         Some(lib)
     } else {
         None

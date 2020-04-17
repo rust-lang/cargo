@@ -4,8 +4,7 @@ use cargo::util::IntoUrl;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, git, paths, project};
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs;
 
 #[cargo_test]
 fn depend_on_alt_registry() {
@@ -534,16 +533,14 @@ fn passwords_in_registry_index_url_forbidden() {
     registry::init();
 
     let config = paths::home().join(".cargo/config");
-
-    File::create(config)
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        config,
+        r#"
         [registry]
         index = "ssh://git:secret@foobar.com"
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -559,15 +556,14 @@ fn passwords_in_registries_index_url_forbidden() {
 
     let config = paths::home().join(".cargo/config");
 
-    File::create(config)
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        config,
+        r#"
         [registries.alternative]
         index = "ssh://git:secret@foobar.com"
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -1181,15 +1177,14 @@ fn unknown_registry() {
 fn registries_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config)
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        &config,
+        r#"
             [registries.relative]
             index = "file:alternative-registry"
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     registry::init();
 
@@ -1231,15 +1226,14 @@ fn registries_index_relative_url() {
 fn registry_index_relative_url() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config)
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        &config,
+        r#"
             [registry]
             index = "file:alternative-registry"
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     registry::init();
 
@@ -1283,15 +1277,14 @@ warning: custom registry support via the `registry.index` configuration is being
 fn registries_index_relative_path_not_allowed() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    File::create(&config)
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        &config,
+        r#"
             [registries.relative]
             index = "alternative-registry"
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     registry::init();
 

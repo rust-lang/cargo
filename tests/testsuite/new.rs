@@ -1,11 +1,9 @@
 //! Tests for the `cargo new` command.
 
-use std::env;
-use std::fs::{self, File};
-use std::io::prelude::*;
-
 use cargo_test_support::paths;
 use cargo_test_support::{cargo_process, git_process};
+use std::env;
+use std::fs::{self, File};
 
 fn create_empty_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to
@@ -27,11 +25,7 @@ fn simple_lib() {
     assert!(!paths::root().join("foo/.gitignore").is_file());
 
     let lib = paths::root().join("foo/src/lib.rs");
-    let mut contents = String::new();
-    File::open(&lib)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&lib).unwrap();
     assert_eq!(
         contents,
         r#"#[cfg(test)]
@@ -86,11 +80,7 @@ fn simple_git() {
     assert!(paths::root().join("foo/.gitignore").is_file());
 
     let fp = paths::root().join("foo/.gitignore");
-    let mut contents = String::new();
-    File::open(&fp)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&fp).unwrap();
     assert_eq!(contents, "/target\nCargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
@@ -187,11 +177,7 @@ fn finds_author_user() {
     cargo_process("new foo").env("USER", "foo").run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
 }
 
@@ -201,11 +187,7 @@ fn finds_author_user_escaped() {
     cargo_process("new foo").env("USER", "foo \"bar\"").run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
 }
 
@@ -218,11 +200,7 @@ fn finds_author_username() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
 }
 
@@ -235,11 +213,7 @@ fn finds_author_name() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
 }
 
@@ -253,11 +227,7 @@ fn finds_author_priority() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
@@ -270,11 +240,7 @@ fn finds_author_email() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
@@ -287,11 +253,7 @@ fn finds_author_git() {
     cargo_process("new foo").env("USER", "foo").run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
@@ -309,11 +271,7 @@ fn finds_local_author_git() {
     cargo_process("init").env("USER", "foo").run();
 
     let toml = paths::root().join("Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
@@ -325,11 +283,7 @@ fn finds_git_author() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
 }
 
@@ -343,11 +297,7 @@ fn finds_git_committer() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#));
 }
 
@@ -359,26 +309,21 @@ fn author_prefers_cargo() {
         .unwrap();
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
-    File::create(&root.join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [cargo-new]
-        name = "new-foo"
-        email = "new-bar"
-        vcs = "none"
-    "#,
-        )
-        .unwrap();
+    fs::write(
+        &root.join(".cargo/config"),
+        r#"
+            [cargo-new]
+            name = "new-foo"
+            email = "new-bar"
+            vcs = "none"
+        "#,
+    )
+    .unwrap();
 
     cargo_process("new foo").env("USER", "foo").run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
     assert!(!root.join("foo/.gitignore").exists());
 }
@@ -392,11 +337,7 @@ fn strip_angle_bracket_author_email() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
@@ -404,17 +345,16 @@ fn strip_angle_bracket_author_email() {
 fn git_prefers_command_line() {
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
-    File::create(&root.join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [cargo-new]
-        vcs = "none"
-        name = "foo"
-        email = "bar"
-    "#,
-        )
-        .unwrap();
+    fs::write(
+        &root.join(".cargo/config"),
+        r#"
+            [cargo-new]
+            vcs = "none"
+            name = "foo"
+            email = "bar"
+        "#,
+    )
+    .unwrap();
 
     cargo_process("new foo --vcs git").env("USER", "foo").run();
     assert!(paths::root().join("foo/.gitignore").exists());

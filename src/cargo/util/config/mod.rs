@@ -949,8 +949,8 @@ impl Config {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        if fs::metadata(&possible).is_ok() {
-            if warn && fs::metadata(&possible_with_extension).is_ok() {
+        if possible.exists() {
+            if warn && possible_with_extension.exists() {
                 // We don't want to print a warning if the version
                 // without the extension is just a symlink to the version
                 // WITH an extension, which people may want to do to
@@ -973,7 +973,7 @@ impl Config {
             }
 
             Ok(Some(possible))
-        } else if fs::metadata(&possible_with_extension).is_ok() {
+        } else if possible_with_extension.exists() {
             Ok(Some(possible_with_extension))
         } else {
             Ok(None)

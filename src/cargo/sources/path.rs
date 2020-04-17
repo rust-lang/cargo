@@ -373,14 +373,14 @@ impl<'cfg> PathSource<'cfg> {
         is_root: bool,
         filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<()> {
-        if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
+        if !path.is_dir() {
             if (*filter)(path)? {
                 ret.push(path.to_path_buf());
             }
             return Ok(());
         }
         // Don't recurse into any sub-packages that we have.
-        if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
+        if !is_root && path.join("Cargo.toml").exists() {
             return Ok(());
         }
 

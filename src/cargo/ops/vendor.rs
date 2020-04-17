@@ -8,8 +8,7 @@ use anyhow::bail;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 pub struct VendorOptions<'a> {
@@ -223,7 +222,7 @@ fn sync(
             "files": map,
         });
 
-        File::create(&cksum)?.write_all(json.to_string().as_bytes())?;
+        paths::write(&cksum, json.to_string())?;
     }
 
     for path in to_remove {

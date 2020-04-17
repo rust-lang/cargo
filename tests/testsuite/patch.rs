@@ -1,12 +1,10 @@
 //! Tests for `[patch]` table source replacement.
 
-use std::fs::{self, File};
-use std::io::{Read, Write};
-
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project, t};
+use cargo_test_support::{basic_manifest, project};
+use std::fs;
 
 #[cargo_test]
 fn replace() {
@@ -260,11 +258,7 @@ fn unused() {
         .run();
 
     // unused patch should be in the lock file
-    let mut lock = String::new();
-    File::open(p.root().join("Cargo.lock"))
-        .unwrap()
-        .read_to_string(&mut lock)
-        .unwrap();
+    let lock = p.read_lockfile();
     let toml: toml::Value = toml::from_str(&lock).unwrap();
     assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
     assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
@@ -373,8 +367,9 @@ fn add_patch() {
         .run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -385,8 +380,8 @@ fn add_patch() {
 
             [patch.crates-io]
             bar = { path = 'bar' }
-    "#
-    ));
+        "#,
+    );
 
     p.cargo("build")
         .with_stderr(
@@ -436,8 +431,9 @@ fn add_ignored_patch() {
         .run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -448,8 +444,8 @@ fn add_ignored_patch() {
 
             [patch.crates-io]
             bar = { path = 'bar' }
-    "#
-    ));
+        "#,
+    );
 
     p.cargo("build")
         .with_stderr(
@@ -660,8 +656,9 @@ fn new_major() {
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -669,8 +666,8 @@ fn new_major() {
 
             [dependencies]
             bar = "0.2.0"
-    "#
-    ));
+        "#,
+    );
     p.cargo("build")
         .with_stderr(
             "\
@@ -824,45 +821,31 @@ fn remove_patch() {
 
     // Generate a lock file where `foo` is unused
     p.cargo("build").run();
-    let mut lock_file1 = String::new();
-    File::open(p.root().join("Cargo.lock"))
-        .unwrap()
-        .read_to_string(&mut lock_file1)
-        .unwrap();
+    let lock_file1 = p.read_lockfile();
 
     // Remove `foo` and generate a new lock file form the old one
-    File::create(p.root().join("Cargo.toml"))
-        .unwrap()
-        .write_all(
-            br#"
-        [package]
-        name = "foo"
-        version = "0.0.1"
-        authors = []
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
 
-        [dependencies]
-        bar = "0.1"
+            [dependencies]
+            bar = "0.1"
 
-        [patch.crates-io]
-        bar = { path = 'bar' }
-    "#,
-        )
-        .unwrap();
+            [patch.crates-io]
+            bar = { path = 'bar' }
+        "#,
+    );
     p.cargo("build").run();
-    let mut lock_file2 = String::new();
-    File::open(p.root().join("Cargo.lock"))
-        .unwrap()
-        .read_to_string(&mut lock_file2)
-        .unwrap();
+    let lock_file2 = p.read_lockfile();
 
     // Remove the lock file and build from scratch
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
     p.cargo("build").run();
-    let mut lock_file3 = String::new();
-    File::open(p.root().join("Cargo.lock"))
-        .unwrap()
-        .read_to_string(&mut lock_file3)
-        .unwrap();
+    let lock_file3 = p.read_lockfile();
 
     assert!(lock_file1.contains("foo"));
     assert_eq!(lock_file2, lock_file3);

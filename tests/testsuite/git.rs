@@ -1,7 +1,7 @@
 //! Tests for git support.
 
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
@@ -501,10 +501,7 @@ fn two_revs_same_deps() {
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
 
     // Commit the changes and make sure we trigger a recompile
-    File::create(&bar.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
-        .unwrap();
+    bar.change_file("src/lib.rs", "pub fn bar() -> i32 { 2 }");
     git::add(&repo);
     let rev2 = git::commit(&repo);
 
@@ -623,10 +620,7 @@ fn recompilation() {
     p.cargo("build").with_stdout("").run();
 
     // Modify a file manually, shouldn't trigger a recompile
-    File::create(&git_project.root().join("src/bar.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
-        .unwrap();
+    git_project.change_file("src/bar.rs", r#"pub fn bar() { println!("hello!"); }"#);
 
     p.cargo("build").with_stdout("").run();
 
@@ -764,10 +758,7 @@ fn update_with_shared_deps() {
         .run();
 
     // Modify a file manually, and commit it
-    File::create(&git_project.root().join("src/bar.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
-        .unwrap();
+    git_project.change_file("src/bar.rs", r#"pub fn bar() { println!("hello!"); }"#);
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let old_head = repo.head().unwrap().target().unwrap();
     git::add(&repo);
@@ -1026,10 +1017,7 @@ fn two_deps_only_update_one() {
         )
         .run();
 
-    File::create(&git1.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn foo() {}"#)
-        .unwrap();
+    git1.change_file("src/lib.rs", "pub fn foo() {}");
     let repo = git2::Repository::open(&git1.root()).unwrap();
     git::add(&repo);
     let oid = git::commit(&repo);
@@ -1086,10 +1074,7 @@ fn stale_cached_version() {
 
     // Update the repo, and simulate someone else updating the lock file and then
     // us pulling it down.
-    File::create(&bar.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() -> i32 { 1 + 0 }"#)
-        .unwrap();
+    bar.change_file("src/lib.rs", "pub fn bar() -> i32 { 1 + 0 }");
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
     git::commit(&repo);
@@ -1098,29 +1083,26 @@ fn stale_cached_version() {
 
     let rev = repo.revparse_single("HEAD").unwrap().id();
 
-    File::create(&foo.root().join("Cargo.lock"))
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
-        [[package]]
-        name = "foo"
-        version = "0.0.0"
-        dependencies = [
-         'bar 0.0.0 (git+{url}#{hash})'
-        ]
+    foo.change_file(
+        "Cargo.lock",
+        &format!(
+            r#"
+                [[package]]
+                name = "foo"
+                version = "0.0.0"
+                dependencies = [
+                 'bar 0.0.0 (git+{url}#{hash})'
+                ]
 
-        [[package]]
-        name = "bar"
-        version = "0.0.0"
-        source = 'git+{url}#{hash}'
-    "#,
-                url = bar.url(),
-                hash = rev
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+                [[package]]
+                name = "bar"
+                version = "0.0.0"
+                source = 'git+{url}#{hash}'
+            "#,
+            url = bar.url(),
+            hash = rev
+        ),
+    );
 
     // Now build!
     foo.cargo("build")
@@ -1194,16 +1176,13 @@ fn dep_with_changed_submodule() {
         .with_stdout("project2\n")
         .run();
 
-    File::create(&git_project.root().join(".gitmodules"))
-        .unwrap()
-        .write_all(
-            format!(
-                "[submodule \"src\"]\n\tpath = src\n\turl={}",
-                git_project3.url()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    git_project.change_file(
+        ".gitmodules",
+        &format!(
+            "[submodule \"src\"]\n\tpath = src\n\turl={}",
+            git_project3.url()
+        ),
+    );
 
     // Sync the submodule and reset it to the new remote.
     sub.sync().unwrap();
@@ -1361,7 +1340,7 @@ fn git_build_cmd_freshness() {
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
-    File::create(&foo.root().join("src/bar.rs")).unwrap();
+    foo.change_file("src/bar.rs", "");
     foo.cargo("build").with_stdout("").run();
 }
 
@@ -1459,10 +1438,7 @@ fn git_repo_changing_no_rebuild() {
         .run();
 
     // Make a commit to lock p2 to a different rev
-    File::create(&bar.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
-        .unwrap();
+    bar.change_file("src/lib.rs", "pub fn bar() -> i32 { 2 }");
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
     git::commit(&repo);
@@ -1566,10 +1542,7 @@ fn git_dep_build_cmd() {
     p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
-    fs::File::create(&p.root().join("bar/src/bar.rs.in"))
-        .unwrap()
-        .write_all(b"pub fn gimme() -> i32 { 1 }")
-        .unwrap();
+    p.change_file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 1 }");
 
     p.cargo("build").run();
 
@@ -1836,23 +1809,20 @@ fn switch_deps_does_not_update_transitive() {
 
     // Update the dependency to point to the second repository, but this
     // shouldn't update the transitive dependency which is the same.
-    File::create(&p.root().join("Cargo.toml"))
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-            [dependencies.dep]
-            git = '{}'
-    "#,
-                dep2.url()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                [dependencies.dep]
+                git = '{}'
+            "#,
+            dep2.url()
+        ),
+    );
 
     p.cargo("build")
         .with_stderr(&format!(
@@ -1912,19 +1882,12 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
 
     // Just be sure to change a file
-    File::create(&dep.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
-        .unwrap();
+    dep.change_file("src/lib.rs", "pub fn bar() -> i32 { 2 }");
     git::add(&repo);
     git::commit(&repo);
 
     p.cargo("update -p dep").run();
-    let mut lockfile = String::new();
-    File::open(&p.root().join("Cargo.lock"))
-        .unwrap()
-        .read_to_string(&mut lockfile)
-        .unwrap();
+    let lockfile = p.read_lockfile();
     assert!(
         !lockfile.contains(&rev1.to_string()),
         "{} in {}",
@@ -1988,23 +1951,20 @@ fn switch_sources() {
         )
         .run();
 
-    File::create(&p.root().join("b/Cargo.toml"))
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
-        [project]
-        name = "b"
-        version = "0.5.0"
-        authors = []
-        [dependencies.a]
-        git = '{}'
-    "#,
-                a2.url()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    p.change_file(
+        "b/Cargo.toml",
+        &format!(
+            r#"
+                [project]
+                name = "b"
+                version = "0.5.0"
+                authors = []
+                [dependencies.a]
+                git = '{}'
+            "#,
+            a2.url()
+        ),
+    );
 
     p.cargo("build")
         .with_stderr(
@@ -2221,24 +2181,21 @@ fn add_a_git_dep() {
 
     p.cargo("build").run();
 
-    File::create(p.root().join("a/Cargo.toml"))
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
-        [package]
-        name = "a"
-        version = "0.0.1"
-        authors = []
+    p.change_file(
+        "a/Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-        [dependencies]
-        git = {{ git = '{}' }}
-    "#,
-                git.url()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+                [dependencies]
+                git = {{ git = '{}' }}
+            "#,
+            git.url()
+        ),
+    );
 
     p.cargo("build").run();
 }
@@ -2584,25 +2541,23 @@ fn templatedir_doesnt_cause_problems() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    File::create(paths::home().join(".gitconfig"))
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
+    fs::write(
+        paths::home().join(".gitconfig"),
+        format!(
+            r#"
                 [init]
                 templatedir = {}
             "#,
-                git_project2
-                    .url()
-                    .to_file_path()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .replace("\\", "/")
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+            git_project2
+                .url()
+                .to_file_path()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .replace("\\", "/")
+        ),
+    )
+    .unwrap();
 
     p.cargo("build").run();
 }

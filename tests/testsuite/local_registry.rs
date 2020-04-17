@@ -1,24 +1,23 @@
 //! Tests for local-registry sources.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
-
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{registry_path, Package};
 use cargo_test_support::{basic_manifest, project, t};
+use std::fs;
 
 fn setup() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(t!(File::create(root.join(".cargo/config"))).write_all(
-        br#"
-        [source.crates-io]
-        registry = 'https://wut'
-        replace-with = 'my-awesome-local-registry'
+    t!(fs::write(
+        root.join(".cargo/config"),
+        r#"
+            [source.crates-io]
+            registry = 'https://wut'
+            replace-with = 'my-awesome-local-registry'
 
-        [source.my-awesome-local-registry]
-        local-registry = 'registry'
-    "#
+            [source.my-awesome-local-registry]
+            local-registry = 'registry'
+        "#
     ));
 }
 
@@ -441,14 +440,15 @@ unable to verify that `bar v0.0.1` is the same as when the lockfile was generate
 fn crates_io_registry_url_is_optional() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(t!(File::create(root.join(".cargo/config"))).write_all(
-        br#"
-        [source.crates-io]
-        replace-with = 'my-awesome-local-registry'
+    t!(fs::write(
+        root.join(".cargo/config"),
+        r#"
+            [source.crates-io]
+            replace-with = 'my-awesome-local-registry'
 
-        [source.my-awesome-local-registry]
-        local-registry = 'registry'
-    "#
+            [source.my-awesome-local-registry]
+            local-registry = 'registry'
+        "#
     ));
 
     Package::new("bar", "0.0.1")
