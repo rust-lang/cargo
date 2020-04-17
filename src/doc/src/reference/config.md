@@ -30,6 +30,11 @@ together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
 home directory is the lowest priority. Arrays will be joined together.
 
+> **Note:** Cargo also reads config files without the `.toml` extension, such as
+> `.cargo/config`. Support for the `.toml` extension was added in version 1.39
+> and is the preferred form. If both files exist, Cargo will use the file
+> without the extension.
+
 ### Configuration format
 
 Configuration files are written in the [TOML format][toml] (like the
