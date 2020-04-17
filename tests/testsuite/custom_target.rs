@@ -51,6 +51,12 @@ fn custom_target_minimal() {
     p.cargo("build --lib --target custom-target.json -v").run();
     p.cargo("build --lib --target src/../custom-target.json -v")
         .run();
+
+    // Ensure that the correct style of flag is passed to --target with doc tests.
+    p.cargo("test --doc --target src/../custom-target.json -v -Zdoctest-xcompile")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[RUNNING] `rustdoc [..]--target [..]foo/custom-target.json[..]")
+        .run();
 }
 
 #[cargo_test]
