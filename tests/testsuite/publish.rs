@@ -1,12 +1,10 @@
 //! Tests for the `cargo publish` command.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
-
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, registry_path, registry_url, Package};
 use cargo_test_support::{basic_manifest, project, publish};
+use std::fs;
 
 const CLEAN_FOO_JSON: &str = r#"
     {
@@ -139,10 +137,7 @@ fn old_token_location() {
         .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
         .run();
 
-    File::create(&credentials)
-        .unwrap()
-        .write_all(br#"token = "api-token""#)
-        .unwrap();
+    fs::write(&credentials, r#"token = "api-token""#).unwrap();
 
     p.cargo("publish --no-verify --index")
         .arg(registry_url().to_string())

@@ -26,8 +26,7 @@ impl State {
 
 #[cfg(target_os = "linux")]
 mod imp {
-    use std::fs::File;
-    use std::io::{self, Read};
+    use std::{fs, io};
 
     pub struct State {
         user: u64,
@@ -43,8 +42,7 @@ mod imp {
     }
 
     pub fn current() -> io::Result<State> {
-        let mut state = String::new();
-        File::open("/proc/stat")?.read_to_string(&mut state)?;
+        let state = fs::read_to_string("/proc/stat")?;
 
         (|| {
             let mut parts = state.lines().next()?.split_whitespace();

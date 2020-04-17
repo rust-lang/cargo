@@ -1,15 +1,13 @@
 //! Tests for the `cargo package` command.
 
-use std::fs::{read_to_string, File};
-use std::io::prelude::*;
-use std::path::Path;
-
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
     registry, symlink_supported, t,
 };
+use std::fs::{read_to_string, File};
+use std::path::Path;
 
 #[cargo_test]
 fn simple() {
@@ -560,18 +558,10 @@ fn package_symlink_to_submodule() {
 
 #[cargo_test]
 fn no_duplicates_from_modified_tracked_files() {
-    let root = paths::root().join("all");
-    let p = git::repo(&root)
-        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file("src/main.rs", "fn main() {}")
-        .build();
-    File::create(p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(br#"fn main() { println!("A change!"); }"#)
-        .unwrap();
-    cargo_process("build").cwd(p.root()).run();
-    cargo_process("package --list --allow-dirty")
-        .cwd(p.root())
+    let p = git::new("all", |p| p.file("src/main.rs", "fn main() {}"));
+    p.change_file("src/main.rs", r#"fn main() { println!("A change!"); }"#);
+    p.cargo("build").run();
+    p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
 Cargo.lock
@@ -669,17 +659,7 @@ fn repackage_on_source_change() {
     p.cargo("package").run();
 
     // Add another source file
-    let mut file = File::create(p.root().join("src").join("foo.rs")).unwrap_or_else(|e| {
-        panic!(
-            "could not create file {}: {}",
-            p.root().join("src/foo.rs").display(),
-            e
-        )
-    });
-
-    file.write_all(br#"fn main() { println!("foo"); }"#)
-        .unwrap();
-    std::mem::drop(file);
+    p.change_file("src/foo.rs", r#"fn main() { println!("foo"); }"#);
 
     // Check that cargo rebuilds the tarball
     p.cargo("package")

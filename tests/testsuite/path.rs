@@ -1,12 +1,10 @@
 //! Tests for `path` dependencies.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
-
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
 use cargo_test_support::{sleep_ms, t};
+use std::fs;
 
 #[cargo_test]
 // I have no idea why this is failing spuriously on Windows;
@@ -359,10 +357,7 @@ fn deep_dependencies_trigger_rebuild() {
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
     sleep_ms(1000);
-    File::create(&p.root().join("baz/src/baz.rs"))
-        .unwrap()
-        .write_all(br#"pub fn baz() { println!("hello!"); }"#)
-        .unwrap();
+    p.change_file("baz/src/baz.rs", r#"pub fn baz() { println!("hello!"); }"#);
     sleep_ms(1000);
     p.cargo("build")
         .with_stderr(
@@ -376,15 +371,13 @@ fn deep_dependencies_trigger_rebuild() {
 
     // Make sure an update to bar doesn't trigger baz
     sleep_ms(1000);
-    File::create(&p.root().join("bar/src/bar.rs"))
-        .unwrap()
-        .write_all(
-            br#"
-        extern crate baz;
-        pub fn bar() { println!("hello!"); baz::baz(); }
-    "#,
-        )
-        .unwrap();
+    p.change_file(
+        "bar/src/bar.rs",
+        r#"
+            extern crate baz;
+            pub fn bar() { println!("hello!"); baz::baz(); }
+        "#,
+    );
     sleep_ms(1000);
     p.cargo("build")
         .with_stderr(
@@ -481,10 +474,7 @@ fn nested_deps_recompile() {
         .run();
     sleep_ms(1000);
 
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(br#"fn main() {}"#)
-        .unwrap();
+    p.change_file("src/main.rs", r#"fn main() {}"#);
 
     // This shouldn't recompile `bar`
     p.cargo("build")
@@ -548,10 +538,7 @@ fn override_relative() {
         .build();
 
     fs::create_dir(&paths::root().join(".cargo")).unwrap();
-    File::create(&paths::root().join(".cargo/config"))
-        .unwrap()
-        .write_all(br#"paths = ["bar"]"#)
-        .unwrap();
+    fs::write(&paths::root().join(".cargo/config"), r#"paths = ["bar"]"#).unwrap();
 
     let p = project()
         .file(
@@ -725,12 +712,7 @@ fn path_dep_build_cmd() {
     p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
-    {
-        let file = fs::File::create(&p.root().join("bar/src/bar.rs.in"));
-        file.unwrap()
-            .write_all(br#"pub fn gimme() -> i32 { 1 }"#)
-            .unwrap();
-    }
+    p.change_file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 1 }");
 
     p.cargo("build")
         .with_stderr(
@@ -963,20 +945,18 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
     p.cargo("build").run();
 
     // Change the dependency on `bar` to an invalid path
-    File::create(&p.root().join("foo/Cargo.toml"))
-        .unwrap()
-        .write_all(
-            br#"
-        [project]
-        name = "foo"
-        version = "0.5.0"
-        authors = []
+    p.change_file(
+        "foo/Cargo.toml",
+        r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
 
-        [dependencies]
-        bar = { path = "" }
-    "#,
-        )
-        .unwrap();
+            [dependencies]
+            bar = { path = "" }
+        "#,
+    );
 
     // Make sure we get a nice error. In the past this actually stack
     // overflowed!

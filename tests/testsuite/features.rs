@@ -1,11 +1,8 @@
 //! Tests for `[features]` table.
 
-use std::fs::File;
-use std::io::prelude::*;
-
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project, t};
+use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
 fn invalid1() {
@@ -920,9 +917,7 @@ fn everything_in_the_lockfile() {
         .build();
 
     p.cargo("fetch").run();
-    let loc = p.root().join("Cargo.lock");
-    let mut lockfile = String::new();
-    t!(t!(File::open(&loc)).read_to_string(&mut lockfile));
+    let lockfile = p.read_lockfile();
     assert!(
         lockfile.contains(r#"name = "d1""#),
         "d1 not found\n{}",

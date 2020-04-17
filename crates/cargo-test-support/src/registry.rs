@@ -165,33 +165,34 @@ pub fn init() {
     if config.exists() {
         return;
     }
-    t!(t!(File::create(&config)).write_all(
+    t!(fs::write(
+        &config,
         format!(
             r#"
-        [source.crates-io]
-        registry = 'https://wut'
-        replace-with = 'dummy-registry'
+                [source.crates-io]
+                registry = 'https://wut'
+                replace-with = 'dummy-registry'
 
-        [source.dummy-registry]
-        registry = '{reg}'
+                [source.dummy-registry]
+                registry = '{reg}'
 
-        [registries.alternative]
-        index = '{alt}'
-    "#,
+                [registries.alternative]
+                index = '{alt}'
+            "#,
             reg = registry_url(),
             alt = alt_registry_url()
         )
-        .as_bytes()
     ));
     let credentials = paths::home().join(".cargo/credentials");
-    t!(t!(File::create(&credentials)).write_all(
-        br#"
-        [registry]
-        token = "api-token"
+    t!(fs::write(
+        &credentials,
+        r#"
+            [registry]
+            token = "api-token"
 
-        [registries.alternative]
-        token = "api-token"
-    "#
+            [registries.alternative]
+            token = "api-token"
+        "#
     ));
 
     // Initialize a new registry.
@@ -404,8 +405,7 @@ impl Package {
             })
             .collect::<Vec<_>>();
         let cksum = {
-            let mut c = Vec::new();
-            t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
+            let c = t!(fs::read(&self.archive_dst()));
             cksum(&c)
         };
         let name = if self.invalid_json {
@@ -442,10 +442,9 @@ impl Package {
         } else {
             registry_path.join(&file)
         };
-        let mut prev = String::new();
-        let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
+        let prev = fs::read_to_string(&dst).unwrap_or(String::new());
         t!(fs::create_dir_all(dst.parent().unwrap()));
-        t!(t!(File::create(&dst)).write_all((prev + &line[..] + "\n").as_bytes()));
+        t!(fs::write(&dst, prev + &line[..] + "\n"));
 
         // Add the new file to the index.
         if !self.local {

@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::mem;
@@ -300,10 +300,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         let path = self.cache_path.join(path);
         let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(dst) = File::open(path) {
-            if let Ok(meta) = dst.metadata() {
-                return meta.len() > 0;
-            }
+        if let Ok(meta) = fs::metadata(path) {
+            return meta.len() > 0;
         }
         false
     }

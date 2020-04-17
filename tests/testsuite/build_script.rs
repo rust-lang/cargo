@@ -1,9 +1,8 @@
 //! Tests for build.rs scripts.
 
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::io;
-use std::io::prelude::*;
 use std::thread;
 
 use cargo::util::paths::remove_dir_all;
@@ -695,7 +694,7 @@ fn only_rerun_build_script() {
     p.cargo("build -v").run();
     p.root().move_into_the_past();
 
-    File::create(&p.root().join("some-new-file")).unwrap();
+    p.change_file("some-new-file", "");
     p.root().move_into_the_past();
 
     p.cargo("build -v")
@@ -773,7 +772,7 @@ fn rebuild_continues_to_pass_env_vars() {
     p.cargo("build -v").run();
     p.root().move_into_the_past();
 
-    File::create(&p.root().join("some-new-file")).unwrap();
+    p.change_file("some-new-file", "");
     p.root().move_into_the_past();
 
     p.cargo("build -v").run();
@@ -800,7 +799,7 @@ fn testing_and_such() {
     p.cargo("build -v").run();
     p.root().move_into_the_past();
 
-    File::create(&p.root().join("src/lib.rs")).unwrap();
+    p.change_file("src/lib.rs", "");
     p.root().move_into_the_past();
 
     println!("test");
@@ -830,10 +829,7 @@ fn testing_and_such() {
         )
         .run();
 
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(b"fn main() {}")
-        .unwrap();
+    p.change_file("src/main.rs", "fn main() {}");
     println!("run");
     p.cargo("run")
         .with_stderr(
@@ -1190,31 +1186,54 @@ fn out_dir_is_preserved() {
 
     // Make the file
     p.cargo("build -v").run();
-    p.root().move_into_the_past();
 
     // Change to asserting that it's there
-    File::create(&p.root().join("build.rs"))
-        .unwrap()
-        .write_all(
-            br#"
-        use std::env;
-        use std::old_io::File;
-        fn main() {
-            let out = env::var("OUT_DIR").unwrap();
-            File::open(&Path::new(&out).join("foo")).unwrap();
-        }
-    "#,
+    p.change_file(
+        "build.rs",
+        r#"
+            use std::env;
+            use std::fs::File;
+            use std::path::Path;
+            fn main() {
+                let out = env::var("OUT_DIR").unwrap();
+                File::open(&Path::new(&out).join("foo")).unwrap();
+            }
+        "#,
+    );
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name build_script_build [..]
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]
+",
         )
-        .unwrap();
-    p.root().move_into_the_past();
-    p.cargo("build -v").run();
+        .run();
 
     // Run a fresh build where file should be preserved
-    p.cargo("build -v").run();
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
 
     // One last time to make sure it's still there.
-    File::create(&p.root().join("foo")).unwrap();
-    p.cargo("build -v").run();
+    p.change_file("foo", "");
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `[..]build-script-build`
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -1321,18 +1340,18 @@ fn code_generation() {
             "build.rs",
             r#"
             use std::env;
-            use std::fs::File;
-            use std::io::prelude::*;
+            use std::fs;
             use std::path::PathBuf;
 
             fn main() {
                 let dst = PathBuf::from(env::var("OUT_DIR").unwrap());
-                let mut f = File::create(&dst.join("hello.rs")).unwrap();
-                f.write_all(b"
+                fs::write(dst.join("hello.rs"),
+                    "
                     pub fn message() -> &'static str {
                         \"Hello, World!\"
                     }
-                ").unwrap();
+                    ")
+                .unwrap();
             }
         "#,
         )
@@ -1536,15 +1555,12 @@ fn test_a_lib_with_a_build_command() {
             "build.rs",
             r#"
             use std::env;
-            use std::io::prelude::*;
-            use std::fs::File;
+            use std::fs;
             use std::path::PathBuf;
 
             fn main() {
                 let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-                File::create(out.join("foo.rs")).unwrap().write_all(b"
-                    fn foo() -> i32 { 1 }
-                ").unwrap();
+                fs::write(out.join("foo.rs"), "fn foo() -> i32 { 1 }").unwrap();
             }
         "#,
         )
@@ -2397,19 +2413,16 @@ fn adding_an_override_invalidates() {
         )
         .run();
 
-    File::create(p.root().join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            format!(
-                "
-        [target.{}.foo]
-        rustc-link-search = [\"native=bar\"]
-    ",
-                target
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            "
+                [target.{}.foo]
+                rustc-link-search = [\"native=bar\"]
+            ",
+            target
+        ),
+    );
 
     p.cargo("build -v")
         .with_stderr(
@@ -2461,19 +2474,16 @@ fn changing_an_override_invalidates() {
         )
         .run();
 
-    File::create(p.root().join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            format!(
-                "
-        [target.{}.foo]
-        rustc-link-search = [\"native=bar\"]
-    ",
-                target
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    p.change_file(
+        ".cargo/config",
+        &format!(
+            "
+                [target.{}.foo]
+                rustc-link-search = [\"native=bar\"]
+            ",
+            target
+        ),
+    );
 
     p.cargo("build -v")
         .with_stderr(
@@ -2634,8 +2644,8 @@ fn rebuild_only_on_explicit_paths() {
         .run();
 
     sleep_ms(1000);
-    File::create(p.root().join("foo")).unwrap();
-    File::create(p.root().join("bar")).unwrap();
+    p.change_file("foo", "");
+    p.change_file("bar", "");
     sleep_ms(1000); // make sure the to-be-created outfile has a timestamp distinct from the infiles
 
     // now the exist, so run once, catch the mtime, then shouldn't run again
@@ -2665,7 +2675,7 @@ fn rebuild_only_on_explicit_paths() {
 
     // random other files do not affect freshness
     println!("run baz");
-    File::create(p.root().join("baz")).unwrap();
+    p.change_file("baz", "");
     p.cargo("build -v")
         .with_stderr(
             "\
@@ -2677,7 +2687,7 @@ fn rebuild_only_on_explicit_paths() {
 
     // but changing dependent files does
     println!("run foo change");
-    File::create(p.root().join("foo")).unwrap();
+    p.change_file("foo", "");
     p.cargo("build -v")
         .with_stderr(
             "\
@@ -3306,19 +3316,17 @@ fn switch_features_rerun() {
             "build.rs",
             r#"
             use std::env;
-            use std::fs::File;
-            use std::io::Write;
+            use std::fs;
             use std::path::Path;
 
             fn main() {
                 let out_dir = env::var_os("OUT_DIR").unwrap();
-                let out_dir = Path::new(&out_dir).join("output");
-                let mut f = File::create(&out_dir).unwrap();
+                let output = Path::new(&out_dir).join("output");
 
                 if env::var_os("CARGO_FEATURE_FOO").is_some() {
-                    f.write_all(b"foo").unwrap();
+                    fs::write(output, "foo").unwrap();
                 } else {
-                    f.write_all(b"bar").unwrap();
+                    fs::write(output, "bar").unwrap();
                 }
             }
         "#,

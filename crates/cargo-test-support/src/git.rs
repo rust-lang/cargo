@@ -39,8 +39,7 @@ use some of the helper functions in this file to interact with the repository.
 */
 
 use crate::{path2url, project, Project, ProjectBuilder};
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 use std::path::{Path, PathBuf};
 use url::Url;
 
@@ -81,7 +80,7 @@ impl RepoBuilder {
     pub fn nocommit_file(self, path: &str, contents: &str) -> RepoBuilder {
         let dst = self.repo.workdir().unwrap().join(path);
         t!(fs::create_dir_all(dst.parent().unwrap()));
-        t!(t!(File::create(&dst)).write_all(contents.as_bytes()));
+        t!(fs::write(&dst, contents));
         self
     }
 

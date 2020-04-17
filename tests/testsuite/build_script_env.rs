@@ -1,7 +1,5 @@
 //! Tests for build.rs rerun-if-env-changed.
 
-use std::fs::File;
-
 use cargo_test_support::project;
 use cargo_test_support::sleep_ms;
 
@@ -97,7 +95,7 @@ fn rerun_if_env_or_file_changes() {
         .with_stderr("[FINISHED] [..]")
         .run();
     sleep_ms(1000);
-    File::create(p.root().join("foo")).unwrap();
+    p.change_file("foo", "");
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr(

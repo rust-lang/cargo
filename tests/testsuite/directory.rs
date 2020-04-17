@@ -1,8 +1,7 @@
 //! Tests for directory sources.
 
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 use std::str;
 
 use serde::Serialize;
@@ -16,8 +15,9 @@ use cargo_test_support::{basic_manifest, project, t, ProjectBuilder};
 fn setup() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(t!(File::create(root.join(".cargo/config"))).write_all(
-        br#"
+    t!(fs::write(
+        root.join(".cargo/config"),
+        r#"
             [source.crates-io]
             replace-with = 'my-awesome-local-registry'
 
@@ -442,8 +442,10 @@ fn bad_file_checksum() {
         .file("src/lib.rs", "")
         .build();
 
-    let mut f = t!(File::create(paths::root().join("index/bar/src/lib.rs")));
-    t!(f.write_all(b"fn bar() -> u32 { 0 }"));
+    t!(fs::write(
+        paths::root().join("index/bar/src/lib.rs"),
+        "fn bar() -> u32 { 0 }"
+    ));
 
     let p = project()
         .file(
@@ -576,24 +578,23 @@ fn git_lock_file_doesnt_change() {
 
     p.cargo("build").run();
 
-    let mut lock1 = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock1));
+    let lock1 = p.read_lockfile();
 
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(t!(File::create(root.join(".cargo/config"))).write_all(
+    t!(fs::write(
+        root.join(".cargo/config"),
         format!(
             r#"
-        [source.my-git-repo]
-        git = '{}'
-        replace-with = 'my-awesome-local-registry'
+                [source.my-git-repo]
+                git = '{}'
+                replace-with = 'my-awesome-local-registry'
 
-        [source.my-awesome-local-registry]
-        directory = 'index'
-    "#,
+                [source.my-awesome-local-registry]
+                directory = 'index'
+            "#,
             git.url()
         )
-        .as_bytes()
     ));
 
     p.cargo("build")
@@ -606,8 +607,7 @@ fn git_lock_file_doesnt_change() {
         )
         .run();
 
-    let mut lock2 = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock2));
+    let lock2 = p.read_lockfile();
     assert_eq!(lock1, lock2, "lock files changed");
 }
 
@@ -637,15 +637,16 @@ fn git_override_requires_lockfile() {
 
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(t!(File::create(root.join(".cargo/config"))).write_all(
-        br#"
-        [source.my-git-repo]
-        git = 'https://example.com/'
-        replace-with = 'my-awesome-local-registry'
+    t!(fs::write(
+        root.join(".cargo/config"),
+        r#"
+            [source.my-git-repo]
+            git = 'https://example.com/'
+            replace-with = 'my-awesome-local-registry'
 
-        [source.my-awesome-local-registry]
-        directory = 'index'
-    "#
+            [source.my-awesome-local-registry]
+            directory = 'index'
+        "#
     ));
 
     p.cargo("build")

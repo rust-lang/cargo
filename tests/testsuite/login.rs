@@ -1,14 +1,13 @@
 //! Tests for the `cargo login` command.
 
-use std::fs::{self, File, OpenOptions};
-use std::io::prelude::*;
-use std::path::PathBuf;
-
 use cargo::core::Shell;
 use cargo::util::config::Config;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::registry::{self, registry_url};
 use cargo_test_support::{cargo_process, paths, t};
+use std::fs::{self, OpenOptions};
+use std::io::prelude::*;
+use std::path::PathBuf;
 
 const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";
@@ -26,19 +25,17 @@ fn setup_new_credentials_toml() {
 
 fn setup_new_credentials_at(config: PathBuf) {
     t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config))
-        .write_all(format!(r#"token = "{token}""#, token = ORIGINAL_TOKEN).as_bytes()));
+    t!(fs::write(
+        &config,
+        format!(r#"token = "{token}""#, token = ORIGINAL_TOKEN)
+    ));
 }
 
 fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
     let credentials = cargo_home().join("credentials");
     assert!(credentials.is_file());
 
-    let mut contents = String::new();
-    File::open(&credentials)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&credentials).unwrap();
     let toml: toml::Value = contents.parse().unwrap();
 
     let token = match (registry, toml) {

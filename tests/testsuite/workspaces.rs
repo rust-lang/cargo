@@ -1,12 +1,9 @@
 //! Tests for workspaces.
 
-use std::env;
-use std::fs::{self, File};
-use std::io::{Read, Write};
-
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{sleep_ms, t};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use std::env;
+use std::fs;
 
 #[cargo_test]
 fn simple_explicit() {
@@ -1113,13 +1110,11 @@ fn lock_doesnt_change_depending_on_crate() {
 
     p.cargo("build").run();
 
-    let mut lockfile = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
+    let lockfile = p.read_lockfile();
 
     p.cargo("build").cwd("baz").run();
 
-    let mut lockfile2 = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile2));
+    let lockfile2 = p.read_lockfile();
 
     assert_eq!(lockfile, lockfile2);
 }
@@ -1168,8 +1163,7 @@ fn rebuild_please() {
 
     sleep_ms(1000);
 
-    t!(t!(File::create(p.root().join("lib/src/lib.rs")))
-        .write_all(br#"pub fn foo() -> u32 { 1 }"#));
+    p.change_file("lib/src/lib.rs", "pub fn foo() -> u32 { 1 }");
 
     p.cargo("build").cwd("lib").run();
 

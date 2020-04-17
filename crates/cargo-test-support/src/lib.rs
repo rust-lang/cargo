@@ -112,7 +112,6 @@ use std::env;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
-use std::io::prelude::*;
 use std::os;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -166,11 +165,8 @@ impl FileBuilder {
 
     fn mk(&self) {
         self.dirname().mkdir_p();
-
-        let mut file = fs::File::create(&self.path)
+        fs::write(&self.path, &self.body)
             .unwrap_or_else(|e| panic!("could not create file {}: {}", self.path.display(), e));
-
-        t!(file.write_all(self.body.as_bytes()));
     }
 
     fn dirname(&self) -> &Path {
@@ -458,25 +454,15 @@ impl Project {
 
     /// Returns the contents of a path in the project root
     pub fn read_file(&self, path: &str) -> String {
-        let mut buffer = String::new();
-        fs::File::open(self.root().join(path))
-            .unwrap()
-            .read_to_string(&mut buffer)
-            .unwrap();
-        buffer
+        let full = self.root().join(path);
+        fs::read_to_string(&full)
+            .unwrap_or_else(|e| panic!("could not read file {}: {}", full.display(), e))
     }
 
     /// Modifies `Cargo.toml` to remove all commented lines.
     pub fn uncomment_root_manifest(&self) {
-        let mut contents = String::new();
-        fs::File::open(self.root().join("Cargo.toml"))
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-        fs::File::create(self.root().join("Cargo.toml"))
-            .unwrap()
-            .write_all(contents.replace("#", "").as_bytes())
-            .unwrap();
+        let contents = self.read_file("Cargo.toml").replace("#", "");
+        fs::write(self.root().join("Cargo.toml"), contents).unwrap();
     }
 
     pub fn symlink(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) {

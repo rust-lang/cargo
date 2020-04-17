@@ -8,8 +8,7 @@ use cargo_test_support::{
     sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs;
 
 #[cargo_test]
 fn cargo_compile_simple() {
@@ -1108,10 +1107,7 @@ fn compile_path_dep_then_change_version() {
 
     p.cargo("build").run();
 
-    File::create(&p.root().join("bar/Cargo.toml"))
-        .unwrap()
-        .write_all(basic_manifest("bar", "0.0.2").as_bytes())
-        .unwrap();
+    p.change_file("bar/Cargo.toml", &basic_manifest("bar", "0.0.2"));
 
     p.cargo("build").run();
 }
@@ -1125,17 +1121,8 @@ fn ignores_carriage_return_in_lockfile() {
 
     p.cargo("build").run();
 
-    let lockfile = p.root().join("Cargo.lock");
-    let mut lock = String::new();
-    File::open(&lockfile)
-        .unwrap()
-        .read_to_string(&mut lock)
-        .unwrap();
-    let lock = lock.replace("\n", "\r\n");
-    File::create(&lockfile)
-        .unwrap()
-        .write_all(lock.as_bytes())
-        .unwrap();
+    let lock = p.read_lockfile();
+    p.change_file("Cargo.lock", &lock.replace("\n", "\r\n"));
     p.cargo("build").run();
 }
 
@@ -2164,7 +2151,7 @@ fn freshness_ignores_excluded() {
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
-    File::create(&foo.root().join("src/bar.rs")).unwrap();
+    foo.change_file("src/bar.rs", "");
     foo.cargo("build").with_stdout("").run();
 }
 
@@ -2212,7 +2199,7 @@ fn rebuild_preserves_out_dir() {
         )
         .run();
 
-    File::create(&foo.root().join("src/bar.rs")).unwrap();
+    foo.change_file("src/bar.rs", "");
     foo.cargo("build")
         .with_stderr(
             "\
@@ -2280,11 +2267,12 @@ fn credentials_is_unreadable() {
 
     let credentials = home().join(".cargo/credentials");
     t!(fs::create_dir_all(credentials.parent().unwrap()));
-    t!(t!(File::create(&credentials)).write_all(
-        br#"
-        [registry]
-        token = "api-token"
-    "#
+    t!(fs::write(
+        &credentials,
+        r#"
+            [registry]
+            token = "api-token"
+        "#
     ));
     let stat = fs::metadata(credentials.as_path()).unwrap();
     let mut perms = stat.permissions();
@@ -2445,12 +2433,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
     assert!(p.bin("foo").is_file());
     p.process(&p.bin("foo")).run();
 
-    let loc = p.root().join("Cargo.lock");
-    let mut lockfile = String::new();
-    File::open(&loc)
-        .unwrap()
-        .read_to_string(&mut lockfile)
-        .unwrap();
+    let lockfile = p.read_lockfile();
     assert!(lockfile.contains("bar"));
 }
 
@@ -2868,16 +2851,13 @@ fn custom_target_dir_env() {
         .run();
     assert!(p.root().join("foo2/target/debug").join(&exe_name).is_file());
 
-    fs::create_dir(p.root().join(".cargo")).unwrap();
-    File::create(p.root().join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [build]
-        target-dir = "foo/target"
-    "#,
-        )
-        .unwrap();
+    p.change_file(
+        ".cargo/config",
+        r#"
+            [build]
+            target-dir = "foo/target"
+        "#,
+    );
     p.cargo("build").env("CARGO_TARGET_DIR", "bar/target").run();
     assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
@@ -2898,16 +2878,13 @@ fn custom_target_dir_line_parameter() {
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
-    fs::create_dir(p.root().join(".cargo")).unwrap();
-    File::create(p.root().join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [build]
-        target-dir = "foo/target"
-    "#,
-        )
-        .unwrap();
+    p.change_file(
+        ".cargo/config",
+        r#"
+            [build]
+            target-dir = "foo/target"
+        "#,
+    );
     p.cargo("build --target-dir bar/target").run();
     assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());

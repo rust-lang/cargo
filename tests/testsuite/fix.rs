@@ -1,12 +1,8 @@
 //! Tests for the `cargo fix` command.
 
-use std::fs::File;
-
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::{basic_manifest, project};
-
-use std::io::Write;
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -713,7 +709,7 @@ fn warns_if_no_vcs_detected() {
 fn warns_about_dirty_working_directory() {
     let p = git::new("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
 
-    File::create(p.root().join("src/lib.rs")).unwrap();
+    p.change_file("src/lib.rs", "");
 
     p.cargo("fix")
         .with_status(101)
@@ -737,10 +733,7 @@ commit the changes to these files:
 fn warns_about_staged_working_directory() {
     let (p, repo) = git::new_repo("foo", |p| p.file("src/lib.rs", "pub fn foo() {}"));
 
-    File::create(&p.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all("pub fn bar() {}".to_string().as_bytes())
-        .unwrap();
+    p.change_file("src/lib.rs", "pub fn bar() {}");
     git::add(&repo);
 
     p.cargo("fix")
@@ -774,7 +767,7 @@ fn does_not_warn_about_dirty_ignored_files() {
             .file(".gitignore", "bar\n")
     });
 
-    File::create(p.root().join("bar")).unwrap();
+    p.change_file("bar", "");
 
     p.cargo("fix").run();
 }

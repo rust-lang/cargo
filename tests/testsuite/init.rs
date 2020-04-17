@@ -1,11 +1,9 @@
 //! Tests for the `cargo init` command.
 
-use std::env;
-use std::fs::{self, File};
-use std::io::prelude::*;
-use std::process::Command;
-
 use cargo_test_support::{command_is_available, paths, Execs};
+use std::env;
+use std::fs;
+use std::process::Command;
 
 fn cargo_process(s: &str) -> Execs {
     let mut execs = cargo_test_support::cargo_process(s);
@@ -79,11 +77,7 @@ fn simple_git_ignore_exists() {
     assert!(paths::root().join("foo/.gitignore").is_file());
 
     let fp = paths::root().join("foo/.gitignore");
-    let mut contents = String::new();
-    File::open(&fp)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(fp).unwrap();
     assert_eq!(
         contents,
         "/target\n\
@@ -110,11 +104,7 @@ fn git_ignore_exists_no_conflicting_entries() {
         .run();
 
     let fp = paths::root().join("foo/.gitignore");
-    let mut contents = String::new();
-    File::open(&fp)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&fp).unwrap();
     assert_eq!(
         contents,
         "**/some.file\n\n\
@@ -140,16 +130,13 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
 
     let sourcefile_path = path.join(rellocation);
 
-    let content = br#"
+    let content = r#"
         fn main() {
             println!("Hello, world 2!");
         }
     "#;
 
-    File::create(&sourcefile_path)
-        .unwrap()
-        .write_all(content)
-        .unwrap();
+    fs::write(&sourcefile_path, content).unwrap();
 
     if explicit {
         cargo_process("init --bin --vcs none")
@@ -167,12 +154,8 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     assert!(!paths::root().join("foo/src/lib.rs").is_file());
 
     // Check that our file is not overwritten
-    let mut new_content = Vec::new();
-    File::open(&sourcefile_path)
-        .unwrap()
-        .read_to_end(&mut new_content)
-        .unwrap();
-    assert_eq!(Vec::from(content as &[u8]), new_content);
+    let new_content = fs::read_to_string(&sourcefile_path).unwrap();
+    assert_eq!(content, new_content);
 }
 
 #[cargo_test]
@@ -210,22 +193,19 @@ fn confused_by_multiple_lib_files() {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
 
-    let sourcefile_path1 = path.join("src/lib.rs");
+    let path1 = path.join("src/lib.rs");
+    fs::write(path1, r#"fn qqq () { println!("Hello, world 2!"); }"#).unwrap();
 
-    File::create(&sourcefile_path1)
-        .unwrap()
-        .write_all(br#"fn qqq () { println!("Hello, world 2!"); }"#)
-        .unwrap();
+    let path2 = path.join("lib.rs");
+    fs::write(path2, r#" fn qqq () { println!("Hello, world 3!"); }"#).unwrap();
 
-    let sourcefile_path2 = path.join("lib.rs");
-
-    File::create(&sourcefile_path2)
-        .unwrap()
-        .write_all(br#" fn qqq () { println!("Hello, world 3!"); }"#)
-        .unwrap();
-
-    cargo_process("init --vcs none").env("USER", "foo").cwd(&path).with_status(101).with_stderr(
-            "[ERROR] cannot have a package with multiple libraries, found both `src/lib.rs` and `lib.rs`",
+    cargo_process("init --vcs none")
+        .env("USER", "foo")
+        .cwd(&path)
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] cannot have a package with multiple libraries, \
+            found both `src/lib.rs` and `lib.rs`",
         )
         .run();
 
@@ -237,19 +217,11 @@ fn multibin_project_name_clash() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
 
-    let sourcefile_path1 = path.join("foo.rs");
+    let path1 = path.join("foo.rs");
+    fs::write(path1, r#"fn main () { println!("Hello, world 2!"); }"#).unwrap();
 
-    File::create(&sourcefile_path1)
-        .unwrap()
-        .write_all(br#"fn main () { println!("Hello, world 2!"); }"#)
-        .unwrap();
-
-    let sourcefile_path2 = path.join("main.rs");
-
-    File::create(&sourcefile_path2)
-        .unwrap()
-        .write_all(br#"fn main () { println!("Hello, world 3!"); }"#)
-        .unwrap();
+    let path2 = path.join("main.rs");
+    fs::write(path2, r#"fn main () { println!("Hello, world 3!"); }"#).unwrap();
 
     cargo_process("init --lib --vcs none")
         .env("USER", "foo")
@@ -274,14 +246,8 @@ fn lib_already_exists(rellocation: &str) {
 
     let sourcefile_path = path.join(rellocation);
 
-    let content = br#"
-        pub fn qqq() {}
-    "#;
-
-    File::create(&sourcefile_path)
-        .unwrap()
-        .write_all(content)
-        .unwrap();
+    let content = "pub fn qqq() {}";
+    fs::write(&sourcefile_path, content).unwrap();
 
     cargo_process("init --vcs none")
         .env("USER", "foo")
@@ -292,12 +258,8 @@ fn lib_already_exists(rellocation: &str) {
     assert!(!paths::root().join("foo/src/main.rs").is_file());
 
     // Check that our file is not overwritten
-    let mut new_content = Vec::new();
-    File::open(&sourcefile_path)
-        .unwrap()
-        .read_to_end(&mut new_content)
-        .unwrap();
-    assert_eq!(Vec::from(content as &[u8]), new_content);
+    let new_content = fs::read_to_string(&sourcefile_path).unwrap();
+    assert_eq!(content, new_content);
 }
 
 #[cargo_test]
@@ -397,10 +359,7 @@ fn mercurial_autodetect() {
 fn gitignore_appended_not_replaced() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    File::create(&paths::root().join(".gitignore"))
-        .unwrap()
-        .write_all(b"qqqqqq\n")
-        .unwrap();
+    fs::write(&paths::root().join(".gitignore"), "qqqqqq\n").unwrap();
 
     cargo_process("init --lib").env("USER", "foo").run();
 
@@ -409,32 +368,21 @@ fn gitignore_appended_not_replaced() {
     assert!(paths::root().join(".git").is_dir());
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
-    assert!(contents.contains(r#"qqqqqq"#));
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
+    assert!(contents.contains("qqqqqq"));
 }
 
 #[cargo_test]
 fn gitignore_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    File::create(&paths::root().join(".gitignore"))
-        .unwrap()
-        .write_all(b"first")
-        .unwrap();
+    fs::write(&paths::root().join(".gitignore"), "first").unwrap();
 
     cargo_process("init --lib").env("USER", "foo").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(contents.starts_with("first\n"));
 }
 
@@ -446,11 +394,7 @@ fn gitignore_no_newline_in_new() {
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(!contents.starts_with('\n'));
 }
 
@@ -458,20 +402,13 @@ fn gitignore_no_newline_in_new() {
 fn mercurial_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
-    File::create(&paths::root().join(".hgignore"))
-        .unwrap()
-        .write_all(b"first")
-        .unwrap();
+    fs::write(&paths::root().join(".hgignore"), "first").unwrap();
 
     cargo_process("init --lib").env("USER", "foo").run();
 
     assert!(paths::root().join(".hgignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".hgignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
     assert!(contents.starts_with("first\n"));
 }
 
@@ -483,11 +420,7 @@ fn mercurial_no_newline_in_new() {
 
     assert!(paths::root().join(".hgignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".hgignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
     assert!(!contents.starts_with('\n'));
 }
 
@@ -558,11 +491,7 @@ fn cargo_lock_gitignored_if_lib1() {
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(contents.contains(r#"Cargo.lock"#));
 }
 
@@ -570,20 +499,13 @@ fn cargo_lock_gitignored_if_lib1() {
 fn cargo_lock_gitignored_if_lib2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    File::create(&paths::root().join("lib.rs"))
-        .unwrap()
-        .write_all(br#""#)
-        .unwrap();
+    fs::write(&paths::root().join("lib.rs"), "").unwrap();
 
     cargo_process("init --vcs git").env("USER", "foo").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(contents.contains(r#"Cargo.lock"#));
 }
 
@@ -597,11 +519,7 @@ fn cargo_lock_not_gitignored_if_bin1() {
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(!contents.contains(r#"Cargo.lock"#));
 }
 
@@ -609,20 +527,13 @@ fn cargo_lock_not_gitignored_if_bin1() {
 fn cargo_lock_not_gitignored_if_bin2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    File::create(&paths::root().join("main.rs"))
-        .unwrap()
-        .write_all(br#""#)
-        .unwrap();
+    fs::write(&paths::root().join("main.rs"), "").unwrap();
 
     cargo_process("init --vcs git").env("USER", "foo").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
-    let mut contents = String::new();
-    File::open(&paths::root().join(".gitignore"))
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
     assert!(!contents.contains(r#"Cargo.lock"#));
 }
 

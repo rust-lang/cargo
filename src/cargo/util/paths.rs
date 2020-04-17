@@ -1,6 +1,6 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::iter;
@@ -118,27 +118,12 @@ pub fn read(path: &Path) -> CargoResult<String> {
 }
 
 pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
-    let res = (|| -> CargoResult<_> {
-        let mut ret = Vec::new();
-        let mut f = File::open(path)?;
-        if let Ok(m) = f.metadata() {
-            ret.reserve(m.len() as usize + 1);
-        }
-        f.read_to_end(&mut ret)?;
-        Ok(ret)
-    })()
-    .chain_err(|| format!("failed to read `{}`", path.display()))?;
-    Ok(res)
+    fs::read(path).chain_err(|| format!("failed to read `{}`", path.display()))
 }
 
-pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
-    (|| -> CargoResult<()> {
-        let mut f = File::create(path)?;
-        f.write_all(contents)?;
-        Ok(())
-    })()
-    .chain_err(|| format!("failed to write `{}`", path.display()))?;
-    Ok(())
+pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> CargoResult<()> {
+    let path = path.as_ref();
+    fs::write(path, contents.as_ref()).chain_err(|| format!("failed to write `{}`", path.display()))
 }
 
 pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> CargoResult<()> {
@@ -190,7 +175,7 @@ pub fn set_invocation_time(path: &Path) -> CargoResult<FileTime> {
     let timestamp = path.join("invoked.timestamp");
     write(
         &timestamp,
-        b"This file has an mtime of when this was started.",
+        "This file has an mtime of when this was started.",
     )?;
     let ft = mtime(&timestamp)?;
     log::debug!("invocation time for {:?} is {}", path, ft);
