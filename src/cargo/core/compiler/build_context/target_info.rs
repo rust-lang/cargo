@@ -292,7 +292,9 @@ impl TargetInfo {
                     suffix: ".pdb".to_string(),
                     prefix: prefix.clone(),
                     flavor: FileFlavor::DebugInfo,
-                    should_replace_hyphens: false,
+                    // rustc calls the linker with underscores, and the
+                    // filename is embedded in the executable.
+                    should_replace_hyphens: true,
                 })
             }
         }

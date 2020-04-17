@@ -4178,6 +4178,7 @@ fn uplift_pdb_of_bin_on_windows() {
     let p = project()
         .file("src/main.rs", "fn main() { panic!(); }")
         .file("src/bin/b.rs", "fn main() { panic!(); }")
+        .file("src/bin/foo-bar.rs", "fn main() { panic!(); }")
         .file("examples/c.rs", "fn main() { panic!(); }")
         .file("tests/d.rs", "fn main() { panic!(); }")
         .build();
@@ -4186,6 +4187,8 @@ fn uplift_pdb_of_bin_on_windows() {
     assert!(p.target_debug_dir().join("foo.pdb").is_file());
     assert!(p.target_debug_dir().join("b.pdb").is_file());
     assert!(p.target_debug_dir().join("examples/c.pdb").exists());
+    assert!(p.target_debug_dir().join("foo-bar.exe").is_file());
+    assert!(p.target_debug_dir().join("foo_bar.pdb").is_file());
     assert!(!p.target_debug_dir().join("c.pdb").exists());
     assert!(!p.target_debug_dir().join("d.pdb").exists());
 }
