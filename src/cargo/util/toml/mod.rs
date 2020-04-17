@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
@@ -1441,11 +1440,12 @@ impl TomlManifest {
             Some(StringOrBool::Bool(true)) => Some(build_rs),
             Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
             None => {
-                match fs::metadata(&build_rs) {
-                    // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
-                    // a build script.
-                    Ok(ref e) if e.is_file() => Some(build_rs),
-                    Ok(_) | Err(_) => None,
+                // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
+                // a build script.
+                if build_rs.is_file() {
+                    Some(build_rs)
+                } else {
+                    None
                 }
             }
         }

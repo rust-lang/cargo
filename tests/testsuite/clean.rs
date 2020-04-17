@@ -185,7 +185,7 @@ fn build_script() {
                 if env::var("FIRST").is_ok() {
                     std::fs::File::create(out.join("out")).unwrap();
                 } else {
-                    assert!(!std::fs::metadata(out.join("out")).is_ok());
+                    assert!(!out.join("out").exists());
                 }
             }
         "#,

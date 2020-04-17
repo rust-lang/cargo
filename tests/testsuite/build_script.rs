@@ -85,7 +85,6 @@ fn custom_build_env_vars() {
             use std::env;
             use std::io::prelude::*;
             use std::path::Path;
-            use std::fs;
 
             fn main() {{
                 let _target = env::var("TARGET").unwrap();
@@ -103,7 +102,7 @@ fn custom_build_env_vars() {
 
                 let out = env::var("OUT_DIR").unwrap();
                 assert!(out.starts_with(r"{0}"));
-                assert!(fs::metadata(&out).map(|m| m.is_dir()).unwrap_or(false));
+                assert!(Path::new(&out).is_dir());
 
                 let _host = env::var("HOST").unwrap();
 

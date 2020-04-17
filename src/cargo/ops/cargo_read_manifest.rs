@@ -60,7 +60,7 @@ pub fn read_packages(
             }
 
             // Don't automatically discover packages across git submodules
-            if fs::metadata(&dir.join(".git")).is_ok() {
+            if dir.join(".git").exists() {
                 return Ok(false);
             }
         }

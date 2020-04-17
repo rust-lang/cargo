@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
@@ -233,7 +233,7 @@ fn transmit(
         None => None,
     };
     if let Some(ref file) = *license_file {
-        if fs::metadata(&pkg.root().join(file)).is_err() {
+        if !pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)
         }
     }

@@ -13,7 +13,6 @@ use crate::CargoResult;
 use anyhow::bail;
 use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
-use std::fs;
 use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
@@ -285,7 +284,7 @@ pub trait ArgMatchesExt {
             if !path.ends_with("Cargo.toml") {
                 anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
-            if fs::metadata(&path).is_err() {
+            if !path.exists() {
                 anyhow::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
