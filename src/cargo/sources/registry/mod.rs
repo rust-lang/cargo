@@ -178,7 +178,7 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::into_url::IntoUrl;
-use crate::util::{CargoResult, Config, Filesystem};
+use crate::util::{restricted_names, CargoResult, Config, Filesystem};
 
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -495,11 +495,18 @@ impl<'cfg> RegistrySource<'cfg> {
                     prefix
                 )
             }
-
-            // Once that's verified, unpack the entry as usual.
-            entry
-                .unpack_in(parent)
-                .chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
+            // Unpacking failed
+            let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
+            if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
+                result = result.chain_err(|| {
+                    format!(
+                        "`{}` appears to contain a reserved Windows path, \
+                        it cannot be extracted on Windows",
+                        entry_path.display()
+                    )
+                });
+            }
+            result.chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
 
         // Write to the lock file to indicate that unpacking was successful.
