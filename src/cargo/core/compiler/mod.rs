@@ -193,7 +193,7 @@ fn rustc<'a, 'cfg>(
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let pass_cdylib_link_args = unit.target.is_cdylib();
-    let do_rename = unit.target.allows_underscores() && !unit.mode.is_any_test();
+    let do_rename = unit.target.allows_dashes() && !unit.mode.is_any_test();
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
 
