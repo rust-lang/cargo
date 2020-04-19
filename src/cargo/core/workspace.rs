@@ -87,7 +87,7 @@ pub struct Workspace<'cfg> {
     ignore_lock: bool,
 
     /// The resolver behavior specified with the `resolver` field.
-    resolve_behavior: ResolveBehavior,
+    resolve_behavior: Option<ResolveBehavior>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -150,8 +150,7 @@ impl<'cfg> Workspace<'cfg> {
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
             MaybePackage::Virtual(vm) => vm.resolve_behavior(),
-        }
-        .unwrap_or(ResolveBehavior::V1);
+        };
         ws.validate()?;
         Ok(ws)
     }
@@ -173,7 +172,7 @@ impl<'cfg> Workspace<'cfg> {
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
-            resolve_behavior: ResolveBehavior::V1,
+            resolve_behavior: None,
         }
     }
 
@@ -186,7 +185,7 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(current_manifest, config);
         ws.root_manifest = Some(root_path.join("Cargo.toml"));
         ws.target_dir = config.target_dir()?;
-        ws.resolve_behavior = manifest.resolve_behavior().unwrap_or(ResolveBehavior::V1);
+        ws.resolve_behavior = manifest.resolve_behavior();
         ws.packages
             .packages
             .insert(root_path, MaybePackage::Virtual(manifest));
@@ -214,10 +213,7 @@ impl<'cfg> Workspace<'cfg> {
         let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), config);
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
-        ws.resolve_behavior = package
-            .manifest()
-            .resolve_behavior()
-            .unwrap_or(ResolveBehavior::V1);
+        ws.resolve_behavior = package.manifest().resolve_behavior();
         let key = ws.current_manifest.parent().unwrap();
         let id = package.package_id();
         let package = MaybePackage::Package(package);
@@ -594,7 +590,7 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     pub fn resolve_behavior(&self) -> ResolveBehavior {
-        self.resolve_behavior
+        self.resolve_behavior.unwrap_or(ResolveBehavior::V1)
     }
 
     pub fn allows_unstable_package_features(&self) -> bool {
@@ -796,11 +792,9 @@ impl<'cfg> Workspace<'cfg> {
                 if !manifest.patch().is_empty() {
                     emit_warning("patch")?;
                 }
-                if let Some(behavior) = manifest.resolve_behavior() {
+                if manifest.resolve_behavior() != self.resolve_behavior {
                     // Only warn if they don't match.
-                    if behavior != self.resolve_behavior {
-                        emit_warning("resolver")?;
-                    }
+                    emit_warning("resolver")?;
                 }
             }
         }
