@@ -305,7 +305,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Returns the bin filename for a given target, without extension and metadata.
     fn bin_stem(&self, unit: &Unit<'_>) -> String {
-        if unit.target.allows_underscores() {
+        if unit.target.allows_dashes() {
             unit.target.name().to_string()
         } else {
             unit.target.crate_name()
