@@ -5,6 +5,7 @@ use std::fmt;
 use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -37,6 +38,11 @@ use crate::util::{self, internal, Config, Progress, ProgressStyle};
 // TODO: is `manifest_path` a relic?
 #[derive(Clone)]
 pub struct Package {
+    inner: Rc<PackageInner>,
+}
+
+#[derive(Clone)]
+struct PackageInner {
     /// The package's manifest.
     manifest: Manifest,
     /// The root of the package.
@@ -87,9 +93,9 @@ impl ser::Serialize for Package {
     where
         S: ser::Serializer,
     {
-        let summary = self.manifest.summary();
+        let summary = self.manifest().summary();
         let package_id = summary.package_id();
-        let manmeta = self.manifest.metadata();
+        let manmeta = self.manifest().metadata();
         let license = manmeta.license.as_deref();
         let license_file = manmeta.license_file.as_deref();
         let description = manmeta.description.as_deref();
@@ -102,7 +108,7 @@ impl ser::Serialize for Package {
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
         let targets: Vec<&Target> = self
-            .manifest
+            .manifest()
             .targets()
             .iter()
             .filter(|t| t.src_path().is_path())
@@ -119,16 +125,16 @@ impl ser::Serialize for Package {
             dependencies: summary.dependencies(),
             targets,
             features: summary.features(),
-            manifest_path: &self.manifest_path,
-            metadata: self.manifest.custom_metadata(),
+            manifest_path: self.manifest_path(),
+            metadata: self.manifest().custom_metadata(),
             authors,
             categories,
             keywords,
             readme,
             repository,
-            edition: &self.manifest.edition().to_string(),
-            links: self.manifest.links(),
-            metabuild: self.manifest.metabuild(),
+            edition: &self.manifest().edition().to_string(),
+            links: self.manifest().links(),
+            metabuild: self.manifest().metabuild(),
             publish: self.publish().as_ref(),
         }
         .serialize(s)
@@ -139,26 +145,28 @@ impl Package {
     /// Creates a package from a manifest and its location.
     pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
-            manifest,
-            manifest_path: manifest_path.to_path_buf(),
+            inner: Rc::new(PackageInner {
+                manifest,
+                manifest_path: manifest_path.to_path_buf(),
+            }),
         }
     }
 
     /// Gets the manifest dependencies.
     pub fn dependencies(&self) -> &[Dependency] {
-        self.manifest.dependencies()
+        self.manifest().dependencies()
     }
     /// Gets the manifest.
     pub fn manifest(&self) -> &Manifest {
-        &self.manifest
+        &self.inner.manifest
     }
     /// Gets the manifest.
     pub fn manifest_mut(&mut self) -> &mut Manifest {
-        &mut self.manifest
+        &mut Rc::make_mut(&mut self.inner).manifest
     }
     /// Gets the path to the manifest.
     pub fn manifest_path(&self) -> &Path {
-        &self.manifest_path
+        &self.inner.manifest_path
     }
     /// Gets the name of the package.
     pub fn name(&self) -> InternedString {
@@ -166,19 +174,19 @@ impl Package {
     }
     /// Gets the `PackageId` object for the package (fully defines a package).
     pub fn package_id(&self) -> PackageId {
-        self.manifest.package_id()
+        self.manifest().package_id()
     }
     /// Gets the root folder of the package.
     pub fn root(&self) -> &Path {
-        self.manifest_path.parent().unwrap()
+        self.manifest_path().parent().unwrap()
     }
     /// Gets the summary for the package.
     pub fn summary(&self) -> &Summary {
-        self.manifest.summary()
+        self.manifest().summary()
     }
     /// Gets the targets specified in the manifest.
     pub fn targets(&self) -> &[Target] {
-        self.manifest.targets()
+        self.manifest().targets()
     }
     /// Gets the current package version.
     pub fn version(&self) -> &Version {
@@ -186,11 +194,11 @@ impl Package {
     }
     /// Gets the package authors.
     pub fn authors(&self) -> &Vec<String> {
-        &self.manifest.metadata().authors
+        &self.manifest().metadata().authors
     }
     /// Returns `true` if the package is set to publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
-        self.manifest.publish()
+        self.manifest().publish()
     }
     /// Returns `true` if this package is a proc-macro.
     pub fn proc_macro(&self) -> bool {
@@ -204,8 +212,10 @@ impl Package {
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Package {
         Package {
-            manifest: self.manifest.map_source(to_replace, replace_with),
-            manifest_path: self.manifest_path,
+            inner: Rc::new(PackageInner {
+                manifest: self.manifest().clone().map_source(to_replace, replace_with),
+                manifest_path: self.manifest_path().to_owned(),
+            }),
         }
     }
 
@@ -545,15 +555,6 @@ impl<'cfg> PackageSet<'cfg> {
         let mut sources = self.sources.borrow_mut();
         let other_sources = set.sources.into_inner();
         sources.add_source_map(other_sources);
-    }
-
-    /// Get mutable access to an already downloaded package, if it's already
-    /// downoaded and it's part of this set. Does not actually attempt to
-    /// download anything if it's not already downloaded.
-    pub fn lookup_mut(&mut self, id: PackageId) -> Option<&mut Package> {
-        self.packages
-            .get_mut(&id)
-            .and_then(|cell| cell.borrow_mut())
     }
 }
 

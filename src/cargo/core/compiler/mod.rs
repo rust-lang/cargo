@@ -58,7 +58,7 @@ pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
     /// unit of work (may still be modified for runtime-known dependencies, when
     /// the work is actually executed).
-    fn init<'a, 'cfg>(&self, _cx: &Context<'a, 'cfg>, _unit: &Unit<'a>) {}
+    fn init(&self, _cx: &Context<'_, '_>, _unit: &Unit) {}
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
@@ -74,7 +74,7 @@ pub trait Executor: Send + Sync + 'static {
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
-    fn force_rebuild(&self, _unit: &Unit<'_>) -> bool {
+    fn force_rebuild(&self, _unit: &Unit) -> bool {
         false
     }
 }
@@ -99,17 +99,17 @@ impl Executor for DefaultExecutor {
     }
 }
 
-fn compile<'a, 'cfg: 'a>(
-    cx: &mut Context<'a, 'cfg>,
-    jobs: &mut JobQueue<'a, 'cfg>,
+fn compile<'cfg>(
+    cx: &mut Context<'_, 'cfg>,
+    jobs: &mut JobQueue<'cfg>,
     plan: &mut BuildPlan,
-    unit: &Unit<'a>,
+    unit: &Unit,
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
-    if !cx.compiled.insert(*unit) {
+    if !cx.compiled.insert(unit.clone()) {
         return Ok(());
     }
 
@@ -139,7 +139,7 @@ fn compile<'a, 'cfg: 'a>(
             let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
                 replay_output_cache(
                     unit.pkg.package_id(),
-                    unit.target,
+                    &unit.target,
                     cx.files().message_cache_path(unit),
                     cx.bcx.build_config.message_format,
                     cx.bcx.config.shell().supports_color(),
@@ -168,11 +168,7 @@ fn compile<'a, 'cfg: 'a>(
     Ok(())
 }
 
-fn rustc<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-    exec: &Arc<dyn Executor>,
-) -> CargoResult<Work> {
+fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     let build_plan = cx.bcx.build_config.build_plan;
 
@@ -212,7 +208,7 @@ fn rustc<'a, 'cfg>(
     }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
-    let target = unit.target.clone();
+    let target = Target::clone(&unit.target);
     let mode = unit.mode;
 
     exec.init(cx, unit);
@@ -226,7 +222,7 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let script_metadata = cx.find_build_script_metadata(*unit);
+    let script_metadata = cx.find_build_script_metadata(unit.clone());
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -394,11 +390,7 @@ fn rustc<'a, 'cfg>(
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the
 /// final target. This must happen during both "Fresh" and "Compile".
-fn link_targets<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
-    fresh: bool,
-) -> CargoResult<Work> {
+fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResult<Work> {
     let bcx = cx.bcx;
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
@@ -408,7 +400,7 @@ fn link_targets<'a, 'cfg>(
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
     let executable = cx.get_executable(unit)?;
-    let mut target = unit.target.clone();
+    let mut target = Target::clone(&unit.target);
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
         let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
@@ -535,22 +527,22 @@ where
     search_path
 }
 
-fn prepare_rustc<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
+fn prepare_rustc(
+    cx: &mut Context<'_, '_>,
     crate_types: &[&str],
-    unit: &Unit<'a>,
+    unit: &Unit,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
-    let is_workspace = cx.bcx.ws.is_member(unit.pkg);
+    let is_workspace = cx.bcx.ws.is_member(&unit.pkg);
 
     let mut base = cx
         .compilation
-        .rustc_process(unit.pkg, is_primary, is_workspace)?;
+        .rustc_process(&unit.pkg, is_primary, is_workspace)?;
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
         base.arg("-Zjobserver-token-requests");
-        assert!(cx.rustc_clients.insert(*unit, client).is_none());
+        assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
     } else {
         base.inherit_jobserver(&cx.jobserver);
     }
@@ -559,9 +551,9 @@ fn prepare_rustc<'a, 'cfg>(
     Ok(base)
 }
 
-fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
+fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(&unit.pkg, &unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -586,7 +578,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     add_error_format_and_color(cx, &mut rustdoc, false)?;
 
-    if let Some(args) = bcx.extra_args_for(unit) {
+    if let Some(args) = cx.bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
 
@@ -599,10 +591,10 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
     let package_id = unit.pkg.package_id();
-    let target = unit.target.clone();
+    let target = Target::clone(&unit.target);
     let mut output_options = OutputOptions::new(cx, unit);
     let pkg_id = unit.pkg.package_id();
-    let script_metadata = cx.find_build_script_metadata(*unit);
+    let script_metadata = cx.find_build_script_metadata(unit.clone());
 
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {
@@ -632,9 +624,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     }))
 }
 
-fn add_crate_versions_if_requested<'a>(
-    bcx: &BuildContext<'a, '_>,
-    unit: &Unit<'a>,
+fn add_crate_versions_if_requested(
+    bcx: &BuildContext<'_, '_>,
+    unit: &Unit,
     rustdoc: &mut ProcessBuilder,
 ) {
     if bcx.config.cli_unstable().crate_versions && !crate_version_flag_already_present(rustdoc) {
@@ -651,7 +643,7 @@ fn crate_version_flag_already_present(rustdoc: &ProcessBuilder) -> bool {
     })
 }
 
-fn append_crate_version_flag(unit: &Unit<'_>, rustdoc: &mut ProcessBuilder) {
+fn append_crate_version_flag(unit: &Unit, rustdoc: &mut ProcessBuilder) {
     rustdoc
         .arg(RUSTDOC_CRATE_VERSION_FLAG)
         .arg(unit.pkg.version().to_string());
@@ -671,7 +663,7 @@ fn append_crate_version_flag(unit: &Unit<'_>, rustdoc: &mut ProcessBuilder) {
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) {
+fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit) -> (PathBuf, PathBuf) {
     let ws_root = bcx.ws.root();
     let src = match unit.target.src_path() {
         TargetSourcePath::Path(path) => path.to_path_buf(),
@@ -686,13 +678,13 @@ fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) 
     (src, unit.pkg.root().to_path_buf())
 }
 
-fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
+fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
 
-fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
+fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
     if !bcx.show_warnings(unit.pkg.package_id()) {
@@ -735,10 +727,10 @@ fn add_error_format_and_color(
     Ok(())
 }
 
-fn build_base_args<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
+fn build_base_args(
+    cx: &mut Context<'_, '_>,
     cmd: &mut ProcessBuilder,
-    unit: &Unit<'a>,
+    unit: &Unit,
     crate_types: &[&str],
 ) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
@@ -786,7 +778,7 @@ fn build_base_args<'a, 'cfg>(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| p != unit.pkg));
+        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| *p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -839,7 +831,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
-    if let Some(args) = bcx.extra_args_for(unit) {
+    if let Some(args) = cx.bcx.extra_args_for(unit) {
         cmd.args(args);
     }
 
@@ -954,10 +946,10 @@ fn build_base_args<'a, 'cfg>(
     Ok(())
 }
 
-fn build_deps_args<'a, 'cfg>(
+fn build_deps_args(
     cmd: &mut ProcessBuilder,
-    cx: &mut Context<'a, 'cfg>,
-    unit: &Unit<'a>,
+    cx: &mut Context<'_, '_>,
+    unit: &Unit,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     cmd.arg("-L").arg(&{
@@ -1023,70 +1015,68 @@ fn build_deps_args<'a, 'cfg>(
 }
 
 /// Generates a list of `--extern` arguments.
-pub fn extern_args<'a>(
-    cx: &Context<'a, '_>,
-    unit: &Unit<'a>,
+pub fn extern_args(
+    cx: &Context<'_, '_>,
+    unit: &Unit,
     unstable_opts: &mut bool,
 ) -> CargoResult<Vec<OsString>> {
     let mut result = Vec::new();
     let deps = cx.unit_deps(unit);
 
     // Closure to add one dependency to `result`.
-    let mut link_to = |dep: &UnitDep<'a>,
-                       extern_crate_name: InternedString,
-                       noprelude: bool|
-     -> CargoResult<()> {
-        let mut value = OsString::new();
-        let mut opts = Vec::new();
-        if unit
-            .pkg
-            .manifest()
-            .features()
-            .require(Feature::public_dependency())
-            .is_ok()
-            && !dep.public
-        {
-            opts.push("priv");
-            *unstable_opts = true;
-        }
-        if noprelude {
-            opts.push("noprelude");
-            *unstable_opts = true;
-        }
-        if !opts.is_empty() {
-            value.push(opts.join(","));
-            value.push(":");
-        }
-        value.push(extern_crate_name.as_str());
-        value.push("=");
+    let mut link_to =
+        |dep: &UnitDep, extern_crate_name: InternedString, noprelude: bool| -> CargoResult<()> {
+            let mut value = OsString::new();
+            let mut opts = Vec::new();
+            if unit
+                .pkg
+                .manifest()
+                .features()
+                .require(Feature::public_dependency())
+                .is_ok()
+                && !dep.public
+            {
+                opts.push("priv");
+                *unstable_opts = true;
+            }
+            if noprelude {
+                opts.push("noprelude");
+                *unstable_opts = true;
+            }
+            if !opts.is_empty() {
+                value.push(opts.join(","));
+                value.push(":");
+            }
+            value.push(extern_crate_name.as_str());
+            value.push("=");
 
-        let mut pass = |file| {
-            let mut value = value.clone();
-            value.push(file);
-            result.push(OsString::from("--extern"));
-            result.push(value);
-        };
+            let mut pass = |file| {
+                let mut value = value.clone();
+                value.push(file);
+                result.push(OsString::from("--extern"));
+                result.push(value);
+            };
 
-        let outputs = cx.outputs(&dep.unit)?;
-        let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
-            FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
-            _ => None,
-        });
+            let outputs = cx.outputs(&dep.unit)?;
+            let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
+                FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
+                _ => None,
+            });
 
-        if cx.only_requires_rmeta(unit, &dep.unit) {
-            let (output, _rmeta) = outputs
-                .find(|(_output, rmeta)| *rmeta)
-                .expect("failed to find rlib dep for pipelined dep");
-            pass(&output.path);
-        } else {
-            for (output, rmeta) in outputs {
-                if !rmeta {
-                    pass(&output.path);
+            if cx.only_requires_rmeta(unit, &dep.unit) {
+                let (output, _rmeta) = outputs
+                    .find(|(_output, rmeta)| *rmeta)
+                    .expect("failed to find rlib dep for pipelined dep");
+                pass(&output.path);
+            } else {
+                for (output, rmeta) in outputs {
+                    if !rmeta {
+                        pass(&output.path);
+                    }
                 }
             }
-        }
-        Ok(())
-    };
+            Ok(())
+        };
 
     for dep in deps {
         if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
@@ -1125,7 +1115,7 @@ struct OutputOptions {
 }
 
 impl OutputOptions {
-    fn new<'a>(cx: &Context<'a, '_>, unit: &Unit<'a>) -> OutputOptions {
+    fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
         let look_for_metadata_directive = cx.rmeta_required(unit);
         let color = cx.bcx.config.shell().supports_color();
         let path = cx.files().message_cache_path(unit);

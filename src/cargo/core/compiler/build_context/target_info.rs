@@ -1,5 +1,4 @@
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::CompileTarget;
+use crate::core::compiler::{BuildOutput, CompileKind, CompileTarget};
 use crate::core::{Dependency, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
 use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
@@ -582,5 +581,13 @@ impl RustcTargetData {
             CompileKind::Host => &self.host_config,
             CompileKind::Target(s) => &self.target_config[&s],
         }
+    }
+
+    /// If a build script is overridden, this returns the `BuildOutput` to use.
+    ///
+    /// `lib_name` is the `links` library name and `kind` is whether it is for
+    /// Host or Target.
+    pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
+        self.target_config(kind).links_overrides.get(lib_name)
     }
 }
