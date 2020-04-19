@@ -6,7 +6,7 @@ use std::env;
 
 #[cargo_test]
 fn rustc_info_cache() {
-    // TODO: need to gate this on nightly as soon as -Cembed-bitcode lands in
+    // TODO: need to gate this on nightly as soon as -Cbitcode-in-rlib lands in
     // nightly
     if true {
         return;

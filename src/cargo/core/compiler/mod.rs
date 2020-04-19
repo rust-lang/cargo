@@ -821,10 +821,10 @@ fn build_base_args<'a, 'cfg>(
                 .bcx
                 .target_data
                 .info(CompileKind::Host)
-                .supports_embed_bitcode
+                .supports_bitcode_in_rlib
                 .unwrap()
             {
-                cmd.arg("-Cembed-bitcode=no");
+                cmd.arg("-Cbitcode-in-rlib=no");
             }
         }
     }
