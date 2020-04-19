@@ -902,12 +902,7 @@ fn generate_targets<'a>(
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map.entry(pkg).or_insert_with(|| {
-                    resolve_all_features(
-                        resolve,
-                        resolved_features,
-                        &bcx.packages,
-                        pkg.package_id(),
-                    )
+                    resolve_all_features(resolve, resolved_features, bcx.packages, pkg.package_id())
                 });
                 rf.iter().filter(|f| !features.contains(*f)).collect()
             }
