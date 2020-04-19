@@ -1209,7 +1209,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     let target_root = target_root(cx);
     let local = if unit.mode.is_doc() {
         // rustdoc does not have dep-info files.
-        let fingerprint = pkg_fingerprint(cx.bcx, unit.pkg)?;
+        let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg)?;
         vec![LocalFingerprint::Precalculated(fingerprint)]
     } else {
         let dep_info = dep_info_loc(cx, unit);
