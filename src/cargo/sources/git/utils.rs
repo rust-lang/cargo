@@ -11,7 +11,6 @@ use serde::Serialize;
 use std::env;
 use std::fmt;
 use std::fs::File;
-use std::mem;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use url::Url;
@@ -835,7 +834,7 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
             );
             if out.status.success() {
                 let new = git2::Repository::open(repo.path())?;
-                let _ = mem::replace(repo, new);
+                *repo = new;
                 return Ok(());
             }
         }
