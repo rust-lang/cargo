@@ -12,10 +12,10 @@ The Cargo home consists of following components:
 
 ## Files:
 
-* `config`
+* `config.toml`
 	Cargo's global configuration file, see the [config entry in the reference][config].
 
-* `credentials`
+* `credentials.toml`
  	Private login credentials from [`cargo login`] in order to log in to a registry.
 
 * `.crates.toml`

@@ -949,8 +949,8 @@ impl Config {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        if fs::metadata(&possible).is_ok() {
-            if warn && fs::metadata(&possible_with_extension).is_ok() {
+        if possible.exists() {
+            if warn && possible_with_extension.exists() {
                 // We don't want to print a warning if the version
                 // without the extension is just a symlink to the version
                 // WITH an extension, which people may want to do to
@@ -973,7 +973,7 @@ impl Config {
             }
 
             Ok(Some(possible))
-        } else if fs::metadata(&possible_with_extension).is_ok() {
+        } else if possible_with_extension.exists() {
             Ok(Some(possible_with_extension))
         } else {
             Ok(None)
@@ -1016,12 +1016,15 @@ impl Config {
         )
     }
 
-    /// Gets the index for the default registry.
-    pub fn get_default_registry_index(&self) -> CargoResult<Option<Url>> {
-        Ok(match self.get_string("registry.index")? {
-            Some(index) => Some(self.resolve_registry_index(index)?),
-            None => None,
-        })
+    /// Returns an error if `registry.index` is set.
+    pub fn check_registry_index_not_set(&self) -> CargoResult<()> {
+        if self.get_string("registry.index")?.is_some() {
+            bail!(
+                "the `registry.index` config value is no longer supported\n\
+                Use `[source]` replacement to alter the default index for crates.io."
+            );
+        }
+        Ok(())
     }
 
     fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {

@@ -2,12 +2,12 @@
 .\"     Title: cargo
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-03-30
+.\"      Date: 2020-04-16
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO" "1" "2020-03-30" "\ \&" "\ \&"
+.TH "CARGO" "1" "2020-04-16" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -357,21 +357,21 @@ Binaries installed by \fBcargo\-install\fP(1) will be located here. If using
 rustup, executables distributed with Rust are also located here.
 .RE
 .sp
-\fB$CARGO_HOME/config\fP
+\fB$CARGO_HOME/config.toml\fP
 .RS 4
 The global configuration file. See \c
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "the reference"
 for more information about configuration files.
 .RE
 .sp
-\fB.cargo/config\fP
+\fB.cargo/config.toml\fP
 .RS 4
-Cargo automatically searches for a file named \fB.cargo/config\fP in the
+Cargo automatically searches for a file named \fB.cargo/config.toml\fP in the
 current directory, and all parent directories. These configuration files
 will be merged with the global configuration file.
 .RE
 .sp
-\fB$CARGO_HOME/credentials\fP
+\fB$CARGO_HOME/credentials.toml\fP
 .RS 4
 Private authentication information for logging in to a registry.
 .RE

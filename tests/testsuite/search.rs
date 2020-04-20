@@ -1,14 +1,12 @@
 //! Tests for the `cargo search` command.
 
-use std::collections::HashSet;
-use std::fs::{self, File};
-use std::io::prelude::*;
-use std::path::Path;
-
 use cargo_test_support::cargo_process;
 use cargo_test_support::git::repo;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{api_path, registry_path, registry_url};
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
 use url::Url;
 
 fn api() -> Url {
@@ -48,15 +46,13 @@ fn write_crates(dest: &Path) {
     //
     // On windows, though, `?` is an invalid character, but we always build curl
     // from source there anyway!
-    File::create(&dest)
-        .unwrap()
-        .write_all(content.as_bytes())
-        .unwrap();
+    fs::write(&dest, content).unwrap();
     if !cfg!(windows) {
-        File::create(&dest.with_file_name("crates?q=postgres&per_page=10"))
-            .unwrap()
-            .write_all(content.as_bytes())
-            .unwrap();
+        fs::write(
+            &dest.with_file_name("crates?q=postgres&per_page=10"),
+            content,
+        )
+        .unwrap();
     }
 }
 
@@ -80,11 +76,10 @@ fn setup() {
 fn set_cargo_config() {
     let config = paths::root().join(".cargo/config");
 
-    File::create(&config)
-        .unwrap()
-        .write_all(
-            format!(
-                r#"
+    fs::write(
+        &config,
+        format!(
+            r#"
 [source.crates-io]
 registry = 'https://wut'
 replace-with = 'dummy-registry'
@@ -92,11 +87,10 @@ replace-with = 'dummy-registry'
 [source.dummy-registry]
 registry = '{reg}'
 "#,
-                reg = registry_url(),
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+            reg = registry_url(),
+        ),
+    )
+    .unwrap();
 }
 
 #[cargo_test]

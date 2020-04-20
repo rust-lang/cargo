@@ -1,12 +1,10 @@
 //! Tests for setting custom rustc flags.
 
-use std::fs::{self, File};
-use std::io::Write;
-
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, paths, project, project_in_home, rustc_host,
 };
+use std::fs;
 
 #[cargo_test]
 fn env_rustflags_normal_source() {
@@ -871,8 +869,7 @@ fn build_rustflags_recompile() {
         "#;
     let config_file = paths::root().join("foo/.cargo/config");
     fs::create_dir_all(config_file.parent().unwrap()).unwrap();
-    let mut config_file = File::create(config_file).unwrap();
-    config_file.write_all(config.as_bytes()).unwrap();
+    fs::write(config_file, config).unwrap();
 
     p.cargo("build")
         .with_status(101)
@@ -893,8 +890,7 @@ fn build_rustflags_recompile2() {
         "#;
     let config_file = paths::root().join("foo/.cargo/config");
     fs::create_dir_all(config_file.parent().unwrap()).unwrap();
-    let mut config_file = File::create(config_file).unwrap();
-    config_file.write_all(config.as_bytes()).unwrap();
+    fs::write(config_file, config).unwrap();
 
     p.cargo("build")
         .with_status(101)
@@ -928,15 +924,14 @@ fn build_rustflags_with_home_config() {
     let home = paths::home();
     let home_config = home.join(".cargo");
     fs::create_dir(&home_config).unwrap();
-    File::create(&home_config.join("config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [build]
-        rustflags = ["-Cllvm-args=-x86-asm-syntax=intel"]
-    "#,
-        )
-        .unwrap();
+    fs::write(
+        &home_config.join("config"),
+        r#"
+            [build]
+            rustflags = ["-Cllvm-args=-x86-asm-syntax=intel"]
+        "#,
+    )
+    .unwrap();
 
     // And we need the project to be inside the home directory
     // so the walking process finds the home project twice.

@@ -1,6 +1,6 @@
 //! Tests for the `cargo install` command.
 
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 
 use cargo_test_support::cross_compile;
@@ -152,6 +152,20 @@ fn missing() {
 }
 
 #[cargo_test]
+fn missing_current_working_directory() {
+    cargo_process("install .")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: To install the binaries for the package in current working \
+directory use `cargo install --path .`. Use `cargo build` if you \
+want to simply build the package.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_version() {
     pkg("foo", "0.0.1");
     cargo_process("install foo --vers=0.2.0")
@@ -201,18 +215,16 @@ fn install_location_precedence() {
     let t4 = cargo_home();
 
     fs::create_dir(root.join(".cargo")).unwrap();
-    File::create(root.join(".cargo/config"))
-        .unwrap()
-        .write_all(
-            format!(
-                "[install]
-                 root = '{}'
-                ",
-                t3.display()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+    fs::write(
+        root.join(".cargo/config"),
+        &format!(
+            "[install]
+             root = '{}'
+            ",
+            t3.display()
+        ),
+    )
+    .unwrap();
 
     println!("install --root");
 

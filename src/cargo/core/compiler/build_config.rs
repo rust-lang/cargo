@@ -4,6 +4,7 @@ use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use serde::ser;
 use std::cell::RefCell;
+use std::path::PathBuf;
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -26,7 +27,15 @@ pub struct BuildConfig {
     pub unit_graph: bool,
     /// An optional override of the rustc process for primary units
     pub primary_unit_rustc: Option<ProcessBuilder>,
+    /// A thread used by `cargo fix` to receive messages on a socket regarding
+    /// the success/failure of applying fixes.
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
+    /// The directory to copy final artifacts to. Note that even if `out_dir` is
+    /// set, a copy of artifacts still could be found a `target/(debug\release)`
+    /// as usual.
+    // Note that, although the cmd-line flag name is `out-dir`, in code we use
+    // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
+    pub export_dir: Option<PathBuf>,
 }
 
 impl BuildConfig {
@@ -70,6 +79,7 @@ impl BuildConfig {
             unit_graph: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
+            export_dir: None,
         })
     }
 

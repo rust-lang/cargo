@@ -318,8 +318,8 @@ to modify `Cargo.toml` like with the `[patch]` section above. For this use
 case Cargo offers a much more limited version of overrides called **path
 overrides**.
 
-Path overrides are specified through [`.cargo/config`](config.md) instead of
-`Cargo.toml`. Inside of `.cargo/config` you'll specify a key called `paths`:
+Path overrides are specified through [`.cargo/config.toml`](config.md) instead of
+`Cargo.toml`. Inside of `.cargo/config.toml` you'll specify a key called `paths`:
 
 ```toml
 paths = ["/path/to/uuid"]

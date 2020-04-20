@@ -165,9 +165,7 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    fs::metadata(path)
-        .map(|metadata| metadata.is_file())
-        .unwrap_or(false)
+    path.as_ref().is_file()
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {

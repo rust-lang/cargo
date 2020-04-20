@@ -139,9 +139,7 @@ impl Registry {
     }
 
     pub fn host_is_crates_io(&self) -> bool {
-        Url::parse(self.host())
-            .map(|u| u.host_str() == Some("crates.io"))
-            .unwrap_or(false)
+        is_url_crates_io(&self.host)
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
@@ -419,4 +417,11 @@ fn reason(code: u32) -> &'static str {
         504 => "Gateway Timeout",
         _ => "<unknown>",
     }
+}
+
+/// Returns `true` if the host of the given URL is "crates.io".
+pub fn is_url_crates_io(url: &str) -> bool {
+    Url::parse(url)
+        .map(|u| u.host_str() == Some("crates.io"))
+        .unwrap_or(false)
 }

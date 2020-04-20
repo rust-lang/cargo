@@ -97,6 +97,35 @@ impl ResolverProgress {
 /// optimized comparison operators like `is_subset` at the interfaces.
 pub type FeaturesSet = Rc<BTreeSet<InternedString>>;
 
+/// Resolver behavior, used to opt-in to new behavior that is
+/// backwards-incompatible via the `resolver` field in the manifest.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum ResolveBehavior {
+    /// V1 is the original resolver behavior.
+    V1,
+    /// V2 adds the new feature resolver.
+    V2,
+}
+
+impl ResolveBehavior {
+    pub fn from_manifest(resolver: &str) -> CargoResult<ResolveBehavior> {
+        match resolver {
+            "2" => Ok(ResolveBehavior::V2),
+            s => anyhow::bail!(
+                "`resolver` setting `{}` is not valid, only valid option is \"2\"",
+                s
+            ),
+        }
+    }
+
+    pub fn to_manifest(&self) -> Option<String> {
+        match self {
+            ResolveBehavior::V1 => None,
+            ResolveBehavior::V2 => Some("2".to_string()),
+        }
+    }
+}
+
 /// Options for how the resolve should work.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ResolveOpts {

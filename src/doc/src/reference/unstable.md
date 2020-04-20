@@ -26,7 +26,7 @@ index each time.
 The `-Z mtime-on-use` flag is an experiment to have Cargo update the mtime of
 used files to make it easier for tools like cargo-sweep to detect which files
 are stale. For many workflows this needs to be set on *all* invocations of cargo.
-To make this more practical setting the `unstable.mtime_on_use` flag in `.cargo/config`
+To make this more practical setting the `unstable.mtime_on_use` flag in `.cargo/config.toml`
 or the corresponding ENV variable will apply the `-Z mtime-on-use` to all
 invocations of nightly cargo. (the config flag is ignored by stable)
 
@@ -76,7 +76,7 @@ directory. Example:
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
-This can also be specified in `.cargo/config` files.
+This can also be specified in `.cargo/config.toml` files.
 
 ```toml
 [build]
@@ -93,7 +93,7 @@ from the host cargo will simply skip testing doctests. If this flag is
 present, cargo will continue as normal, passing the tests to doctest,
 while also passing it a `--target` option, as well as enabling
 `-Zunstable-features --enable-per-target-ignores` and passing along
-information from `.cargo/config`. See the rustc issue for more information.
+information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```
 cargo test --target foo -Zdoctest-xcompile
@@ -573,6 +573,40 @@ make feature flags behave in a more intuitive manner.
 
 The ability to set features for non-workspace members is no longer allowed, as
 the resolver fundamentally does not support that ability.
+
+### Resolver
+* Tracking Issue: [#8088](https://github.com/rust-lang/cargo/issues/8088)
+
+The `resolver` feature allows the resolver version to be specified in the
+`Cargo.toml` manifest. This allows a project to opt-in to
+backwards-incompatible changes in the resolver.
+
+```toml
+cargo-features = ["resolver"]
+
+[package]
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
+```
+
+Currently the only allowed value is `"2"`. This declaration enables all of the
+new feature behavior of [`-Zfeatures=all`](#features) and
+[`-Zpackage-features`](#package-features).
+
+This flag is global for a workspace. If using a virtual workspace, the root
+definition should be in the `[workspace]` table like this:
+
+```toml
+cargo-features = ["resolver"]
+
+[workspace]
+members = ["member1", "member2"]
+resolver = "2"
+```
+
+The `resolver` field is ignored in dependencies, only the top-level project or
+workspace can control the new behavior.
 
 ### crate-versions
 * Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)

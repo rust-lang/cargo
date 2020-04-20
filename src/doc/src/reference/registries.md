@@ -11,7 +11,7 @@ support publishing new crates directly from Cargo.
 ### Using an Alternate Registry
 
 To use a registry other than [crates.io], the name and index URL of the
-registry must be added to a [`.cargo/config` file][config]. The `registries`
+registry must be added to a [`.cargo/config.toml` file][config]. The `registries`
 table has a key for each registry, for example:
 
 ```toml
@@ -63,7 +63,7 @@ registry to use. For example, to publish the package in the current directory:
 2. `cargo publish --registry=my-registry`
 
 Instead of always passing the `--registry` command-line option, the default
-registry may be set in [`.cargo/config`][config] with the `registry.default`
+registry may be set in [`.cargo/config.toml`][config] with the `registry.default`
 key.
 
 Setting the `package.publish` key in the `Cargo.toml` manifest restricts which
@@ -81,7 +81,7 @@ The `publish` value may also be `false` to restrict all publishing, which is
 the same as an empty list.
 
 The authentication information saved by [`cargo login`] is stored in the
-`credentials` file in the Cargo home directory (default `$HOME/.cargo`). It
+`credentials.toml` file in the Cargo home directory (default `$HOME/.cargo`). It
 has a separate table for each registry, for example:
 
 ```toml

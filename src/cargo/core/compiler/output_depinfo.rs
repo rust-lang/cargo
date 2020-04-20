@@ -48,13 +48,13 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
         .map(|f| f.replace(" ", "\\ "))
 }
 
-fn add_deps_for_unit<'a, 'b>(
+fn add_deps_for_unit(
     deps: &mut BTreeSet<PathBuf>,
-    cx: &mut Context<'a, 'b>,
-    unit: &Unit<'a>,
-    visited: &mut HashSet<Unit<'a>>,
+    cx: &mut Context<'_, '_>,
+    unit: &Unit,
+    visited: &mut HashSet<Unit>,
 ) -> CargoResult<()> {
-    if !visited.insert(*unit) {
+    if !visited.insert(unit.clone()) {
         return Ok(());
     }
 
@@ -80,7 +80,7 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Add rerun-if-changed dependencies
-    if let Some(metadata) = cx.find_build_script_metadata(*unit) {
+    if let Some(metadata) = cx.find_build_script_metadata(unit.clone()) {
         if let Some(output) = cx
             .build_script_outputs
             .lock()
@@ -107,7 +107,7 @@ fn add_deps_for_unit<'a, 'b>(
 /// Save a `.d` dep-info file for the given unit.
 ///
 /// This only saves files for uplifted artifacts.
-pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
+pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = cx.bcx;
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();

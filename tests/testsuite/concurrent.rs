@@ -1,7 +1,6 @@
 //! Tests for running multiple `cargo` processes at the same time.
 
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs;
 use std::net::TcpListener;
 use std::process::Stdio;
 use std::sync::mpsc::channel;
@@ -185,10 +184,7 @@ fn git_same_repo_different_tags() {
     let repo = git2::Repository::open(&a.root()).unwrap();
     git::tag(&repo, "tag1");
 
-    File::create(a.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(b"pub fn tag2() {}")
-        .unwrap();
+    a.change_file("src/lib.rs", "pub fn tag2() {}");
     git::add(&repo);
     git::commit(&repo);
     git::tag(&repo, "tag2");
@@ -308,10 +304,7 @@ fn git_same_branch_different_revs() {
 
     // Make a new commit on the master branch
     let repo = git2::Repository::open(&a.root()).unwrap();
-    File::create(a.root().join("src/lib.rs"))
-        .unwrap()
-        .write_all(b"pub fn f2() {}")
-        .unwrap();
+    a.change_file("src/lib.rs", "pub fn f2() {}");
     git::add(&repo);
     git::commit(&repo);
 

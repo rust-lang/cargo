@@ -2,7 +2,6 @@
 
 use std::env;
 use std::fs::{self, File};
-use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -174,15 +173,14 @@ fn find_closest_alias() {
     let root = paths::root();
     let my_home = root.join("my_home");
     fs::create_dir(&my_home).unwrap();
-    File::create(&my_home.join("config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [alias]
-        myalias = "build"
-    "#,
-        )
-        .unwrap();
+    fs::write(
+        &my_home.join("config"),
+        r#"
+            [alias]
+            myalias = "build"
+        "#,
+    )
+    .unwrap();
 
     cargo_process("myalais")
         .env("CARGO_HOME", &my_home)
@@ -239,17 +237,16 @@ fn override_cargo_home() {
     let root = paths::root();
     let my_home = root.join("my_home");
     fs::create_dir(&my_home).unwrap();
-    File::create(&my_home.join("config"))
-        .unwrap()
-        .write_all(
-            br#"
-        [cargo-new]
-        name = "foo"
-        email = "bar"
-        git = false
-    "#,
-        )
-        .unwrap();
+    fs::write(
+        &my_home.join("config"),
+        r#"
+            [cargo-new]
+            name = "foo"
+            email = "bar"
+            git = false
+        "#,
+    )
+    .unwrap();
 
     cargo_process("new foo")
         .env("USER", "foo")
@@ -257,11 +254,7 @@ fn override_cargo_home() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    let mut contents = String::new();
-    File::open(&toml)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
+    let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
 }
 

@@ -1,15 +1,13 @@
 //! Tests for normal registry dependencies.
 
-use std::fs::{self, File};
-use std::io::prelude::*;
-use std::path::Path;
-
 use cargo::util::paths::remove_dir_all;
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{self, registry_path, registry_url, Dependency, Package};
+use cargo_test_support::registry::{self, registry_path, Dependency, Package};
 use cargo_test_support::{basic_manifest, project, t};
+use std::fs::{self, File};
+use std::path::Path;
 
 #[cargo_test]
 fn simple() {
@@ -671,8 +669,9 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
     Package::new("bar", "0.0.1").yanked(true).publish();
     Package::new("baz", "0.0.1").publish();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -681,8 +680,8 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
             [dependencies]
             bar = "*"
             baz = "*"
-    "#
-    ));
+        "#,
+    );
 
     p.cargo("build").with_stdout("").run();
 }
@@ -897,8 +896,7 @@ fn bad_license_file() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("publish -v --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish -v --token sekrit")
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();
@@ -951,8 +949,9 @@ fn updating_a_dep() {
         )
         .run();
 
-    t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "a/Cargo.toml",
+        r#"
         [project]
         name = "a"
         version = "0.0.1"
@@ -960,8 +959,8 @@ fn updating_a_dep() {
 
         [dependencies]
         bar = "0.1.0"
-    "#
-    ));
+        "#,
+    );
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
@@ -1608,8 +1607,9 @@ fn add_dep_dont_update_registry() {
 
     p.cargo("build").run();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
         [project]
         name = "bar"
         version = "0.5.0"
@@ -1618,8 +1618,8 @@ fn add_dep_dont_update_registry() {
         [dependencies]
         baz = { path = "baz" }
         remote = "0.3"
-    "#
-    ));
+        "#,
+    );
 
     p.cargo("build")
         .with_stderr(
@@ -1666,8 +1666,9 @@ fn bump_version_dont_update_registry() {
 
     p.cargo("build").run();
 
-    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
-        br#"
+    p.change_file(
+        "Cargo.toml",
+        r#"
         [project]
         name = "bar"
         version = "0.6.0"
@@ -1675,8 +1676,8 @@ fn bump_version_dont_update_registry() {
 
         [dependencies]
         baz = { path = "baz" }
-    "#
-    ));
+        "#,
+    );
 
     p.cargo("build")
         .with_stderr(
@@ -1933,15 +1934,14 @@ fn git_init_templatedir_missing() {
     p.cargo("build").run();
 
     remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
-    File::create(paths::home().join(".gitconfig"))
-        .unwrap()
-        .write_all(
-            br#"
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
             [init]
             templatedir = nowhere
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     p.cargo("build").run();
     p.cargo("build").run();
@@ -2077,4 +2077,54 @@ fn readonly_registry_still_works() {
         perms.set_readonly(readonly);
         t!(fs::set_permissions(path, perms));
     }
+}
+
+#[cargo_test]
+fn registry_index_rejected() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [registry]
+            index = "https://example.com/"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
+
+    p.cargo("login")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
 }

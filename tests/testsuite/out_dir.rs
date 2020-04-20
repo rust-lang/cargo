@@ -1,11 +1,10 @@
 //! Tests for --out-dir flag.
 
-use std::env;
-use std::fs::{self, File};
-use std::path::Path;
-
 use cargo_test_support::sleep_ms;
 use cargo_test_support::{basic_manifest, project};
+use std::env;
+use std::fs;
+use std::path::Path;
 
 #[cargo_test]
 fn binary_with_debug() {
@@ -175,8 +174,8 @@ fn include_only_the_binary_from_the_current_package() {
 fn out_dir_is_a_file() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file("out", "")
         .build();
-    File::create(p.root().join("out")).unwrap();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()

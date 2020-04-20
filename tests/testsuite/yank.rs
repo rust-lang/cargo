@@ -4,10 +4,10 @@ use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
-use cargo_test_support::registry::{self, api_path, registry_url};
+use cargo_test_support::registry;
 
 fn setup(name: &str, version: &str) {
-    let dir = api_path().join(format!("api/v1/crates/{}/{}", name, version));
+    let dir = registry::api_path().join(format!("api/v1/crates/{}/{}", name, version));
     dir.mkdir_p();
     fs::write(dir.join("yank"), r#"{"ok": true}"#).unwrap();
 }
@@ -32,12 +32,9 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("yank --vers 0.0.1 --index")
-        .arg(registry_url().to_string())
-        .run();
+    p.cargo("yank --vers 0.0.1 --token sekrit").run();
 
-    p.cargo("yank --undo --vers 0.0.1 --index")
-        .arg(registry_url().to_string())
+    p.cargo("yank --undo --vers 0.0.1 --token sekrit")
         .with_status(101)
         .with_stderr(
             "    Updating `[..]` index

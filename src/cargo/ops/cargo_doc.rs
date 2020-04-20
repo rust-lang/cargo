@@ -104,10 +104,8 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
         }
         None => {
             if let Err(e) = opener::open(&path) {
-                shell.warn(format!("Couldn't open docs: {}", e))?;
-                for cause in anyhow::Error::new(e).chain().skip(1) {
-                    shell.warn(format!("Caused by:\n {}", cause))?;
-                }
+                let e = e.into();
+                crate::display_warning_with_error("couldn't open docs", &e, shell);
             }
         }
     };

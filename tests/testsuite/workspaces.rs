@@ -1,12 +1,9 @@
 //! Tests for workspaces.
 
-use std::env;
-use std::fs::{self, File};
-use std::io::{Read, Write};
-
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{sleep_ms, t};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use std::env;
+use std::fs;
 
 #[cargo_test]
 fn simple_explicit() {
@@ -1037,8 +1034,7 @@ fn new_warns_you_this_will_not_work() {
         .env("USER", "foo")
         .with_stderr(
             "\
-warning: compiling this new crate may not work due to invalid workspace \
-configuration
+warning: compiling this new crate may not work due to invalid workspace configuration
 
 current package believes it's in a workspace when it's not:
 current: [..]
@@ -1065,8 +1061,10 @@ fn new_warning_with_corrupt_ws() {
 failed to parse manifest at `[..]foo/Cargo.toml`
 
 Caused by:
-    0: could not parse input as TOML
-    1: expected an equals, found eof at line 1 column 5
+  could not parse input as TOML
+
+Caused by:
+  expected an equals, found eof at line 1 column 5
      Created binary (application) `bar` package
 ",
         )
@@ -1112,13 +1110,11 @@ fn lock_doesnt_change_depending_on_crate() {
 
     p.cargo("build").run();
 
-    let mut lockfile = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
+    let lockfile = p.read_lockfile();
 
     p.cargo("build").cwd("baz").run();
 
-    let mut lockfile2 = String::new();
-    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile2));
+    let lockfile2 = p.read_lockfile();
 
     assert_eq!(lockfile, lockfile2);
 }
@@ -1167,8 +1163,7 @@ fn rebuild_please() {
 
     sleep_ms(1000);
 
-    t!(t!(File::create(p.root().join("lib/src/lib.rs")))
-        .write_all(br#"pub fn foo() -> u32 { 1 }"#));
+    p.change_file("lib/src/lib.rs", "pub fn foo() -> u32 { 1 }");
 
     p.cargo("build").cwd("lib").run();
 

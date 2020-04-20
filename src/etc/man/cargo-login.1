@@ -2,12 +2,12 @@
 .\"     Title: cargo-login
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-06-03
+.\"      Date: 2020-04-16
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-LOGIN" "1" "2019-06-03" "\ \&" "\ \&"
+.TH "CARGO\-LOGIN" "1" "2020-04-16" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -36,7 +36,7 @@ cargo\-login \- Save an API token from the registry locally
 .sp
 This command will save the API token to disk so that commands that require
 authentication, such as \fBcargo\-publish\fP(1), will be automatically
-authenticated. The token is saved in \fB$CARGO_HOME/credentials\fP. \fBCARGO_HOME\fP
+authenticated. The token is saved in \fB$CARGO_HOME/credentials.toml\fP. \fBCARGO_HOME\fP
 defaults to \fB.cargo\fP in your home directory.
 .sp
 If the \fITOKEN\fP argument is not specified, it will be read from stdin.

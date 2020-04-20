@@ -133,7 +133,8 @@ fn build_resolve_graph(
         .pkg_set
         .get_many(ws_resolve.pkg_set.package_ids())?
         .into_iter()
-        .map(|pkg| (pkg.package_id(), pkg.clone()))
+        // This is a little lazy, but serde doesn't handle Rc fields very well.
+        .map(|pkg| (pkg.package_id(), Package::clone(pkg)))
         .collect();
 
     // Start from the workspace roots, and recurse through filling out the

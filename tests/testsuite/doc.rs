@@ -1,13 +1,11 @@
 //! Tests for the `cargo doc` command.
 
-use std::fs::{self, File};
-use std::io::Read;
-use std::str;
-
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 use cargo_test_support::{is_nightly, rustc_host};
+use std::fs;
+use std::str;
 
 #[cargo_test]
 fn simple() {
@@ -385,14 +383,7 @@ fn doc_lib_bin_same_name_documents_lib() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo/index.html");
-    assert!(doc_file.is_file());
-    let mut doc_html = String::new();
-    File::open(&doc_file)
-        .unwrap()
-        .read_to_string(&mut doc_html)
-        .unwrap();
+    let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("Library"));
     assert!(!doc_html.contains("Binary"));
 }
@@ -427,14 +418,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo/index.html");
-    assert!(doc_file.is_file());
-    let mut doc_html = String::new();
-    File::open(&doc_file)
-        .unwrap()
-        .read_to_string(&mut doc_html)
-        .unwrap();
+    let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("Library"));
     assert!(!doc_html.contains("Binary"));
 }
@@ -470,14 +454,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo/index.html");
-    assert!(doc_file.is_file());
-    let mut doc_html = String::new();
-    File::open(&doc_file)
-        .unwrap()
-        .read_to_string(&mut doc_html)
-        .unwrap();
+    let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
 }
@@ -513,14 +490,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 ",
         )
         .run();
-    assert!(p.root().join("target/doc").is_dir());
-    let doc_file = p.root().join("target/doc/foo/index.html");
-    assert!(doc_file.is_file());
-    let mut doc_html = String::new();
-    File::open(&doc_file)
-        .unwrap()
-        .read_to_string(&mut doc_html)
-        .unwrap();
+    let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(!doc_html.contains("Library"));
     assert!(doc_html.contains("Binary"));
 }

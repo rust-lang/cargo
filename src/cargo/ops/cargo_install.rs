@@ -158,6 +158,16 @@ fn install_one(
     no_track: bool,
     needs_update_if_source_is_index: bool,
 ) -> CargoResult<bool> {
+    if let Some(name) = krate {
+        if name == "." {
+            bail!(
+                "To install the binaries for the package in current working \
+                 directory use `cargo install --path .`. \
+                 Use `cargo build` if you want to simply build the package."
+            )
+        }
+    }
+
     let dst = root.join("bin").into_path_unlocked();
 
     let dependency = {

@@ -1,8 +1,5 @@
 //! Tests for the `cargo update` command.
 
-use std::fs::File;
-use std::io::prelude::*;
-
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project};
 
@@ -42,20 +39,18 @@ fn minor_update_two_places() {
     p.cargo("build").run();
     Package::new("log", "0.1.1").publish();
 
-    File::create(p.root().join("foo/Cargo.toml"))
-        .unwrap()
-        .write_all(
-            br#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                authors = []
+    p.change_file(
+        "foo/Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
 
-                [dependencies]
-                log = "0.1.1"
-            "#,
-        )
-        .unwrap();
+            [dependencies]
+            log = "0.1.1"
+        "#,
+    );
 
     p.cargo("build").run();
 }
@@ -630,7 +625,7 @@ fn dry_run_update() {
         .build();
 
     p.cargo("build").run();
-    let old_lockfile = p.read_file("Cargo.lock");
+    let old_lockfile = p.read_lockfile();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
@@ -644,6 +639,6 @@ fn dry_run_update() {
 ",
         )
         .run();
-    let new_lockfile = p.read_file("Cargo.lock");
+    let new_lockfile = p.read_lockfile();
     assert_eq!(old_lockfile, new_lockfile)
 }

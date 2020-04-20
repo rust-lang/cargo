@@ -13,7 +13,6 @@ use crate::CargoResult;
 use anyhow::bail;
 use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
-use std::fs;
 use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
@@ -285,7 +284,7 @@ pub trait ArgMatchesExt {
             if !path.ends_with("Cargo.toml") {
                 anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
-            if fs::metadata(&path).is_err() {
+            if !path.exists() {
                 anyhow::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
@@ -302,7 +301,7 @@ pub trait ArgMatchesExt {
         if config.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
-        if ws.is_virtual() && !config.cli_unstable().package_features {
+        if ws.is_virtual() && !ws.allows_unstable_package_features() {
             // --all-features is actually honored. In general, workspaces and
             // feature flags are a bit of a mess right now.
             for flag in &["features", "no-default-features"] {
@@ -493,7 +492,6 @@ pub trait ArgMatchesExt {
             target_rustc_args: None,
             local_rustdoc_args: None,
             rustdoc_document_private_items: false,
-            export_dir: None,
         };
 
         if let Some(ws) = workspace {

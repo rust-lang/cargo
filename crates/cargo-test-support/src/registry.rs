@@ -162,36 +162,37 @@ pub struct Dependency {
 pub fn init() {
     let config = paths::home().join(".cargo/config");
     t!(fs::create_dir_all(config.parent().unwrap()));
-    if fs::metadata(&config).is_ok() {
+    if config.exists() {
         return;
     }
-    t!(t!(File::create(&config)).write_all(
+    t!(fs::write(
+        &config,
         format!(
             r#"
-        [source.crates-io]
-        registry = 'https://wut'
-        replace-with = 'dummy-registry'
+                [source.crates-io]
+                registry = 'https://wut'
+                replace-with = 'dummy-registry'
 
-        [source.dummy-registry]
-        registry = '{reg}'
+                [source.dummy-registry]
+                registry = '{reg}'
 
-        [registries.alternative]
-        index = '{alt}'
-    "#,
+                [registries.alternative]
+                index = '{alt}'
+            "#,
             reg = registry_url(),
             alt = alt_registry_url()
         )
-        .as_bytes()
     ));
     let credentials = paths::home().join(".cargo/credentials");
-    t!(t!(File::create(&credentials)).write_all(
-        br#"
-        [registry]
-        token = "api-token"
+    t!(fs::write(
+        &credentials,
+        r#"
+            [registry]
+            token = "api-token"
 
-        [registries.alternative]
-        token = "api-token"
-    "#
+            [registries.alternative]
+            token = "api-token"
+        "#
     ));
 
     // Initialize a new registry.
@@ -404,8 +405,7 @@ impl Package {
             })
             .collect::<Vec<_>>();
         let cksum = {
-            let mut c = Vec::new();
-            t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
+            let c = t!(fs::read(&self.archive_dst()));
             cksum(&c)
         };
         let name = if self.invalid_json {
@@ -442,10 +442,9 @@ impl Package {
         } else {
             registry_path.join(&file)
         };
-        let mut prev = String::new();
-        let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
+        let prev = fs::read_to_string(&dst).unwrap_or(String::new());
         t!(fs::create_dir_all(dst.parent().unwrap()));
-        t!(t!(File::create(&dst)).write_all((prev + &line[..] + "\n").as_bytes()));
+        t!(fs::write(&dst, prev + &line[..] + "\n"));
 
         // Add the new file to the index.
         if !self.local {
@@ -474,6 +473,27 @@ impl Package {
     }
 
     fn make_archive(&self) {
+        let dst = self.archive_dst();
+        t!(fs::create_dir_all(dst.parent().unwrap()));
+        let f = t!(File::create(&dst));
+        let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
+
+        if !self.files.iter().any(|(name, _)| name == "Cargo.toml") {
+            self.append_manifest(&mut a);
+        }
+        if self.files.is_empty() {
+            self.append(&mut a, "src/lib.rs", "");
+        } else {
+            for &(ref name, ref contents) in self.files.iter() {
+                self.append(&mut a, name, contents);
+            }
+        }
+        for &(ref name, ref contents) in self.extra_files.iter() {
+            self.append_extra(&mut a, name, contents);
+        }
+    }
+
+    fn append_manifest<W: Write>(&self, ar: &mut Builder<W>) {
         let mut manifest = format!(
             r#"
             [package]
@@ -509,21 +529,7 @@ impl Package {
             manifest.push_str("[lib]\nproc-macro = true\n");
         }
 
-        let dst = self.archive_dst();
-        t!(fs::create_dir_all(dst.parent().unwrap()));
-        let f = t!(File::create(&dst));
-        let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
-        self.append(&mut a, "Cargo.toml", &manifest);
-        if self.files.is_empty() {
-            self.append(&mut a, "src/lib.rs", "");
-        } else {
-            for &(ref name, ref contents) in self.files.iter() {
-                self.append(&mut a, name, contents);
-            }
-        }
-        for &(ref name, ref contents) in self.extra_files.iter() {
-            self.append_extra(&mut a, name, contents);
-        }
+        self.append(ar, "Cargo.toml", &manifest);
     }
 
     fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, contents: &str) {

@@ -45,7 +45,7 @@ struct SerializedBuildPlan {
 }
 
 impl Invocation {
-    pub fn new(unit: &Unit<'_>, deps: Vec<usize>) -> Invocation {
+    pub fn new(unit: &Unit, deps: Vec<usize>) -> Invocation {
         let id = unit.pkg.package_id();
         Invocation {
             package_name: id.name().to_string(),
@@ -109,7 +109,7 @@ impl BuildPlan {
         }
     }
 
-    pub fn add<'a>(&mut self, cx: &Context<'a, '_>, unit: &Unit<'a>) -> CargoResult<()> {
+    pub fn add(&mut self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx

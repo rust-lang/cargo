@@ -107,7 +107,7 @@ separated with a comma, e.g., `>= 1.2, < 1.5`.
 ### Specifying dependencies from other registries
 
 To specify a dependency from a registry other than [crates.io], first the
-registry must be configured in a `.cargo/config` file. See the [registries
+registry must be configured in a `.cargo/config.toml` file. See the [registries
 documentation] for more information. In the dependency, set the `registry` key
 to the name of the registry to use.
 

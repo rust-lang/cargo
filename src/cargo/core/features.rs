@@ -82,6 +82,11 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
+            s if s.parse().map_or(false, |y: u16| y > 2020 && y < 2050) => bail!(
+                "this version of Cargo is older than the `{}` edition, \
+                 and only supports `2015` and `2018` editions.",
+                s
+            ),
             s => bail!(
                 "supported edition values are `2015` or `2018`, but `{}` \
                  is unknown",
@@ -206,6 +211,9 @@ features! {
 
         // Allow to specify profiles other than 'dev', 'release', 'test', etc.
         [unstable] named_profiles: bool,
+
+        // Opt-in new-resolver behavior.
+        [unstable] resolver: bool,
     }
 }
 

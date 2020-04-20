@@ -12,14 +12,14 @@ all parent directories. If, for example, Cargo were invoked in
 `/projects/foo/bar/baz`, then the following configuration files would be
 probed for and unified in this order:
 
-* `/projects/foo/bar/baz/.cargo/config`
-* `/projects/foo/bar/.cargo/config`
-* `/projects/foo/.cargo/config`
-* `/projects/.cargo/config`
-* `/.cargo/config`
-* `$CARGO_HOME/config` which defaults to:
-    * Windows: `%USERPROFILE%\.cargo\config`
-    * Unix: `$HOME/.cargo/config`
+* `/projects/foo/bar/baz/.cargo/config.toml`
+* `/projects/foo/bar/.cargo/config.toml`
+* `/projects/foo/.cargo/config.toml`
+* `/projects/.cargo/config.toml`
+* `/.cargo/config.toml`
+* `$CARGO_HOME/config.toml` which defaults to:
+    * Windows: `%USERPROFILE%\.cargo\config.toml`
+    * Unix: `$HOME/.cargo/config.toml`
 
 With this structure, you can specify configuration per-package, and even
 possibly check it into version control. You can also specify personal defaults
@@ -29,6 +29,11 @@ If a key is specified in multiple config files, the values will get merged
 together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the
 home directory is the lowest priority. Arrays will be joined together.
+
+> **Note:** Cargo also reads config files without the `.toml` extension, such as
+> `.cargo/config`. Support for the `.toml` extension was added in version 1.39
+> and is the preferred form. If both files exist, Cargo will use the file
+> without the extension.
 
 ### Configuration format
 
@@ -179,15 +184,15 @@ relative to the current working directory.
 runner = "foo"  # Searches `PATH` for `foo`.
 
 [source.vendored-sources]
-# Directory is relative to the parent where `.cargo/config` is located.
-# For example, `/my/project/.cargo/config` would result in `/my/project/vendor`.
+# Directory is relative to the parent where `.cargo/config.toml` is located.
+# For example, `/my/project/.cargo/config.toml` would result in `/my/project/vendor`.
 directory = "vendor"
 ```
 
 ### Credentials
 
 Configuration values with sensitive information are stored in the
-`$CARGO_HOME/credentials` file. This file is automatically created and updated
+`$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
 by [`cargo login`]. It follows the same format as Cargo config files.
 
 ```toml
@@ -681,7 +686,7 @@ specified.
 
 ##### `registry.index`
 
-This value is deprecated and should not be used.
+This value is no longer accepted and should not be used.
 
 ##### `registry.default`
 * Type: string

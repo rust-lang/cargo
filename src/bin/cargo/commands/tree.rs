@@ -1,3 +1,4 @@
+use crate::cli;
 use crate::command_prelude::*;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
@@ -88,9 +89,22 @@ pub fn cli() -> App {
                 .short("f")
                 .default_value("{p}"),
         )
+        .arg(
+            // Backwards compatibility with old cargo-tree.
+            Arg::with_name("version")
+                .long("version")
+                .short("V")
+                .hidden(true),
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+    if args.is_present("version") {
+        let verbose = args.occurrences_of("verbose") > 0;
+        let version = cli::get_version_string(verbose);
+        print!("{}", version);
+        return Ok(());
+    }
     let prefix = if args.is_present("no-indent") {
         config
             .shell()
@@ -106,12 +120,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let prefix = tree::Prefix::from_str(prefix).map_err(|e| anyhow::anyhow!("{}", e))?;
 
+    let no_dedupe = args.is_present("no-dedupe") || args.is_present("all");
     if args.is_present("all") {
-        return Err(format_err!(
-            "The `cargo tree` --all flag has been changed to --no-dedupe.\n\
-            If you are looking to display all workspace members, use the --workspace flag."
-        )
-        .into());
+        config.shell().warn(
+            "The `cargo tree` --all flag has been changed to --no-dedupe, \
+             and may be removed in a future version.\n\
+             If you are looking to display all workspace members, use the --workspace flag.",
+        )?;
     }
 
     let target = if args.is_present("all-targets") {
@@ -170,7 +185,7 @@ subtree of the package given to -p.\n\
         edge_kinds,
         invert,
         prefix,
-        no_dedupe: args.is_present("no-dedupe"),
+        no_dedupe,
         duplicates: args.is_present("duplicates"),
         charset,
         format: args.value_of("format").unwrap().to_string(),

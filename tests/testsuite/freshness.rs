@@ -1,7 +1,7 @@
 //! Tests for fingerprinting (rebuild detection).
 
 use filetime::FileTime;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpListener;
@@ -34,10 +34,7 @@ fn modifying_and_moving() {
     p.root().move_into_the_past();
     p.root().join("target").move_into_the_past();
 
-    File::create(&p.root().join("src/a.rs"))
-        .unwrap()
-        .write_all(b"#[allow(unused)]fn main() {}")
-        .unwrap();
+    p.change_file("src/a.rs", "#[allow(unused)]fn main() {}");
     p.cargo("build")
         .with_stderr(
             "\
@@ -78,16 +75,8 @@ fn modify_only_some_files() {
     assert!(p.bin("foo").is_file());
 
     let lib = p.root().join("src/lib.rs");
-    let bin = p.root().join("src/b.rs");
-
-    File::create(&lib)
-        .unwrap()
-        .write_all(b"invalid rust code")
-        .unwrap();
-    File::create(&bin)
-        .unwrap()
-        .write_all(b"#[allow(unused)]fn foo() {}")
-        .unwrap();
+    p.change_file("src/lib.rs", "invalid rust code");
+    p.change_file("src/b.rs", "#[allow(unused)]fn foo() {}");
     lib.move_into_the_past();
 
     // Make sure the binary is rebuilt, not the lib
@@ -538,7 +527,7 @@ fn rebuild_tests_if_lib_changes() {
     p.cargo("test").run();
 
     sleep_ms(1000);
-    File::create(&p.root().join("src/lib.rs")).unwrap();
+    p.change_file("src/lib.rs", "");
 
     p.cargo("build -v").run();
     p.cargo("test -v")
@@ -838,18 +827,16 @@ fn rebuild_if_environment_changes() {
         )
         .run();
 
-    File::create(&p.root().join("Cargo.toml"))
-        .unwrap()
-        .write_all(
-            br#"
-        [package]
-        name = "foo"
-        description = "new desc"
-        version = "0.0.1"
-        authors = []
-    "#,
-        )
-        .unwrap();
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            description = "new desc"
+            version = "0.0.1"
+            authors = []
+        "#,
+    );
 
     p.cargo("run")
         .with_stdout("new desc")
@@ -1471,7 +1458,7 @@ fn bust_patched_dep() {
         sleep_ms(1000);
     }
 
-    File::create(&p.root().join("reg1new/src/lib.rs")).unwrap();
+    p.change_file("reg1new/src/lib.rs", "");
     if is_coarse_mtime() {
         sleep_ms(1000);
     }

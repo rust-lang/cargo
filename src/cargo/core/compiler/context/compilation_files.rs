@@ -82,15 +82,15 @@ pub struct CompilationFiles<'a, 'cfg> {
     export_dir: Option<PathBuf>,
     /// The root targets requested by the user on the command line (does not
     /// include dependencies).
-    roots: Vec<Unit<'a>>,
+    roots: Vec<Unit>,
     ws: &'a Workspace<'cfg>,
     /// Metadata hash to use for each unit.
     ///
     /// `None` if the unit should not use a metadata data hash (like rustdoc,
     /// or some dylibs).
-    metas: HashMap<Unit<'a>, Option<Metadata>>,
+    metas: HashMap<Unit, Option<Metadata>>,
     /// For each Unit, a list all files produced.
-    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
+    outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
 
 /// Info about a single file emitted by the compiler.
@@ -119,15 +119,12 @@ impl OutputFile {
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
-        roots: &[Unit<'a>],
+        cx: &Context<'a, 'cfg>,
         host: Layout,
         target: HashMap<CompileTarget, Layout>,
-        export_dir: Option<PathBuf>,
-        ws: &'a Workspace<'cfg>,
-        cx: &Context<'a, 'cfg>,
     ) -> CompilationFiles<'a, 'cfg> {
         let mut metas = HashMap::new();
-        for unit in roots {
+        for unit in &cx.bcx.roots {
             metadata_of(unit, cx, &mut metas);
         }
         let outputs = metas
@@ -136,11 +133,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(|unit| (unit, LazyCell::new()))
             .collect();
         CompilationFiles {
-            ws,
+            ws: &cx.bcx.ws,
             host,
             target,
-            export_dir,
-            roots: roots.to_vec(),
+            export_dir: cx.bcx.build_config.export_dir.clone(),
+            roots: cx.bcx.roots.clone(),
             metas,
             outputs,
         }
@@ -161,20 +158,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ///
     /// Returns `None` if the unit should not use a metadata data hash (like
     /// rustdoc, or some dylibs).
-    pub fn metadata(&self, unit: &Unit<'a>) -> Option<Metadata> {
+    pub fn metadata(&self, unit: &Unit) -> Option<Metadata> {
         self.metas[unit]
     }
 
     /// Gets the short hash based only on the `PackageId`.
     /// Used for the metadata when `metadata` returns `None`.
-    pub fn target_short_hash(&self, unit: &Unit<'_>) -> String {
+    pub fn target_short_hash(&self, unit: &Unit) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
         util::short_hash(&hashable)
     }
 
     /// Returns the appropriate output directory for the specified package and
     /// target.
-    pub fn out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
         if unit.mode.is_doc() {
             self.layout(unit.kind).doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
@@ -194,7 +191,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 
     /// Directory name to use for a package in the form `NAME-HASH`.
-    pub fn pkg_dir(&self, unit: &Unit<'a>) -> String {
+    pub fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
         match self.metas[unit] {
             Some(ref meta) => format!("{}-{}", name, meta),
@@ -214,24 +211,24 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit<'_>) -> &Path {
+    pub fn deps_dir(&self, unit: &Unit) -> &Path {
         self.layout(unit.kind).deps()
     }
 
     /// Directory where the fingerprint for the given unit should go.
-    pub fn fingerprint_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
     /// Path where compiler output is cached.
-    pub fn message_cache_path(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn message_cache_path(&self, unit: &Unit) -> PathBuf {
         self.fingerprint_dir(unit).join("output")
     }
 
     /// Returns the directory where a compiled build script is stored.
     /// `/path/to/target/{debug,release}/build/PKG-HASH`
-    pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn build_script_dir(&self, unit: &Unit) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(!unit.mode.is_run_custom_build());
         assert!(self.metas.contains_key(unit));
@@ -242,7 +239,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directory where information about running a build script
     /// is stored.
     /// `/path/to/target/{debug,release}/build/PKG-HASH`
-    pub fn build_script_run_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn build_script_run_dir(&self, unit: &Unit) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
@@ -251,12 +248,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Returns the "OUT_DIR" directory for running a build script.
     /// `/path/to/target/{debug,release}/build/PKG-HASH/out`
-    pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    pub fn build_script_out_dir(&self, unit: &Unit) -> PathBuf {
         self.build_script_run_dir(unit).join("out")
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata).
-    pub fn file_stem(&self, unit: &Unit<'a>) -> String {
+    pub fn file_stem(&self, unit: &Unit) -> String {
         match self.metas[unit] {
             Some(ref metadata) => format!("{}-{}", unit.target.crate_name(), metadata),
             None => self.bin_stem(unit),
@@ -295,7 +292,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the filenames that the given unit will generate.
     pub(super) fn outputs(
         &self,
-        unit: &Unit<'a>,
+        unit: &Unit,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.outputs[unit]
@@ -304,8 +301,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 
     /// Returns the bin filename for a given target, without extension and metadata.
-    fn bin_stem(&self, unit: &Unit<'_>) -> String {
-        if unit.target.allows_underscores() {
+    fn bin_stem(&self, unit: &Unit) -> String {
+        if unit.target.allows_dashes() {
             unit.target.name().to_string()
         } else {
             unit.target.crate_name()
@@ -325,7 +322,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ///
     /// Returns an `Option` because in some cases we don't want to link
     /// (eg a dependent lib).
-    fn link_stem(&self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
+    fn link_stem(&self, unit: &Unit) -> Option<(PathBuf, String)> {
         let out_dir = self.out_dir(unit);
         let bin_stem = self.bin_stem(unit); // Stem without metadata.
         let file_stem = self.file_stem(unit); // Stem with metadata.
@@ -358,7 +355,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     fn calc_outputs(
         &self,
-        unit: &Unit<'a>,
+        unit: &Unit,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
@@ -408,7 +405,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     fn calc_outputs_rustc(
         &self,
-        unit: &Unit<'a>,
+        unit: &Unit,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Vec<OutputFile>> {
         let mut ret = Vec::new();
@@ -522,14 +519,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 }
 
-fn metadata_of<'a, 'cfg>(
-    unit: &Unit<'a>,
-    cx: &Context<'a, 'cfg>,
-    metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
+fn metadata_of(
+    unit: &Unit,
+    cx: &Context<'_, '_>,
+    metas: &mut HashMap<Unit, Option<Metadata>>,
 ) -> Option<Metadata> {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
-        metas.insert(*unit, meta);
+        metas.insert(unit.clone(), meta);
         for dep in cx.unit_deps(unit) {
             metadata_of(&dep.unit, cx, metas);
         }
@@ -537,10 +534,10 @@ fn metadata_of<'a, 'cfg>(
     metas[unit]
 }
 
-fn compute_metadata<'a, 'cfg>(
-    unit: &Unit<'a>,
-    cx: &Context<'a, 'cfg>,
-    metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
+fn compute_metadata(
+    unit: &Unit,
+    cx: &Context<'_, '_>,
+    metas: &mut HashMap<Unit, Option<Metadata>>,
 ) -> Option<Metadata> {
     if unit.mode.is_doc_test() {
         // Doc tests do not have metadata.
@@ -631,7 +628,7 @@ fn compute_metadata<'a, 'cfg>(
 
     hash_rustc_version(bcx, &mut hasher);
 
-    if cx.bcx.ws.is_member(unit.pkg) {
+    if cx.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
         if let Some(path) = &cx.bcx.rustc().workspace_wrapper {
