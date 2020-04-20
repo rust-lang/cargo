@@ -152,6 +152,20 @@ fn missing() {
 }
 
 #[cargo_test]
+fn missing_current_working_directory() {
+    cargo_process("install .")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: To install the binaries for the package in current working \
+directory use `cargo install --path .`. Use `cargo build` if you \
+want to simply build the package.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_version() {
     pkg("foo", "0.0.1");
     cargo_process("install foo --vers=0.2.0")

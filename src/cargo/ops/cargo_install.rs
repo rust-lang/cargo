@@ -146,6 +146,15 @@ fn install_one(
     no_track: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
+    if let Some(name) = krate {
+        if name == "." {
+            bail!(
+                "To install the binaries for the package in current working \
+                 directory use `cargo install --path .`. \
+                 Use `cargo build` if you want to simply build the package."
+            )
+        }
+    }
     let pkg = if source_id.is_git() {
         select_pkg(
             GitSource::new(source_id, config)?,
