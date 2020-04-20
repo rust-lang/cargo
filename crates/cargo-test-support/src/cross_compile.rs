@@ -190,6 +190,8 @@ pub fn alternate() -> &'static str {
         "i686-unknown-linux-gnu"
     } else if cfg!(all(target_os = "windows", target_env = "msvc")) {
         "i686-pc-windows-msvc"
+    } else if cfg!(all(target_os = "windows", target_env = "gnu")) {
+        "i686-pc-windows-gnu"
     } else {
         panic!("This test should be gated on cross_compile::disabled.");
     }

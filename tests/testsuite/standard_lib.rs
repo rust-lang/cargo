@@ -21,6 +21,12 @@ fn setup() -> Option<Setup> {
         return None;
     }
 
+    if cfg!(all(target_os = "windows", target_env = "gnu")) {
+        // FIXME: contains object files that we don't handle yet:
+        // https://github.com/rust-lang/wg-cargo-std-aware/issues/46
+        return None;
+    }
+
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
