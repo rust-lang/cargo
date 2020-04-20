@@ -835,7 +835,7 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
             );
             if out.status.success() {
                 let new = git2::Repository::open(repo.path())?;
-                mem::replace(repo, new);
+                let _ = mem::replace(repo, new);
                 return Ok(());
             }
         }
