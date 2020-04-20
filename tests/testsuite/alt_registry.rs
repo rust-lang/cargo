@@ -298,7 +298,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
-    p.cargo("publish --index")
+    p.cargo("publish --token sekrit --index")
         .arg(fakeio_url.to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
@@ -413,17 +413,18 @@ fn alt_registry_and_crates_io_deps() {
 
 #[cargo_test]
 fn block_publish_due_to_no_token() {
-    let p = project().file("src/main.rs", "fn main() {}").build();
-
-    // Setup the registry by publishing a package
-    Package::new("bar", "0.0.1").alternative(true).publish();
+    registry::init();
+    let p = project().file("src/lib.rs", "").build();
 
     fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
 
     // Now perform the actual publish
     p.cargo("publish --registry alternative")
         .with_status(101)
-        .with_stderr_contains("error: no upload token found, please run `cargo login`")
+        .with_stderr_contains(
+            "error: no upload token found, \
+            please run `cargo login` or pass `--token`",
+        )
         .run();
 }
 
@@ -526,28 +527,6 @@ fn publish_with_crates_io_dep() {
         "foo-0.0.1.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
-}
-
-#[cargo_test]
-fn passwords_in_registry_index_url_forbidden() {
-    registry::init();
-
-    let config = paths::home().join(".cargo/config");
-    fs::write(
-        config,
-        r#"
-        [registry]
-        index = "ssh://git:secret@foobar.com"
-        "#,
-    )
-    .unwrap();
-
-    let p = project().file("src/main.rs", "fn main() {}").build();
-
-    p.cargo("publish")
-        .with_status(101)
-        .with_stderr_contains("error: Registry URLs may not contain passwords")
-        .run();
 }
 
 #[cargo_test]
@@ -1223,57 +1202,6 @@ fn registries_index_relative_url() {
 }
 
 #[cargo_test]
-fn registry_index_relative_url() {
-    let config = paths::root().join(".cargo/config");
-    fs::create_dir_all(config.parent().unwrap()).unwrap();
-    fs::write(
-        &config,
-        r#"
-            [registry]
-            index = "file:alternative-registry"
-        "#,
-    )
-    .unwrap();
-
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.bar]
-            version = "0.0.1"
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    Package::new("bar", "0.0.1").alternative(true).publish();
-
-    fs::remove_file(paths::home().join(".cargo/config")).unwrap();
-
-    p.cargo("build")
-        .with_stderr(&format!(
-            "\
-warning: custom registry support via the `registry.index` configuration is being removed, this functionality will not work in the future
-[UPDATING] `{reg}` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
-",
-            reg = registry::alt_registry_path().to_str().unwrap()
-        ))
-        .run();
-}
-
-#[cargo_test]
 fn registries_index_relative_path_not_allowed() {
     let config = paths::root().join(".cargo/config");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
@@ -1319,4 +1247,20 @@ Caused by:
         ))
         .with_status(101)
         .run();
+}
+
+#[cargo_test]
+fn both_index_and_registry() {
+    let p = project().file("src/lib.rs", "").build();
+    for cmd in &["publish", "owner", "search", "yank --vers 1.0.0"] {
+        p.cargo(cmd)
+            .arg("--registry=foo")
+            .arg("--index=foo")
+            .with_status(101)
+            .with_stderr(
+                "[ERROR] both `--index` and `--registry` \
+                should not be set at the same time",
+            )
+            .run();
+    }
 }

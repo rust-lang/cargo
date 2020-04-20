@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::{cmp, env};
 
 use anyhow::{bail, format_err};
-use crates_io::{NewCrate, NewCrateDependency, Registry};
+use crates_io::{self, NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt, SslVersion};
 use log::{log, Level};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
@@ -25,8 +25,13 @@ use crate::util::IntoUrl;
 use crate::util::{paths, validate_package_name};
 use crate::version;
 
+/// Registry settings loaded from config files.
+///
+/// This is loaded based on the `--registry` flag and the config settings.
 pub struct RegistryConfig {
+    /// The index URL. If `None`, use crates.io.
     pub index: Option<String>,
+    /// The authentication token.
     pub token: Option<String>,
 }
 
@@ -316,10 +321,15 @@ fn transmit(
     }
 }
 
+/// Returns the index and token from the config file for the given registry.
+///
+/// `registry` is typically the registry specified on the command-line. If
+/// `None`, `index` is set to `None` to indicate it should use crates.io.
 pub fn registry_configuration(
     config: &Config,
     registry: Option<String>,
 ) -> CargoResult<RegistryConfig> {
+    // `registry.default` is handled in command-line parsing.
     let (index, token) = match registry {
         Some(registry) => {
             validate_package_name(&registry, "registry name", "")?;
@@ -331,19 +341,26 @@ pub fn registry_configuration(
             )
         }
         None => {
-            // Checking for default index and token
-            (
-                config
-                    .get_default_registry_index()?
-                    .map(|url| url.to_string()),
-                config.get_string("registry.token")?.map(|p| p.val),
-            )
+            // Use crates.io default.
+            config.check_registry_index_not_set()?;
+            (None, config.get_string("registry.token")?.map(|p| p.val))
         }
     };
 
     Ok(RegistryConfig { index, token })
 }
 
+/// Returns the `Registry` and `Source` based on command-line and config settings.
+///
+/// * `token`: The token from the command-line. If not set, uses the token
+///   from the config.
+/// * `index`: The index URL from the command-line. This is ignored if
+///   `registry` is set.
+/// * `registry`: The registry name from the command-line. If neither
+///   `registry`, or `index` are set, then uses `crates-io`, honoring
+///   `[source]` replacement if defined.
+/// * `force_update`: If `true`, forces the index to be updated.
+/// * `validate_token`: If `true`, the token must be set.
 fn registry(
     config: &Config,
     token: Option<String>,
@@ -352,13 +369,17 @@ fn registry(
     force_update: bool,
     validate_token: bool,
 ) -> CargoResult<(Registry, SourceId)> {
+    if index.is_some() && registry.is_some() {
+        // Otherwise we would silently ignore one or the other.
+        bail!("both `--index` and `--registry` should not be set at the same time");
+    }
     // Parse all configuration options
     let RegistryConfig {
         token: token_config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
-    let token = token.or(token_config);
-    let sid = get_source_id(config, index_config.or(index), registry)?;
+    let opt_index = index_config.as_ref().or(index.as_ref());
+    let sid = get_source_id(config, opt_index, registry.as_ref())?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -386,10 +407,51 @@ fn registry(
         cfg.and_then(|cfg| cfg.api)
             .ok_or_else(|| format_err!("{} does not support API commands", sid))?
     };
-    let handle = http_handle(config)?;
-    if validate_token && token.is_none() {
-        bail!("no upload token found, please run `cargo login`");
+    let token = match (&index, &token, &token_config) {
+        // No token.
+        (None, None, None) => {
+            if validate_token {
+                bail!("no upload token found, please run `cargo login` or pass `--token`");
+            }
+            None
+        }
+        // Token on command-line.
+        (_, Some(_), _) => token,
+        // Token in config, no --index, loading from config is OK for crates.io.
+        (None, None, Some(_)) => {
+            // Check `is_default_registry` so that the crates.io index can
+            // change config.json's "api" value, and this won't affect most
+            // people. It will affect those using source replacement, but
+            // hopefully that's a relatively small set of users.
+            if registry.is_none()
+                && !sid.is_default_registry()
+                && !crates_io::is_url_crates_io(&api_host)
+            {
+                if validate_token {
+                    config.shell().warn(
+                        "using `registry.token` config value with source \
+                        replacement is deprecated\n\
+                        This may become a hard error in the future; \
+                        see <https://github.com/rust-lang/cargo/issues/xxx>.\n\
+                        Use the --token command-line flag to remove this warning.",
+                    )?;
+                    token_config
+                } else {
+                    None
+                }
+            } else {
+                token_config
+            }
+        }
+        // --index, no --token
+        (Some(_), None, _) => {
+            if validate_token {
+                bail!("command-line argument --index requires --token to be specified")
+            }
+            None
+        }
     };
+    let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
@@ -739,10 +801,14 @@ pub fn yank(
     Ok(())
 }
 
+/// Gets the SourceId for an index or registry setting.
+///
+/// The `index` and `reg` values are from the command-line or config settings.
+/// If both are None, returns the source for crates.io.
 fn get_source_id(
     config: &Config,
-    index: Option<String>,
-    reg: Option<String>,
+    index: Option<&String>,
+    reg: Option<&String>,
 ) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, &r),

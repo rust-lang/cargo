@@ -686,7 +686,7 @@ specified.
 
 ##### `registry.index`
 
-This value is deprecated and should not be used.
+This value is no longer accepted and should not be used.
 
 ##### `registry.default`
 * Type: string

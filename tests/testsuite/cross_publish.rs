@@ -97,8 +97,7 @@ fn publish_with_target() {
 
     let target = cross_compile::alternate();
 
-    p.cargo("publish --index")
-        .arg(registry::registry_url().to_string())
+    p.cargo("publish --token sekrit")
         .arg("--target")
         .arg(&target)
         .with_stderr(&format!(

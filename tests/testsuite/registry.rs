@@ -4,7 +4,7 @@ use cargo::util::paths::remove_dir_all;
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{self, registry_path, registry_url, Dependency, Package};
+use cargo_test_support::registry::{self, registry_path, Dependency, Package};
 use cargo_test_support::{basic_manifest, project, t};
 use std::fs::{self, File};
 use std::path::Path;
@@ -896,8 +896,7 @@ fn bad_license_file() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("publish -v --index")
-        .arg(registry_url().to_string())
+    p.cargo("publish -v --token sekrit")
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();
@@ -2078,4 +2077,54 @@ fn readonly_registry_still_works() {
         perms.set_readonly(readonly);
         t!(fs::set_permissions(path, perms));
     }
+}
+
+#[cargo_test]
+fn registry_index_rejected() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [registry]
+            index = "https://example.com/"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
+
+    p.cargo("login")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `registry.index` config value is no longer supported
+Use `[source]` replacement to alter the default index for crates.io.
+",
+        )
+        .run();
 }
