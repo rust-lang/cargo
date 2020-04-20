@@ -2,8 +2,10 @@
 
 use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::{basic_manifest, project, rustc_host};
+use cargo_test_support::{basic_manifest, cargo_process, project, rustc_host};
+use std::fs::File;
 
 #[cargo_test]
 fn inactivate_targets() {
@@ -1288,4 +1290,422 @@ fn build_dep_activated() {
         .arg(alternate())
         .masquerade_as_nightly_cargo()
         .run();
+}
+
+#[cargo_test]
+fn resolver_gated() {
+    // Check that `resolver` field is feature gated.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            resolver = "2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  feature `resolver` is required
+
+consider adding `cargo-features = [\"resolver\"]` to the manifest
+",
+        )
+        .run();
+
+    // Test with virtual ws.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+            resolver = "2"
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  feature `resolver` is required
+
+consider adding `cargo-features = [\"resolver\"]` to the manifest
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolver_bad_setting() {
+    // Unknown setting in `resolver`
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            resolver = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  `resolver` setting `1` is not valid, only valid option is \"2\"
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolver_not_both() {
+    // Can't specify resolver in both workspace and package.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [workspace]
+            resolver = "2"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            resolver = "2"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  cannot specify `resolver` field in both `[workspace]` and `[package]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolver_ws_member() {
+    // Can't specify `resolver` in a ws member.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [package]
+            name = "a"
+            version = "0.1.0"
+            resolver = "2"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+warning: resolver for the non root package will be ignored, specify resolver at the workspace root:
+package:   [..]/foo/a/Cargo.toml
+workspace: [..]/foo/Cargo.toml
+[CHECKING] a v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolver_ws_root_and_member() {
+    // Check when specified in both ws root and member.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [workspace]
+            members = ["a"]
+            resolver = "2"
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [package]
+            name = "a"
+            version = "0.1.0"
+            resolver = "2"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    // Ignores if they are the same.
+    p.cargo("check")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[CHECKING] a v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolver_enables_new_features() {
+    // resolver="2" enables all the things.
+    Package::new("common", "1.0.0")
+        .feature("normal", &[])
+        .feature("build", &[])
+        .feature("dev", &[])
+        .feature("itarget", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn feats() -> u32 {
+                let mut res = 0;
+                if cfg!(feature="normal") { res |= 1; }
+                if cfg!(feature="build") { res |= 2; }
+                if cfg!(feature="dev") { res |= 4; }
+                if cfg!(feature="itarget") { res |= 8; }
+                res
+            }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [workspace]
+            members = ["a", "b"]
+            resolver = "2"
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            common = {version = "1.0", features=["normal"]}
+
+            [dev-dependencies]
+            common = {version = "1.0", features=["dev"]}
+
+            [build-dependencies]
+            common = {version = "1.0", features=["build"]}
+
+            [target.'cfg(whatever)'.dependencies]
+            common = {version = "1.0", features=["itarget"]}
+            "#,
+        )
+        .file(
+            "a/src/main.rs",
+            r#"
+            fn main() {
+                expect();
+            }
+
+            fn expect() {
+                let expected: u32 = std::env::var("EXPECTED_FEATS").unwrap().parse().unwrap();
+                assert_eq!(expected, common::feats());
+            }
+
+            #[test]
+            fn from_test() {
+                expect();
+            }
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+
+            [features]
+            ping = []
+            "#,
+        )
+        .file(
+            "b/src/main.rs",
+            r#"
+            fn main() {
+                if cfg!(feature="ping") {
+                    println!("pong");
+                }
+            }
+            "#,
+        )
+        .build();
+
+    // Only normal.
+    p.cargo("run --bin a")
+        .masquerade_as_nightly_cargo()
+        .env("EXPECTED_FEATS", "1")
+        .run();
+
+    // only normal+dev
+    p.cargo("test")
+        .cwd("a")
+        .masquerade_as_nightly_cargo()
+        .env("EXPECTED_FEATS", "5")
+        .run();
+
+    // -Zpackage-features is enabled.
+    p.cargo("run -p b --features=ping")
+        .cwd("a")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("pong")
+        .run();
+}
+
+#[cargo_test]
+fn install_resolve_behavior() {
+    // install honors the resolver behavior.
+    Package::new("common", "1.0.0")
+        .feature("f1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+            #[cfg(feature = "f1")]
+            compile_error!("f1 should not activate");
+            "#,
+        )
+        .publish();
+
+    Package::new("bar", "1.0.0").dep("common", "1.0").publish();
+
+    Package::new("foo", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            resolver = "2"
+
+            [target.'cfg(whatever)'.dependencies]
+            common = {version="1.0", features=["f1"]}
+
+            [dependencies]
+            bar = "1.0"
+
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("install foo")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn package_includes_resolve_behavior() {
+    // `cargo package` will inherit the correct resolve behavior.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["resolver"]
+            [workspace]
+            members = ["a"]
+            resolver = "2"
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = ["Zzz"]
+            description = "foo"
+            license = "MIT"
+            homepage = "https://example.com/"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .cwd("a")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    let rewritten_toml = format!(
+        r#"{}
+cargo-features = ["resolver"]
+
+[package]
+name = "a"
+version = "0.1.0"
+authors = ["Zzz"]
+description = "foo"
+homepage = "https://example.com/"
+license = "MIT"
+resolver = "2"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE
+    );
+
+    let f = File::open(&p.root().join("target/package/a-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "a-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
 }

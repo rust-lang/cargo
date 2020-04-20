@@ -72,6 +72,7 @@ pub fn resolve_std<'cfg>(
         ws_config,
         /*profiles*/ None,
         crate::core::Features::default(),
+        None,
     );
 
     let config = ws.config();

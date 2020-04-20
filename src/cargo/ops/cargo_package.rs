@@ -156,7 +156,7 @@ fn build_ar_list(
                     rel_str: "Cargo.toml.orig".to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
-                let generated = pkg.to_registry_toml(ws.config())?;
+                let generated = pkg.to_registry_toml(ws)?;
                 result.push(ArchiveFile {
                     rel_path,
                     rel_str,
@@ -267,7 +267,7 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
         orig_pkg
             .manifest()
             .original()
-            .prepare_for_publish(config, orig_pkg.root())?,
+            .prepare_for_publish(ws, orig_pkg.root())?,
     );
     let package_root = orig_pkg.root();
     let source_id = orig_pkg.package_id().source_id();

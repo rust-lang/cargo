@@ -574,6 +574,40 @@ make feature flags behave in a more intuitive manner.
 The ability to set features for non-workspace members is no longer allowed, as
 the resolver fundamentally does not support that ability.
 
+### Resolver
+* Tracking Issue: [#8088](https://github.com/rust-lang/cargo/issues/8088)
+
+The `resolver` feature allows the resolver version to be specified in the
+`Cargo.toml` manifest. This allows a project to opt-in to
+backwards-incompatible changes in the resolver.
+
+```toml
+cargo-features = ["resolver"]
+
+[package]
+name = "my-package"
+version = "1.0.0"
+resolver = "2"
+```
+
+Currently the only allowed value is `"2"`. This declaration enables all of the
+new feature behavior of [`-Zfeatures=all`](#features) and
+[`-Zpackage-features`](#package-features).
+
+This flag is global for a workspace. If using a virtual workspace, the root
+definition should be in the `[workspace]` table like this:
+
+```toml
+cargo-features = ["resolver"]
+
+[workspace]
+members = ["member1", "member2"]
+resolver = "2"
+```
+
+The `resolver` field is ignored in dependencies, only the top-level project or
+workspace can control the new behavior.
+
 ### crate-versions
 * Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)
 

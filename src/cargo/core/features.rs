@@ -211,6 +211,9 @@ features! {
 
         // Allow to specify profiles other than 'dev', 'release', 'test', etc.
         [unstable] named_profiles: bool,
+
+        // Opt-in new-resolver behavior.
+        [unstable] resolver: bool,
     }
 }
 

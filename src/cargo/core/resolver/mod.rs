@@ -71,7 +71,7 @@ pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::features::HasDevUnits;
 pub use self::resolve::{Resolve, ResolveVersion};
-pub use self::types::ResolveOpts;
+pub use self::types::{ResolveBehavior, ResolveOpts};
 
 mod conflict_cache;
 mod context;
