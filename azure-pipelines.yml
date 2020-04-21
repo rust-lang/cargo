@@ -41,6 +41,9 @@ jobs:
       x86_64-msvc:
         TOOLCHAIN: stable-x86_64-pc-windows-msvc
         OTHER_TARGET: i686-pc-windows-msvc
+      x86_64-gnu:
+        TOOLCHAIN: nightly-x86_64-pc-windows-gnu
+        OTHER_TARGET: i686-pc-windows-gnu
 
 - job: rustfmt
   pool:

@@ -20,6 +20,7 @@ fn binary_with_debug() {
         &["foo"],
         &["foo", "foo.dSYM"],
         &["foo.exe", "foo.pdb"],
+        &["foo.exe"],
     );
 }
 
@@ -55,6 +56,7 @@ fn static_library_with_debug() {
         &["libfoo.a"],
         &["libfoo.a"],
         &["foo.lib"],
+        &["libfoo.a"],
     );
 }
 
@@ -90,6 +92,8 @@ fn dynamic_library_with_debug() {
         &["libfoo.so"],
         &["libfoo.dylib"],
         &["foo.dll", "foo.dll.lib"],
+        // FIXME https://github.com/rust-lang/cargo/pull/6875
+        &["foo.dll"],
     );
 }
 
@@ -121,6 +125,7 @@ fn rlib_with_debug() {
         .run();
     check_dir_contents(
         &p.root().join("out"),
+        &["libfoo.rlib"],
         &["libfoo.rlib"],
         &["libfoo.rlib"],
         &["libfoo.rlib"],
@@ -167,6 +172,7 @@ fn include_only_the_binary_from_the_current_package() {
         &["foo"],
         &["foo", "foo.dSYM"],
         &["foo.exe", "foo.pdb"],
+        &["foo.exe"],
     );
 }
 
@@ -242,6 +248,7 @@ fn avoid_build_scripts() {
         &["a", "b"],
         &["a", "a.dSYM", "b", "b.dSYM"],
         &["a.exe", "a.pdb", "b.exe", "b.pdb"],
+        &["a.exe", "b.exe"],
     );
 }
 
@@ -266,6 +273,7 @@ fn cargo_build_out_dir() {
         &["foo"],
         &["foo", "foo.dSYM"],
         &["foo.exe", "foo.pdb"],
+        &["foo.exe"],
     );
 }
 
@@ -273,10 +281,15 @@ fn check_dir_contents(
     out_dir: &Path,
     expected_linux: &[&str],
     expected_mac: &[&str],
-    expected_win: &[&str],
+    expected_win_msvc: &[&str],
+    expected_win_gnu: &[&str],
 ) {
     let expected = if cfg!(target_os = "windows") {
-        expected_win
+        if cfg!(target_env = "msvc") {
+            expected_win_msvc
+        } else {
+            expected_win_gnu
+        }
     } else if cfg!(target_os = "macos") {
         expected_mac
     } else {
