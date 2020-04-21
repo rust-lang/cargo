@@ -3810,8 +3810,7 @@ fn cdylib_final_outputs() {
         if cfg!(target_env = "msvc") {
             vec!["foo_bar.dll.lib", "foo_bar.dll"]
         } else {
-            // FIXME https://github.com/rust-lang/cargo/pull/6875
-            vec!["foo_bar.dll"]
+            vec!["foo_bar.dll", "libfoo_bar.dll.a"]
         }
     } else if cfg!(target_os = "macos") {
         vec!["libfoo_bar.dylib"]

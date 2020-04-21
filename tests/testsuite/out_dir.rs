@@ -92,8 +92,7 @@ fn dynamic_library_with_debug() {
         &["libfoo.so"],
         &["libfoo.dylib"],
         &["foo.dll", "foo.dll.lib"],
-        // FIXME https://github.com/rust-lang/cargo/pull/6875
-        &["foo.dll"],
+        &["foo.dll", "libfoo.dll.a"],
     );
 }
 
