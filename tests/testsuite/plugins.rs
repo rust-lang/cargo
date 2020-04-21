@@ -180,8 +180,7 @@ fn plugin_with_dynamic_native_dependency() {
                 let src = root.join(&file);
                 let dst = out_dir.join(&file);
                 fs::copy(src, dst).unwrap();
-                // FIXME https://github.com/rust-lang/cargo/pull/6875
-                    if cfg!(target_env = "msvc") {
+                if cfg!(target_env = "msvc") {
                     fs::copy(root.join("builder.dll.lib"),
                              out_dir.join("builder.dll.lib")).unwrap();
                 }
