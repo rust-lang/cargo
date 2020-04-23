@@ -127,7 +127,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
     let member_ids = ws
-        .members_with_features(&specs, &opts.features)?
+        .members_with_features(specs, &opts.features)?
         .into_iter()
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
@@ -136,7 +136,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &member_ids,
         has_dev_units,
         requested_target,
-        &target_data,
+        target_data,
     )?;
 
     let resolved_features = FeatureResolver::resolve(
