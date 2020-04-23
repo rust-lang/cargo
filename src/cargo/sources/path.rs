@@ -204,12 +204,8 @@ impl<'cfg> PathSource<'cfg> {
                 root.display()
             )
         })?;
-        // Git requires forward-slashes.
-        let repo_safe_path = repo_relative_path
-            .join("Cargo.toml")
-            .to_string_lossy()
-            .replace('\\', "/");
-        if index.get_path(Path::new(&repo_safe_path), 0).is_some() {
+        let manifest_path = repo_relative_path.join("Cargo.toml");
+        if index.get_path(&manifest_path, 0).is_some() {
             return Ok(Some(self.list_files_git(pkg, &repo, filter)?));
         }
         // Package Cargo.toml is not in git, don't use git to guide our selection.
