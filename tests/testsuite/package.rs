@@ -6,7 +6,7 @@ use cargo_test_support::{
     basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
     registry, symlink_supported, t,
 };
-use std::fs::{read_to_string, File};
+use std::fs::{self, read_to_string, File};
 use std::path::Path;
 
 #[cargo_test]
@@ -1687,6 +1687,59 @@ fn package_restricted_windows() {
 [VERIFYING] foo [..]
 [COMPILING] foo [..]
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn finds_git_in_parent() {
+    // Test where `Cargo.toml` is not in the root of the git repo.
+    let repo_path = paths::root().join("repo");
+    fs::create_dir(&repo_path).unwrap();
+    let p = project()
+        .at("repo/foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+    let repo = git::init(&repo_path);
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("ignoreme", "");
+    p.change_file("ignoreme2", "");
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+Cargo.toml
+Cargo.toml.orig
+ignoreme
+ignoreme2
+src/lib.rs
+",
+        )
+        .run();
+
+    p.change_file(".gitignore", "ignoreme");
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.toml
+Cargo.toml.orig
+ignoreme2
+src/lib.rs
+",
+        )
+        .run();
+
+    fs::write(repo_path.join(".gitignore"), "ignoreme2").unwrap();
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
 ",
         )
         .run();
