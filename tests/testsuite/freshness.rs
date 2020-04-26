@@ -2316,6 +2316,8 @@ LLVM version: 9.0
 fn linking_interrupted() {
     // Interrupt during the linking phase shouldn't leave test executable as "fresh".
 
+    // This is used to detect when linking starts, then to pause the linker so
+    // that the test can kill cargo.
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
@@ -2367,6 +2369,8 @@ fn linking_interrupted() {
         "CARGO_TARGET_{}_LINKER",
         rustc_host().to_uppercase().replace('-', "_")
     );
+    // NOTE: This assumes that the path to the linker is not in the
+    // fingerprint. But maybe it should be?
     let mut cmd = p
         .cargo("test --test t1 --no-run")
         .env(&linker_env, linker.bin("linker"))
@@ -2381,8 +2385,21 @@ fn linking_interrupted() {
 
     // Interrupt the child.
     child.kill().unwrap();
-    // Note: rustc and the linker are still running, let them exit here.
-    conn.write(b"X").unwrap();
+    child.wait().unwrap();
+    // Note: rustc and the linker may still be running because we didn't kill
+    // the entire process group. Normally, when a user hits Ctrl-C, everything
+    // is killed. However, setting up process groups in a cross-platform test
+    // is a pain, and there's no easy way to know when everything has been
+    // killed. This write will tell them to exit, pretending that they died
+    // before finishing. Ignore the error, because (sometimes?) on Windows
+    // everything is already killed.
+    let _ = conn.write(b"X");
+    // Sleep a bit to allow rustc to clean up and exit. I have seen some race
+    // conditions on macOS where clang dies with `no such
+    // file...t1-HASH.rcgu.o`. I think what is happening is that the old rustc
+    // process is still running, and deletes the `*.o` files while the command
+    // below is trying to write them. Not sure if that is macOS-specific.
+    std::thread::sleep(std::time::Duration::new(2, 0));
 
     // Build again, shouldn't be fresh.
     p.cargo("test --test t1")
