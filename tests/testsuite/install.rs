@@ -1458,3 +1458,65 @@ fn git_install_reads_workspace_manifest() {
         .with_stderr_contains("  invalid type: integer `3`[..]")
         .run();
 }
+
+#[cfg(target_os = "windows")]
+#[cargo_test]
+fn has_file_with_windows_reserved_filenames() {
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "pub mod aux;")
+        .file(
+            "src/aux.rs",
+            "//! This file has a windows reserved filename.",
+        )
+        .file("src/main.rs", &format!("extern crate foo; fn main() {{}}"))
+        .publish();
+
+    cargo_process("install foo")
+    .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+error: failed to download replaced source registry [..]\n
+Caused by:
+  failed to unpack package `foo v0.0.1 (registry [..])`
+
+Caused by:
+  failed to unpack entry at `foo-0.0.1/src/aux.rs`. 
+The package cointains the file \"aux.rs\" which has in it's path a filename that uses Windows reserved filenames",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cfg(target_os = "windows")]
+#[cargo_test]
+fn has_folder_with_windows_reserved_filenames() {
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "pub mod aux;")
+        .file("src/main.rs", &format!("extern crate foo; fn main() {{}}"))
+        .file(
+            "src/aux/mod.rs",
+            "//! File in a folder with reserved filename!",
+        )
+        .publish();
+
+    cargo_process("install foo")
+    .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+error: failed to download replaced source registry [..]\n
+Caused by:
+  failed to unpack package `foo v0.0.1 (registry [..])`
+
+Caused by:
+  failed to unpack entry at `foo-0.0.1/src/aux/mod.rs`. 
+The package cointains the file \"mod.rs\" which has in it's path a filename that uses Windows reserved filenames",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
