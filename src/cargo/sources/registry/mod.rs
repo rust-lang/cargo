@@ -496,6 +496,46 @@ impl<'cfg> RegistrySource<'cfg> {
                 )
             }
 
+            // We need to check wether the any of the path items contains
+            // a reserved name in Windows.
+            #[cfg(target_os = "windows")]
+            {
+                use crate::util::restricted_names::is_windows_reserved;
+                let mut split_path: Vec<&str> = entry_path
+                    .as_os_str()
+                    .to_str()
+                    // If the path contains non UTF-8 characters, provide the
+                    // propper error.
+                    .ok_or(crate::util::errors::ProcessError {
+                        desc: String::from("Invalid UTF8 character in the file path"),
+                        exit: None,
+                        output: None,
+                    })
+                    .chain_err(|| "Invalid UTF8 character in the file path")?
+                    // Split by folders so we can check if any has a Windows reserved
+                    // filename.
+                    .split('/')
+                    .collect();
+                // Split the filename to check if the name or the extension of it
+                // correspond to any Windows reserved filenames.
+                let last: &str = split_path.pop().unwrap();
+                split_path.extend(last.split("."));
+                // Check over the whole array if any of the &str's correspond to
+                // a Windows reserved filename.
+                // If so, return the corresponding error.
+                for part in split_path {
+                    if is_windows_reserved(part) == true {
+                        anyhow::bail!(
+                            "failed to unpack entry at `{}`. \nThe package cointains \
+                             the file {:?} which has in it's path a filename that uses Windows \
+                             reserved filenames",
+                            entry_path.display(),
+                            entry_path.file_name().unwrap(),
+                        )
+                    }
+                }
+            }
+
             // Once that's verified, unpack the entry as usual.
             entry
                 .unpack_in(parent)
