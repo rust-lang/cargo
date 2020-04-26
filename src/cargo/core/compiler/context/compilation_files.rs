@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 use log::info;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
-use crate::core::compiler::{CompileMode, CompileTarget, Unit};
+use crate::core::compiler::{CompileMode, CompileTarget, CrateType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
@@ -274,7 +274,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let info = bcx.target_data.info(kind);
         let file_types = info
             .file_types(
-                "bin",
+                &CrateType::Bin,
                 FileFlavor::Normal,
                 &TargetKind::Bin,
                 bcx.target_data.short_name(&kind),
@@ -416,12 +416,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let info = bcx.target_data.info(unit.kind);
         let file_stem = self.file_stem(unit);
 
-        let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
-            let crate_type = if crate_type == "lib" {
-                "rlib"
-            } else {
-                crate_type
-            };
+        let mut add = |crate_type: &CrateType, flavor: FileFlavor| -> CargoResult<()> {
             let file_types = info.file_types(
                 crate_type,
                 flavor,
@@ -465,22 +460,22 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             }
             Ok(())
         };
-        match *unit.target.kind() {
+        match unit.target.kind() {
             TargetKind::Bin
             | TargetKind::CustomBuild
             | TargetKind::ExampleBin
             | TargetKind::Bench
             | TargetKind::Test => {
-                add("bin", FileFlavor::Normal)?;
+                add(&CrateType::Bin, FileFlavor::Normal)?;
             }
             TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.mode.is_any_test() => {
-                add("bin", FileFlavor::Normal)?;
+                add(&CrateType::Bin, FileFlavor::Normal)?;
             }
-            TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
-                for kind in kinds {
+            TargetKind::ExampleLib(crate_types) | TargetKind::Lib(crate_types) => {
+                for crate_type in crate_types {
                     add(
-                        kind.crate_type(),
-                        if kind.linkable() {
+                        crate_type,
+                        if crate_type.is_linkable() {
                             FileFlavor::Linkable { rmeta: false }
                         } else {
                             FileFlavor::Normal

@@ -4,6 +4,7 @@ mod build_plan;
 mod compilation;
 mod compile_kind;
 mod context;
+mod crate_type;
 mod custom_build;
 mod fingerprint;
 mod job;
@@ -35,6 +36,7 @@ use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
+pub use self::crate_type::CrateType;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
@@ -532,7 +534,7 @@ where
 
 fn prepare_rustc(
     cx: &mut Context<'_, '_>,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
     unit: &Unit,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
@@ -734,7 +736,7 @@ fn build_base_args(
     cx: &mut Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     unit: &Unit,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
 ) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
@@ -764,7 +766,7 @@ fn build_base_args(
 
     if !test {
         for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type);
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
     }
 
@@ -780,7 +782,7 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| *p != unit.pkg));
+        || (crate_types.contains(&CrateType::Dylib) && bcx.ws.members().any(|p| *p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -984,7 +986,7 @@ fn build_deps_args(
     // error in the future (see PR #4797).
     if !deps
         .iter()
-        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.linkable())
+        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_linkable())
     {
         if let Some(dep) = deps
             .iter()
@@ -1088,7 +1090,7 @@ pub fn extern_args(
         };
 
     for dep in deps {
-        if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
+        if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             link_to(dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }

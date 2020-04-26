@@ -1,4 +1,4 @@
-use crate::core::compiler::{BuildOutput, CompileKind, CompileTarget};
+use crate::core::compiler::{BuildOutput, CompileKind, CompileTarget, CrateType};
 use crate::core::{Dependency, TargetKind, Workspace};
 use crate::util::config::{Config, StringList, TargetConfig};
 use crate::util::{CargoResult, CargoResultExt, ProcessBuilder, Rustc};
@@ -25,7 +25,7 @@ pub struct TargetInfo {
     /// `Some((prefix, suffix))`, for example `libcargo.so` would be
     /// `Some(("lib", ".so")). The value is `None` if the crate type is not
     /// supported.
-    crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
+    crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
     /// Path to the sysroot.
@@ -123,10 +123,16 @@ impl TargetInfo {
         }
 
         let crate_type_process = process.clone();
-        const KNOWN_CRATE_TYPES: &[&str] =
-            &["bin", "rlib", "dylib", "cdylib", "staticlib", "proc-macro"];
+        const KNOWN_CRATE_TYPES: &[CrateType] = &[
+            CrateType::Bin,
+            CrateType::Rlib,
+            CrateType::Dylib,
+            CrateType::Cdylib,
+            CrateType::Staticlib,
+            CrateType::ProcMacro,
+        ];
         for crate_type in KNOWN_CRATE_TYPES.iter() {
-            process.arg("--crate-type").arg(crate_type);
+            process.arg("--crate-type").arg(crate_type.as_str());
         }
 
         process.arg("--print=sysroot");
@@ -140,7 +146,7 @@ impl TargetInfo {
         let mut map = HashMap::new();
         for crate_type in KNOWN_CRATE_TYPES {
             let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
-            map.insert(crate_type.to_string(), out);
+            map.insert(crate_type.clone(), out);
         }
 
         let line = match lines.next() {
@@ -228,13 +234,19 @@ impl TargetInfo {
     /// Returns `None` if the target does not support the given crate type.
     pub fn file_types(
         &self,
-        crate_type: &str,
+        crate_type: &CrateType,
         flavor: FileFlavor,
         kind: &TargetKind,
         target_triple: &str,
     ) -> CargoResult<Option<Vec<FileType>>> {
+        let crate_type = if *crate_type == CrateType::Lib {
+            CrateType::Rlib
+        } else {
+            crate_type.clone()
+        };
+
         let mut crate_types = self.crate_types.borrow_mut();
-        let entry = crate_types.entry(crate_type.to_string());
+        let entry = crate_types.entry(crate_type.clone());
         let crate_type_info = match entry {
             Entry::Occupied(o) => &*o.into_mut(),
             Entry::Vacant(v) => {
@@ -255,7 +267,7 @@ impl TargetInfo {
 
         // See rust-lang/cargo#4500.
         if target_triple.ends_with("-windows-msvc")
-            && crate_type.ends_with("dylib")
+            && (crate_type == CrateType::Dylib || crate_type == CrateType::Cdylib)
             && suffix == ".dll"
         {
             ret.push(FileType {
@@ -265,7 +277,7 @@ impl TargetInfo {
                 should_replace_hyphens: false,
             })
         } else if target_triple.ends_with("windows-gnu")
-            && crate_type.ends_with("dylib")
+            && (crate_type == CrateType::Dylib || crate_type == CrateType::Cdylib)
             && suffix == ".dll"
         {
             // LD can link DLL directly, but LLD requires the import library.
@@ -278,7 +290,7 @@ impl TargetInfo {
         }
 
         // See rust-lang/cargo#4535.
-        if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
+        if target_triple.starts_with("wasm32-") && crate_type == CrateType::Bin && suffix == ".js" {
             ret.push(FileType {
                 suffix: ".wasm".to_string(),
                 prefix: prefix.clone(),
@@ -319,10 +331,10 @@ impl TargetInfo {
         Ok(Some(ret))
     }
 
-    fn discover_crate_type(&self, crate_type: &str) -> CargoResult<Option<(String, String)>> {
+    fn discover_crate_type(&self, crate_type: &CrateType) -> CargoResult<Option<(String, String)>> {
         let mut process = self.crate_type_process.clone();
 
-        process.arg("--crate-type").arg(crate_type);
+        process.arg("--crate-type").arg(crate_type.as_str());
 
         let output = process.exec_with_output().chain_err(|| {
             format!(
@@ -353,7 +365,7 @@ impl TargetInfo {
 /// This function can not handle more than one file per type (with wasm32-unknown-emscripten, there
 /// are two files for bin (`.wasm` and `.js`)).
 fn parse_crate_type(
-    crate_type: &str,
+    crate_type: &CrateType,
     cmd: &ProcessBuilder,
     output: &str,
     error: &str,
