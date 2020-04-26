@@ -25,6 +25,10 @@
 - Windows GNU targets now copy `.dll.a` import library files for DLL crate
   types to the output directory.
   [#8141](https://github.com/rust-lang/cargo/pull/8141)
+- Dylibs for all dependencies are now unconditionally copied to the output
+  directory. Some obscure scenarios can cause an old dylib to be referenced
+  between builds, and this ensures that all the latest copies are used.
+  [#8139](https://github.com/rust-lang/cargo/pull/8139)
 
 ### Fixed
 - Fixed copying Windows `.pdb` files to the output directory when the filename
