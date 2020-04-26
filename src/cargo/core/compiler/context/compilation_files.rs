@@ -133,7 +133,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(|unit| (unit, LazyCell::new()))
             .collect();
         CompilationFiles {
-            ws: &cx.bcx.ws,
+            ws: cx.bcx.ws,
             host,
             target,
             export_dir: cx.bcx.build_config.export_dir.clone(),
