@@ -823,25 +823,12 @@ fn check_filename(file: &Path, shell: &mut Shell) -> CargoResult<()> {
             file.display()
         )
     }
-    let mut check_windows = |name| -> CargoResult<()> {
-        if restricted_names::is_windows_reserved(name) {
-            shell.warn(format!(
-                "file {} is a reserved Windows filename, \
+    if restricted_names::is_windows_reserved_path(file) {
+        shell.warn(format!(
+            "file {} is a reserved Windows filename, \
                 it will not work on Windows platforms",
-                file.display()
-            ))?;
-        }
-        Ok(())
-    };
-    for component in file.iter() {
-        if let Some(component) = component.to_str() {
-            check_windows(component)?;
-        }
-    }
-    if file.extension().is_some() {
-        if let Some(stem) = file.file_stem().and_then(|s| s.to_str()) {
-            check_windows(stem)?;
-        }
+            file.display()
+        ))?;
     }
     Ok(())
 }

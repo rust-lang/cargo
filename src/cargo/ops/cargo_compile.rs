@@ -419,7 +419,7 @@ pub fn create_bcx<'a, 'cfg>(
         &resolved_features,
         &pkg_set,
         &profiles,
-        &interner,
+        interner,
     )?;
 
     let std_roots = if let Some(crates) = &config.cli_unstable().build_std {
@@ -442,7 +442,7 @@ pub fn create_bcx<'a, 'cfg>(
             std_features,
             build_config.requested_kind,
             &pkg_set,
-            &interner,
+            interner,
             &profiles,
         )?
     } else {
@@ -491,7 +491,7 @@ pub fn create_bcx<'a, 'cfg>(
         build_config.mode,
         &target_data,
         &profiles,
-        &interner,
+        interner,
     )?;
 
     let bcx = BuildContext::new(

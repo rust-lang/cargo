@@ -811,7 +811,7 @@ fn get_source_id(
     reg: Option<&String>,
 ) -> CargoResult<SourceId> {
     match (reg, index) {
-        (Some(r), _) => SourceId::alt_registry(config, &r),
+        (Some(r), _) => SourceId::alt_registry(config, r),
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;

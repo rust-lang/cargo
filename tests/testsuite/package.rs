@@ -1744,3 +1744,55 @@ src/lib.rs
         )
         .run();
 }
+
+#[cargo_test]
+#[cfg(windows)]
+fn reserved_windows_name() {
+    Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "pub mod aux;")
+        .file("src/aux.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "extern crate bar;\nfn main() {  }")
+        .build();
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: failed to verify package tarball
+
+Caused by:
+  failed to download replaced source registry `[..]`
+
+Caused by:
+  failed to unpack package `[..] `[..]`)`
+
+Caused by:
+  failed to unpack entry at `[..]aux.rs`
+
+Caused by:
+  `[..]aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows
+
+Caused by:
+  failed to unpack `[..]aux.rs`
+
+Caused by:
+  failed to unpack `[..]aux.rs` into `[..]aux.rs`",
+        )
+        .run();
+}
