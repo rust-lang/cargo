@@ -792,7 +792,9 @@ impl<'cfg> Workspace<'cfg> {
                 if !manifest.patch().is_empty() {
                     emit_warning("patch")?;
                 }
-                if manifest.resolve_behavior() != self.resolve_behavior {
+                if manifest.resolve_behavior().is_some()
+                    && manifest.resolve_behavior() != self.resolve_behavior
+                {
                     // Only warn if they don't match.
                     emit_warning("resolver")?;
                 }
