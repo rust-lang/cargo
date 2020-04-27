@@ -1592,6 +1592,17 @@ fn resolver_enables_new_features() {
     p.cargo("run --bin a")
         .masquerade_as_nightly_cargo()
         .env("EXPECTED_FEATS", "1")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] common [..]
+[COMPILING] common v1.0.0
+[COMPILING] a v0.1.0 [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/a[EXE]`
+",
+        )
         .run();
 
     // only normal+dev
