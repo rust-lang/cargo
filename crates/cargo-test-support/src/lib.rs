@@ -1723,6 +1723,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         .env_remove("RUSTDOC")
         .env_remove("RUSTC_WRAPPER")
         .env_remove("RUSTFLAGS")
+        .env_remove("RUSTDOCFLAGS")
         .env_remove("XDG_CONFIG_HOME") // see #2345
         .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
         .env_remove("EMAIL")
