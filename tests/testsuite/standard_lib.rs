@@ -518,7 +518,7 @@ fn doctest() {
         )
         .build();
 
-    p.cargo("test --doc -v")
+    p.cargo("test --doc -v -Zdoctest-xcompile")
         .build_std(&setup)
         .with_stdout_contains("test src/lib.rs - f [..] ... ok")
         .target_host()

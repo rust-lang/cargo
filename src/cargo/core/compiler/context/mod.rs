@@ -165,13 +165,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let bindst = output.bin_dst();
 
                 if unit.mode == CompileMode::Test {
-                    self.compilation.tests.push((
-                        unit.pkg.clone(),
-                        unit.target.clone(),
-                        output.path.clone(),
-                    ));
+                    self.compilation
+                        .tests
+                        .push((unit.clone(), output.path.clone()));
                 } else if unit.target.is_executable() {
-                    self.compilation.binaries.push(bindst.clone());
+                    self.compilation
+                        .binaries
+                        .push((unit.clone(), bindst.clone()));
                 }
             }
 
@@ -199,8 +199,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let mut unstable_opts = false;
                 let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 self.compilation.to_doc_test.push(compilation::Doctest {
-                    package: unit.pkg.clone(),
-                    target: unit.target.clone(),
+                    unit: unit.clone(),
                     args,
                     unstable_opts,
                 });
@@ -273,9 +272,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
-        if let CompileKind::Target(target) = self.bcx.build_config.requested_kind {
-            let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
-            targets.insert(target, layout);
+        for kind in self.bcx.build_config.requested_kinds.iter() {
+            if let CompileKind::Target(target) = *kind {
+                let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
+                targets.insert(target, layout);
+            }
         }
         self.primary_packages
             .extend(self.bcx.roots.iter().map(|u| u.pkg.package_id()));
@@ -302,12 +303,22 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 .chain_err(|| "couldn't prepare build directories")?;
         }
 
-        self.compilation.host_deps_output = self.files_mut().host.deps().to_path_buf();
-
         let files = self.files.as_ref().unwrap();
-        let layout = files.layout(self.bcx.build_config.requested_kind);
-        self.compilation.root_output = layout.dest().to_path_buf();
-        self.compilation.deps_output = layout.deps().to_path_buf();
+        for &kind in self
+            .bcx
+            .build_config
+            .requested_kinds
+            .iter()
+            .chain(Some(&CompileKind::Host))
+        {
+            let layout = files.layout(kind);
+            self.compilation
+                .root_output
+                .insert(kind, layout.dest().to_path_buf());
+            self.compilation
+                .deps_output
+                .insert(kind, layout.deps().to_path_buf());
+        }
         Ok(())
     }
 

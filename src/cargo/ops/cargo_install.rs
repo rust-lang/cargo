@@ -270,7 +270,8 @@ fn install_one(
     // anything if we're gonna throw it away anyway.
     let dst = root.join("bin").into_path_unlocked();
     let rustc = config.load_global_rustc(Some(&ws))?;
-    let target = match &opts.build_config.requested_kind {
+    let requested_kind = opts.build_config.single_requested_kind()?;
+    let target = match &requested_kind {
         CompileKind::Host => rustc.host.as_str(),
         CompileKind::Target(target) => target.short_name(),
     };
@@ -335,7 +336,7 @@ fn install_one(
     let mut binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
-        .map(|bin| {
+        .map(|(_, bin)| {
             let name = bin.file_name().unwrap();
             if let Some(s) = name.to_str() {
                 Ok((s, bin.as_ref()))

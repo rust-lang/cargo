@@ -49,16 +49,16 @@ pub struct TreeOptions {
 #[derive(PartialEq)]
 pub enum Target {
     Host,
-    Specific(String),
+    Specific(Vec<String>),
     All,
 }
 
 impl Target {
-    pub fn from_cli(target: Option<&str>) -> Target {
-        match target {
-            None => Target::Host,
-            Some("all") => Target::All,
-            Some(target) => Target::Specific(target.to_string()),
+    pub fn from_cli(targets: Vec<String>) -> Target {
+        match targets.len() {
+            0 => Target::Host,
+            1 if targets[0] == "all" => Target::All,
+            _ => Target::Specific(targets),
         }
     }
 }
@@ -126,14 +126,14 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     if opts.graph_features && opts.duplicates {
         bail!("the `-e features` flag does not support `--duplicates`");
     }
-    let requested_target = match &opts.target {
-        Target::All | Target::Host => None,
-        Target::Specific(t) => Some(t.as_ref()),
+    let requested_targets = match &opts.target {
+        Target::All | Target::Host => Vec::new(),
+        Target::Specific(t) => t.clone(),
     };
     // TODO: Target::All is broken with -Zfeatures=itarget. To handle that properly,
     // `FeatureResolver` will need to be taught what "all" means.
-    let requested_kind = CompileKind::from_requested_target(ws.config(), requested_target)?;
-    let target_data = RustcTargetData::new(ws, requested_kind)?;
+    let requested_kinds = CompileKind::from_requested_targets(ws.config(), &requested_targets)?;
+    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let specs = opts.packages.to_package_id_specs(ws)?;
     let resolve_opts = ResolveOpts::new(
         /*dev_deps*/ true,
@@ -152,7 +152,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
-        requested_kind,
+        &requested_kinds,
         &resolve_opts,
         &specs,
         has_dev,
@@ -172,7 +172,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &specs,
         &resolve_opts.features,
         &target_data,
-        requested_kind,
+        &requested_kinds,
         package_map,
         opts,
     )?;

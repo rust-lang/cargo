@@ -75,7 +75,7 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData,
-    requested_target: CompileKind,
+    requested_targets: &[CompileKind],
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
@@ -135,7 +135,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &resolved_with_overrides,
         &member_ids,
         has_dev_units,
-        requested_target,
+        requested_targets,
         target_data,
     )?;
 
@@ -146,7 +146,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &pkg_set,
         &opts.features,
         specs,
-        requested_target,
+        requested_targets,
         has_dev_units,
     )?;
 

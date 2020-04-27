@@ -538,7 +538,7 @@ fn prepare_rustc(
 
     let mut base = cx
         .compilation
-        .rustc_process(&unit.pkg, is_primary, is_workspace)?;
+        .rustc_process(unit, is_primary, is_workspace)?;
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
@@ -554,7 +554,7 @@ fn prepare_rustc(
 
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(&unit.pkg, &unit.target)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);

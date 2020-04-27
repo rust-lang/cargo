@@ -29,7 +29,7 @@ pub struct PackageOpts<'cfg> {
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
-    pub target: Option<String>,
+    pub targets: Vec<String>,
     pub features: Vec<String>,
     pub all_features: bool,
     pub no_default_features: bool,
@@ -716,7 +716,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     ops::compile_with_exec(
         &ws,
         &ops::CompileOptions {
-            build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
+            build_config: BuildConfig::new(config, opts.jobs, &opts.targets, CompileMode::Build)?,
             features: opts.features.clone(),
             no_default_features: opts.no_default_features,
             all_features: opts.all_features,

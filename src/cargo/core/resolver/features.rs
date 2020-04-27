@@ -246,8 +246,8 @@ impl ResolvedFeatures {
 pub struct FeatureResolver<'a, 'cfg> {
     ws: &'a Workspace<'cfg>,
     target_data: &'a RustcTargetData,
-    /// The platform to build for, requested by the user.
-    requested_target: CompileKind,
+    /// The platforms to build for, requested by the user.
+    requested_targets: &'a [CompileKind],
     resolve: &'a Resolve,
     package_set: &'a PackageSet<'cfg>,
     /// Options that change how the feature resolver operates.
@@ -269,7 +269,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         package_set: &'a PackageSet<'cfg>,
         requested_features: &RequestedFeatures,
         specs: &[PackageIdSpec],
-        requested_target: CompileKind,
+        requested_targets: &[CompileKind],
         has_dev_units: HasDevUnits,
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
@@ -287,7 +287,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let mut r = FeatureResolver {
             ws,
             target_data,
-            requested_target,
+            requested_targets,
             resolve,
             package_set,
             opts,
@@ -536,8 +536,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     .dep_platform_activated(dep, CompileKind::Host);
             }
             // Not a build dependency, and not for a build script, so must be Target.
-            self.target_data
-                .dep_platform_activated(dep, self.requested_target)
+            self.requested_targets
+                .iter()
+                .any(|kind| self.target_data.dep_platform_activated(dep, *kind))
         };
         self.resolve
             .deps(pkg_id)
