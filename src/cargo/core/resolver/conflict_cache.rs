@@ -175,7 +175,7 @@ impl ConflictCache {
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
-        let out = self.find(dep, &|id| cx.is_active(id), must_contain, std::usize::MAX);
+        let out = self.find(dep, &|id| cx.is_active(id), must_contain, usize::MAX);
         if cfg!(debug_assertions) {
             if let Some(c) = &out {
                 assert!(cx.is_conflicting(None, c).is_some());

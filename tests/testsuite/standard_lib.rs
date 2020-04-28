@@ -303,7 +303,7 @@ fn lib_nostd() {
             r#"
                 #![no_std]
                 pub fn foo() {
-                    assert_eq!(core::u8::MIN, 0);
+                    assert_eq!(u8::MIN, 0);
                 }
             "#,
         )
