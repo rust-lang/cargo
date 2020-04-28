@@ -287,6 +287,7 @@ impl Profiles {
         &self,
         pkg_id: PackageId,
         is_member: bool,
+        is_local: bool,
         unit_for: UnitFor,
         mode: CompileMode,
     ) -> Profile {
@@ -360,7 +361,7 @@ impl Profiles {
         // itself (aka crates.io / git dependencies)
         //
         // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if !pkg_id.source_id().is_path() {
+        if !is_local {
             profile.incremental = false;
         }
         profile.name = profile_name;

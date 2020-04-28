@@ -574,10 +574,14 @@ fn new_unit_dep(
     kind: CompileKind,
     mode: CompileMode,
 ) -> CargoResult<UnitDep> {
-    let profile =
-        state
-            .profiles
-            .get_profile(pkg.package_id(), state.ws.is_member(pkg), unit_for, mode);
+    let is_local = pkg.package_id().source_id().is_path() && !state.is_std;
+    let profile = state.profiles.get_profile(
+        pkg.package_id(),
+        state.ws.is_member(pkg),
+        is_local,
+        unit_for,
+        mode,
+    );
     new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
 }
 

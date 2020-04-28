@@ -152,8 +152,13 @@ pub fn generate_std_roots(
             // in time is minimal, and the difference in caching is
             // significant.
             let mode = CompileMode::Build;
-            let profile =
-                profiles.get_profile(pkg.package_id(), /*is_member*/ false, unit_for, mode);
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                /*is_member*/ false,
+                /*is_local*/ false,
+                unit_for,
+                mode,
+            );
             let features =
                 std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
             Ok(interner.intern(

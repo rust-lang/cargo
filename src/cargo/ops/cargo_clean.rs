@@ -109,6 +109,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                             profiles.get_profile_run_custom_build(&profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
+                                /*is_local*/ true,
                                 *unit_for,
                                 CompileMode::Build,
                             ))
@@ -116,6 +117,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                             profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
+                                /*is_local*/ true,
                                 *unit_for,
                                 *mode,
                             )
