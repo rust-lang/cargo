@@ -760,8 +760,14 @@ fn generate_targets(
             _ => target_mode,
         };
         let kind = default_arch_kind.for_target(target);
-        let profile =
-            profiles.get_profile(pkg.package_id(), ws.is_member(pkg), unit_for, target_mode);
+        let is_local = pkg.package_id().source_id().is_path();
+        let profile = profiles.get_profile(
+            pkg.package_id(),
+            ws.is_member(pkg),
+            is_local,
+            unit_for,
+            target_mode,
+        );
 
         // No need to worry about build-dependencies, roots are never build dependencies.
         let features_for = FeaturesFor::from_for_host(target.proc_macro());
