@@ -50,8 +50,17 @@ struct ArchiveFile {
 enum FileContents {
     /// Absolute path to the file on disk to add to the archive.
     OnDisk(PathBuf),
-    /// Contents of a file generated in memory.
-    Generated(String),
+    /// Generates a file.
+    Generated(GeneratedFile),
+}
+
+enum GeneratedFile {
+    /// Generates `Cargo.toml` by rewriting the original.
+    Manifest,
+    /// Generates `Cargo.lock` in some cases (like if there is a binary).
+    Lockfile,
+    /// Adds a `.cargo-vcs_info.json` file if in a (clean) git repo.
+    VcsInfo(String),
 }
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
@@ -70,8 +79,6 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     if opts.check_metadata {
         check_metadata(pkg, config)?;
     }
-
-    verify_dependencies(pkg)?;
 
     if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
         config.shell().warn(
@@ -99,6 +106,8 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         }
         return Ok(None);
     }
+
+    verify_dependencies(pkg)?;
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
     let dir = ws.target_dir().join("package");
@@ -156,11 +165,10 @@ fn build_ar_list(
                     rel_str: "Cargo.toml.orig".to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
-                let generated = pkg.to_registry_toml(ws.config())?;
                 result.push(ArchiveFile {
                     rel_path,
                     rel_str,
-                    contents: FileContents::Generated(generated),
+                    contents: FileContents::Generated(GeneratedFile::Manifest),
                 });
             }
             "Cargo.lock" => continue,
@@ -179,18 +187,17 @@ fn build_ar_list(
         }
     }
     if pkg.include_lockfile() {
-        let new_lock = build_lock(ws)?;
         result.push(ArchiveFile {
             rel_path: PathBuf::from("Cargo.lock"),
             rel_str: "Cargo.lock".to_string(),
-            contents: FileContents::Generated(new_lock),
+            contents: FileContents::Generated(GeneratedFile::Lockfile),
         });
     }
     if let Some(vcs_info) = vcs_info {
         result.push(ArchiveFile {
             rel_path: PathBuf::from(VCS_INFO_FILE),
             rel_str: VCS_INFO_FILE.to_string(),
-            contents: FileContents::Generated(vcs_info),
+            contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
         });
     }
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
@@ -530,7 +537,12 @@ fn tar(
                     format!("could not archive source file `{}`", disk_path.display())
                 })?;
             }
-            FileContents::Generated(contents) => {
+            FileContents::Generated(generated_kind) => {
+                let contents = match generated_kind {
+                    GeneratedFile::Manifest => pkg.to_registry_toml(config)?,
+                    GeneratedFile::Lockfile => build_lock(ws)?,
+                    GeneratedFile::VcsInfo(s) => s,
+                };
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);
                 header.set_mtime(
