@@ -1,10 +1,10 @@
 //! Tests for the `cargo package` command.
 
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::Package;
+use cargo_test_support::publish::validate_crate_contents;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
-    registry, symlink_supported, t,
+    basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
 };
 use std::fs::{self, read_to_string, File};
 use std::path::Path;
@@ -1793,6 +1793,55 @@ Caused by:
 
 Caused by:
   failed to unpack `[..]aux.rs` into `[..]aux.rs`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn list_with_path_and_lock() {
+    // Allow --list even for something that isn't packageable.
+
+    // Init an empty registry because a versionless path dep will search for
+    // the package on crates.io.
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+
+            [dependencies]
+            bar = {path="bar"}
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: all path dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version.
+",
         )
         .run();
 }
