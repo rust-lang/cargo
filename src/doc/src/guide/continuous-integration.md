@@ -49,6 +49,40 @@ breakage in nightly will not fail your overall build. Please see the
 [GitLab CI](https://docs.gitlab.com/ce/ci/yaml/README.html) for more
 information.
 
+### Github Actions
+
+To test your package on Github Actions, here is a sample `workflow.yml` file, which has to be in the directory `.github/workflows directory`:
+```yaml
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+```
+This will run on a push to the repository. Pleas see the [Github Actions help](https://help.github.com/en/actions) for more information.
+
 ### builds.sr.ht
 
 To test your package on sr.ht, here is a sample `.build.yml` file.
