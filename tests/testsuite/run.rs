@@ -849,6 +849,7 @@ fn run_with_library_paths() {
             fn main() {{
                 let search_path = std::env::var_os("{}").unwrap();
                 let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
+                println!("{{:#?}}", paths);
                 assert!(paths.contains(&r#"{}"#.into()));
                 assert!(paths.contains(&r#"{}"#.into()));
             }}

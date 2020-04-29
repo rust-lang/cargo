@@ -129,15 +129,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         )?;
     }
 
-    let target = if args.is_present("all-targets") {
+    let targets = if args.is_present("all-targets") {
         config
             .shell()
             .warn("the --all-targets flag has been changed to --target=all")?;
-        Some("all")
+        vec!["all".to_string()]
     } else {
-        args.value_of("target")
+        args._values_of("target")
     };
-    let target = tree::Target::from_cli(target);
+    let target = tree::Target::from_cli(targets);
 
     let edge_kinds = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);

@@ -40,7 +40,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             index,
             verify: !args.is_present("no-verify"),
             allow_dirty: args.is_present("allow-dirty"),
-            target: args.target(),
+            targets: args.targets(),
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),
             registry,

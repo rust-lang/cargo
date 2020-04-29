@@ -55,7 +55,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
-    std_roots: &[Unit],
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData,
     profiles: &'a Profiles,
@@ -108,14 +108,16 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 /// Compute all the dependencies for the standard library.
 fn calc_deps_of_std(
     mut state: &mut State<'_, '_>,
-    std_roots: &[Unit],
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
 ) -> CargoResult<Option<UnitGraph>> {
     if std_roots.is_empty() {
         return Ok(None);
     }
     // Compute dependencies for the standard library.
     state.is_std = true;
-    deps_of_roots(std_roots, &mut state)?;
+    for roots in std_roots.values() {
+        deps_of_roots(roots, &mut state)?;
+    }
     state.is_std = false;
     Ok(Some(std::mem::replace(
         &mut state.unit_dependencies,
@@ -124,11 +126,15 @@ fn calc_deps_of_std(
 }
 
 /// Add the standard library units to the `unit_dependencies`.
-fn attach_std_deps(state: &mut State<'_, '_>, std_roots: &[Unit], std_unit_deps: UnitGraph) {
+fn attach_std_deps(
+    state: &mut State<'_, '_>,
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
+    std_unit_deps: UnitGraph,
+) {
     // Attach the standard library as a dependency of every target unit.
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots.iter().map(|unit| UnitDep {
+            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
                 unit: unit.clone(),
                 unit_for: UnitFor::new_normal(),
                 extern_crate_name: unit.pkg.name(),

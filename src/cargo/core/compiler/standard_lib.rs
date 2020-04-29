@@ -34,7 +34,7 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
 pub fn resolve_std<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData,
-    requested_target: CompileKind,
+    requested_targets: &[CompileKind],
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
     let src_path = detect_sysroot_src_path(target_data)?;
@@ -107,7 +107,7 @@ pub fn resolve_std<'cfg>(
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
-        requested_target,
+        requested_targets,
         &opts,
         &specs,
         HasDevUnits::No,
@@ -126,11 +126,11 @@ pub fn generate_std_roots(
     crates: &[String],
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
-    kind: CompileKind,
+    kinds: &[CompileKind],
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
-) -> CargoResult<Vec<Unit>> {
+) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
         .iter()
@@ -138,34 +138,42 @@ pub fn generate_std_roots(
         .collect::<CargoResult<Vec<PackageId>>>()?;
     // Convert PackageId to Package.
     let std_pkgs = package_set.get_many(std_ids)?;
-    // Generate a list of Units.
-    std_pkgs
-        .into_iter()
-        .map(|pkg| {
-            let lib = pkg
-                .targets()
-                .iter()
-                .find(|t| t.is_lib())
-                .expect("std has a lib");
-            let unit_for = UnitFor::new_normal();
-            // I don't think we need to bother with Check here, the difference
-            // in time is minimal, and the difference in caching is
-            // significant.
-            let mode = CompileMode::Build;
-            let profile = profiles.get_profile(
-                pkg.package_id(),
-                /*is_member*/ false,
-                /*is_local*/ false,
-                unit_for,
+    // Generate a map of Units for each kind requested.
+    let mut ret = HashMap::new();
+    for pkg in std_pkgs {
+        let lib = pkg
+            .targets()
+            .iter()
+            .find(|t| t.is_lib())
+            .expect("std has a lib");
+        let unit_for = UnitFor::new_normal();
+        // I don't think we need to bother with Check here, the difference
+        // in time is minimal, and the difference in caching is
+        // significant.
+        let mode = CompileMode::Build;
+        let profile = profiles.get_profile(
+            pkg.package_id(),
+            /*is_member*/ false,
+            /*is_local*/ false,
+            unit_for,
+            mode,
+        );
+        let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
+
+        for kind in kinds {
+            let list = ret.entry(*kind).or_insert(Vec::new());
+            list.push(interner.intern(
+                pkg,
+                lib,
+                profile,
+                *kind,
                 mode,
-            );
-            let features =
-                std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-            Ok(interner.intern(
-                pkg, lib, profile, kind, mode, features, /*is_std*/ true,
-            ))
-        })
-        .collect::<CargoResult<Vec<_>>>()
+                features.clone(),
+                /*is_std*/ true,
+            ));
+        }
+    }
+    return Ok(ret);
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf> {

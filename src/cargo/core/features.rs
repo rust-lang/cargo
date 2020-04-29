@@ -352,6 +352,7 @@ pub struct CliUnstable {
     pub features: Option<Vec<String>>,
     pub crate_versions: bool,
     pub separate_nightlies: bool,
+    pub multitarget: bool,
 }
 
 impl CliUnstable {
@@ -430,6 +431,7 @@ impl CliUnstable {
             "features" => self.features = Some(parse_features(v)),
             "crate-versions" => self.crate_versions = parse_empty(k, v)?,
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
+            "multitarget" => self.multitarget = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

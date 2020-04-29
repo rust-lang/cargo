@@ -67,6 +67,7 @@ mod message_format;
 mod metabuild;
 mod metadata;
 mod minimal_versions;
+mod multitarget;
 mod net_config;
 mod new;
 mod offline;

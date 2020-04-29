@@ -90,11 +90,18 @@ impl FileType {
 impl TargetInfo {
     pub fn new(
         config: &Config,
-        requested_kind: CompileKind,
+        requested_kinds: &[CompileKind],
         rustc: &Rustc,
         kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(config, requested_kind, &rustc.host, None, kind, "RUSTFLAGS")?;
+        let rustflags = env_args(
+            config,
+            requested_kinds,
+            &rustc.host,
+            None,
+            kind,
+            "RUSTFLAGS",
+        )?;
         let mut process = rustc.process();
         process
             .arg("-")
@@ -180,7 +187,7 @@ impl TargetInfo {
             // information
             rustflags: env_args(
                 config,
-                requested_kind,
+                requested_kinds,
                 &rustc.host,
                 Some(&cfg),
                 kind,
@@ -188,7 +195,7 @@ impl TargetInfo {
             )?,
             rustdocflags: env_args(
                 config,
-                requested_kind,
+                requested_kinds,
                 &rustc.host,
                 Some(&cfg),
                 kind,
@@ -416,7 +423,7 @@ fn output_err_info(cmd: &ProcessBuilder, stdout: &str, stderr: &str) -> String {
 /// scripts, ...), even if it is the same as the target.
 fn env_args(
     config: &Config,
-    requested_kind: CompileKind,
+    requested_kinds: &[CompileKind],
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
@@ -441,7 +448,7 @@ fn env_args(
     // This means that, e.g., even if the specified --target is the
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
-    if !requested_kind.is_host() && kind.is_host() {
+    if requested_kinds != &[CompileKind::Host] && kind.is_host() {
         // This is probably a build script or plugin and we're
         // compiling with --target. In this scenario there are
         // no rustflags we can apply.
@@ -526,20 +533,25 @@ pub struct RustcTargetData {
 }
 
 impl RustcTargetData {
-    pub fn new(ws: &Workspace<'_>, requested_kind: CompileKind) -> CargoResult<RustcTargetData> {
+    pub fn new(
+        ws: &Workspace<'_>,
+        requested_kinds: &[CompileKind],
+    ) -> CargoResult<RustcTargetData> {
         let config = ws.config();
         let rustc = config.load_global_rustc(Some(ws))?;
         let host_config = config.target_cfg_triple(&rustc.host)?;
-        let host_info = TargetInfo::new(config, requested_kind, &rustc, CompileKind::Host)?;
+        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        if let CompileKind::Target(target) = requested_kind {
-            let tcfg = config.target_cfg_triple(target.short_name())?;
-            target_config.insert(target, tcfg);
-            target_info.insert(
-                target,
-                TargetInfo::new(config, requested_kind, &rustc, CompileKind::Target(target))?,
-            );
+        for kind in requested_kinds {
+            if let CompileKind::Target(target) = *kind {
+                let tcfg = config.target_cfg_triple(target.short_name())?;
+                target_config.insert(target, tcfg);
+                target_info.insert(
+                    target,
+                    TargetInfo::new(config, requested_kinds, &rustc, *kind)?,
+                );
+            }
         }
 
         Ok(RustcTargetData {

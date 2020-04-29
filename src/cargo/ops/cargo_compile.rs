@@ -79,7 +79,7 @@ pub struct CompileOptions {
 impl<'a> CompileOptions {
     pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
         Ok(CompileOptions {
-            build_config: BuildConfig::new(config, None, &None, mode)?,
+            build_config: BuildConfig::new(config, None, &[], mode)?,
             features: Vec::new(),
             all_features: false,
             no_default_features: false,
@@ -310,7 +310,7 @@ pub fn create_bcx<'a, 'cfg>(
         }
     }
 
-    let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
+    let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
     let specs = spec.to_package_id_specs(ws)?;
     let dev_deps = ws.require_optional_deps() || filter.need_dev_deps(build_config.mode);
@@ -323,7 +323,7 @@ pub fn create_bcx<'a, 'cfg>(
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
-        build_config.requested_kind,
+        &build_config.requested_kinds,
         &opts,
         &specs,
         has_dev_units,
@@ -341,14 +341,14 @@ pub fn create_bcx<'a, 'cfg>(
                 .shell()
                 .warn("-Zbuild-std does not currently fully support --build-plan")?;
         }
-        if build_config.requested_kind.is_host() {
+        if build_config.requested_kinds[0].is_host() {
             // TODO: This should eventually be fixed. Unfortunately it is not
             // easy to get the host triple in BuildConfig. Consider changing
             // requested_target to an enum, or some other approach.
             anyhow::bail!("-Zbuild-std requires --target");
         }
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &target_data, build_config.requested_kind, crates)?;
+            standard_lib::resolve_std(ws, &target_data, &build_config.requested_kinds, crates)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -413,7 +413,7 @@ pub fn create_bcx<'a, 'cfg>(
         ws,
         &to_builds,
         filter,
-        build_config.requested_kind,
+        &build_config.requested_kinds,
         build_config.mode,
         &resolve,
         &resolved_features,
@@ -440,13 +440,13 @@ pub fn create_bcx<'a, 'cfg>(
             &crates,
             std_resolve,
             std_features,
-            build_config.requested_kind,
+            &build_config.requested_kinds,
             &pkg_set,
             interner,
             &profiles,
         )?
     } else {
-        Vec::new()
+        Default::default()
     };
 
     let mut extra_compiler_args = HashMap::new();
@@ -694,7 +694,7 @@ fn generate_targets(
     ws: &Workspace<'_>,
     packages: &[&Package],
     filter: &CompileFilter,
-    default_arch_kind: CompileKind,
+    requested_kinds: &[CompileKind],
     mode: CompileMode,
     resolve: &Resolve,
     resolved_features: &features::ResolvedFeatures,
@@ -703,86 +703,90 @@ fn generate_targets(
     interner: &UnitInterner,
 ) -> CargoResult<Vec<Unit>> {
     let config = ws.config();
-    // Helper for creating a `Unit` struct.
-    let new_unit = |pkg: &Package, target: &Target, target_mode: CompileMode| {
-        let unit_for = if target_mode.is_any_test() {
-            // NOTE: the `UnitFor` here is subtle. If you have a profile
-            // with `panic` set, the `panic` flag is cleared for
-            // tests/benchmarks and their dependencies. If this
-            // was `normal`, then the lib would get compiled three
-            // times (once with panic, once without, and once with
-            // `--test`).
-            //
-            // This would cause a problem for doc tests, which would fail
-            // because `rustdoc` would attempt to link with both libraries
-            // at the same time. Also, it's probably not important (or
-            // even desirable?) for rustdoc to link with a lib with
-            // `panic` set.
-            //
-            // As a consequence, Examples and Binaries get compiled
-            // without `panic` set. This probably isn't a bad deal.
-            //
-            // Forcing the lib to be compiled three times during `cargo
-            // test` is probably also not desirable.
-            UnitFor::new_test(config)
-        } else if target.for_host() {
-            // Proc macro / plugin should not have `panic` set.
-            UnitFor::new_compiler()
-        } else {
-            UnitFor::new_normal()
-        };
-        // Custom build units are added in `build_unit_dependencies`.
-        assert!(!target.is_custom_build());
-        let target_mode = match target_mode {
-            CompileMode::Test => {
-                if target.is_example() && !filter.is_specific() && !target.tested() {
-                    // Examples are included as regular binaries to verify
-                    // that they compile.
-                    CompileMode::Build
-                } else {
-                    CompileMode::Test
+    // Helper for creating a list of `Unit` structures
+    let new_unit =
+        |units: &mut HashSet<Unit>, pkg: &Package, target: &Target, target_mode: CompileMode| {
+            let unit_for = if target_mode.is_any_test() {
+                // NOTE: the `UnitFor` here is subtle. If you have a profile
+                // with `panic` set, the `panic` flag is cleared for
+                // tests/benchmarks and their dependencies. If this
+                // was `normal`, then the lib would get compiled three
+                // times (once with panic, once without, and once with
+                // `--test`).
+                //
+                // This would cause a problem for doc tests, which would fail
+                // because `rustdoc` would attempt to link with both libraries
+                // at the same time. Also, it's probably not important (or
+                // even desirable?) for rustdoc to link with a lib with
+                // `panic` set.
+                //
+                // As a consequence, Examples and Binaries get compiled
+                // without `panic` set. This probably isn't a bad deal.
+                //
+                // Forcing the lib to be compiled three times during `cargo
+                // test` is probably also not desirable.
+                UnitFor::new_test(config)
+            } else if target.for_host() {
+                // Proc macro / plugin should not have `panic` set.
+                UnitFor::new_compiler()
+            } else {
+                UnitFor::new_normal()
+            };
+            // Custom build units are added in `build_unit_dependencies`.
+            assert!(!target.is_custom_build());
+            let target_mode = match target_mode {
+                CompileMode::Test => {
+                    if target.is_example() && !filter.is_specific() && !target.tested() {
+                        // Examples are included as regular binaries to verify
+                        // that they compile.
+                        CompileMode::Build
+                    } else {
+                        CompileMode::Test
+                    }
                 }
-            }
-            CompileMode::Build => match *target.kind() {
-                TargetKind::Test => CompileMode::Test,
-                TargetKind::Bench => CompileMode::Bench,
-                _ => CompileMode::Build,
-            },
-            // `CompileMode::Bench` is only used to inform `filter_default_targets`
-            // which command is being used (`cargo bench`). Afterwards, tests
-            // and benches are treated identically. Switching the mode allows
-            // de-duplication of units that are essentially identical. For
-            // example, `cargo build --all-targets --release` creates the units
-            // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
-            // and since these are the same, we want them to be de-duplicated in
-            // `unit_dependencies`.
-            CompileMode::Bench => CompileMode::Test,
-            _ => target_mode,
-        };
-        let kind = default_arch_kind.for_target(target);
-        let is_local = pkg.package_id().source_id().is_path();
-        let profile = profiles.get_profile(
-            pkg.package_id(),
-            ws.is_member(pkg),
-            is_local,
-            unit_for,
-            target_mode,
-        );
+                CompileMode::Build => match *target.kind() {
+                    TargetKind::Test => CompileMode::Test,
+                    TargetKind::Bench => CompileMode::Bench,
+                    _ => CompileMode::Build,
+                },
+                // `CompileMode::Bench` is only used to inform `filter_default_targets`
+                // which command is being used (`cargo bench`). Afterwards, tests
+                // and benches are treated identically. Switching the mode allows
+                // de-duplication of units that are essentially identical. For
+                // example, `cargo build --all-targets --release` creates the units
+                // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
+                // and since these are the same, we want them to be de-duplicated in
+                // `unit_dependencies`.
+                CompileMode::Bench => CompileMode::Test,
+                _ => target_mode,
+            };
 
-        // No need to worry about build-dependencies, roots are never build dependencies.
-        let features_for = FeaturesFor::from_for_host(target.proc_macro());
-        let features =
-            Vec::from(resolved_features.activated_features(pkg.package_id(), features_for));
-        interner.intern(
-            pkg,
-            target,
-            profile,
-            kind,
-            target_mode,
-            features,
-            /*is_std*/ false,
-        )
-    };
+            let is_local = pkg.package_id().source_id().is_path();
+            let profile = profiles.get_profile(
+                pkg.package_id(),
+                ws.is_member(pkg),
+                is_local,
+                unit_for,
+                target_mode,
+            );
+
+            // No need to worry about build-dependencies, roots are never build dependencies.
+            let features_for = FeaturesFor::from_for_host(target.proc_macro());
+            let features = resolved_features.activated_features(pkg.package_id(), features_for);
+
+            for kind in requested_kinds {
+                let unit = interner.intern(
+                    pkg,
+                    target,
+                    profile,
+                    kind.for_target(target),
+                    target_mode,
+                    features.clone(),
+                    /*is_std*/ false,
+                );
+                units.insert(unit);
+            }
+        };
 
     // Create a list of proposed targets.
     let mut proposals: Vec<Proposal<'_>> = Vec::new();
@@ -927,8 +931,7 @@ fn generate_targets(
             None => Vec::new(),
         };
         if target.is_lib() || unavailable_features.is_empty() {
-            let unit = new_unit(pkg, target, mode);
-            units.insert(unit);
+            new_unit(&mut units, pkg, target, mode);
         } else if requires_features {
             let required_features = target.required_features().unwrap();
             let quoted_required_features: Vec<String> = required_features

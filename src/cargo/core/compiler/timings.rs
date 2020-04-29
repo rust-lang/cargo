@@ -614,7 +614,13 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         .lines()
         .next()
         .expect("rustc version");
-    let requested_target = bcx.target_data.short_name(&bcx.build_config.requested_kind);
+    let requested_target = bcx
+        .build_config
+        .requested_kinds
+        .iter()
+        .map(|kind| bcx.target_data.short_name(kind))
+        .collect::<Vec<_>>()
+        .join(", ");
     format!(
         "{}<br>Host: {}<br>Target: {}",
         version,
