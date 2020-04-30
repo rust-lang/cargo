@@ -34,31 +34,29 @@ impl<'a> Retry<'a> {
 }
 
 fn maybe_spurious(err: &Error) -> bool {
-    for e in err.chain() {
-        if let Some(git_err) = e.downcast_ref::<git2::Error>() {
-            match git_err.class() {
-                git2::ErrorClass::Net | git2::ErrorClass::Os => return true,
-                _ => (),
-            }
+    if let Some(git_err) = err.downcast_ref::<git2::Error>() {
+        match git_err.class() {
+            git2::ErrorClass::Net | git2::ErrorClass::Os => return true,
+            _ => (),
         }
-        if let Some(curl_err) = e.downcast_ref::<curl::Error>() {
-            if curl_err.is_couldnt_connect()
-                || curl_err.is_couldnt_resolve_proxy()
-                || curl_err.is_couldnt_resolve_host()
-                || curl_err.is_operation_timedout()
-                || curl_err.is_recv_error()
-                || curl_err.is_http2_error()
-                || curl_err.is_http2_stream_error()
-                || curl_err.is_ssl_connect_error()
-                || curl_err.is_partial_file()
-            {
-                return true;
-            }
+    }
+    if let Some(curl_err) = err.downcast_ref::<curl::Error>() {
+        if curl_err.is_couldnt_connect()
+            || curl_err.is_couldnt_resolve_proxy()
+            || curl_err.is_couldnt_resolve_host()
+            || curl_err.is_operation_timedout()
+            || curl_err.is_recv_error()
+            || curl_err.is_http2_error()
+            || curl_err.is_http2_stream_error()
+            || curl_err.is_ssl_connect_error()
+            || curl_err.is_partial_file()
+        {
+            return true;
         }
-        if let Some(not_200) = e.downcast_ref::<HttpNot200>() {
-            if 500 <= not_200.code && not_200.code < 600 {
-                return true;
-            }
+    }
+    if let Some(not_200) = err.downcast_ref::<HttpNot200>() {
+        if 500 <= not_200.code && not_200.code < 600 {
+            return true;
         }
     }
     false
