@@ -669,7 +669,7 @@ impl Target {
             .set_name(name)
             .set_doctest(true)
             .set_doc(true);
-        return target;
+        target
     }
 
     pub fn bin_target(
@@ -684,7 +684,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_doc(true);
-        return target;
+        target
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
@@ -696,7 +696,7 @@ impl Target {
             .set_for_host(true)
             .set_benched(false)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn metabuild_target(name: &str) -> Target {
@@ -707,7 +707,7 @@ impl Target {
             .set_for_host(true)
             .set_benched(false)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn example_target(
@@ -733,7 +733,7 @@ impl Target {
             .set_required_features(required_features)
             .set_tested(false)
             .set_benched(false);
-        return target;
+        target
     }
 
     pub fn test_target(
@@ -748,7 +748,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_benched(false);
-        return target;
+        target
     }
 
     pub fn bench_target(
@@ -763,7 +763,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn name(&self) -> &str {

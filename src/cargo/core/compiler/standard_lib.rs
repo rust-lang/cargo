@@ -161,7 +161,7 @@ pub fn generate_std_roots(
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
 
         for kind in kinds {
-            let list = ret.entry(*kind).or_insert(Vec::new());
+            let list = ret.entry(*kind).or_insert_with(Vec::new);
             list.push(interner.intern(
                 pkg,
                 lib,
@@ -173,7 +173,7 @@ pub fn generate_std_roots(
             ));
         }
     }
-    return Ok(ret);
+    Ok(ret)
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData) -> CargoResult<PathBuf> {

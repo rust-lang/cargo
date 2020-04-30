@@ -206,7 +206,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
             .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
         kinds.push("no-dev");
     }
-    if kinds.len() == 0 {
+    if kinds.is_empty() {
         kinds.extend(&["normal", "build", "dev"]);
     }
 

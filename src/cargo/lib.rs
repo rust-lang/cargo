@@ -144,7 +144,7 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
 /// and context.
 pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
     drop(shell.warn(warning));
-    drop(writeln!(shell.err(), ""));
+    drop(writeln!(shell.err()));
     _display_error(err, shell, false);
 }
 

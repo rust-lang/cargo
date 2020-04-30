@@ -622,7 +622,7 @@ fn lock(
 
     // Lock the summary's ID if possible
     let summary = match pair {
-        Some((precise, _)) => summary.override_id(precise.clone()),
+        Some((precise, _)) => summary.override_id(*precise),
         None => summary,
     };
     summary.map_dependencies(|dep| {

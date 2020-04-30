@@ -55,7 +55,7 @@ impl CompileKind {
         if targets.len() > 1 && !config.cli_unstable().multitarget {
             bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
         }
-        if targets.len() != 0 {
+        if !targets.is_empty() {
             return Ok(targets
                 .iter()
                 .map(|value| Ok(CompileKind::Target(CompileTarget::new(value)?)))
