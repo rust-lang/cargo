@@ -10,6 +10,7 @@ mod job;
 mod job_queue;
 mod layout;
 mod links;
+mod lto;
 mod output_depinfo;
 pub mod standard_lib;
 mod timings;
@@ -42,7 +43,7 @@ use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{Lto, PanicStrategy, Profile};
+use crate::core::profiles::{PanicStrategy, Profile};
 use crate::core::{Edition, Feature, InternedString, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
 use crate::util::machine_message::Message;
@@ -740,7 +741,6 @@ fn build_base_args(
     let bcx = cx.bcx;
     let Profile {
         ref opt_level,
-        ref lto,
         codegen_units,
         debuginfo,
         debug_assertions,
@@ -793,24 +793,31 @@ fn build_base_args(
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    // Disable LTO for host builds as prefer_dynamic and it are mutually
-    // exclusive.
-    let lto_possible = unit.target.can_lto() && !unit.target.for_host();
-    match lto {
-        Lto::Bool(true) => {
-            if lto_possible {
-                cmd.args(&["-C", "lto"]);
+    match cx.lto[&unit] {
+        lto::Lto::Run(None) => {
+            cmd.arg("-C").arg("lto");
+        }
+        lto::Lto::Run(Some(s)) => {
+            cmd.arg("-C").arg(format!("lto={}", s));
+        }
+        lto::Lto::EmbedBitcode => {} // this is rustc's default
+        lto::Lto::OnlyBitcode => {
+            // Note that this compiler flag, like the one below, is just an
+            // optimization in terms of build time. If we don't pass it then
+            // both object code and bitcode will show up. This is lagely just
+            // compat until the feature lands on stable and we can remove the
+            // conditional branch.
+            if cx
+                .bcx
+                .target_data
+                .info(CompileKind::Host)
+                .supports_embed_bitcode
+                .unwrap()
+            {
+                cmd.arg("-Clinker-plugin-lto");
             }
         }
-        Lto::Named(s) => {
-            if lto_possible {
-                cmd.arg("-C").arg(format!("lto={}", s));
-            }
-        }
-        // If LTO isn't being enabled then there's no need for bitcode to be
-        // present in the intermediate artifacts, so shave off some build time
-        // by removing it.
-        Lto::Bool(false) => {
+        lto::Lto::None => {
             if cx
                 .bcx
                 .target_data
