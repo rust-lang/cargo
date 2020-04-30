@@ -393,3 +393,21 @@ fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
         })?;
     Ok(())
 }
+
+/// Changes the filesystem mtime (and atime if possible) for the given file.
+///
+/// This intentionally does not return an error, as this is sometimes not
+/// supported on network filesystems. For the current uses in Cargo, this is a
+/// "best effort" approach, and errors shouldn't be propagated.
+pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
+    let path = path.as_ref();
+    match filetime::set_file_times(path, time, time) {
+        Ok(()) => log::debug!("set file mtime {} to {}", path.display(), time),
+        Err(e) => log::warn!(
+            "could not set mtime of {} to {}: {:?}",
+            path.display(),
+            time,
+            e
+        ),
+    }
+}

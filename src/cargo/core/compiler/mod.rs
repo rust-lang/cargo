@@ -321,8 +321,9 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     rustc_dep_info_loc.display()
                 ))
             })?;
-            debug!("rewinding mtime of {:?} to {}", dep_info_loc, timestamp);
-            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
+            // This mtime shift allows Cargo to detect if a source file was
+            // modified in the middle of the build.
+            paths::set_file_time_no_err(dep_info_loc, timestamp);
         }
 
         Ok(())
