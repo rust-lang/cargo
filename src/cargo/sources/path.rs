@@ -197,13 +197,18 @@ impl<'cfg> PathSource<'cfg> {
                 repo.path().display()
             )
         })?;
-        let repo_relative_path = root.strip_prefix(repo_root).chain_err(|| {
-            format!(
-                "expected git repo {} to be parent of package {}",
-                repo.path().display(),
-                root.display()
-            )
-        })?;
+        let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!(
+                    "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
+                    root,
+                    repo_root,
+                    e
+                );
+                return Ok(None);
+            }
+        };
         let manifest_path = repo_relative_path.join("Cargo.toml");
         if index.get_path(&manifest_path, 0).is_some() {
             return Ok(Some(self.list_files_git(pkg, &repo, filter)?));
