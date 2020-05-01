@@ -407,6 +407,7 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
+    pub strip: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -640,6 +641,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.dir_name {
             self.dir_name = Some(*v);
+        }
+
+        if let Some(v) = profile.strip {
+            self.strip = Some(v);
         }
     }
 }

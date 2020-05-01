@@ -565,6 +565,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
+    if let Some(strip) = toml.strip {
+        profile.strip = strip;
+    }
 }
 
 /// The root profile (dev/release).
@@ -595,6 +598,7 @@ pub struct Profile {
     pub rpath: bool,
     pub incremental: bool,
     pub panic: PanicStrategy,
+    pub strip: bool,
 }
 
 impl Default for Profile {
@@ -611,6 +615,7 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
+            strip: false,
         }
     }
 }
@@ -635,6 +640,7 @@ compact_debug! {
                 rpath
                 incremental
                 panic
+                strip
             )]
         }
     }
@@ -721,6 +727,7 @@ impl Profile {
         bool,
         bool,
         PanicStrategy,
+        bool,
     ) {
         (
             self.opt_level,
@@ -732,6 +739,7 @@ impl Profile {
             self.rpath,
             self.incremental,
             self.panic,
+            self.strip,
         )
     }
 }

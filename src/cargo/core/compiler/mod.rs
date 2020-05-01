@@ -748,6 +748,7 @@ fn build_base_args(
         rpath,
         ref panic,
         incremental,
+        strip,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -917,6 +918,10 @@ fn build_base_args(
     if incremental {
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();
         opt(cmd, "-C", "incremental=", Some(dir));
+    }
+
+    if strip {
+        opt(cmd, "-C", "link-arg=", Some(OsStr::new("-s")));
     }
 
     if unit.is_std {
