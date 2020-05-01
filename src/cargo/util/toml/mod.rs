@@ -407,6 +407,7 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
+    pub strip: Option<InternedString>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -519,6 +520,16 @@ impl TomlProfile {
                     "`panic` setting of `{}` is not a valid setting,\
                      must be `unwind` or `abort`",
                     panic
+                );
+            }
+        }
+
+        if let Some(strip) = &self.strip {
+            if strip != "debuginfo" && strip != "none" && strip != "symbols" {
+                bail!(
+                    "`strip` setting of `{}` is not a valid setting,\
+                     must be `debuginfo`, `none` or `symbols`",
+                    strip
                 );
             }
         }
@@ -640,6 +651,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.dir_name {
             self.dir_name = Some(*v);
+        }
+
+        if let Some(v) = profile.strip {
+            self.strip = Some(v);
         }
     }
 }

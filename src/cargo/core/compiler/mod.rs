@@ -46,7 +46,7 @@ use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{PanicStrategy, Profile};
+use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Edition, Feature, InternedString, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
 use crate::util::machine_message::Message;
@@ -732,6 +732,7 @@ fn build_base_args(
         rpath,
         ref panic,
         incremental,
+        strip,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -909,6 +910,11 @@ fn build_base_args(
         let dir = cx.files().layout(unit.kind).incremental().as_os_str();
         opt(cmd, "-C", "incremental=", Some(dir));
     }
+
+    if strip != Strip::None {
+        cmd.arg("-Z").arg(format!("strip={}", strip));
+    }
+
 
     if unit.is_std {
         // -Zforce-unstable-if-unmarked prevents the accidental use of
