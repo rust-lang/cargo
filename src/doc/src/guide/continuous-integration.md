@@ -49,9 +49,9 @@ breakage in nightly will not fail your overall build. Please see the
 [GitLab CI](https://docs.gitlab.com/ce/ci/yaml/README.html) for more
 information.
 
-### Github Actions
+### GitHub Actions
 
-To test your package on Github Actions, here is a sample `workflow.yml` file, which has to be in the directory `.github/workflows directory`:
+To test your package on GitHub Actions, here is a sample `workflow.yml` file, which has to be in the directory `.github/workflows`:
 ```yaml
 name: Rust
 
@@ -81,7 +81,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 ```
-This will run on a push to the repository. Pleas see the [Github Actions help](https://help.github.com/en/actions) for more information.
+This will run on a push to the repository. Pleas see the [GitHub Actions help](https://help.github.com/en/actions) for more information.
 
 ### builds.sr.ht
 
