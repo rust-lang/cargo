@@ -208,36 +208,34 @@ impl ResolvedFeatures {
         pkg_id: PackageId,
         features_for: FeaturesFor,
     ) -> Vec<InternedString> {
-        self.activated_features_int(pkg_id, features_for, true)
+        self.activated_features_int(pkg_id, features_for)
+            .expect("activated_features for invalid package")
     }
 
-    /// Variant of `activated_features` that returns an empty Vec if this is
+    /// Variant of `activated_features` that returns `None` if this is
     /// not a valid pkg_id/is_build combination. Used in places which do
     /// not know which packages are activated (like `cargo clean`).
     pub fn activated_features_unverified(
         &self,
         pkg_id: PackageId,
         features_for: FeaturesFor,
-    ) -> Vec<InternedString> {
-        self.activated_features_int(pkg_id, features_for, false)
+    ) -> Option<Vec<InternedString>> {
+        self.activated_features_int(pkg_id, features_for).ok()
     }
 
     fn activated_features_int(
         &self,
         pkg_id: PackageId,
         features_for: FeaturesFor,
-        verify: bool,
-    ) -> Vec<InternedString> {
+    ) -> CargoResult<Vec<InternedString>> {
         if let Some(legacy) = &self.legacy {
-            legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone())
+            Ok(legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone()))
         } else {
             let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
             if let Some(fs) = self.activated_features.get(&(pkg_id, is_build)) {
-                fs.iter().cloned().collect()
-            } else if verify {
-                panic!("features did not find {:?} {:?}", pkg_id, is_build)
+                Ok(fs.iter().cloned().collect())
             } else {
-                Vec::new()
+                anyhow::bail!("features did not find {:?} {:?}", pkg_id, is_build)
             }
         }
     }
