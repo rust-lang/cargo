@@ -88,9 +88,9 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
     let mut src = path_source(source_id, config)?;
     let pkg = select_pkg(
         &mut src,
-        DependencyOrListAllFn::ListAllFn(|path: &mut PathSource<'_>| path.read_packages()),
+        None,
+        |path: &mut PathSource<'_>| path.read_packages(),
         config,
-        true,
     )?;
     let pkgid = pkg.package_id();
     uninstall_pkgid(root, tracker, pkgid, bins, config)

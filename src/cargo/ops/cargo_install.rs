@@ -170,103 +170,97 @@ fn install_one(
 
     let dst = root.join("bin").into_path_unlocked();
 
-    let dependency = {
-        if let Some(krate) = krate {
-            let vers = if source_id.is_git() || source_id.is_path() {
-                // We explicitly ignore the version flag for these source types.
-                None
-            } else if let Some(vers_flag) = vers {
-                Some(parse_semver_flag(vers_flag)?.to_string())
-            } else {
-                if source_id.is_registry() {
-                    // Avoid pre-release versions from crate.io
-                    // unless explicitly asked for
-                    Some(String::from("*"))
+    let pkg = {
+        let dep = {
+            if let Some(krate) = krate {
+                let vers = if let Some(vers_flag) = vers {
+                    Some(parse_semver_flag(vers_flag)?.to_string())
                 } else {
-                    None
-                }
-            };
-            Some(Dependency::parse_no_deprecated(
-                krate,
-                vers.as_deref(),
-                source_id,
-            )?)
-        } else {
-            None
-        }
-    };
-
-    let pkg = if source_id.is_git() {
-        let dep_or_list_all_fn = if let Some(dep) = dependency {
-            DependencyOrListAllFn::Dependency(dep)
-        } else {
-            DependencyOrListAllFn::ListAllFn(|git: &mut GitSource<'_>| git.read_packages())
-        };
-        select_pkg(
-            &mut GitSource::new(source_id, config)?,
-            dep_or_list_all_fn,
-            config,
-            true,
-        )?
-    } else if source_id.is_path() {
-        let mut src = path_source(source_id, config)?;
-        if !src.path().is_dir() {
-            bail!(
-                "`{}` is not a directory. \
-                 --path must point to a directory containing a Cargo.toml file.",
-                src.path().display()
-            )
-        }
-        if !src.path().join("Cargo.toml").exists() {
-            if from_cwd {
-                bail!(
-                    "`{}` is not a crate root; specify a crate to \
-                     install from crates.io, or use --path or --git to \
-                     specify an alternate source",
-                    src.path().display()
-                );
+                    if source_id.is_registry() {
+                        // Avoid pre-release versions from crate.io
+                        // unless explicitly asked for
+                        Some(String::from("*"))
+                    } else {
+                        None
+                    }
+                };
+                Some(Dependency::parse_no_deprecated(
+                    krate,
+                    vers.as_deref(),
+                    source_id,
+                )?)
             } else {
+                None
+            }
+        };
+
+        if source_id.is_git() {
+            let mut source = GitSource::new(source_id, config)?;
+            select_pkg(
+                &mut source,
+                dep,
+                |git: &mut GitSource<'_>| git.read_packages(),
+                config,
+            )?
+        } else if source_id.is_path() {
+            let mut src = path_source(source_id, config)?;
+            if !src.path().is_dir() {
                 bail!(
-                    "`{}` does not contain a Cargo.toml file. \
-                     --path must point to a directory containing a Cargo.toml file.",
+                    "`{}` is not a directory. \
+                 --path must point to a directory containing a Cargo.toml file.",
                     src.path().display()
                 )
             }
-        }
-        src.update()?;
-
-        let dep_or_list_all_fn = if let Some(dep) = dependency {
-            DependencyOrListAllFn::Dependency(dep)
+            if !src.path().join("Cargo.toml").exists() {
+                if from_cwd {
+                    bail!(
+                        "`{}` is not a crate root; specify a crate to \
+                     install from crates.io, or use --path or --git to \
+                     specify an alternate source",
+                        src.path().display()
+                    );
+                } else {
+                    bail!(
+                        "`{}` does not contain a Cargo.toml file. \
+                     --path must point to a directory containing a Cargo.toml file.",
+                        src.path().display()
+                    )
+                }
+            }
+            select_pkg(
+                &mut src,
+                dep,
+                |path: &mut PathSource<'_>| path.read_packages(),
+                config,
+            )?
         } else {
-            DependencyOrListAllFn::ListAllFn(|path: &mut PathSource<'_>| path.read_packages())
-        };
-        select_pkg(&mut src, dep_or_list_all_fn, config, false)?
-    } else {
-        if !dependency.is_some() {
-            bail!(
-                "must specify a crate to install from \
+            if let Some(dep) = dep {
+                let mut source = map.load(source_id, &HashSet::new())?;
+                if let Ok(Some(pkg)) = installed_exact_package(
+                    dep.clone(),
+                    &mut source,
+                    config,
+                    opts,
+                    root,
+                    &dst,
+                    force,
+                ) {
+                    let msg = format!(
+                        "package `{}` is already installed, use --force to override",
+                        pkg
+                    );
+                    config.shell().status("Ignored", &msg)?;
+                    return Ok(true);
+                }
+                select_dep_pkg(&mut source, dep, config, needs_update_if_source_is_index)?
+            } else {
+                bail!(
+                    "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
-            )
+                )
+            }
         }
-        let dep = dependency.unwrap(); // Verified with is_some/bail above.
-        let mut source = map.load(source_id, &HashSet::new())?;
-        if let Ok(Some(pkg)) =
-            installed_exact_package(dep.clone(), &mut source, config, opts, root, &dst, force)
-        {
-            let msg = format!(
-                "package `{}` is already installed, use --force to override",
-                pkg
-            );
-            config.shell().status("Ignored", &msg)?;
-            return Ok(true);
-        }
-        select_pkg(
-            &mut source,
-            DependencyOrListAllFn::<fn(&mut Box<dyn Source>) -> CargoResult<Vec<Package>>>::Dependency(dep),
-            config,
-            needs_update_if_source_is_index,
-        )?
     };
 
     let git_package = if source_id.is_git() {
@@ -578,12 +572,7 @@ where
     // expensive network call in the case that the package is already installed.
     // If this fails, the caller will possibly do an index update and try again, this is just a
     // best-effort check to see if we can avoid hitting the network.
-    if let Ok(pkg) = select_pkg(
-        source,
-        DependencyOrListAllFn::<fn(&mut T) -> CargoResult<Vec<Package>>>::Dependency(dep),
-        config,
-        false,
-    ) {
+    if let Ok(pkg) = select_dep_pkg(source, dep, config, false) {
         let (_ws, rustc, target) =
             make_ws_rustc_target(&config, opts, &source.source_id(), pkg.clone())?;
         if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force) {
@@ -644,6 +633,7 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             ),
         }
     } else {
+        println!("DWH: Converting...");
         match v.to_semver() {
             Ok(v) => Ok(VersionReq::exact(&v)),
             Err(e) => {

@@ -519,23 +519,15 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
     Ok(PathSource::new(&path, source_id, config))
 }
 
-/// Either the specific dependency to be selected, or a function which can be executed to list all
-/// packages known in a source so that one can be selected from that list.
-pub enum DependencyOrListAllFn<F> {
-    Dependency(Dependency),
-    ListAllFn(F),
-}
-
 /// Gets a Package based on command-line requirements.
-pub fn select_pkg<T, F>(
+pub fn select_dep_pkg<T>(
     source: &mut T,
-    dep_or_list_all_fn: DependencyOrListAllFn<F>,
+    dep: Dependency,
     config: &Config,
     needs_update: bool,
 ) -> CargoResult<Package>
 where
     T: Source,
-    F: FnMut(&mut T) -> CargoResult<Vec<Package>>,
 {
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
@@ -546,54 +538,71 @@ where
         source.update()?;
     }
 
-    match dep_or_list_all_fn {
-        DependencyOrListAllFn::Dependency(dep) => {
-            let deps = source.query_vec(&dep)?;
-            match deps.iter().map(|p| p.package_id()).max() {
-                Some(pkgid) => {
-                    let pkg = Box::new(source).download_now(pkgid, config)?;
-                    Ok(pkg)
-                }
-                None => bail!(
-                    "could not find `{}` in {} with version `{}`",
-                    dep.package_name(),
-                    source.source_id(),
-                    dep.version_req(),
-                ),
-            }
+    let deps = source.query_vec(&dep)?;
+    match deps.iter().map(|p| p.package_id()).max() {
+        Some(pkgid) => {
+            let pkg = Box::new(source).download_now(pkgid, config)?;
+            Ok(pkg)
         }
-        DependencyOrListAllFn::ListAllFn(mut list_all) => {
-            let candidates = list_all(source)?;
-            let binaries = candidates
-                .iter()
-                .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);
-            let examples = candidates
-                .iter()
-                .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
-            let pkg = match one(binaries, |v| multi_err("binaries", v))? {
-                Some(p) => p,
-                None => match one(examples, |v| multi_err("examples", v))? {
-                    Some(p) => p,
-                    None => bail!(
-                        "no packages found with binaries or \
-                     examples"
-                    ),
-                },
-            };
-            return Ok(pkg.clone());
+        None => bail!(
+            "could not find `{}` in {} with version `{}`",
+            dep.package_name(),
+            source.source_id(),
+            dep.version_req(),
+        ),
+    }
+}
 
-            fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
-                pkgs.sort_unstable_by_key(|a| a.name());
-                format!(
-                    "multiple packages with {} found: {}",
-                    kind,
-                    pkgs.iter()
-                        .map(|p| p.name().as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
-            }
-        }
+pub fn select_pkg<T, F>(
+    source: &mut T,
+    dep: Option<Dependency>,
+    mut list_all: F,
+    config: &Config,
+) -> CargoResult<Package>
+where
+    T: Source,
+    F: FnMut(&mut T) -> CargoResult<Vec<Package>>,
+{
+    // This operation may involve updating some sources or making a few queries
+    // which may involve frobbing caches, as a result make sure we synchronize
+    // with other global Cargos
+    let _lock = config.acquire_package_cache_lock()?;
+
+    source.update()?;
+
+    return if let Some(dep) = dep {
+        select_dep_pkg(source, dep, config, false)
+    } else {
+        let candidates = list_all(source)?;
+        let binaries = candidates
+            .iter()
+            .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);
+        let examples = candidates
+            .iter()
+            .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
+        let pkg = match one(binaries, |v| multi_err("binaries", v))? {
+            Some(p) => p,
+            None => match one(examples, |v| multi_err("examples", v))? {
+                Some(p) => p,
+                None => bail!(
+                    "no packages found with binaries or \
+                         examples"
+                ),
+            },
+        };
+        Ok(pkg.clone())
+    };
+
+    fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
+        pkgs.sort_unstable_by_key(|a| a.name());
+        format!(
+            "multiple packages with {} found: {}",
+            kind,
+            pkgs.iter()
+                .map(|p| p.name().as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
