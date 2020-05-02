@@ -263,12 +263,14 @@ fn install_one(
         }
     };
 
-    let git_package = if source_id.is_git() {
-        Some(pkg.clone())
+    let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
+    let pkg = if source_id.is_git() {
+        // Don't use ws.current() in order to keep the package source as a git source so that
+        // install tracking uses the correct source.
+        pkg
     } else {
-        None
+        ws.current()?.clone()
     };
-    let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg)?;
 
     let mut td_opt = None;
     let mut needs_cleanup = false;
@@ -285,10 +287,6 @@ fn install_one(
         };
         ws.set_target_dir(target_dir);
     }
-
-    let pkg = git_package
-        .as_ref()
-        .map_or_else(|| ws.current(), |pkg| Ok(pkg))?;
 
     if from_cwd {
         if pkg.manifest().edition() == Edition::Edition2015 {
@@ -317,7 +315,7 @@ fn install_one(
 
     // Helper for --no-track flag to make sure it doesn't overwrite anything.
     let no_track_duplicates = || -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-        let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(pkg, &opts.filter)
+        let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(&pkg, &opts.filter)
             .into_iter()
             .filter(|name| dst.join(name).exists())
             .map(|name| (name, None))
@@ -349,7 +347,7 @@ fn install_one(
         }
     }
 
-    config.shell().status("Installing", pkg)?;
+    config.shell().status("Installing", &pkg)?;
 
     check_yanked_install(&ws)?;
 
@@ -390,7 +388,7 @@ fn install_one(
     } else {
         let tracker = InstallTracker::load(config, root)?;
         let (_freshness, duplicates) =
-            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
+            tracker.check_upgrade(&dst, &pkg, force, opts, &target, &rustc.verbose_version)?;
         (Some(tracker), duplicates)
     };
 
@@ -453,7 +451,7 @@ fn install_one(
 
     if let Some(mut tracker) = tracker {
         tracker.mark_installed(
-            pkg,
+            &pkg,
             &successful_bins,
             vers.map(|s| s.to_string()),
             opts,
@@ -461,7 +459,7 @@ fn install_one(
             &rustc.verbose_version,
         );
 
-        if let Err(e) = remove_orphaned_bins(&ws, &mut tracker, &duplicates, pkg, &dst) {
+        if let Err(e) = remove_orphaned_bins(&ws, &mut tracker, &duplicates, &pkg, &dst) {
             // Don't hard error on remove.
             config
                 .shell()
@@ -588,11 +586,7 @@ fn make_ws_rustc_target<'cfg>(
     source_id: &SourceId,
     pkg: Package,
 ) -> CargoResult<(Workspace<'cfg>, Rustc, String)> {
-    let mut ws = if source_id.is_git() {
-        // Don't use ws.current() in order to keep the package source as a git source so that
-        // install tracking uses the correct source.
-        Workspace::new(pkg.manifest_path(), config)?
-    } else if source_id.is_path() {
+    let mut ws = if source_id.is_git() || source_id.is_path() {
         Workspace::new(pkg.manifest_path(), config)?
     } else {
         Workspace::ephemeral(pkg, config, None, false)?
