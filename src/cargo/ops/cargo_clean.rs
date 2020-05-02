@@ -23,7 +23,7 @@ pub struct CleanOptions<'a> {
     /// A list of packages to clean. If empty, everything is cleaned.
     pub spec: Vec<String>,
     /// The target arch triple to clean, or None for the host arch
-    pub target: Option<String>,
+    pub targets: Vec<String>,
     /// Whether to clean the release directory
     pub profile_specified: bool,
     /// Whether to clean the directory of a certain build profile
@@ -61,9 +61,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     if opts.spec.is_empty() {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
-    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
+    let mut build_config = BuildConfig::new(config, Some(1), &opts.targets, CompileMode::Build)?;
     build_config.requested_profile = opts.requested_profile;
-    let target_data = RustcTargetData::new(ws, build_config.requested_kind)?;
+    let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
     // Resolve for default features. In the future, `cargo clean` should be rewritten
     // so that it doesn't need to guess filename hashes.
     let resolve_opts = ResolveOpts::new(
@@ -80,7 +80,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
-        build_config.requested_kind,
+        &build_config.requested_kinds,
         &resolve_opts,
         &specs,
         HasDevUnits::Yes,
@@ -102,13 +102,18 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
-            for kind in [CompileKind::Host, build_config.requested_kind].iter() {
+            for kind in build_config
+                .requested_kinds
+                .iter()
+                .chain(Some(&CompileKind::Host))
+            {
                 for mode in CompileMode::all_modes() {
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
                             profiles.get_profile_run_custom_build(&profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
+                                /*is_local*/ true,
                                 *unit_for,
                                 CompileMode::Build,
                             ))
@@ -116,6 +121,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                             profiles.get_profile(
                                 pkg.package_id(),
                                 ws.is_member(pkg),
+                                /*is_local*/ true,
                                 *unit_for,
                                 *mode,
                             )
@@ -141,7 +147,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         &features,
         None,
         &units,
-        &[],
+        &Default::default(),
         build_config.mode,
         &target_data,
         &profiles,

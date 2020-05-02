@@ -25,7 +25,7 @@ proptest! {
                 0
             } else {
                 // but that local builds will give a small clear test case.
-                std::u32::MAX
+                u32::MAX
             },
         result_cache: prop::test_runner::basic_result_cache,
         .. ProptestConfig::default()

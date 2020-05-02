@@ -70,16 +70,19 @@ pub fn run(
         }
     }
 
+    // `cargo run` is only compatible with one `--target` flag at most
+    options.build_config.single_requested_kind()?;
+
     let compile = ops::compile(ws, options)?;
     assert_eq!(compile.binaries.len(), 1);
-    let exe = &compile.binaries[0];
+    let (unit, exe) = &compile.binaries[0];
     let exe = match exe.strip_prefix(config.cwd()) {
         Ok(path) if path.file_name() == Some(path.as_os_str()) => Path::new(".").join(path),
         Ok(path) => path.to_path_buf(),
         Err(_) => exe.to_path_buf(),
     };
     let pkg = bins[0].0;
-    let mut process = compile.target_process(exe, pkg)?;
+    let mut process = compile.target_process(exe, unit.kind, pkg)?;
     process.args(args).cwd(config.cwd());
 
     config.shell().status("Running", process.to_string())?;

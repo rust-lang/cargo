@@ -64,9 +64,7 @@ pub fn run_benches(
 
 fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<Compilation<'a>> {
     let mut compilation = ops::compile(ws, &options.compile_opts)?;
-    compilation
-        .tests
-        .sort_by(|a, b| (a.0.package_id(), &a.1, &a.2).cmp(&(b.0.package_id(), &b.1, &b.2)));
+    compilation.tests.sort();
     Ok(compilation)
 }
 
@@ -78,16 +76,14 @@ fn run_unit_tests(
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let cwd = config.cwd();
-
     let mut errors = Vec::new();
 
-    for &(ref pkg, ref target, ref exe) in &compilation.tests {
-        let kind = target.kind();
-        let test = target.name().to_string();
+    for (unit, exe) in compilation.tests.iter() {
+        let test = unit.target.name().to_string();
         let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
-        let mut cmd = compilation.target_process(exe, pkg)?;
+        let mut cmd = compilation.target_process(exe, unit.kind, &unit.pkg)?;
         cmd.args(test_args);
-        if target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+        if unit.target.harness() && config.shell().verbosity() == Verbosity::Quiet {
             cmd.arg("--quiet");
         }
         config
@@ -102,7 +98,12 @@ fn run_unit_tests(
         match result {
             Err(e) => {
                 let e = e.downcast::<ProcessError>()?;
-                errors.push((kind.clone(), test.clone(), pkg.name().to_string(), e));
+                errors.push((
+                    unit.target.kind().clone(),
+                    test.clone(),
+                    unit.pkg.name().to_string(),
+                    e,
+                ));
                 if !options.no_fail_fast {
                     break;
                 }
@@ -137,48 +138,44 @@ fn run_doc_tests(
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
 
-    // The unstable doctest-xcompile feature enables both per-target-ignores and
-    // cross-compiling doctests. As a side effect, this feature also gates running
-    // doctests with runtools when target == host.
-    let doctest_xcompile = config.cli_unstable().doctest_xcompile;
-    let mut runtool: &Option<(std::path::PathBuf, Vec<String>)> = &None;
-    if doctest_xcompile {
-        runtool = compilation.target_runner();
-    } else if compilation.host != compilation.target {
-        return Ok((Test::Doc, errors));
-    }
-
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
-            package,
-            target,
             args,
             unstable_opts,
+            unit,
         } = doctest_info;
-        config.shell().status("Doc-tests", target.name())?;
-        let mut p = compilation.rustdoc_process(package, target)?;
-        p.arg("--test")
-            .arg(target.src_path().path().unwrap())
-            .arg("--crate-name")
-            .arg(&target.crate_name());
 
-        if doctest_xcompile {
-            if let CompileKind::Target(target) = options.compile_opts.build_config.requested_kind {
+        // Skip any `--target` tests unless `doctest-xcompile` is specified.
+        if !config.cli_unstable().doctest_xcompile && !unit.kind.is_host() {
+            continue;
+        }
+
+        config.shell().status("Doc-tests", unit.target.name())?;
+        let mut p = compilation.rustdoc_process(unit)?;
+        p.arg("--test")
+            .arg(unit.target.src_path().path().unwrap())
+            .arg("--crate-name")
+            .arg(&unit.target.crate_name());
+
+        if config.cli_unstable().doctest_xcompile {
+            if let CompileKind::Target(target) = unit.kind {
                 // use `rustc_target()` to properly handle JSON target paths
                 p.arg("--target").arg(target.rustc_target());
             }
             p.arg("-Zunstable-options");
             p.arg("--enable-per-target-ignores");
-        }
-
-        if let Some((runtool, runtool_args)) = runtool {
-            p.arg("--runtool").arg(runtool);
-            for arg in runtool_args {
-                p.arg("--runtool-arg").arg(arg);
+            if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
+                p.arg("--runtool").arg(runtool);
+                for arg in runtool_args {
+                    p.arg("--runtool-arg").arg(arg);
+                }
             }
         }
 
-        for &rust_dep in &[&compilation.deps_output] {
+        for &rust_dep in &[
+            &compilation.deps_output[&unit.kind],
+            &compilation.deps_output[&CompileKind::Host],
+        ] {
             let mut arg = OsString::from("dependency=");
             arg.push(rust_dep);
             p.arg("-L").arg(arg);
@@ -188,17 +185,11 @@ fn run_doc_tests(
             p.arg("-L").arg(native_dep);
         }
 
-        for &host_rust_dep in &[&compilation.host_deps_output] {
-            let mut arg = OsString::from("dependency=");
-            arg.push(host_rust_dep);
-            p.arg("-L").arg(arg);
-        }
-
         for arg in test_args {
             p.arg("--test-args").arg(arg);
         }
 
-        if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
+        if let Some(cfgs) = compilation.cfgs.get(&unit.pkg.package_id()) {
             for cfg in cfgs.iter() {
                 p.arg("--cfg").arg(cfg);
             }
@@ -212,7 +203,7 @@ fn run_doc_tests(
             p.arg("-Zunstable-options");
         }
 
-        if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {
+        if let Some(flags) = compilation.rustdocflags.get(&unit.pkg.package_id()) {
             p.args(flags);
         }
         config

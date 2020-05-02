@@ -180,7 +180,7 @@ fn plugin_with_dynamic_native_dependency() {
                 let src = root.join(&file);
                 let dst = out_dir.join(&file);
                 fs::copy(src, dst).unwrap();
-                if cfg!(windows) {
+                if cfg!(target_env = "msvc") {
                     fs::copy(root.join("builder.dll.lib"),
                              out_dir.join("builder.dll.lib")).unwrap();
                 }
@@ -435,5 +435,5 @@ fn shared_panic_abort_plugins() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build -v").run();
 }

@@ -21,6 +21,12 @@ fn setup() -> Option<Setup> {
         return None;
     }
 
+    if cfg!(all(target_os = "windows", target_env = "gnu")) {
+        // FIXME: contains object files that we don't handle yet:
+        // https://github.com/rust-lang/wg-cargo-std-aware/issues/46
+        return None;
+    }
+
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
@@ -297,7 +303,7 @@ fn lib_nostd() {
             r#"
                 #![no_std]
                 pub fn foo() {
-                    assert_eq!(core::u8::MIN, 0);
+                    assert_eq!(u8::MIN, 0);
                 }
             "#,
         )
@@ -512,7 +518,7 @@ fn doctest() {
         )
         .build();
 
-    p.cargo("test --doc -v")
+    p.cargo("test --doc -v -Zdoctest-xcompile")
         .build_std(&setup)
         .with_stdout_contains("test src/lib.rs - f [..] ... ok")
         .target_host()
@@ -569,4 +575,32 @@ fn macro_expanded_shadow() {
         .build();
 
     p.cargo("build -v").build_std(&setup).target_host().run();
+}
+
+#[cargo_test]
+fn ignores_incremental() {
+    // Incremental is not really needed for std, make sure it is disabled.
+    // Incremental also tends to have bugs that affect std libraries more than
+    // any other crate.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build")
+        .env("CARGO_INCREMENTAL", "1")
+        .build_std(&setup)
+        .target_host()
+        .run();
+    let incremental: Vec<_> = p
+        .glob(format!("target/{}/debug/incremental/*", rustc_host()))
+        .map(|e| e.unwrap())
+        .collect();
+    assert_eq!(incremental.len(), 1);
+    assert!(incremental[0]
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .starts_with("foo-"));
 }

@@ -136,7 +136,7 @@ fn compile<'cfg>(
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
+            let work = if unit.show_warnings(bcx.config) {
                 replay_output_cache(
                     unit.pkg.package_id(),
                     &unit.target,
@@ -223,6 +223,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
     let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let is_local = unit.is_local();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -312,7 +313,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &pkg_root,
                 &target_dir,
                 // Do not track source files in the fingerprint for registry dependencies.
-                current_id.source_id().is_path(),
+                is_local,
             )
             .chain_err(|| {
                 internal(format!(
@@ -320,8 +321,9 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     rustc_dep_info_loc.display()
                 ))
             })?;
-            debug!("rewinding mtime of {:?} to {}", dep_info_loc, timestamp);
-            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
+            // This mtime shift allows Cargo to detect if a source file was
+            // modified in the middle of the build.
+            paths::set_file_time_no_err(dep_info_loc, timestamp);
         }
 
         Ok(())
@@ -537,7 +539,7 @@ fn prepare_rustc(
 
     let mut base = cx
         .compilation
-        .rustc_process(&unit.pkg, is_primary, is_workspace)?;
+        .rustc_process(unit, is_primary, is_workspace)?;
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
@@ -553,7 +555,7 @@ fn prepare_rustc(
 
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(&unit.pkg, &unit.target)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -687,12 +689,12 @@ fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
-    if !bcx.show_warnings(unit.pkg.package_id()) {
+    if !unit.show_warnings(bcx.config) {
         cmd.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they
     // don't fail compilation.
-    } else if !unit.pkg.package_id().source_id().is_path() {
+    } else if !unit.is_local() {
         cmd.arg("--cap-lints").arg("warn");
     }
 }

@@ -251,7 +251,7 @@ pub fn build<'a>(
     specs: &[PackageIdSpec],
     requested_features: &RequestedFeatures,
     target_data: &RustcTargetData,
-    requested_kind: CompileKind,
+    requested_kinds: &[CompileKind],
     package_map: HashMap<PackageId, &'a Package>,
     opts: &TreeOptions,
 ) -> CargoResult<Graph<'a>> {
@@ -261,19 +261,21 @@ pub fn build<'a>(
     for (member, requested_features) in members_with_features {
         let member_id = member.package_id();
         let features_for = FeaturesFor::from_for_host(member.proc_macro());
-        let member_index = add_pkg(
-            &mut graph,
-            resolve,
-            resolved_features,
-            member_id,
-            features_for,
-            target_data,
-            requested_kind,
-            opts,
-        );
-        if opts.graph_features {
-            let fmap = resolve.summary(member_id).features();
-            add_cli_features(&mut graph, member_index, &requested_features, fmap);
+        for kind in requested_kinds {
+            let member_index = add_pkg(
+                &mut graph,
+                resolve,
+                resolved_features,
+                member_id,
+                features_for,
+                target_data,
+                *kind,
+                opts,
+            );
+            if opts.graph_features {
+                let fmap = resolve.summary(member_id).features();
+                add_cli_features(&mut graph, member_index, &requested_features, fmap);
+            }
         }
     }
     if opts.graph_features {

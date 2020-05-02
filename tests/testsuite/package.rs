@@ -1,12 +1,12 @@
 //! Tests for the `cargo package` command.
 
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::Package;
+use cargo_test_support::publish::validate_crate_contents;
+use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, publish::validate_crate_contents,
-    registry, symlink_supported, t,
+    basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
 };
-use std::fs::{read_to_string, File};
+use std::fs::{self, read_to_string, File};
 use std::path::Path;
 
 #[cargo_test]
@@ -1687,6 +1687,160 @@ fn package_restricted_windows() {
 [VERIFYING] foo [..]
 [COMPILING] foo [..]
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn finds_git_in_parent() {
+    // Test where `Cargo.toml` is not in the root of the git repo.
+    let repo_path = paths::root().join("repo");
+    fs::create_dir(&repo_path).unwrap();
+    let p = project()
+        .at("repo/foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+    let repo = git::init(&repo_path);
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("ignoreme", "");
+    p.change_file("ignoreme2", "");
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+Cargo.toml
+Cargo.toml.orig
+ignoreme
+ignoreme2
+src/lib.rs
+",
+        )
+        .run();
+
+    p.change_file(".gitignore", "ignoreme");
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.toml
+Cargo.toml.orig
+ignoreme2
+src/lib.rs
+",
+        )
+        .run();
+
+    fs::write(repo_path.join(".gitignore"), "ignoreme2").unwrap();
+    p.cargo("package --list --allow-dirty")
+        .with_stdout(
+            "\
+.gitignore
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[cfg(windows)]
+fn reserved_windows_name() {
+    Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "pub mod aux;")
+        .file("src/aux.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "extern crate bar;\nfn main() {  }")
+        .build();
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: failed to verify package tarball
+
+Caused by:
+  failed to download replaced source registry `[..]`
+
+Caused by:
+  failed to unpack package `[..] `[..]`)`
+
+Caused by:
+  failed to unpack entry at `[..]aux.rs`
+
+Caused by:
+  `[..]aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows
+
+Caused by:
+  failed to unpack `[..]aux.rs`
+
+Caused by:
+  failed to unpack `[..]aux.rs` into `[..]aux.rs`",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn list_with_path_and_lock() {
+    // Allow --list even for something that isn't packageable.
+
+    // Init an empty registry because a versionless path dep will search for
+    // the package on crates.io.
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+
+            [dependencies]
+            bar = {path="bar"}
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+        )
+        .run();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: all path dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version.
 ",
         )
         .run();

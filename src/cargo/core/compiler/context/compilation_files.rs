@@ -133,7 +133,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(|unit| (unit, LazyCell::new()))
             .collect();
         CompilationFiles {
-            ws: &cx.bcx.ws,
+            ws: cx.bcx.ws,
             host,
             target,
             export_dir: cx.bcx.build_config.export_dir.clone(),
@@ -332,7 +332,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         // we don't want to link it up.
         if out_dir.ends_with("deps") {
             // Don't lift up library dependencies.
-            if unit.target.is_bin() || self.roots.contains(unit) {
+            if unit.target.is_bin() || self.roots.contains(unit) || unit.target.is_dylib() {
                 Some((
                     out_dir.parent().unwrap().to_owned(),
                     if unit.mode.is_any_test() {

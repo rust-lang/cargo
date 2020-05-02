@@ -10,7 +10,9 @@ use cargo_test_support::install::{
 };
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, cargo_process, project, NO_SUCH_FILE_ERR_MSG};
+use cargo_test_support::{
+    basic_manifest, cargo_process, project, symlink_supported, t, NO_SUCH_FILE_ERR_MSG,
+};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -1456,5 +1458,42 @@ fn git_install_reads_workspace_manifest() {
     cargo_process(&format!("install --git {}", p.url().to_string()))
         .with_status(101)
         .with_stderr_contains("  invalid type: integer `3`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn install_git_with_symlink_home() {
+    // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
+    // symlink, and uses an build script.
+    if !symlink_supported() {
+        return;
+    }
+    let p = git::new("foo", |p| {
+        p.file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+            .file("src/main.rs", "fn main() {}")
+            // This triggers discover_git_and_list_files for detecting changed files.
+            .file("build.rs", "fn main() {}")
+    });
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let actual = paths::root().join("actual-home");
+    t!(std::fs::create_dir(&actual));
+    t!(symlink(&actual, paths::home().join(".cargo")));
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[INSTALLING] foo v1.0.0 [..]
+[COMPILING] foo v1.0.0 [..]
+[FINISHED] [..]
+[INSTALLING] [..]home/.cargo/bin/foo[..]
+[INSTALLED] package `foo [..]
+[WARNING] be sure to add [..]
+",
+        )
         .run();
 }

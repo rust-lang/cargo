@@ -42,7 +42,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
-    pub target: Option<String>,
+    pub targets: Vec<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
     pub features: Vec<String>,
@@ -88,7 +88,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             list: false,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
-            target: opts.target.clone(),
+            targets: opts.targets.clone(),
             jobs: opts.jobs,
             features: opts.features.clone(),
             all_features: opts.all_features,
@@ -811,7 +811,7 @@ fn get_source_id(
     reg: Option<&String>,
 ) -> CargoResult<SourceId> {
     match (reg, index) {
-        (Some(r), _) => SourceId::alt_registry(config, &r),
+        (Some(r), _) => SourceId::alt_registry(config, r),
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;

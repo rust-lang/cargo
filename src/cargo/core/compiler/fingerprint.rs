@@ -1209,7 +1209,12 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     let target_root = target_root(cx);
     let local = if unit.mode.is_doc() {
         // rustdoc does not have dep-info files.
-        let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg)?;
+        let fingerprint = pkg_fingerprint(cx.bcx, &unit.pkg).chain_err(|| {
+            format!(
+                "failed to determine package fingerprint for documenting {}",
+                unit.pkg
+            )
+        })?;
         vec![LocalFingerprint::Precalculated(fingerprint)]
     } else {
         let dep_info = dep_info_loc(cx, unit);
@@ -1270,7 +1275,18 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
     // the whole crate.
     let (gen_local, overridden) = build_script_local_fingerprints(cx, unit);
     let deps = &cx.build_explicit_deps[unit];
-    let local = (gen_local)(deps, Some(&|| pkg_fingerprint(cx.bcx, &unit.pkg)))?.unwrap();
+    let local = (gen_local)(
+        deps,
+        Some(&|| {
+            pkg_fingerprint(cx.bcx, &unit.pkg).chain_err(|| {
+                format!(
+                    "failed to determine package fingerprint for build script for {}",
+                    unit.pkg
+                )
+            })
+        }),
+    )?
+    .unwrap();
     let output = deps.build_script_output.clone();
 
     // Include any dependencies of our execution, which is typically just the
@@ -1521,7 +1537,7 @@ fn compare_old_fingerprint(
         // update the mtime so other cleaners know we used it
         let t = FileTime::from_system_time(SystemTime::now());
         debug!("mtime-on-use forcing {:?} to {}", loc, t);
-        filetime::set_file_times(loc, t, t)?;
+        paths::set_file_time_no_err(loc, t);
     }
 
     let new_hash = new_fingerprint.hash();

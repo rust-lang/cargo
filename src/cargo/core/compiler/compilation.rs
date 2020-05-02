@@ -8,15 +8,14 @@ use semver::Version;
 
 use super::BuildContext;
 use crate::core::compiler::CompileKind;
-use crate::core::{Edition, Package, PackageId, Target};
+use crate::core::compiler::Unit;
+use crate::core::{Edition, Package, PackageId};
 use crate::util::{self, config, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
-    /// The package being doc-tested.
-    pub package: Package,
-    /// The target being tested (currently always the package's lib).
-    pub target: Target,
+    /// What's being doctested
+    pub unit: Unit,
     /// Arguments needed to pass to rustdoc to run this test.
     pub args: Vec<OsString>,
     /// Whether or not -Zunstable-options is needed.
@@ -26,11 +25,12 @@ pub struct Doctest {
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
-    /// `(package, target, path_to_test_exe)`
-    pub tests: Vec<(Package, Target, PathBuf)>,
+    /// `(unit, path_to_test_exe)` where `unit` contains information such as the
+    /// package, compile target, etc.
+    pub tests: Vec<(Unit, PathBuf)>,
 
     /// An array of all binaries created.
-    pub binaries: Vec<PathBuf>,
+    pub binaries: Vec<(Unit, PathBuf)>,
 
     /// All directories for the output of native build commands.
     ///
@@ -41,20 +41,17 @@ pub struct Compilation<'cfg> {
     pub native_dirs: BTreeSet<PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
-    pub root_output: PathBuf,
+    pub root_output: HashMap<CompileKind, PathBuf>,
 
     /// Output directory for rust dependencies.
     /// May be for the host or for a specific target.
-    pub deps_output: PathBuf,
+    pub deps_output: HashMap<CompileKind, PathBuf>,
 
-    /// Output directory for the rust host dependencies.
-    pub host_deps_output: PathBuf,
+    /// The path to the host libdir for the compiler used
+    sysroot_host_libdir: PathBuf,
 
-    /// The path to rustc's own libstd
-    pub host_dylib_path: PathBuf,
-
-    /// The path to libstd for the target
-    pub target_dylib_path: PathBuf,
+    /// The path to libstd for each target
+    sysroot_target_libdir: HashMap<CompileKind, PathBuf>,
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
@@ -69,9 +66,6 @@ pub struct Compilation<'cfg> {
     /// Flags to pass to rustdoc when invoked from cargo test, per package.
     pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
-    pub host: String,
-    pub target: String,
-
     config: &'cfg Config,
 
     /// Rustc process to be used by default
@@ -82,7 +76,7 @@ pub struct Compilation<'cfg> {
     /// rustc_workspace_wrapper_process
     primary_rustc_process: Option<ProcessBuilder>,
 
-    target_runner: Option<(PathBuf, Vec<String>)>,
+    target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -100,23 +94,28 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-        let default_kind = bcx.build_config.requested_kind;
         Ok(Compilation {
             // TODO: deprecated; remove.
             native_dirs: BTreeSet::new(),
-            root_output: PathBuf::from("/"),
-            deps_output: PathBuf::from("/"),
-            host_deps_output: PathBuf::from("/"),
-            host_dylib_path: bcx
+            root_output: HashMap::new(),
+            deps_output: HashMap::new(),
+            sysroot_host_libdir: bcx
                 .target_data
                 .info(CompileKind::Host)
                 .sysroot_host_libdir
                 .clone(),
-            target_dylib_path: bcx
-                .target_data
-                .info(default_kind)
-                .sysroot_target_libdir
-                .clone(),
+            sysroot_target_libdir: bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .chain(Some(&CompileKind::Host))
+                .map(|kind| {
+                    (
+                        *kind,
+                        bcx.target_data.info(*kind).sysroot_target_libdir.clone(),
+                    )
+                })
+                .collect(),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -127,16 +126,20 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
-            host: bcx.host_triple().to_string(),
-            target: bcx.target_data.short_name(&default_kind).to_string(),
-            target_runner: target_runner(bcx, default_kind)?,
+            target_runners: bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .chain(Some(&CompileKind::Host))
+                .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
+                .collect::<CargoResult<HashMap<_, _>>>()?,
         })
     }
 
     /// See `process`.
     pub fn rustc_process(
         &self,
-        pkg: &Package,
+        unit: &Unit,
         is_primary: bool,
         is_workspace: bool,
     ) -> CargoResult<ProcessBuilder> {
@@ -148,17 +151,22 @@ impl<'cfg> Compilation<'cfg> {
             self.rustc_process.clone()
         };
 
-        self.fill_env(rustc, pkg, true)
+        self.fill_env(rustc, &unit.pkg, unit.kind, true)
     }
 
     /// See `process`.
-    pub fn rustdoc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
-        let mut p = self.fill_env(process(&*self.config.rustdoc()?), pkg, false)?;
-        if target.edition() != Edition::Edition2015 {
-            p.arg(format!("--edition={}", target.edition()));
+    pub fn rustdoc_process(&self, unit: &Unit) -> CargoResult<ProcessBuilder> {
+        let mut p = self.fill_env(
+            process(&*self.config.rustdoc()?),
+            &unit.pkg,
+            unit.kind,
+            true,
+        )?;
+        if unit.target.edition() != Edition::Edition2015 {
+            p.arg(format!("--edition={}", unit.target.edition()));
         }
 
-        for crate_type in target.rustc_crate_types() {
+        for crate_type in unit.target.rustc_crate_types() {
             p.arg("--crate-type").arg(crate_type);
         }
 
@@ -171,20 +179,21 @@ impl<'cfg> Compilation<'cfg> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, true)
+        self.fill_env(process(cmd), pkg, CompileKind::Host, false)
     }
 
-    pub fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
-        &self.target_runner
+    pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
+        self.target_runners.get(&kind).and_then(|x| x.as_ref())
     }
 
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(
         &self,
         cmd: T,
+        kind: CompileKind,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        let builder = if let Some((ref runner, ref args)) = *self.target_runner() {
+        let builder = if let Some((runner, args)) = self.target_runner(kind) {
             let mut builder = process(runner);
             builder.args(args);
             builder.arg(cmd);
@@ -192,7 +201,7 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             process(cmd)
         };
-        self.fill_env(builder, pkg, false)
+        self.fill_env(builder, pkg, kind, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -204,26 +213,28 @@ impl<'cfg> Compilation<'cfg> {
         &self,
         mut cmd: ProcessBuilder,
         pkg: &Package,
-        is_host: bool,
+        kind: CompileKind,
+        is_rustc_tool: bool,
     ) -> CargoResult<ProcessBuilder> {
-        let mut search_path = if is_host {
-            let mut search_path = vec![self.host_deps_output.clone()];
-            search_path.push(self.host_dylib_path.clone());
-            search_path
+        let mut search_path = Vec::new();
+        if is_rustc_tool {
+            search_path.push(self.deps_output[&CompileKind::Host].clone());
+            search_path.push(self.sysroot_host_libdir.clone());
         } else {
-            let mut search_path =
-                super::filter_dynamic_search_path(self.native_dirs.iter(), &self.root_output);
-            search_path.push(self.deps_output.clone());
-            search_path.push(self.root_output.clone());
+            search_path.extend(super::filter_dynamic_search_path(
+                self.native_dirs.iter(),
+                &self.root_output[&kind],
+            ));
+            search_path.push(self.deps_output[&kind].clone());
+            search_path.push(self.root_output[&kind].clone());
             // For build-std, we don't want to accidentally pull in any shared
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it
             // matters), but is here to be safe.
             if self.config.cli_unstable().build_std.is_none() {
-                search_path.push(self.target_dylib_path.clone());
+                search_path.push(self.sysroot_target_libdir[&kind].clone());
             }
-            search_path
-        };
+        }
 
         let dylib_path = util::dylib_path();
         let dylib_path_is_empty = dylib_path.is_empty();

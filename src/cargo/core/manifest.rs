@@ -353,7 +353,7 @@ compact_debug! {
                                 kinds.clone(),
                                 self.src_path.path().unwrap().to_path_buf(),
                                 self.edition,
-                            ).inner.clone(),
+                            ).inner,
                             format!("lib_target({:?}, {:?}, {:?}, {:?})",
                                     self.name, kinds, self.src_path, self.edition),
                         )
@@ -366,21 +366,21 @@ compact_debug! {
                                         &self.name,
                                         path.to_path_buf(),
                                         self.edition,
-                                    ).inner.clone(),
+                                    ).inner,
                                     format!("custom_build_target({:?}, {:?}, {:?})",
                                             self.name, path, self.edition),
                                 )
                             }
                             TargetSourcePath::Metabuild => {
                                 (
-                                    Target::metabuild_target(&self.name).inner.clone(),
+                                    Target::metabuild_target(&self.name).inner,
                                     format!("metabuild_target({:?})", self.name),
                                 )
                             }
                         }
                     }
                     _ => (
-                        Target::new(self.src_path.clone(), self.edition).inner.clone(),
+                        Target::new(self.src_path.clone(), self.edition).inner,
                         format!("with_path({:?}, {:?})", self.src_path, self.edition),
                     ),
                 }

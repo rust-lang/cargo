@@ -889,7 +889,7 @@ impl<'cfg> DrainState<'cfg> {
         artifact: Artifact,
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<()> {
-        if unit.mode.is_run_custom_build() && cx.bcx.show_warnings(unit.pkg.package_id()) {
+        if unit.mode.is_run_custom_build() && unit.show_warnings(cx.bcx.config) {
             self.emit_warnings(None, unit, cx)?;
         }
         let unlocked = self.queue.finish(unit, &artifact);

@@ -139,7 +139,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(opt("target", target).value_name("TRIPLE"))
+        self._arg(multi_opt("target", target, "TRIPLE"))
     }
 
     fn arg_target_dir(self) -> Self {
@@ -321,8 +321,8 @@ pub trait ArgMatchesExt {
         self.value_of_u32("jobs")
     }
 
-    fn target(&self) -> Option<String> {
-        self._value_of("target").map(|s| s.to_string())
+    fn targets(&self) -> Vec<String> {
+        self._values_of("target")
     }
 
     fn get_profile_name(
@@ -454,7 +454,7 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
+        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.targets(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");

@@ -4,7 +4,7 @@ steps:
       rustup set profile minimal
       rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
       rustup update --no-self-update $TOOLCHAIN
-      if [ "$TOOLCHAIN" = "nightly" ]; then
+      if [[ "$TOOLCHAIN" == "nightly"* ]]; then
         rustup component add --toolchain=$TOOLCHAIN rustc-dev
       fi
       rustup default $TOOLCHAIN

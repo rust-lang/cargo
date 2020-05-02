@@ -99,6 +99,25 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 cargo test --target foo -Zdoctest-xcompile
 ```
 
+### multitarget
+* Tracking Issue: [#8176](https://github.com/rust-lang/cargo/issues/8176)
+
+This flag allows passing multiple `--target` flags to the `cargo` subcommand
+selected. When multiple `--target` flags are passed the selected build targets
+will be built for each of the selected architectures.
+
+For example to compile a library for both 32 and 64-bit:
+
+```
+cargo build --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
+```
+
+or running tests for both targets:
+
+```
+cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
+```
+
 ### Custom named profiles
 
 * Tracking Issue: [rust-lang/cargo#6988](https://github.com/rust-lang/cargo/issues/6988)

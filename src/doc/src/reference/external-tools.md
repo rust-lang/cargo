@@ -48,7 +48,11 @@ alter the way the JSON messages are computed and rendered. See the description
 of the `--message-format` option in the [build command documentation] for more
 details.
 
+If you are using Rust, the [cargo_metadata] crate can be used to parse these
+messages.
+
 [build command documentation]: ../commands/cargo-build.md
+[cargo_metadata]: https://crates.io/crates/cargo_metadata
 
 #### Compiler messages
 

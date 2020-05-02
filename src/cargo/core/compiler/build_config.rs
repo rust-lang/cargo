@@ -2,6 +2,7 @@ use crate::core::compiler::CompileKind;
 use crate::core::interning::InternedString;
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
+use anyhow::bail;
 use serde::ser;
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -10,7 +11,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct BuildConfig {
     /// The requested kind of compilation for this session
-    pub requested_kind: CompileKind,
+    pub requested_kinds: Vec<CompileKind>,
     /// Number of rustc jobs to run in parallel.
     pub jobs: u32,
     /// Build profile
@@ -50,12 +51,11 @@ impl BuildConfig {
     pub fn new(
         config: &Config,
         jobs: Option<u32>,
-        requested_target: &Option<String>,
+        requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
-        let requested_kind =
-            CompileKind::from_requested_target(config, requested_target.as_deref())?;
+        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
         }
@@ -69,7 +69,7 @@ impl BuildConfig {
         let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
 
         Ok(BuildConfig {
-            requested_kind,
+            requested_kinds,
             jobs,
             requested_profile: InternedString::new("dev"),
             mode,
@@ -94,6 +94,13 @@ impl BuildConfig {
 
     pub fn test(&self) -> bool {
         self.mode == CompileMode::Test || self.mode == CompileMode::Bench
+    }
+
+    pub fn single_requested_kind(&self) -> CargoResult<CompileKind> {
+        match self.requested_kinds.len() {
+            1 => Ok(self.requested_kinds[0]),
+            _ => bail!("only one `--target` argument is supported"),
+        }
     }
 }
 

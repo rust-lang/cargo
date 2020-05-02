@@ -393,3 +393,43 @@ fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
         })?;
     Ok(())
 }
+
+/// Changes the filesystem mtime (and atime if possible) for the given file.
+///
+/// This intentionally does not return an error, as this is sometimes not
+/// supported on network filesystems. For the current uses in Cargo, this is a
+/// "best effort" approach, and errors shouldn't be propagated.
+pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
+    let path = path.as_ref();
+    match filetime::set_file_times(path, time, time) {
+        Ok(()) => log::debug!("set file mtime {} to {}", path.display(), time),
+        Err(e) => log::warn!(
+            "could not set mtime of {} to {}: {:?}",
+            path.display(),
+            time,
+            e
+        ),
+    }
+}
+
+/// Strips `base` from `path`.
+///
+/// This canonicalizes both paths before stripping. This is useful if the
+/// paths are obtained in different ways, and one or the other may or may not
+/// have been normalized in some way.
+pub fn strip_prefix_canonical<P: AsRef<Path>>(
+    path: P,
+    base: P,
+) -> Result<PathBuf, std::path::StripPrefixError> {
+    // Not all filesystems support canonicalize. Just ignore if it doesn't work.
+    let safe_canonicalize = |path: &Path| match path.canonicalize() {
+        Ok(p) => p,
+        Err(e) => {
+            log::warn!("cannot canonicalize {:?}: {:?}", path, e);
+            path.to_path_buf()
+        }
+    };
+    let canon_path = safe_canonicalize(path.as_ref());
+    let canon_base = safe_canonicalize(base.as_ref());
+    canon_path.strip_prefix(canon_base).map(|p| p.to_path_buf())
+}

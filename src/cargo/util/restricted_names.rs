@@ -2,6 +2,7 @@
 
 use crate::util::CargoResult;
 use anyhow::bail;
+use std::path::Path;
 
 /// Returns `true` if the name contains non-ASCII characters.
 pub fn is_non_ascii_name(name: &str) -> bool {
@@ -80,4 +81,14 @@ pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<
         }
     }
     Ok(())
+}
+
+// Check the entire path for names reserved in Windows.
+pub fn is_windows_reserved_path(path: &Path) -> bool {
+    path.iter()
+        .filter_map(|component| component.to_str())
+        .any(|component| {
+            let stem = component.split('.').next().unwrap();
+            is_windows_reserved(stem)
+        })
 }

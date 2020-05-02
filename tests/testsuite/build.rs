@@ -3769,7 +3769,11 @@ fn cdylib_not_lifted() {
     p.cargo("build").run();
 
     let files = if cfg!(windows) {
-        vec!["foo.dll.lib", "foo.dll.exp", "foo.dll"]
+        if cfg!(target_env = "msvc") {
+            vec!["foo.dll.lib", "foo.dll.exp", "foo.dll"]
+        } else {
+            vec!["libfoo.dll.a", "foo.dll"]
+        }
     } else if cfg!(target_os = "macos") {
         vec!["libfoo.dylib"]
     } else {
@@ -3803,7 +3807,11 @@ fn cdylib_final_outputs() {
     p.cargo("build").run();
 
     let files = if cfg!(windows) {
-        vec!["foo_bar.dll.lib", "foo_bar.dll"]
+        if cfg!(target_env = "msvc") {
+            vec!["foo_bar.dll.lib", "foo_bar.dll"]
+        } else {
+            vec!["foo_bar.dll", "libfoo_bar.dll.a"]
+        }
     } else if cfg!(target_os = "macos") {
         vec!["libfoo_bar.dylib"]
     } else {
