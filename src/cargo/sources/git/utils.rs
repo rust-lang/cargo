@@ -833,30 +833,15 @@ fn fetch_with_cli(
 /// opportunistically try a `git gc` when the pack directory looks too big, and
 /// failing that we just blow away the repository and start over.
 fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
-    // Here we arbitrarily declare that if you have more than 100 files in your
-    // `pack` folder that we need to do a gc.
-    let entries = match repo.path().join("objects/pack").read_dir() {
-        Ok(e) => e.count(),
-        Err(_) => {
-            debug!("skipping gc as pack dir appears gone");
-            return Ok(());
-        }
-    };
-    let max = env::var("__CARGO_PACKFILE_LIMIT")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(100);
-    if entries < max {
-        debug!("skipping gc as there's only {} pack files", entries);
-        return Ok(());
-    }
-
-    // First up, try a literal `git gc` by shelling out to git. This is pretty
-    // likely to fail though as we may not have `git` installed. Note that
-    // libgit2 doesn't currently implement the gc operation, so there's no
-    // equivalent there.
+    // First up, try a literal `git gc --auto` by shelling out to git. This
+    // is pretty likely to fail though as we may not have `git` installed.
+    // If it doesn't fail, it will check how many packs and loose objects there
+    // are and spawn a `git gc` in the background if there are too many.
+    // Note that libgit2 doesn't currently implement the gc operation, so
+    // there's no equivalent there.
     match Command::new("git")
         .arg("gc")
+        .arg("--auto")
         .current_dir(repo.path())
         .output()
     {

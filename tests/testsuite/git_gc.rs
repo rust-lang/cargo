@@ -50,6 +50,9 @@ fn run_test(path_env: Option<&OsStr>) {
     let mut cfg = index.config().unwrap();
     cfg.set_str("user.email", "foo@bar.com").unwrap();
     cfg.set_str("user.name", "Foo Bar").unwrap();
+    cfg.set_str("gc.autoPackLimit", "10").unwrap();
+    // Ensure we check the number of packs after gc finished.
+    cfg.set_str("gc.autoDetach", "false").unwrap();
 
     for _ in 0..N {
         git::commit(&repo);
@@ -70,7 +73,6 @@ fn run_test(path_env: Option<&OsStr>) {
     assert!(before > N);
 
     let mut cmd = foo.cargo("update");
-    cmd.env("__CARGO_PACKFILE_LIMIT", "10");
     if let Some(path) = path_env {
         cmd.env("PATH", path);
     }
