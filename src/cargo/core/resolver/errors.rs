@@ -173,11 +173,11 @@ pub(super) fn activation_error(
                 "\n\nall possible versions conflict with \
                  previously selected packages.",
             );
-        }
 
-        for &(p, _) in other_errors.iter() {
-            msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+            for &(p, _) in other_errors.iter() {
+                msg.push_str("\n\n  previously selected ");
+                msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
+            }
         }
 
         msg.push_str("\n\nfailed to select a version for `");
