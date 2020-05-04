@@ -71,6 +71,7 @@
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
+//! LTO flags                                  | ✓           |
 //! is_std                                     |             | ✓
 //!
 //! [^1]: Build script and bin dependencies are not included.
@@ -1241,7 +1242,12 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     }
     .to_vec();
 
-    let profile_hash = util::hash_u64((&unit.profile, unit.mode, cx.bcx.extra_args_for(unit)));
+    let profile_hash = util::hash_u64((
+        &unit.profile,
+        unit.mode,
+        cx.bcx.extra_args_for(unit),
+        cx.lto[unit],
+    ));
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));

@@ -16,6 +16,7 @@ use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
+use super::lto::Lto;
 use super::unit_graph::UnitDep;
 use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
@@ -72,6 +73,11 @@ pub struct Context<'a, 'cfg> {
     /// jobserver clients for each Unit (which eventually becomes a rustc
     /// process).
     pub rustc_clients: HashMap<Unit, Client>,
+
+    /// Map of the LTO-status of each unit. This indicates what sort of
+    /// compilation is happening (only object, only bitcode, both, etc), and is
+    /// precalculated early on.
+    pub lto: HashMap<Unit, Lto>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -111,6 +117,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rmeta_required: HashSet::new(),
             rustc_clients: HashMap::new(),
             pipelining,
+            lto: HashMap::new(),
         })
     }
 
@@ -123,6 +130,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
+        super::lto::generate(&mut self)?;
         self.check_collistions()?;
 
         for unit in &self.bcx.roots {

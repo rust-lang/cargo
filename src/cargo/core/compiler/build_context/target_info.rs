@@ -40,7 +40,7 @@ pub struct TargetInfo {
     pub rustflags: Vec<String>,
     /// Extra flags to pass to `rustdoc`, see `env_args`.
     pub rustdocflags: Vec<String>,
-    /// Remove this when it hits stable (1.44)
+    /// Remove this when it hits stable (1.45)
     pub supports_embed_bitcode: Option<bool>,
 }
 
