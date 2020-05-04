@@ -176,7 +176,7 @@ fn build_resolve_graph_r(
     let deps: Vec<Dep> = resolve
         .deps(pkg_id)
         .filter(|(_dep_id, deps)| {
-            if requested_kinds == &[CompileKind::Host] {
+            if requested_kinds == [CompileKind::Host] {
                 true
             } else {
                 requested_kinds.iter().any(|kind| {

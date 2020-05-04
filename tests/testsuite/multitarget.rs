@@ -35,7 +35,7 @@ fn simple_build() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    assert!(p.target_bin(&t1, "foo").is_file());
+    assert!(p.target_bin(t1, "foo").is_file());
     assert!(p.target_bin(&t2, "foo").is_file());
 }
 

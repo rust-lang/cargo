@@ -378,7 +378,7 @@ fn registry(
         token: token_config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
-    let opt_index = index_config.as_ref().or(index.as_ref());
+    let opt_index = index_config.as_ref().or_else(|| index.as_ref());
     let sid = get_source_id(config, opt_index, registry.as_ref())?;
     if !sid.is_remote_registry() {
         bail!(

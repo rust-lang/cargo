@@ -204,6 +204,6 @@ impl UnitInterner {
         }
         let item = Rc::new(item.clone());
         me.cache.insert(item.clone());
-        return item;
+        item
     }
 }

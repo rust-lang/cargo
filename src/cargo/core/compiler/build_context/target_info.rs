@@ -448,7 +448,7 @@ fn env_args(
     // This means that, e.g., even if the specified --target is the
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
-    if requested_kinds != &[CompileKind::Host] && kind.is_host() {
+    if requested_kinds != [CompileKind::Host] && kind.is_host() {
         // This is probably a build script or plugin and we're
         // compiling with --target. In this scenario there are
         // no rustflags we can apply.

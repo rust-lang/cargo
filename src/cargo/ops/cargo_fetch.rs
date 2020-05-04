@@ -39,7 +39,7 @@ pub fn fetch<'a>(
                 deps.iter().any(|d| {
                     // If no target was specified then all dependencies are
                     // fetched.
-                    if options.targets.len() == 0 {
+                    if options.targets.is_empty() {
                         return true;
                     }
 
