@@ -78,7 +78,7 @@ fn do_read_manifest(
         let (mut manifest, paths) =
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
-        if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
+        if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
                 "no targets specified in the manifest\n  \
                  either src/lib.rs, src/main.rs, a [lib] section, or \
