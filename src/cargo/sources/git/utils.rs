@@ -4,7 +4,7 @@ use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{network, Config, IntoUrl, Progress};
 use curl::easy::{Easy, List};
-use git2::{self, ObjectType};
+use git2::{self, ErrorClass, ObjectType};
 use log::{debug, info};
 use serde::ser;
 use serde::Serialize;
@@ -97,10 +97,43 @@ impl GitRemote {
         reference: &GitReference,
         cargo_config: &Config,
     ) -> CargoResult<(GitDatabase, GitRevision)> {
+        let format_error = |e: anyhow::Error, operation| {
+            let may_be_libgit_fault = e
+                .chain()
+                .filter_map(|e| e.downcast_ref::<git2::Error>())
+                .any(|e| match e.class() {
+                    ErrorClass::Net
+                    | ErrorClass::Ssl
+                    | ErrorClass::Submodule
+                    | ErrorClass::FetchHead
+                    | ErrorClass::Ssh
+                    | ErrorClass::Callback
+                    | ErrorClass::Http => true,
+                    _ => false,
+                });
+            let uses_cli = cargo_config
+                .net_config()
+                .ok()
+                .and_then(|config| config.git_fetch_with_cli)
+                .unwrap_or(false);
+            let msg = if !uses_cli && may_be_libgit_fault {
+                format!(
+                    r"failed to {} into: {}
+  If your environment requires git authentication or proxying, try enabling `git-fetch-with-cli`
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                    operation,
+                    into.display()
+                )
+            } else {
+                format!("failed to {} into: {}", operation, into.display())
+            };
+            e.context(msg)
+        };
+
         let mut repo_and_rev = None;
         if let Ok(mut repo) = git2::Repository::open(into) {
             self.fetch_into(&mut repo, cargo_config)
-                .chain_err(|| format!("failed to fetch into {}", into.display()))?;
+                .map_err(|e| format_error(e, "fetch"))?;
             if let Ok(rev) = reference.resolve(&repo) {
                 repo_and_rev = Some((repo, rev));
             }
@@ -110,7 +143,7 @@ impl GitRemote {
             None => {
                 let repo = self
                     .clone_into(into, cargo_config)
-                    .chain_err(|| format!("failed to clone into: {}", into.display()))?;
+                    .map_err(|e| format_error(e, "clone"))?;
                 let rev = reference.resolve(&repo)?;
                 (repo, rev)
             }
