@@ -164,6 +164,18 @@ impl TargetKind {
             _ => true,
         }
     }
+
+    /// Returns the arguments suitable for `--crate-type` to pass to rustc.
+    pub fn rustc_crate_types(&self) -> Vec<CrateType> {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => kinds.clone(),
+            TargetKind::CustomBuild
+            | TargetKind::Bench
+            | TargetKind::Test
+            | TargetKind::ExampleBin
+            | TargetKind::Bin => vec![CrateType::Bin],
+        }
+    }
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -757,14 +769,6 @@ impl Target {
         }
     }
 
-    /// Whether or not this target allows dashes in its filename.
-    ///
-    /// Rustc will always emit filenames with underscores, and Cargo will
-    /// rename them back to dashes if this is true.
-    pub fn allows_dashes(&self) -> bool {
-        self.is_bin() || self.is_example() || self.is_custom_build()
-    }
-
     pub fn is_lib(&self) -> bool {
         match self.kind() {
             TargetKind::Lib(_) => true,
@@ -835,14 +839,7 @@ impl Target {
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<CrateType> {
-        match self.kind() {
-            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => kinds.clone(),
-            TargetKind::CustomBuild
-            | TargetKind::Bench
-            | TargetKind::Test
-            | TargetKind::ExampleBin
-            | TargetKind::Bin => vec![CrateType::Bin],
-        }
+        self.kind().rustc_crate_types()
     }
 
     pub fn can_lto(&self) -> bool {

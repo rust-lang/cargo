@@ -491,3 +491,23 @@ fn rustc_workspace_wrapper() {
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
         .run();
 }
+
+#[cargo_test]
+fn wacky_hashless_fingerprint() {
+    // On Windows, executables don't have hashes. This checks for a bad
+    // assumption that caused bad caching.
+    let p = project()
+        .file("src/bin/a.rs", "fn main() { let unused = 1; }")
+        .file("src/bin/b.rs", "fn main() {}")
+        .build();
+    p.cargo("build --bin b")
+        .with_stderr_does_not_contain("[..]unused[..]")
+        .run();
+    p.cargo("build --bin a")
+        .with_stderr_contains("[..]unused[..]")
+        .run();
+    // This should not pick up the cache from `a`.
+    p.cargo("build --bin b")
+        .with_stderr_does_not_contain("[..]unused[..]")
+        .run();
+}

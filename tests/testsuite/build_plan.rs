@@ -154,9 +154,7 @@ fn cargo_build_plan_build_script() {
                 "env": "{...}",
                 "kind": null,
                 "links": "{...}",
-                "outputs": [
-                    "[..]/foo/target/debug/build/[..]/build_script_build-[..]"
-                ],
+                "outputs": "{...}",
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "rustc",

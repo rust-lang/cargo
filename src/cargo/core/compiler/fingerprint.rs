@@ -104,8 +104,9 @@
 //! - A "dep-info" file which contains a list of source filenames for the
 //!   target. See below for details.
 //! - An `invoked.timestamp` file whose filesystem mtime is updated every time
-//!   the Unit is built. This is an experimental feature used for cleaning
-//!   unused artifacts.
+//!   the Unit is built. This is used for capturing the time when the build
+//!   starts, to detect if files are changed in the middle of the build. See
+//!   below for more details.
 //!
 //! Note that some units are a little different. A Unit for *running* a build
 //! script or for `rustdoc` does not have a dep-info file (it's not
@@ -352,7 +353,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     ));
     let bcx = cx.bcx;
     let new = cx.files().fingerprint_dir(unit);
-    let loc = new.join(&filename(cx, unit));
+    let loc = new.join(&filename(unit));
 
     debug!("fingerprint at: {}", loc.display());
 
@@ -1523,7 +1524,7 @@ pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
 pub fn dep_info_loc(cx: &mut Context<'_, '_>, unit: &Unit) -> PathBuf {
     cx.files()
         .fingerprint_dir(unit)
-        .join(&format!("dep-{}", filename(cx, unit)))
+        .join(&format!("dep-{}", filename(unit)))
 }
 
 /// Returns an absolute path that target directory.
@@ -1679,11 +1680,8 @@ where
     None
 }
 
-fn filename(cx: &mut Context<'_, '_>, unit: &Unit) -> String {
-    // file_stem includes metadata hash. Thus we have a different
-    // fingerprint for every metadata hash version. This works because
-    // even if the package is fresh, we'll still link the fresh target
-    let file_stem = cx.files().file_stem(unit);
+/// Returns the filename used for the fingerprint file.
+fn filename(unit: &Unit) -> String {
     let kind = unit.target.kind().description();
     let flavor = if unit.mode.is_any_test() {
         "test-"
@@ -1694,7 +1692,7 @@ fn filename(cx: &mut Context<'_, '_>, unit: &Unit) -> String {
     } else {
         ""
     };
-    format!("{}{}-{}", flavor, kind, file_stem)
+    format!("{}{}-{}", flavor, kind, unit.target.name())
 }
 
 #[repr(u8)]

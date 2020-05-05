@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 use log::info;
 
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
-use crate::core::compiler::{CompileMode, CompileTarget, CrateType, Unit};
+use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
@@ -85,10 +85,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'cfg>,
     /// Metadata hash to use for each unit.
-    ///
-    /// `None` if the unit should not use a metadata data hash (like rustdoc,
-    /// or some dylibs).
-    metas: HashMap<Unit, Option<Metadata>>,
+    metas: HashMap<Unit, Metadata>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -151,15 +148,18 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    /// Gets the metadata for a target in a specific profile.
-    /// We build to the path `"{filename}-{target_metadata}"`.
-    /// We use a linking step to link/copy to a predictable filename
-    /// like `target/debug/libfoo.{a,so,rlib}` and such.
+    /// Gets the metadata for the given unit.
     ///
-    /// Returns `None` if the unit should not use a metadata data hash (like
+    /// See module docs for more details.
+    ///
+    /// Returns `None` if the unit should not use a metadata hash (like
     /// rustdoc, or some dylibs).
-    pub fn metadata(&self, unit: &Unit) -> Option<Metadata> {
-        self.metas[unit]
+    pub fn metadata(&self, bcx: &BuildContext<'_, '_>, unit: &Unit) -> Option<Metadata> {
+        if should_use_metadata(bcx, unit) {
+            Some(self.metas[unit])
+        } else {
+            None
+        }
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -169,8 +169,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         util::short_hash(&hashable)
     }
 
-    /// Returns the appropriate output directory for the specified package and
-    /// target.
+    /// Returns the directory where the artifacts for the given unit are
+    /// initially created.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
         if unit.mode.is_doc() {
             self.layout(unit.kind).doc().to_path_buf()
@@ -191,12 +191,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 
     /// Directory name to use for a package in the form `NAME-HASH`.
+    ///
+    /// The hash is unique per Unit.
     pub fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        match self.metas[unit] {
-            Some(ref meta) => format!("{}-{}", name, meta),
-            None => format!("{}-{}", name, self.target_short_hash(unit)),
-        }
+        format!("{}-{}", name, self.metas[unit])
     }
 
     /// Returns the root of the build output tree for the host
@@ -252,14 +251,6 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.build_script_run_dir(unit).join("out")
     }
 
-    /// Returns the file stem for a given target/profile combo (with metadata).
-    pub fn file_stem(&self, unit: &Unit) -> String {
-        match self.metas[unit] {
-            Some(ref metadata) => format!("{}-{}", unit.target.crate_name(), metadata),
-            None => self.bin_stem(unit),
-        }
-    }
-
     /// Returns the path to the executable binary for the given bin target.
     ///
     /// This should only to be used when a `Unit` is not available.
@@ -272,13 +263,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         assert!(target.is_bin());
         let dest = self.layout(kind).dest();
         let info = bcx.target_data.info(kind);
-        let file_types = info
-            .file_types(
-                &CrateType::Bin,
-                FileFlavor::Normal,
+        let (file_types, _) = info
+            .rustc_outputs(
+                CompileMode::Build,
                 &TargetKind::Bin,
                 bcx.target_data.short_name(&kind),
-            )?
+            )
             .expect("target must support `bin`");
 
         let file_type = file_types
@@ -286,10 +276,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .find(|file_type| file_type.flavor == FileFlavor::Normal)
             .expect("target must support `bin`");
 
-        Ok(dest.join(file_type.filename(target.name())))
+        Ok(dest.join(file_type.uplift_filename(target)))
     }
 
     /// Returns the filenames that the given unit will generate.
+    ///
+    /// Note: It is not guaranteed that all of the files will be generated.
     pub(super) fn outputs(
         &self,
         unit: &Unit,
@@ -300,57 +292,50 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(Arc::clone)
     }
 
-    /// Returns the bin filename for a given target, without extension and metadata.
-    fn bin_stem(&self, unit: &Unit) -> String {
-        if unit.target.allows_dashes() {
-            unit.target.name().to_string()
-        } else {
-            unit.target.crate_name()
+    /// Returns the path where the output for the given unit and FileType
+    /// should be uplifted to.
+    ///
+    /// Returns `None` if the unit shouldn't be uplifted (for example, a
+    /// dependent rlib).
+    fn uplift_to(&self, unit: &Unit, file_type: &FileType, from_path: &Path) -> Option<PathBuf> {
+        // Tests, check, doc, etc. should not be uplifted.
+        if unit.mode != CompileMode::Build || file_type.flavor == FileFlavor::Rmeta {
+            return None;
         }
-    }
-
-    /// Returns a tuple `(hard_link_dir, filename_stem)` for the primary
-    /// output file for the given unit.
-    ///
-    /// `hard_link_dir` is the directory where the file should be hard-linked
-    /// ("uplifted") to. For example, `/path/to/project/target`.
-    ///
-    /// `filename_stem` is the base filename without an extension.
-    ///
-    /// This function returns it in two parts so the caller can add
-    /// prefix/suffix to filename separately.
-    ///
-    /// Returns an `Option` because in some cases we don't want to link
-    /// (eg a dependent lib).
-    fn link_stem(&self, unit: &Unit) -> Option<(PathBuf, String)> {
-        let out_dir = self.out_dir(unit);
-        let bin_stem = self.bin_stem(unit); // Stem without metadata.
-        let file_stem = self.file_stem(unit); // Stem with metadata.
-
-        // We currently only lift files up from the `deps` directory. If
-        // it was compiled into something like `example/` or `doc/` then
-        // we don't want to link it up.
-        if out_dir.ends_with("deps") {
-            // Don't lift up library dependencies.
-            if unit.target.is_bin() || self.roots.contains(unit) || unit.target.is_dylib() {
-                Some((
-                    out_dir.parent().unwrap().to_owned(),
-                    if unit.mode.is_any_test() {
-                        file_stem
-                    } else {
-                        bin_stem
-                    },
-                ))
-            } else {
-                None
-            }
-        } else if bin_stem == file_stem {
-            None
-        } else if out_dir.ends_with("examples") || out_dir.parent().unwrap().ends_with("build") {
-            Some((out_dir, bin_stem))
-        } else {
-            None
+        // Only uplift:
+        // - Binaries: The user always wants to see these, even if they are
+        //   implicitly built (for example for integration tests).
+        // - dylibs: This ensures that the dynamic linker pulls in all the
+        //   latest copies (even if the dylib was built from a previous cargo
+        //   build). There are complex reasons for this, see #8139, #6167, #6162.
+        // - Things directly requested from the command-line (the "roots").
+        //   This one is a little questionable for rlibs (see #6131), but is
+        //   historically how Cargo has operated. This is primarily useful to
+        //   give the user access to staticlibs and cdylibs.
+        if !unit.target.is_bin()
+            && !unit.target.is_custom_build()
+            && file_type.crate_type != Some(CrateType::Dylib)
+            && !self.roots.contains(unit)
+        {
+            return None;
         }
+
+        let filename = file_type.uplift_filename(&unit.target);
+        let uplift_path = if unit.target.is_example() {
+            // Examples live in their own little world.
+            self.layout(unit.kind).examples().join(filename)
+        } else if unit.target.is_custom_build() {
+            self.build_script_dir(unit).join(filename)
+        } else {
+            self.layout(unit.kind).dest().join(filename)
+        };
+        if from_path == uplift_path {
+            // This can happen with things like examples that reside in the
+            // same directory, do not have a metadata hash (like on Windows),
+            // and do not have hyphens.
+            return None;
+        }
+        Some(uplift_path)
     }
 
     fn calc_outputs(
@@ -359,18 +344,6 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
-            CompileMode::Check { .. } => {
-                // This may be confusing. rustc outputs a file named `lib*.rmeta`
-                // for both libraries and binaries.
-                let file_stem = self.file_stem(unit);
-                let path = self.out_dir(unit).join(format!("lib{}.rmeta", file_stem));
-                vec![OutputFile {
-                    path,
-                    hardlink: None,
-                    export_path: None,
-                    flavor: FileFlavor::Linkable { rmeta: false },
-                }]
-            }
             CompileMode::Doc { .. } => {
                 let path = self
                     .out_dir(unit)
@@ -394,131 +367,77 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 // but Cargo does not know about that.
                 vec![]
             }
-            CompileMode::Test | CompileMode::Build | CompileMode::Bench => {
-                self.calc_outputs_rustc(unit, bcx)?
-            }
+            CompileMode::Test
+            | CompileMode::Build
+            | CompileMode::Bench
+            | CompileMode::Check { .. } => self.calc_outputs_rustc(unit, bcx)?,
         };
         info!("Target filenames: {:?}", ret);
 
         Ok(Arc::new(ret))
     }
 
+    /// Computes the actual, full pathnames for all the files generated by rustc.
+    ///
+    /// The `OutputFile` also contains the paths where those files should be
+    /// "uplifted" to.
     fn calc_outputs_rustc(
         &self,
         unit: &Unit,
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Vec<OutputFile>> {
-        let mut ret = Vec::new();
-        let mut unsupported = Vec::new();
-
         let out_dir = self.out_dir(unit);
-        let link_stem = self.link_stem(unit);
+
         let info = bcx.target_data.info(unit.kind);
-        let file_stem = self.file_stem(unit);
-
-        let mut add = |crate_type: &CrateType, flavor: FileFlavor| -> CargoResult<()> {
-            let file_types = info.file_types(
-                crate_type,
-                flavor,
-                unit.target.kind(),
-                bcx.target_data.short_name(&unit.kind),
-            )?;
-
-            match file_types {
-                Some(types) => {
-                    for file_type in types {
-                        let path = out_dir.join(file_type.filename(&file_stem));
-                        // Don't create hardlink for tests
-                        let hardlink = if unit.mode.is_any_test() {
-                            None
-                        } else {
-                            link_stem
-                                .as_ref()
-                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)))
-                        };
-                        let export_path = if unit.target.is_custom_build() {
-                            None
-                        } else {
-                            self.export_dir.as_ref().and_then(|export_dir| {
-                                hardlink
-                                    .as_ref()
-                                    .map(|hardlink| export_dir.join(hardlink.file_name().unwrap()))
-                            })
-                        };
-                        ret.push(OutputFile {
-                            path,
-                            hardlink,
-                            export_path,
-                            flavor: file_type.flavor,
-                        });
-                    }
-                }
-                // Not supported; don't worry about it.
-                None => {
-                    unsupported.push(crate_type.to_string());
-                }
-            }
-            Ok(())
-        };
-        match unit.target.kind() {
-            TargetKind::Bin
-            | TargetKind::CustomBuild
-            | TargetKind::ExampleBin
-            | TargetKind::Bench
-            | TargetKind::Test => {
-                add(&CrateType::Bin, FileFlavor::Normal)?;
-            }
-            TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.mode.is_any_test() => {
-                add(&CrateType::Bin, FileFlavor::Normal)?;
-            }
-            TargetKind::ExampleLib(crate_types) | TargetKind::Lib(crate_types) => {
-                for crate_type in crate_types {
-                    add(
-                        crate_type,
-                        if crate_type.is_linkable() {
-                            FileFlavor::Linkable { rmeta: false }
-                        } else {
-                            FileFlavor::Normal
-                        },
-                    )?;
-                }
-                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                if !unit.requires_upstream_objects() {
-                    ret.push(OutputFile {
-                        path,
-                        hardlink: None,
-                        export_path: None,
-                        flavor: FileFlavor::Linkable { rmeta: true },
-                    });
-                }
-            }
-        }
-        if ret.is_empty() {
+        let triple = bcx.target_data.short_name(&unit.kind);
+        let (file_types, unsupported) =
+            info.rustc_outputs(unit.mode, unit.target.kind(), triple)?;
+        if file_types.is_empty() {
             if !unsupported.is_empty() {
+                let unsupported_strs: Vec<_> = unsupported.iter().map(|ct| ct.as_str()).collect();
                 anyhow::bail!(
                     "cannot produce {} for `{}` as the target `{}` \
                      does not support these crate types",
-                    unsupported.join(", "),
+                    unsupported_strs.join(", "),
                     unit.pkg,
-                    bcx.target_data.short_name(&unit.kind),
+                    triple,
                 )
             }
             anyhow::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                bcx.target_data.short_name(&unit.kind),
+                triple,
             );
         }
-        Ok(ret)
+
+        // Convert FileType to OutputFile.
+        let mut outputs = Vec::new();
+        for file_type in file_types {
+            let meta = self.metadata(bcx, unit).map(|m| m.to_string());
+            let path = out_dir.join(file_type.output_filename(&unit.target, meta.as_deref()));
+            let hardlink = self.uplift_to(unit, &file_type, &path);
+            let export_path = if unit.target.is_custom_build() {
+                None
+            } else {
+                self.export_dir.as_ref().and_then(|export_dir| {
+                    hardlink
+                        .as_ref()
+                        .map(|hardlink| export_dir.join(hardlink.file_name().unwrap()))
+                })
+            };
+            outputs.push(OutputFile {
+                path,
+                hardlink,
+                export_path,
+                flavor: file_type.flavor,
+            });
+        }
+        Ok(outputs)
     }
 }
 
-fn metadata_of(
-    unit: &Unit,
-    cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
+fn metadata_of(unit: &Unit, cx: &Context<'_, '_>, metas: &mut HashMap<Unit, Metadata>) -> Metadata {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
         metas.insert(unit.clone(), meta);
@@ -532,48 +451,9 @@ fn metadata_of(
 fn compute_metadata(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Option<Metadata>>,
-) -> Option<Metadata> {
-    if unit.mode.is_doc_test() {
-        // Doc tests do not have metadata.
-        return None;
-    }
-    // No metadata for dylibs because of a couple issues:
-    // - macOS encodes the dylib name in the executable,
-    // - Windows rustc multiple files of which we can't easily link all of them.
-    //
-    // No metadata for bin because of an issue:
-    // - wasm32 rustc/emcc encodes the `.wasm` name in the `.js` (rust-lang/cargo#4535).
-    // - msvc: The path to the PDB is embedded in the executable, and we don't
-    //   want the PDB path to include the hash in it.
-    //
-    // Two exceptions:
-    // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict),
-    // 2) `__CARGO_DEFAULT_LIB_METADATA` env var.
-    //
-    // Note, however, that the compiler's build system at least wants
-    // path dependencies (eg libstd) to have hashes in filenames. To account for
-    // that we have an extra hack here which reads the
-    // `__CARGO_DEFAULT_LIB_METADATA` environment variable and creates a
-    // hash in the filename if that's present.
-    //
-    // This environment variable should not be relied on! It's
-    // just here for rustbuild. We need a more principled method
-    // doing this eventually.
+    metas: &mut HashMap<Unit, Metadata>,
+) -> Metadata {
     let bcx = &cx.bcx;
-    let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
-    let short_name = bcx.target_data.short_name(&unit.kind);
-    if !(unit.mode.is_any_test() || unit.mode.is_check())
-        && (unit.target.is_dylib()
-            || unit.target.is_cdylib()
-            || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
-            || (unit.target.is_executable() && short_name.contains("msvc")))
-        && unit.pkg.package_id().source_id().is_path()
-        && __cargo_default_lib_metadata.is_err()
-    {
-        return None;
-    }
-
     let mut hasher = SipHasher::new();
 
     // This is a generic version number that can be changed to make
@@ -633,7 +513,7 @@ fn compute_metadata(
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = __cargo_default_lib_metadata {
+    if let Ok(ref channel) = env::var("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -646,7 +526,7 @@ fn compute_metadata(
     // with user dependencies.
     unit.is_std.hash(&mut hasher);
 
-    Some(Metadata(hasher.finish()))
+    Metadata(hasher.finish())
 }
 
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
@@ -679,4 +559,47 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
     // The backend version ("LLVM version") might become more relevant in
     // the future when cranelift sees more use, and people want to switch
     // between different backends without recompiling.
+}
+
+/// Returns whether or not this unit should use a metadata hash.
+fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+    if unit.mode.is_doc_test() {
+        // Doc tests do not have metadata.
+        return false;
+    }
+    if unit.mode.is_any_test() || unit.mode.is_check() {
+        // These always use metadata.
+        return true;
+    }
+    // No metadata in these cases:
+    //
+    // - dylibs:
+    //   - macOS encodes the dylib name in the executable, so it can't be renamed.
+    //   - TODO: Are there other good reasons? If not, maybe this should be macos specific?
+    // - Windows MSVC executables: The path to the PDB is embedded in the
+    //   executable, and we don't want the PDB path to include the hash in it.
+    // - wasm32 executables: When using emscripten, the path to the .wasm file
+    //   is embedded in the .js file, so we don't want the hash in there.
+    //   TODO: Is this necessary for wasm32-unknown-unknown?
+    //
+    // This is only done for local packages, as we don't expect to export
+    // dependencies.
+    //
+    // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
+    // force metadata in the hash. This is only used for building libstd. For
+    // example, if libstd is placed in a common location, we don't want a file
+    // named /usr/lib/libstd.so which could conflict with other rustc
+    // installs. TODO: Is this still a realistic concern?
+    // See https://github.com/rust-lang/cargo/issues/3005
+    let short_name = bcx.target_data.short_name(&unit.kind);
+    if (unit.target.is_dylib()
+        || unit.target.is_cdylib()
+        || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
+        || (unit.target.is_executable() && short_name.contains("msvc")))
+        && unit.pkg.package_id().source_id().is_path()
+        && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
+    {
+        return false;
+    }
+    true
 }
