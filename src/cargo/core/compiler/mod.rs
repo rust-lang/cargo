@@ -41,6 +41,7 @@ pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
+pub(crate) use self::layout::Layout;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
