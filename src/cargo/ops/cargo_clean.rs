@@ -129,8 +129,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                         // Use unverified here since this is being more
                         // exhaustive than what is actually needed.
                         let features_for = unit_for.map_to_features_for();
-                        let features =
-                            features.activated_features_unverified(pkg.package_id(), features_for);
+                        let features = features
+                            .activated_features_unverified(pkg.package_id(), features_for)
+                            .unwrap_or_default();
                         units.push(interner.intern(
                             pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
                         ));

@@ -978,7 +978,10 @@ pub fn resolve_all_features(
             .proc_macro();
         for dep in deps {
             let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
-            for feature in resolved_features.activated_features_unverified(dep_id, features_for) {
+            for feature in resolved_features
+                .activated_features_unverified(dep_id, features_for)
+                .unwrap_or_default()
+            {
                 features.insert(format!("{}/{}", dep.name_in_toml(), feature));
             }
         }
