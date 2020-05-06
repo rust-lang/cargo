@@ -297,8 +297,8 @@ fn no_warn_workspace_extras() {
         .cwd("a")
         .with_stderr(
             "\
-[UPDATING] `[..]` index
 [PACKAGING] a v0.1.0 ([..])
+[UPDATING] `[..]` index
 ",
         )
         .run();
@@ -328,10 +328,10 @@ fn warn_package_with_yanked() {
     p.cargo("package --no-verify")
         .with_stderr(
             "\
+[PACKAGING] foo v0.0.1 ([..])
 [UPDATING] `[..]` index
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry \
     `crates.io`, consider updating to a version that is not yanked
-[PACKAGING] foo v0.0.1 ([..])
 ",
         )
         .run();

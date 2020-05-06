@@ -361,13 +361,18 @@ fn package_with_path_deps() {
         .file("notyet/src/lib.rs", "")
         .build();
 
-    p.cargo("package -v")
+    p.cargo("package")
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] no matching package named `notyet` found
-location searched: registry [..]
-required by package `foo v0.0.1 ([..])`
+[PACKAGING] foo [..]
+[UPDATING] [..]
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `notyet` found
+location searched: registry `https://github.com/rust-lang/crates.io-index`
+required by package `foo v0.0.1 [..]`
 ",
         )
         .run();
@@ -377,8 +382,8 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("package")
         .with_stderr(
             "\
-[UPDATING] `[..]` index
 [PACKAGING] foo v0.0.1 ([CWD])
+[UPDATING] `[..]` index
 [VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
