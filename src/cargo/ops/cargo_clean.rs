@@ -112,6 +112,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         for target in pkg.targets() {
             for kind in [CompileKind::Host, build_config.requested_kind].iter() {
                 for mode in CompileMode::all_modes() {
+                    if target.is_custom_build() && (mode.is_any_test() || !kind.is_host()) {
+                        // Workaround where the UnitFor code will panic
+                        // because it is not expecting strange combinations
+                        // like "testing a build script".
+                        continue;
+                    }
                     for unit_for in UnitFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
                             bcx.profiles
