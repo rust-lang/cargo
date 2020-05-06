@@ -319,3 +319,41 @@ fn clean_remove_rlib_rmeta() {
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
     assert!(!rmeta.exists());
 }
+
+#[cargo_test]
+fn clean_with_build_dep() {
+    // Test for panic when there was a build dep with `-p`.
+    Package::new("bar", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [build-dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build").run();
+    // Two build directories, one for the executable, one for the run output.
+    assert_eq!(p.glob(p.target_debug_dir().join("build/foo-*")).count(), 2);
+    // Produces both an rlib and rmeta.
+    assert_eq!(
+        p.glob(p.target_debug_dir().join("deps/libfoo-*.*")).count(),
+        2
+    );
+    p.cargo("clean -p foo").run();
+    // `clean -p` doesn't clean the output directory, it should.
+    // Will be fixed via https://github.com/rust-lang/cargo/pull/8210
+    assert_eq!(p.glob(p.target_debug_dir().join("build/foo-*")).count(), 1);
+    assert_eq!(
+        p.glob(p.target_debug_dir().join("deps/libfoo-*.*")).count(),
+        0
+    );
+}
