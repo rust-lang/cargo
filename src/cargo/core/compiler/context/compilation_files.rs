@@ -85,7 +85,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'cfg>,
     /// Metadata hash to use for each unit.
-    metas: HashMap<Unit, Metadata>,
+    metas: HashMap<Unit, Option<Metadata>>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -154,12 +154,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     ///
     /// Returns `None` if the unit should not use a metadata hash (like
     /// rustdoc, or some dylibs).
-    pub fn metadata(&self, bcx: &BuildContext<'_, '_>, unit: &Unit) -> Option<Metadata> {
-        if should_use_metadata(bcx, unit) {
-            Some(self.metas[unit])
-        } else {
-            None
-        }
+    pub fn metadata(&self, unit: &Unit) -> Option<Metadata> {
+        self.metas[unit]
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -192,10 +188,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Directory name to use for a package in the form `NAME-HASH`.
     ///
-    /// The hash is unique per Unit.
-    pub fn pkg_dir(&self, unit: &Unit) -> String {
+    /// Note that some units may share the same directory, so care should be
+    /// taken in those cases!
+    fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        format!("{}-{}", name, self.metas[unit])
+        match self.metas[unit] {
+            Some(ref meta) => format!("{}-{}", name, meta),
+            None => format!("{}-{}", name, self.target_short_hash(unit)),
+        }
     }
 
     /// Returns the root of the build output tree for the host
@@ -220,9 +220,29 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
+    /// Returns the path for a file in the fingerprint directory.
+    ///
+    /// The "prefix" should be something to distinguish the file from other
+    /// files in the fingerprint directory.
+    pub fn fingerprint_file_path(&self, unit: &Unit, prefix: &str) -> PathBuf {
+        // Different targets need to be distinguished in the
+        let kind = unit.target.kind().description();
+        let flavor = if unit.mode.is_any_test() {
+            "test-"
+        } else if unit.mode.is_doc() {
+            "doc-"
+        } else if unit.mode.is_run_custom_build() {
+            "run-"
+        } else {
+            ""
+        };
+        let name = format!("{}{}{}-{}", prefix, flavor, kind, unit.target.name());
+        self.fingerprint_dir(unit).join(name)
+    }
+
     /// Path where compiler output is cached.
     pub fn message_cache_path(&self, unit: &Unit) -> PathBuf {
-        self.fingerprint_dir(unit).join("output")
+        self.fingerprint_file_path(unit, "output-")
     }
 
     /// Returns the directory where a compiled build script is stored.
@@ -414,7 +434,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         // Convert FileType to OutputFile.
         let mut outputs = Vec::new();
         for file_type in file_types {
-            let meta = self.metadata(bcx, unit).map(|m| m.to_string());
+            let meta = self.metadata(unit).map(|m| m.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta.as_deref()));
             let hardlink = self.uplift_to(unit, &file_type, &path);
             let export_path = if unit.target.is_custom_build() {
@@ -437,7 +457,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 }
 
-fn metadata_of(unit: &Unit, cx: &Context<'_, '_>, metas: &mut HashMap<Unit, Metadata>) -> Metadata {
+fn metadata_of(
+    unit: &Unit,
+    cx: &Context<'_, '_>,
+    metas: &mut HashMap<Unit, Option<Metadata>>,
+) -> Option<Metadata> {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, cx, metas);
         metas.insert(unit.clone(), meta);
@@ -451,9 +475,12 @@ fn metadata_of(unit: &Unit, cx: &Context<'_, '_>, metas: &mut HashMap<Unit, Meta
 fn compute_metadata(
     unit: &Unit,
     cx: &Context<'_, '_>,
-    metas: &mut HashMap<Unit, Metadata>,
-) -> Metadata {
+    metas: &mut HashMap<Unit, Option<Metadata>>,
+) -> Option<Metadata> {
     let bcx = &cx.bcx;
+    if !should_use_metadata(bcx, unit) {
+        return None;
+    }
     let mut hasher = SipHasher::new();
 
     // This is a generic version number that can be changed to make
@@ -526,7 +553,7 @@ fn compute_metadata(
     // with user dependencies.
     unit.is_std.hash(&mut hasher);
 
-    Metadata(hasher.finish())
+    Some(Metadata(hasher.finish()))
 }
 
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {

@@ -194,7 +194,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let pass_cdylib_link_args = unit.target.is_cdylib();
 
-    let dep_info_name = match cx.files().metadata(cx.bcx, unit) {
+    let dep_info_name = match cx.files().metadata(unit) {
         Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
         None => format!("{}.d", unit.target.crate_name()),
     };
@@ -870,7 +870,7 @@ fn build_base_args(
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    match cx.files().metadata(cx.bcx, unit) {
+    match cx.files().metadata(unit) {
         Some(m) => {
             cmd.arg("-C").arg(&format!("metadata={}", m));
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));

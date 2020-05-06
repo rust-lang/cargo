@@ -43,8 +43,9 @@
 //! The `Metadata` hash is a hash added to the output filenames to isolate
 //! each unit. See the documentation in the `compilation_files` module for
 //! more details. NOTE: Not all output files are isolated via filename hashes
-//! (like dylibs), but the fingerprint directory always has the `Metadata`
-//! hash in its directory name.
+//! (like dylibs). The fingerprint directory uses a hash, but sometimes units
+//! share the same fingerprint directory (when they don't have Metadata) so
+//! care should be taken to handle this!
 //!
 //! Fingerprints and Metadata are similar, and track some of the same things.
 //! The Metadata contains information that is required to keep Units separate.
@@ -352,8 +353,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         unit.target.name()
     ));
     let bcx = cx.bcx;
-    let new = cx.files().fingerprint_dir(unit);
-    let loc = new.join(&filename(unit));
+    let loc = cx.files().fingerprint_file_path(unit, "");
 
     debug!("fingerprint at: {}", loc.display());
 
@@ -1522,9 +1522,7 @@ pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
 /// Returns the location that the dep-info file will show up at for the `unit`
 /// specified.
 pub fn dep_info_loc(cx: &mut Context<'_, '_>, unit: &Unit) -> PathBuf {
-    cx.files()
-        .fingerprint_dir(unit)
-        .join(&format!("dep-{}", filename(unit)))
+    cx.files().fingerprint_file_path(unit, "dep-")
 }
 
 /// Returns an absolute path that target directory.
@@ -1678,21 +1676,6 @@ where
         reference, reference_mtime
     );
     None
-}
-
-/// Returns the filename used for the fingerprint file.
-fn filename(unit: &Unit) -> String {
-    let kind = unit.target.kind().description();
-    let flavor = if unit.mode.is_any_test() {
-        "test-"
-    } else if unit.mode.is_doc() {
-        "doc-"
-    } else if unit.mode.is_run_custom_build() {
-        "run-"
-    } else {
-        ""
-    };
-    format!("{}{}-{}", flavor, kind, unit.target.name())
 }
 
 #[repr(u8)]

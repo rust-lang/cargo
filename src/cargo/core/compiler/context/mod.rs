@@ -377,7 +377,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
         assert!(unit.mode.is_run_custom_build());
         self.files()
-            .metadata(self.bcx, unit)
+            .metadata(unit)
             .expect("build script should always have hash")
     }
 

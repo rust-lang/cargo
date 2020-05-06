@@ -39,7 +39,7 @@
 //!                 lib-$targetname.json
 //!                 # The console output from the compiler. This is cached
 //!                 # so that warnings can be redisplayed for "fresh" units.
-//!                 output
+//!                 output-lib-$targetname
 //!
 //!         # This is the root directory for all rustc artifacts except build
 //!         # scripts, examples, and test and bench executables. Almost every

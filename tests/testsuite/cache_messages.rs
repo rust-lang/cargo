@@ -194,7 +194,7 @@ fn clears_cache_after_fix() {
     // Fill the cache.
     p.cargo("check").with_stderr_contains("[..]asdf[..]").run();
     let cpath = p
-        .glob("target/debug/.fingerprint/foo-*/output")
+        .glob("target/debug/.fingerprint/foo-*/output-*")
         .next()
         .unwrap()
         .unwrap();
@@ -215,7 +215,10 @@ fn clears_cache_after_fix() {
 ",
         )
         .run();
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        0
+    );
 
     // And again, check the cache is correct.
     p.cargo("check")
@@ -253,7 +256,10 @@ fn rustdoc() {
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
     assert!(rustdoc_stderr.contains("private"));
     assert!(rustdoc_stderr.contains("\x1b["));
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        1
+    );
 
     // Check the cached output.
     let rustdoc_output = p
@@ -331,14 +337,23 @@ fn doesnt_create_extra_files() {
 
     p.cargo("build").run();
 
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
-    assert_eq!(p.glob("target/debug/.fingerprint/dep-*/output").count(), 0);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        0
+    );
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/dep-*/output-*").count(),
+        0
+    );
     if is_coarse_mtime() {
         sleep_ms(1000);
     }
     p.change_file("src/lib.rs", "fn unused() {}");
     p.cargo("build").run();
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        1
+    );
 }
 
 #[cargo_test]
