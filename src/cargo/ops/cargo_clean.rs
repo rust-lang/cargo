@@ -91,7 +91,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     // Doc tests produce no output.
 
     // Get Packages for the specified specs.
-    let mut packages = Vec::new();
+    let mut pkg_ids = Vec::new();
     for spec_str in opts.spec.iter() {
         // Translate the spec to a Package.
         let spec = PackageIdSpec::parse(spec_str)?;
@@ -115,8 +115,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         if matches.is_empty() {
             anyhow::bail!("package ID specification `{}` matched no packages", spec);
         }
-        packages.extend(pkg_set.get_many(matches)?);
+        pkg_ids.extend(matches);
     }
+    let packages = pkg_set.get_many(pkg_ids)?;
 
     for pkg in packages {
         let pkg_dir = format!("{}-*", pkg.name());
