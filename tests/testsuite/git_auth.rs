@@ -320,30 +320,7 @@ Caused by:
 
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] git repository `ssh://needs-proxy.invalid/git`
-[RUNNING] `git fetch[..]
-[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
-
-Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  Unable to update ssh://needs-proxy.invalid/git
-
-Caused by:
-  failed to fetch into: [..]
-
-Caused by:
-  [..]process didn't exit successfully[..]
---- stderr
-ssh: Could not resolve hostname[..]
-fatal: [..]
-
-Please make sure you have the correct access rights
-and the repository exists.
-[..]",
-        )
+        .with_stderr_contains("[..]Unable to update[..]")
+        .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
         .run();
 }
