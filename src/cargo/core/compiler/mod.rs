@@ -4,6 +4,7 @@ mod build_plan;
 mod compilation;
 mod compile_kind;
 mod context;
+mod crate_type;
 mod custom_build;
 mod fingerprint;
 mod job;
@@ -30,15 +31,17 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::build_context::{BuildContext, FileFlavor, RustcTargetData, TargetInfo};
+pub use self::build_context::{BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
+pub use self::crate_type::CrateType;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
+pub(crate) use self::layout::Layout;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
@@ -190,17 +193,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let pass_cdylib_link_args = unit.target.is_cdylib();
-    let do_rename = unit.target.allows_dashes() && !unit.mode.is_any_test();
-    let real_name = unit.target.name().to_string();
-    let crate_name = unit.target.crate_name();
 
-    // Rely on `target_filenames` iterator as source of truth rather than rederiving filestem.
-    let rustc_dep_info_loc = if do_rename && cx.files().metadata(unit).is_none() {
-        root.join(&crate_name)
-    } else {
-        root.join(&cx.files().file_stem(unit))
-    }
-    .with_extension("d");
+    let dep_info_name = match cx.files().metadata(unit) {
+        Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
+        None => format!("{}.d", unit.target.crate_name()),
+    };
+    let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
@@ -290,20 +288,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             )
             .map_err(verbose_if_simple_exit_code)
             .chain_err(|| format!("could not compile `{}`.", name))?;
-        }
-
-        if do_rename && real_name != crate_name {
-            let dst = &outputs[0].path;
-            let src = dst.with_file_name(
-                dst.file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .replace(&real_name, &crate_name),
-            );
-            if src.exists() && src.file_name() != dst.file_name() {
-                fs::rename(&src, &dst).chain_err(|| format!("could not rename crate {:?}", src))?;
-            }
         }
 
         if rustc_dep_info_loc.exists() {
@@ -532,7 +516,7 @@ where
 
 fn prepare_rustc(
     cx: &mut Context<'_, '_>,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
     unit: &Unit,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
@@ -734,7 +718,7 @@ fn build_base_args(
     cx: &mut Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     unit: &Unit,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
 ) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
@@ -764,7 +748,7 @@ fn build_base_args(
 
     if !test {
         for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type);
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
     }
 
@@ -780,7 +764,7 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| *p != unit.pkg));
+        || (crate_types.contains(&CrateType::Dylib) && bcx.ws.members().any(|p| *p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -984,7 +968,7 @@ fn build_deps_args(
     // error in the future (see PR #4797).
     if !deps
         .iter()
-        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.linkable())
+        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_linkable())
     {
         if let Some(dep) = deps
             .iter()
@@ -1067,19 +1051,18 @@ pub fn extern_args(
             };
 
             let outputs = cx.outputs(&dep.unit)?;
-            let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
-                FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
-                _ => None,
-            });
 
-            if cx.only_requires_rmeta(unit, &dep.unit) {
-                let (output, _rmeta) = outputs
-                    .find(|(_output, rmeta)| *rmeta)
-                    .expect("failed to find rlib dep for pipelined dep");
+            if cx.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
+                // Example: rlib dependency for an rlib, rmeta is all that is required.
+                let output = outputs
+                    .iter()
+                    .find(|output| output.flavor == FileFlavor::Rmeta)
+                    .expect("failed to find rmeta dep for pipelined dep");
                 pass(&output.path);
             } else {
-                for (output, rmeta) in outputs {
-                    if !rmeta {
+                // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
+                for output in outputs.iter() {
+                    if output.flavor == FileFlavor::Linkable {
                         pass(&output.path);
                     }
                 }
@@ -1088,7 +1071,7 @@ pub fn extern_args(
         };
 
     for dep in deps {
-        if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
+        if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             link_to(dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }

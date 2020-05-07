@@ -132,7 +132,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
     for output in cx
         .outputs(unit)?
         .iter()
-        .filter(|o| o.flavor != FileFlavor::DebugInfo)
+        .filter(|o| !matches!(o.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
     {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");

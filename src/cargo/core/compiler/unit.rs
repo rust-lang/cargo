@@ -1,5 +1,5 @@
-use crate::core::compiler::{CompileKind, CompileMode};
-use crate::core::manifest::{LibKind, Target, TargetKind};
+use crate::core::compiler::{CompileKind, CompileMode, CrateType};
+use crate::core::manifest::{Target, TargetKind};
 use crate::core::{profiles::Profile, InternedString, Package};
 use crate::util::hex::short_hash;
 use crate::util::Config;
@@ -178,9 +178,9 @@ impl UnitInterner {
             //
             // At some point in the future, it would be nice to have a
             // first-class way of overriding or specifying crate-types.
-            (true, TargetKind::Lib(crate_types)) if crate_types.contains(&LibKind::Dylib) => {
+            (true, TargetKind::Lib(crate_types)) if crate_types.contains(&CrateType::Dylib) => {
                 let mut new_target = Target::clone(target);
-                new_target.set_kind(TargetKind::Lib(vec![LibKind::Rlib]));
+                new_target.set_kind(TargetKind::Lib(vec![CrateType::Rlib]));
                 new_target
             }
             _ => target.clone(),

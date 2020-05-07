@@ -832,9 +832,11 @@ fn generate_targets(
                 for proposal in filter_targets(packages, Target::is_lib, false, mode) {
                     let Proposal { target, pkg, .. } = proposal;
                     if mode.is_doc_test() && !target.doctestable() {
+                        let types = target.rustc_crate_types();
+                        let types_str: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
                         ws.config().shell().warn(format!(
                             "doc tests are not supported for crate type(s) `{}` in package `{}`",
-                            target.rustc_crate_types().join(", "),
+                            types_str.join(", "),
                             pkg.name()
                         ))?;
                     } else {

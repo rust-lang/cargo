@@ -262,7 +262,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the executable for the specified unit (if any).
     pub fn get_executable(&mut self, unit: &Unit) -> CargoResult<Option<PathBuf>> {
         for output in self.outputs(unit)?.iter() {
-            if output.flavor == FileFlavor::DebugInfo {
+            if output.flavor != FileFlavor::Normal {
                 continue;
             }
 

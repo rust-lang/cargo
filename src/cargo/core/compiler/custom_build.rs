@@ -738,7 +738,7 @@ pub fn build_map(cx: &mut Context<'_, '_>) -> CargoResult<()> {
 
             if dep_unit.target.for_host() {
                 ret.plugins.extend(dep_scripts.to_link.iter().cloned());
-            } else if dep_unit.target.linkable() {
+            } else if dep_unit.target.is_linkable() {
                 for &(pkg, metadata) in dep_scripts.to_link.iter() {
                     add_to_link(&mut ret, pkg, metadata);
                 }

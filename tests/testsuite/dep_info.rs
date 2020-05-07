@@ -272,13 +272,13 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/pm-*/dep-lib-pm-*",
+        "target/debug/.fingerprint/pm-*/dep-lib-pm",
         &[(1, "src/lib.rs"), (2, "debug/deps/libpmdep-*.rlib")],
     );
 
     assert_deps_contains(
         &p,
-        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo*", host),
+        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo", host),
         &[
             (1, "src/main.rs"),
             (
@@ -296,7 +296,7 @@ fn relative_depinfo_paths_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-build-script-build_script_build-*",
+        "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
         &[(1, "build.rs"), (2, "debug/deps/libbdep-*.rlib")],
     );
 
@@ -400,13 +400,13 @@ fn relative_depinfo_paths_no_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/pm-*/dep-lib-pm-*",
+        "target/debug/.fingerprint/pm-*/dep-lib-pm",
         &[(1, "src/lib.rs"), (2, "debug/deps/libpmdep-*.rlib")],
     );
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-bin-foo*",
+        "target/debug/.fingerprint/foo-*/dep-bin-foo",
         &[
             (1, "src/main.rs"),
             (
@@ -424,7 +424,7 @@ fn relative_depinfo_paths_no_ws() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-build-script-build_script_build-*",
+        "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
         &[(1, "build.rs"), (2, "debug/deps/libbdep-*.rlib")],
     );
 
@@ -461,7 +461,7 @@ fn reg_dep_source_not_tracked() {
 
     assert_deps(
         &p,
-        "target/debug/.fingerprint/regdep-*/dep-lib-regdep-*",
+        "target/debug/.fingerprint/regdep-*/dep-lib-regdep",
         |info_path, entries| {
             for (kind, path) in entries {
                 if *kind == 1 {
@@ -513,7 +513,7 @@ fn canonical_path() {
 
     assert_deps_contains(
         &p,
-        "target/debug/.fingerprint/foo-*/dep-lib-foo-*",
+        "target/debug/.fingerprint/foo-*/dep-lib-foo",
         &[(1, "src/lib.rs"), (2, "debug/deps/libregdep-*.rmeta")],
     );
 }
