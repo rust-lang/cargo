@@ -2113,3 +2113,24 @@ fn slash_optional_enables() {
 
     p.cargo("check --features dep/feat").run();
 }
+
+#[cargo_test]
+fn default_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            edition = "2018"
+            
+            [dependencies]
+        "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"hello\"); }")
+        .build();
+
+    p.cargo("build --features default").with_status(0).run();
+}

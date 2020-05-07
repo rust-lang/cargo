@@ -265,6 +265,8 @@ pub fn resolve_features<'b>(
     let reqs = build_requirements(s, opts)?;
     let mut ret = Vec::new();
     let mut used_features = HashSet::new();
+    // Add `default` as a feature that must exist.
+    used_features.insert("default".into());
     let default_dep = (false, BTreeSet::new());
 
     // Next, collect all actually enabled dependencies and their features.
