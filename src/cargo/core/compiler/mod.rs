@@ -777,7 +777,7 @@ fn build_base_args(
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    match cx.lto[&unit] {
+    match cx.lto[unit] {
         lto::Lto::Run(None) => {
             cmd.arg("-C").arg("lto");
         }

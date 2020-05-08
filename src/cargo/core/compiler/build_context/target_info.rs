@@ -375,7 +375,7 @@ impl TargetInfo {
                     suffix,
                     prefix: prefix.clone(),
                     flavor: FileFlavor::DebugInfo,
-                    crate_type: Some(crate_type.clone()),
+                    crate_type: Some(crate_type),
                     // macOS tools like lldb use all sorts of magic to locate
                     // dSYM files. See https://lldb.llvm.org/use/symbols.html
                     // for some details. It seems like a `.dSYM` located next
@@ -389,7 +389,7 @@ impl TargetInfo {
                     suffix: ".pdb".to_string(),
                     prefix: prefix.clone(),
                     flavor: FileFlavor::DebugInfo,
-                    crate_type: Some(crate_type.clone()),
+                    crate_type: Some(crate_type),
                     // The absolute path to the pdb file is embedded in the
                     // executable. If the exe/pdb pair is moved to another
                     // machine, then debuggers will look in the same directory
@@ -466,7 +466,7 @@ impl TargetInfo {
             } else {
                 FileFlavor::Normal
             };
-            let file_types = self.file_types(&crate_type, flavor, target_triple)?;
+            let file_types = self.file_types(crate_type, flavor, target_triple)?;
             match file_types {
                 Some(types) => {
                     result.extend(types);
