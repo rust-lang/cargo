@@ -16,14 +16,14 @@ use std::fmt;
 /// for each package.
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
-    /// from `Cargo.toml`. We need a `Vec` here because the same package
+    /// from `Cargo.toml`. We need a `HashSet` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, HashSet<Dependency>>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
-    /// An empty `HashSet` to avoid creating a new `HashSet` for every package
+    /// An empty `Vec` to avoid creating a new `Vec` for every package
     /// that does not have any features, and to avoid using `Option` to
     /// simplify the API.
     empty_features: Vec<InternedString>,
