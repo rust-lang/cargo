@@ -36,6 +36,16 @@ The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
 function to handle running benchmarks.
 
+
+> **Note**: The
+> link:https://doc.rust-lang.org/nightly/unstable-book/library-features/test.html[`#[bench\]` attribute]
+> is currently unstable and only available on the
+> link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel].
+> There are some packages available on
+> link:https://crates.io/keywords/benchmark[crates.io] that may help with
+> running benchmarks on the stable channel, such as
+> link:https://crates.io/crates/criterion[Criterion].
+
 == OPTIONS
 
 === Benchmark Options
