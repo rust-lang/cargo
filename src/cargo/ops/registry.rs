@@ -556,7 +556,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             };
             match str::from_utf8(data) {
                 Ok(s) => {
-                    for line in s.lines() {
+                    for mut line in s.lines() {
+                        if line.starts_with("Authorization:") {
+                            line = "Authorization: [REDACTED]";
+                        } else if line[..line.len().min(10)].eq_ignore_ascii_case("set-cookie") {
+                            line = "set-cookie: [REDACTED]";
+                        }
                         log!(level, "http-debug: {} {}", prefix, line);
                     }
                 }
