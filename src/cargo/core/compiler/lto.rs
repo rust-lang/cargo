@@ -45,8 +45,10 @@ fn calculate(
         (Lto::None, false)
     } else if unit.target.can_lto() {
         // Otherwise if this target can perform LTO then we're going to read the
-        // LTO value out of the profile.
-        assert!(!require_bitcode); // can't depend on binaries/staticlib/etc
+        // LTO value out of the profile. Note that we ignore `require_bitcode`
+        // here because if a unit depends on another unit than can LTO this
+        // isn't a rustc-level dependency but rather a Cargo-level dependency.
+        // For example this is an integration test depending on a binary.
         match unit.profile.lto {
             profiles::Lto::Named(s) => match s.as_str() {
                 "n" | "no" | "off" => (Lto::Run(Some(s)), false),
@@ -73,12 +75,11 @@ fn calculate(
 
         Entry::Occupied(mut v) => {
             let result = match (lto, v.get()) {
-                // Targets which execute LTO cannot be depended on, so these
-                // units should only show up once in the dependency graph, so we
-                // should never hit this case.
-                (Lto::Run(_), _) | (_, Lto::Run(_)) => {
-                    unreachable!("lto-able targets shouldn't show up twice")
-                }
+                // Once we're running LTO we keep running LTO. We should always
+                // calculate the same thing here each iteration because if we
+                // see this twice then it means, for example, two unit tests
+                // depend on a binary, which is normal.
+                (Lto::Run(s), _) | (_, &Lto::Run(s)) => Lto::Run(s),
 
                 // If we calculated the same thing as before then we can bail
                 // out quickly.

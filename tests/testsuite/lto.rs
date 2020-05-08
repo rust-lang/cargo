@@ -278,3 +278,61 @@ fn between_builds() {
     p.cargo("build -v --release --lib").run();
     p.cargo("build -v --release").run();
 }
+
+#[cargo_test]
+fn test_all() {
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [profile.release]
+                lto = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/a.rs", "")
+        .file("tests/b.rs", "")
+        .build();
+    p.cargo("test --release -v")
+        .with_stderr_contains("[RUNNING] `rustc[..]--crate-name foo[..]-C lto[..]")
+        .run();
+}
+
+#[cargo_test]
+fn test_all_and_bench() {
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [profile.release]
+                lto = true
+                [profile.bench]
+                lto = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/a.rs", "")
+        .file("tests/b.rs", "")
+        .build();
+    p.cargo("test --release -v")
+        .with_stderr_contains("[RUNNING] `rustc[..]--crate-name a[..]-C lto[..]")
+        .with_stderr_contains("[RUNNING] `rustc[..]--crate-name b[..]-C lto[..]")
+        .with_stderr_contains("[RUNNING] `rustc[..]--crate-name foo[..]-C lto[..]")
+        .run();
+}
