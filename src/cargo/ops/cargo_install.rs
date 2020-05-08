@@ -627,7 +627,6 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             ),
         }
     } else {
-        println!("DWH: Converting...");
         match v.to_semver() {
             Ok(v) => Ok(VersionReq::exact(&v)),
             Err(e) => {
