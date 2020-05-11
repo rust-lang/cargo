@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use log::info;
 use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
-use crate::util::{self, CargoResult};
+use crate::util::{self, CargoResult, StableHasher};
 
 /// The `Metadata` is a hash used to make unique file names for each unit in a
 /// build. It is also use for symbol mangling.
@@ -481,7 +481,7 @@ fn compute_metadata(
     if !should_use_metadata(bcx, unit) {
         return None;
     }
-    let mut hasher = SipHasher::new();
+    let mut hasher = StableHasher::new();
 
     // This is a generic version number that can be changed to make
     // backwards-incompatible changes to any file structures in the output
@@ -556,7 +556,7 @@ fn compute_metadata(
     Some(Metadata(hasher.finish()))
 }
 
-fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
+fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     let vers = &bcx.rustc().version;
     if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
         // For stable, keep the artifacts separate. This helps if someone is
