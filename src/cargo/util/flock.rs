@@ -148,8 +148,7 @@ impl Filesystem {
     /// Handles errors where other Cargo processes are also attempting to
     /// concurrently create this directory.
     pub fn create_dir(&self) -> CargoResult<()> {
-        paths::create_dir_all(&self.root)?;
-        Ok(())
+        paths::create_dir_all(&self.root)
     }
 
     /// Returns an adaptor that can be used to print the path of this

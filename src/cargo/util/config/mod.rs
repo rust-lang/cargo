@@ -1622,9 +1622,11 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;
-    file.write_all(contents.as_bytes())?;
+    file.write_all(contents.as_bytes())
+        .chain_err(|| format!("failed to write to `{}`", file.path().display()))?;
     file.file().set_len(contents.len() as u64)?;
-    set_permissions(file.file(), 0o600)?;
+    set_permissions(file.file(), 0o600)
+        .chain_err(|| format!("failed to set permissions of `{}`", file.path().display()))?;
 
     return Ok(());
 

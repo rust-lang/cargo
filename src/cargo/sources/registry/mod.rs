@@ -468,7 +468,8 @@ impl<'cfg> RegistrySource<'cfg> {
             .create(true)
             .read(true)
             .write(true)
-            .open(&path)?;
+            .open(&path)
+            .chain_err(|| format!("failed to open `{}`", path.display()))?;
 
         let gz = GzDecoder::new(tarball);
         let mut tar = Archive::new(gz);

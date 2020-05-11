@@ -1144,7 +1144,7 @@ fn on_stderr_line(
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
-            let f = cell.try_borrow_mut_with(|| File::create(path))?;
+            let f = cell.try_borrow_mut_with(|| paths::create(path))?;
             debug_assert!(!line.contains('\n'));
             f.write_all(line.as_bytes())?;
             f.write_all(&[b'\n'])?;
@@ -1332,7 +1332,7 @@ fn replay_output_cache(
         // We sometimes have gigabytes of output from the compiler, so avoid
         // loading it all into memory at once, as that can cause OOM where
         // otherwise there would be none.
-        let file = fs::File::open(&path)?;
+        let file = paths::open(&path)?;
         let mut reader = std::io::BufReader::new(file);
         let mut line = String::new();
         loop {

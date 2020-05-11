@@ -23,7 +23,6 @@
 //! be detected via changes to `Cargo.lock`.
 
 use std::collections::{BTreeSet, HashSet};
-use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
@@ -148,7 +147,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 }
 
                 // Otherwise write it all out
-                let mut outfile = BufWriter::new(File::create(output_path)?);
+                let mut outfile = BufWriter::new(paths::create(output_path)?);
                 write!(outfile, "{}:", target_fn)?;
                 for dep in &deps {
                     write!(outfile, " {}", dep)?;
