@@ -321,7 +321,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
                 } else {
                     Err(E::custom(format!(
                         "must be an integer, `z`, or `s`, \
-                         but found: {}",
+                         but found the string: \"{}\"",
                         value
                     )))
                 }
