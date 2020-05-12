@@ -500,7 +500,7 @@ impl<'cfg> DrainState<'cfg> {
                 plan.update(&module_name, &cmd, &filenames)?;
             }
             Message::Stdout(out) => {
-                cx.bcx.config.shell().stdout_println(out);
+                writeln!(cx.bcx.config.shell().out(), "{}", out)?;
             }
             Message::Stderr(err) => {
                 let mut shell = cx.bcx.config.shell();
@@ -700,7 +700,7 @@ impl<'cfg> DrainState<'cfg> {
                 success: error.is_none(),
             }
             .to_json_string();
-            cx.bcx.config.shell().stdout_println(msg);
+            writeln!(cx.bcx.config.shell().out(), "{}", msg)?;
         }
 
         if let Some(e) = error {

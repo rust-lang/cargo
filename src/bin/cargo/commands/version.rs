@@ -1,6 +1,5 @@
-use crate::command_prelude::*;
-
 use crate::cli;
+use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("version")
@@ -8,9 +7,9 @@ pub fn cli() -> App {
         .arg(opt("quiet", "No output printed to stdout").short("q"))
 }
 
-pub fn exec(_config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let verbose = args.occurrences_of("verbose") > 0;
     let version = cli::get_version_string(verbose);
-    print!("{}", version);
+    cargo::drop_print!(config, "{}", version);
     Ok(())
 }

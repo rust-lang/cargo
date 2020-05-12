@@ -1,7 +1,5 @@
 use crate::command_prelude::*;
 
-use cargo::print_json;
-
 pub fn cli() -> App {
     subcommand("read-manifest")
         .about(
@@ -17,6 +15,6 @@ Deprecated, use `cargo metadata --no-deps` instead.\
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    print_json(&ws.current()?);
+    config.shell().print_json(&ws.current()?);
     Ok(())
 }

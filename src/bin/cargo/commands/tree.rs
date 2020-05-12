@@ -102,7 +102,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
-        print!("{}", version);
+        cargo::drop_print!(config, "{}", version);
         return Ok(());
     }
     let prefix = if args.is_present("no-indent") {

@@ -34,7 +34,6 @@ use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 use anyhow::Error;
 use log::debug;
-use serde::ser;
 use std::fmt;
 
 pub use crate::util::errors::{InternalError, VerboseError};
@@ -91,11 +90,6 @@ impl fmt::Display for VersionInfo {
         };
         Ok(())
     }
-}
-
-pub fn print_json<T: ser::Serialize>(obj: &T) {
-    let encoded = serde_json::to_string(&obj).unwrap();
-    println!("{}", encoded);
 }
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {

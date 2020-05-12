@@ -19,20 +19,23 @@ pub struct VendorOptions<'a> {
 }
 
 pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
+    let config = ws.config();
     let mut extra_workspaces = Vec::new();
     for extra in opts.extra.iter() {
-        let extra = ws.config().cwd().join(extra);
-        let ws = Workspace::new(&extra, ws.config())?;
+        let extra = config.cwd().join(extra);
+        let ws = Workspace::new(&extra, config)?;
         extra_workspaces.push(ws);
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
     let vendor_config =
-        sync(ws.config(), &workspaces, opts).chain_err(|| "failed to sync".to_string())?;
+        sync(config, &workspaces, opts).chain_err(|| "failed to sync".to_string())?;
 
-    let shell = ws.config().shell();
-    if shell.verbosity() != Verbosity::Quiet {
-        eprint!("To use vendored sources, add this to your .cargo/config for this project:\n\n");
-        print!("{}", &toml::to_string(&vendor_config).unwrap());
+    if config.shell().verbosity() != Verbosity::Quiet {
+        crate::drop_eprint!(
+            config,
+            "To use vendored sources, add this to your .cargo/config for this project:\n\n"
+        );
+        crate::drop_print!(config, "{}", &toml::to_string(&vendor_config).unwrap());
     }
 
     Ok(())

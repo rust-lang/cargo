@@ -1744,3 +1744,45 @@ impl StringList {
         &self.0
     }
 }
+
+#[macro_export]
+macro_rules! __shell_print {
+    ($config:expr, $which:ident, $newline:literal, $($arg:tt)*) => ({
+        let mut shell = $config.shell();
+        let out = shell.$which();
+        drop(out.write_fmt(format_args!($($arg)*)));
+        if $newline {
+            drop(out.write_all(b"\n"));
+        }
+    });
+}
+
+#[macro_export]
+macro_rules! drop_println {
+    ($config:expr) => ( $crate::drop_print!($config, "\n") );
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, out, true, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_eprintln {
+    ($config:expr) => ( $crate::drop_eprint!($config, "\n") );
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, err, true, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_print {
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, out, false, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_eprint {
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, err, false, $($arg)*)
+    );
+}

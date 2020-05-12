@@ -1,5 +1,5 @@
 use cargo::core::features;
-use cargo::{self, CliResult, Config};
+use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
 
 use super::commands;
@@ -25,7 +25,8 @@ pub fn main(config: &mut Config) -> CliResult {
     };
 
     if args.value_of("unstable-features") == Some("help") {
-        println!(
+        drop_println!(
+            config,
             "
 Available unstable (nightly-only) flags:
 
@@ -40,7 +41,8 @@ Available unstable (nightly-only) flags:
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
         if !features::nightly_features_allowed() {
-            println!(
+            drop_println!(
+                config,
                 "\nUnstable flags are only available on the nightly channel \
                  of Cargo, but this is the `{}` channel.\n\
                  {}",
@@ -48,7 +50,8 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
                 features::SEE_CHANNELS
             );
         }
-        println!(
+        drop_println!(
+            config,
             "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
              for more information about these flags."
         );
@@ -58,7 +61,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
     let is_verbose = args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
         let version = get_version_string(is_verbose);
-        print!("{}", version);
+        drop_print!(config, "{}", version);
         return Ok(());
     }
 
@@ -69,19 +72,19 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
     }
 
     if args.is_present("list") {
-        println!("Installed Commands:");
+        drop_println!(config, "Installed Commands:");
         for command in list_commands(config) {
             match command {
                 CommandInfo::BuiltIn { name, about } => {
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    println!("    {:<20} {}", name, summary)
+                    drop_println!(config, "    {:<20} {}", name, summary);
                 }
                 CommandInfo::External { name, path } => {
                     if is_verbose {
-                        println!("    {:<20} {}", name, path.display())
+                        drop_println!(config, "    {:<20} {}", name, path.display());
                     } else {
-                        println!("    {}", name)
+                        drop_println!(config, "    {}", name);
                     }
                 }
             }

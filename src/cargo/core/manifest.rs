@@ -500,7 +500,7 @@ impl Manifest {
     pub fn print_teapot(&self, config: &Config) {
         if let Some(teapot) = self.im_a_teapot {
             if config.cli_unstable().print_im_a_teapot {
-                println!("im-a-teapot = {}", teapot);
+                crate::drop_println!(config, "im-a-teapot = {}", teapot);
             }
         }
     }
