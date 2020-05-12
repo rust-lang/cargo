@@ -225,7 +225,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         // Create a dummy file to record the mtime for when we updated the
         // index.
-        File::create(&path.join(LAST_UPDATED_FILE))?;
+        paths::create(&path.join(LAST_UPDATED_FILE))?;
 
         Ok(())
     }
@@ -283,7 +283,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .create(true)
             .read(true)
             .write(true)
-            .open(&path)?;
+            .open(&path)
+            .chain_err(|| format!("failed to open `{}`", path.display()))?;
         let meta = dst.metadata()?;
         if meta.len() > 0 {
             return Ok(dst);

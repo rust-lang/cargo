@@ -374,9 +374,7 @@ fn install_one(
         if !source_id.is_path() && fs::rename(src, &dst).is_ok() {
             continue;
         }
-        fs::copy(src, &dst).chain_err(|| {
-            format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
-        })?;
+        paths::copy(src, &dst)?;
     }
 
     let (to_replace, to_install): (Vec<&str>, Vec<&str>) = binaries

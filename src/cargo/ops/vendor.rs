@@ -330,8 +330,7 @@ fn cp_sources(
 
         paths::create_dir_all(dst.parent().unwrap())?;
 
-        fs::copy(&p, &dst)
-            .chain_err(|| format!("failed to copy `{}` to `{}`", p.display(), dst.display()))?;
+        paths::copy(&p, &dst)?;
         let cksum = Sha256::new().update_path(dst)?.finish_hex();
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }

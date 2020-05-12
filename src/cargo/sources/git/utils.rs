@@ -10,7 +10,6 @@ use serde::ser;
 use serde::Serialize;
 use std::env;
 use std::fmt;
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use url::Url;
@@ -363,7 +362,7 @@ impl<'a> GitCheckout<'a> {
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = self.repo.find_object(self.revision.0, None)?;
         reset(&self.repo, &object, config)?;
-        File::create(ok_file)?;
+        paths::create(ok_file)?;
         Ok(())
     }
 
