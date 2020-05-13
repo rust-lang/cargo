@@ -308,8 +308,8 @@ impl Shell {
         }
         #[cfg(windows)]
         {
-            if let ShellOut::Stream { stream, .. } = &mut self.err {
-                ::fwdansi::write_ansi(stream, message)?;
+            if let ShellOut::Stream { stderr, .. } = &mut self.output {
+                ::fwdansi::write_ansi(stderr, message)?;
                 return Ok(());
             }
         }
@@ -495,6 +495,6 @@ mod imp {
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);
-        drop(write!(shell.err.as_write(), "{}\r", blank));
+        drop(write!(shell.output.stderr(), "{}\r", blank));
     }
 }
