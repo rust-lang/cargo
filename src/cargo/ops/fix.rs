@@ -41,6 +41,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, ExitStatus};
 use std::str;
@@ -526,7 +527,11 @@ fn exit_with(status: ExitStatus) -> ! {
     {
         use std::os::unix::prelude::*;
         if let Some(signal) = status.signal() {
-            eprintln!("child failed with signal `{}`", signal);
+            drop(writeln!(
+                std::io::stderr().lock(),
+                "child failed with signal `{}`",
+                signal
+            ));
             process::exit(2);
         }
     }

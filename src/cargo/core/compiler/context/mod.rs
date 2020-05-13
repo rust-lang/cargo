@@ -157,7 +157,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         if build_plan {
             plan.set_inputs(self.build_plan_inputs()?);
-            plan.output_plan();
+            plan.output_plan(self.bcx.config);
         }
 
         // Collect the result of the build into `self.compilation`.
