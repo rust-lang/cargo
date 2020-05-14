@@ -573,9 +573,13 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         for ((pkg_id, dep_kind), features) in &self.activated_features {
             let r_features = self.resolve.features(*pkg_id);
             if !r_features.iter().eq(features.iter()) {
-                eprintln!(
+                crate::drop_eprintln!(
+                    self.ws.config(),
                     "{}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
-                    pkg_id, dep_kind, r_features, features
+                    pkg_id,
+                    dep_kind,
+                    r_features,
+                    features
                 );
                 found = true;
             }

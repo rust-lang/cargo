@@ -35,9 +35,45 @@ fn write_crates(dest: &Path) {
             "repository": "https://github.com/nick29581/libhoare",
             "updated_at": "2014-11-20T21:49:21Z",
             "versions": null
-        }],
+        },
+        {
+            "id": "postgres",
+            "name": "postgres",
+            "updated_at": "2020-05-01T23:17:54.335921+00:00",
+            "versions": null,
+            "keywords": null,
+            "categories": null,
+            "badges": [
+                {
+                    "badge_type": "circle-ci",
+                    "attributes": {
+                        "repository": "sfackler/rust-postgres",
+                        "branch": null
+                    }
+                }
+            ],
+            "created_at": "2014-11-24T02:34:44.756689+00:00",
+            "downloads": 535491,
+            "recent_downloads": 88321,
+            "max_version": "0.17.3",
+            "newest_version": "0.17.3",
+            "description": "A native, synchronous PostgreSQL client",
+            "homepage": null,
+            "documentation": null,
+            "repository": "https://github.com/sfackler/rust-postgres",
+            "links": {
+                "version_downloads": "/api/v1/crates/postgres/downloads",
+                "versions": "/api/v1/crates/postgres/versions",
+                "owners": "/api/v1/crates/postgres/owners",
+                "owner_team": "/api/v1/crates/postgres/owner_team",
+                "owner_user": "/api/v1/crates/postgres/owner_user",
+                "reverse_dependencies": "/api/v1/crates/postgres/reverse_dependencies"
+            },
+            "exact_match": true
+        }
+        ],
         "meta": {
-            "total": 1
+            "total": 2
         }
     }"#;
 
@@ -55,6 +91,11 @@ fn write_crates(dest: &Path) {
         .unwrap();
     }
 }
+
+const SEARCH_RESULTS: &str = "\
+hoare = \"0.1.1\"        # Design by contract style assertions for Rust
+postgres = \"0.17.3\"    # A native, synchronous PostgreSQL client
+";
 
 fn setup() {
     let cargo_home = paths::root().join(".cargo");
@@ -114,7 +155,7 @@ fn not_update() {
     drop(lock);
 
     cargo_process("search postgres")
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .with_stderr("") // without "Updating ... index"
         .run();
 }
@@ -125,7 +166,7 @@ fn replace_default() {
     set_cargo_config();
 
     cargo_process("search postgres")
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .with_stderr_contains("[..]Updating [..] index")
         .run();
 }
@@ -136,7 +177,7 @@ fn simple() {
 
     cargo_process("search postgres --index")
         .arg(registry_url().to_string())
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -162,7 +203,7 @@ about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
         )
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -190,7 +231,7 @@ about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
         )
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 
@@ -200,7 +241,7 @@ fn multiple_query_params() {
 
     cargo_process("search postgres sql --index")
         .arg(registry_url().to_string())
-        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
 

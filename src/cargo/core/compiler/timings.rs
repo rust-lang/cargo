@@ -245,7 +245,7 @@ impl<'cfg> Timings<'cfg> {
                 rmeta_time: unit_time.rmeta_time,
             }
             .to_json_string();
-            self.config.shell().stdout_println(msg);
+            crate::drop_println!(self.config, "{}", msg);
         }
         self.unit_times.push(unit_time);
     }

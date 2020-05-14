@@ -524,9 +524,14 @@ fn rustfix_and_fix(
 fn exit_with(status: ExitStatus) -> ! {
     #[cfg(unix)]
     {
+        use std::io::Write;
         use std::os::unix::prelude::*;
         if let Some(signal) = status.signal() {
-            eprintln!("child failed with signal `{}`", signal);
+            drop(writeln!(
+                std::io::stderr().lock(),
+                "child failed with signal `{}`",
+                signal
+            ));
             process::exit(2);
         }
     }

@@ -9,11 +9,11 @@ use tempfile::Builder as TempFileBuilder;
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor};
 use crate::core::{Edition, Package, PackageId, Source, SourceId, Workspace};
-use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{paths, Config, Filesystem};
+use crate::{drop_println, ops};
 
 struct Transaction {
     bins: Vec<PathBuf>,
@@ -531,9 +531,9 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let root = resolve_root(dst, config)?;
     let tracker = InstallTracker::load(config, &root)?;
     for (k, v) in tracker.all_installed_bins() {
-        println!("{}:", k);
+        drop_println!(config, "{}:", k);
         for bin in v {
-            println!("    {}", bin);
+            drop_println!(config, "    {}", bin);
         }
     }
     Ok(())

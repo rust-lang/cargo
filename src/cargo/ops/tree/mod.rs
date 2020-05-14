@@ -6,7 +6,8 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
-use crate::util::CargoResult;
+use crate::util::{CargoResult, Config};
+use crate::{drop_print, drop_println};
 use anyhow::{bail, Context};
 use graph::Graph;
 use std::collections::{HashMap, HashSet};
@@ -200,12 +201,17 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         graph.invert();
     }
 
-    print(opts, root_indexes, &graph)?;
+    print(ws.config(), opts, root_indexes, &graph)?;
     Ok(())
 }
 
 /// Prints a tree for each given root.
-fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResult<()> {
+fn print(
+    config: &Config,
+    opts: &TreeOptions,
+    roots: Vec<usize>,
+    graph: &Graph<'_>,
+) -> CargoResult<()> {
     let format = Pattern::new(&opts.format)
         .with_context(|| format!("tree format `{}` not valid", opts.format))?;
 
@@ -220,7 +226,7 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
 
     for (i, root_index) in roots.into_iter().enumerate() {
         if i != 0 {
-            println!();
+            drop_println!(config);
         }
 
         // A stack of bools used to determine where | symbols should appear
@@ -231,6 +237,7 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
         let mut print_stack = vec![];
 
         print_node(
+            config,
             graph,
             root_index,
             &format,
@@ -248,6 +255,7 @@ fn print(opts: &TreeOptions, roots: Vec<usize>, graph: &Graph<'_>) -> CargoResul
 
 /// Prints a package and all of its dependencies.
 fn print_node<'a>(
+    config: &Config,
     graph: &'a Graph<'_>,
     node_index: usize,
     format: &Pattern,
@@ -261,12 +269,12 @@ fn print_node<'a>(
     let new = no_dedupe || visited_deps.insert(node_index);
 
     match prefix {
-        Prefix::Depth => print!("{}", levels_continue.len()),
+        Prefix::Depth => drop_print!(config, "{}", levels_continue.len()),
         Prefix::Indent => {
             if let Some((last_continues, rest)) = levels_continue.split_last() {
                 for continues in rest {
                     let c = if *continues { symbols.down } else { " " };
-                    print!("{}   ", c);
+                    drop_print!(config, "{}   ", c);
                 }
 
                 let c = if *last_continues {
@@ -274,7 +282,7 @@ fn print_node<'a>(
                 } else {
                     symbols.ell
                 };
-                print!("{0}{1}{1} ", c, symbols.right);
+                drop_print!(config, "{0}{1}{1} ", c, symbols.right);
             }
         }
         Prefix::None => {}
@@ -290,7 +298,7 @@ fn print_node<'a>(
     } else {
         " (*)"
     };
-    println!("{}{}", format.display(graph, node_index), star);
+    drop_println!(config, "{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
         return;
@@ -304,6 +312,7 @@ fn print_node<'a>(
         EdgeKind::Feature,
     ] {
         print_dependencies(
+            config,
             graph,
             node_index,
             format,
@@ -321,6 +330,7 @@ fn print_node<'a>(
 
 /// Prints all the dependencies of a package for the given dependency kind.
 fn print_dependencies<'a>(
+    config: &Config,
     graph: &'a Graph<'_>,
     node_index: usize,
     format: &Pattern,
@@ -348,10 +358,10 @@ fn print_dependencies<'a>(
         if let Some(name) = name {
             for continues in &**levels_continue {
                 let c = if *continues { symbols.down } else { " " };
-                print!("{}   ", c);
+                drop_print!(config, "{}   ", c);
             }
 
-            println!("{}", name);
+            drop_println!(config, "{}", name);
         }
     }
 
@@ -359,6 +369,7 @@ fn print_dependencies<'a>(
     while let Some(dependency) = it.next() {
         levels_continue.push(it.peek().is_some());
         print_node(
+            config,
             graph,
             *dependency,
             format,

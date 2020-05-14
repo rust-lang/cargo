@@ -146,7 +146,7 @@ fn compile<'cfg>(
                     &unit.target,
                     cx.files().message_cache_path(unit),
                     cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().supports_color(),
+                    cx.bcx.config.shell().err_supports_color(),
                 )
             } else {
                 Work::noop()
@@ -1109,7 +1109,7 @@ struct OutputOptions {
 impl OutputOptions {
     fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
         let look_for_metadata_directive = cx.rmeta_required(unit);
-        let color = cx.bcx.config.shell().supports_color();
+        let color = cx.bcx.config.shell().err_supports_color();
         let path = cx.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
