@@ -2117,7 +2117,7 @@ fn ws_err_unused() {
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  virtual manifests do not specify {}
+  this virtual manifest specifies a {} section, which is not allowed
 ",
                 key
             ))
