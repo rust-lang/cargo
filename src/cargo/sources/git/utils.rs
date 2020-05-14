@@ -702,6 +702,23 @@ pub fn fetch(
     refspec: &str,
     config: &Config,
 ) -> CargoResult<()> {
+    fetch_impl(repo, url, refspec, config)?;
+    // We reuse repositories quite a lot, so now that we have updated the repo,
+    // check to see if it's a little too old and could benefit from a gc.
+    // `git gc` goes through lengths to avoid removing precious data. In
+    // principle, we could be running it in the background while we're fetching,
+    // but better safe(r) than sorry, we just spawn it once we're done. It will
+    // be spawned in the background (so effectively, cargo will likely have
+    // terminated before `git gc` finishes), but only if necessary.
+    maybe_gc_repo(repo)
+}
+
+fn fetch_impl(
+    repo: &mut git2::Repository,
+    url: &str,
+    refspec: &str,
+    config: &Config,
+) -> CargoResult<()> {
     if config.frozen() {
         anyhow::bail!(
             "attempting to update a git repository, but --frozen \
@@ -728,12 +745,6 @@ pub fn fetch(
             }
         }
     }
-
-    // We reuse repositories quite a lot, so before we go through and update the
-    // repo check to see if it's a little too old and could benefit from a gc.
-    // In theory this shouldn't be too too expensive compared to the network
-    // request we're about to issue.
-    maybe_gc_repo(repo)?;
 
     // Unfortunately `libgit2` is notably lacking in the realm of authentication
     // when compared to the `git` command line. As a result, allow an escape
@@ -860,9 +871,7 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
         }
         Err(e) => debug!("git-gc failed to spawn: {}", e),
     }
-
-    // Alright all else failed, let's start over.
-    reinitialize(repo)
+    Ok(())
 }
 
 fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
