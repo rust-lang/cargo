@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::core::dependency::DepKind;
-use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -78,7 +78,7 @@ fn do_read_manifest(
         let (mut manifest, paths) =
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
-        if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
+        if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
                 "no targets specified in the manifest\n  \
                  either src/lib.rs, src/main.rs, a [lib] section, or \
@@ -321,7 +321,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
                 } else {
                     Err(E::custom(format!(
                         "must be an integer, `z`, or `s`, \
-                         but found: {}",
+                         but found the string: \"{}\"",
                         value
                     )))
                 }
@@ -1320,43 +1320,43 @@ impl TomlManifest {
         config: &Config,
     ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
         if me.project.is_some() {
-            bail!("virtual manifests do not define [project]");
+            bail!("this virtual manifest specifies a [project] section, which is not allowed");
         }
         if me.package.is_some() {
-            bail!("virtual manifests do not define [package]");
+            bail!("this virtual manifest specifies a [package] section, which is not allowed");
         }
         if me.lib.is_some() {
-            bail!("virtual manifests do not specify [lib]");
+            bail!("this virtual manifest specifies a [lib] section, which is not allowed");
         }
         if me.bin.is_some() {
-            bail!("virtual manifests do not specify [[bin]]");
+            bail!("this virtual manifest specifies a [[bin]] section, which is not allowed");
         }
         if me.example.is_some() {
-            bail!("virtual manifests do not specify [[example]]");
+            bail!("this virtual manifest specifies a [[example]] section, which is not allowed");
         }
         if me.test.is_some() {
-            bail!("virtual manifests do not specify [[test]]");
+            bail!("this virtual manifest specifies a [[test]] section, which is not allowed");
         }
         if me.bench.is_some() {
-            bail!("virtual manifests do not specify [[bench]]");
+            bail!("this virtual manifest specifies a [[bench]] section, which is not allowed");
         }
         if me.dependencies.is_some() {
-            bail!("virtual manifests do not specify [dependencies]");
+            bail!("this virtual manifest specifies a [dependencies] section, which is not allowed");
         }
         if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
-            bail!("virtual manifests do not specify [dev-dependencies]");
+            bail!("this virtual manifest specifies a [dev-dependencies] section, which is not allowed");
         }
         if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
-            bail!("virtual manifests do not specify [build-dependencies]");
+            bail!("this virtual manifest specifies a [build-dependencies] section, which is not allowed");
         }
         if me.features.is_some() {
-            bail!("virtual manifests do not specify [features]");
+            bail!("this virtual manifest specifies a [features] section, which is not allowed");
         }
         if me.target.is_some() {
-            bail!("virtual manifests do not specify [target]");
+            bail!("this virtual manifest specifies a [target] section, which is not allowed");
         }
         if me.badges.is_some() {
-            bail!("virtual manifests do not specify [badges]");
+            bail!("this virtual manifest specifies a [badges] section, which is not allowed");
         }
 
         let mut nested_paths = Vec::new();

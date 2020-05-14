@@ -113,6 +113,6 @@ pub fn emit_serialized_unit_graph(root_units: &[Unit], unit_graph: &UnitGraph) -
     let stdout = std::io::stdout();
     let mut lock = stdout.lock();
     serde_json::to_writer(&mut lock, &s)?;
-    write!(lock, "\n")?;
+    drop(writeln!(lock));
     Ok(())
 }

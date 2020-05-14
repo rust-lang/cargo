@@ -15,12 +15,12 @@ use tar::{Archive, Builder, EntryType, Header};
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
-use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, restricted_names, Config, FileLock};
+use crate::{drop_println, ops};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -102,7 +102,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
 
     if opts.list {
         for ar_file in ar_files {
-            println!("{}", ar_file.rel_str);
+            drop_println!(config, "{}", ar_file.rel_str);
         }
         return Ok(None);
     }

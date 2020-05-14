@@ -3360,7 +3360,7 @@ fn json_artifact_includes_test_flag() {
             "name":"foo",
             "src_path":"[..]lib.rs"
         },
-        "filenames":["[..]/foo-[..]"],
+        "filenames":"{...}",
         "fresh": false
     }
 

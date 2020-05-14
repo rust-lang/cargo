@@ -265,3 +265,62 @@ Caused by:
         .run();
     t.join().ok().unwrap();
 }
+
+#[cargo_test]
+fn net_err_suggests_fetch_with_cli() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            foo = { git = "ssh://needs-proxy.invalid/git" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] git repository `ssh://needs-proxy.invalid/git`
+warning: spurious network error[..]
+warning: spurious network error[..]
+[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
+
+Caused by:
+  failed to load source for dependency `foo`
+
+Caused by:
+  Unable to update ssh://needs-proxy.invalid/git
+
+Caused by:
+  failed to clone into: [..]
+  If your environment requires git authentication or proxying, try enabling `git-fetch-with-cli`
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  failed to resolve address for needs-proxy.invalid[..]
+",
+        )
+        .run();
+
+    p.change_file(
+        ".cargo/config",
+        "
+            [net]
+            git-fetch-with-cli = true
+            ",
+    );
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains("[..]Unable to update[..]")
+        .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
+        .run();
+}

@@ -476,7 +476,7 @@ fn maybe_lib(
     unit.pkg
         .targets()
         .iter()
-        .find(|t| t.linkable())
+        .find(|t| t.is_linkable())
         .map(|t| {
             let mode = check_or_build_mode(unit.mode, t);
             new_unit_dep(
@@ -681,7 +681,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
                 // Only deps with `links`.
                 .filter(|other| {
                     other.unit.pkg != unit.pkg
-                        && other.unit.target.linkable()
+                        && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
                 // Get the RunCustomBuild for other lib.

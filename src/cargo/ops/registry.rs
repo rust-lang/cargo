@@ -23,7 +23,7 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::IntoUrl;
 use crate::util::{paths, validate_package_name};
-use crate::version;
+use crate::{drop_print, drop_println, version};
 
 /// Registry settings loaded from config files.
 ///
@@ -378,7 +378,7 @@ fn registry(
         token: token_config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
-    let opt_index = index_config.as_ref().or(index.as_ref());
+    let opt_index = index_config.as_ref().or_else(|| index.as_ref());
     let sid = get_source_id(config, opt_index, registry.as_ref())?;
     if !sid.is_remote_registry() {
         bail!(
@@ -556,7 +556,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
             };
             match str::from_utf8(data) {
                 Ok(s) => {
-                    for line in s.lines() {
+                    for mut line in s.lines() {
+                        if line.starts_with("Authorization:") {
+                            line = "Authorization: [REDACTED]";
+                        } else if line[..line.len().min(10)].eq_ignore_ascii_case("set-cookie") {
+                            line = "set-cookie: [REDACTED]";
+                        }
                         log!(level, "http-debug: {} {}", prefix, line);
                     }
                 }
@@ -655,7 +660,8 @@ pub fn registry_login(
     let token = match token {
         Some(token) => token,
         None => {
-            println!(
+            drop_println!(
+                config,
                 "please visit {}/me and paste the API Token below",
                 registry.host()
             );
@@ -746,11 +752,11 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             .list_owners(&name)
             .chain_err(|| format!("failed to list owners of crate {}", name))?;
         for owner in owners.iter() {
-            print!("{}", owner.login);
+            drop_print!(config, "{}", owner.login);
             match (owner.name.as_ref(), owner.email.as_ref()) {
-                (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
-                (Some(s), None) | (None, Some(s)) => println!(" ({})", s),
-                (None, None) => println!(),
+                (Some(name), Some(email)) => drop_println!(config, " ({} <{}>)", name, email),
+                (Some(s), None) | (None, Some(s)) => drop_println!(config, " ({})", s),
+                (None, None) => drop_println!(config),
             }
         }
     }
@@ -871,12 +877,13 @@ pub fn search(
             }
             None => name,
         };
-        println!("{}", line);
+        drop_println!(config, "{}", line);
     }
 
     let search_max_limit = 100;
     if total_crates > limit && limit < search_max_limit {
-        println!(
+        drop_println!(
+            config,
             "... and {} crates more (use --limit N to see more)",
             total_crates - limit
         );
@@ -889,7 +896,12 @@ pub fn search(
         } else {
             String::new()
         };
-        println!("... and {} crates more{}", total_crates - limit, extra);
+        drop_println!(
+            config,
+            "... and {} crates more{}",
+            total_crates - limit,
+            extra
+        );
     }
 
     Ok(())

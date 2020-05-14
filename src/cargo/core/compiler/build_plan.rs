@@ -14,7 +14,7 @@ use serde::Serialize;
 use super::context::OutputFile;
 use super::{CompileKind, CompileMode, Context, Unit};
 use crate::core::TargetKind;
-use crate::util::{internal, CargoResult, ProcessBuilder};
+use crate::util::{internal, CargoResult, Config, ProcessBuilder};
 
 #[derive(Debug, Serialize)]
 struct Invocation {
@@ -146,9 +146,9 @@ impl BuildPlan {
         self.plan.inputs = inputs;
     }
 
-    pub fn output_plan(self) {
+    pub fn output_plan(self, config: &Config) {
         let encoded = serde_json::to_string(&self.plan).unwrap();
-        println!("{}", encoded);
+        crate::drop_println!(config, "{}", encoded);
     }
 }
 

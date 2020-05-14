@@ -213,7 +213,7 @@ impl ConflictCache {
 
         for c in con.keys() {
             self.dep_from_pid
-                .entry(c.clone())
+                .entry(*c)
                 .or_insert_with(HashSet::new)
                 .insert(dep.clone());
         }

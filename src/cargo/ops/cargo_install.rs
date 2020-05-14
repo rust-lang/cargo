@@ -4,17 +4,17 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use anyhow::{bail, format_err};
+use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor};
 use crate::core::{Dependency, Edition, Package, PackageId, Source, SourceId, Workspace};
-use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{paths, Config, Filesystem, Rustc, ToSemver};
-use semver::VersionReq;
+use crate::{drop_println, ops};
 
 struct Transaction {
     bins: Vec<PathBuf>,
@@ -406,9 +406,7 @@ fn install_one(
         if !source_id.is_path() && fs::rename(src, &dst).is_ok() {
             continue;
         }
-        fs::copy(src, &dst).chain_err(|| {
-            format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
-        })?;
+        paths::copy(src, &dst)?;
     }
 
     let (to_replace, to_install): (Vec<&str>, Vec<&str>) = binaries
@@ -686,9 +684,9 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let root = resolve_root(dst, config)?;
     let tracker = InstallTracker::load(config, &root)?;
     for (k, v) in tracker.all_installed_bins() {
-        println!("{}:", k);
+        drop_println!(config, "{}:", k);
         for bin in v {
-            println!("    {}", bin);
+            drop_println!(config, "    {}", bin);
         }
     }
     Ok(())

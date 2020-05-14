@@ -167,7 +167,7 @@ impl<'cfg> Compilation<'cfg> {
         }
 
         for crate_type in unit.target.rustc_crate_types() {
-            p.arg("--crate-type").arg(crate_type);
+            p.arg("--crate-type").arg(crate_type.as_str());
         }
 
         Ok(p)

@@ -832,9 +832,11 @@ fn generate_targets(
                 for proposal in filter_targets(packages, Target::is_lib, false, mode) {
                     let Proposal { target, pkg, .. } = proposal;
                     if mode.is_doc_test() && !target.doctestable() {
+                        let types = target.rustc_crate_types();
+                        let types_str: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
                         ws.config().shell().warn(format!(
                             "doc tests are not supported for crate type(s) `{}` in package `{}`",
-                            target.rustc_crate_types().join(", "),
+                            types_str.join(", "),
                             pkg.name()
                         ))?;
                     } else {
@@ -978,7 +980,10 @@ pub fn resolve_all_features(
             .proc_macro();
         for dep in deps {
             let features_for = FeaturesFor::from_for_host(is_proc_macro || dep.is_build());
-            for feature in resolved_features.activated_features_unverified(dep_id, features_for) {
+            for feature in resolved_features
+                .activated_features_unverified(dep_id, features_for)
+                .unwrap_or_default()
+            {
                 features.insert(format!("{}/{}", dep.name_in_toml(), feature));
             }
         }

@@ -1,7 +1,5 @@
 use crate::command_prelude::*;
-
 use cargo::ops::{self, OutputMetadataOptions};
-use cargo::print_json;
 
 pub fn cli() -> App {
     subcommand("metadata")
@@ -54,6 +52,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    print_json(&result);
+    config.shell().print_json(&result);
     Ok(())
 }

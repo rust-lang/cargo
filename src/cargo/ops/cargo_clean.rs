@@ -1,22 +1,12 @@
-use crate::core::InternedString;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-
-use crate::core::compiler::unit_dependencies;
-use crate::core::compiler::BuildContext;
-use crate::core::compiler::{
-    BuildConfig, CompileKind, CompileMode, Context, RustcTargetData, UnitInterner,
-};
-use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::HasDevUnits;
-use crate::core::resolver::ResolveOpts;
-use crate::core::{PackageIdSpec, Workspace};
+use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
+use crate::core::profiles::Profiles;
+use crate::core::{InternedString, PackageIdSpec, Workspace};
 use crate::ops;
-use crate::ops::resolve::WorkspaceResolve;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::Config;
+use std::fs;
+use std::path::Path;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
@@ -61,134 +51,131 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     if opts.spec.is_empty() {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
-    let mut build_config = BuildConfig::new(config, Some(1), &opts.targets, CompileMode::Build)?;
-    build_config.requested_profile = opts.requested_profile;
-    let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
-    // Resolve for default features. In the future, `cargo clean` should be rewritten
-    // so that it doesn't need to guess filename hashes.
-    let resolve_opts = ResolveOpts::new(
-        /*dev_deps*/ true,
-        &[],
-        /*all features*/ false,
-        /*default*/ true,
-    );
-    let specs = opts
-        .spec
-        .iter()
-        .map(|spec| PackageIdSpec::parse(spec))
-        .collect::<CargoResult<Vec<_>>>()?;
-    let ws_resolve = ops::resolve_ws_with_opts(
-        ws,
-        &target_data,
-        &build_config.requested_kinds,
-        &resolve_opts,
-        &specs,
-        HasDevUnits::Yes,
-    )?;
-    let WorkspaceResolve {
-        pkg_set,
-        targeted_resolve: resolve,
-        resolved_features: features,
-        ..
-    } = ws_resolve;
 
-    let interner = UnitInterner::new();
-    let mut units = Vec::new();
+    // Clean specific packages.
+    let requested_kinds = CompileKind::from_requested_targets(config, &opts.targets)?;
+    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let (pkg_set, resolve) = ops::resolve_ws(ws)?;
+    let prof_dir_name = profiles.get_dir_name();
+    let host_layout = Layout::new(ws, None, &prof_dir_name)?;
+    // Convert requested kinds to a Vec of layouts.
+    let target_layouts: Vec<(CompileKind, Layout)> = requested_kinds
+        .into_iter()
+        .filter_map(|kind| match kind {
+            CompileKind::Target(target) => match Layout::new(ws, Some(target), &prof_dir_name) {
+                Ok(layout) => Some(Ok((kind, layout))),
+                Err(e) => Some(Err(e)),
+            },
+            CompileKind::Host => None,
+        })
+        .collect::<CargoResult<_>>()?;
+    // A Vec of layouts. This is a little convoluted because there can only be
+    // one host_layout.
+    let layouts = if opts.targets.is_empty() {
+        vec![(CompileKind::Host, &host_layout)]
+    } else {
+        target_layouts
+            .iter()
+            .map(|(kind, layout)| (*kind, layout))
+            .collect()
+    };
+    // Create a Vec that also includes the host for things that need to clean both.
+    let layouts_with_host: Vec<(CompileKind, &Layout)> =
+        std::iter::once((CompileKind::Host, &host_layout))
+            .chain(layouts.iter().map(|(k, l)| (*k, *l)))
+            .collect();
 
-    for spec in opts.spec.iter() {
-        // Translate the spec to a Package
-        let pkgid = resolve.query(spec)?;
-        let pkg = pkg_set.get_one(pkgid)?;
+    // Cleaning individual rustdoc crates is currently not supported.
+    // For example, the search index would need to be rebuilt to fully
+    // remove it (otherwise you're left with lots of broken links).
+    // Doc tests produce no output.
 
-        // Generate all relevant `Unit` targets for this package
-        for target in pkg.targets() {
-            for kind in build_config
-                .requested_kinds
-                .iter()
-                .chain(Some(&CompileKind::Host))
-            {
-                for mode in CompileMode::all_modes() {
-                    for unit_for in UnitFor::all_values() {
-                        let profile = if mode.is_run_custom_build() {
-                            profiles.get_profile_run_custom_build(&profiles.get_profile(
-                                pkg.package_id(),
-                                ws.is_member(pkg),
-                                /*is_local*/ true,
-                                *unit_for,
-                                CompileMode::Build,
-                            ))
-                        } else {
-                            profiles.get_profile(
-                                pkg.package_id(),
-                                ws.is_member(pkg),
-                                /*is_local*/ true,
-                                *unit_for,
-                                *mode,
-                            )
-                        };
-                        // Use unverified here since this is being more
-                        // exhaustive than what is actually needed.
-                        let features_for = unit_for.map_to_features_for();
-                        let features =
-                            features.activated_features_unverified(pkg.package_id(), features_for);
-                        units.push(interner.intern(
-                            pkg, target, profile, *kind, *mode, features, /*is_std*/ false,
-                        ));
-                    }
-                }
-            }
+    // Get Packages for the specified specs.
+    let mut pkg_ids = Vec::new();
+    for spec_str in opts.spec.iter() {
+        // Translate the spec to a Package.
+        let spec = PackageIdSpec::parse(spec_str)?;
+        if spec.version().is_some() {
+            config.shell().warn(&format!(
+                "version qualifier in `-p {}` is ignored, \
+                cleaning all versions of `{}` found",
+                spec_str,
+                spec.name()
+            ))?;
         }
+        if spec.url().is_some() {
+            config.shell().warn(&format!(
+                "url qualifier in `-p {}` ignored, \
+                cleaning all versions of `{}` found",
+                spec_str,
+                spec.name()
+            ))?;
+        }
+        let matches: Vec<_> = resolve.iter().filter(|id| spec.matches(*id)).collect();
+        if matches.is_empty() {
+            anyhow::bail!("package ID specification `{}` matched no packages", spec);
+        }
+        pkg_ids.extend(matches);
     }
+    let packages = pkg_set.get_many(pkg_ids)?;
 
-    let unit_graph = unit_dependencies::build_unit_dependencies(
-        ws,
-        &pkg_set,
-        &resolve,
-        &features,
-        None,
-        &units,
-        &Default::default(),
-        build_config.mode,
-        &target_data,
-        &profiles,
-        &interner,
-    )?;
-    let extra_args = HashMap::new();
-    let bcx = BuildContext::new(
-        ws,
-        pkg_set,
-        &build_config,
-        profiles,
-        extra_args,
-        target_data,
-        units,
-        unit_graph,
-    )?;
-    let mut cx = Context::new(&bcx)?;
-    cx.prepare_units()?;
+    for pkg in packages {
+        let pkg_dir = format!("{}-*", pkg.name());
 
-    for unit in &bcx.roots {
-        if unit.mode.is_doc() || unit.mode.is_doc_test() {
-            // Cleaning individual rustdoc crates is currently not supported.
-            // For example, the search index would need to be rebuilt to fully
-            // remove it (otherwise you're left with lots of broken links).
-            // Doc tests produce no output.
-            continue;
+        // Clean fingerprints.
+        for (_, layout) in &layouts_with_host {
+            rm_rf_glob(&layout.fingerprint().join(&pkg_dir), config)?;
         }
-        rm_rf(&cx.files().fingerprint_dir(unit), config)?;
-        if unit.target.is_custom_build() {
-            if unit.mode.is_run_custom_build() {
-                rm_rf(&cx.files().build_script_out_dir(unit), config)?;
-            } else {
-                rm_rf(&cx.files().build_script_dir(unit), config)?;
+
+        for target in pkg.targets() {
+            if target.is_custom_build() {
+                // Get both the build_script_build and the output directory.
+                for (_, layout) in &layouts_with_host {
+                    rm_rf_glob(&layout.build().join(&pkg_dir), config)?;
+                }
+                continue;
             }
-            continue;
-        }
+            let crate_name = target.crate_name();
+            for &mode in &[
+                CompileMode::Build,
+                CompileMode::Test,
+                CompileMode::Check { test: false },
+            ] {
+                for (compile_kind, layout) in &layouts {
+                    let triple = target_data.short_name(compile_kind);
 
-        for output in cx.outputs(unit)?.iter() {
-            rm_rf(&output.path, config)?;
-            if let Some(ref dst) = output.hardlink {
-                rm_rf(dst, config)?;
+                    let (file_types, _unsupported) = target_data
+                        .info(*compile_kind)
+                        .rustc_outputs(mode, target.kind(), triple)?;
+                    let (dir, uplift_dir) = if target.is_example() {
+                        (layout.examples(), layout.examples())
+                    } else {
+                        (layout.deps(), layout.dest())
+                    };
+                    for file_type in file_types {
+                        // Some files include a hash in the filename, some don't.
+                        let hashed_name = file_type.output_filename(target, Some("*"));
+                        let unhashed_name = file_type.output_filename(target, None);
+                        rm_rf_glob(&dir.join(&hashed_name), config)?;
+                        rm_rf(&dir.join(&unhashed_name), config)?;
+                        // Remove dep-info file generated by rustc. It is not tracked in
+                        // file_types. It does not have a prefix.
+                        let hashed_dep_info = dir.join(format!("{}-*.d", crate_name));
+                        let unhashed_dep_info = dir.join(format!("{}.d", crate_name));
+                        rm_rf_glob(&hashed_dep_info, config)?;
+                        rm_rf(&unhashed_dep_info, config)?;
+
+                        // Remove the uplifted copy.
+                        let uplifted_path = uplift_dir.join(file_type.uplift_filename(target));
+                        rm_rf(&uplifted_path, config)?;
+                        // Dep-info generated by Cargo itself.
+                        let dep_info = uplifted_path.with_extension("d");
+                        rm_rf(&dep_info, config)?;
+                    }
+                    // TODO: what to do about build_script_build?
+                    let incremental = layout.incremental().join(format!("{}-*", crate_name));
+                    rm_rf_glob(&incremental, config)?;
+                }
             }
         }
     }
@@ -196,8 +183,19 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     Ok(())
 }
 
+fn rm_rf_glob(pattern: &Path, config: &Config) -> CargoResult<()> {
+    // TODO: Display utf8 warning to user?  Or switch to globset?
+    let pattern = pattern
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("expected utf-8 path"))?;
+    for path in glob::glob(pattern)? {
+        rm_rf(&path?, config)?;
+    }
+    Ok(())
+}
+
 fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
-    let m = fs::metadata(path);
+    let m = fs::symlink_metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
         config
             .shell()

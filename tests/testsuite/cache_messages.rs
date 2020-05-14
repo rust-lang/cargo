@@ -194,7 +194,7 @@ fn clears_cache_after_fix() {
     // Fill the cache.
     p.cargo("check").with_stderr_contains("[..]asdf[..]").run();
     let cpath = p
-        .glob("target/debug/.fingerprint/foo-*/output")
+        .glob("target/debug/.fingerprint/foo-*/output-*")
         .next()
         .unwrap()
         .unwrap();
@@ -215,7 +215,10 @@ fn clears_cache_after_fix() {
 ",
         )
         .run();
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        0
+    );
 
     // And again, check the cache is correct.
     p.cargo("check")
@@ -253,7 +256,10 @@ fn rustdoc() {
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
     assert!(rustdoc_stderr.contains("private"));
     assert!(rustdoc_stderr.contains("\x1b["));
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        1
+    );
 
     // Check the cached output.
     let rustdoc_output = p
@@ -331,14 +337,23 @@ fn doesnt_create_extra_files() {
 
     p.cargo("build").run();
 
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 0);
-    assert_eq!(p.glob("target/debug/.fingerprint/dep-*/output").count(), 0);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        0
+    );
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/dep-*/output-*").count(),
+        0
+    );
     if is_coarse_mtime() {
         sleep_ms(1000);
     }
     p.change_file("src/lib.rs", "fn unused() {}");
     p.cargo("build").run();
-    assert_eq!(p.glob("target/debug/.fingerprint/foo-*/output").count(), 1);
+    assert_eq!(
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
+        1
+    );
 }
 
 #[cargo_test]
@@ -489,5 +504,25 @@ fn rustc_workspace_wrapper() {
         .with_stderr_contains("[FRESH] foo [..]")
         .with_stderr_contains("[WARNING] [..]unused_func[..]")
         .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .run();
+}
+
+#[cargo_test]
+fn wacky_hashless_fingerprint() {
+    // On Windows, executables don't have hashes. This checks for a bad
+    // assumption that caused bad caching.
+    let p = project()
+        .file("src/bin/a.rs", "fn main() { let unused = 1; }")
+        .file("src/bin/b.rs", "fn main() {}")
+        .build();
+    p.cargo("build --bin b")
+        .with_stderr_does_not_contain("[..]unused[..]")
+        .run();
+    p.cargo("build --bin a")
+        .with_stderr_contains("[..]unused[..]")
+        .run();
+    // This should not pick up the cache from `a`.
+    p.cargo("build --bin b")
+        .with_stderr_does_not_contain("[..]unused[..]")
         .run();
 }

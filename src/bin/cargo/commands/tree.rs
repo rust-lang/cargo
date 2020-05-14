@@ -102,7 +102,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
-        print!("{}", version);
+        cargo::drop_print!(config, "{}", version);
         return Ok(());
     }
     let prefix = if args.is_present("no-indent") {
@@ -206,7 +206,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
             .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
         kinds.push("no-dev");
     }
-    if kinds.len() == 0 {
+    if kinds.is_empty() {
         kinds.extend(&["normal", "build", "dev"]);
     }
 

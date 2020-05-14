@@ -2,12 +2,12 @@
 .\"     Title: cargo-bench
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-02-06
+.\"      Date: 2020-05-08
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BENCH" "1" "2020-02-06" "\ \&" "\ \&"
+.TH "CARGO\-BENCH" "1" "2020-05-08" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -59,6 +59,22 @@ the test harness to tell it to run only benchmarks.
 The libtest harness may be disabled by setting \fBharness = false\fP in the target
 manifest settings, in which case your code will need to provide its own \fBmain\fP
 function to handle running benchmarks.
+.RS 3
+.ll -.6i
+.sp
+\fBNote\fP: The
+\c
+.URL "https://doc.rust\-lang.org/nightly/unstable\-book/library\-features/test.html" "\fB#[bench]\fP attribute"
+is currently unstable and only available on the
+.URL "https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html" "nightly channel" "."
+There are some packages available on
+.URL "https://crates.io/keywords/benchmark" "crates.io" " "
+that may help with
+running benchmarks on the stable channel, such as
+.URL "https://crates.io/crates/criterion" "Criterion" "."
+.br
+.RE
+.ll
 .SH "OPTIONS"
 .SS "Benchmark Options"
 .sp

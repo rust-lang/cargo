@@ -1,6 +1,6 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::iter;
@@ -162,6 +162,18 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     Ok(())
 }
 
+/// Creates a new file.
+pub fn create<P: AsRef<Path>>(path: P) -> CargoResult<File> {
+    let path = path.as_ref();
+    File::create(path).chain_err(|| format!("failed to create file `{}`", path.display()))
+}
+
+/// Opens an existing file.
+pub fn open<P: AsRef<Path>>(path: P) -> CargoResult<File> {
+    let path = path.as_ref();
+    File::open(path).chain_err(|| format!("failed to open file `{}`", path.display()))
+}
+
 pub fn mtime(path: &Path) -> CargoResult<FileTime> {
     let meta = fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
     Ok(FileTime::from_last_modification_time(&meta))
@@ -265,7 +277,11 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
 }
 
 fn _remove_dir_all(p: &Path) -> CargoResult<()> {
-    if p.symlink_metadata()?.file_type().is_symlink() {
+    if p.symlink_metadata()
+        .chain_err(|| format!("could not get metadata for `{}` to remove", p.display()))?
+        .file_type()
+        .is_symlink()
+    {
         return remove_file(p);
     }
     let entries = p
@@ -392,6 +408,14 @@ fn _link_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
             )
         })?;
     Ok(())
+}
+
+/// Copies a file from one location to another.
+pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> CargoResult<u64> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    fs::copy(from, to)
+        .chain_err(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
 }
 
 /// Changes the filesystem mtime (and atime if possible) for the given file.

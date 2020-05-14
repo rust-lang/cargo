@@ -26,19 +26,20 @@
 //!         # packages
 //!         .fingerprint/
 //!             # Each package is in a separate directory.
+//!             # Note that different target kinds have different filename prefixes.
 //!             $pkgname-$META/
 //!                 # Set of source filenames for this package.
-//!                 dep-lib-$pkgname-$META
+//!                 dep-lib-$targetname
 //!                 # Timestamp when this package was last built.
 //!                 invoked.timestamp
 //!                 # The fingerprint hash.
-//!                 lib-$pkgname-$META
+//!                 lib-$targetname
 //!                 # Detailed information used for logging the reason why
 //!                 # something is being recompiled.
-//!                 lib-$pkgname-$META.json
+//!                 lib-$targetname.json
 //!                 # The console output from the compiler. This is cached
 //!                 # so that warnings can be redisplayed for "fresh" units.
-//!                 output
+//!                 output-lib-$targetname
 //!
 //!         # This is the root directory for all rustc artifacts except build
 //!         # scripts, examples, and test and bench executables. Almost every

@@ -442,7 +442,7 @@ impl Package {
         } else {
             registry_path.join(&file)
         };
-        let prev = fs::read_to_string(&dst).unwrap_or(String::new());
+        let prev = fs::read_to_string(&dst).unwrap_or_default();
         t!(fs::create_dir_all(dst.parent().unwrap()));
         t!(fs::write(&dst, prev + &line[..] + "\n"));
 

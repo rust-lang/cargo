@@ -260,7 +260,7 @@ impl EncodableResolve {
         let mut g = Graph::new();
 
         for &(ref id, _) in live_pkgs.values() {
-            g.add(id.clone());
+            g.add(*id);
         }
 
         for &(ref id, pkg) in live_pkgs.values() {
@@ -271,7 +271,7 @@ impl EncodableResolve {
 
             for edge in deps.iter() {
                 if let Some(to_depend_on) = lookup_id(edge) {
-                    g.link(id.clone(), to_depend_on);
+                    g.link(*id, to_depend_on);
                 }
             }
         }
@@ -282,7 +282,7 @@ impl EncodableResolve {
                 if let Some(ref replace) = pkg.replace {
                     assert!(pkg.dependencies.is_none());
                     if let Some(replace_id) = lookup_id(replace) {
-                        replacements.insert(id.clone(), replace_id);
+                        replacements.insert(*id, replace_id);
                     }
                 }
             }
