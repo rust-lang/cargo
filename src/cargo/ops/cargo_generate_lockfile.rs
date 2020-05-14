@@ -5,7 +5,7 @@ use termcolor::Color::{self, Cyan, Green, Red};
 
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::ResolveOpts;
-use crate::core::PackageId;
+use crate::core::{PackageId, PackageIdSpec};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::config::Config;
@@ -79,6 +79,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     if opts.to_update.is_empty() {
         to_avoid.extend(previous_resolve.iter());
+        to_avoid.extend(previous_resolve.unused_patches());
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {
@@ -101,6 +102,11 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     }
                     None => dep.source_id().with_precise(None),
                 });
+            }
+            if let Ok(unused_id) =
+                PackageIdSpec::query_str(name, previous_resolve.unused_patches().iter().cloned())
+            {
+                to_avoid.insert(unused_id);
             }
         }
 
