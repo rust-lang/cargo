@@ -1445,3 +1445,79 @@ fn canonicalize_a_bunch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
+
+#[cargo_test]
+fn update_unused_new_version() {
+    // If there is an unused patch entry, and then you update the patch,
+    // make sure `cargo update` will be able to fix the lock file.
+    Package::new("bar", "0.1.5").publish();
+
+    // Start with a lock file to 0.1.5, and an "unused" patch because the
+    // version is too old.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bar = "0.1.5"
+
+                [patch.crates-io]
+                bar = { path = "../bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Patch is too old.
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.4"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr_contains("[WARNING] Patch `bar v0.1.4 [..] was not used in the crate graph.")
+        .run();
+    // unused patch should be in the lock file
+    let lock = p.read_lockfile();
+    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
+    assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
+    assert_eq!(
+        toml["patch"]["unused"][0]["version"].as_str(),
+        Some("0.1.4")
+    );
+
+    // Oh, OK, let's update to the latest version.
+    bar.change_file("Cargo.toml", &basic_manifest("bar", "0.1.6"));
+
+    // Create a backup so we can test it with different options.
+    fs::copy(p.root().join("Cargo.lock"), p.root().join("Cargo.lock.bak")).unwrap();
+
+    // Try with `-p`.
+    p.cargo("update -p bar")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[ADDING] bar v0.1.6 ([..]/bar)
+[REMOVING] bar v0.1.5
+",
+        )
+        .run();
+
+    // Try with bare `cargo update`.
+    fs::copy(p.root().join("Cargo.lock.bak"), p.root().join("Cargo.lock")).unwrap();
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[ADDING] bar v0.1.6 ([..]/bar)
+[REMOVING] bar v0.1.5
+",
+        )
+        .run();
+}
