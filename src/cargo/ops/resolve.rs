@@ -253,7 +253,8 @@ pub fn resolve_with_previous<'cfg>(
             let previous = match previous {
                 Some(r) => r,
                 None => {
-                    registry.patch(url, patches)?;
+                    let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
+                    registry.patch(url, &patches)?;
                     continue;
                 }
             };
@@ -264,11 +265,11 @@ pub fn resolve_with_previous<'cfg>(
                     let candidates = previous.iter().chain(unused);
                     match candidates.filter(keep).find(|&id| dep.matches_id(id)) {
                         Some(id) => {
-                            let mut dep = dep.clone();
-                            dep.lock_to(id);
-                            dep
+                            let mut locked_dep = dep.clone();
+                            locked_dep.lock_to(id);
+                            (dep, Some(locked_dep))
                         }
-                        None => dep.clone(),
+                        None => (dep, None),
                     }
                 })
                 .collect::<Vec<_>>();

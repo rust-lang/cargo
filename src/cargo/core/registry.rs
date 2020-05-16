@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::bail;
 use log::{debug, trace};
-use semver::VersionReq;
+use semver::{Version, VersionReq};
 use url::Url;
 
 use crate::core::PackageSet;
@@ -222,14 +222,22 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// the manifest.
     ///
     /// Here the `deps` will be resolved to a precise version and stored
-    /// internally for future calls to `query` below. It's expected that `deps`
-    /// have had `lock_to` call already, if applicable. (e.g., if a lock file was
-    /// already present).
+    /// internally for future calls to `query` below. `deps` should be a tuple
+    /// where the first element is the patch definition straight from the
+    /// manifest, and the second element is an optional variant where the
+    /// patch has been locked. This locked patch is the patch locked to
+    /// a specific version found in Cargo.lock. This will be `None` if
+    /// `Cargo.lock` doesn't exist, or the patch did not match any existing
+    /// entries in `Cargo.lock`.
     ///
     /// Note that the patch list specified here *will not* be available to
     /// `query` until `lock_patches` is called below, which should be called
     /// once all patches have been added.
-    pub fn patch(&mut self, url: &Url, deps: &[Dependency]) -> CargoResult<()> {
+    pub fn patch(
+        &mut self,
+        url: &Url,
+        deps: &[(&Dependency, Option<Dependency>)],
+    ) -> CargoResult<()> {
         let canonical = CanonicalUrl::new(url)?;
 
         // First up we need to actually resolve each `deps` specification to
@@ -243,7 +251,8 @@ impl<'cfg> PackageRegistry<'cfg> {
         // of summaries which should be the same length as `deps` above.
         let unlocked_summaries = deps
             .iter()
-            .map(|dep| {
+            .map(|(orig_dep, locked_dep)| {
+                let dep = locked_dep.as_ref().unwrap_or(orig_dep);
                 debug!(
                     "registering a patch for `{}` with `{}`",
                     url,
@@ -261,30 +270,13 @@ impl<'cfg> PackageRegistry<'cfg> {
                         )
                     })?;
 
-                let mut summaries = self
+                let source = self
                     .sources
                     .get_mut(dep.source_id())
-                    .expect("loaded source not present")
-                    .query_vec(dep)?
-                    .into_iter();
+                    .expect("loaded source not present");
+                let summaries = source.query_vec(dep)?;
+                let summary = summary_for_patch(orig_dep, locked_dep, url, summaries, source)?;
 
-                let summary = match summaries.next() {
-                    Some(summary) => summary,
-                    None => anyhow::bail!(
-                        "patch for `{}` in `{}` did not resolve to any crates. If this is \
-                         unexpected, you may wish to consult: \
-                         https://github.com/rust-lang/cargo/issues/4678",
-                        dep.package_name(),
-                        url
-                    ),
-                };
-                if summaries.next().is_some() {
-                    anyhow::bail!(
-                        "patch for `{}` in `{}` resolved to more than one candidate",
-                        dep.package_name(),
-                        url
-                    )
-                }
                 if *summary.package_id().source_id().canonical_url() == canonical {
                     anyhow::bail!(
                         "patch for `{}` in `{}` points to the same source, but \
@@ -717,4 +709,109 @@ fn lock(
         trace!("\tnope, unlocked");
         dep
     })
+}
+
+/// This is a helper for generating a user-friendly error message for a bad patch.
+fn summary_for_patch(
+    orig_patch: &Dependency,
+    locked_patch: &Option<Dependency>,
+    url: &Url,
+    mut summaries: Vec<Summary>,
+    source: &mut dyn Source,
+) -> CargoResult<Summary> {
+    if summaries.len() == 1 {
+        return Ok(summaries.pop().unwrap());
+    }
+    // Helpers to create a comma-separated string of versions.
+    let versions = |versions: &mut [&Version]| -> String {
+        versions.sort();
+        let versions: Vec<_> = versions.into_iter().map(|v| v.to_string()).collect();
+        versions.join(", ")
+    };
+    let summary_versions = |summaries: &[Summary]| -> String {
+        let mut vers: Vec<_> = summaries.iter().map(|summary| summary.version()).collect();
+        versions(&mut vers)
+    };
+    if summaries.len() > 1 {
+        anyhow::bail!(
+            "patch for `{}` in `{}` resolved to more than one candidate\n\
+            Found versions: {}\n\
+            Update the patch definition to select only one package, \
+            or remove the extras from the patch location.",
+            orig_patch.package_name(),
+            url,
+            summary_versions(&summaries)
+        );
+    }
+    // No summaries found, try to help the user figure out what is wrong.
+    let extra = if let Some(locked_patch) = locked_patch {
+        let found = match source.query_vec(orig_patch) {
+            Ok(unlocked_summaries) => format!(" (found {})", summary_versions(&unlocked_summaries)),
+            Err(e) => {
+                log::warn!(
+                    "could not determine unlocked summaries for dep {:?}: {:?}",
+                    orig_patch,
+                    e
+                );
+                "".to_string()
+            }
+        };
+        format!(
+            "The patch is locked to {} in Cargo.lock, \
+            but the version in the patch location does not match{}.\n\
+            Make sure the patch points to the correct version.\n\
+            If it does, run `cargo update -p {}` to update Cargo.lock.",
+            locked_patch.version_req(),
+            found,
+            locked_patch.package_name(),
+        )
+    } else {
+        // Try checking if there are *any* packages that match this by name.
+        let name_only_dep =
+            Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
+        let found = match source.query_vec(&name_only_dep) {
+            Ok(name_summaries) => {
+                let mut vers = name_summaries
+                    .iter()
+                    .map(|summary| summary.version())
+                    .collect::<Vec<_>>();
+                match vers.len() {
+                    0 => format!(""),
+                    1 => format!("version `{}`", versions(&mut vers)),
+                    _ => format!("versions `{}`", versions(&mut vers)),
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "failed to do name-only summary query for {:?}: {:?}",
+                    name_only_dep,
+                    e
+                );
+                "".to_string()
+            }
+        };
+        if found.is_empty() {
+            format!(
+                "The patch location does not appear to contain any packages \
+                matching the name `{}`.",
+                orig_patch.package_name()
+            )
+        } else {
+            format!(
+                "The patch location contains a `{}` package with {}, but the patch \
+                definition requires `{}`.\n\
+                Check that the version in the patch location is what you expect, \
+                and update the patch definition to match.",
+                orig_patch.package_name(),
+                found,
+                orig_patch.version_req()
+            )
+        }
+    };
+    anyhow::bail!(
+        "patch for `{}` in `{}` did not resolve to any crates.\n{}",
+        orig_patch.package_name(),
+        url,
+        extra
+    );
 }

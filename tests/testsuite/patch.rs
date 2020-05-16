@@ -1498,7 +1498,25 @@ fn update_unused_new_version() {
     // Create a backup so we can test it with different options.
     fs::copy(p.root().join("Cargo.lock"), p.root().join("Cargo.lock.bak")).unwrap();
 
-    // Try with `-p`.
+    // Try to build again.
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not \
+resolve to any crates.
+The patch is locked to = 0.1.4 in Cargo.lock, but the version in the patch \
+location does not match (found 0.1.6).
+Make sure the patch points to the correct version.
+If it does, run `cargo update -p bar` to update Cargo.lock.
+",
+        )
+        .run();
+
+    // Oh, OK, try `update -p`.
     p.cargo("update -p bar")
         .with_stderr(
             "\
@@ -1517,6 +1535,122 @@ fn update_unused_new_version() {
 [UPDATING] `[..]/registry` index
 [ADDING] bar v0.1.6 ([..]/bar)
 [REMOVING] bar v0.1.5
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn too_many_matches() {
+    // The patch locations has multiple versions that match.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.0").alternative(true).publish();
+    Package::new("bar", "0.1.1").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { version = "0.1", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr("\
+[UPDATING] `[..]alternative-registry` index
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` resolved to more than one candidate
+Found versions: 0.1.0, 0.1.1
+Update the patch definition to select only one package, or remove the extras from the patch location.
+")
+        .run();
+}
+
+#[cargo_test]
+fn no_matches() {
+    // A patch to a location that does not contain the named package.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { path = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("abc", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates.
+The patch location does not appear to contain any packages matching the name `bar`.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn mismatched_version() {
+    // A patch to a location that has an old version.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.1"
+
+                [patch.crates-io]
+                bar = { path = "bar", version = "0.1.1" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates.
+The patch location contains a `bar` package with version `0.1.0`, \
+but the patch definition requires `^0.1.1`.
+Check that the version in the patch location is what you expect, \
+and update the patch definition to match.
 ",
         )
         .run();
