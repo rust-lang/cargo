@@ -915,7 +915,6 @@ fn build_base_args(
         cmd.arg("-Z").arg(format!("strip={}", strip));
     }
 
-
     if unit.is_std {
         // -Zforce-unstable-if-unmarked prevents the accidental use of
         // unstable crates within the sysroot (such as "extern crate libc" or
