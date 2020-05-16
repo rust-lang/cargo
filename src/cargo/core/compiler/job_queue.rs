@@ -69,7 +69,7 @@ use super::job::{
 };
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
-use crate::core::{PackageId, TargetKind};
+use crate::core::{PackageId, Shell, TargetKind};
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal, profile};
@@ -412,7 +412,6 @@ impl<'cfg> DrainState<'cfg> {
         cx: &mut Context<'_, '_>,
         jobserver_helper: &HelperThread,
         scope: &Scope<'_>,
-        has_errored: bool,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
         // possible that can run. Note that this is also the point where we
@@ -423,11 +422,6 @@ impl<'cfg> DrainState<'cfg> {
             if self.active.len() + self.pending_queue.len() > 1 {
                 jobserver_helper.request_token();
             }
-        }
-
-        // Do not actually spawn the new work if we've errored out
-        if has_errored {
-            return Ok(());
         }
 
         // Now that we've learned of all possible work that we can execute
@@ -487,7 +481,7 @@ impl<'cfg> DrainState<'cfg> {
         jobserver_helper: &HelperThread,
         plan: &mut BuildPlan,
         event: Message,
-    ) -> CargoResult<Option<anyhow::Error>> {
+    ) -> CargoResult<()> {
         match event {
             Message::Run(id, cmd) => {
                 cx.bcx
@@ -545,17 +539,7 @@ impl<'cfg> DrainState<'cfg> {
                     Err(e) => {
                         let msg = "The following warnings were emitted during compilation:";
                         self.emit_warnings(Some(msg), &unit, cx)?;
-
-                        if !self.active.is_empty() {
-                            crate::display_error(&e, &mut *cx.bcx.config.shell());
-                            cx.bcx.config.shell().warn(
-                                "build failed, waiting for other \
-                                 jobs to finish...",
-                            )?;
-                            return Ok(Some(anyhow::format_err!("build failed")));
-                        } else {
-                            return Ok(Some(e));
-                        }
+                        return Err(e);
                     }
                 }
             }
@@ -590,7 +574,7 @@ impl<'cfg> DrainState<'cfg> {
             }
         }
 
-        Ok(None)
+        Ok(())
     }
 
     // This will also tick the progress bar as appropriate
@@ -651,8 +635,14 @@ impl<'cfg> DrainState<'cfg> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
+        // CAUTION! From here on out, do not use `?`. Every error must be handled
+        // in such a way that the loop is still allowed to drain event messages.
         loop {
-            self.spawn_work_if_possible(cx, jobserver_helper, scope, error.is_some())?;
+            if error.is_none() {
+                if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
+                    self.handle_error(&mut cx.bcx.config.shell(), &mut error, e);
+                }
+            }
 
             // If after all that we're not actually running anything then we're
             // done!
@@ -660,7 +650,9 @@ impl<'cfg> DrainState<'cfg> {
                 break;
             }
 
-            self.grant_rustc_token_requests()?;
+            if let Err(e) = self.grant_rustc_token_requests() {
+                self.handle_error(&mut cx.bcx.config.shell(), &mut error, e);
+            }
 
             // And finally, before we block waiting for the next event, drop any
             // excess tokens we may have accidentally acquired. Due to how our
@@ -668,8 +660,8 @@ impl<'cfg> DrainState<'cfg> {
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
             for event in self.wait_for_events() {
-                if let Some(err) = self.handle_event(cx, jobserver_helper, plan, event)? {
-                    error = Some(err);
+                if let Err(event_err) = self.handle_event(cx, jobserver_helper, plan, event) {
+                    self.handle_error(&mut cx.bcx.config.shell(), &mut error, event_err);
                 }
             }
         }
@@ -694,13 +686,25 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
-        self.timings.finished(cx.bcx, &error)?;
+        if let Err(e) = self.timings.finished(cx.bcx, &error) {
+            if error.is_some() {
+                crate::display_error(&e, &mut cx.bcx.config.shell());
+            } else {
+                return Err(e);
+            }
+        }
         if cx.bcx.build_config.emit_json() {
             let msg = machine_message::BuildFinished {
                 success: error.is_none(),
             }
             .to_json_string();
-            writeln!(cx.bcx.config.shell().out(), "{}", msg)?;
+            if let Err(e) = writeln!(cx.bcx.config.shell().out(), "{}", msg) {
+                if error.is_some() {
+                    crate::display_error(&e.into(), &mut cx.bcx.config.shell());
+                } else {
+                    return Err(e.into());
+                }
+            }
         }
 
         if let Some(e) = error {
@@ -711,12 +715,33 @@ impl<'cfg> DrainState<'cfg> {
                 profile_name, opt_type, time_elapsed
             );
             if !cx.bcx.build_config.build_plan {
-                cx.bcx.config.shell().status("Finished", message)?;
+                // It doesn't really matter if this fails.
+                drop(cx.bcx.config.shell().status("Finished", message));
             }
             Ok(())
         } else {
             debug!("queue: {:#?}", self.queue);
             Err(internal("finished with jobs still left in the queue"))
+        }
+    }
+
+    fn handle_error(
+        &self,
+        shell: &mut Shell,
+        err_state: &mut Option<anyhow::Error>,
+        new_err: anyhow::Error,
+    ) {
+        if err_state.is_some() {
+            // Already encountered one error.
+            log::warn!("{:?}", new_err);
+        } else {
+            if !self.active.is_empty() {
+                crate::display_error(&new_err, shell);
+                drop(shell.warn("build failed, waiting for other jobs to finish..."));
+                *err_state = Some(anyhow::format_err!("build failed"));
+            } else {
+                *err_state = Some(new_err);
+            }
         }
     }
 
