@@ -1198,11 +1198,20 @@ impl TomlManifest {
             project.links.as_deref(),
             project.namespaced_features.unwrap_or(false),
         )?;
+
+        let readme = match &project.readme {
+            None => Some(String::from("README.md")),
+            Some(value) => match value.as_str() {
+                "false" => None,
+                _ => Some(value.clone())
+            }
+        };
+
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
-            readme: project.readme.clone(),
+            readme,
             authors: project.authors.clone().unwrap_or_default(),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
