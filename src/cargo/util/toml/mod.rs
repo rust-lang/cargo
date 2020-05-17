@@ -1200,7 +1200,7 @@ impl TomlManifest {
         )?;
 
         let readme = match &project.readme {
-            None => Some(String::from("README.md")),
+            None => default_readme_from_package_root(package_root),
             Some(value) => match value.as_str() {
                 "false" => None,
                 _ => Some(value.clone())
@@ -1520,6 +1520,19 @@ impl TomlManifest {
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
     }
+}
+
+const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"];
+
+/// Checks if a file with any of the default README file names exists in the package root.
+/// If so, returns a String representing that name.
+fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
+    DEFAULT_README_FILES
+        .iter()
+        .map(|&fname| package_root.join(Path::new(fname)))
+        .filter(|path| path.is_file())
+        .flat_map(|path| path.file_name().map(|fname| fname.to_string_lossy().into_owned()))
+        .nth(0)
 }
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
