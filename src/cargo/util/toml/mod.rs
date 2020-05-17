@@ -1520,8 +1520,8 @@ fn readme_for_project(package_root: &Path, project: &Box<TomlProject>) -> Option
         None => default_readme_from_package_root(package_root),
         Some(value) => match value.as_str() {
             "false" => None,
-            _ => Some(value.clone())
-        }
+            _ => Some(value.clone()),
+        },
     }
 }
 
@@ -1540,11 +1540,15 @@ fn _default_readme_from_package_root(package_root: &Path) -> CargoResult<String>
         let fname = entry.file_name();
 
         if entry.metadata()?.is_file() && DEFAULT_README_FILES.contains(&fname.to_str().unwrap()) {
-            return Ok(fname.into_string().map_err(|_| anyhow!("Could not convert the README's file name into a String"))?);
+            return Ok(fname
+                .into_string()
+                .map_err(|_| anyhow!("Could not convert the README's file name into a String"))?);
         }
     }
 
-    Err(anyhow!("No files with the default README file names found in the package root."))
+    Err(anyhow!(
+        "No files with the default README file names found in the package root."
+    ))
 }
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
