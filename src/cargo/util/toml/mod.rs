@@ -1532,7 +1532,7 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
         .map(|&fname| package_root.join(Path::new(fname)))
         .filter(|path| path.is_file())
         .flat_map(|path| path.file_name().map(|fname| fname.to_string_lossy().into_owned()))
-        .nth(0)
+        .next()
 }
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
