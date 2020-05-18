@@ -4,11 +4,13 @@ use cargo::util::paths::dylib_path_envvar;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, lines_match, main_file, project,
+    rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
+use std::io::Read;
+use std::process::Stdio;
 
 #[cargo_test]
 fn cargo_compile_simple() {
@@ -4817,4 +4819,113 @@ fn user_specific_cfgs_are_filtered_out() {
     p.cargo("rustc -- --cfg debug_assertions --cfg proc_macro")
         .run();
     p.process(&p.bin("foo")).run();
+}
+
+#[cargo_test]
+fn close_output() {
+    // What happens when stdout or stderr is closed during a build.
+
+    // Server to know when rustc has spawned.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            &r#"
+                use proc_macro::TokenStream;
+                use std::io::Read;
+
+                #[proc_macro]
+                pub fn repro(_input: TokenStream) -> TokenStream {
+                    println!("hello stdout!");
+                    eprintln!("hello stderr!");
+                    // Tell the test we have started.
+                    let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
+                    // Wait for the test to tell us to start printing.
+                    let mut buf = [0];
+                    drop(socket.read_exact(&mut buf));
+                    let use_stderr = std::env::var("__CARGO_REPRO_STDERR").is_ok();
+                    for i in 0..10000 {
+                        if use_stderr {
+                            eprintln!("{}", i);
+                        } else {
+                            println!("{}", i);
+                        }
+                        std::thread::sleep(std::time::Duration::new(0, 1));
+                    }
+                    TokenStream::new()
+                }
+            "#
+            .replace("__ADDR__", &addr.to_string()),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                foo::repro!();
+
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    // The `stderr` flag here indicates if this should forcefully close stderr or stdout.
+    let spawn = |stderr: bool| {
+        let mut cmd = p.cargo("build").build_command();
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+        if stderr {
+            cmd.env("__CARGO_REPRO_STDERR", "1");
+        }
+        let mut child = cmd.spawn().unwrap();
+        // Wait for proc macro to start.
+        let pm_conn = listener.accept().unwrap().0;
+        // Close stderr or stdout.
+        if stderr {
+            drop(child.stderr.take());
+        } else {
+            drop(child.stdout.take());
+        }
+        // Tell the proc-macro to continue;
+        drop(pm_conn);
+        // Read the output from the other channel.
+        let out: &mut dyn Read = if stderr {
+            child.stdout.as_mut().unwrap()
+        } else {
+            child.stderr.as_mut().unwrap()
+        };
+        let mut result = String::new();
+        out.read_to_string(&mut result).unwrap();
+        let status = child.wait().unwrap();
+        assert!(!status.success());
+        result
+    };
+
+    let stderr = spawn(false);
+    lines_match(
+        "\
+[COMPILING] foo [..]
+hello stderr!
+[ERROR] [..]
+[WARNING] build failed, waiting for other jobs to finish...
+[ERROR] build failed
+",
+        &stderr,
+    );
+
+    // Try again with stderr.
+    p.build_dir().rm_rf();
+    let stdout = spawn(true);
+    lines_match("hello_stdout!", &stdout);
 }
