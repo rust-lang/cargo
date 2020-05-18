@@ -1,6 +1,7 @@
 use crate::core::compiler::{Context, Unit};
 use crate::core::interning::InternedString;
 use crate::core::profiles;
+use crate::core::TargetKind;
 use crate::util::errors::CargoResult;
 use std::collections::hash_map::{Entry, HashMap};
 
@@ -26,7 +27,7 @@ pub enum Lto {
 pub fn generate(cx: &mut Context<'_, '_>) -> CargoResult<()> {
     let mut map = HashMap::new();
     for unit in cx.bcx.roots.iter() {
-        calculate(cx, &mut map, unit, false)?;
+        calculate(cx, &mut map, unit, Lto::None)?;
     }
     cx.lto = map;
     Ok(())
@@ -36,34 +37,49 @@ fn calculate(
     cx: &Context<'_, '_>,
     map: &mut HashMap<Unit, Lto>,
     unit: &Unit,
-    require_bitcode: bool,
+    lto_for_deps: Lto,
 ) -> CargoResult<()> {
-    let (lto, require_bitcode_for_deps) = if unit.target.for_host() {
+    let (lto, lto_for_deps) = if unit.target.for_host() {
         // Disable LTO for host builds since we only really want to perform LTO
         // for the final binary, and LTO on plugins/build scripts/proc macros is
         // largely not desired.
-        (Lto::None, false)
-    } else if unit.target.can_lto() {
-        // Otherwise if this target can perform LTO then we're going to read the
-        // LTO value out of the profile. Note that we ignore `require_bitcode`
+        (Lto::None, Lto::None)
+    } else if unit.target.is_linkable() {
+        // A "linkable" target is one that produces and rlib or dylib in this
+        // case. In this scenario we cannot pass `-Clto` to the compiler because
+        // that is an invalid request, this is simply a dependency. What we do,
+        // however, is respect the request for whatever dependencies need to
+        // have.
+        //
+        // Here if no LTO is requested then we keep it turned off. Otherwise LTO
+        // is requested in some form, which means ideally we need just what's
+        // requested, nothing else. It's possible, though, to have libraries
+        // which are both a cdylib and and rlib, for example, which means that
+        // object files are getting sent to the linker. That means that we need
+        // to fully embed bitcode rather than simply generating just bitcode.
+        let has_non_linkable_lib = match unit.target.kind() {
+            TargetKind::Lib(kinds) => kinds.iter().any(|k| !k.is_linkable()),
+            _ => true,
+        };
+        match lto_for_deps {
+            Lto::None => (Lto::None, Lto::None),
+            _ if has_non_linkable_lib => (Lto::EmbedBitcode, Lto::EmbedBitcode),
+            other => (other, other),
+        }
+    } else {
+        // Otherwise this target can perform LTO and we're going to read the
+        // LTO value out of the profile. Note that we ignore `lto_for_deps`
         // here because if a unit depends on another unit than can LTO this
         // isn't a rustc-level dependency but rather a Cargo-level dependency.
         // For example this is an integration test depending on a binary.
         match unit.profile.lto {
             profiles::Lto::Named(s) => match s.as_str() {
-                "n" | "no" | "off" => (Lto::Run(Some(s)), false),
-                _ => (Lto::Run(Some(s)), true),
+                "n" | "no" | "off" => (Lto::Run(Some(s)), Lto::None),
+                _ => (Lto::Run(Some(s)), Lto::OnlyBitcode),
             },
-            profiles::Lto::Bool(true) => (Lto::Run(None), true),
-            profiles::Lto::Bool(false) => (Lto::None, false),
+            profiles::Lto::Bool(true) => (Lto::Run(None), Lto::OnlyBitcode),
+            profiles::Lto::Bool(false) => (Lto::None, Lto::None),
         }
-    } else if require_bitcode {
-        // Otherwise we're a dependency of something, an rlib. This means that
-        // if our parent required bitcode of some kind then we need to generate
-        // bitcode.
-        (Lto::OnlyBitcode, true)
-    } else {
-        (Lto::None, false)
     };
 
     match map.entry(unit.clone()) {
@@ -93,14 +109,12 @@ fn calculate(
                 // either only-objects or only-bitcode we have to embed both in
                 // rlibs (used for different compilations), so we switch to
                 // embedding bitcode.
-                (Lto::OnlyBitcode, Lto::None)
-                | (Lto::OnlyBitcode, Lto::EmbedBitcode)
-                | (Lto::None, Lto::OnlyBitcode)
-                | (Lto::None, Lto::EmbedBitcode) => Lto::EmbedBitcode,
+                (Lto::OnlyBitcode, Lto::None) | (Lto::None, Lto::OnlyBitcode) => Lto::EmbedBitcode,
 
-                // Currently this variant is never calculated above, so no need
-                // to handle this case.
-                (Lto::EmbedBitcode, _) => unreachable!(),
+                // Once a target has requested bitcode embedding that's the
+                // maximal amount of work that can be done, so we just keep
+                // doing that work.
+                (Lto::EmbedBitcode, _) | (_, Lto::EmbedBitcode) => Lto::EmbedBitcode,
             };
             // No need to recurse if we calculated the same value as before.
             if result == *v.get() {
@@ -111,7 +125,7 @@ fn calculate(
     }
 
     for dep in cx.unit_deps(unit) {
-        calculate(cx, map, &dep.unit, require_bitcode_for_deps)?;
+        calculate(cx, map, &dep.unit, lto_for_deps)?;
     }
     Ok(())
 }

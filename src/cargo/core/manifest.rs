@@ -842,17 +842,6 @@ impl Target {
         self.kind().rustc_crate_types()
     }
 
-    pub fn can_lto(&self) -> bool {
-        match self.kind() {
-            TargetKind::Lib(v) => {
-                !v.contains(&CrateType::Rlib)
-                    && !v.contains(&CrateType::Dylib)
-                    && !v.contains(&CrateType::Lib)
-            }
-            _ => true,
-        }
-    }
-
     pub fn set_tested(&mut self, tested: bool) -> &mut Target {
         Arc::make_mut(&mut self.inner).tested = tested;
         self
