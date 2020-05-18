@@ -525,6 +525,7 @@ impl TomlProfile {
         }
 
         if let Some(strip) = &self.strip {
+            features.require(Feature::strip())?;
             if strip != "debuginfo" && strip != "none" && strip != "symbols" {
                 bail!(
                     "`strip` setting of `{}` is not a valid setting,\

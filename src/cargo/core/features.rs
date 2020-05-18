@@ -214,6 +214,9 @@ features! {
 
         // Opt-in new-resolver behavior.
         [unstable] resolver: bool,
+
+        // Allow to specify whether binaries should be stripped.
+        [unstable] strip: bool,
     }
 }
 
@@ -353,6 +356,7 @@ pub struct CliUnstable {
     pub crate_versions: bool,
     pub separate_nightlies: bool,
     pub multitarget: bool,
+    pub strip: bool,
 }
 
 impl CliUnstable {
@@ -432,6 +436,7 @@ impl CliUnstable {
             "crate-versions" => self.crate_versions = parse_empty(k, v)?,
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "multitarget" => self.multitarget = parse_empty(k, v)?,
+            "strip" => self.strip = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
