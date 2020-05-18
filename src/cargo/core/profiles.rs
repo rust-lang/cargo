@@ -804,7 +804,7 @@ pub enum Strip {
 impl fmt::Display for Strip {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Strip::DebugInfo => "unwind",
+            Strip::DebugInfo => "debuginfo",
             Strip::None => "abort",
             Strip::Symbols => "symbols",
         }
