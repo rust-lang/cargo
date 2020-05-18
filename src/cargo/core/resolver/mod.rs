@@ -844,7 +844,7 @@ fn generalize_conflicting(
     for (critical_parent, critical_parents_deps) in
         cx.parents.edges(&backtrack_critical_id).filter(|(p, _)| {
             // it will only help backjump further if it is older then the critical_age
-            cx.is_active(*p).expect("parent not currently active!?") < backtrack_critical_age
+            cx.is_active(**p).expect("parent not currently active!?") < backtrack_critical_age
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
