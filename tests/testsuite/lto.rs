@@ -336,3 +336,78 @@ fn test_all_and_bench() {
         .with_stderr_contains("[RUNNING] `rustc[..]--crate-name foo[..]-C lto[..]")
         .run();
 }
+
+#[cargo_test]
+fn cdylib_and_rlib() {
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+
+    Package::new("registry", "0.0.1")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
+    Package::new("registry-shared", "0.0.1")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+
+                [workspace]
+
+                [dependencies]
+                bar = { path = 'bar' }
+                registry-shared = "*"
+
+                [profile.release]
+                lto = true
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "
+                fn main() {
+                    bar::foo();
+                    registry_shared::foo();
+                }
+            ",
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.0"
+
+                [dependencies]
+                registry = "*"
+                registry-shared = "*"
+
+                [lib]
+                crate-type = ['cdylib', 'rlib']
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            "
+                pub fn foo() {
+                    registry::foo();
+                    registry_shared::foo();
+                }
+            ",
+        )
+        .file("tests/a.rs", "")
+        .file("bar/tests/b.rs", "")
+        .build();
+    p.cargo("build --release -v").run();
+    p.cargo("test --release -v").run();
+    p.cargo("build --release -v --manifest-path bar/Cargo.toml")
+        .run();
+    p.cargo("test --release -v --manifest-path bar/Cargo.toml")
+        .run();
+}
