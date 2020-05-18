@@ -401,8 +401,13 @@ impl<'cfg> JobQueue<'cfg> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        crossbeam_utils::thread::scope(move |scope| state.drain_the_queue(cx, plan, scope, &helper))
-            .expect("child threads shouldn't panic")
+        crossbeam_utils::thread::scope(move |scope| {
+            match state.drain_the_queue(cx, plan, scope, &helper) {
+                Some(err) => Err(err),
+                None => Ok(()),
+            }
+        })
+        .expect("child threads shouldn't panic")
     }
 }
 
@@ -615,13 +620,18 @@ impl<'cfg> DrainState<'cfg> {
         events
     }
 
+    /// This is the "main" loop, where Cargo does all work to run the
+    /// compiler.
+    ///
+    /// This returns an Option to prevent the use of `?` on `Result` types
+    /// because it is important for the loop to carefully handle errors.
     fn drain_the_queue(
         mut self,
         cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
         scope: &Scope<'_>,
         jobserver_helper: &HelperThread,
-    ) -> CargoResult<()> {
+    ) -> Option<anyhow::Error> {
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -635,8 +645,9 @@ impl<'cfg> DrainState<'cfg> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
-        // CAUTION! From here on out, do not use `?`. Every error must be handled
-        // in such a way that the loop is still allowed to drain event messages.
+        // CAUTION! Do not use `?` or break out of the loop early. Every error
+        // must be handled in such a way that the loop is still allowed to
+        // drain event messages.
         loop {
             if error.is_none() {
                 if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
@@ -690,7 +701,7 @@ impl<'cfg> DrainState<'cfg> {
             if error.is_some() {
                 crate::display_error(&e, &mut cx.bcx.config.shell());
             } else {
-                return Err(e);
+                return Some(e);
             }
         }
         if cx.bcx.build_config.emit_json() {
@@ -702,13 +713,13 @@ impl<'cfg> DrainState<'cfg> {
                 if error.is_some() {
                     crate::display_error(&e.into(), &mut cx.bcx.config.shell());
                 } else {
-                    return Err(e.into());
+                    return Some(e.into());
                 }
             }
         }
 
         if let Some(e) = error {
-            Err(e)
+            Some(e)
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
             let message = format!(
                 "{} [{}] target(s) in {}",
@@ -718,10 +729,10 @@ impl<'cfg> DrainState<'cfg> {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
             }
-            Ok(())
+            None
         } else {
             debug!("queue: {:#?}", self.queue);
-            Err(internal("finished with jobs still left in the queue"))
+            Some(internal("finished with jobs still left in the queue"))
         }
     }
 
