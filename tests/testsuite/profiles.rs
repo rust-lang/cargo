@@ -468,3 +468,34 @@ fn thin_lto_works() {
         )
         .run();
 }
+
+#[cargo_test]
+fn strip_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["strip"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.release]
+            strip = 'symbols'
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -Z strip=symbols [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
