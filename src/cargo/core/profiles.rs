@@ -565,6 +565,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
+    if let Some(strip) = toml.strip {
+        profile.strip = strip;
+    }
 }
 
 /// The root profile (dev/release).
@@ -595,6 +598,7 @@ pub struct Profile {
     pub rpath: bool,
     pub incremental: bool,
     pub panic: PanicStrategy,
+    pub strip: Strip,
 }
 
 impl Default for Profile {
@@ -611,6 +615,7 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
+            strip: Strip::None,
         }
     }
 }
@@ -635,6 +640,7 @@ compact_debug! {
                 rpath
                 incremental
                 panic
+                strip
             )]
         }
     }
@@ -721,6 +727,7 @@ impl Profile {
         bool,
         bool,
         PanicStrategy,
+        Strip,
     ) {
         (
             self.opt_level,
@@ -732,6 +739,7 @@ impl Profile {
             self.rpath,
             self.incremental,
             self.panic,
+            self.strip,
         )
     }
 }
@@ -776,6 +784,30 @@ impl fmt::Display for PanicStrategy {
     }
 }
 
+/// The setting for choosing which symbols to strip
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Strip {
+    /// Only strip debugging symbols
+    DebugInfo,
+    /// Don't remove any symbols
+    None,
+    /// Strip all non-exported symbols from the final binary
+    Symbols,
+}
+
+impl fmt::Display for Strip {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Strip::DebugInfo => "debuginfo",
+            Strip::None => "abort",
+            Strip::Symbols => "symbols",
+        }
+        .fmt(f)
+    }
+}
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

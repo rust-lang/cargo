@@ -214,6 +214,9 @@ features! {
 
         // Opt-in new-resolver behavior.
         [unstable] resolver: bool,
+
+        // Allow to specify whether binaries should be stripped.
+        [unstable] strip: bool,
     }
 }
 

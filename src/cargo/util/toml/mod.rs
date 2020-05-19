@@ -15,6 +15,7 @@ use url::Url;
 
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -407,6 +408,7 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
+    pub strip: Option<Strip>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -521,6 +523,10 @@ impl TomlProfile {
                     panic
                 );
             }
+        }
+
+        if self.strip.is_some() {
+            features.require(Feature::strip())?;
         }
         Ok(())
     }
@@ -640,6 +646,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.dir_name {
             self.dir_name = Some(*v);
+        }
+
+        if let Some(v) = profile.strip {
+            self.strip = Some(v);
         }
     }
 }

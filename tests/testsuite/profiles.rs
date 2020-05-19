@@ -2,7 +2,7 @@
 
 use std::env;
 
-use cargo_test_support::project;
+use cargo_test_support::{is_nightly, project};
 
 #[cargo_test]
 fn profile_overrides() {
@@ -464,6 +464,114 @@ fn thin_lto_works() {
 [COMPILING] top [..]
 [RUNNING] `rustc [..] -C lto=thin [..]`
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn strip_works() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["strip"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.release]
+            strip = 'symbols'
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -Z strip=symbols [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn strip_requires_cargo_feature() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.release]
+            strip = 'symbols'
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  feature `strip` is required
+
+consider adding `cargo-features = [\"strip\"]` to the manifest
+",
+        )
+        .run();
+}
+#[cargo_test]
+fn strip_rejects_invalid_option() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["strip"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.release]
+            strip = 'wrong'
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  unknown variant `wrong`, expected one of `debuginfo`, `none`, `symbols` for key [..]
 ",
         )
         .run();
