@@ -566,12 +566,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.incremental = incremental;
     }
     if let Some(strip) = toml.strip {
-        profile.strip = match strip.as_str() {
-            "debuginfo" => Strip::DebugInfo,
-            "none" => Strip::None,
-            "symbols" => Strip::Symbols,
-            _ => panic!("Unexpected strip option `{}`", strip),
-        };
+        profile.strip = strip;
     }
 }
 
@@ -790,7 +785,9 @@ impl fmt::Display for PanicStrategy {
 }
 
 /// The setting for choosing which symbols to strip
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Strip {
     /// Only strip debugging symbols
