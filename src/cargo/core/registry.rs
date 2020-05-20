@@ -296,7 +296,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 let (summary, should_unlock) =
                     summary_for_patch(orig_patch, &locked, summaries, source).chain_err(|| {
                         format!(
-                            "patch for `{}` in `{}` did not resolve to any crates",
+                            "patch for `{}` in `{}` failed to resolve",
                             orig_patch.package_name(),
                             url,
                         )
@@ -754,21 +754,28 @@ fn summary_for_patch(
     if summaries.len() == 1 {
         return Ok((summaries.pop().unwrap(), None));
     }
-    let best_summary = |summaries: &mut Vec<Summary>| -> Summary {
-        // TODO: This could maybe honor -Zminimal-versions?
-        summaries.sort_by(|a, b| a.version().cmp(b.version()));
-        summaries.pop().unwrap()
-    };
     if summaries.len() > 1 {
-        let summary = best_summary(&mut summaries);
-        if let Some((_dep, lock_id)) = locked {
-            // I can't think of a scenario where this might happen (locked by
-            // definition should only match at most one summary). Maybe if the
-            // source is broken?
-            return Ok((summary, Some(*lock_id)));
-        } else {
-            return Ok((summary, None));
-        }
+        // TODO: In the future, it might be nice to add all of these
+        // candidates so that version selection would just pick the
+        // appropriate one. However, as this is currently structured, if we
+        // added these all as patches, the unselected versions would end up in
+        // the "unused patch" listing, and trigger a warning. It might take a
+        // fair bit of restructuring to make that work cleanly, and there
+        // isn't any demand at this time to support that.
+        let mut vers: Vec<_> = summaries.iter().map(|summary| summary.version()).collect();
+        vers.sort();
+        let versions: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
+        anyhow::bail!(
+            "patch for `{}` in `{}` resolved to more than one candidate\n\
+            Found versions: {}\n\
+            Update the patch definition to select only one package.\n\
+            For example, add an `=` version requirement to the patch definition, \
+            such as `version = \"={}\"`.",
+            orig_patch.package_name(),
+            orig_patch.source_id(),
+            versions.join(", "),
+            versions.last().unwrap()
+        );
     }
     assert!(summaries.is_empty());
     // No summaries found, try to help the user figure out what is wrong.

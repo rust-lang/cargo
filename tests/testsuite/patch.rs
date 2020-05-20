@@ -1567,15 +1567,20 @@ fn too_many_matches() {
 
     // Picks 0.1.1, the most recent version.
     p.cargo("check")
+        .with_status(101)
         .with_stderr(
             "\
 [UPDATING] `[..]/alternative-registry` index
-[UPDATING] `[..]/registry` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.1 (registry `[..]/alternative-registry`)
-[CHECKING] bar v0.1.1 (registry `[..]/alternative-registry`)
-[CHECKING] foo v0.1.0 ([..]/foo)
-[FINISHED] [..]
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  patch for `bar` in `registry `[..]/alternative-registry`` resolved to more than one candidate
+Found versions: 0.1.0, 0.1.1
+Update the patch definition to select only one package.
+For example, add an `=` version requirement to the patch definition, such as `version = \"=0.1.1\"`.
 ",
         )
         .run();
@@ -1611,7 +1616,7 @@ fn no_matches() {
 error: failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
   The patch location `[..]/foo/bar` does not appear to contain any packages matching the name `bar`.
@@ -1650,7 +1655,7 @@ fn mismatched_version() {
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
   The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, \
@@ -1760,7 +1765,7 @@ fn patch_walks_backwards_restricted() {
 error: failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
   The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
@@ -1942,7 +1947,7 @@ fn can_update_with_alt_reg() {
                 bar = "0.1"
 
                 [patch.crates-io]
-                bar = { version = "0.1.1", registry = "alternative" }
+                bar = { version = "=0.1.1", registry = "alternative" }
             "#,
         )
         .file("src/lib.rs", "")
@@ -1967,12 +1972,42 @@ fn can_update_with_alt_reg() {
     // Should remain locked.
     p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
+    // This does nothing, due to `=` requirement.
     p.cargo("update -p bar")
         .with_stderr(
             "\
 [UPDATING] `[..]/alternative-registry` index
 [UPDATING] `[..]/registry` index
-[UPDATING] bar v0.1.1 (registry `[..]/alternative-registry`) -> v0.1.2
+",
+        )
+        .run();
+
+    // Bump to 0.1.2.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [patch.crates-io]
+            bar = { version = "=0.1.2", registry = "alternative" }
+        "#,
+    );
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `[..]/registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.2 (registry `[..]/alternative-registry`)
+[CHECKING] bar v0.1.2 (registry `[..]/alternative-registry`)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
 ",
         )
         .run();
