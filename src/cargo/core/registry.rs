@@ -812,16 +812,18 @@ fn summary_for_patch(
     };
     if found.is_empty() {
         anyhow::bail!(
-            "The patch location does not appear to contain any packages \
+            "The patch location `{}` does not appear to contain any packages \
             matching the name `{}`.",
+            orig_patch.source_id(),
             orig_patch.package_name()
         );
     } else {
         anyhow::bail!(
-            "The patch location contains a `{}` package with {}, but the patch \
+            "The patch location `{}` contains a `{}` package with {}, but the patch \
             definition requires `{}`.\n\
             Check that the version in the patch location is what you expect, \
             and update the patch definition to match.",
+            orig_patch.source_id(),
             orig_patch.package_name(),
             found,
             orig_patch.version_req()
