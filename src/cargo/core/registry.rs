@@ -774,17 +774,14 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some((locked_patch, locked_id)) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let mut orig_matches = match source.query_vec(orig_patch) {
-            Ok(summaries) => summaries,
-            Err(e) => {
-                log::warn!(
-                    "could not determine unlocked summaries for dep {:?}: {:?}",
-                    orig_patch,
-                    e
-                );
-                Vec::new()
-            }
-        };
+        let mut orig_matches = source.query_vec(orig_patch).unwrap_or_else(|e| {
+            log::warn!(
+                "could not determine unlocked summaries for dep {:?}: {:?}",
+                orig_patch,
+                e
+            );
+            Vec::new()
+        });
         if orig_matches.is_empty() {
             // This should be relatively unusual. For example, a patch of
             // {version="0.1.2", ...} and the patch location no longer contains a
@@ -810,29 +807,25 @@ fn summary_for_patch(
         // Try checking if there are *any* packages that match this by name.
         let name_only_dep =
             Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
-        let found = match source.query_vec(&name_only_dep) {
-            Ok(name_summaries) => {
-                let mut vers = name_summaries
-                    .iter()
-                    .map(|summary| summary.version())
-                    .collect::<Vec<_>>();
-                match vers.len() {
-                    0 => format!(""),
-                    1 => format!("version `{}`", vers[0]),
-                    _ => {
-                        vers.sort();
-                        let strs: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
-                        format!("versions `{}`", strs.join(", "))
-                    }
-                }
-            }
-            Err(e) => {
-                log::warn!(
-                    "failed to do name-only summary query for {:?}: {:?}",
-                    name_only_dep,
-                    e
-                );
-                "".to_string()
+        let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
+            log::warn!(
+                "failed to do name-only summary query for {:?}: {:?}",
+                name_only_dep,
+                e
+            );
+            Vec::new()
+        });
+        let mut vers = name_summaries
+            .iter()
+            .map(|summary| summary.version())
+            .collect::<Vec<_>>();
+        let found = match vers.len() {
+            0 => format!(""),
+            1 => format!("version `{}`", vers[0]),
+            _ => {
+                vers.sort();
+                let strs: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
+                format!("versions `{}`", strs.join(", "))
             }
         };
         if found.is_empty() {
