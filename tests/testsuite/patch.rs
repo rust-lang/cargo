@@ -1763,8 +1763,8 @@ Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` did not resolve to any crates
 
 Caused by:
-  The patch is locked to = 0.1.1 in Cargo.lock, but the version in the patch location does not match any packages in the patch location.
-Make sure the patch points to the correct version.
+  The patch location contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+Check that the version in the patch location is what you expect, and update the patch definition to match.
 ",
         )
         .run();

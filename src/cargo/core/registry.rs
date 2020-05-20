@@ -772,9 +772,9 @@ fn summary_for_patch(
     }
     assert!(summaries.is_empty());
     // No summaries found, try to help the user figure out what is wrong.
-    if let Some((locked_patch, locked_id)) = locked {
+    if let Some((_locked_patch, locked_id)) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let mut orig_matches = source.query_vec(orig_patch).unwrap_or_else(|e| {
+        let orig_matches = source.query_vec(orig_patch).unwrap_or_else(|e| {
             log::warn!(
                 "could not determine unlocked summaries for dep {:?}: {:?}",
                 orig_patch,
@@ -782,68 +782,49 @@ fn summary_for_patch(
             );
             Vec::new()
         });
-        if orig_matches.is_empty() {
-            // This should be relatively unusual. For example, a patch of
-            // {version="0.1.2", ...} and the patch location no longer contains a
-            // version that matches "0.1.2". It is unusual to explicitly write a
-            // version in the patch.
-            anyhow::bail!(
-                "The patch is locked to {} in Cargo.lock, but the version in the \
-                patch location does not match any packages in the patch location.\n\
-                Make sure the patch points to the correct version.",
-                locked_patch.version_req(),
-            );
-        }
-        let summary = best_summary(&mut orig_matches);
-        debug!(
-            "locked patch no longer matches, but unlocked version should work. \
-            locked={:?} unlocked={:?} summary={:?}",
-            locked, orig_patch, summary
-        );
+        let (summary, _) = summary_for_patch(orig_patch, &None, orig_matches, source)?;
         // The unlocked version found a match. This returns a value to
         // indicate that this entry should be unlocked.
         return Ok((summary, Some(*locked_id)));
-    } else {
-        // Try checking if there are *any* packages that match this by name.
-        let name_only_dep =
-            Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
-        let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
-            log::warn!(
-                "failed to do name-only summary query for {:?}: {:?}",
-                name_only_dep,
-                e
-            );
-            Vec::new()
-        });
-        let mut vers = name_summaries
-            .iter()
-            .map(|summary| summary.version())
-            .collect::<Vec<_>>();
-        let found = match vers.len() {
-            0 => format!(""),
-            1 => format!("version `{}`", vers[0]),
-            _ => {
-                vers.sort();
-                let strs: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
-                format!("versions `{}`", strs.join(", "))
-            }
-        };
-        if found.is_empty() {
-            anyhow::bail!(
-                "The patch location does not appear to contain any packages \
-                matching the name `{}`.",
-                orig_patch.package_name()
-            );
-        } else {
-            anyhow::bail!(
-                "The patch location contains a `{}` package with {}, but the patch \
-                definition requires `{}`.\n\
-                Check that the version in the patch location is what you expect, \
-                and update the patch definition to match.",
-                orig_patch.package_name(),
-                found,
-                orig_patch.version_req()
-            );
+    }
+    // Try checking if there are *any* packages that match this by name.
+    let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
+    let name_summaries = source.query_vec(&name_only_dep).unwrap_or_else(|e| {
+        log::warn!(
+            "failed to do name-only summary query for {:?}: {:?}",
+            name_only_dep,
+            e
+        );
+        Vec::new()
+    });
+    let mut vers = name_summaries
+        .iter()
+        .map(|summary| summary.version())
+        .collect::<Vec<_>>();
+    let found = match vers.len() {
+        0 => format!(""),
+        1 => format!("version `{}`", vers[0]),
+        _ => {
+            vers.sort();
+            let strs: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
+            format!("versions `{}`", strs.join(", "))
         }
+    };
+    if found.is_empty() {
+        anyhow::bail!(
+            "The patch location does not appear to contain any packages \
+            matching the name `{}`.",
+            orig_patch.package_name()
+        );
+    } else {
+        anyhow::bail!(
+            "The patch location contains a `{}` package with {}, but the patch \
+            definition requires `{}`.\n\
+            Check that the version in the patch location is what you expect, \
+            and update the patch definition to match.",
+            orig_patch.package_name(),
+            found,
+            orig_patch.version_req()
+        );
     }
 }
