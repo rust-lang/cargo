@@ -75,7 +75,7 @@ fn multiple_pkgs() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]`
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
@@ -147,7 +147,7 @@ fn missing() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] could not find `bar` in registry `[..]`
+[ERROR] could not find `bar` in registry `[..]` with version `*`
 ",
         )
         .run();
@@ -175,7 +175,7 @@ fn bad_version() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] could not find `foo` in registry `[..]` with version `=0.2.0`
+[ERROR] could not find `foo` in registry `[..]` with version `= 0.2.0`
 ",
         )
         .run();
