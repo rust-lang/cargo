@@ -766,3 +766,22 @@ The following is a description of the JSON structure:
   "roots": [0],
 }
 ```
+
+### Profile `strip` option
+* Tracking Issue: [rust-lang/rust#72110](https://github.com/rust-lang/rust/issues/72110)
+
+This feature provides a new option in the `[profile]` section to strip either
+symbols or debuginfo from a binary. This can be enabled like so:
+
+```toml
+cargo-features = ["strip"]
+
+[package]
+# ...
+
+[profile.release]
+strip = "debuginfo"
+```
+
+Other possible values of `strip` are `none` and `symbols`. The default is
+`none`.
