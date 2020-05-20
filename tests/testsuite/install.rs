@@ -175,7 +175,7 @@ fn bad_version() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] could not find `foo` in registry `[..]` with version `=0.2.0`
+[ERROR] could not find `foo` in registry `[..]` with version `= 0.2.0`
 ",
         )
         .run();
