@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::bail;
 use log::{debug, trace};
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use url::Url;
 
 use crate::core::PackageSet;
@@ -233,12 +233,23 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// Note that the patch list specified here *will not* be available to
     /// `query` until `lock_patches` is called below, which should be called
     /// once all patches have been added.
+    ///
+    /// The return value is a `Vec` of patches that should *not* be locked.
+    /// This happens when the patch is locked, but the patch has been updated
+    /// so the locked value is no longer correct.
     pub fn patch(
         &mut self,
         url: &Url,
-        deps: &[(&Dependency, Option<Dependency>)],
-    ) -> CargoResult<()> {
+        deps: &[(&Dependency, Option<(Dependency, PackageId)>)],
+    ) -> CargoResult<Vec<(Dependency, PackageId)>> {
+        // NOTE: None of this code is aware of required features. If a patch
+        // is missing a required feature, you end up with an "unused patch"
+        // warning, which is very hard to understand. Ideally the warning
+        // would be tailored to indicate *why* it is unused.
         let canonical = CanonicalUrl::new(url)?;
+
+        // Return value of patches that shouldn't be locked.
+        let mut unlock_patches = Vec::new();
 
         // First up we need to actually resolve each `deps` specification to
         // precisely one summary. We're not using the `query` method below as it
@@ -251,8 +262,15 @@ impl<'cfg> PackageRegistry<'cfg> {
         // of summaries which should be the same length as `deps` above.
         let unlocked_summaries = deps
             .iter()
-            .map(|(orig_dep, locked_dep)| {
-                let dep = locked_dep.as_ref().unwrap_or(orig_dep);
+            .map(|(orig_patch, locked)| {
+                // Remove double reference in orig_patch. Is there maybe a
+                // magic pattern that could avoid this?
+                let orig_patch = *orig_patch;
+                // Use the locked patch if it exists, otherwise use the original.
+                let dep = match locked {
+                    Some((locked_patch, _locked_id)) => locked_patch,
+                    None => orig_patch,
+                };
                 debug!(
                     "registering a patch for `{}` with `{}`",
                     url,
@@ -275,7 +293,21 @@ impl<'cfg> PackageRegistry<'cfg> {
                     .get_mut(dep.source_id())
                     .expect("loaded source not present");
                 let summaries = source.query_vec(dep)?;
-                let summary = summary_for_patch(orig_dep, locked_dep, url, summaries, source)?;
+                let (summary, should_unlock) =
+                    summary_for_patch(orig_patch, &locked, summaries, source).chain_err(|| {
+                        format!(
+                            "patch for `{}` in `{}` did not resolve to any crates",
+                            orig_patch.package_name(),
+                            url,
+                        )
+                    })?;
+                debug!(
+                    "patch summary is {:?} should_unlock={:?}",
+                    summary, should_unlock
+                );
+                if let Some(unlock_id) = should_unlock {
+                    unlock_patches.push((orig_patch.clone(), unlock_id));
+                }
 
                 if *summary.package_id().source_id().canonical_url() == canonical {
                     anyhow::bail!(
@@ -313,7 +345,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.patches_available.insert(canonical.clone(), ids);
         self.patches.insert(canonical, unlocked_summaries);
 
-        Ok(())
+        Ok(unlock_patches)
     }
 
     /// Lock all patch summaries added via `patch`, making them available to
@@ -327,6 +359,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         assert!(!self.patches_locked);
         for summaries in self.patches.values_mut() {
             for summary in summaries {
+                debug!("locking patch {:?}", summary);
                 *summary = lock(&self.locked, &self.patches_available, summary.clone());
             }
         }
@@ -711,60 +744,68 @@ fn lock(
     })
 }
 
-/// This is a helper for generating a user-friendly error message for a bad patch.
+/// This is a helper for selecting the summary, or generating a helpful error message.
 fn summary_for_patch(
     orig_patch: &Dependency,
-    locked_patch: &Option<Dependency>,
-    url: &Url,
+    locked: &Option<(Dependency, PackageId)>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
-) -> CargoResult<Summary> {
+) -> CargoResult<(Summary, Option<PackageId>)> {
     if summaries.len() == 1 {
-        return Ok(summaries.pop().unwrap());
+        return Ok((summaries.pop().unwrap(), None));
     }
-    // Helpers to create a comma-separated string of versions.
-    let versions = |versions: &mut [&Version]| -> String {
-        versions.sort();
-        let versions: Vec<_> = versions.into_iter().map(|v| v.to_string()).collect();
-        versions.join(", ")
-    };
-    let summary_versions = |summaries: &[Summary]| -> String {
-        let mut vers: Vec<_> = summaries.iter().map(|summary| summary.version()).collect();
-        versions(&mut vers)
+    let best_summary = |summaries: &mut Vec<Summary>| -> Summary {
+        // TODO: This could maybe honor -Zminimal-versions?
+        summaries.sort_by(|a, b| a.version().cmp(b.version()));
+        summaries.pop().unwrap()
     };
     if summaries.len() > 1 {
-        anyhow::bail!(
-            "patch for `{}` in `{}` resolved to more than one candidate\n\
-            Found versions: {}\n\
-            Update the patch definition to select only one package, \
-            or remove the extras from the patch location.",
-            orig_patch.package_name(),
-            url,
-            summary_versions(&summaries)
-        );
+        let summary = best_summary(&mut summaries);
+        if let Some((_dep, lock_id)) = locked {
+            // I can't think of a scenario where this might happen (locked by
+            // definition should only match at most one summary). Maybe if the
+            // source is broken?
+            return Ok((summary, Some(*lock_id)));
+        } else {
+            return Ok((summary, None));
+        }
     }
+    assert!(summaries.is_empty());
     // No summaries found, try to help the user figure out what is wrong.
-    let extra = if let Some(locked_patch) = locked_patch {
-        let found = match source.query_vec(orig_patch) {
-            Ok(unlocked_summaries) => format!(" (found {})", summary_versions(&unlocked_summaries)),
+    if let Some((locked_patch, locked_id)) = locked {
+        // Since the locked patch did not match anything, try the unlocked one.
+        let mut orig_matches = match source.query_vec(orig_patch) {
+            Ok(summaries) => summaries,
             Err(e) => {
                 log::warn!(
                     "could not determine unlocked summaries for dep {:?}: {:?}",
                     orig_patch,
                     e
                 );
-                "".to_string()
+                Vec::new()
             }
         };
-        format!(
-            "The patch is locked to {} in Cargo.lock, \
-            but the version in the patch location does not match{}.\n\
-            Make sure the patch points to the correct version.\n\
-            If it does, run `cargo update -p {}` to update Cargo.lock.",
-            locked_patch.version_req(),
-            found,
-            locked_patch.package_name(),
-        )
+        if orig_matches.is_empty() {
+            // This should be relatively unusual. For example, a patch of
+            // {version="0.1.2", ...} and the patch location no longer contains a
+            // version that matches "0.1.2". It is unusual to explicitly write a
+            // version in the patch.
+            anyhow::bail!(
+                "The patch is locked to {} in Cargo.lock, but the version in the \
+                patch location does not match any packages in the patch location.\n\
+                Make sure the patch points to the correct version.",
+                locked_patch.version_req(),
+            );
+        }
+        let summary = best_summary(&mut orig_matches);
+        debug!(
+            "locked patch no longer matches, but unlocked version should work. \
+            locked={:?} unlocked={:?} summary={:?}",
+            locked, orig_patch, summary
+        );
+        // The unlocked version found a match. This returns a value to
+        // indicate that this entry should be unlocked.
+        return Ok((summary, Some(*locked_id)));
     } else {
         // Try checking if there are *any* packages that match this by name.
         let name_only_dep =
@@ -777,8 +818,12 @@ fn summary_for_patch(
                     .collect::<Vec<_>>();
                 match vers.len() {
                     0 => format!(""),
-                    1 => format!("version `{}`", versions(&mut vers)),
-                    _ => format!("versions `{}`", versions(&mut vers)),
+                    1 => format!("version `{}`", vers[0]),
+                    _ => {
+                        vers.sort();
+                        let strs: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
+                        format!("versions `{}`", strs.join(", "))
+                    }
                 }
             }
             Err(e) => {
@@ -791,13 +836,13 @@ fn summary_for_patch(
             }
         };
         if found.is_empty() {
-            format!(
+            anyhow::bail!(
                 "The patch location does not appear to contain any packages \
                 matching the name `{}`.",
                 orig_patch.package_name()
-            )
+            );
         } else {
-            format!(
+            anyhow::bail!(
                 "The patch location contains a `{}` package with {}, but the patch \
                 definition requires `{}`.\n\
                 Check that the version in the patch location is what you expect, \
@@ -805,13 +850,7 @@ fn summary_for_patch(
                 orig_patch.package_name(),
                 found,
                 orig_patch.version_req()
-            )
+            );
         }
-    };
-    anyhow::bail!(
-        "patch for `{}` in `{}` did not resolve to any crates.\n{}",
-        orig_patch.package_name(),
-        url,
-        extra
-    );
+    }
 }
