@@ -20,7 +20,7 @@ use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Worksp
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::profile;
+use crate::util::{profile, CanonicalUrl};
 use log::{debug, trace};
 use std::collections::HashSet;
 
@@ -224,13 +224,62 @@ pub fn resolve_with_previous<'cfg>(
         );
     }
 
-    let keep = |p: &PackageId| {
+    let pre_patch_keep = |p: &PackageId| {
         !to_avoid_sources.contains(&p.source_id())
             && match to_avoid {
                 Some(set) => !set.contains(p),
                 None => true,
             }
     };
+
+    // This is a set of PackageIds of `[patch]` entries that should not be
+    // locked.
+    let mut avoid_patch_ids = HashSet::new();
+    if register_patches {
+        for (url, patches) in ws.root_patch() {
+            let previous = match previous {
+                Some(r) => r,
+                None => {
+                    let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
+                    let unlock_ids = registry.patch(url, &patches)?;
+                    // Since nothing is locked, this shouldn't possibly return anything.
+                    assert!(unlock_ids.is_empty());
+                    continue;
+                }
+            };
+            let patches = patches
+                .iter()
+                .map(|dep| {
+                    let unused = previous.unused_patches().iter().cloned();
+                    let candidates = previous.iter().chain(unused);
+                    match candidates
+                        .filter(pre_patch_keep)
+                        .find(|&id| dep.matches_id(id))
+                    {
+                        Some(id) => {
+                            let mut locked_dep = dep.clone();
+                            locked_dep.lock_to(id);
+                            (dep, Some((locked_dep, id)))
+                        }
+                        None => (dep, None),
+                    }
+                })
+                .collect::<Vec<_>>();
+            let canonical = CanonicalUrl::new(url)?;
+            for (orig_patch, unlock_id) in registry.patch(url, &patches)? {
+                // Avoid the locked patch ID.
+                avoid_patch_ids.insert(unlock_id);
+                // Also avoid the thing it is patching.
+                avoid_patch_ids.extend(previous.iter().filter(|id| {
+                    orig_patch.matches_ignoring_source(*id)
+                        && *id.source_id().canonical_url() == canonical
+                }));
+            }
+        }
+    }
+    debug!("avoid_patch_ids={:?}", avoid_patch_ids);
+
+    let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
 
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
@@ -249,32 +298,6 @@ pub fn resolve_with_previous<'cfg>(
     }
 
     if register_patches {
-        for (url, patches) in ws.root_patch() {
-            let previous = match previous {
-                Some(r) => r,
-                None => {
-                    registry.patch(url, patches)?;
-                    continue;
-                }
-            };
-            let patches = patches
-                .iter()
-                .map(|dep| {
-                    let unused = previous.unused_patches().iter().cloned();
-                    let candidates = previous.iter().chain(unused);
-                    match candidates.filter(keep).find(|&id| dep.matches_id(id)) {
-                        Some(id) => {
-                            let mut dep = dep.clone();
-                            dep.lock_to(id);
-                            dep
-                        }
-                        None => dep.clone(),
-                    }
-                })
-                .collect::<Vec<_>>();
-            registry.patch(url, &patches)?;
-        }
-
         registry.lock_patches();
     }
 
