@@ -12,7 +12,7 @@
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::{FeatureResolver, ResolvedFeatures};
+use crate::core::resolver::features::{FeatureResolver, ForceAllTargets, ResolvedFeatures};
 use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts};
 use crate::core::summary::Summary;
 use crate::core::Feature;
@@ -79,6 +79,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
+    force_all_targets: ForceAllTargets,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -148,6 +149,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         specs,
         requested_targets,
         has_dev_units,
+        force_all_targets,
     )?;
 
     Ok(WorkspaceResolve {

@@ -123,6 +123,7 @@ fn build_resolve_graph(
         &resolve_opts,
         &specs,
         HasDevUnits::Yes,
+        crate::core::resolver::features::ForceAllTargets::No,
     )?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,

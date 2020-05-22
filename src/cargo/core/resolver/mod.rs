@@ -69,7 +69,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::HasDevUnits;
+pub use self::features::{ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
 
