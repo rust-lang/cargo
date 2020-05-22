@@ -4929,3 +4929,58 @@ hello stderr!
     let stdout = spawn(true);
     lines_match("hello_stdout!", &stdout);
 }
+
+use cargo_test_support::registry::Dependency;
+
+#[cargo_test]
+fn eric() {
+    Package::new("blas-src", "0.6.1")
+        .add_dep(Dependency::new("openblas-src", "0.9").optional(true))
+        .feature("openblas", &["openblas-src"])
+        .publish();
+    Package::new("openblas-src", "0.9.0")
+        .links("openblas")
+        .publish();
+    Package::new("openblas-src", "0.6.1")
+        .links("openblas")
+        .publish();
+    Package::new("ndarray-linalg", "0.12.0")
+        .add_dep(&Dependency::new("blas-src", "0.4")) // default-features=false
+        .add_dep(Dependency::new("ndarray", "0.13").enable_features(&["blas"]))
+        .publish();
+    Package::new("blas-src", "0.4.0").publish();
+    Package::new("blas-src", "0.2.1")
+        .feature("openblas", &["openblas-src"])
+        .add_dep(Dependency::new("openblas-src", "0.6").optional(true))
+        .publish();
+    Package::new("ndarray", "0.13.1")
+        .add_dep(Dependency::new("blas-src", "0.2.0").optional(true))
+        .feature("blas", &["blas-src"])
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                blas-src = { version = "*", features = ["openblas"] }
+                openblas-src = { version = "*" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    cargo::util::paths::append(&p.root().join("Cargo.toml"), b"ndarray-linalg = \"0.12\"\n")
+        .unwrap();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]links to the native library `openblas`[..]")
+        .run();
+    // This passes, what!?
+    p.cargo("check").run();
+}

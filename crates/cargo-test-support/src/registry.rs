@@ -145,6 +145,7 @@ pub struct Package {
     alternative: bool,
     invalid_json: bool,
     proc_macro: bool,
+    links: Option<String>,
 }
 
 #[derive(Clone)]
@@ -245,6 +246,7 @@ impl Package {
             alternative: false,
             invalid_json: false,
             proc_macro: false,
+            links: None,
         }
     }
 
@@ -368,6 +370,11 @@ impl Package {
         self
     }
 
+    pub fn links(&mut self, links: &str) -> &mut Package {
+        self.links = Some(links.to_string());
+        self
+    }
+
     /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
@@ -420,6 +427,7 @@ impl Package {
             "cksum": cksum,
             "features": self.features,
             "yanked": self.yanked,
+            "links": self.links,
         })
         .to_string();
 
