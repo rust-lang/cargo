@@ -185,6 +185,8 @@ pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index"
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
+const PREFIX_TEMPLATE: &str = "{prefix}";
+const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
@@ -203,10 +205,14 @@ pub struct RegistryConfig {
     /// The string is a template which will generate the download URL for the
     /// tarball of a specific version of a crate. The substrings `{crate}` and
     /// `{version}` will be replaced with the crate's name and version
-    /// respectively.
+    /// respectively.  The substring `{prefix}` will be replaced with the
+    /// crate's prefix directory name, and the substring `{lowerprefix}` will
+    /// be replaced with the crate's prefix directory name converted to
+    /// lowercase.
     ///
-    /// For backwards compatibility, if the string does not contain `{crate}` or
-    /// `{version}`, it will be extended with `/{crate}/{version}/download` to
+    /// For backwards compatibility, if the string does not contain any
+    /// markers (`{crate}`, `{version}`, `{prefix}`, or ``{lowerprefix}`), it
+    /// will be extended with `/{crate}/{version}/download` to
     /// support registries like crates.io which were created before the
     /// templating setup was created.
     pub dl: String,
