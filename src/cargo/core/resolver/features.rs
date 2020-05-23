@@ -91,6 +91,13 @@ pub enum HasDevUnits {
     No,
 }
 
+/// Flag to indicate that target-specific filtering should be disabled.
+#[derive(Copy, Clone, PartialEq)]
+pub enum ForceAllTargets {
+    Yes,
+    No,
+}
+
 /// Flag to indicate if features are requested for a build dependency or not.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FeaturesFor {
@@ -110,7 +117,11 @@ impl FeaturesFor {
 }
 
 impl FeatureOpts {
-    fn new(ws: &Workspace<'_>, has_dev_units: HasDevUnits) -> CargoResult<FeatureOpts> {
+    fn new(
+        ws: &Workspace<'_>,
+        has_dev_units: HasDevUnits,
+        force_all_targets: ForceAllTargets,
+    ) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
         let unstable_flags = ws.config().cli_unstable();
         opts.package_features = unstable_flags.package_features;
@@ -154,6 +165,9 @@ impl FeatureOpts {
         if let HasDevUnits::Yes = has_dev_units {
             // Dev deps cannot be decoupled when they are in use.
             opts.decouple_dev_deps = false;
+        }
+        if let ForceAllTargets::Yes = force_all_targets {
+            opts.ignore_inactive_targets = false;
         }
         Ok(opts)
     }
@@ -269,11 +283,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         specs: &[PackageIdSpec],
         requested_targets: &[CompileKind],
         has_dev_units: HasDevUnits,
+        force_all_targets: ForceAllTargets,
     ) -> CargoResult<ResolvedFeatures> {
         use crate::util::profile;
         let _p = profile::start("resolve features");
 
-        let opts = FeatureOpts::new(ws, has_dev_units)?;
+        let opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
         if !opts.new_resolver {
             // Legacy mode.
             return Ok(ResolvedFeatures {

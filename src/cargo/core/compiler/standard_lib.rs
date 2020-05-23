@@ -111,6 +111,7 @@ pub fn resolve_std<'cfg>(
         &opts,
         &specs,
         HasDevUnits::No,
+        crate::core::resolver::features::ForceAllTargets::No,
     )?;
     Ok((
         resolve.pkg_set,
