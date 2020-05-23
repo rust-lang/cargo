@@ -5,8 +5,8 @@ use log::{debug, trace};
 use semver::VersionReq;
 use url::Url;
 
-use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
+use crate::core::{InternedString, PackageSet};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{profile, CanonicalUrl, Config};
@@ -94,7 +94,7 @@ type LockedMap = HashMap<
     SourceId,
     HashMap<
         // This next level is keyed by the name of the package...
-        String,
+        InternedString,
         // ... and the value here is a list of tuples. The first element of each
         // tuple is a package which has the source/name used to get to this
         // point. The second element of each tuple is the list of locked
@@ -207,9 +207,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             .locked
             .entry(id.source_id())
             .or_insert_with(HashMap::new);
-        let sub_vec = sub_map
-            .entry(id.name().to_string())
-            .or_insert_with(Vec::new);
+        let sub_vec = sub_map.entry(id.name()).or_insert_with(Vec::new);
         sub_vec.push((id, deps));
     }
 
@@ -640,7 +638,7 @@ fn lock(
 ) -> Summary {
     let pair = locked
         .get(&summary.source_id())
-        .and_then(|map| map.get(&*summary.name()))
+        .and_then(|map| map.get(&summary.name()))
         .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
@@ -730,7 +728,7 @@ fn lock(
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(&dep.source_id())
-            .and_then(|map| map.get(&*dep.package_name()))
+            .and_then(|map| map.get(&dep.package_name()))
             .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
