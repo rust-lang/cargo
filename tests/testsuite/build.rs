@@ -1230,6 +1230,10 @@ fn crate_env_vars() {
         homepage = "https://example.com"
         repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
+
+        [[bin]]
+        name = "foo-bar"
+        path = "src/main.rs"
         "#,
         )
         .file(
@@ -1248,6 +1252,9 @@ fn crate_env_vars() {
             static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
             static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+            static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
+            static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+
 
             fn main() {
                 let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
@@ -1256,6 +1263,8 @@ fn crate_env_vars() {
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
+                 assert_eq!("foo-bar", BIN_NAME);
+                 assert_eq!("foo_bar", CRATE_NAME);
                  assert_eq!("https://example.com", HOMEPAGE);
                  assert_eq!("https://example.com/repo.git", REPOSITORY);
                  assert_eq!("This is foo", DESCRIPTION);
@@ -1284,7 +1293,7 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    p.process(&p.bin("foo"))
+    p.process(&p.bin("foo-bar"))
         .with_stdout("0-5-1 @ alpha.1 in [CWD]")
         .run();
 
