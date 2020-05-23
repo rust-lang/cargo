@@ -5,7 +5,7 @@ steps:
       rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
       rustup update --no-self-update $TOOLCHAIN
       if [[ "$TOOLCHAIN" == "nightly"* ]]; then
-        rustup component add --toolchain=$TOOLCHAIN rustc-dev
+        rustup component add --toolchain=$TOOLCHAIN rustc-dev llvm-tools-preview
       fi
       rustup default $TOOLCHAIN
     displayName: Install rust
