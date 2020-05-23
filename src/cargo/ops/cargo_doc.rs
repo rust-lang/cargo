@@ -33,6 +33,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         &opts,
         &specs,
         HasDevUnits::No,
+        crate::core::resolver::features::ForceAllTargets::No,
     )?;
 
     let ids = ws_resolve.targeted_resolve.specs_to_ids(&specs)?;

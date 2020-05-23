@@ -118,10 +118,11 @@ If you can't install an alternate target, you can set the
 `CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests. The
 Windows cross tests only support the MSVC toolchain.
 
-Some of the nightly tests require the `rustc-dev` component installed. This
-component includes the compiler as a library. This may already be installed
-with your nightly toolchain, but it if isn't, run `rustup component add
-rustc-dev --toolchain=nightly`.
+Some of the nightly tests require the `rustc-dev` and `llvm-tools-preview`
+rustup components installed. These components include the compiler as a
+library. This may already be installed with your nightly toolchain, but if it
+isn't, run `rustup component add rustc-dev llvm-tools-preview
+--toolchain=nightly`.
 
 There are several other packages in the repo for running specialized tests,
 and you will need to run these tests separately by changing into its directory

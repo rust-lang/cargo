@@ -3,7 +3,7 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{HasDevUnits, ResolveOpts};
+use crate::core::resolver::{ForceAllTargets, HasDevUnits, ResolveOpts};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::{CargoResult, Config};
@@ -150,6 +150,11 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     } else {
         HasDevUnits::No
     };
+    let force_all = if opts.target == Target::All {
+        ForceAllTargets::Yes
+    } else {
+        ForceAllTargets::No
+    };
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
@@ -157,6 +162,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &resolve_opts,
         &specs,
         has_dev,
+        force_all,
     )?;
     // Download all Packages. Some display formats need to display package metadata.
     let package_map: HashMap<PackageId, &Package> = ws_resolve

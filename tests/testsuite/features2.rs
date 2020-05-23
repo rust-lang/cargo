@@ -1720,3 +1720,32 @@ resolver = "2"
         &[("Cargo.toml", &rewritten_toml)],
     );
 }
+
+#[cargo_test]
+fn tree_all() {
+    // `cargo tree` with the new feature resolver.
+    Package::new("log", "0.4.8").feature("serde", &[]).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'cfg(whatever)'.dependencies]
+                log = {version="*", features=["serde"]}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("tree --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── log v0.4.8
+",
+        )
+        .run();
+}
