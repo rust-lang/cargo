@@ -91,16 +91,13 @@ pub struct PackageRegistry<'cfg> {
 type LockedMap = HashMap<
     // The first level of key-ing done in this hash map is the source that
     // dependencies come from, identified by a `SourceId`.
-    SourceId,
-    HashMap<
-        // This next level is keyed by the name of the package...
-        InternedString,
-        // ... and the value here is a list of tuples. The first element of each
-        // tuple is a package which has the source/name used to get to this
-        // point. The second element of each tuple is the list of locked
-        // dependencies that the first element has.
-        Vec<(PackageId, Vec<PackageId>)>,
-    >,
+    // The next level is keyed by the name of the package...
+    (SourceId, InternedString),
+    // ... and the value here is a list of tuples. The first element of each
+    // tuple is a package which has the source/name used to get to this
+    // point. The second element of each tuple is the list of locked
+    // dependencies that the first element has.
+    Vec<(PackageId, Vec<PackageId>)>,
 >;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -203,11 +200,10 @@ impl<'cfg> PackageRegistry<'cfg> {
         for dep in deps.iter() {
             trace!("\t-> {}", dep);
         }
-        let sub_map = self
+        let sub_vec = self
             .locked
-            .entry(id.source_id())
-            .or_insert_with(HashMap::new);
-        let sub_vec = sub_map.entry(id.name()).or_insert_with(Vec::new);
+            .entry((id.source_id(), id.name()))
+            .or_insert_with(Vec::new);
         sub_vec.push((id, deps));
     }
 
@@ -637,8 +633,7 @@ fn lock(
     summary: Summary,
 ) -> Summary {
     let pair = locked
-        .get(&summary.source_id())
-        .and_then(|map| map.get(&summary.name()))
+        .get(&(summary.source_id(), summary.name()))
         .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
@@ -727,8 +722,7 @@ fn lock(
         // all known locked packages to see if they match this dependency.
         // If anything does then we lock it to that and move on.
         let v = locked
-            .get(&dep.source_id())
-            .and_then(|map| map.get(&dep.package_name()))
+            .get(&(dep.source_id(), dep.package_name()))
             .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
