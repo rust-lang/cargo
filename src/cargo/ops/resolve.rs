@@ -584,6 +584,7 @@ fn register_previous_locks(
     // the registry as a locked dependency.
     let keep = |id: &PackageId| keep(id) && !avoid_locking.contains(id);
 
+    registry.clear_lock();
     for node in resolve.iter().filter(keep) {
         let deps = resolve
             .deps_not_replaced(node)

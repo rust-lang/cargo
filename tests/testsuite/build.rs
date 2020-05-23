@@ -4934,6 +4934,7 @@ use cargo_test_support::registry::Dependency;
 
 #[cargo_test]
 fn reduced_reproduction_8249() {
+    // https://github.com/rust-lang/cargo/issues/8249
     Package::new("a-src", "0.1.0").links("a").publish();
     Package::new("a-src", "0.2.0").links("a").publish();
 
@@ -4966,10 +4967,6 @@ fn reduced_reproduction_8249() {
 
     p.cargo("generate-lockfile").run();
     cargo::util::paths::append(&p.root().join("Cargo.toml"), b"c = \"*\"").unwrap();
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_contains("[..]links to the native library `a`[..]")
-        .run();
-    // This passes, what!?
+    p.cargo("check").run();
     p.cargo("check").run();
 }

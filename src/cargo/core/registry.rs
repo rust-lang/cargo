@@ -195,6 +195,12 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.yanked_whitelist.extend(pkgs);
     }
 
+    /// remove all residual state from previous lock files.
+    pub fn clear_lock(&mut self) {
+        trace!("clear_lock");
+        self.locked = HashMap::new();
+    }
+
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
         trace!("register_lock: {}", id);
         for dep in deps.iter() {
