@@ -35,7 +35,8 @@ fn manifest_output(readme_value: &str) -> String {
     "manifest_path":"[..]Cargo.toml",
     "metadata": null,
     "publish": null
-}}"#, readme_value
+}}"#,
+        readme_value
     )
 }
 
@@ -112,7 +113,9 @@ fn cargo_read_manifest_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("read-manifest").with_json(&manifest_output_no_readme()).run();
+    p.cargo("read-manifest")
+        .with_json(&manifest_output_no_readme())
+        .run();
 }
 
 #[cargo_test]
@@ -126,18 +129,24 @@ fn cargo_read_manifest_default_readme() {
             .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
             .build();
 
-        p.cargo("read-manifest").with_json(&manifest_output(&format!(r#""{}""#, readme))).run();
+        p.cargo("read-manifest")
+            .with_json(&manifest_output(&format!(r#""{}""#, readme)))
+            .run();
     }
 }
 
 #[cargo_test]
 fn cargo_read_manifest_suppress_default_readme() {
     let p = project()
-        .file("Cargo.toml", &basic_bin_manifest_with_readme("foo", "false"))
+        .file(
+            "Cargo.toml",
+            &basic_bin_manifest_with_readme("foo", "false"),
+        )
         .file("README.txt", "Sample project")
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("read-manifest").with_json(&manifest_output_no_readme()).run();
+    p.cargo("read-manifest")
+        .with_json(&manifest_output_no_readme())
+        .run();
 }
-
