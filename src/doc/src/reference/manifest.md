@@ -165,6 +165,11 @@ will interpret it as Markdown and render it on the crate's page.
 readme = "README.md"
 ```
 
+If no value is specified for this field, and a file named `README.md`,
+`README.txt` or `README` exists in the package root, then the name of that
+file will be used. You can suppress this behavior by setting this field to
+`"false"`.
+
 #### The `homepage` field
 
 The `homepage` field should be a URL to a site that is the home page for your
