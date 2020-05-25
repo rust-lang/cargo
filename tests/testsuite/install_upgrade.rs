@@ -802,7 +802,7 @@ fn already_installed_updates_yank_status_on_upgrade() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[ERROR] could not find `foo` in registry `[..]` with version `= 1.0.1`
+[ERROR] could not find `foo` in registry `[..]` with version `=1.0.1`
 ",
         )
         .run();

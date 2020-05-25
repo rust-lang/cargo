@@ -734,8 +734,8 @@ fn meta_test_deep_pretty_print_registry() {
         "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
          pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
          pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
-         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
-         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
+         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"=1.0.2\"),dep_req(\"other\", \"^1\"),]),\
+         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"=1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
          pkg!((\"baz\", \"1.0.1\")),\
          pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", DepKind::Build, false),]),\
