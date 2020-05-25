@@ -1008,12 +1008,16 @@ impl Config {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
-        Ok(
-            match self.get_string(&format!("registries.{}.index", registry))? {
-                Some(index) => self.resolve_registry_index(index)?,
-                None => bail!("No index found for registry: `{}`", registry),
-            },
-        )
+        if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
+            self.resolve_registry_index(&index).chain_err(|| {
+                format!(
+                    "invalid index URL for registry `{}` defined in {}",
+                    registry, index.definition
+                )
+            })
+        } else {
+            bail!("no index found for registry: `{}`", registry);
+        }
     }
 
     /// Returns an error if `registry.index` is set.
@@ -1027,7 +1031,8 @@ impl Config {
         Ok(())
     }
 
-    fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
+    fn resolve_registry_index(&self, index: &Value<String>) -> CargoResult<Url> {
+        // This handles relative file: URLs, relative to the config definition.
         let base = index
             .definition
             .root(self)
@@ -1036,7 +1041,7 @@ impl Config {
         let _parsed = index.val.into_url()?;
         let url = index.val.into_url_with_base(Some(&*base))?;
         if url.password().is_some() {
-            bail!("Registry URLs may not contain passwords");
+            bail!("registry URLs may not contain passwords");
         }
         Ok(url)
     }
