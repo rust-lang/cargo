@@ -1,7 +1,7 @@
 //! Tests for the -Zrustdoc-map feature.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{is_nightly, project, Project};
+use cargo_test_support::{is_nightly, paths, project, Project};
 
 fn basic_project() -> Project {
     Package::new("bar", "1.0.0")
@@ -77,6 +77,18 @@ fn std_docs() {
     if !is_nightly() {
         // --extern-html-root-url is unstable
         return;
+    }
+    if !cargo::util::is_ci() {
+        // For local developers, skip this test if docs aren't installed.
+        let docs = std::path::Path::new(&paths::sysroot()).join("share/doc/rust/html");
+        if !docs.exists() {
+            eprintln!(
+                "documentation not found at {}, \
+                skipping test (run `rustdoc component add rust-docs` to install",
+                docs.display()
+            );
+            return;
+        }
     }
     let p = basic_project();
     p.change_file(
