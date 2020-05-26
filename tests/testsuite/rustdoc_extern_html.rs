@@ -78,10 +78,12 @@ fn std_docs() {
         // --extern-html-root-url is unstable
         return;
     }
-    if !cargo::util::is_ci() {
-        // For local developers, skip this test if docs aren't installed.
-        let docs = std::path::Path::new(&paths::sysroot()).join("share/doc/rust/html");
-        if !docs.exists() {
+    // For local developers, skip this test if docs aren't installed.
+    let docs = std::path::Path::new(&paths::sysroot()).join("share/doc/rust/html");
+    if !docs.exists() {
+        if cargo::util::is_ci() {
+            panic!("std docs are not installed, check that the rust-docs component is installed");
+        } else {
             eprintln!(
                 "documentation not found at {}, \
                 skipping test (run `rustdoc component add rust-docs` to install",
