@@ -4840,6 +4840,9 @@ fn close_output() {
 
                 [lib]
                 proc-macro = true
+
+                [[bin]]
+                name = "foobar"
             "#,
         )
         .file(
@@ -4864,7 +4867,6 @@ fn close_output() {
                         } else {
                             println!("{}", i);
                         }
-                        std::thread::sleep(std::time::Duration::new(0, 1));
                     }
                     TokenStream::new()
                 }
@@ -4872,7 +4874,7 @@ fn close_output() {
             .replace("__ADDR__", &addr.to_string()),
         )
         .file(
-            "src/main.rs",
+            "src/bin/foobar.rs",
             r#"
                 foo::repro!();
 
@@ -4913,19 +4915,27 @@ fn close_output() {
     };
 
     let stderr = spawn(false);
-    lines_match(
-        "\
+    assert!(
+        lines_match(
+            "\
 [COMPILING] foo [..]
 hello stderr!
 [ERROR] [..]
 [WARNING] build failed, waiting for other jobs to finish...
 [ERROR] build failed
 ",
-        &stderr,
+            &stderr,
+        ),
+        "lines differ:\n{}",
+        stderr
     );
 
     // Try again with stderr.
     p.build_dir().rm_rf();
     let stdout = spawn(true);
-    lines_match("hello_stdout!", &stdout);
+    assert!(
+        lines_match("hello stdout!\n", &stdout),
+        "lines differ:\n{}",
+        stdout
+    );
 }
