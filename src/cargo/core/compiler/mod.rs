@@ -13,6 +13,7 @@ mod layout;
 mod links;
 mod lto;
 mod output_depinfo;
+pub mod rustdoc;
 pub mod standard_lib;
 mod timings;
 mod unit;
@@ -570,6 +571,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
+    rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
 
     rustdoc.args(bcx.rustdocflags_args(unit));
 

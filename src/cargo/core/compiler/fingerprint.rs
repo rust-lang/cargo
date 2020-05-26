@@ -73,6 +73,7 @@
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
 //! LTO flags                                  | ✓           |
+//! config settings[^5]                        | ✓           |
 //! is_std                                     |             | ✓
 //!
 //! [^1]: Build script and bin dependencies are not included.
@@ -81,6 +82,9 @@
 //!
 //! [^4]: `__CARGO_DEFAULT_LIB_METADATA` is set by rustbuild to embed the
 //!        release channel (bootstrap/stable/beta/nightly) in libstd.
+//!
+//! [^5]: Config settings that are not otherwise captured anywhere else.
+//!       Currently, this is only `doc.extern-map`.
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
@@ -533,6 +537,8 @@ pub struct Fingerprint {
     /// "description", which are exposed as environment variables during
     /// compilation.
     metadata: u64,
+    /// Hash of various config settings that change how things are compiled.
+    config: u64,
     /// Description of whether the filesystem status for this unit is up to date
     /// or should be considered stale.
     #[serde(skip)]
@@ -746,6 +752,7 @@ impl Fingerprint {
             memoized_hash: Mutex::new(None),
             rustflags: Vec::new(),
             metadata: 0,
+            config: 0,
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
         }
@@ -805,6 +812,9 @@ impl Fingerprint {
         }
         if self.metadata != old.metadata {
             bail!("metadata changed")
+        }
+        if self.config != old.config {
+            bail!("configuration settings have changed")
         }
         let my_local = self.local.lock().unwrap();
         let old_local = old.local.lock().unwrap();
@@ -1040,12 +1050,13 @@ impl hash::Hash for Fingerprint {
             ref deps,
             ref local,
             metadata,
+            config,
             ref rustflags,
             ..
         } = *self;
         let local = local.lock().unwrap();
         (
-            rustc, features, target, path, profile, &*local, metadata, rustflags,
+            rustc, features, target, path, profile, &*local, metadata, config, rustflags,
         )
             .hash(h);
 
@@ -1252,6 +1263,14 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
+    let config = if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
+        cx.bcx
+            .config
+            .doc_extern_map()
+            .map_or(0, |map| util::hash_u64(map))
+    } else {
+        0
+    };
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
@@ -1264,6 +1283,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
+        config,
         rustflags: extra_flags,
         fs_status: FsStatus::Stale,
         outputs,

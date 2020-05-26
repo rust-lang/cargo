@@ -98,6 +98,7 @@ mod run;
 mod rustc;
 mod rustc_info_cache;
 mod rustdoc;
+mod rustdoc_extern_html;
 mod rustdocflags;
 mod rustflags;
 mod search;
