@@ -2436,3 +2436,39 @@ fn linking_interrupted() {
         )
         .run();
 }
+
+#[cargo_test]
+#[cfg_attr(
+    not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")),
+    ignore
+)]
+fn lld_is_fresh() {
+    // Check for bug when using lld linker that it remains fresh with dylib.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [target.x86_64-pc-windows-msvc]
+                linker = "rust-lld"
+                rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build -v")
+        .with_stderr("[FRESH] foo [..]\n[FINISHED] [..]")
+        .run();
+}
