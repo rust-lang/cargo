@@ -1515,7 +1515,7 @@ impl TomlManifest {
 }
 
 /// Returns the name of the README file for a `TomlProject`.
-fn readme_for_project(package_root: &Path, project: &Box<TomlProject>) -> Option<String> {
+fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
     match &project.readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value.as_str() {
@@ -1530,25 +1530,13 @@ const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"];
 /// Checks if a file with any of the default README file names exists in the package root.
 /// If so, returns a `String` representing that name.
 fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
-    _default_readme_from_package_root(package_root).ok()
-}
-
-fn _default_readme_from_package_root(package_root: &Path) -> CargoResult<String> {
-    for entry in package_root.read_dir()? {
-        let entry = entry?;
-
-        let fname = entry.file_name();
-
-        if entry.metadata()?.is_file() && DEFAULT_README_FILES.contains(&fname.to_str().unwrap()) {
-            return Ok(fname
-                .into_string()
-                .map_err(|_| anyhow!("Could not convert the README's file name into a String"))?);
+    for &readme_filename in DEFAULT_README_FILES.iter() {
+        if package_root.join(readme_filename).is_file() {
+            return Some(readme_filename.to_string());
         }
     }
 
-    Err(anyhow!(
-        "No files with the default README file names found in the package root."
-    ))
+    None
 }
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
