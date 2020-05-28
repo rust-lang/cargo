@@ -127,12 +127,17 @@ looks like:
 
 The keys are:
 - `dl`: This is the URL for downloading crates listed in the index. The value
-  may have the markers `{crate}` and `{version}` which are replaced with the
-  name and version of the crate to download, or the marker `{prefix}` which is
-  replaced with the crate's prefix, or the marker `{lowerprefix}` which is
-  replaced with the crate's prefix converted to lowercase.  If none of the
-  markers are present, then the value `/{crate}/{version}/download` is appended
-  to the end.  See below for more about crate prefixes.
+  may have the following markers which will be replaced with their
+  corresponding value:
+
+  - `{crate}`: The name of crate.
+  - `{version}`: The crate version.
+  - `{prefix}`: A directory prefix computed from the crate name. For example,
+    a crate named `cargo` has a prefix of `ca/rg`. See below for details.
+  - `{lowerprefix}`: Lowercase variant of `{prefix}`.
+
+  If none of the markers are present, then the value
+  `/{crate}/{version}/download` is appended to the end.
 - `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
