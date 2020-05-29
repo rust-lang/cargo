@@ -119,6 +119,22 @@ fn cargo_read_manifest_cwd() {
 }
 
 #[cargo_test]
+fn cargo_read_manifest_with_specified_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &basic_bin_manifest_with_readme("foo", r#""SomeReadme.txt""#),
+        )
+        .file("SomeReadme.txt", "Sample Project")
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("read-manifest")
+        .with_json(&manifest_output(&format!(r#""{}""#, "SomeReadme.txt")))
+        .run();
+}
+
+#[cargo_test]
 fn cargo_read_manifest_default_readme() {
     let readme_filenames = ["README.md", "README.txt", "README"];
 
@@ -148,5 +164,19 @@ fn cargo_read_manifest_suppress_default_readme() {
 
     p.cargo("read-manifest")
         .with_json(&manifest_output_no_readme())
+        .run();
+}
+
+// If a file named README.txt exists, and `readme = true`, the value `README.txt` should be defaulted in.
+#[cargo_test]
+fn cargo_read_manifest_defaults_readme_if_true() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest_with_readme("foo", "true"))
+        .file("README.txt", "Sample project")
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("read-manifest")
+        .with_json(&manifest_output(&format!(r#""{}""#, "README.txt")))
         .run();
 }

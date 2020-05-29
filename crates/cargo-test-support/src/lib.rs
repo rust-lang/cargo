@@ -1630,7 +1630,7 @@ pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> Stri
         name = "{}"
         version = "0.5.0"
         authors = ["wycats@example.com"]
-        readme = "{}"
+        readme = {}
 
         [[bin]]
 
