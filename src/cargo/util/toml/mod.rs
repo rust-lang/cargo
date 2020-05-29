@@ -798,7 +798,7 @@ pub struct TomlProject {
     description: Option<String>,
     homepage: Option<String>,
     documentation: Option<String>,
-    readme: Option<String>,
+    readme: Option<StringOrBool>,
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
@@ -1518,9 +1518,10 @@ impl TomlManifest {
 fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
     match &project.readme {
         None => default_readme_from_package_root(package_root),
-        Some(value) => match value.as_str() {
-            "false" => None,
-            _ => Some(value.clone()),
+        Some(value) => match value {
+            StringOrBool::Bool(false) => None,
+            StringOrBool::Bool(true) => default_readme_from_package_root(package_root),
+            StringOrBool::String(v) => Some(v.clone()),
         },
     }
 }
