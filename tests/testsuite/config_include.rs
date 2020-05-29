@@ -3,7 +3,7 @@
 use super::config::{
     assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
 };
-use cargo_test_support::{paths, NO_SUCH_FILE_ERR_MSG};
+use cargo_test_support::{no_such_file_err_msg, paths};
 use std::fs;
 
 #[cargo_test]
@@ -92,7 +92,7 @@ Caused by:
 
 Caused by:
   {}",
-            NO_SUCH_FILE_ERR_MSG
+            no_such_file_err_msg()
         ),
     );
 }
@@ -179,7 +179,7 @@ Caused by:
 
 Caused by:
   {}",
-            NO_SUCH_FILE_ERR_MSG
+            no_such_file_err_msg()
         ),
     );
 }

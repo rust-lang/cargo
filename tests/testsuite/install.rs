@@ -11,7 +11,7 @@ use cargo_test_support::install::{
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_manifest, cargo_process, project, symlink_supported, t, NO_SUCH_FILE_ERR_MSG,
+    basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
 };
 
 fn pkg(name: &str, vers: &str) {
@@ -845,7 +845,7 @@ fn uninstall_cwd_no_project() {
 
 Caused by:
   {err_msg}",
-            err_msg = NO_SUCH_FILE_ERR_MSG,
+            err_msg = no_such_file_err_msg(),
         ))
         .run();
 }
