@@ -785,3 +785,44 @@ strip = "debuginfo"
 
 Other possible values of `strip` are `none` and `symbols`. The default is
 `none`.
+
+### rustdoc-map
+* Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
+
+This feature adds configuration settings that are passed to `rustdoc` so that
+it can generate links to dependencies whose documentation is hosted elsewhere
+when the dependency is not documented. First, add this to `.cargo/config`:
+
+```toml
+[doc.extern-map.registries]
+crates-io = "https://docs.rs/"
+```
+
+Then, when building documentation, use the following flags to cause links
+to dependencies to link to [docs.rs](https://docs.rs/):
+
+```
+cargo +nightly doc --no-deps -Zrustdoc-map
+```
+
+The `registries` table contains a mapping of registry name to the URL to link
+to. The URL may have the markers `{pkg_name}` and `{version}` which will get
+replaced with the corresponding values. If neither are specified, then Cargo
+defaults to appending `{pkg_name}/{version}/` to the end of the URL.
+
+Another config setting is available to redirect standard library links. By
+default, rustdoc creates links to <https://doc.rust-lang.org/nightly/>. To
+change this behavior, use the `doc.extern-map.std` setting:
+
+```toml
+[doc.extern-map]
+std = "local"
+```
+
+A value of `"local"` means to link to the documentation found in the `rustc`
+sysroot. If you are using rustup, this documentation can be installed with
+`rustup component add rust-docs`.
+
+The default value is `"remote"`.
+
+The value may also take a URL for a custom location.

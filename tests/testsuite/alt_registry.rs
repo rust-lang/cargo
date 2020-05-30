@@ -548,7 +548,14 @@ fn passwords_in_registries_index_url_forbidden() {
 
     p.cargo("publish --registry alternative")
         .with_status(101)
-        .with_stderr_contains("error: Registry URLs may not contain passwords")
+        .with_stderr(
+            "\
+error: invalid index URL for registry `alternative` defined in [..]/home/.cargo/config
+
+Caused by:
+  registry URLs may not contain passwords
+",
+        )
         .run();
 }
 
@@ -1239,6 +1246,9 @@ fn registries_index_relative_path_not_allowed() {
         .with_stderr(&format!(
             "\
 error: failed to parse manifest at `{root}/foo/Cargo.toml`
+
+Caused by:
+  invalid index URL for registry `relative` defined in [..]/.cargo/config
 
 Caused by:
   invalid url `alternative-registry`: relative URL without a base
