@@ -787,7 +787,7 @@ Other possible values of `strip` are `none` and `symbols`. The default is
 `none`.
 
 ### rustdoc-map
-* Tracking Issue: TODO
+* Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
 This feature adds configuration settings that are passed to `rustdoc` so that
 it can generate links to dependencies whose documentation is hosted elsewhere
