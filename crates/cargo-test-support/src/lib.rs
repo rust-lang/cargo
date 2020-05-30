@@ -1622,24 +1622,6 @@ pub fn basic_lib_manifest(name: &str) -> String {
     )
 }
 
-pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {
-    format!(
-        r#"
-        [package]
-
-        name = "{}"
-        version = "0.5.0"
-        authors = ["wycats@example.com"]
-        readme = {}
-
-        [[bin]]
-
-        name = "{}"
-    "#,
-        name, readme_filename, name
-    )
-}
-
 pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
     Url::from_file_path(p).ok().unwrap()
 }

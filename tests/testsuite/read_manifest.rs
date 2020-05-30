@@ -1,6 +1,6 @@
 //! Tests for the `cargo read-manifest` command.
 
-use cargo_test_support::{basic_bin_manifest, basic_bin_manifest_with_readme, main_file, project};
+use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 fn manifest_output(readme_value: &str) -> String {
     format!(
@@ -42,6 +42,24 @@ fn manifest_output(readme_value: &str) -> String {
 
 fn manifest_output_no_readme() -> String {
     manifest_output("null")
+}
+
+pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {
+    format!(
+        r#"
+        [package]
+
+        name = "{}"
+        version = "0.5.0"
+        authors = ["wycats@example.com"]
+        readme = {}
+
+        [[bin]]
+
+        name = "{}"
+    "#,
+        name, readme_filename, name
+    )
 }
 
 #[cargo_test]
