@@ -1611,6 +1611,18 @@ impl DetailedTomlDependency {
             }
         }
 
+        if let Some(git) = self.git.clone() {
+            if let Ok(url) = git.into_url() {
+                if url.fragment().is_some() {
+                    let msg = format!(
+                        "hash in git url is ignored for dependency ({}). \
+                        if you were trying to specify a specific git revision, use rev = \"revision\".",
+                        name_in_toml);
+                    cx.warnings.push(msg)
+                }
+            }
+        }
+
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),
