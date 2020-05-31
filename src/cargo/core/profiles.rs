@@ -802,7 +802,7 @@ impl fmt::Display for Strip {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Strip::DebugInfo => "debuginfo",
-            Strip::None => "abort",
+            Strip::None => "none",
             Strip::Symbols => "symbols",
         }
         .fmt(f)
