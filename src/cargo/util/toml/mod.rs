@@ -1611,18 +1611,6 @@ impl DetailedTomlDependency {
             }
         }
 
-        if let Some(git) = self.git.clone() {
-            if let Ok(url) = git.into_url() {
-                if url.fragment().is_some() {
-                    let msg = format!(
-                        "hash in git url is ignored for dependency ({}). \
-                        If you were trying to specify a specific git revision, use rev = \"revision\".",
-                        name_in_toml);
-                    cx.warnings.push(msg)
-                }
-            }
-        }
-
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),
@@ -1673,6 +1661,17 @@ impl DetailedTomlDependency {
                     .or_else(|| self.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
                 let loc = git.into_url()?;
+
+                if let Some(fragment) = loc.fragment() {
+                    let msg = format!(
+                        "URL fragment `#{}` in git URL is ignored for dependency ({}). \
+                        If you were trying to specify a specific git revision, \
+                        use `rev = \"{}\"` in the dependency declaration.",
+                        fragment, name_in_toml, fragment
+                    );
+                    cx.warnings.push(msg)
+                }
+
                 SourceId::for_git(&loc, reference)?
             }
             (None, Some(path), _, _) => {
