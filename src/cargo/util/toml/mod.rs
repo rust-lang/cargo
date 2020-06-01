@@ -1616,7 +1616,7 @@ impl DetailedTomlDependency {
                 if url.fragment().is_some() {
                     let msg = format!(
                         "hash in git url is ignored for dependency ({}). \
-                        if you were trying to specify a specific git revision, use rev = \"revision\".",
+                        If you were trying to specify a specific git revision, use rev = \"revision\".",
                         name_in_toml);
                     cx.warnings.push(msg)
                 }
