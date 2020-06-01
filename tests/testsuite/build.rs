@@ -4939,3 +4939,44 @@ hello stderr!
         stdout
     );
 }
+
+use cargo_test_support::registry::Dependency;
+
+#[cargo_test]
+fn reduced_reproduction_8249() {
+    // https://github.com/rust-lang/cargo/issues/8249
+    Package::new("a-src", "0.1.0").links("a").publish();
+    Package::new("a-src", "0.2.0").links("a").publish();
+
+    Package::new("b", "0.1.0")
+        .add_dep(Dependency::new("a-src", "0.1").optional(true))
+        .publish();
+    Package::new("b", "0.2.0")
+        .add_dep(Dependency::new("a-src", "0.2").optional(true))
+        .publish();
+
+    Package::new("c", "1.0.0")
+        .add_dep(&Dependency::new("b", "0.1.0"))
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                b = { version = "*", features = ["a-src"] }
+                a-src = "*"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    cargo::util::paths::append(&p.root().join("Cargo.toml"), b"c = \"*\"").unwrap();
+    p.cargo("check").run();
+    p.cargo("check").run();
+}

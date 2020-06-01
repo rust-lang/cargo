@@ -1459,6 +1459,31 @@ fn conflict_store_more_then_one_match() {
 }
 
 #[test]
+fn bad_lockfile_from_8249() {
+    let input = vec![
+        pkg!(("a-sys", "0.2.0")),
+        pkg!(("a-sys", "0.1.0")),
+        pkg!(("b", "0.1.0") => [
+            dep_req("a-sys", "0.1"), // should be optional: true, but not deeded for now
+        ]),
+        pkg!(("c", "1.0.0") => [
+            dep_req("b", "=0.1.0"),
+        ]),
+        pkg!("foo" => [
+            dep_req("a-sys", "=0.2.0"),
+            {
+                let mut b = dep_req("b", "=0.1.0");
+                b.set_features(vec!["a-sys"]);
+                b
+            },
+            dep_req("c", "=1.0.0"),
+        ]),
+    ];
+    let reg = registry(input);
+    let _ = resolve_and_validated(vec![dep("foo")], &reg, None);
+}
+
+#[test]
 fn cyclic_good_error_message() {
     let input = vec![
         pkg!(("A", "0.0.0") => [dep("C")]),
