@@ -470,6 +470,8 @@ fn thin_lto_works() {
 }
 
 #[cargo_test]
+// Strip doesn't work on macos.
+#[cfg_attr(target_os = "macos", ignore)]
 fn strip_works() {
     if !is_nightly() {
         return;
