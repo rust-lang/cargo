@@ -532,6 +532,21 @@ impl Config {
                 return true;
             }
         }
+
+        self.env
+            .iter()
+            .filter(|(k, _)| k.to_uppercase().contains("CARGO_TARGET"))
+            .for_each(|(k, _)| {
+                // Warn if the env variable match with env_key
+                // but the env variable contains lower case character(s)
+                let env_key = key.as_env_key();
+                if k.to_uppercase() == env_key && k != env_key {
+                    let _ = self
+                        .shell()
+                        .warn(format!("{} env variable contains lowercase.", k));
+                }
+            });
+
         false
     }
 

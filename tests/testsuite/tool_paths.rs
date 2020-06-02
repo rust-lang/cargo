@@ -352,3 +352,19 @@ fn cfg_ignored_fields() {
         )
         .run();
 }
+
+#[cargo_test]
+fn env_var_contain_lower_case() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let env_key = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_musl_LINKER";
+
+    p.cargo("build -v --target X86_64_unknown_linux_musl")
+        .env(env_key, "nonexistent-linker")
+        .with_status(101)
+        .with_stderr_contains(format!(
+            "warning: {} env variable contains lowercase.",
+            env_key
+        ))
+        .run();
+}
