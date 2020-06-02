@@ -82,7 +82,25 @@ default-members = ["path/to/member2", "path/to/member3/foo"]
 
 When specified, `default-members` must expand to a subset of `members`.
 
+### The `workspace.metadata` table
+
+Like the [`package.metadata`][package-metadata] table, the `workspace.metadata`
+table is ignored by Cargo and will not be warned about. This section can be
+used for tools that would like to store workspace configuration in
+`Cargo.toml`. For example:
+
+```toml
+[workspace]
+members = ["member1", "member2"]
+
+[workspace.metadata.webcontents]
+root = "path/to/webproject"
+tool = ["npm", "run", "build"]
+# ...
+```
+
 [package]: manifest.md#the-package-section
+[package-metadata]: manifest.md#the-metadata-table
 [output directory]: ../guide/build-cache.md
 [patch]: overriding-dependencies.md#the-patch-section
 [replace]: overriding-dependencies.md#the-replace-section

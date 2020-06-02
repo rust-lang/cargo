@@ -88,6 +88,9 @@ pub struct Workspace<'cfg> {
 
     /// The resolver behavior specified with the `resolver` field.
     resolve_behavior: Option<ResolveBehavior>,
+
+    /// Workspace-level custom metadata
+    custom_metadata: Option<toml::Value>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -126,6 +129,7 @@ pub struct WorkspaceRootConfig {
     members: Option<Vec<String>>,
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
+    custom_metadata: Option<toml::Value>,
 }
 
 /// An iterator over the member packages of a workspace, returned by
@@ -155,6 +159,7 @@ impl<'cfg> Workspace<'cfg> {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
+        ws.load_workspace_metadata()?;
         ws.find_members()?;
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
@@ -182,6 +187,7 @@ impl<'cfg> Workspace<'cfg> {
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
             resolve_behavior: None,
+            custom_metadata: None,
         }
     }
 
@@ -395,6 +401,10 @@ impl<'cfg> Workspace<'cfg> {
         self
     }
 
+    pub fn custom_metadata(&self) -> Option<&toml::Value> {
+        self.custom_metadata.as_ref()
+    }
+
     /// Finds the root of a workspace for the crate whose manifest is located
     /// at `manifest_path`.
     ///
@@ -466,6 +476,30 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         Ok(None)
+    }
+
+    /// After the root of a workspace has been located, loads the `workspace.metadata` table from
+    /// the workspace root file.
+    ///
+    /// If no workspace was defined, then no changes occur.
+    fn load_workspace_metadata(&mut self) -> CargoResult<()> {
+        // If we didn't find a root, it must mean there is no [workspace] section, and thus no
+        // metadata.
+        if let Some(root_path) = &self.root_manifest {
+            let root_package = self.packages.load(root_path)?;
+            match root_package.workspace_config() {
+                WorkspaceConfig::Root(ref root_config) => {
+                    self.custom_metadata = root_config.custom_metadata.clone();
+                }
+
+                _ => anyhow::bail!(
+                    "root of a workspace inferred but wasn't a root: {}",
+                    root_path.display()
+                ),
+            }
+        }
+
+        Ok(())
     }
 
     /// After the root of a workspace has been located, probes for all members
@@ -1129,12 +1163,14 @@ impl WorkspaceRootConfig {
         members: &Option<Vec<String>>,
         default_members: &Option<Vec<String>>,
         exclude: &Option<Vec<String>>,
+        custom_metadata: &Option<toml::Value>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
             root_dir: root_dir.to_path_buf(),
             members: members.clone(),
             default_members: default_members.clone(),
             exclude: exclude.clone().unwrap_or_default(),
+            custom_metadata: custom_metadata.clone(),
         }
     }
 

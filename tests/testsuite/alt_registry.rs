@@ -824,7 +824,8 @@ fn alt_reg_metadata() {
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
                 "version": 1,
-                "workspace_root": "[..]/foo"
+                "workspace_root": "[..]/foo",
+                "metadata": null
             }"#,
         )
         .run();
@@ -1003,7 +1004,8 @@ fn alt_reg_metadata() {
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
                 "version": 1,
-                "workspace_root": "[..]/foo"
+                "workspace_root": "[..]/foo",
+                "metadata": null
             }"#,
         )
         .run();
@@ -1152,7 +1154,8 @@ fn unknown_registry() {
               "resolve": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
-              "workspace_root": "[..]/foo"
+              "workspace_root": "[..]/foo",
+              "metadata": null
             }
             "#,
         )

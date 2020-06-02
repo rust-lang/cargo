@@ -46,6 +46,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
+        metadata: ws.custom_metadata().cloned(),
     })
 }
 
@@ -60,6 +61,7 @@ pub struct ExportInfo {
     target_directory: PathBuf,
     version: u32,
     workspace_root: PathBuf,
+    metadata: Option<toml::Value>,
 }
 
 #[derive(Serialize)]

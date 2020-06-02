@@ -65,6 +65,7 @@ pub fn resolve_std<'cfg>(
         &Some(members),
         /*default_members*/ &None,
         /*exclude*/ &None,
+        /*custom_metadata*/ &None,
     ));
     let virtual_manifest = crate::core::VirtualManifest::new(
         /*replace*/ Vec::new(),

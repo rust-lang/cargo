@@ -67,7 +67,8 @@ fn cargo_metadata_simple() {
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -159,7 +160,8 @@ crate-type = ["lib", "staticlib"]
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -248,7 +250,8 @@ optional_feat = []
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -537,7 +540,8 @@ fn cargo_metadata_with_deps_and_version() {
         "workspace_members": [
             "foo 0.5.0 (path+file:[..]foo)"
         ],
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -622,7 +626,8 @@ name = "ex"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -708,7 +713,8 @@ crate-type = ["rlib", "dylib"]
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -722,6 +728,14 @@ fn workspace_metadata() {
             r#"
             [workspace]
             members = ["bar", "baz"]
+
+            [workspace.metadata]
+            tool1 = "hello"
+            tool2 = [1, 2, 3]
+
+            [workspace.metadata.foo]
+            bar = 3
+
         "#,
         )
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -822,7 +836,14 @@ fn workspace_metadata() {
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": {
+            "tool1": "hello",
+            "tool2": [1, 2, 3],
+            "foo": {
+              "bar": 3
+            }
+        }
     }"#,
         )
         .run();
@@ -920,7 +941,8 @@ fn workspace_metadata_no_deps() {
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -979,7 +1001,8 @@ const MANIFEST_OUTPUT: &str = r#"
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
-    "workspace_root": "[..]/foo"
+    "workspace_root": "[..]/foo",
+    "metadata": null
 }"#;
 
 #[cargo_test]
@@ -1163,7 +1186,8 @@ fn package_metadata() {
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -1230,7 +1254,8 @@ fn package_publish() {
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -1315,7 +1340,8 @@ fn cargo_metadata_path_to_cargo_toml_project() {
             "workspace_members": [
                 "bar 0.5.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
 "#,
         )
@@ -1396,7 +1422,8 @@ fn package_edition_2018() {
             "workspace_members": [
                 "foo 0.1.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
         "#,
         )
@@ -1493,7 +1520,8 @@ fn target_edition_2018() {
             "workspace_members": [
                 "foo 0.1.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
         "#,
         )
@@ -1710,7 +1738,8 @@ fn rename_dependency() {
     "workspace_members": [
         "foo 0.0.1[..]"
     ],
-    "workspace_root": "[..]"
+    "workspace_root": "[..]",
+    "metadata": null
 }"#,
         )
         .run();
@@ -1801,7 +1830,8 @@ fn metadata_links() {
   "workspace_members": [
     "foo 0.5.0 [..]"
   ],
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#,
         )
@@ -1896,7 +1926,8 @@ fn deps_with_bin_only() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#,
         )
@@ -2280,7 +2311,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
@@ -2354,7 +2386,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
@@ -2425,7 +2458,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#
             .replace("$HOST_TRIPLE", &rustc_host())
@@ -2515,7 +2549,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#
             .replace("$HOST_TRIPLE", &rustc_host())
@@ -2565,6 +2600,7 @@ fn dep_kinds() {
   "target_directory": "{...}",
   "version": 1,
   "workspace_root": "{...}",
+  "metadata": null,
   "resolve": {
     "nodes": [
       {
@@ -2679,6 +2715,7 @@ fn dep_kinds_workspace() {
   "target_directory": "[..]/foo/target",
   "version": 1,
   "workspace_root": "[..]/foo",
+  "metadata": null,
   "resolve": {
     "nodes": [
       {

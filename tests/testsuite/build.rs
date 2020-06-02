@@ -3299,6 +3299,43 @@ fn no_warn_about_package_metadata() {
 }
 
 #[cargo_test]
+fn no_warn_about_workspace_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+
+            [workspace.metadata]
+            something = "something_else"
+            x = 1
+            y = 2
+
+            [workspace.metadata.another]
+            bar = 12
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] foo v0.0.1 ([..])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_build_empty_target() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
