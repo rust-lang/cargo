@@ -299,8 +299,9 @@ impl TargetInfo {
 
         // Window shared library import/export files.
         if crate_type.is_dynamic() {
-            if target_triple.ends_with("-windows-msvc") {
-                assert!(suffix == ".dll");
+            // Note: Custom JSON specs can alter the suffix. For now, we'll
+            // just ignore non-DLL suffixes.
+            if target_triple.ends_with("-windows-msvc") && suffix == ".dll" {
                 // See https://docs.microsoft.com/en-us/cpp/build/reference/working-with-import-libraries-and-export-files
                 // for more information about DLL import/export files.
                 ret.push(FileType {
@@ -318,8 +319,7 @@ impl TargetInfo {
                     crate_type: Some(crate_type.clone()),
                     should_replace_hyphens: true,
                 });
-            } else if target_triple.ends_with("windows-gnu") {
-                assert!(suffix == ".dll");
+            } else if target_triple.ends_with("windows-gnu") && suffix == ".dll" {
                 // See https://cygwin.com/cygwin-ug-net/dll.html for more
                 // information about GNU import libraries.
                 // LD can link DLL directly, but LLD requires the import library.
