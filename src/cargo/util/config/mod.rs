@@ -1452,12 +1452,10 @@ impl ConfigValue {
     fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                let new = mem::replace(new, Vec::new());
-                old.extend(new.into_iter());
+                old.extend(mem::take(new).into_iter());
             }
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
-                let new = mem::replace(new, HashMap::new());
-                for (key, value) in new {
+                for (key, value) in mem::take(new) {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
                             let new_def = value.definition().clone();

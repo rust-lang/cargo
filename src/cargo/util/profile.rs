@@ -48,11 +48,7 @@ impl Drop for Profiler {
         let duration = start.elapsed();
         let duration_ms = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
 
-        let msg = (
-            stack_len,
-            duration_ms,
-            mem::replace(&mut self.desc, String::new()),
-        );
+        let msg = (stack_len, duration_ms, mem::take(&mut self.desc));
         MESSAGES.with(|msgs| msgs.borrow_mut().push(msg));
 
         if stack_len == 0 {
