@@ -115,8 +115,7 @@ impl Summary {
     {
         {
             let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
-            let deps = mem::replace(slot, Vec::new());
-            *slot = deps.into_iter().map(f).collect();
+            *slot = mem::take(slot).into_iter().map(f).collect();
         }
         self
     }

@@ -119,10 +119,7 @@ fn calc_deps_of_std(
         deps_of_roots(roots, &mut state)?;
     }
     state.is_std = false;
-    Ok(Some(std::mem::replace(
-        &mut state.unit_dependencies,
-        HashMap::new(),
-    )))
+    Ok(Some(std::mem::take(&mut state.unit_dependencies)))
 }
 
 /// Add the standard library units to the `unit_dependencies`.

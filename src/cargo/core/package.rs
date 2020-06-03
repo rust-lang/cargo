@@ -735,7 +735,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 .pending
                 .remove(&token)
                 .expect("got a token for a non-in-progress transfer");
-            let data = mem::replace(&mut *dl.data.borrow_mut(), Vec::new());
+            let data = mem::take(&mut *dl.data.borrow_mut());
             let mut handle = self.set.multi.remove(handle)?;
             self.pending_ids.remove(&dl.id);
 
