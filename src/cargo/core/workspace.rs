@@ -147,7 +147,10 @@ impl<'cfg> Workspace<'cfg> {
         ws.target_dir = config.target_dir()?;
 
         if manifest_path.is_relative() {
-            ws.root_manifest = Some(std::env::current_dir()?);
+            anyhow::bail!(
+                "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
+                manifest_path
+            )
         } else {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
