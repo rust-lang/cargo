@@ -307,7 +307,7 @@ fn acquire(
             if !error_contended(&e) {
                 let e = anyhow::Error::from(e);
                 let cx = format!("failed to lock file: {}", path.display());
-                return Err(e.context(cx).into());
+                return Err(e.context(cx));
             }
         }
     }
