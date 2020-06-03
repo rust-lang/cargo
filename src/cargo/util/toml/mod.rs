@@ -1767,9 +1767,9 @@ struct TomlTarget {
     doc: Option<bool>,
     plugin: Option<bool>,
     #[serde(rename = "proc-macro")]
-    proc_macro: Option<bool>,
+    proc_macro_raw: Option<bool>,
     #[serde(rename = "proc_macro")]
-    proc_macro2: Option<bool>,
+    proc_macro_raw2: Option<bool>,
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
@@ -1824,7 +1824,7 @@ impl TomlTarget {
     }
 
     fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro.or(self.proc_macro2).or_else(|| {
+        self.proc_macro_raw.or(self.proc_macro_raw2).or_else(|| {
             if let Some(types) = self.crate_types() {
                 if types.contains(&"proc-macro".to_string()) {
                     return Some(true);

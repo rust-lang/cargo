@@ -774,7 +774,7 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
         .set_doctest(toml.doctest.unwrap_or_else(|| t2.doctested()))
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
         .set_harness(toml.harness.unwrap_or_else(|| t2.harness()))
-        .set_proc_macro(toml.proc_macro.unwrap_or_else(|| t2.proc_macro()))
+        .set_proc_macro(toml.proc_macro().unwrap_or_else(|| t2.proc_macro()))
         .set_for_host(match (toml.plugin, toml.proc_macro()) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
