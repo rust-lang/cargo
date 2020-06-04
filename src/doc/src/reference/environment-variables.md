@@ -184,6 +184,7 @@ let version = env!("CARGO_PKG_VERSION");
 * `CARGO_PKG_DESCRIPTION` — The description from the manifest of your package.
 * `CARGO_PKG_HOMEPAGE` — The home page from the manifest of your package.
 * `CARGO_PKG_REPOSITORY` — The repository from the manifest of your package.
+* `CARGO_PKG_LICENSE` — The license from the manifest of your package.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
