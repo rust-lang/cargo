@@ -894,7 +894,7 @@ impl Fingerprint {
             if a.name != b.name {
                 let e = format_err!("`{}` != `{}`", a.name, b.name)
                     .context("unit dependency name changed");
-                return Err(e.into());
+                return Err(e);
             }
 
             if a.fingerprint.hash() != b.fingerprint.hash() {
@@ -906,7 +906,7 @@ impl Fingerprint {
                     b.fingerprint.hash()
                 )
                 .context("unit dependency information changed");
-                return Err(e.into());
+                return Err(e);
             }
         }
 

@@ -381,13 +381,11 @@ mod imp {
     pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
         let mut command = process_builder.build_command();
         let error = command.exec();
-        Err(anyhow::Error::from(error)
-            .context(process_error(
-                &format!("could not execute process {}", process_builder),
-                None,
-                None,
-            ))
-            .into())
+        Err(anyhow::Error::from(error).context(process_error(
+            &format!("could not execute process {}", process_builder),
+            None,
+            None,
+        )))
     }
 }
 

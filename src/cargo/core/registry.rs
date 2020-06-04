@@ -294,7 +294,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                     .expect("loaded source not present");
                 let summaries = source.query_vec(dep)?;
                 let (summary, should_unlock) =
-                    summary_for_patch(orig_patch, &locked, summaries, source).chain_err(|| {
+                    summary_for_patch(orig_patch, locked, summaries, source).chain_err(|| {
                         format!(
                             "patch for `{}` in `{}` failed to resolve",
                             orig_patch.package_name(),
