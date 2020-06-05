@@ -420,6 +420,15 @@ package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
 
+There is a similar table at the workspace level at
+[`workspace.metadata`][workspace-metadata]. While cargo does not specify a
+format for the content of either of these tables, it is suggested that
+external tools may wish to use them in a consistent fashion, such as referring
+to the data in `workspace.metadata` if data is missing from `package.metadata`,
+if that makes sense for the tool in question.
+
+[workspace-metadata](workspaces.md#the-metadata-table)
+
 #### The `default-run` field
 
 The `default-run` field in the `[package]` section of the manifest can be used

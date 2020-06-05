@@ -405,6 +405,26 @@ impl<'cfg> Workspace<'cfg> {
         self.custom_metadata.as_ref()
     }
 
+    pub fn load_workspace_config(&mut self) -> CargoResult<Option<WorkspaceRootConfig>> {
+        // If we didn't find a root, it must mean there is no [workspace] section, and thus no
+        // metadata.
+        if let Some(root_path) = &self.root_manifest {
+            let root_package = self.packages.load(root_path)?;
+            match root_package.workspace_config() {
+                WorkspaceConfig::Root(ref root_config) => {
+                    return Ok(Some(root_config.clone()));
+                }
+
+                _ => anyhow::bail!(
+                    "root of a workspace inferred but wasn't a root: {}",
+                    root_path.display()
+                ),
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Finds the root of a workspace for the crate whose manifest is located
     /// at `manifest_path`.
     ///
@@ -478,25 +498,10 @@ impl<'cfg> Workspace<'cfg> {
         Ok(None)
     }
 
-    /// After the root of a workspace has been located, loads the `workspace.metadata` table from
-    /// the workspace root file.
-    ///
-    /// If no workspace was defined, then no changes occur.
-    fn load_workspace_metadata(&mut self) -> CargoResult<()> {
-        // If we didn't find a root, it must mean there is no [workspace] section, and thus no
-        // metadata.
-        if let Some(root_path) = &self.root_manifest {
-            let root_package = self.packages.load(root_path)?;
-            match root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
-                    self.custom_metadata = root_config.custom_metadata.clone();
-                }
-
-                _ => anyhow::bail!(
-                    "root of a workspace inferred but wasn't a root: {}",
-                    root_path.display()
-                ),
-            }
+    /// After the root of a workspace has been located, sets the custom_metadata, if it exists.
+    pub fn load_workspace_metadata(&mut self) -> CargoResult<()> {
+        if let Some(workspace_config) = self.load_workspace_config()? {
+            self.custom_metadata = workspace_config.custom_metadata;
         }
 
         Ok(())
@@ -510,8 +515,8 @@ impl<'cfg> Workspace<'cfg> {
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
     fn find_members(&mut self) -> CargoResult<()> {
-        let root_manifest_path = match self.root_manifest {
-            Some(ref path) => path.clone(),
+        let workspace_config = match self.load_workspace_config()? {
+            Some(workspace_config) => workspace_config,
             None => {
                 debug!("find_members - only me as a member");
                 self.members.push(self.current_manifest.clone());
@@ -524,30 +529,20 @@ impl<'cfg> Workspace<'cfg> {
             }
         };
 
-        let members_paths;
-        let default_members_paths;
-        {
-            let root_package = self.packages.load(&root_manifest_path)?;
-            match *root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
-                    members_paths = root_config
-                        .members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
-                    default_members_paths = if root_manifest_path == self.current_manifest {
-                        if let Some(ref default) = root_config.default_members {
-                            Some(root_config.members_paths(default)?)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    };
-                }
-                _ => anyhow::bail!(
-                    "root of a workspace inferred but wasn't a root: {}",
-                    root_manifest_path.display()
-                ),
+        // self.root_manifest must be Some to have retrieved workspace_config
+        let root_manifest_path = self.root_manifest.clone().unwrap();
+
+        let members_paths =
+            workspace_config.members_paths(workspace_config.members.as_ref().unwrap_or(&vec![]))?;
+        let default_members_paths = if root_manifest_path == self.current_manifest {
+            if let Some(ref default) = workspace_config.default_members {
+                Some(workspace_config.members_paths(default)?)
+            } else {
+                None
             }
-        }
+        } else {
+            None
+        };
 
         for path in members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
