@@ -1,7 +1,40 @@
 # Changelog
 
+## Cargo 1.46 (2020-08-27)
+[9fcb8c1d...HEAD](https://github.com/rust-lang/cargo/compare/9fcb8c1d...HEAD)
+
+### Added
+
+### Changed
+- A warning is now displayed if a git dependency includes a `#` fragment in
+  the URL. This was potentially confusing because Cargo itself displays git
+  URLs with this syntax, but it does not have any meaning outside of the
+  `Cargo.lock` file, and would not work properly.
+  [#8297](https://github.com/rust-lang/cargo/pull/8297)
+
+### Fixed
+- Fixed a rare situation where an update to `Cargo.lock` failed once, but then
+  subsequent runs allowed it proceed.
+  [#8274](https://github.com/rust-lang/cargo/pull/8274)
+- Removed assertion that Windows dylibs must have a `.dll` extension. Some
+  custom JSON spec targets may change the extension.
+  [#8310](https://github.com/rust-lang/cargo/pull/8310)
+- Updated libgit2, which brings in a fix for zlib errors for some remote
+  git servers like googlesource.com.
+  [#8320](https://github.com/rust-lang/cargo/pull/8320)
+
+### Nightly only
+- Added `-Zrustdoc-map` feature which provides external mappings for rustdoc
+  (such as https://docs.rs/ links).
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map)
+  [#8287](https://github.com/rust-lang/cargo/pull/8287)
+- Fixed feature calculation when a proc-macro is declared in `Cargo.toml` with
+  an underscore (like `proc_macro = true`).
+  [#8319](https://github.com/rust-lang/cargo/pull/8319)
+
+
 ## Cargo 1.45 (2020-07-16)
-[ebda5065e...HEAD](https://github.com/rust-lang/cargo/compare/ebda5065e...HEAD)
+[ebda5065e...rust-1.45.0](https://github.com/rust-lang/cargo/compare/ebda5065...rust-1.45.0)
 
 ### Added
 
@@ -29,11 +62,105 @@
   directory. Some obscure scenarios can cause an old dylib to be referenced
   between builds, and this ensures that all the latest copies are used.
   [#8139](https://github.com/rust-lang/cargo/pull/8139)
+- `package.exclude` can now match directory names. If a directory is
+  specified, the entire directory will be excluded, and Cargo will not attempt
+  to inspect it further. Previously Cargo would try to check every file in the
+  directory which could cause problems if the directory contained unreadable
+  files.
+  [#8095](https://github.com/rust-lang/cargo/pull/8095)
+- When packaging with `cargo publish` or `cargo package`, Cargo can use git to
+  guide its decision on which files to include. Previously this git-based
+  logic required a `Cargo.toml` file to exist at the root of the repository.
+  This is no longer required, so Cargo will now use git-based guidance even if
+  there is not a `Cargo.toml` in the root of the repository.
+  [#8095](https://github.com/rust-lang/cargo/pull/8095)
+- While unpacking a crate on Windows, if it fails to write a file because the
+  file is a reserved Windows filename (like "aux.rs"), Cargo will display an
+  extra message to explain why it failed.
+  [#8136](https://github.com/rust-lang/cargo/pull/8136)
+- Failures to set mtime on files are now ignored. Some filesystems did not
+  support this.
+  [#8185](https://github.com/rust-lang/cargo/pull/8185)
+- Certain classes of git errors will now recommend enabling
+  `net.git-fetch-with-cli`.
+  [#8166](https://github.com/rust-lang/cargo/pull/8166)
+- When doing an LTO build, Cargo will now instruct rustc not to perform
+  codegen when possible. This may result in a faster build and use less disk
+  space. Additionally, for non-LTO builds, Cargo will instruct rustc to not
+  embed LLVM bitcode in libraries, which should decrease their size.
+  [#8192](https://github.com/rust-lang/cargo/pull/8192)
+  [#8226](https://github.com/rust-lang/cargo/pull/8226)
+  [#8254](https://github.com/rust-lang/cargo/pull/8254)
+- The implementation for `cargo clean -p` has been rewritten so that it can
+  more accurately remove the files for a specific package.
+  [#8210](https://github.com/rust-lang/cargo/pull/8210)
+- The way Cargo computes the outputs from a build has been rewritten to be
+  more complete and accurate. Newly tracked files will be displayed in JSON
+  messages, and may be uplifted to the output directory in some cases. Some of
+  the changes from this are:
+
+  - `.exp` export files on Windows MSVC dynamic libraries are now tracked.
+  - Proc-macros on Windows track import/export files.
+  - All targets (like tests, etc.) that generate separate debug files
+    (pdb/dSYM) are tracked.
+  - Added .map files for wasm32-unknown-emscripten.
+  - macOS dSYM directories are tracked for all dynamic libraries
+    (dylib/cdylib/proc-macro) and for build scripts.
+
+  There are a variety of other changes as a consequence of this:
+
+  - Binary examples on Windows MSVC with a hyphen will now show up twice in
+    the examples directory (`foo_bar.exe` and `foo-bar.exe`). Previously Cargo
+    just renamed the file instead of hard-linking it.
+  - Example libraries now follow the same rules for hyphen/underscore
+    translation as normal libs (they will now use underscores).
+
+  [#8210](https://github.com/rust-lang/cargo/pull/8210)
+- Cargo attempts to scrub any secrets from the debug log for HTTP debugging.
+  [#8222](https://github.com/rust-lang/cargo/pull/8222)
+- Context has been added to many of Cargo's filesystem operations, so that
+  error messages now provide more information, such as the path that caused
+  the problem.
+  [#8232](https://github.com/rust-lang/cargo/pull/8232)
+- Several commands now ignore the error if stdout or stderr is closed while it
+  is running. For example `cargo install --list | grep -q cargo-fuzz` would
+  previously sometimes panic because `grep -q` may close stdout before the
+  command finishes. Regular builds continue to fail if stdout or stderr is
+  closed, matching the behavior of many other build systems.
+  [#8236](https://github.com/rust-lang/cargo/pull/8236)
+- If `cargo install` is given an exact version, like `--version=1.2.3`, it
+  will now avoid updating the index if that version is already installed, and
+  exit quickly indicating it is already installed.
+  [#8022](https://github.com/rust-lang/cargo/pull/8022)
+- Changes to the `[patch]` section will now attempt to automatically update
+  `Cargo.lock` to the new version. It should now also provide better error
+  messages for the rare cases where it is unable to automatically update.
+  [#8248](https://github.com/rust-lang/cargo/pull/8248)
 
 ### Fixed
 - Fixed copying Windows `.pdb` files to the output directory when the filename
   contained dashes.
   [#8123](https://github.com/rust-lang/cargo/pull/8123)
+- Fixed error where Cargo would fail when scanning if a package is inside a
+  git repository when any of its ancestor paths is a symlink.
+  [#8186](https://github.com/rust-lang/cargo/pull/8186)
+- Fixed `cargo update` with an unused `[patch]` so that it does not get
+  stuck and refuse to update.
+  [#8243](https://github.com/rust-lang/cargo/pull/8243)
+- Fixed a situation where Cargo would hang if stderr is closed, and the
+  compiler generated a large number of messages.
+  [#8247](https://github.com/rust-lang/cargo/pull/8247)
+- Fixed backtraces on macOS not showing filenames or line numbers. As a
+  consequence of this, binary executables on apple targets do not include a
+  hash in the filename in Cargo's cache. This means Cargo can only track one
+  copy, so if you switch features or rustc versions, Cargo will need to
+  rebuild the executable.
+  [#8329](https://github.com/rust-lang/cargo/pull/8329)
+  [#8335](https://github.com/rust-lang/cargo/pull/8335)
+- Fixed fingerprinting when using lld on Windows with a dylib. Cargo was
+  erroneously thinking the dylib was never fresh.
+  [#8290](https://github.com/rust-lang/cargo/pull/8290)
+  [#8335](https://github.com/rust-lang/cargo/pull/8335)
 
 ### Nightly only
 - Fixed passing the full path for `--target` to `rustdoc` when using JSON spec
@@ -44,9 +171,22 @@
 - Added new `resolver` field to `Cargo.toml` to opt-in to the new feature
   resolver.
   [#8129](https://github.com/rust-lang/cargo/pull/8129)
+- `-Zbuild-std` no longer treats std dependencies as "local". This means that
+  it won't use incremental compilation for those dependencies, removes them
+  from dep-info files, and caps lints at "allow".
+  [#8177](https://github.com/rust-lang/cargo/pull/8177)
+- Added `-Zmultitarget` which allows multiple `--target` flags to build the
+  same thing for multiple targets at once.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#multitarget)
+  [#8167](https://github.com/rust-lang/cargo/pull/8167)
+- Added `strip` option to the profile to remove symbols and debug information.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-strip-option)
+  [#8246](https://github.com/rust-lang/cargo/pull/8246)
+- Fixed panic with `cargo tree --target=all -Zfeatures=all`.
+  [#8269](https://github.com/rust-lang/cargo/pull/8269)
 
 ## Cargo 1.44 (2020-06-04)
-[bda50510...ebda5065e](https://github.com/rust-lang/cargo/compare/bda50510...ebda5065e)
+[bda50510...rust-1.44.0](https://github.com/rust-lang/cargo/compare/bda50510...rust-1.44.0)
 
 ### Added
 - 🔥 Added the `cargo tree` command.
@@ -96,6 +236,10 @@
   [#8090](https://github.com/rust-lang/cargo/pull/8090)
 - Added a certain class of HTTP2 errors as "spurious" that will get retried.
   [#8102](https://github.com/rust-lang/cargo/pull/8102)
+- Allow `cargo package --list` to succeed, even if there are other validation
+  errors (such as `Cargo.lock` generation problem, or missing dependencies).
+  [#8175](https://github.com/rust-lang/cargo/pull/8175)
+  [#8215](https://github.com/rust-lang/cargo/pull/8215)
 
 ### Fixed
 - Cargo no longer buffers excessive amounts of compiler output in memory.
@@ -115,6 +259,8 @@
 - Protect against some (unknown) situations where Cargo could panic when the
   system monotonic clock doesn't appear to be monotonic.
   [#8114](https://github.com/rust-lang/cargo/pull/8114)
+- Fixed panic with `cargo clean -p` if the package has a build script.
+  [#8216](https://github.com/rust-lang/cargo/pull/8216)
 
 ### Nightly only
 - Fixed panic with new feature resolver and required-features.
