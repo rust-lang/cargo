@@ -82,7 +82,7 @@ default-members = ["path/to/member2", "path/to/member3/foo"]
 
 When specified, `default-members` must expand to a subset of `members`.
 
-<a id="the-metadata-table"></a>
+<a id="the-workspace-metadata-table"></a>
 ### The `workspace.metadata` table
 
 The `workspace.metadata` table is ignored by Cargo and will not be warned
