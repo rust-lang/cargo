@@ -608,6 +608,12 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     // - wasm32 executables: When using emscripten, the path to the .wasm file
     //   is embedded in the .js file, so we don't want the hash in there.
     //   TODO: Is this necessary for wasm32-unknown-unknown?
+    // - apple executables: The executable name is used in the dSYM directory
+    //   (such as `target/debug/foo.dSYM/Contents/Resources/DWARF/foo-64db4e4bf99c12dd`).
+    //   Unfortunately this causes problems with our current backtrace
+    //   implementation which looks for a file matching the exe name exactly.
+    //   See https://github.com/rust-lang/rust/issues/72550#issuecomment-638501691
+    //   for more details.
     //
     // This is only done for local packages, as we don't expect to export
     // dependencies.
@@ -622,7 +628,8 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if (unit.target.is_dylib()
         || unit.target.is_cdylib()
         || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
-        || (unit.target.is_executable() && short_name.contains("msvc")))
+        || (unit.target.is_executable() && short_name.contains("msvc"))
+        || (unit.target.is_executable() && short_name.contains("-apple-")))
         && unit.pkg.package_id().source_id().is_path()
         && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {
