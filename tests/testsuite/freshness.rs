@@ -491,8 +491,8 @@ fn changing_bin_features_caches_targets() {
     /* Targets should be cached from the first build */
 
     let mut e = p.cargo("build");
-    // MSVC does not include hash in binary filename, so it gets recompiled.
-    if cfg!(target_env = "msvc") {
+    // MSVC/apple does not include hash in binary filename, so it gets recompiled.
+    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -501,7 +501,7 @@ fn changing_bin_features_caches_targets() {
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     let mut e = p.cargo("build --features foo");
-    if cfg!(target_env = "msvc") {
+    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -2434,5 +2434,41 @@ fn linking_interrupted() {
 [RUNNING] target/debug/deps/t1[..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+#[cfg_attr(
+    not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")),
+    ignore
+)]
+fn lld_is_fresh() {
+    // Check for bug when using lld linker that it remains fresh with dylib.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [target.x86_64-pc-windows-msvc]
+                linker = "rust-lld"
+                rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build -v")
+        .with_stderr("[FRESH] foo [..]\n[FINISHED] [..]")
         .run();
 }

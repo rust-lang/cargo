@@ -1229,7 +1229,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     let outputs = cx
         .outputs(unit)?
         .iter()
-        .filter(|output| output.flavor != FileFlavor::DebugInfo)
+        .filter(|output| !matches!(output.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
         .map(|output| output.path.clone())
         .collect();
 
