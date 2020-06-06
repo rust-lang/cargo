@@ -1230,7 +1230,7 @@ fn crate_env_vars() {
         homepage = "https://example.com"
         repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
-        license = "MIT"
+        license = "MIT OR Apache-2.0"
         "#,
         )
         .file(
@@ -1260,7 +1260,7 @@ fn crate_env_vars() {
                  assert_eq!("foo", PKG_NAME);
                  assert_eq!("https://example.com", HOMEPAGE);
                  assert_eq!("https://example.com/repo.git", REPOSITORY);
-                 assert_eq!("MIT", LICENSE);
+                 assert_eq!("MIT OR Apache-2.0", LICENSE);
                  assert_eq!("This is foo", DESCRIPTION);
                 let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
