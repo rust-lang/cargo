@@ -32,8 +32,41 @@
 mod windows;
 
 use std::env;
+use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+
+/// Permits parameterising the home functions via the _from variants - used for
+/// in-process unit testing by rustup.
+pub trait Env {
+    fn home_dir(&self) -> Option<PathBuf>;
+    fn current_dir(&self) -> io::Result<PathBuf>;
+    fn var_os(&self, key: &str) -> Option<OsString>;
+}
+
+/// Implements Env for the OS context, both Unix style and Windows.
+///
+/// This is trait permits in-process testing by providing a control point to
+/// allow in-process divergence on what is normally process wide state.
+///
+/// Implementations should be provided by whatever testing framework the caller
+/// is using. Code that is not performing in-process threaded testing requiring
+/// isolated rustup/cargo directories does not need this trait or the _from
+/// functions.
+struct OsEnv {}
+impl Env for OsEnv {
+    fn home_dir(&self) -> Option<PathBuf> {
+        home_dir_inner()
+    }
+    fn current_dir(&self) -> io::Result<PathBuf> {
+        env::current_dir()
+    }
+    fn var_os(&self, key: &str) -> Option<OsString> {
+        env::var_os(key)
+    }
+}
+
+static OS_ENV: OsEnv = OsEnv {};
 
 /// Returns the path of the current user's home directory if known.
 ///
@@ -61,7 +94,15 @@ use std::path::{Path, PathBuf};
 /// }
 /// ```
 pub fn home_dir() -> Option<PathBuf> {
-    home_dir_inner()
+    home_dir_from(&OS_ENV)
+}
+
+/// Variant of home_dir where the environment source is parameterised. This is
+/// specifically to support in-process testing scenarios as environment
+/// variables and user home metadata are normally process global state. See the
+/// OsEnv trait.
+pub fn home_dir_from(env: &dyn Env) -> Option<PathBuf> {
+    env.home_dir()
 }
 
 #[cfg(windows)]
@@ -101,14 +142,30 @@ fn home_dir_inner() -> Option<PathBuf> {
 /// }
 /// ```
 pub fn cargo_home() -> io::Result<PathBuf> {
-    let cwd = env::current_dir()?;
-    cargo_home_with_cwd(&cwd)
+    cargo_home_from(&OS_ENV)
+}
+
+/// Variant of cargo_home where the environment source is parameterised. This is
+/// specifically to support in-process testing scenarios as environment
+/// variables and user home metadata are normally process global state. See the
+/// OsEnv trait.
+pub fn cargo_home_from(env: &dyn Env) -> io::Result<PathBuf> {
+    let cwd = env.current_dir()?;
+    cargo_home_with_cwd_from(env, &cwd)
 }
 
 /// Returns the storage directory used by Cargo within `cwd`.
 /// For more details, see [`cargo_home`](fn.cargo_home.html).
 pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    match env::var_os("CARGO_HOME").filter(|h| !h.is_empty()) {
+    cargo_home_with_cwd_from(&OS_ENV, cwd)
+}
+
+/// Variant of cargo_home_with_cwd where the environment source is
+/// parameterised. This is specifically to support in-process testing scenarios
+/// as environment variables and user home metadata are normally process global
+/// state. See the OsEnv trait.
+pub fn cargo_home_with_cwd_from(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
+    match env.var_os("CARGO_HOME").filter(|h| !h.is_empty()) {
         Some(home) => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
@@ -117,7 +174,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
                 Ok(cwd.join(&home))
             }
         }
-        _ => home_dir()
+        _ => home_dir_from(env)
             .map(|p| p.join(".cargo"))
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find cargo home dir")),
     }
@@ -151,14 +208,30 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 /// }
 /// ```
 pub fn rustup_home() -> io::Result<PathBuf> {
-    let cwd = env::current_dir()?;
-    rustup_home_with_cwd(&cwd)
+    rustup_home_from(&OS_ENV)
+}
+
+/// Variant of cargo_home_with_cwd where the environment source is
+/// parameterised. This is specifically to support in-process testing scenarios
+/// as environment variables and user home metadata are normally process global
+/// state. See the OsEnv trait.
+pub fn rustup_home_from(env: &dyn Env) -> io::Result<PathBuf> {
+    let cwd = env.current_dir()?;
+    rustup_home_with_cwd_from(env, &cwd)
 }
 
 /// Returns the storage directory used by rustup within `cwd`.
 /// For more details, see [`rustup_home`](fn.rustup_home.html).
 pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
-    match env::var_os("RUSTUP_HOME").filter(|h| !h.is_empty()) {
+    rustup_home_with_cwd_from(&OS_ENV, cwd)
+}
+
+/// Variant of cargo_home_with_cwd where the environment source is
+/// parameterised. This is specifically to support in-process testing scenarios
+/// as environment variables and user home metadata are normally process global
+/// state. See the OsEnv trait.
+pub fn rustup_home_with_cwd_from(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
+    match env.var_os("RUSTUP_HOME").filter(|h| !h.is_empty()) {
         Some(home) => {
             let home = PathBuf::from(home);
             if home.is_absolute() {
@@ -167,7 +240,7 @@ pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
                 Ok(cwd.join(&home))
             }
         }
-        _ => home_dir()
+        _ => home_dir_from(env)
             .map(|d| d.join(".rustup"))
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "could not find rustup home dir")),
     }
