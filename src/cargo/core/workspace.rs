@@ -159,7 +159,9 @@ impl<'cfg> Workspace<'cfg> {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
-        ws.custom_metadata = ws.load_workspace_config()?.and_then(|cfg| cfg.custom_metadata);
+        ws.custom_metadata = ws
+            .load_workspace_config()?
+            .and_then(|cfg| cfg.custom_metadata);
         ws.find_members()?;
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
