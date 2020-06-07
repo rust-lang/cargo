@@ -159,7 +159,7 @@ impl<'cfg> Workspace<'cfg> {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
-        ws.load_workspace_metadata()?;
+        ws.custom_metadata = ws.load_workspace_config()?.and_then(|cfg| cfg.custom_metadata);
         ws.find_members()?;
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
@@ -496,15 +496,6 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         Ok(None)
-    }
-
-    /// After the root of a workspace has been located, sets the custom_metadata, if it exists.
-    pub fn load_workspace_metadata(&mut self) -> CargoResult<()> {
-        if let Some(workspace_config) = self.load_workspace_config()? {
-            self.custom_metadata = workspace_config.custom_metadata;
-        }
-
-        Ok(())
     }
 
     /// After the root of a workspace has been located, probes for all members
