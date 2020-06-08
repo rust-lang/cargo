@@ -1231,6 +1231,10 @@ fn crate_env_vars() {
         repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
         license = "MIT OR Apache-2.0"
+
+        [[bin]]
+        name = "foo-bar"
+        path = "src/main.rs"
         "#,
         )
         .file(
@@ -1250,6 +1254,9 @@ fn crate_env_vars() {
             static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
             static LICENSE: &'static str = env!("CARGO_PKG_LICENSE");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+            static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
+            static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+
 
             fn main() {
                 let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
@@ -1258,6 +1265,8 @@ fn crate_env_vars() {
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
+                 assert_eq!("foo-bar", BIN_NAME);
+                 assert_eq!("foo_bar", CRATE_NAME);
                  assert_eq!("https://example.com", HOMEPAGE);
                  assert_eq!("https://example.com/repo.git", REPOSITORY);
                  assert_eq!("MIT OR Apache-2.0", LICENSE);
@@ -1287,7 +1296,7 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    p.process(&p.bin("foo"))
+    p.process(&p.bin("foo-bar"))
         .with_stdout("0-5-1 @ alpha.1 in [CWD]")
         .run();
 
@@ -4152,7 +4161,7 @@ fn uplift_dsym_of_bin_on_mac() {
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
-    assert!(p.target_debug_dir().join("examples/c.dSYM").is_symlink());
+    assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
 }

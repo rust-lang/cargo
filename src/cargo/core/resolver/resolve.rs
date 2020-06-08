@@ -119,10 +119,9 @@ impl Resolve {
 
     pub fn register_used_patches(&mut self, patches: &[Summary]) {
         for summary in patches {
-            if self.iter().any(|id| id == summary.package_id()) {
-                continue;
-            }
-            self.unused_patches.push(summary.package_id());
+            if !self.graph.contains(&summary.package_id()) {
+                self.unused_patches.push(summary.package_id())
+            };
         }
     }
 

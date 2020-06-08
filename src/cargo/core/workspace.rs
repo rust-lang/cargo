@@ -145,7 +145,16 @@ impl<'cfg> Workspace<'cfg> {
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
         ws.target_dir = config.target_dir()?;
-        ws.root_manifest = ws.find_root(manifest_path)?;
+
+        if manifest_path.is_relative() {
+            anyhow::bail!(
+                "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
+                manifest_path
+            )
+        } else {
+            ws.root_manifest = ws.find_root(manifest_path)?;
+        }
+
         ws.find_members()?;
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
@@ -863,7 +872,7 @@ impl<'cfg> Workspace<'cfg> {
                     let err = anyhow::format_err!("{}", warning.message);
                     let cx =
                         anyhow::format_err!("failed to parse manifest at `{}`", path.display());
-                    return Err(err.context(cx).into());
+                    return Err(err.context(cx));
                 } else {
                     let msg = if self.root_manifest.is_none() {
                         warning.message.to_string()

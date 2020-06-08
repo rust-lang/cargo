@@ -274,16 +274,13 @@ _cargo() {
                 tree)
                     _arguments -s -S $common $features $triple $manifest \
                         '(-p --package)'{-p+,--package=}'[package to use as the root]:package:_cargo_package_names' \
-                        '--no-filter-targets[return dependencies for all targets]' \
-                        '--no-dev-dependencies[skip dev dependencies]' \
-                        '(-i --invert)'{-i,--invert}'[invert the tree]' \
-                        '--no-indent[display as a list]' \
-                        '--prefix-depth[display as a list with numeric depth]' \
+                        '(-i --invert)'{-i+,--invert=}'[invert the tree for the given package]:package:_cargo_package_names' \
+                        '--prefix=[line prefix]:prefix:(depth indent none)' \
                         '--no-dedupe[repeat shared dependencies]' \
                         '(-d --duplicates)'{-d,--duplicates}'[packages with multiple versions]' \
-                        '--charset=[utf8 or ascii]' \
-                        '(-f --format)'{-f,--format=}'[format string]' \
-                        '--graph-features[show features]' \
+                        '--charset=[utf8 or ascii]:charset:(utf8 ascii)' \
+                        '(-f --format)'{-f,--format=}'[format string]:format' \
+                        '(-e --edges)'{-e,--edges=}'[edge kinds]:kind:(features normal build dev all no-dev no-build no-normal)' \
                         ;;
 
                 uninstall)

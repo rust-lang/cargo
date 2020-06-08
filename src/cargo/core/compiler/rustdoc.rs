@@ -79,7 +79,7 @@ pub fn add_root_urls(
         return Ok(());
     }
     let map = config.doc_extern_map()?;
-    if map.registries.len() == 0 && map.std.is_none() {
+    if map.registries.is_empty() && map.std.is_none() {
         // Skip doing unnecessary work.
         return Ok(());
     }
@@ -90,13 +90,13 @@ pub fn add_root_urls(
         .keys()
         .filter_map(|name| {
             if let Ok(index_url) = config.get_registry_index(name) {
-                return Some((name, index_url));
+                Some((name, index_url))
             } else {
                 log::warn!(
                     "`doc.extern-map.{}` specifies a registry that is not defined",
                     name
                 );
-                return None;
+                None
             }
         })
         .collect();

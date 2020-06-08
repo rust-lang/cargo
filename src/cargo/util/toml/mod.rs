@@ -163,7 +163,7 @@ and this will become a hard error in the future.",
     }
 
     let first_error = anyhow::Error::from(first_error);
-    Err(first_error.context("could not parse input as TOML").into())
+    Err(first_error.context("could not parse input as TOML"))
 }
 
 type TomlLibTarget = TomlTarget;

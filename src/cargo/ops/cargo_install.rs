@@ -570,8 +570,8 @@ where
     // best-effort check to see if we can avoid hitting the network.
     if let Ok(pkg) = select_dep_pkg(source, dep, config, false) {
         let (_ws, rustc, target) =
-            make_ws_rustc_target(&config, opts, &source.source_id(), pkg.clone())?;
-        if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, &dst, force) {
+            make_ws_rustc_target(config, opts, &source.source_id(), pkg.clone())?;
+        if let Ok(true) = is_installed(&pkg, config, opts, &rustc, &target, root, dst, force) {
             return Ok(Some(pkg));
         }
     }

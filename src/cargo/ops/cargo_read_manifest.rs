@@ -112,7 +112,7 @@ fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> Ca
         Err(e) => {
             let cx = format!("failed to read directory `{}`", path.display());
             let e = anyhow::Error::from(e);
-            return Err(e.context(cx).into());
+            return Err(e.context(cx));
         }
     };
     for dir in dirs {

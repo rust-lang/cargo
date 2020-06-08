@@ -6,6 +6,7 @@ pub struct ParseError {
     orig: String,
 }
 
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum ParseErrorKind {
     UnterminatedString,
@@ -17,9 +18,6 @@ pub enum ParseErrorKind {
     IncompleteExpr(&'static str),
     UnterminatedExpression(String),
     InvalidTarget(String),
-
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl fmt::Display for ParseError {
@@ -53,7 +51,6 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "unexpected content `{}` found after cfg expression", s)
             }
             InvalidTarget(s) => write!(f, "invalid target specifier: {}", s),
-            __Nonexhaustive => unreachable!(),
         }
     }
 }

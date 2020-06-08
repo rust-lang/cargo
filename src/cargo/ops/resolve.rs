@@ -216,15 +216,14 @@ pub fn resolve_with_previous<'cfg>(
     //
     // TODO: this seems like a hokey reason to single out the registry as being
     // different.
-    let mut to_avoid_sources: HashSet<SourceId> = HashSet::new();
-    if let Some(to_avoid) = to_avoid {
-        to_avoid_sources.extend(
-            to_avoid
-                .iter()
+    let to_avoid_sources: HashSet<SourceId> = to_avoid
+        .map(|set| {
+            set.iter()
                 .map(|p| p.source_id())
-                .filter(|s| !s.is_registry()),
-        );
-    }
+                .filter(|s| !s.is_registry())
+                .collect()
+        })
+        .unwrap_or_default();
 
     let pre_patch_keep = |p: &PackageId| {
         !to_avoid_sources.contains(&p.source_id())
@@ -286,18 +285,23 @@ pub fn resolve_with_previous<'cfg>(
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure.
-    let mut try_to_use = HashSet::new();
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
         register_previous_locks(ws, registry, r, &keep);
-
-        // Everything in the previous lock file we want to keep is prioritized
-        // in dependency selection if it comes up, aka we want to have
-        // conservative updates.
-        try_to_use.extend(r.iter().filter(keep).inspect(|id| {
-            debug!("attempting to prefer {}", id);
-        }));
     }
+    // Everything in the previous lock file we want to keep is prioritized
+    // in dependency selection if it comes up, aka we want to have
+    // conservative updates.
+    let try_to_use = previous
+        .map(|r| {
+            r.iter()
+                .filter(keep)
+                .inspect(|id| {
+                    debug!("attempting to prefer {}", id);
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
     if register_patches {
         registry.lock_patches();

@@ -151,17 +151,15 @@ impl<'cfg> Compilation<'cfg> {
             self.rustc_process.clone()
         };
 
-        self.fill_env(rustc, &unit.pkg, unit.kind, true)
+        let cmd = fill_rustc_tool_env(rustc, unit);
+        self.fill_env(cmd, &unit.pkg, unit.kind, true)
     }
 
     /// See `process`.
     pub fn rustdoc_process(&self, unit: &Unit) -> CargoResult<ProcessBuilder> {
-        let mut p = self.fill_env(
-            process(&*self.config.rustdoc()?),
-            &unit.pkg,
-            unit.kind,
-            true,
-        )?;
+        let rustdoc = process(&*self.config.rustdoc()?);
+        let cmd = fill_rustc_tool_env(rustdoc, unit);
+        let mut p = self.fill_env(cmd, &unit.pkg, unit.kind, true)?;
         if unit.target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", unit.target.edition()));
         }
@@ -297,6 +295,16 @@ impl<'cfg> Compilation<'cfg> {
             .cwd(pkg.root());
         Ok(cmd)
     }
+}
+
+/// Prepares a rustc_tool process with additional environment variables
+/// that are only relevant in a context that has a unit
+fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
+    if unit.target.is_bin() {
+        cmd.env("CARGO_BIN_NAME", unit.target.name());
+    }
+    cmd.env("CARGO_CRATE_NAME", unit.target.crate_name());
+    cmd
 }
 
 fn pre_version_component(v: &Version) -> String {
