@@ -1115,6 +1115,7 @@ fn package_metadata() {
             baz = "quux"
         "#,
         )
+        .file("README.md", "")
         .file("src/lib.rs", "")
         .build();
 
@@ -1186,6 +1187,7 @@ fn package_publish() {
             publish = ["my-registry"]
         "#,
         )
+        .file("README.md", "")
         .file("src/lib.rs", "")
         .build();
 
