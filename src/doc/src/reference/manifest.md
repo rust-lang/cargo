@@ -168,7 +168,8 @@ readme = "README.md"
 If no value is specified for this field, and a file named `README.md`,
 `README.txt` or `README` exists in the package root, then the name of that
 file will be used. You can suppress this behavior by setting this field to
-`false`.
+`false`. If the field is set to `true`, a default value of `README.md` will
+be assumed.
 
 #### The `homepage` field
 

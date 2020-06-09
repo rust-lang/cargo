@@ -1199,11 +1199,18 @@ impl TomlManifest {
             project.namespaced_features.unwrap_or(false),
         )?;
 
+        let readme = readme_for_project(package_root, project);
+        if let Some(ref r) = readme {
+            if !package_root.join(r).is_file() {
+                bail!("readme file with name '{}' was not found", r);
+            }
+        };
+
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
-            readme: readme_for_project(package_root, project),
+            readme,
             authors: project.authors.clone().unwrap_or_default(),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
@@ -1520,7 +1527,7 @@ fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<Stri
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
             StringOrBool::Bool(false) => None,
-            StringOrBool::Bool(true) => default_readme_from_package_root(package_root),
+            StringOrBool::Bool(true) => Some("README.md".to_string()),
             StringOrBool::String(v) => Some(v.clone()),
         },
     }
