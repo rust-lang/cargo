@@ -808,7 +808,7 @@ pub struct TomlProject {
     description: Option<String>,
     homepage: Option<String>,
     documentation: Option<String>,
-    readme: Option<String>,
+    readme: Option<StringOrBool>,
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
@@ -1208,11 +1208,19 @@ impl TomlManifest {
             project.links.as_deref(),
             project.namespaced_features.unwrap_or(false),
         )?;
+
+        let readme = readme_for_project(package_root, project);
+        if let Some(ref r) = readme {
+            if !package_root.join(r).is_file() {
+                bail!("readme file with name '{}' was not found", r);
+            }
+        };
+
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
-            readme: project.readme.clone(),
+            readme,
             authors: project.authors.clone().unwrap_or_default(),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
@@ -1521,6 +1529,32 @@ impl TomlManifest {
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
     }
+}
+
+/// Returns the name of the README file for a `TomlProject`.
+fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
+    match &project.readme {
+        None => default_readme_from_package_root(package_root),
+        Some(value) => match value {
+            StringOrBool::Bool(false) => None,
+            StringOrBool::Bool(true) => Some("README.md".to_string()),
+            StringOrBool::String(v) => Some(v.clone()),
+        },
+    }
+}
+
+const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"];
+
+/// Checks if a file with any of the default README file names exists in the package root.
+/// If so, returns a `String` representing that name.
+fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
+    for &readme_filename in DEFAULT_README_FILES.iter() {
+        if package_root.join(readme_filename).is_file() {
+            return Some(readme_filename.to_string());
+        }
+    }
+
+    None
 }
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
