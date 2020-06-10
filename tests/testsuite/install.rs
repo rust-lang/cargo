@@ -9,7 +9,7 @@ use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
 use cargo_test_support::paths;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{registry_path, registry_url, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
 };
@@ -42,6 +42,35 @@ fn simple() {
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("uninstall foo")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn with_index() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --index")
+        .arg(registry_url().to_string())
+        .with_stderr(&format!(
+            "\
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `{reg}`)
+[INSTALLING] foo v0.0.1 (registry `{reg}`)
+[COMPILING] foo v0.0.1 (registry `{reg}`)
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 (registry `{reg}`)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+            reg = registry_path().to_str().unwrap()
+        ))
         .run();
     assert_has_installed_exe(cargo_home(), "foo");
 
