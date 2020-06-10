@@ -26,6 +26,17 @@ impl CrateType {
         }
     }
 
+    pub fn can_lto(&self) -> bool {
+        match self {
+            CrateType::Bin | CrateType::Staticlib | CrateType::Cdylib => true,
+            CrateType::Lib
+            | CrateType::Rlib
+            | CrateType::Dylib
+            | CrateType::ProcMacro
+            | CrateType::Other(..) => false,
+        }
+    }
+
     pub fn is_linkable(&self) -> bool {
         match self {
             CrateType::Lib | CrateType::Rlib | CrateType::Dylib | CrateType::ProcMacro => true,
