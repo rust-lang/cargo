@@ -233,10 +233,13 @@ fn transmit(
         ref badges,
         ref links,
     } = *manifest.metadata();
-    let readme_content = match *readme {
-        Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
-        None => None,
-    };
+    let readme_content = readme
+        .as_ref()
+        .map(|readme| {
+            paths::read(&pkg.root().join(readme))
+                .chain_err(|| format!("failed to read `readme` file for package `{}`", pkg))
+        })
+        .transpose()?;
     if let Some(ref file) = *license_file {
         if !pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)

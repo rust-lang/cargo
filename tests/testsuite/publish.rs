@@ -3,7 +3,7 @@
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, registry_path, registry_url, Package};
-use cargo_test_support::{basic_manifest, project, publish};
+use cargo_test_support::{basic_manifest, no_such_file_err_msg, project, publish};
 use std::fs;
 
 const CLEAN_FOO_JSON: &str = r#"
@@ -1339,5 +1339,45 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn publish_with_missing_readme() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                homepage = "https://example.com/"
+                readme = "foo.md"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[UPLOADING] foo v0.1.0 [..]
+[ERROR] failed to read `readme` file for package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to read `[ROOT]/foo/foo.md`
+
+Caused by:
+  {}
+",
+            no_such_file_err_msg()
+        ))
         .run();
 }
