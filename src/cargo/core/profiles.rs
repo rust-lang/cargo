@@ -533,6 +533,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
+        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no") => {
+            profile.lto = Lto::Off
+        }
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
@@ -747,8 +750,10 @@ impl Profile {
 /// The link-time-optimization setting.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum Lto {
-    /// False = no LTO
+    /// Explicitly no LTO, disables thin-LTO.
+    Off,
     /// True = "Fat" LTO
+    /// False = rustc default (no args), currently "thin LTO"
     Bool(bool),
     /// Named LTO settings like "thin".
     Named(InternedString),
@@ -760,6 +765,7 @@ impl serde::ser::Serialize for Lto {
         S: serde::ser::Serializer,
     {
         match self {
+            Lto::Off => "off".serialize(s),
             Lto::Bool(b) => b.to_string().serialize(s),
             Lto::Named(n) => n.serialize(s),
         }

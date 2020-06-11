@@ -43,6 +43,7 @@ pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
 pub(crate) use self::layout::Layout;
+pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
@@ -787,7 +788,10 @@ fn build_base_args(
         lto::Lto::Run(Some(s)) => {
             cmd.arg("-C").arg(format!("lto={}", s));
         }
-        lto::Lto::EmbedBitcode => {} // this is rustc's default
+        lto::Lto::Off => {
+            cmd.arg("-C").arg("lto=off");
+        }
+        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
         lto::Lto::OnlyBitcode => {
             // Note that this compiler flag, like the one below, is just an
             // optimization in terms of build time. If we don't pass it then
@@ -804,7 +808,7 @@ fn build_base_args(
                 cmd.arg("-Clinker-plugin-lto");
             }
         }
-        lto::Lto::None => {
+        lto::Lto::OnlyObject => {
             if cx
                 .bcx
                 .target_data
