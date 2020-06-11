@@ -2,8 +2,8 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
+use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
-use cargo_test_support::{is_nightly, rustc_host};
 
 #[cargo_test]
 fn simple_cross() {
@@ -204,96 +204,6 @@ fn linker() {
             target = target,
         ))
         .run();
-}
-
-#[cargo_test]
-fn plugin_with_extra_dylib_dep() {
-    if cross_compile::disabled() {
-        return;
-    }
-    if !is_nightly() {
-        // plugins are unstable
-        return;
-    }
-
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.bar]
-            path = "../bar"
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            #![feature(plugin)]
-            #![plugin(bar)]
-
-            fn main() {}
-        "#,
-        )
-        .build();
-    let _bar = project()
-        .at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "bar"
-            plugin = true
-
-            [dependencies.baz]
-            path = "../baz"
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            #![feature(plugin_registrar, rustc_private)]
-
-            extern crate baz;
-            extern crate rustc_driver;
-
-            use rustc_driver::plugin::Registry;
-
-            #[plugin_registrar]
-            pub fn foo(reg: &mut Registry) {
-                println!("{}", baz::baz());
-            }
-        "#,
-        )
-        .build();
-    let _baz = project()
-        .at("baz")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "baz"
-            crate_type = ["dylib"]
-        "#,
-        )
-        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
-        .build();
-
-    let target = cross_compile::alternate();
-    foo.cargo("build --target").arg(&target).run();
 }
 
 #[cargo_test]

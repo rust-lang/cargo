@@ -542,43 +542,8 @@ fn compute_metadata<'a, 'cfg>(
     cx: &Context<'a, 'cfg>,
     metas: &mut HashMap<Unit<'a>, Option<Metadata>>,
 ) -> Option<Metadata> {
-    if unit.mode.is_doc_test() {
-        // Doc tests do not have metadata.
-        return None;
-    }
-    // No metadata for dylibs because of a couple issues:
-    // - macOS encodes the dylib name in the executable,
-    // - Windows rustc multiple files of which we can't easily link all of them.
-    //
-    // No metadata for bin because of an issue:
-    // - wasm32 rustc/emcc encodes the `.wasm` name in the `.js` (rust-lang/cargo#4535).
-    // - msvc: The path to the PDB is embedded in the executable, and we don't
-    //   want the PDB path to include the hash in it.
-    //
-    // Two exceptions:
-    // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict),
-    // 2) `__CARGO_DEFAULT_LIB_METADATA` env var.
-    //
-    // Note, however, that the compiler's build system at least wants
-    // path dependencies (eg libstd) to have hashes in filenames. To account for
-    // that we have an extra hack here which reads the
-    // `__CARGO_DEFAULT_LIB_METADATA` environment variable and creates a
-    // hash in the filename if that's present.
-    //
-    // This environment variable should not be relied on! It's
-    // just here for rustbuild. We need a more principled method
-    // doing this eventually.
     let bcx = &cx.bcx;
-    let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
-    let short_name = bcx.target_data.short_name(&unit.kind);
-    if !(unit.mode.is_any_test() || unit.mode.is_check())
-        && (unit.target.is_dylib()
-            || unit.target.is_cdylib()
-            || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
-            || (unit.target.is_executable() && short_name.contains("msvc")))
-        && unit.pkg.package_id().source_id().is_path()
-        && __cargo_default_lib_metadata.is_err()
-    {
+    if !should_use_metadata(bcx, unit) {
         return None;
     }
 
@@ -641,7 +606,7 @@ fn compute_metadata<'a, 'cfg>(
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = __cargo_default_lib_metadata {
+    if let Ok(ref channel) = env::var("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -687,4 +652,54 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut SipHasher) {
     // The backend version ("LLVM version") might become more relevant in
     // the future when cranelift sees more use, and people want to switch
     // between different backends without recompiling.
+}
+
+/// Returns whether or not this unit should use a metadata hash.
+fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> bool {
+    if unit.mode.is_doc_test() {
+        // Doc tests do not have metadata.
+        return false;
+    }
+    if unit.mode.is_any_test() || unit.mode.is_check() {
+        // These always use metadata.
+        return true;
+    }
+    // No metadata in these cases:
+    //
+    // - dylibs:
+    //   - macOS encodes the dylib name in the executable, so it can't be renamed.
+    //   - TODO: Are there other good reasons? If not, maybe this should be macos specific?
+    // - Windows MSVC executables: The path to the PDB is embedded in the
+    //   executable, and we don't want the PDB path to include the hash in it.
+    // - wasm32 executables: When using emscripten, the path to the .wasm file
+    //   is embedded in the .js file, so we don't want the hash in there.
+    //   TODO: Is this necessary for wasm32-unknown-unknown?
+    // - apple executables: The executable name is used in the dSYM directory
+    //   (such as `target/debug/foo.dSYM/Contents/Resources/DWARF/foo-64db4e4bf99c12dd`).
+    //   Unfortunately this causes problems with our current backtrace
+    //   implementation which looks for a file matching the exe name exactly.
+    //   See https://github.com/rust-lang/rust/issues/72550#issuecomment-638501691
+    //   for more details.
+    //
+    // This is only done for local packages, as we don't expect to export
+    // dependencies.
+    //
+    // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
+    // force metadata in the hash. This is only used for building libstd. For
+    // example, if libstd is placed in a common location, we don't want a file
+    // named /usr/lib/libstd.so which could conflict with other rustc
+    // installs. TODO: Is this still a realistic concern?
+    // See https://github.com/rust-lang/cargo/issues/3005
+    let short_name = bcx.target_data.short_name(&unit.kind);
+    if (unit.target.is_dylib()
+        || unit.target.is_cdylib()
+        || (unit.target.is_executable() && short_name.starts_with("wasm32-"))
+        || (unit.target.is_executable() && short_name.contains("msvc"))
+        || (unit.target.is_executable() && short_name.contains("-apple-")))
+        && unit.pkg.package_id().source_id().is_path()
+        && env::var("__CARGO_DEFAULT_LIB_METADATA").is_err()
+    {
+        return false;
+    }
+    true
 }

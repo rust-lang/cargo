@@ -4162,7 +4162,7 @@ fn uplift_dsym_of_bin_on_mac() {
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
-    assert!(p.target_debug_dir().join("examples/c.dSYM").is_symlink());
+    assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
 }
