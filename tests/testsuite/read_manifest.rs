@@ -195,19 +195,6 @@ fn cargo_read_manifest_defaults_readme_if_true() {
         .build();
 
     p.cargo("read-manifest")
-        .with_json(&manifest_output(&format!(r#""{}""#, "README.md")))
+        .with_json(&manifest_output(r#""README.md""#))
         .run();
-}
-
-// If a file named README.md does not exist, and `readme = true`, it should panic.
-#[cargo_test]
-#[should_panic]
-fn cargo_read_manifest_panics_if_default_readme_not_found() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest_with_readme("foo", "true"))
-        .file("README.txt", "Sample project")
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .build();
-
-    p.cargo("read-manifest").run();
 }

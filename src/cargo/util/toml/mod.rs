@@ -1209,18 +1209,11 @@ impl TomlManifest {
             project.namespaced_features.unwrap_or(false),
         )?;
 
-        let readme = readme_for_project(package_root, project);
-        if let Some(ref r) = readme {
-            if !package_root.join(r).is_file() {
-                bail!("readme file with name '{}' was not found", r);
-            }
-        };
-
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
-            readme,
+            readme: readme_for_project(package_root, project),
             authors: project.authors.clone().unwrap_or_default(),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
