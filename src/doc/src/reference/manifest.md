@@ -427,7 +427,7 @@ external tools may wish to use them in a consistent fashion, such as referring
 to the data in `workspace.metadata` if data is missing from `package.metadata`,
 if that makes sense for the tool in question.
 
-[workspace-metadata](workspaces.md#the-workspace-metadata-table)
+[workspace-metadata]: workspaces.md#the-workspacemetadata-table
 
 #### The `default-run` field
 
