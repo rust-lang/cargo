@@ -44,8 +44,13 @@ jobs:
           path: ~/.cargo
           key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
-      - run: bash ci/install-rustup.bash
-      - run: bash ci/install-rust.bash ${{ matrix.rust }}
+      - run: |
+          rustup update --no-self-update ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+      - run: |
+          rustup -V
+          rustc -Vv
+          cargo -V
       - if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -76,8 +81,13 @@ jobs:
           path: ~/.cargo
           key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
           restore-keys: ${{ runner.os }}-cargo-home
-      - run: bash ci/install-rustup.bash
-      - run: bash ci/install-rust.bash beta
+      - run: |
+          rustup update --no-self-update nightly
+          rustup default nightly
+      - run: |
+          rustup -V
+          rustc -Vv
+          cargo -V
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
       # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
