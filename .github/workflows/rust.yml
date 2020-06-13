@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: |
           rustup update --no-self-update ${{ matrix.rust }}
@@ -58,7 +58,7 @@ jobs:
           cargo fmt -- --check
       - run: cargo build --verbose
       - run: cargo test --verbose
-      # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
+      # FIXME: Use `cargo install` when we switch to Rust 1.41.0
       - name: Before cache
         shell: bash
         run: |
@@ -79,7 +79,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo
-          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.toml') }}-${{ hashFiles('.github/workflows/rust.yml') }}
+          key: ${{ runner.os }}-cargo-home-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-home
       - run: |
           rustup update --no-self-update nightly
@@ -90,14 +90,7 @@ jobs:
           cargo -V
       - run: rustup component add clippy
       - run: cargo clippy --all --all-targets
-      # FIXME: Use `cargo install` directly when Rust 1.41.0 is out
       - name: Before cache
-        shell: bash
         run: |
-          case ${{ runner.os }} in
-            Linux ) OS=linux;;
-            Windows ) OS=windows;;
-            macOS ) OS=osx;;
-          esac
-          curl -sSL "https://github.com/lzutao/cargo-cache/releases/download/0.3.3/cargo-cache-0.3.3-${OS}.tar.gz" | tar -xzf - -C ~/.cargo/bin
+          cargo install --debug --bin cargo-cache -- cargo-cache
           cargo cache --autoclean
