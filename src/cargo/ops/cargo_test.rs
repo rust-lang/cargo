@@ -137,6 +137,7 @@ fn run_doc_tests(
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
+    let doctest_xcompile = config.cli_unstable().doctest_xcompile;
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -145,9 +146,16 @@ fn run_doc_tests(
             unit,
         } = doctest_info;
 
-        // Skip any `--target` tests unless `doctest-xcompile` is specified.
-        if !config.cli_unstable().doctest_xcompile && !unit.kind.is_host() {
-            continue;
+        if !doctest_xcompile {
+            match unit.kind {
+                CompileKind::Host => {}
+                CompileKind::Target(target) => {
+                    if target.short_name() != compilation.host {
+                        // Skip doctests, -Zdoctest-xcompile not enabled.
+                        continue;
+                    }
+                }
+            }
         }
 
         config.shell().status("Doc-tests", unit.target.name())?;
@@ -157,7 +165,7 @@ fn run_doc_tests(
             .arg("--crate-name")
             .arg(&unit.target.crate_name());
 
-        if config.cli_unstable().doctest_xcompile {
+        if doctest_xcompile {
             if let CompileKind::Target(target) = unit.kind {
                 // use `rustc_target()` to properly handle JSON target paths
                 p.arg("--target").arg(target.rustc_target());

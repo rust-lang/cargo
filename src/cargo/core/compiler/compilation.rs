@@ -66,6 +66,9 @@ pub struct Compilation<'cfg> {
     /// Flags to pass to rustdoc when invoked from cargo test, per package.
     pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
+    /// The target host triple.
+    pub host: String,
+
     config: &'cfg Config,
 
     /// Rustc process to be used by default
@@ -123,6 +126,7 @@ impl<'cfg> Compilation<'cfg> {
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
             config: bcx.config,
+            host: bcx.host_triple().to_string(),
             rustc_process: rustc,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
