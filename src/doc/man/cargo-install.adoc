@@ -135,6 +135,8 @@ available.
 
 include::options-registry.adoc[]
 
+include::options-index.adoc[]
+
 include::options-features.adoc[]
 
 === Compilation Options
