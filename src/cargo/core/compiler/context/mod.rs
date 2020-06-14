@@ -209,6 +209,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
+                    linker: self.bcx.linker(unit.kind),
                 });
             }
 

@@ -20,6 +20,8 @@ pub struct Doctest {
     pub args: Vec<OsString>,
     /// Whether or not -Zunstable-options is needed.
     pub unstable_opts: bool,
+    /// The -Clinker value to use.
+    pub linker: Option<PathBuf>,
 }
 
 /// A structure returning the result of a compilation.

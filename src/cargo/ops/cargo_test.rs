@@ -143,6 +143,7 @@ fn run_doc_tests(
             args,
             unstable_opts,
             unit,
+            linker,
         } = doctest_info;
 
         // Skip any `--target` tests unless `doctest-xcompile` is specified.
@@ -169,6 +170,11 @@ fn run_doc_tests(
                 for arg in runtool_args {
                     p.arg("--runtool-arg").arg(arg);
                 }
+            }
+            if let Some(linker) = linker {
+                let mut joined = OsString::from("linker=");
+                joined.push(linker);
+                p.arg("-C").arg(joined);
             }
         }
 
