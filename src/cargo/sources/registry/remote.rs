@@ -1,4 +1,4 @@
-use crate::core::{InternedString, PackageId, SourceId};
+use crate::core::{GitReference, InternedString, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
@@ -32,6 +32,7 @@ pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
     cache_path: Filesystem,
     source_id: SourceId,
+    index_git_ref: GitReference,
     config: &'cfg Config,
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
@@ -46,6 +47,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
+            // TODO: we should probably make this configurable
+            index_git_ref: GitReference::Branch("master".to_string()),
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
@@ -97,7 +100,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
-            let oid = self.repo()?.refname_to_id("refs/remotes/origin/master")?;
+            let repo = self.repo()?;
+            let oid = self.index_git_ref.resolve(repo)?.0;
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())
@@ -227,11 +231,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .shell()
             .status("Updating", self.source_id.display_index())?;
 
-        // git fetch origin master
+        // Fetch the latest version of our `index_git_ref` into the index
+        // checkout.
         let url = self.source_id.url();
-        let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url.as_str(), refspec, self.config)
+        git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
 
