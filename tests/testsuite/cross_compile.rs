@@ -396,6 +396,7 @@ fn no_cross_doctests() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
+[DOCTEST] foo
 ",
             triple = target
         ))
