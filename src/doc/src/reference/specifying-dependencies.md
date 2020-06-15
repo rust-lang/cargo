@@ -137,7 +137,7 @@ Cargo will fetch the `git` repository at this location then look for a
 of a workspace and setting `git` to the repository containing the workspace).
 
 Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our package.
+we intend to use the latest commit on the main branch to build our package.
 You can combine the `git` key with the `rev`, `tag`, or `branch` keys to
 specify something else. Here's an example of specifying that you want to use
 the latest commit on a branch named `next`:

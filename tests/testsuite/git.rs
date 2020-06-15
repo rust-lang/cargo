@@ -2784,3 +2784,51 @@ to proceed despite [..]
     git::commit(&repo);
     git_project.cargo("package --no-verify").run();
 }
+
+#[cargo_test]
+fn default_not_master() {
+    let project = project();
+
+    // Create a repository with a `master` branch ...
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project.file("Cargo.toml", &basic_lib_manifest("dep1"))
+    });
+
+    // Then create a `main` branch with actual code, and set the head of the
+    // repository (default branch) to `main`.
+    git_project.change_file("src/lib.rs", "pub fn foo() {}");
+    git::add(&repo);
+    let rev = git::commit(&repo);
+    let commit = repo.find_commit(rev).unwrap();
+    repo.branch("main", &commit, false).unwrap();
+    repo.set_head("refs/heads/main").unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { dep1::foo() }")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] git repository `[..]`
+[COMPILING] dep1 v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+}
