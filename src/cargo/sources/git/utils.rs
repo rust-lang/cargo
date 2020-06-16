@@ -989,6 +989,14 @@ fn github_up_to_date(
         anyhow::bail!("too many segments on URL");
     }
 
+    // Trim off the `.git` from the repository, if present, since that's
+    // optional for GitHub and won't work when we try to use the API as well.
+    let repository = if repository.ends_with(".git") {
+        &repository[..repository.len() - 4]
+    } else {
+        repository
+    };
+
     let url = format!(
         "https://api.github.com/repos/{}/{}/commits/{}",
         username, repository, github_branch_name,
