@@ -15,27 +15,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use url::Url;
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct GitRevision(pub git2::Oid);
-
-impl ser::Serialize for GitRevision {
-    fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        serialize_str(self, s)
-    }
-}
-
 fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
 where
     T: fmt::Display,
     S: ser::Serializer,
 {
     s.collect_str(t)
-}
-
-impl fmt::Display for GitRevision {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
 }
 
 pub struct GitShortID(git2::Buf);
@@ -71,7 +56,8 @@ pub struct GitDatabase {
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
     location: PathBuf,
-    revision: GitRevision,
+    #[serde(serialize_with = "serialize_str")]
+    revision: git2::Oid,
     #[serde(skip_serializing)]
     repo: git2::Repository,
 }
@@ -87,16 +73,18 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<GitRevision> {
+    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<git2::Oid> {
         reference.resolve(&self.db_at(path)?.repo)
     }
 
     pub fn checkout(
         &self,
         into: &Path,
+        db: Option<GitDatabase>,
         reference: &GitReference,
+        locked_rev: Option<git2::Oid>,
         cargo_config: &Config,
-    ) -> CargoResult<(GitDatabase, GitRevision)> {
+    ) -> CargoResult<(GitDatabase, git2::Oid)> {
         let format_error = |e: anyhow::Error, operation| {
             let may_be_libgit_fault = e
                 .chain()
@@ -130,23 +118,40 @@ impl GitRemote {
             e.context(msg)
         };
 
-        let mut repo_and_rev = None;
-        if let Ok(mut repo) = git2::Repository::open(into) {
-            self.fetch_into(&mut repo, reference, cargo_config)
+        // If we have a previous instance of `GitDatabase` then fetch into that
+        // if we can. If that can successfully load our revision then we've
+        // populated the database with the latest version of `reference`, so
+        // return that database and the rev we resolve to.
+        if let Some(mut db) = db {
+            fetch(&mut db.repo, self.url.as_str(), reference, cargo_config)
                 .map_err(|e| format_error(e, "fetch"))?;
-            if let Ok(rev) = reference.resolve(&repo) {
-                repo_and_rev = Some((repo, rev));
+            match locked_rev {
+                Some(rev) => {
+                    if db.contains(rev) {
+                        return Ok((db, rev));
+                    }
+                }
+                None => {
+                    if let Ok(rev) = reference.resolve(&db.repo) {
+                        return Ok((db, rev));
+                    }
+                }
             }
         }
-        let (repo, rev) = match repo_and_rev {
-            Some(pair) => pair,
-            None => {
-                let repo = self
-                    .clone_into(into, reference, cargo_config)
-                    .map_err(|e| format_error(e, "clone"))?;
-                let rev = reference.resolve(&repo)?;
-                (repo, rev)
-            }
+
+        // Otherwise start from scratch to handle corrupt git repositories.
+        // After our fetch (which is interpreted as a clone now) we do the same
+        // resolution to figure out what we cloned.
+        if into.exists() {
+            paths::remove_dir_all(into)?;
+        }
+        paths::create_dir_all(into)?;
+        let mut repo = init(into, true)?;
+        fetch(&mut repo, self.url.as_str(), reference, cargo_config)
+            .map_err(|e| format_error(e, "clone"))?;
+        let rev = match locked_rev {
+            Some(rev) => rev,
+            None => reference.resolve(&repo)?,
         };
 
         Ok((
@@ -167,36 +172,12 @@ impl GitRemote {
             repo,
         })
     }
-
-    fn fetch_into(
-        &self,
-        dst: &mut git2::Repository,
-        reference: &GitReference,
-        cargo_config: &Config,
-    ) -> CargoResult<()> {
-        fetch(dst, self.url.as_str(), reference, cargo_config)
-    }
-
-    fn clone_into(
-        &self,
-        dst: &Path,
-        reference: &GitReference,
-        cargo_config: &Config,
-    ) -> CargoResult<git2::Repository> {
-        if dst.exists() {
-            paths::remove_dir_all(dst)?;
-        }
-        paths::create_dir_all(dst)?;
-        let mut repo = init(dst, true)?;
-        fetch(&mut repo, self.url.as_str(), reference, cargo_config)?;
-        Ok(repo)
-    }
 }
 
 impl GitDatabase {
     pub fn copy_to(
         &self,
-        rev: GitRevision,
+        rev: git2::Oid,
         dest: &Path,
         cargo_config: &Config,
     ) -> CargoResult<GitCheckout<'_>> {
@@ -230,14 +211,22 @@ impl GitDatabase {
         Ok(checkout)
     }
 
-    pub fn to_short_id(&self, revision: &GitRevision) -> CargoResult<GitShortID> {
-        let obj = self.repo.find_object(revision.0, None)?;
+    pub fn to_short_id(&self, revision: git2::Oid) -> CargoResult<GitShortID> {
+        let obj = self.repo.find_object(revision, None)?;
         Ok(GitShortID(obj.short_id()?))
+    }
+
+    pub fn contains(&self, oid: git2::Oid) -> bool {
+        self.repo.revparse_single(&oid.to_string()).is_ok()
+    }
+
+    pub fn resolve(&self, r: &GitReference) -> CargoResult<git2::Oid> {
+        r.resolve(&self.repo)
     }
 }
 
 impl GitReference {
-    pub fn resolve(&self, repo: &git2::Repository) -> CargoResult<GitRevision> {
+    pub fn resolve(&self, repo: &git2::Repository) -> CargoResult<git2::Oid> {
         let id = match self {
             // Note that we resolve the named tag here in sync with where it's
             // fetched into via `fetch` below.
@@ -269,7 +258,7 @@ impl GitReference {
                 }
             }
         };
-        Ok(GitRevision(id))
+        Ok(id)
     }
 }
 
@@ -277,7 +266,7 @@ impl<'a> GitCheckout<'a> {
     fn new(
         path: &Path,
         database: &'a GitDatabase,
-        revision: GitRevision,
+        revision: git2::Oid,
         repo: git2::Repository,
     ) -> GitCheckout<'a> {
         GitCheckout {
@@ -291,7 +280,7 @@ impl<'a> GitCheckout<'a> {
     fn clone_into(
         into: &Path,
         database: &'a GitDatabase,
-        revision: GitRevision,
+        revision: git2::Oid,
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
@@ -336,7 +325,7 @@ impl<'a> GitCheckout<'a> {
 
     fn is_fresh(&self) -> bool {
         match self.repo.revparse_single("HEAD") {
-            Ok(ref head) if head.id() == self.revision.0 => {
+            Ok(ref head) if head.id() == self.revision => {
                 // See comments in reset() for why we check this
                 self.location.join(".cargo-ok").exists()
             }
@@ -364,7 +353,7 @@ impl<'a> GitCheckout<'a> {
         let ok_file = self.location.join(".cargo-ok");
         let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
-        let object = self.repo.find_object(self.revision.0, None)?;
+        let object = self.repo.find_object(self.revision, None)?;
         reset(&self.repo, &object, config)?;
         paths::create(ok_file)?;
         Ok(())
