@@ -220,14 +220,30 @@ impl Layout {
     }
 }
 
+/// Marks the directory as excluded from archives/backups.
+///
+/// This is recommended to prevent derived/temporary files from bloating backups. There are two
+/// mechanisms used to achieve this right now:
+///
+/// * A dedicated resource property excluding from Time Machine backups on macOS
+/// * CACHEDIR.TAG files supported by various tools in a platform-independent way
+fn exclude_from_backups(path: &Path) {
+    exclude_from_time_machine(path);
+    let _ = std::fs::write(
+        path.join("CACHEDIR.TAG"),
+        "Signature: 8a477f597d28d172789f06886806bc55
+# This file is a cache directory tag created by cargo.
+# For information about cache directory tags see https://bford.info/cachedir/",
+    );
+    // Similarly to exclude_from_time_machine() we ignore errors here as it's an optional feature.
+}
+
 #[cfg(not(target_os = "macos"))]
-fn exclude_from_backups(_: &Path) {}
+fn exclude_from_time_machine(path: &Path) {}
 
 #[cfg(target_os = "macos")]
 /// Marks files or directories as excluded from Time Machine on macOS
-///
-/// This is recommended to prevent derived/temporary files from bloating backups.
-fn exclude_from_backups(path: &Path) {
+fn exclude_from_time_machine(path: &Path) {
     use core_foundation::base::TCFType;
     use core_foundation::{number, string, url};
     use std::ptr;
