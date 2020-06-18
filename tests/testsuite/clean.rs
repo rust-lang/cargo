@@ -293,6 +293,7 @@ fn clean_verbose() {
 [REMOVING] [..]
 [REMOVING] [..]
 [REMOVING] [..]
+[REMOVING] [..]
 ",
         )
         .run();
