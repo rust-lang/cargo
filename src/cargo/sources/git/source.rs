@@ -1,23 +1,22 @@
-use std::fmt::{self, Debug, Formatter};
-
-use log::trace;
-use url::Url;
-
 use crate::core::source::{MaybePackage, Source, SourceId};
 use crate::core::GitReference;
 use crate::core::{Dependency, Package, PackageId, Summary};
-use crate::sources::git::utils::{GitRemote, GitRevision};
+use crate::sources::git::utils::GitRemote;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::Config;
+use anyhow::Context;
+use log::trace;
+use std::fmt::{self, Debug, Formatter};
+use url::Url;
 
 pub struct GitSource<'cfg> {
     remote: GitRemote,
-    reference: GitReference,
+    manifest_reference: GitReference,
+    locked_rev: Option<git2::Oid>,
     source_id: SourceId,
     path_source: Option<PathSource<'cfg>>,
-    rev: Option<GitRevision>,
     ident: String,
     config: &'cfg Config,
 }
@@ -29,17 +28,17 @@ impl<'cfg> GitSource<'cfg> {
         let remote = GitRemote::new(source_id.url());
         let ident = ident(&source_id);
 
-        let reference = match source_id.precise() {
-            Some(s) => GitReference::Rev(s.to_string()),
-            None => source_id.git_reference().unwrap().clone(),
-        };
-
         let source = GitSource {
             remote,
-            reference,
+            manifest_reference: source_id.git_reference().unwrap().clone(),
+            locked_rev: match source_id.precise() {
+                Some(s) => Some(git2::Oid::from_str(s).with_context(|| {
+                    format!("precise value for git is not a git revision: {}", s)
+                })?),
+                None => None,
+            },
             source_id,
             path_source: None,
-            rev: None,
             ident,
             config,
         };
@@ -76,7 +75,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
-        match self.reference.pretty_ref() {
+        match self.manifest_reference.pretty_ref() {
             Some(s) => write!(f, " ({})", s),
             None => Ok(()),
         }
@@ -117,52 +116,70 @@ impl<'cfg> Source for GitSource<'cfg> {
         let git_path = self.config.assert_package_cache_locked(&git_path);
         let db_path = git_path.join("db").join(&self.ident);
 
-        if self.config.offline() && !db_path.exists() {
-            anyhow::bail!(
-                "can't checkout from '{}': you are in the offline mode (--offline)",
-                self.remote.url()
-            );
-        }
+        let db = self.remote.db_at(&db_path).ok();
+        let (db, actual_rev) = match (self.locked_rev, db) {
+            // If we have a locked revision, and we have a preexisting database
+            // which has that revision, then no update needs to happen.
+            (Some(rev), Some(db)) if db.contains(rev) => (db, rev),
 
-        // Resolve our reference to an actual revision, and check if the
-        // database already has that revision. If it does, we just load a
-        // database pinned at that revision, and if we don't we issue an update
-        // to try to find the revision.
-        let actual_rev = self.remote.rev_for(&db_path, &self.reference);
-        let should_update = actual_rev.is_err() || self.source_id.precise().is_none();
+            // If we're in offline mode, we're not locked, and we have a
+            // database, then try to resolve our reference with the preexisting
+            // repository.
+            (None, Some(db)) if self.config.offline() => {
+                let rev = db.resolve(&self.manifest_reference).with_context(|| {
+                    "failed to lookup reference in preexisting repository, and \
+                     can't check for updates in offline mode (--offline)"
+                })?;
+                (db, rev)
+            }
 
-        let (db, actual_rev) = if should_update && !self.config.offline() {
-            self.config.shell().status(
-                "Updating",
-                format!("git repository `{}`", self.remote.url()),
-            )?;
+            // ... otherwise we use this state to update the git database. Note
+            // that we still check for being offline here, for example in the
+            // situation that we have a locked revision but the database
+            // doesn't have it.
+            (locked_rev, db) => {
+                if self.config.offline() {
+                    anyhow::bail!(
+                        "can't checkout from '{}': you are in the offline mode (--offline)",
+                        self.remote.url()
+                    );
+                }
+                self.config.shell().status(
+                    "Updating",
+                    format!("git repository `{}`", self.remote.url()),
+                )?;
 
-            trace!("updating git source `{:?}`", self.remote);
+                trace!("updating git source `{:?}`", self.remote);
 
-            self.remote
-                .checkout(&db_path, &self.reference, self.config)?
-        } else {
-            (self.remote.db_at(&db_path)?, actual_rev.unwrap())
+                self.remote.checkout(
+                    &db_path,
+                    db,
+                    &self.manifest_reference,
+                    locked_rev,
+                    self.config,
+                )?
+            }
         };
 
         // Don’t use the full hash, in order to contribute less to reaching the
         // path length limit on Windows. See
         // <https://github.com/servo/servo/pull/14397>.
-        let short_id = db.to_short_id(&actual_rev).unwrap();
+        let short_id = db.to_short_id(actual_rev)?;
 
+        // Check out `actual_rev` from the database to a scoped location on the
+        // filesystem. This will use hard links and such to ideally make the
+        // checkout operation here pretty fast.
         let checkout_path = git_path
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
-
-        // Copy the database to the checkout location.
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);
-        self.rev = Some(actual_rev);
+        self.locked_rev = Some(actual_rev);
         self.path_source.as_mut().unwrap().update()
     }
 
@@ -183,7 +200,7 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
-        Ok(self.rev.as_ref().unwrap().to_string())
+        Ok(self.locked_rev.as_ref().unwrap().to_string())
     }
 
     fn describe(&self) -> String {
