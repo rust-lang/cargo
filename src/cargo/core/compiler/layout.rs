@@ -239,7 +239,7 @@ fn exclude_from_backups(path: &Path) {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn exclude_from_time_machine(path: &Path) {}
+fn exclude_from_time_machine(_: &Path) {}
 
 #[cfg(target_os = "macos")]
 /// Marks files or directories as excluded from Time Machine on macOS
