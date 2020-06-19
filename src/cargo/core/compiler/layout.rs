@@ -102,7 +102,9 @@ use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
 use crate::util::paths;
 use crate::util::{CargoResult, FileLock};
+use std::fs;
 use std::path::{Path, PathBuf};
+use tempfile::Builder as TempFileBuilder;
 
 /// Contains the paths of all target output locations.
 ///
@@ -146,13 +148,42 @@ impl Layout {
         if let Some(target) = target {
             root.push(target.short_name());
         }
+        // We need root to exist before we do the tempdir/rename dance inside it.
+        if !root.as_path_unlocked().exists() {
+            root.create_dir()?;
+        }
         let dest = root.join(dest);
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the
         // system supports it since this is a freshly created folder.
+        //
+        // We do this in two steps (first create a temporary directory and exlucde
+        // it from backups, then rename it to the desired name. If we created the
+        // directory directly where it should be and then excluded it from backups
+        // we would risk a situation where cargo is interrupted right after the directory
+        // creation but before the exclusion the the directory would remain non-excluded from
+        // backups because we only perform exclusion right after we created the directory
+        // ourselves.
         if !dest.as_path_unlocked().exists() {
-            dest.create_dir()?;
-            exclude_from_backups(dest.as_path_unlocked());
+            // We need the tempdir created in root instead of $TMP, because only then we can be
+            // easily sure that rename() will succeed (the new name needs to be on the same mount
+            // point as the old one).
+            let tempdir = TempFileBuilder::new()
+                .prefix("cargo-target")
+                .tempdir_in(root.as_path_unlocked())?
+                .into_path();
+            exclude_from_backups(&tempdir);
+            // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
+            // here to create the directory directly and fs::create_dir_all() explicitly treats
+            // the directory being created concurrently by another thread or process as success,
+            // hence the check below to follow the existing behavior. If we get an error at
+            // rename() and suddently the directory (which didn't exist a moment earlier) exists
+            // we can infer from it it's another cargo process doing work.
+            if let Err(e) = fs::rename(&tempdir, dest.as_path_unlocked()) {
+                if !dest.as_path_unlocked().exists() {
+                    return Err(anyhow::Error::from(e));
+                }
+            }
         }
 
         // For now we don't do any more finer-grained locking on the artifact
