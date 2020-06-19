@@ -170,16 +170,15 @@ impl Layout {
             // point as the old one).
             let tempdir = TempFileBuilder::new()
                 .prefix("cargo-target")
-                .tempdir_in(root.as_path_unlocked())?
-                .into_path();
-            exclude_from_backups(&tempdir);
+                .tempdir_in(root.as_path_unlocked())?;
+            exclude_from_backups(&tempdir.path());
             // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
             // here to create the directory directly and fs::create_dir_all() explicitly treats
             // the directory being created concurrently by another thread or process as success,
             // hence the check below to follow the existing behavior. If we get an error at
             // rename() and suddently the directory (which didn't exist a moment earlier) exists
             // we can infer from it it's another cargo process doing work.
-            if let Err(e) = fs::rename(&tempdir, dest.as_path_unlocked()) {
+            if let Err(e) = fs::rename(tempdir.path(), dest.as_path_unlocked()) {
                 if !dest.as_path_unlocked().exists() {
                     return Err(anyhow::Error::from(e));
                 }
