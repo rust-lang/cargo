@@ -152,6 +152,7 @@ impl Layout {
         if !root.as_path_unlocked().exists() {
             root.create_dir()?;
         }
+        let dest_base = dest;
         let dest = root.join(dest);
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the
@@ -169,7 +170,7 @@ impl Layout {
             // easily sure that rename() will succeed (the new name needs to be on the same mount
             // point as the old one).
             let tempdir = TempFileBuilder::new()
-                .prefix("cargo-target")
+                .prefix(dest_base)
                 .tempdir_in(root.as_path_unlocked())?;
             exclude_from_backups(&tempdir.path());
             // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
