@@ -5,7 +5,7 @@ authors = ["Alex Crichton <alex@alexcrichton.com>"]
 edition = "2018"
 
 [dependencies]
-cargo = { path = "../.." }
+cargo = { path = "../..", default-features = false }
 proptest = "0.9.1"
 lazy_static = "1.3.0"
 varisat = "0.2.1"
