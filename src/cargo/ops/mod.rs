@@ -18,6 +18,7 @@ pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_run::run;
 pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_uninstall::uninstall;
+#[cfg(feature = "op-fix")]
 pub use self::fix::{fix, fix_maybe_exec_rustc, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::HttpTimeout;
@@ -46,6 +47,7 @@ mod cargo_run;
 mod cargo_test;
 mod cargo_uninstall;
 mod common_for_install_and_uninstall;
+#[cfg(feature = "op-fix")]
 mod fix;
 mod lockfile;
 mod registry;

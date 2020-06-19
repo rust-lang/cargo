@@ -32,7 +32,12 @@ fn main() {
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc() {
+    #[cfg(feature = "op-fix")]
+    let fix_maybe_exec_rustc = cargo::ops::fix_maybe_exec_rustc();
+    #[cfg(not(feature = "op-fix"))]
+    let fix_maybe_exec_rustc = CargoResult::Ok(false);
+
+    let result = match fix_maybe_exec_rustc {
         Ok(true) => Ok(()),
         Ok(false) => {
             let _token = cargo::util::job::setup();
