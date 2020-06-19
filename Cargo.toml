@@ -63,7 +63,7 @@ termcolor = "1.0"
 toml = "0.5.3"
 unicode-xid = "0.2.0"
 url = "2.0"
-walkdir = "2.2"
+walkdir = { version = "2.2", optional = true }
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
@@ -105,6 +105,7 @@ features = [
 [dev-dependencies]
 cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
 cargo-test-support = { path = "crates/cargo-test-support", version = "0.1.0" }
+walkdir = "2.2"
 
 [[bin]]
 name = "cargo"
@@ -112,10 +113,11 @@ test = false
 doc = false
 
 [features]
-default = ["op-install", "op-doc-open", "op-fix"]
+default = ["op-install", "op-doc-open", "op-fix", "op-package-publish"]
 deny-warnings = []
 vendored-openssl = ["openssl/vendored"]
 pretty-env-logger = ["pretty_env_logger"]
 op-install = ["tempfile"]
 op-doc-open = ["opener"]
 op-fix = ["rustfix"]
+op-package-publish = ["walkdir"]

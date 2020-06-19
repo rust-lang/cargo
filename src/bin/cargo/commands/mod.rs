@@ -20,8 +20,10 @@ pub fn builtin() -> Vec<App> {
         metadata::cli(),
         new::cli(),
         owner::cli(),
+        #[cfg(feature = "op-package-publish")]
         package::cli(),
         pkgid::cli(),
+        #[cfg(feature = "op-package-publish")]
         publish::cli(),
         read_manifest::cli(),
         run::cli(),
@@ -59,8 +61,10 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "metadata" => metadata::exec,
         "new" => new::exec,
         "owner" => owner::exec,
+        #[cfg(feature = "op-package-publish")]
         "package" => package::exec,
         "pkgid" => pkgid::exec,
+        #[cfg(feature = "op-package-publish")]
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
         "run" => run::exec,
@@ -98,8 +102,10 @@ pub mod login;
 pub mod metadata;
 pub mod new;
 pub mod owner;
+#[cfg(feature = "op-package-publish")]
 pub mod package;
 pub mod pkgid;
+#[cfg(feature = "op-package-publish")]
 pub mod publish;
 pub mod read_manifest;
 pub mod run;

@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "op-package-publish"), allow(unused))]
+
 use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -16,6 +18,7 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::source::Source;
 use crate::core::{Package, SourceId, Workspace};
+#[cfg(feature = "op-package-publish")]
 use crate::ops;
 use crate::sources::{RegistrySource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::config::{self, Config, SslVersionConfig, SslVersionConfigRange};
@@ -50,6 +53,7 @@ pub struct PublishOpts<'cfg> {
     pub no_default_features: bool,
 }
 
+#[cfg(feature = "op-package-publish")]
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let pkg = ws.current()?;
 
@@ -170,6 +174,7 @@ fn verify_dependencies(
     Ok(())
 }
 
+#[cfg(feature = "op-package-publish")]
 fn transmit(
     config: &Config,
     pkg: &Package,
