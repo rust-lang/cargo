@@ -77,6 +77,16 @@ jobs:
   variables:
     TOOLCHAIN: stable
 
+- job: no_default_features
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+    - template: ci/azure-install-rust.yml
+    - bash: cargo check --no-default-features
+      displayName: "cargo check --no-default-features"
+  variables:
+    TOOLCHAIN: stable
+
 - job: build_std
   pool:
     vmImage: ubuntu-16.04
