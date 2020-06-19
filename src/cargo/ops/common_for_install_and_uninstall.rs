@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "op-install"), allow(dead_code))]
+
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::env;
 use std::io::prelude::*;

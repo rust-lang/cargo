@@ -8,6 +8,7 @@ pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
+#[cfg(feature = "op-install")]
 pub use self::cargo_install::{install, install_list};
 pub use self::cargo_new::{init, new, NewOptions, VersionControl};
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
@@ -34,6 +35,7 @@ mod cargo_compile;
 mod cargo_doc;
 mod cargo_fetch;
 mod cargo_generate_lockfile;
+#[cfg(feature = "op-install")]
 mod cargo_install;
 mod cargo_new;
 mod cargo_output_metadata;

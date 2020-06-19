@@ -12,6 +12,7 @@ pub fn builtin() -> Vec<App> {
         generate_lockfile::cli(),
         git_checkout::cli(),
         init::cli(),
+        #[cfg(feature = "op-install")]
         install::cli(),
         locate_project::cli(),
         login::cli(),
@@ -49,6 +50,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
         "init" => init::exec,
+        #[cfg(feature = "op-install")]
         "install" => install::exec,
         "locate-project" => locate_project::exec,
         "login" => login::exec,
@@ -86,6 +88,7 @@ pub mod fix;
 pub mod generate_lockfile;
 pub mod git_checkout;
 pub mod init;
+#[cfg(feature = "op-install")]
 pub mod install;
 pub mod locate_project;
 pub mod login;
