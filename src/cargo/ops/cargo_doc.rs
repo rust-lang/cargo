@@ -108,10 +108,17 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
             }
         }
         None => {
+            #[cfg(feature = "op-doc-open")]
             if let Err(e) = opener::open(&path) {
                 let e = e.into();
                 crate::display_warning_with_error("couldn't open docs", &e, shell);
             }
+            #[cfg(not(feature = "op-doc-open"))]
+            shell.warn(
+                "Ability to open docs disabled at build time. \
+                Please set the BROWSER env var. "
+                    .to_string(),
+            )?;
         }
     };
 
