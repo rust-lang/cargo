@@ -66,7 +66,9 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     pub fn queue(&mut self, key: N, value: V, dependencies: impl IntoIterator<Item = (N, E)>) {
         assert!(!self.dep_map.contains_key(&key));
 
-        let mut my_dependencies = HashSet::new();
+        let dependencies = dependencies.into_iter();
+        let mut my_dependencies = HashSet::with_capacity(dependencies.size_hint().0);
+
         for (dep, edge) in dependencies {
             my_dependencies.insert((dep.clone(), edge.clone()));
             self.reverse_dep_map
