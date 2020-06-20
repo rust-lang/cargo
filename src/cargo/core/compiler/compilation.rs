@@ -82,6 +82,9 @@ pub struct Compilation<'cfg> {
     primary_rustc_process: Option<ProcessBuilder>,
 
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
+
+    /// Target directory for workspace this compilation is in
+    target_dir: OsString,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -139,6 +142,12 @@ impl<'cfg> Compilation<'cfg> {
                 .chain(Some(&CompileKind::Host))
                 .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
+            target_dir: bcx
+                .ws
+                .target_dir()
+                .as_path_unlocked()
+                .as_os_str()
+                .to_os_string(),
         })
     }
 
@@ -272,6 +281,7 @@ impl<'cfg> Compilation<'cfg> {
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
+            .env("CARGO_OUT_DIR", &self.target_dir)
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
