@@ -186,6 +186,7 @@ let version = env!("CARGO_PKG_VERSION");
 * `CARGO_PKG_REPOSITORY` — The repository from the manifest of your package.
 * `CARGO_CRATE_NAME` — The name of the crate that is currently being compiled.
 * `CARGO_BIN_NAME` — The name of the binary that is currently being compiled (if it is a binary). This name does not include any file extension, such as `.exe`.
+* `CARGO_OUT_DIR` — The target directory of your package.
 * `OUT_DIR` — If the package has a build script, this is set to the folder where the build
               script should place its output. See below for more information.
               (Only set during compilation.)
