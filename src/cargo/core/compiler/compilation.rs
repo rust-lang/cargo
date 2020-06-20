@@ -297,6 +297,10 @@ impl<'cfg> Compilation<'cfg> {
                 "CARGO_PKG_LICENSE",
                 metadata.license.as_ref().unwrap_or(&String::new()),
             )
+            .env(
+                "CARGO_PKG_LICENSE_FILE",
+                metadata.license_file.as_ref().unwrap_or(&String::new()),
+            )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
         Ok(cmd)

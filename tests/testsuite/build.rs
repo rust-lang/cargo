@@ -1231,6 +1231,7 @@ fn crate_env_vars() {
         repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
         license = "MIT OR Apache-2.0"
+        license_file = "license.txt"
 
         [[bin]]
         name = "foo-bar"
@@ -1253,6 +1254,7 @@ fn crate_env_vars() {
             static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
             static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
             static LICENSE: &'static str = env!("CARGO_PKG_LICENSE");
+            static LICENSE_FILE: &'static str = env!("CARGO_PKG_LICENSE_FILE");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
             static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
             static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
