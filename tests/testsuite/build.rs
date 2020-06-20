@@ -1254,12 +1254,13 @@ fn crate_env_vars() {
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
             static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
             static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+            static CARGO_OUT_DIR: &'static str = env!("CARGO_OUT_DIR");
 
 
             fn main() {
-                let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
+                let s = format!("{}-{}-{} @ {} in {} out {}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
-                                CARGO_MANIFEST_DIR);
+                                CARGO_MANIFEST_DIR, CARGO_OUT_DIR);
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
@@ -1278,12 +1279,13 @@ fn crate_env_vars() {
             "src/lib.rs",
             r#"
             pub fn version() -> String {
-                format!("{}-{}-{} @ {} in {}",
+                format!("{}-{}-{} @ {} in {} out {}",
                         env!("CARGO_PKG_VERSION_MAJOR"),
                         env!("CARGO_PKG_VERSION_MINOR"),
                         env!("CARGO_PKG_VERSION_PATCH"),
                         env!("CARGO_PKG_VERSION_PRE"),
-                        env!("CARGO_MANIFEST_DIR"))
+                        env!("CARGO_MANIFEST_DIR"),
+                        env!("CARGO_OUT_DIR"))
             }
         "#,
         )
@@ -1294,7 +1296,7 @@ fn crate_env_vars() {
 
     println!("bin");
     p.process(&p.bin("foo-bar"))
-        .with_stdout("0-5-1 @ alpha.1 in [CWD]")
+        .with_stdout("0-5-1 @ alpha.1 in [CWD] out [CWD]/target")
         .run();
 
     println!("test");
