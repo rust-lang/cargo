@@ -143,6 +143,8 @@ include::options-features.adoc[]
 
 include::options-target-triple.adoc[]
 
+include::options-target-dir.adoc[]
+
 *--debug*::
     Build with the `dev` profile instead the `release` profile.
 

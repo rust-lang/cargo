@@ -2,12 +2,12 @@
 .\"     Title: cargo-install
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-06-14
+.\"      Date: 2020-06-20
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INSTALL" "1" "2020-06-14" "\ \&" "\ \&"
+.TH "CARGO\-INSTALL" "1" "2020-06-20" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -343,6 +343,16 @@ Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
 .URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
 documentation for more details.
+.RE
+.sp
+\fB\-\-target\-dir\fP \fIDIRECTORY\fP
+.RS 4
+Directory for all generated artifacts and intermediate files. May also be
+specified with the \fBCARGO_TARGET_DIR\fP environment variable, or the
+\fBbuild.target\-dir\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+Defaults
+to \fBtarget\fP in the root of the workspace.
 .RE
 .sp
 \fB\-\-debug\fP
