@@ -330,7 +330,10 @@ fn install_target_dir() {
     path.push("td_test");
     assert!(path.exists());
 
+    #[cfg(not(windows))]
     path.push("release/foo");
+    #[cfg(windows)]
+    path.push("release/foo.exe");
     assert!(path.exists());
 }
 
