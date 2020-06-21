@@ -1095,6 +1095,72 @@ Caused by:
 }
 
 #[cargo_test]
+/// Assert that unstable options can be configured with the `unstable` table in
+/// cargo config files
+fn config_unstable_table() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+[unstable]
+print-im-a-teapot = 'yes'
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+}
+
+#[cargo_test]
+/// Assert that dotted notation works for configuring unstable options
+fn config_unstable_dotted() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+unstable.print-im-a-teapot = 'yes'
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+}
+
+#[cargo_test]
+/// Assert that Zflags on the CLI take precedence over those from config
+fn config_unstable_cli_wins() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+unstable.print-im-a-teapot = 'yes'
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+
+    let config = ConfigBuilder::new()
+        .unstable_flag("print-im-a-teapot=no")
+        .build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
+}
+
+#[cargo_test]
+/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// errors out the same as it would on the command line
+fn config_unstable_invalid_flag() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+unstable.an-invalid-flag = 'yes'
+",
+    );
+    assert_error(
+        ConfigBuilder::new().build_err().unwrap_err(),
+        "\
+Invalid [unstable] entry in Cargo config
+
+Caused by:
+  unknown `-Z` flag specified: an-invalid-flag",
+    );
+}
+
+#[cargo_test]
 fn table_merge_failure() {
     // Config::merge fails to merge entries in two tables.
     write_config_at(
