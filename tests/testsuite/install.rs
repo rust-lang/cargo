@@ -319,7 +319,7 @@ fn install_target_dir() {
 [INSTALLING] foo v0.0.1 [..]
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] release [..]
-[INSTALLING] [..]foo
+[INSTALLING] [..]foo[EXE]
 [INSTALLED] package `foo v0.0.1 [..]foo[..]` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
 ",
