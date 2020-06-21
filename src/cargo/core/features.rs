@@ -429,7 +429,9 @@ impl CliUnstable {
             Ok(true)
         };
 
-        match k {
+        // Permit dashes or underscores in parsing these
+        let normalized_key = k.replace("_", "-");
+        match normalized_key.as_str() {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
