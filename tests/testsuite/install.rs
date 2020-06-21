@@ -309,6 +309,32 @@ fn install_path() {
 }
 
 #[cargo_test]
+fn install_target_dir() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("install --target-dir td_test")
+        .with_stderr(
+            "\
+[WARNING] Using `cargo install` [..]
+[INSTALLING] foo v0.0.1 [..]
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] release [..]
+[INSTALLING] [..]foo
+[INSTALLED] package `foo v0.0.1 [..]foo[..]` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+
+    let mut path = p.root();
+    path.push("td_test");
+    assert!(path.exists());
+
+    path.push("release/foo");
+    assert!(path.exists());
+}
+
+#[cargo_test]
 fn multiple_crates_error() {
     let p = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
