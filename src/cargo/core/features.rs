@@ -46,6 +46,7 @@
 //! we'll be sure to update this documentation!
 
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -371,16 +372,33 @@ impl CliUnstable {
             );
         }
         for flag in flags {
-            self.add(flag)?;
+            let mut parts = flag.splitn(2, '=');
+            let k = parts.next().unwrap();
+            let v = parts.next();
+            self.add(k, v)?;
         }
         Ok(())
     }
 
-    fn add(&mut self, flag: &str) -> CargoResult<()> {
-        let mut parts = flag.splitn(2, '=');
-        let k = parts.next().unwrap();
-        let v = parts.next();
+    /// Read unstable options from a hashmap.
+    /// Intended for consuming unstable settings from config files
+    pub fn from_table(&mut self, flags: &HashMap<String, String>) -> CargoResult<()> {
+        if !flags.is_empty() && !nightly_features_allowed() {
+            bail!(
+                "the `-Z` flag is only accepted on the nightly channel of Cargo, \
+                 but this is the `{}` channel\n\
+                 {}",
+                channel(),
+                SEE_CHANNELS
+            );
+        }
+        for (k, v) in flags {
+            self.add(&k, Some(v.as_str()))?;
+        }
+        Ok(())
+    }
 
+    fn add(&mut self, k: &str, v: Option<&str>) -> CargoResult<()> {
         fn parse_bool(key: &str, value: Option<&str>) -> CargoResult<bool> {
             match value {
                 None | Some("yes") => Ok(true),
