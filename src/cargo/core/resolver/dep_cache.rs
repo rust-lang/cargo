@@ -402,15 +402,13 @@ impl Requirements<'_> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if let Some(dep) = self
+        if self
             .summary
             .dependencies()
             .iter()
-            .find(|p| p.name_in_toml() == package)
+            .any(|dep| dep.name_in_toml() == package && dep.is_optional())
         {
-            if dep.is_optional() {
-                self.used.insert(package);
-            }
+            self.used.insert(package);
         }
         self.deps
             .entry(package)

@@ -1,7 +1,7 @@
 //! Tests for `[features]` table.
 
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -2112,4 +2112,81 @@ fn slash_optional_enables() {
         .run();
 
     p.cargo("check --features dep/feat").run();
+}
+
+#[cargo_test]
+fn registry_summary_order_doesnt_matter() {
+    // Checks for an issue where the resolver depended on the order of entries
+    // in the registry summary. If there was a non-optional dev-dependency
+    // that appeared before an optional normal dependency, then the resolver
+    // would not activate the optional dependency with a pkg/featname feature
+    // syntax.
+    Package::new("dep", "0.1.0")
+        .feature("feat1", &[])
+        .file(
+            "src/lib.rs",
+            r#"
+                #[cfg(feature="feat1")]
+                pub fn work() {
+                    println!("it works");
+                }
+            "#,
+        )
+        .publish();
+    Package::new("bar", "0.1.0")
+        .feature("bar_feat", &["dep/feat1"])
+        .add_dep(Dependency::new("dep", "0.1.0").dev())
+        .add_dep(Dependency::new("dep", "0.1.0").optional(true))
+        .file(
+            "src/lib.rs",
+            r#"
+                // This will fail to compile without `dep` optional dep activated.
+                extern crate dep;
+
+                pub fn doit() {
+                    dep::work();
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dependencies]
+                bar = { version="0.1", features = ["bar_feat"] }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    bar::doit();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[DOWNLOADED] [..]
+[COMPILING] dep v0.1.0
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/foo[EXE]`
+",
+        )
+        .with_stdout("it works")
+        .run();
 }
