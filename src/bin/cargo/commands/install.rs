@@ -57,6 +57,7 @@ pub fn cli() -> App {
             "Install all examples",
         )
         .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .arg(
             opt("index", "Registry index to install from")
