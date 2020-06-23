@@ -268,6 +268,15 @@ The output has the following format:
     "version": 1,
     /* The absolute path to the root of the workspace. */
     "workspace_root": "/path/to/my-package"
+    /* Workspace metadata.
+       This is null if no metadata is specified. */
+    "metadata": {
+        "docs": {
+            "rs": {
+                "all-features": true
+            }
+        }
+    }
 }
 ----
 

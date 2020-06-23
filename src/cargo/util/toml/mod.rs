@@ -825,6 +825,7 @@ pub struct TomlWorkspace {
     #[serde(rename = "default-members")]
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
+    metadata: Option<toml::Value>,
     resolver: Option<String>,
 }
 
@@ -1230,6 +1231,7 @@ impl TomlManifest {
                 &config.members,
                 &config.default_members,
                 &config.exclude,
+                &config.metadata,
             )),
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
@@ -1414,6 +1416,7 @@ impl TomlManifest {
                 &config.members,
                 &config.default_members,
                 &config.exclude,
+                &config.metadata,
             )),
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
