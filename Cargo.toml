@@ -116,3 +116,6 @@ doc = false
 deny-warnings = []
 vendored-openssl = ["openssl/vendored"]
 pretty-env-logger = ["pretty_env_logger"]
+
+[profile.release.build-override]
+opt-level = 0
