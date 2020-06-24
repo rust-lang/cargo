@@ -11,7 +11,7 @@ command-line flags. Options requiring this will be called out below.
 Anything which can be configured with a Z flag can also be set in the cargo
 config file (`.cargo/config.toml`) in the `unstable` table. For example:
 
-```
+```toml
 [unstable]
 mtime-on-use = 'yes'
 multitarget = 'yes'
