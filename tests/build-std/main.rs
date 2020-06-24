@@ -25,7 +25,6 @@ use std::path::Path;
 fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
     e.env_remove("CARGO_HOME");
     e.env_remove("HOME");
-    e.arg("-Zno-index-update");
 
     // And finally actually enable `build-std` for now
     let arg = match arg {

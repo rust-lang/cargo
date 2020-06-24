@@ -1689,7 +1689,7 @@ impl DetailedTomlDependency {
                     .map(GitReference::Branch)
                     .or_else(|| self.tag.clone().map(GitReference::Tag))
                     .or_else(|| self.rev.clone().map(GitReference::Rev))
-                    .unwrap_or_else(|| GitReference::Branch("master".to_string()));
+                    .unwrap_or_else(|| GitReference::DefaultBranch);
                 let loc = git.into_url()?;
 
                 if let Some(fragment) = loc.fragment() {

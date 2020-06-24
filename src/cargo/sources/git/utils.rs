@@ -250,6 +250,14 @@ impl GitReference {
                     .target()
                     .ok_or_else(|| anyhow::format_err!("branch `{}` did not have a target", s))?
             }
+            GitReference::DefaultBranch => {
+                let refname = "refs/remotes/origin/HEAD";
+                let id = repo.refname_to_id(refname)?;
+                let obj = repo.find_object(id, None)?;
+                let obj = obj.peel(ObjectType::Commit)?;
+                obj.id()
+            }
+
             GitReference::Rev(s) => {
                 let obj = repo.revparse_single(s)?;
                 match obj.as_tag() {
@@ -734,11 +742,16 @@ pub fn fetch(
             refspecs.push(format!("refs/tags/{0}:refs/remotes/origin/tags/{0}", t));
         }
 
+        GitReference::DefaultBranch => {
+            refspecs.push(format!("HEAD:refs/remotes/origin/HEAD"));
+        }
+
         // For `rev` dependencies we don't know what the rev will point to. To
         // handle this situation we fetch all branches and tags, and then we
         // pray it's somewhere in there.
         GitReference::Rev(_) => {
             refspecs.push(format!("refs/heads/*:refs/remotes/origin/*"));
+            refspecs.push(format!("HEAD:refs/remotes/origin/HEAD"));
             tags = true;
         }
     }
@@ -957,6 +970,7 @@ fn github_up_to_date(
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
         GitReference::Tag(tag) => tag,
+        GitReference::DefaultBranch => "HEAD",
         GitReference::Rev(_) => {
             debug!("can't use github fast path with `rev`");
             return Ok(false);
