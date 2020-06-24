@@ -179,6 +179,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     self.compilation
                         .binaries
                         .push((unit.clone(), bindst.clone()));
+                } else if unit.target.is_cdylib() {
+                    if !self.compilation.cdylibs.iter().any(|(u, _)| u == unit) {
+                        self.compilation
+                            .cdylibs
+                            .push((unit.clone(), bindst.clone()));
+                    }
                 }
             }
 

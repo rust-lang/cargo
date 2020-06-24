@@ -34,6 +34,9 @@ pub struct Compilation<'cfg> {
     /// An array of all binaries created.
     pub binaries: Vec<(Unit, PathBuf)>,
 
+    /// An array of all cdylibs created.
+    pub cdylibs: Vec<(Unit, PathBuf)>,
+
     /// All directories for the output of native build commands.
     ///
     /// This is currently used to drive some entries which are added to the
@@ -123,6 +126,7 @@ impl<'cfg> Compilation<'cfg> {
                 .collect(),
             tests: Vec::new(),
             binaries: Vec::new(),
+            cdylibs: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             cfgs: HashMap::new(),
