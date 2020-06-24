@@ -361,6 +361,7 @@ pub struct CliUnstable {
 }
 
 impl CliUnstable {
+    /// Update unstable options in-place from a slice of flag strings
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
             bail!(
@@ -380,9 +381,9 @@ impl CliUnstable {
         Ok(())
     }
 
-    /// Read unstable options from a hashmap.
+    /// Read unstable options from a hashmap, updating in-place.
     /// Intended for consuming unstable settings from config files
-    pub fn from_table(&mut self, flags: &HashMap<String, String>) -> CargoResult<()> {
+    pub fn update_with_table(&mut self, flags: &HashMap<String, String>) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
             bail!(
                 "the `-Z` flag is only accepted on the nightly channel of Cargo, \

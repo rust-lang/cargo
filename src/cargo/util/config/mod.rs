@@ -749,7 +749,7 @@ impl Config {
                 self.get::<Option<HashMap<String, String>>>("unstable")?
             {
                 self.unstable_flags
-                    .from_table(&unstable_configs)
+                    .update_with_table(&unstable_configs)
                     .with_context(|| "Invalid [unstable] entry in Cargo config")?;
 
                 // NB. It sucks to parse these twice, but doing it again here
