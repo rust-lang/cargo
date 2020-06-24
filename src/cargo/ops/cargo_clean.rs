@@ -175,7 +175,9 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                     // TODO: what to do about build_script_build?
                     let incremental = layout.incremental().join(format!("{}-*", crate_name));
                     rm_rf_glob(&incremental, config)?;
-                    rm_rf(&uplift_dir.join("CACHEDIR.TAG"), config)?;
+                    if let Some(uplift_dir) = uplift_dir {
+                        rm_rf(&uplift_dir.join("CACHEDIR.TAG"), config)?;
+                    }
                 }
             }
         }
