@@ -94,7 +94,7 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
-    bin: bool,
+    kind: NewProjectKind,
     edition: Option<&'a str>,
     registry: Option<&'a str>,
 }
@@ -160,7 +160,12 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
-fn check_name(name: &str, name_help: &str, has_bin: bool, shell: &mut Shell) -> CargoResult<()> {
+fn check_name(
+    name: &str,
+    name_help: &str,
+    kind: NewProjectKind,
+    shell: &mut Shell,
+) -> CargoResult<()> {
     restricted_names::validate_package_name(name, "crate name", name_help)?;
 
     if restricted_names::is_keyword(name) {
@@ -171,7 +176,7 @@ fn check_name(name: &str, name_help: &str, has_bin: bool, shell: &mut Shell) -> 
         );
     }
     if restricted_names::is_conflicting_artifact_name(name) {
-        if has_bin {
+        if kind.is_bin() {
             anyhow::bail!(
                 "the name `{}` cannot be used as a crate name, \
                 it conflicts with cargo's build directory names{}",
@@ -372,7 +377,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(path, opts)?;
-    check_name(name, "", opts.kind.is_bin(), &mut config.shell())?;
+    check_name(name, "", opts.kind, &mut config.shell())?;
 
     let source_files = plan_new_source_file(opts.kind, name.to_string())
         .map(|s| vec![s])
@@ -383,7 +388,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         path,
         name,
         source_files,
-        bin: opts.kind.is_bin(),
+        kind: opts.kind,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -425,14 +430,22 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         // Maybe when doing `cargo init --bin` inside a library package stub,
         // user may mean "initialize for library, but also add binary target"
     }
-    let has_bin = src_paths_types.iter().any(|x| x.bin);
+
+    let kind = if src_paths_types.is_empty() {
+        NewProjectKind::Workspace
+    } else if src_paths_types.iter().any(|x| x.bin) {
+        NewProjectKind::Bin
+    } else {
+        NewProjectKind::Lib
+    };
+
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = match opts.name {
         Some(_) => "",
         None => "\nuse --name to override crate name",
     };
-    check_name(name, name_help, has_bin, &mut config.shell())?;
+    check_name(name, name_help, kind, &mut config.shell())?;
 
     let mut version_control = opts.version_control;
 
@@ -474,7 +487,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control,
         path,
         name,
-        bin: has_bin,
+        kind,
         source_files: src_paths_types,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
@@ -633,7 +646,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
-    if !opts.bin {
+    if !opts.kind.is_bin() {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
 
@@ -696,11 +709,8 @@ path = {}
 
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
 
-    // TODO: let toml_base = match
-
-    paths::write(
-        &path.join("Cargo.toml"),
-        format!(
+    let toml_base = match opts.kind {
+        NewProjectKind::Lib | NewProjectKind::Bin => format!(
             r#"[package]
 name = "{}"
 version = "0.1.0"
@@ -725,9 +735,13 @@ edition = {}
                 None => "".to_string(),
             },
             cargotoml_path_specifier
-        )
-        .as_bytes(),
-    )?;
+        ),
+        NewProjectKind::Workspace => r#"[workspace]
+members = []"#
+            .to_string(),
+    };
+
+    paths::write(&path.join("Cargo.toml"), toml_base.as_bytes())?;
 
     // Create all specified source files (with respective parent directories) if they don't exist.
 
