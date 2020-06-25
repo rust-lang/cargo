@@ -59,11 +59,70 @@ fn simple_bin() {
 }
 
 #[cargo_test]
+fn simple_workspace() {
+    cargo_process("new --workspace --vcs git foo")
+        .env("USER", "foo")
+        .with_stderr("[CREATED] workspace `foo` package")
+        .run();
+
+    assert!(paths::root().join("foo").is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(!paths::root().join("foo/src").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    cargo_process("build")
+        .cwd(&paths::root().join("foo"))
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] manifest path `[..]` contains no package: The manifest is virtual, and the \
+            workspace has no members.",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_ignores_edition() {
+    cargo_process("new --workspace --edition 2015 foo")
+        .env("USER", "foo")
+        .with_stderr("[CREATED] workspace `foo` package")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+
+    assert!(toml.is_file());
+
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert_eq!(
+        contents,
+        r#"[workspace]
+members = []"#
+    );
+}
+
+#[cargo_test]
 fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
         .env("USER", "foo")
         .with_status(101)
-        .with_stderr("[ERROR] can't specify both lib and binary outputs")
+        .with_stderr("[ERROR] can't specify multiple templates")
+        .run();
+}
+
+#[cargo_test]
+fn both_lib_and_workspace() {
+    cargo_process("new --lib --workspace foo")
+        .env("USER", "foo")
+        .with_status(101)
+        .with_stderr("[ERROR] can't specify multiple templates")
+        .run();
+}
+
+#[cargo_test]
+fn both_bin_and_workspace() {
+    cargo_process("new --bin --workspace foo")
+        .env("USER", "foo")
+        .with_status(101)
+        .with_stderr("[ERROR] can't specify multiple templates")
         .run();
 }
 
