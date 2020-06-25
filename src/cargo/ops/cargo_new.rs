@@ -63,6 +63,7 @@ pub struct NewOptions {
 pub enum NewProjectKind {
     Bin,
     Lib,
+    Workspace,
 }
 
 impl NewProjectKind {
@@ -76,6 +77,7 @@ impl fmt::Display for NewProjectKind {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
+            NewProjectKind::Workspace => "workspace",
         }
         .fmt(f)
     }
@@ -102,16 +104,20 @@ impl NewOptions {
         version_control: Option<VersionControl>,
         bin: bool,
         lib: bool,
+        workspace: bool,
         path: PathBuf,
         name: Option<String>,
         edition: Option<String>,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
-        let kind = match (bin, lib) {
-            (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
-            (false, true) => NewProjectKind::Lib,
-            // default to bin
-            (_, false) => NewProjectKind::Bin,
+        let kind = if bin && lib || bin && workspace || lib && workspace {
+            anyhow::bail!("can't specify multiple templates")
+        } else if lib {
+            NewProjectKind::Lib
+        } else if workspace {
+            NewProjectKind::Workspace
+        } else {
+            NewProjectKind::Bin
         };
 
         let opts = NewOptions {
@@ -680,6 +686,8 @@ path = {}
     }
 
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
+
+    // TODO: let toml_base = match
 
     paths::write(
         &path.join("Cargo.toml"),

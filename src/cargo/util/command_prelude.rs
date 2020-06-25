@@ -181,6 +181,7 @@ pub trait AppExt: Sized {
         )
         ._arg(opt("bin", "Use a binary (application) template [default]"))
         ._arg(opt("lib", "Use a library template"))
+        ._arg(opt("workspace", "Use a workspace template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
                 .possible_values(&["2015", "2018"])
@@ -526,6 +527,7 @@ pub trait ArgMatchesExt {
             vcs,
             self._is_present("bin"),
             self._is_present("lib"),
+            self._is_present("workspace"),
             self.value_of_path("path", config).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
             self._value_of("edition").map(|s| s.to_string()),
