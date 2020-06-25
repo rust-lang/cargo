@@ -219,8 +219,8 @@ pub(super) fn activation_error(
             };
 
             let mut msg = format!(
-                "failed to select a version for the requirement `{} = \"{}\"`\n  \
-                 candidate versions found which didn't match: {}\n  \
+                "failed to select a version for the requirement `{} = \"{}\"`\n\
+                 candidate versions found which didn't match: {}\n\
                  location searched: {}\n",
                 dep.package_name(),
                 dep.version_req(),

@@ -796,7 +796,7 @@ fn do_not_package_if_repository_is_dirty() {
             homepage = "foo"
             repository = "foo"
             # change
-    "#,
+        "#,
     );
 
     p.cargo("package")
@@ -1112,14 +1112,14 @@ error: failed to verify package tarball
 
 Caused by:
   Source directory was modified by build.rs during cargo publish. \
-Build scripts should not modify anything outside of OUT_DIR.
-Changed: [CWD]/target/package/foo-0.0.1/bar.txt
-Added: [CWD]/target/package/foo-0.0.1/new-dir
-<tab>[CWD]/target/package/foo-0.0.1/src/generated.txt
-Removed: [CWD]/target/package/foo-0.0.1/dir
-<tab>[CWD]/target/package/foo-0.0.1/dir/foo.txt
+  Build scripts should not modify anything outside of OUT_DIR.
+  Changed: [CWD]/target/package/foo-0.0.1/bar.txt
+  Added: [CWD]/target/package/foo-0.0.1/new-dir
+  <tab>[CWD]/target/package/foo-0.0.1/src/generated.txt
+  Removed: [CWD]/target/package/foo-0.0.1/dir
+  <tab>[CWD]/target/package/foo-0.0.1/dir/foo.txt
 
-To proceed despite this, pass the `--no-verify` flag.",
+  To proceed despite this, pass the `--no-verify` flag.",
         )
         .run();
 

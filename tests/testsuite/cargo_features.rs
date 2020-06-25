@@ -30,7 +30,7 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
+  consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
 ",
         )
         .run();
@@ -47,9 +47,9 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can add
-`cargo-features = [\"test-dummy-unstable\"]` to enable this feature
+  this Cargo does not support nightly features, but if you
+  switch to nightly channel you can add
+  `cargo-features = [\"test-dummy-unstable\"]` to enable this feature
 ",
         )
         .run();
@@ -148,7 +148,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-See [..]
+  See [..]
 ",
         )
         .run();
@@ -213,7 +213,7 @@ Caused by:
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-See [..]
+  See [..]
 ",
         )
         .run();
@@ -255,7 +255,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-See [..]
+  See [..]
 ",
         )
         .run();

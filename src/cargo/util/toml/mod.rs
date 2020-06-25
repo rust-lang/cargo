@@ -81,7 +81,7 @@ fn do_read_manifest(
         add_unused(manifest.warnings_mut());
         if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
-                "no targets specified in the manifest\n  \
+                "no targets specified in the manifest\n\
                  either src/lib.rs, src/main.rs, a [lib] section, or \
                  [[bin]] section must be present"
             )

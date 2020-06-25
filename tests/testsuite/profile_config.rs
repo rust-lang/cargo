@@ -27,7 +27,7 @@ fn named_profile_gated() {
 Caused by:
   feature `named-profiles` is required
 
-consider adding `cargo-features = [\"named-profiles\"]` to the manifest
+  consider adding `cargo-features = [\"named-profiles\"]` to the manifest
 ",
         )
         .with_status(101)

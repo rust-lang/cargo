@@ -20,9 +20,9 @@ impl<'a> Retry<'a> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
                 let msg = format!(
-                    "spurious network error ({} tries \
-                     remaining): {}",
-                    self.remaining, e
+                    "spurious network error ({} tries remaining): {}",
+                    self.remaining,
+                    e.root_cause(),
                 );
                 self.config.shell().warn(msg)?;
                 self.remaining -= 1;

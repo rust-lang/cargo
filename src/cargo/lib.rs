@@ -163,7 +163,13 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
             return true;
         }
         drop(writeln!(shell.err(), "\nCaused by:"));
-        drop(writeln!(shell.err(), "  {}", cause));
+        for line in cause.to_string().lines() {
+            if line.is_empty() {
+                drop(writeln!(shell.err(), ""));
+            } else {
+                drop(writeln!(shell.err(), "  {}", line));
+            }
+        }
     }
     false
 }

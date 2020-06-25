@@ -224,8 +224,8 @@ fn wrong_version() {
         .with_stderr_contains(
             "\
 error: failed to select a version for the requirement `foo = \">=1.0.0\"`
-  candidate versions found which didn't match: 0.0.2, 0.0.1
-  location searched: `[..]` index (which is replacing registry `[..]`)
+candidate versions found which didn't match: 0.0.2, 0.0.1
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -239,8 +239,8 @@ required by package `foo v0.0.1 ([..])`
         .with_stderr_contains(
             "\
 error: failed to select a version for the requirement `foo = \">=1.0.0\"`
-  candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
-  location searched: `[..]` index (which is replacing registry `[..]`)
+candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -369,8 +369,8 @@ fn package_with_path_deps() {
 
 Caused by:
   no matching package named `notyet` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
-required by package `foo v0.0.1 [..]`
+  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  required by package `foo v0.0.1 [..]`
 ",
         )
         .run();
@@ -544,8 +544,8 @@ fn relying_on_a_yank_is_bad() {
         .with_stderr_contains(
             "\
 error: failed to select a version for the requirement `baz = \"=0.0.2\"`
-  candidate versions found which didn't match: 0.0.1
-  location searched: `[..]` index (which is replacing registry `[..]`)
+candidate versions found which didn't match: 0.0.1
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `bar v0.0.1`
     ... which is depended on by `foo [..]`
 ",
@@ -2118,7 +2118,7 @@ fn registry_index_rejected() {
 
 Caused by:
   the `registry.index` config value is no longer supported
-Use `[source]` replacement to alter the default index for crates.io.
+  Use `[source]` replacement to alter the default index for crates.io.
 ",
         )
         .run();

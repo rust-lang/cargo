@@ -32,7 +32,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   feature `metabuild` is required
 
-consider adding `cargo-features = [\"metabuild\"]` to the manifest
+  consider adding `cargo-features = [\"metabuild\"]` to the manifest
 ",
         )
         .run();

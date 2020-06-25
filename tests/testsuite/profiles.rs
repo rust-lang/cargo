@@ -537,7 +537,7 @@ fn strip_requires_cargo_feature() {
 Caused by:
   feature `strip` is required
 
-consider adding `cargo-features = [\"strip\"]` to the manifest
+  consider adding `cargo-features = [\"strip\"]` to the manifest
 ",
         )
         .run();
