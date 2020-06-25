@@ -122,7 +122,7 @@ macro_rules! get_value_typed {
 /// relating to cargo itself.
 #[derive(Debug)]
 pub struct Config {
-    /// The location of the user's 'home' directory. OS-dependent.
+    /// The location of the user's Cargo home directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
