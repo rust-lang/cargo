@@ -275,7 +275,7 @@ fn bogus_default_run() {
 Caused by:
   default-run target `b` not found
 
-<tab>Did you mean `a`?
+  <tab>Did you mean `a`?
 ",
         )
         .run();

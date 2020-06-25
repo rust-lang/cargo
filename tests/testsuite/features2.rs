@@ -1318,7 +1318,7 @@ error: failed to parse manifest at `[..]/foo/Cargo.toml`
 Caused by:
   feature `resolver` is required
 
-consider adding `cargo-features = [\"resolver\"]` to the manifest
+  consider adding `cargo-features = [\"resolver\"]` to the manifest
 ",
         )
         .run();
@@ -1347,7 +1347,7 @@ error: failed to parse manifest at `[..]/foo/Cargo.toml`
 Caused by:
   feature `resolver` is required
 
-consider adding `cargo-features = [\"resolver\"]` to the manifest
+  consider adding `cargo-features = [\"resolver\"]` to the manifest
 ",
         )
         .run();

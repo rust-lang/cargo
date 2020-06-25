@@ -98,7 +98,7 @@ fn invalid3() {
 
 Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
-Consider adding `optional = true` to the dependency
+  Consider adding `optional = true` to the dependency
 ",
         )
         .run();
@@ -1456,7 +1456,7 @@ fn namespaced_non_optional_dependency() {
 
 Caused by:
   Feature `bar` includes `crate:baz` which is not an optional dependency.
-Consider adding `optional = true` to the dependency
+  Consider adding `optional = true` to the dependency
 ",
         )
         .run();
@@ -1519,7 +1519,7 @@ fn namespaced_shadowed_dep() {
 
 Caused by:
   Feature `baz` includes the optional dependency of the same name, but this is left implicit in the features included by this feature.
-Consider adding `crate:baz` to this feature's requirements.
+  Consider adding `crate:baz` to this feature's requirements.
 ",
         )
         .run();
@@ -1555,8 +1555,8 @@ fn namespaced_shadowed_non_optional() {
 
 Caused by:
   Feature `baz` includes the dependency of the same name, but this is left implicit in the features included by this feature.
-Additionally, the dependency must be marked as optional to be included in the feature definition.
-Consider adding `crate:baz` to this feature's requirements and marking the dependency as `optional = true`
+  Additionally, the dependency must be marked as optional to be included in the feature definition.
+  Consider adding `crate:baz` to this feature's requirements and marking the dependency as `optional = true`
 ",
         )
         .run();
@@ -1592,7 +1592,7 @@ fn namespaced_implicit_non_optional() {
 
 Caused by:
   Feature `bar` includes `baz` which is not defined as a feature.
-A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition
+  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition
 ",
         ).run(
     );

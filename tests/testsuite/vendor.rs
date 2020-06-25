@@ -504,8 +504,8 @@ error: failed to sync
 Caused by:
   found duplicate version of package `b v0.5.0` vendored from two sources:
 
-<tab>source 1: [..]
-<tab>source 2: [..]
+  <tab>source 1: [..]
+  <tab>source 2: [..]
 ",
         )
         .with_status(101)

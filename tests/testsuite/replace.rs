@@ -548,8 +548,8 @@ fn override_wrong_name() {
 
 Caused by:
   no matching package for override `[..]baz:0.1.0` found
-location searched: file://[..]
-version required: =0.1.0
+  location searched: file://[..]
+  version required: =0.1.0
 ",
         )
         .run();
@@ -682,10 +682,10 @@ fn multiple_specs() {
 Caused by:
   overlapping replacement specifications found:
 
-  * [..]
-  * [..]
+    * [..]
+    * [..]
 
-both specifications match: bar v0.1.0
+  both specifications match: bar v0.1.0
 ",
         )
         .run();

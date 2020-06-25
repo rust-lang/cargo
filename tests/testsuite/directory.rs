@@ -192,9 +192,9 @@ error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[
 
 Caused by:
   no matching package named `baz` found
-location searched: registry `https://github.com/rust-lang/crates.io-index`
-perhaps you meant: bar or foo
-required by package `bar v0.1.0`
+  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  perhaps you meant: bar or foo
+  required by package `bar v0.1.0`
 ",
         )
         .run();
@@ -663,11 +663,10 @@ Caused by:
 
 Caused by:
   the source my-git-repo requires a lock file to be present first before it can be
-used against vendored source code
+  used against vendored source code
 
-remove the source replacement configuration, generate a lock file, and then
-restore the source replacement configuration to continue the build
-
+  remove the source replacement configuration, generate a lock file, and then
+  restore the source replacement configuration to continue the build
 ",
         )
         .run();
@@ -765,8 +764,8 @@ Caused by:
   failed to select a version for the requirement `foo = \"^2\"`
   candidate versions found which didn't match: 0.0.1
   location searched: directory source `[..] (which is replacing registry `[..]`)
-required by package `bar v0.1.0`
-perhaps a crate was updated and forgotten to be re-vendored?
+  required by package `bar v0.1.0`
+  perhaps a crate was updated and forgotten to be re-vendored?
 ",
         )
         .with_status(101)

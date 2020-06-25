@@ -3,7 +3,7 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{network, Config, IntoUrl, Progress};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use curl::easy::List;
 use git2::{self, ErrorClass, ObjectType};
 use log::{debug, info};
@@ -85,46 +85,13 @@ impl GitRemote {
         locked_rev: Option<git2::Oid>,
         cargo_config: &Config,
     ) -> CargoResult<(GitDatabase, git2::Oid)> {
-        let format_error = |e: anyhow::Error, operation| {
-            let may_be_libgit_fault = e
-                .chain()
-                .filter_map(|e| e.downcast_ref::<git2::Error>())
-                .any(|e| match e.class() {
-                    ErrorClass::Net
-                    | ErrorClass::Ssl
-                    | ErrorClass::Submodule
-                    | ErrorClass::FetchHead
-                    | ErrorClass::Ssh
-                    | ErrorClass::Callback
-                    | ErrorClass::Http => true,
-                    _ => false,
-                });
-            let uses_cli = cargo_config
-                .net_config()
-                .ok()
-                .and_then(|config| config.git_fetch_with_cli)
-                .unwrap_or(false);
-            let msg = if !uses_cli && may_be_libgit_fault {
-                format!(
-                    r"failed to {} into: {}
-  If your environment requires git authentication or proxying, try enabling `git-fetch-with-cli`
-  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
-                    operation,
-                    into.display()
-                )
-            } else {
-                format!("failed to {} into: {}", operation, into.display())
-            };
-            e.context(msg)
-        };
-
         // If we have a previous instance of `GitDatabase` then fetch into that
         // if we can. If that can successfully load our revision then we've
         // populated the database with the latest version of `reference`, so
         // return that database and the rev we resolve to.
         if let Some(mut db) = db {
             fetch(&mut db.repo, self.url.as_str(), reference, cargo_config)
-                .map_err(|e| format_error(e, "fetch"))?;
+                .context(format!("failed to fetch into: {}", into.display()))?;
             match locked_rev {
                 Some(rev) => {
                     if db.contains(rev) {
@@ -148,7 +115,7 @@ impl GitRemote {
         paths::create_dir_all(into)?;
         let mut repo = init(into, true)?;
         fetch(&mut repo, self.url.as_str(), reference, cargo_config)
-            .map_err(|e| format_error(e, "clone"))?;
+            .context(format!("failed to clone into: {}", into.display()))?;
         let rev = match locked_rev {
             Some(rev) => rev,
             None => reference.resolve(&repo)?,
@@ -481,9 +448,14 @@ where
     let mut ssh_agent_attempts = Vec::new();
     let mut any_attempts = false;
     let mut tried_sshkey = false;
+    let mut url_attempt = None;
 
+    let orig_url = url;
     let mut res = f(&mut |url, username, allowed| {
         any_attempts = true;
+        if url != orig_url {
+            url_attempt = Some(url.to_string());
+        }
         // libgit2's "USERNAME" authentication actually means that it's just
         // asking us for a username to keep going. This is currently only really
         // used for SSH authentication and isn't really an authentication type.
@@ -615,18 +587,26 @@ where
             }
         }
     }
-
-    if res.is_ok() || !any_attempts {
-        return res.map_err(From::from);
-    }
+    let mut err = match res {
+        Ok(e) => return Ok(e),
+        Err(e) => e,
+    };
 
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    let res = res.map_err(anyhow::Error::from).chain_err(|| {
+    if any_attempts {
         let mut msg = "failed to authenticate when downloading \
                        repository"
             .to_string();
+
+        if let Some(attempt) = &url_attempt {
+            if url != attempt {
+                msg.push_str(": ");
+                msg.push_str(attempt);
+            }
+        }
+        msg.push_str("\n");
         if !ssh_agent_attempts.is_empty() {
             let names = ssh_agent_attempts
                 .iter()
@@ -634,28 +614,56 @@ where
                 .collect::<Vec<_>>()
                 .join(", ");
             msg.push_str(&format!(
-                "\nattempted ssh-agent authentication, but \
-                 none of the usernames {} succeeded",
+                "\n* attempted ssh-agent authentication, but \
+                 no usernames succeeded: {}",
                 names
             ));
         }
         if let Some(failed_cred_helper) = cred_helper_bad {
             if failed_cred_helper {
                 msg.push_str(
-                    "\nattempted to find username/password via \
+                    "\n* attempted to find username/password via \
                      git's `credential.helper` support, but failed",
                 );
             } else {
                 msg.push_str(
-                    "\nattempted to find username/password via \
+                    "\n* attempted to find username/password via \
                      `credential.helper`, but maybe the found \
                      credentials were incorrect",
                 );
             }
         }
-        msg
-    })?;
-    Ok(res)
+        msg.push_str("\n\n");
+        msg.push_str("if the git CLI succeeds then `net.git-fetch-with-cli` may help here\n");
+        msg.push_str("https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli");
+        err = err.context(msg);
+
+    // Otherwise if we didn't even get to the authentication phase them we may
+    // have failed to set up a connection, in these cases hint on the
+    // `net.git-fetch-with-cli` configuration option.
+    } else if let Some(e) = err.downcast_ref::<git2::Error>() {
+        match e.class() {
+            ErrorClass::Net
+            | ErrorClass::Ssl
+            | ErrorClass::Submodule
+            | ErrorClass::FetchHead
+            | ErrorClass::Ssh
+            | ErrorClass::Callback
+            | ErrorClass::Http => {
+                let mut msg = "network failure seems to have happened\n".to_string();
+                msg.push_str(
+                    "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
+                );
+                msg.push_str(
+                    "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                );
+                err = err.context(msg);
+            }
+            _ => {}
+        }
+    }
+
+    Err(err)
 }
 
 fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> CargoResult<()> {

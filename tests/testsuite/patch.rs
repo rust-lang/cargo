@@ -1578,9 +1578,9 @@ Caused by:
 
 Caused by:
   patch for `bar` in `registry `[..]/alternative-registry`` resolved to more than one candidate
-Found versions: 0.1.0, 0.1.1
-Update the patch definition to select only one package.
-For example, add an `=` version requirement to the patch definition, such as `version = \"=0.1.1\"`.
+  Found versions: 0.1.0, 0.1.1
+  Update the patch definition to select only one package.
+  For example, add an `=` version requirement to the patch definition, such as `version = \"=0.1.1\"`.
 ",
         )
         .run();
@@ -1659,9 +1659,9 @@ Caused by:
 
 Caused by:
   The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, \
-but the patch definition requires `^0.1.1`.
-Check that the version in the patch location is what you expect, \
-and update the patch definition to match.
+  but the patch definition requires `^0.1.1`.
+  Check that the version in the patch location is what you expect, \
+  and update the patch definition to match.
 ",
         )
         .run();
@@ -1769,7 +1769,7 @@ Caused by:
 
 Caused by:
   The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
-Check that the version in the patch location is what you expect, and update the patch definition to match.
+  Check that the version in the patch location is what you expect, and update the patch definition to match.
 ",
         )
         .run();

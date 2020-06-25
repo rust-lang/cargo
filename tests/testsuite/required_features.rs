@@ -668,7 +668,7 @@ fn install_default_features() {
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
+  Consider enabling them by passing, e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -688,7 +688,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
+  Consider enabling them by passing, e.g., `--features=\"a\"`
 ",
         )
         .run();
