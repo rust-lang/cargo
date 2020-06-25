@@ -1,9 +1,0 @@
-[package]
-name = "ws"
-version = "0.1.0"
-authors = ["Walker Crouse <walker.crouse@coop.co.uk>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]

@@ -342,19 +342,22 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformation {
-    if bin {
-        SourceFileInformation {
+fn plan_new_source_file(
+    kind: NewProjectKind,
+    package_name: String,
+) -> Option<SourceFileInformation> {
+    match kind {
+        NewProjectKind::Bin => Some(SourceFileInformation {
             relative_path: "src/main.rs".to_string(),
             target_name: package_name,
             bin: true,
-        }
-    } else {
-        SourceFileInformation {
+        }),
+        NewProjectKind::Lib => Some(SourceFileInformation {
             relative_path: "src/lib.rs".to_string(),
             target_name: package_name,
             bin: false,
-        }
+        }),
+        _ => None,
     }
 }
 
@@ -371,11 +374,15 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let name = get_name(path, opts)?;
     check_name(name, "", opts.kind.is_bin(), &mut config.shell())?;
 
+    let source_files = plan_new_source_file(opts.kind, name.to_string())
+        .map(|s| vec![s])
+        .unwrap_or_else(|| vec![]);
+
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path,
         name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
+        source_files,
         bin: opts.kind.is_bin(),
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
@@ -410,7 +417,9 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
+        if let Some(source_file) = plan_new_source_file(opts.kind, name.to_string()) {
+            src_paths_types.push(source_file)
+        }
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present
         // Maybe when doing `cargo init --bin` inside a library package stub,
