@@ -9,6 +9,7 @@ use cargo_test_support::{
 use filetime::FileTime;
 use std::fs;
 use std::path::Path;
+use std::str;
 
 // Helper for testing dep-info files in the fingerprint dir.
 fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(u8, &str)])) {
@@ -22,17 +23,38 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
         .unwrap_or_else(|| panic!("expected 1 dep-info file at {}, found 0", fingerprint));
     assert!(files.next().is_none(), "expected only 1 dep-info file");
     let dep_info = fs::read(&info_path).unwrap();
-    let deps: Vec<(u8, &str)> = dep_info
-        .split(|&x| x == 0)
-        .filter(|x| !x.is_empty())
-        .map(|p| {
+    let dep_info = &mut &dep_info[..];
+    let deps = (0..read_usize(dep_info))
+        .map(|_| {
             (
-                p[0],
-                std::str::from_utf8(&p[1..]).expect("expected valid path"),
+                read_u8(dep_info),
+                str::from_utf8(read_bytes(dep_info)).unwrap(),
             )
         })
-        .collect();
+        .collect::<Vec<_>>();
     test_cb(&info_path, &deps);
+
+    fn read_usize(bytes: &mut &[u8]) -> usize {
+        let ret = &bytes[..4];
+        *bytes = &bytes[4..];
+        ((ret[0] as usize) << 0)
+            | ((ret[1] as usize) << 8)
+            | ((ret[2] as usize) << 16)
+            | ((ret[3] as usize) << 24)
+    }
+
+    fn read_u8(bytes: &mut &[u8]) -> u8 {
+        let ret = bytes[0];
+        *bytes = &bytes[1..];
+        ret
+    }
+
+    fn read_bytes<'a>(bytes: &mut &'a [u8]) -> &'a [u8] {
+        let n = read_usize(bytes) as usize;
+        let ret = &bytes[..n];
+        *bytes = &bytes[n..];
+        ret
+    }
 }
 
 fn assert_deps_contains(project: &Project, fingerprint: &str, expected: &[(u8, &str)]) {
@@ -273,31 +295,31 @@ fn relative_depinfo_paths_ws() {
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/pm-*/dep-lib-pm",
-        &[(1, "src/lib.rs"), (2, "debug/deps/libpmdep-*.rlib")],
+        &[(0, "src/lib.rs"), (1, "debug/deps/libpmdep-*.rlib")],
     );
 
     assert_deps_contains(
         &p,
         &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo", host),
         &[
-            (1, "src/main.rs"),
+            (0, "src/main.rs"),
             (
-                2,
+                1,
                 &format!(
                     "debug/deps/{}pm-*.{}",
                     paths::get_lib_prefix("proc-macro"),
                     paths::get_lib_extension("proc-macro")
                 ),
             ),
-            (2, &format!("{}/debug/deps/libbar-*.rlib", host)),
-            (2, &format!("{}/debug/deps/libregdep-*.rlib", host)),
+            (1, &format!("{}/debug/deps/libbar-*.rlib", host)),
+            (1, &format!("{}/debug/deps/libregdep-*.rlib", host)),
         ],
     );
 
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
-        &[(1, "build.rs"), (2, "debug/deps/libbdep-*.rlib")],
+        &[(0, "build.rs"), (1, "debug/deps/libbdep-*.rlib")],
     );
 
     // Make sure it stays fresh.
@@ -401,31 +423,31 @@ fn relative_depinfo_paths_no_ws() {
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/pm-*/dep-lib-pm",
-        &[(1, "src/lib.rs"), (2, "debug/deps/libpmdep-*.rlib")],
+        &[(0, "src/lib.rs"), (1, "debug/deps/libpmdep-*.rlib")],
     );
 
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/foo-*/dep-bin-foo",
         &[
-            (1, "src/main.rs"),
+            (0, "src/main.rs"),
             (
-                2,
+                1,
                 &format!(
                     "debug/deps/{}pm-*.{}",
                     paths::get_lib_prefix("proc-macro"),
                     paths::get_lib_extension("proc-macro")
                 ),
             ),
-            (2, "debug/deps/libbar-*.rlib"),
-            (2, "debug/deps/libregdep-*.rlib"),
+            (1, "debug/deps/libbar-*.rlib"),
+            (1, "debug/deps/libregdep-*.rlib"),
         ],
     );
 
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/foo-*/dep-build-script-build-script-build",
-        &[(1, "build.rs"), (2, "debug/deps/libbdep-*.rlib")],
+        &[(0, "build.rs"), (1, "debug/deps/libbdep-*.rlib")],
     );
 
     // Make sure it stays fresh.
@@ -514,6 +536,6 @@ fn canonical_path() {
     assert_deps_contains(
         &p,
         "target/debug/.fingerprint/foo-*/dep-lib-foo",
-        &[(1, "src/lib.rs"), (2, "debug/deps/libregdep-*.rmeta")],
+        &[(0, "src/lib.rs"), (1, "debug/deps/libregdep-*.rmeta")],
     );
 }

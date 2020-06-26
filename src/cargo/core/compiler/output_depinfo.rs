@@ -65,7 +65,7 @@ fn add_deps_for_unit(
         if let Some(paths) =
             fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
         {
-            for path in paths {
+            for path in paths.files {
                 deps.insert(path);
             }
         } else {
@@ -141,7 +141,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous.len() == 1 && previous[0].0 == target_fn && previous[0].1 == deps {
+                    if previous.files.iter().eq(deps.iter().map(Path::new)) {
                         continue;
                     }
                 }

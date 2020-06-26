@@ -312,6 +312,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::env;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
+use std::str;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -674,13 +675,18 @@ enum LocalFingerprint {
     RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
-enum StaleFile {
-    Missing(PathBuf),
-    Changed {
+enum StaleItem {
+    MissingFile(PathBuf),
+    ChangedFile {
         reference: PathBuf,
         reference_mtime: FileTime,
         stale: PathBuf,
         stale_mtime: FileTime,
+    },
+    ChangedEnv {
+        var: String,
+        previous: Option<String>,
+        current: Option<String>,
     },
 }
 
@@ -690,12 +696,12 @@ impl LocalFingerprint {
     ///
     /// This will use the absolute root paths passed in if necessary to guide
     /// file accesses.
-    fn find_stale_file(
+    fn find_stale_item(
         &self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         pkg_root: &Path,
         target_root: &Path,
-    ) -> CargoResult<Option<StaleFile>> {
+    ) -> CargoResult<Option<StaleItem>> {
         match self {
             // We need to parse `dep_info`, learn about all the files the crate
             // depends on, and then see if any of them are newer than the
@@ -703,11 +709,22 @@ impl LocalFingerprint {
             // unit has never been compiled!
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                if let Some(paths) = parse_dep_info(pkg_root, target_root, &dep_info)? {
-                    Ok(find_stale_file(mtime_cache, &dep_info, paths.iter()))
-                } else {
-                    Ok(Some(StaleFile::Missing(dep_info)))
+                let info = match parse_dep_info(pkg_root, target_root, &dep_info)? {
+                    Some(info) => info,
+                    None => return Ok(Some(StaleItem::MissingFile(dep_info))),
+                };
+                for (key, previous) in info.env.iter() {
+                    let current = env::var(key).ok();
+                    if current == *previous {
+                        continue;
+                    }
+                    return Ok(Some(StaleItem::ChangedEnv {
+                        var: key.clone(),
+                        previous: previous.clone(),
+                        current,
+                    }));
                 }
+                Ok(find_stale_file(mtime_cache, &dep_info, info.files.iter()))
             }
 
             // We need to verify that no paths listed in `paths` are newer than
@@ -1025,8 +1042,8 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(file) = local.find_stale_file(mtime_cache, pkg_root, target_root)? {
-                file.log();
+            if let Some(item) = local.find_stale_item(mtime_cache, pkg_root, target_root)? {
+                item.log();
                 return Ok(());
             }
         }
@@ -1138,7 +1155,7 @@ impl DepFingerprint {
     }
 }
 
-impl StaleFile {
+impl StaleItem {
     /// Use the `log` crate to log a hopefully helpful message in diagnosing
     /// what file is considered stale and why. This is intended to be used in
     /// conjunction with `CARGO_LOG` to determine why Cargo is recompiling
@@ -1146,10 +1163,10 @@ impl StaleFile {
     /// that.
     fn log(&self) {
         match self {
-            StaleFile::Missing(path) => {
+            StaleItem::MissingFile(path) => {
                 info!("stale: missing {:?}", path);
             }
-            StaleFile::Changed {
+            StaleItem::ChangedFile {
                 reference,
                 reference_mtime,
                 stale,
@@ -1158,6 +1175,14 @@ impl StaleFile {
                 info!("stale: changed {:?}", stale);
                 info!("          (vs) {:?}", reference);
                 info!("               {:?} != {:?}", reference_mtime, stale_mtime);
+            }
+            StaleItem::ChangedEnv {
+                var,
+                previous,
+                current,
+            } => {
+                info!("stale: changed env {:?}", var);
+                info!("       {:?} != {:?}", previous, current);
             }
         }
     }
@@ -1600,28 +1625,26 @@ pub fn parse_dep_info(
     pkg_root: &Path,
     target_root: &Path,
     dep_info: &Path,
-) -> CargoResult<Option<Vec<PathBuf>>> {
+) -> CargoResult<Option<RustcDepInfo>> {
     let data = match paths::read_bytes(dep_info) {
         Ok(data) => data,
         Err(_) => return Ok(None),
     };
-    let paths = data
-        .split(|&x| x == 0)
-        .filter(|x| !x.is_empty())
-        .map(|p| {
-            let ty = match DepInfoPathType::from_byte(p[0]) {
-                Some(ty) => ty,
-                None => return Err(internal("dep-info invalid")),
-            };
-            let path = util::bytes2path(&p[1..])?;
-            match ty {
-                DepInfoPathType::PackageRootRelative => Ok(pkg_root.join(path)),
-                // N.B. path might be absolute here in which case the join will have no effect
-                DepInfoPathType::TargetRootRelative => Ok(target_root.join(path)),
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(paths))
+    let info = match OnDiskDepInfo::parse(&data) {
+        Some(info) => info,
+        None => return Ok(None),
+    };
+    let mut ret = RustcDepInfo::default();
+    ret.env = info.env;
+    for (ty, path) in info.files {
+        let path = match ty {
+            DepInfoPathType::PackageRootRelative => pkg_root.join(path),
+            // N.B. path might be absolute here in which case the join will have no effect
+            DepInfoPathType::TargetRootRelative => target_root.join(path),
+        };
+        ret.files.push(path);
+    }
+    Ok(Some(ret))
 }
 
 fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
@@ -1638,14 +1661,14 @@ fn find_stale_file<I>(
     mtime_cache: &mut HashMap<PathBuf, FileTime>,
     reference: &Path,
     paths: I,
-) -> Option<StaleFile>
+) -> Option<StaleItem>
 where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
     let reference_mtime = match paths::mtime(reference) {
         Ok(mtime) => mtime,
-        Err(..) => return Some(StaleFile::Missing(reference.to_path_buf())),
+        Err(..) => return Some(StaleItem::MissingFile(reference.to_path_buf())),
     };
 
     for path in paths {
@@ -1655,7 +1678,7 @@ where
             Entry::Vacant(v) => {
                 let mtime = match paths::mtime(path) {
                     Ok(mtime) => mtime,
-                    Err(..) => return Some(StaleFile::Missing(path.to_path_buf())),
+                    Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
                 };
                 *v.insert(mtime)
             }
@@ -1683,7 +1706,7 @@ where
             continue;
         }
 
-        return Some(StaleFile::Changed {
+        return Some(StaleItem::ChangedFile {
             reference: reference.to_path_buf(),
             reference_mtime,
             stale: path.to_path_buf(),
@@ -1698,23 +1721,13 @@ where
     None
 }
 
-#[repr(u8)]
+#[derive(Serialize, Deserialize)]
 enum DepInfoPathType {
     // src/, e.g. src/lib.rs
-    PackageRootRelative = 1,
+    PackageRootRelative,
     // target/debug/deps/lib...
     // or an absolute path /.../sysroot/...
-    TargetRootRelative = 2,
-}
-
-impl DepInfoPathType {
-    fn from_byte(b: u8) -> Option<DepInfoPathType> {
-        match b {
-            1 => Some(DepInfoPathType::PackageRootRelative),
-            2 => Some(DepInfoPathType::TargetRootRelative),
-            _ => None,
-        }
-    }
+    TargetRootRelative,
 }
 
 /// Parses the dep-info file coming out of rustc into a Cargo-specific format.
@@ -1748,16 +1761,14 @@ pub fn translate_dep_info(
     target_root: &Path,
     allow_package: bool,
 ) -> CargoResult<()> {
-    let target = parse_rustc_dep_info(rustc_dep_info)?;
-    let deps = &target
-        .get(0)
-        .ok_or_else(|| internal("malformed dep-info format, no targets".to_string()))?
-        .1;
+    let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
     let target_root = target_root.canonicalize()?;
     let pkg_root = pkg_root.canonicalize()?;
-    let mut new_contents = Vec::new();
-    for file in deps {
+    let mut on_disk_info = OnDiskDepInfo::default();
+    on_disk_info.env = depinfo.env;
+
+    for file in depinfo.files {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
         let abs_file = rustc_cwd.join(file);
@@ -1779,28 +1790,145 @@ pub fn translate_dep_info(
             // effect.
             (DepInfoPathType::TargetRootRelative, &*abs_file)
         };
-        new_contents.push(ty as u8);
-        new_contents.extend(util::path2bytes(path)?);
-        new_contents.push(0);
+        on_disk_info.files.push((ty, path.to_owned()));
     }
-    paths::write(cargo_dep_info, &new_contents)?;
+    paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
 }
 
+#[derive(Default)]
+pub struct RustcDepInfo {
+    /// The list of files that the main target in the dep-info file depends on.
+    pub files: Vec<PathBuf>,
+    /// The list of environment variables we found that the rustc compilation
+    /// depends on.
+    pub env: Vec<(String, Option<String>)>,
+}
+
+#[derive(Default)]
+struct OnDiskDepInfo {
+    files: Vec<(DepInfoPathType, PathBuf)>,
+    env: Vec<(String, Option<String>)>,
+}
+
+impl OnDiskDepInfo {
+    fn parse(mut bytes: &[u8]) -> Option<OnDiskDepInfo> {
+        let bytes = &mut bytes;
+        let nfiles = read_usize(bytes)?;
+        let mut files = Vec::with_capacity(nfiles as usize);
+        for _ in 0..nfiles {
+            let ty = match read_u8(bytes)? {
+                0 => DepInfoPathType::PackageRootRelative,
+                1 => DepInfoPathType::TargetRootRelative,
+                _ => return None,
+            };
+            let bytes = read_bytes(bytes)?;
+            files.push((ty, util::bytes2path(bytes).ok()?));
+        }
+
+        let nenv = read_usize(bytes)?;
+        let mut env = Vec::with_capacity(nenv as usize);
+        for _ in 0..nenv {
+            let key = str::from_utf8(read_bytes(bytes)?).ok()?.to_string();
+            let val = match read_u8(bytes)? {
+                0 => None,
+                1 => Some(str::from_utf8(read_bytes(bytes)?).ok()?.to_string()),
+                _ => return None,
+            };
+            env.push((key, val));
+        }
+        return Some(OnDiskDepInfo { files, env });
+
+        fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
+            let ret = bytes.get(..4)?;
+            *bytes = &bytes[4..];
+            Some(
+                ((ret[0] as usize) << 0)
+                    | ((ret[1] as usize) << 8)
+                    | ((ret[2] as usize) << 16)
+                    | ((ret[3] as usize) << 24),
+            )
+        }
+
+        fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
+            let ret = *bytes.get(0)?;
+            *bytes = &bytes[1..];
+            Some(ret)
+        }
+
+        fn read_bytes<'a>(bytes: &mut &'a [u8]) -> Option<&'a [u8]> {
+            let n = read_usize(bytes)? as usize;
+            let ret = bytes.get(..n)?;
+            *bytes = &bytes[n..];
+            Some(ret)
+        }
+    }
+
+    fn serialize(&self) -> CargoResult<Vec<u8>> {
+        let mut ret = Vec::new();
+        let dst = &mut ret;
+        write_usize(dst, self.files.len());
+        for (ty, file) in self.files.iter() {
+            match ty {
+                DepInfoPathType::PackageRootRelative => dst.push(0),
+                DepInfoPathType::TargetRootRelative => dst.push(1),
+            }
+            write_bytes(dst, util::path2bytes(file)?);
+        }
+
+        write_usize(dst, self.env.len());
+        for (key, val) in self.env.iter() {
+            write_bytes(dst, key);
+            match val {
+                None => dst.push(0),
+                Some(val) => {
+                    dst.push(1);
+                    write_bytes(dst, val);
+                }
+            }
+        }
+        return Ok(ret);
+
+        fn write_bytes(dst: &mut Vec<u8>, val: impl AsRef<[u8]>) {
+            let val = val.as_ref();
+            write_usize(dst, val.len());
+            dst.extend_from_slice(val);
+        }
+
+        fn write_usize(dst: &mut Vec<u8>, val: usize) {
+            dst.push(val as u8);
+            dst.push((val >> 8) as u8);
+            dst.push((val >> 16) as u8);
+            dst.push((val >> 24) as u8);
+            assert!(val >> 32 == 0);
+        }
+    }
+}
+
 /// Parse the `.d` dep-info file generated by rustc.
-///
-/// Result is a Vec of `(target, prerequisites)` tuples where `target` is the
-/// rule name, and `prerequisites` is a list of files that it depends on.
-pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<Vec<(String, Vec<String>)>> {
+pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> {
     let contents = paths::read(rustc_dep_info)?;
-    contents
-        .lines()
-        .filter_map(|l| l.find(": ").map(|i| (l, i)))
-        .map(|(line, pos)| {
-            let target = &line[..pos];
+    let mut ret = RustcDepInfo::default();
+    let mut found_deps = false;
+
+    for line in contents.lines() {
+        let env_dep_prefix = "# env-dep:";
+        if line.starts_with(env_dep_prefix) {
+            let rest = &line[env_dep_prefix.len()..];
+            let mut parts = rest.splitn(2, '=');
+            let env_var = match parts.next() {
+                Some(s) => s.to_string(),
+                None => continue,
+            };
+            let env_val = parts.next().map(|s| s.to_string());
+            ret.env.push((env_var, env_val));
+        } else if let Some(pos) = line.find(": ") {
+            if found_deps {
+                continue;
+            }
+            found_deps = true;
             let mut deps = line[pos + 2..].split_whitespace();
 
-            let mut ret = Vec::new();
             while let Some(s) = deps.next() {
                 let mut file = s.to_string();
                 while file.ends_with('\\') {
@@ -1810,9 +1938,9 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<Vec<(String, V
                         internal("malformed dep-info format, trailing \\".to_string())
                     })?);
                 }
-                ret.push(file);
+                ret.files.push(file.into());
             }
-            Ok((target.to_string(), ret))
-        })
-        .collect()
+        }
+    }
+    Ok(ret)
 }
