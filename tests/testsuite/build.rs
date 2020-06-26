@@ -1,6 +1,9 @@
 //! Tests for the `cargo build` command.
 
-use cargo::util::paths::dylib_path_envvar;
+use cargo::{
+    core::compiler::CompileMode, core::Workspace, ops::CompileOptions,
+    util::paths::dylib_path_envvar, Config,
+};
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -397,6 +400,55 @@ Caused by:
 (currently \"cdylib, rlib\")",
         )
         .run();
+}
+
+#[cargo_test]
+fn cargo_compile_api_exposes_artifact_paths() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "the_foo_bin"
+            path = "src/bin.rs"
+
+            [lib]
+            name = "the_foo_lib"
+            path = "src/foo.rs"
+            crate-type = ["cdylib", "rlib"]
+        "#,
+        )
+        .file("src/foo.rs", "pub fn bar() {}")
+        .file("src/bin.rs", "pub fn main() {}")
+        .build();
+
+    let config = Config::default().unwrap();
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
+    let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
+
+    let result = cargo::ops::compile(&ws, &compile_options).unwrap();
+
+    assert_eq!(1, result.binaries.len());
+    assert!(result.binaries[0].1.exists());
+    assert!(result.binaries[0]
+        .1
+        .to_str()
+        .unwrap()
+        .contains("the_foo_bin"));
+
+    assert_eq!(1, result.cdylibs.len());
+    // The exact library path varies by platform, but should certainly exist at least
+    assert!(result.cdylibs[0].1.exists());
+    assert!(result.cdylibs[0]
+        .1
+        .to_str()
+        .unwrap()
+        .contains("the_foo_lib"));
 }
 
 #[cargo_test]
