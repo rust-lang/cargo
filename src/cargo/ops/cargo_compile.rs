@@ -469,10 +469,18 @@ pub fn create_bcx<'a, 'cfg>(
             // Add `--document-private-items` rustdoc flag if requested or if
             // the target is a binary. Binary crates get their private items
             // documented by default.
-            if rustdoc_document_private_items || unit.target.is_bin() {
-                let mut args = extra_args.take().unwrap_or_else(|| vec![]);
-                args.push("--document-private-items".into());
-                extra_args = Some(args);
+            // Don't add the flag if it's already there, because that's an error.
+            let document_private_items_flag = "--document-private-items".to_string();
+            if !target_data
+                .info(unit.kind)
+                .rustdocflags
+                .contains(&document_private_items_flag)
+            {
+                if rustdoc_document_private_items || unit.target.is_bin() {
+                    let mut args = extra_args.take().unwrap_or_else(|| vec![]);
+                    args.push(document_private_items_flag);
+                    extra_args = Some(args);
+                }
             }
 
             if let Some(args) = extra_args {
