@@ -1,6 +1,6 @@
 use crate::core::compiler::{CompileMode, Context, CrateType, Unit};
-use crate::core::interning::InternedString;
 use crate::core::profiles;
+use crate::util::interning::InternedString;
 
 use crate::util::errors::CargoResult;
 use std::collections::hash_map::{Entry, HashMap};

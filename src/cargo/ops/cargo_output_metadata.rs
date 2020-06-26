@@ -1,8 +1,9 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
-use crate::core::{Dependency, InternedString, Package, PackageId, Workspace};
+use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
+use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use cargo_platform::Platform;
 use serde::Serialize;

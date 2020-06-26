@@ -5,9 +5,8 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::{FeaturesFor, RequestedFeatures, ResolvedFeatures};
 use crate::core::resolver::Resolve;
-use crate::core::{
-    FeatureMap, FeatureValue, InternedString, Package, PackageId, PackageIdSpec, Workspace,
-};
+use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
+use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use std::collections::{HashMap, HashSet};
 

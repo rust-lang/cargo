@@ -15,11 +15,11 @@ use std::rc::Rc;
 
 use log::debug;
 
-use crate::core::interning::InternedString;
 use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, ResolveOpts};

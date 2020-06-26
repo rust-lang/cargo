@@ -67,8 +67,9 @@
 //! hopefully those are more obvious inline in the code itself.
 
 use crate::core::dependency::Dependency;
-use crate::core::{InternedString, PackageId, SourceId, Summary};
+use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 use log::info;

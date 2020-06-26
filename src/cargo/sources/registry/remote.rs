@@ -1,4 +1,4 @@
-use crate::core::{GitReference, InternedString, PackageId, SourceId};
+use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
@@ -6,6 +6,7 @@ use crate::sources::registry::{
     VERSION_TEMPLATE,
 };
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use lazycell::LazyCell;

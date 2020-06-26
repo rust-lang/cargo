@@ -11,11 +11,11 @@ use serde::Serialize;
 use url::Url;
 
 use crate::core::compiler::CrateType;
-use crate::core::interning::InternedString;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
+use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 

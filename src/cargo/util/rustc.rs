@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::core::InternedString;
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{self, profile, CargoResult, CargoResultExt, ProcessBuilder, StableHasher};
 

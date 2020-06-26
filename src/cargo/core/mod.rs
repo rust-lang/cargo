@@ -3,7 +3,6 @@ pub use self::features::{
     enable_nightly_features, maybe_allow_nightly_features, nightly_features_allowed,
 };
 pub use self::features::{CliUnstable, Edition, Feature, Features};
-pub use self::interning::InternedString;
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};
@@ -19,7 +18,6 @@ pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConf
 pub mod compiler;
 pub mod dependency;
 pub mod features;
-mod interning;
 pub mod manifest;
 pub mod package;
 pub mod package_id;

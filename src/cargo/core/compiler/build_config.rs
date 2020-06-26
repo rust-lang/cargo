@@ -1,5 +1,5 @@
 use crate::core::compiler::CompileKind;
-use crate::core::interning::InternedString;
+use crate::util::interning::InternedString;
 use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
 use anyhow::bail;

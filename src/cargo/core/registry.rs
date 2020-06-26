@@ -5,10 +5,11 @@ use log::{debug, trace};
 use semver::VersionReq;
 use url::Url;
 
+use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
-use crate::core::{InternedString, PackageSet};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::{profile, CanonicalUrl, Config};
 
 /// Source of information about a group of packages.

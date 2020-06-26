@@ -1,8 +1,9 @@
 use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
-use crate::core::{InternedString, PackageIdSpec, TargetKind, Workspace};
+use crate::core::{PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::Config;
 use std::fs;

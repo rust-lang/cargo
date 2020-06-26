@@ -98,9 +98,9 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
-use crate::core::InternedString;
 use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::{internal, Graph};
 
 use super::{Resolve, ResolveVersion};

@@ -1,7 +1,7 @@
 use super::features::RequestedFeatures;
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::Config;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};

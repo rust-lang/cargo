@@ -173,10 +173,11 @@ use tar::Archive;
 
 use crate::core::dependency::{DepKind, Dependency};
 use crate::core::source::MaybePackage;
-use crate::core::{InternedString, Package, PackageId, Source, SourceId, Summary};
+use crate::core::{Package, PackageId, Source, SourceId, Summary};
 use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
+use crate::util::interning::InternedString;
 use crate::util::into_url::IntoUrl;
 use crate::util::{restricted_names, CargoResult, Config, Filesystem};
 

@@ -4,8 +4,8 @@ use std::num::NonZeroU64;
 use anyhow::format_err;
 use log::debug;
 
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::util::interning::InternedString;
 use crate::util::Graph;
 
 use super::dep_cache::RegistryQueryer;

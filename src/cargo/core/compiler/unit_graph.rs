@@ -1,7 +1,8 @@
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{nightly_features_allowed, InternedString, PackageId, Target};
+use crate::core::{nightly_features_allowed, PackageId, Target};
+use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use std::collections::HashMap;
 use std::io::Write;

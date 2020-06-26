@@ -1,8 +1,8 @@
 use super::encode::Metadata;
 use crate::core::dependency::DepKind;
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::Graph;
 use std::borrow::Borrow;
 use std::cmp;
