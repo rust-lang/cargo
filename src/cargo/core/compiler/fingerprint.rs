@@ -328,7 +328,7 @@ use crate::core::{InternedString, Package};
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::{internal, profile};
+use crate::util::{internal, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
 use super::job::{
@@ -1759,6 +1759,7 @@ pub fn translate_dep_info(
     rustc_cwd: &Path,
     pkg_root: &Path,
     target_root: &Path,
+    rustc_cmd: &ProcessBuilder,
     allow_package: bool,
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
@@ -1767,6 +1768,34 @@ pub fn translate_dep_info(
     let pkg_root = pkg_root.canonicalize()?;
     let mut on_disk_info = OnDiskDepInfo::default();
     on_disk_info.env = depinfo.env;
+
+    // This is a bit of a tricky statement, but here we're *removing* the
+    // dependency on environment variables that were defined specifically for
+    // the command itself. Environment variables returend by `get_envs` includes
+    // environment variables like:
+    //
+    // * `OUT_DIR` if applicable
+    // * env vars added by a build script, if any
+    //
+    // The general idea here is that the dep info file tells us what, when
+    // changed, should cause us to rebuild the crate. These environment
+    // variables are synthesized by Cargo and/or the build script, and the
+    // intention is that their values are tracked elsewhere for whether the
+    // crate needs to be rebuilt.
+    //
+    // For example a build script says when it needs to be rerun and otherwise
+    // it's assumed to produce the same output, so we're guaranteed that env
+    // vars defined by the build script will always be the same unless the build
+    // script itself reruns, in which case the crate will rerun anyway.
+    //
+    // For things like `OUT_DIR` it's a bit sketchy for now. Most of the time
+    // that's used for code generation but this is technically buggy where if
+    // you write a binary that does `println!("{}", env!("OUT_DIR"))` we won't
+    // recompile that if you move the target directory. Hopefully that's not too
+    // bad of an issue for now...
+    on_disk_info
+        .env
+        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
 
     for file in depinfo.files {
         // The path may be absolute or relative, canonical or not. Make sure

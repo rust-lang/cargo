@@ -70,7 +70,7 @@ pub trait Executor: Send + Sync + 'static {
     /// this package.
     fn exec(
         &self,
-        cmd: ProcessBuilder,
+        cmd: &ProcessBuilder,
         id: PackageId,
         target: &Target,
         mode: CompileMode,
@@ -93,7 +93,7 @@ pub struct DefaultExecutor;
 impl Executor for DefaultExecutor {
     fn exec(
         &self,
-        cmd: ProcessBuilder,
+        cmd: &ProcessBuilder,
         _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
@@ -281,7 +281,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
             exec.exec(
-                rustc,
+                &rustc,
                 package_id,
                 &target,
                 mode,
@@ -299,6 +299,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &cwd,
                 &pkg_root,
                 &target_dir,
+                &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
             )
