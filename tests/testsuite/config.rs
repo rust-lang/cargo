@@ -1,7 +1,8 @@
 //! Tests for config settings.
 
-use cargo::core::{enable_nightly_features, InternedString, Shell};
+use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config, SslVersionConfig, StringList};
+use cargo::util::interning::InternedString;
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::{normalized_lines_match, paths, project, t};

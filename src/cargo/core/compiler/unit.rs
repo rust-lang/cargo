@@ -1,7 +1,8 @@
 use crate::core::compiler::{CompileKind, CompileMode, CrateType};
 use crate::core::manifest::{Target, TargetKind};
-use crate::core::{profiles::Profile, InternedString, Package};
+use crate::core::{profiles::Profile, Package};
 use crate::util::hex::short_hash;
+use crate::util::interning::InternedString;
 use crate::util::Config;
 use std::cell::RefCell;
 use std::collections::HashSet;

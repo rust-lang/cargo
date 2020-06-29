@@ -323,9 +323,10 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::unit_graph::UnitDep;
-use crate::core::{InternedString, Package};
+use crate::core::Package;
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, profile};
 

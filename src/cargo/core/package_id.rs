@@ -9,8 +9,8 @@ use std::sync::Mutex;
 use serde::de;
 use serde::ser;
 
-use crate::core::interning::InternedString;
 use crate::core::source::SourceId;
+use crate::util::interning::InternedString;
 use crate::util::{CargoResult, ToSemver};
 
 lazy_static::lazy_static! {

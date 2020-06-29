@@ -6,9 +6,9 @@ use serde::ser;
 use serde::Serialize;
 use std::rc::Rc;
 
-use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::Config;
 
 /// Information about a dependency requested by a Cargo manifest.

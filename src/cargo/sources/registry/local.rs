@@ -1,6 +1,7 @@
-use crate::core::{InternedString, PackageId};
+use crate::core::PackageId;
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use std::fs::File;

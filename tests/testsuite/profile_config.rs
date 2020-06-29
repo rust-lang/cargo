@@ -346,7 +346,8 @@ fn named_config_profile() {
     use cargo::core::enable_nightly_features;
     use cargo::core::features::Features;
     use cargo::core::profiles::{Profiles, UnitFor};
-    use cargo::core::{InternedString, PackageId};
+    use cargo::core::PackageId;
+    use cargo::util::interning::InternedString;
     use cargo::util::toml::TomlProfiles;
     use std::fs;
     enable_nightly_features();

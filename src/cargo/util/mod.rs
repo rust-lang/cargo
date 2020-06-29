@@ -43,6 +43,7 @@ pub mod graph;
 mod hasher;
 pub mod hex;
 pub mod important_paths;
+pub mod interning;
 pub mod into_url;
 mod into_url_with_base;
 pub mod job;

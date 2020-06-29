@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use serde::{Serialize, Serializer};
 
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId};
+use crate::util::interning::InternedString;
 use semver::Version;
 
 use crate::util::CargoResult;

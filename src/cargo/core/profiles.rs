@@ -1,8 +1,8 @@
 use crate::core::compiler::CompileMode;
-use crate::core::interning::InternedString;
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
+use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::bail;

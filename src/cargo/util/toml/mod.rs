@@ -17,11 +17,12 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, InternedString, Manifest, PackageId, Summary, Target};
+use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::interning::InternedString;
 use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
 
 mod targets;

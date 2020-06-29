@@ -1,5 +1,6 @@
-use crate::core::{InternedString, Target};
+use crate::core::Target;
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::Config;
 use anyhow::bail;
 use serde::Serialize;
