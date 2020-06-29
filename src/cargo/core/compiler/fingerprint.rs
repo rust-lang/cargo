@@ -106,8 +106,9 @@
 //!   used to log details about *why* a fingerprint is considered dirty.
 //!   `CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
 //!   used to display this log information.
-//! - A "dep-info" file which contains a list of source filenames for the
-//!   target. See below for details.
+//! - A "dep-info" file which is a translation of rustc's `*.d` dep-info files
+//!   to a Cargo-specific format that tweaks file names and is optimized for
+//!   reading quickly.
 //! - An `invoked.timestamp` file whose filesystem mtime is updated every time
 //!   the Unit is built. This is used for capturing the time when the build
 //!   starts, to detect if files are changed in the middle of the build. See
@@ -146,7 +147,10 @@
 //! directory (`translate_dep_info`). The mtime of the fingerprint dep-info
 //! file itself is used as the reference for comparing the source files to
 //! determine if any of the source files have been modified (see below for
-//! more detail).
+//! more detail). Note that Cargo parses the special `# env-var:...` comments in
+//! dep-info files to learn about environment variables that the rustc compile
+//! depends on. Cargo then later uses this to trigger a recompile if a
+//! referenced env var changes (even if the source didn't change).
 //!
 //! There is also a third dep-info file. Cargo will extend the file created by
 //! rustc with some additional information and saves this into the output
@@ -692,10 +696,16 @@ enum StaleItem {
 
 impl LocalFingerprint {
     /// Checks dynamically at runtime if this `LocalFingerprint` has a stale
-    /// file.
+    /// item inside of it.
     ///
-    /// This will use the absolute root paths passed in if necessary to guide
-    /// file accesses.
+    /// The main purpose of this function is to handle two different ways
+    /// fingerprints can be invalidated:
+    ///
+    /// * One is a dependency listed in rustc's dep-info files is invalid. Note
+    ///   that these could either be env vars or files. We check both here.
+    ///
+    /// * Another is the `rerun-if-changed` directive from build scripts. This
+    ///   is where we'll find whether files have actually changed
     fn find_stale_item(
         &self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
@@ -703,10 +713,12 @@ impl LocalFingerprint {
         target_root: &Path,
     ) -> CargoResult<Option<StaleItem>> {
         match self {
-            // We need to parse `dep_info`, learn about all the files the crate
-            // depends on, and then see if any of them are newer than the
-            // dep_info file itself. If the `dep_info` file is missing then this
-            // unit has never been compiled!
+            // We need to parse `dep_info`, learn about the crate's dependencies.
+            //
+            // For each env var we see if our current process's env var still
+            // matches, and for each file we see if any of them are newer than
+            // the `dep_info` file itself whose mtime represents the start of
+            // rustc.
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
                 let info = match parse_dep_info(pkg_root, target_root, &dep_info)? {
@@ -1620,7 +1632,17 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     info!("    err: {:?}", ce);
 }
 
-// Parse the dep-info into a list of paths
+/// Parses Cargo's internal `EncodedDepInfo` structure that was previously
+/// serialized to disk.
+///
+/// Note that this is not rustc's `*.d` files.
+///
+/// Also note that rustc's `*.d` files are translated to Cargo-specific
+/// `EncodedDepInfo` files after compilations have finished in
+/// `translate_dep_info`.
+///
+/// Returns `None` if the file is corrupt or couldn't be read from disk. This
+/// indicates that the crate should likely be rebuilt.
 pub fn parse_dep_info(
     pkg_root: &Path,
     target_root: &Path,
@@ -1630,9 +1652,12 @@ pub fn parse_dep_info(
         Ok(data) => data,
         Err(_) => return Ok(None),
     };
-    let info = match OnDiskDepInfo::parse(&data) {
+    let info = match EncodedDepInfo::parse(&data) {
         Some(info) => info,
-        None => return Ok(None),
+        None => {
+            log::warn!("failed to parse cargo's dep-info at {:?}", dep_info);
+            return Ok(None);
+        }
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
@@ -1721,7 +1746,6 @@ where
     None
 }
 
-#[derive(Serialize, Deserialize)]
 enum DepInfoPathType {
     // src/, e.g. src/lib.rs
     PackageRootRelative,
@@ -1766,7 +1790,7 @@ pub fn translate_dep_info(
 
     let target_root = target_root.canonicalize()?;
     let pkg_root = pkg_root.canonicalize()?;
-    let mut on_disk_info = OnDiskDepInfo::default();
+    let mut on_disk_info = EncodedDepInfo::default();
     on_disk_info.env = depinfo.env;
 
     // This is a bit of a tricky statement, but here we're *removing* the
@@ -1831,17 +1855,27 @@ pub struct RustcDepInfo {
     pub files: Vec<PathBuf>,
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
+    ///
+    /// The first element of the pair is the name of the env var and the second
+    /// item is the value. `Some` means that the env var was set, and `None`
+    /// means that the env var wasn't actually set and the compilation depends
+    /// on it not being set.
     pub env: Vec<(String, Option<String>)>,
 }
 
+// Same as `RustcDepInfo` except avoids absolute paths as much as possible to
+// allow moving around the target directory.
+//
+// This is also stored in an optimized format to make parsing it fast because
+// Cargo will read it for crates on all future compilations.
 #[derive(Default)]
-struct OnDiskDepInfo {
+struct EncodedDepInfo {
     files: Vec<(DepInfoPathType, PathBuf)>,
     env: Vec<(String, Option<String>)>,
 }
 
-impl OnDiskDepInfo {
-    fn parse(mut bytes: &[u8]) -> Option<OnDiskDepInfo> {
+impl EncodedDepInfo {
+    fn parse(mut bytes: &[u8]) -> Option<EncodedDepInfo> {
         let bytes = &mut bytes;
         let nfiles = read_usize(bytes)?;
         let mut files = Vec::with_capacity(nfiles as usize);
@@ -1866,7 +1900,7 @@ impl OnDiskDepInfo {
             };
             env.push((key, val));
         }
-        return Some(OnDiskDepInfo { files, env });
+        return Some(EncodedDepInfo { files, env });
 
         fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
             let ret = bytes.get(..4)?;
