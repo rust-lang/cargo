@@ -1980,11 +1980,14 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
             let rest = &line[env_dep_prefix.len()..];
             let mut parts = rest.splitn(2, '=');
             let env_var = match parts.next() {
-                Some(s) => s.to_string(),
+                Some(s) => s,
                 None => continue,
             };
-            let env_val = parts.next().map(|s| s.to_string());
-            ret.env.push((env_var, env_val));
+            let env_val = match parts.next() {
+                Some(s) => Some(unescape_env(s)?),
+                None => None,
+            };
+            ret.env.push((unescape_env(env_var)?, env_val));
         } else if let Some(pos) = line.find(": ") {
             if found_deps {
                 continue;
@@ -2005,5 +2008,27 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
             }
         }
     }
-    Ok(ret)
+    return Ok(ret);
+
+    // rustc tries to fit env var names and values all on a single line, which
+    // means it needs to escape `\r` and `\n`. The escape syntax used is "\n"
+    // which means that `\` also needs to be escaped.
+    fn unescape_env(s: &str) -> CargoResult<String> {
+        let mut ret = String::with_capacity(s.len());
+        let mut chars = s.chars();
+        while let Some(c) = chars.next() {
+            if c != '\\' {
+                ret.push(c);
+                continue;
+            }
+            match chars.next() {
+                Some('\\') => ret.push('\\'),
+                Some('n') => ret.push('\n'),
+                Some('r') => ret.push('\r'),
+                Some(c) => bail!("unknown escape character `{}`", c),
+                None => bail!("unterminated escape character"),
+            }
+        }
+        Ok(ret)
+    }
 }

@@ -2493,6 +2493,7 @@ fn env_in_code_causes_rebuild() {
             r#"
                 fn main() {
                     println!("{:?}", option_env!("FOO"));
+                    println!("{:?}", option_env!("FOO\nBAR"));
                 }
             "#,
         )
@@ -2525,6 +2526,19 @@ fn env_in_code_causes_rebuild() {
         .run();
     p.cargo("build")
         .env_remove("FOO")
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    let interesting = " #!$\nabc\r\\\t\u{8}\r\n";
+    p.cargo("build").env("FOO", interesting).run();
+    p.cargo("build")
+        .env("FOO", interesting)
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    p.cargo("build").env("FOO\nBAR", interesting).run();
+    p.cargo("build")
+        .env("FOO\nBAR", interesting)
         .with_stderr("[FINISHED][..]")
         .run();
 }
