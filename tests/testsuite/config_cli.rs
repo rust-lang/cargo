@@ -268,26 +268,6 @@ fn rerooted_remains() {
 }
 
 #[cargo_test]
-fn unstable_dash_underscore_interchangable() {
-    // Confirm unstable flag parsing treats underscores and dashes
-    // interchangably when coming from the CLI.
-    let config = ConfigBuilder::new()
-        .unstable_flag("print_im_a_teapot")
-        .build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
-
-    let config = ConfigBuilder::new()
-        .unstable_flag("print-im-a-teapot")
-        .build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
-
-    let config = ConfigBuilder::new()
-        .unstable_flag("print_im-a_teapot")
-        .build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
-}
-
-#[cargo_test]
 fn bad_parse() {
     // Fail to TOML parse.
     let config = ConfigBuilder::new().config_arg("abc").build_err();

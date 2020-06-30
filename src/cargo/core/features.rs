@@ -46,7 +46,6 @@
 //! we'll be sure to update this documentation!
 
 use std::cell::Cell;
-use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::str::FromStr;
@@ -361,7 +360,6 @@ pub struct CliUnstable {
 }
 
 impl CliUnstable {
-    /// Update unstable options in-place from a slice of flag strings
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
             bail!(
@@ -373,33 +371,16 @@ impl CliUnstable {
             );
         }
         for flag in flags {
-            let mut parts = flag.splitn(2, '=');
-            let k = parts.next().unwrap();
-            let v = parts.next();
-            self.add(k, v)?;
+            self.add(flag)?;
         }
         Ok(())
     }
 
-    /// Read unstable options from a hashmap, updating in-place.
-    /// Intended for consuming unstable settings from config files
-    pub fn update_with_table(&mut self, flags: &HashMap<String, String>) -> CargoResult<()> {
-        if !flags.is_empty() && !nightly_features_allowed() {
-            bail!(
-                "the `-Z` flag is only accepted on the nightly channel of Cargo, \
-                 but this is the `{}` channel\n\
-                 {}",
-                channel(),
-                SEE_CHANNELS
-            );
-        }
-        for (k, v) in flags {
-            self.add(&k, Some(v.as_str()))?;
-        }
-        Ok(())
-    }
+    fn add(&mut self, flag: &str) -> CargoResult<()> {
+        let mut parts = flag.splitn(2, '=');
+        let k = parts.next().unwrap();
+        let v = parts.next();
 
-    fn add(&mut self, k: &str, v: Option<&str>) -> CargoResult<()> {
         fn parse_bool(key: &str, value: Option<&str>) -> CargoResult<bool> {
             match value {
                 None | Some("yes") => Ok(true),
@@ -430,9 +411,7 @@ impl CliUnstable {
             Ok(true)
         };
 
-        // Permit dashes or underscores in parsing these
-        let normalized_key = k.replace("_", "-");
-        match normalized_key.as_str() {
+        match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
