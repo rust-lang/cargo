@@ -28,10 +28,12 @@ use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::unused_dependencies::AllowedKinds;
 use crate::core::compiler::{standard_lib, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -467,7 +469,7 @@ pub fn create_bcx<'a, 'cfg>(
         })
         .collect();
 
-    let mut units = generate_targets(
+    let (mut units, allowed_kinds) = generate_targets(
         ws,
         &to_builds,
         filter,
@@ -610,6 +612,7 @@ pub fn create_bcx<'a, 'cfg>(
         ws,
         pkg_set,
         build_config,
+        allowed_kinds,
         profiles,
         extra_compiler_args,
         target_data,
@@ -849,7 +852,7 @@ fn generate_targets(
     package_set: &PackageSet<'_>,
     profiles: &Profiles,
     interner: &UnitInterner,
-) -> CargoResult<Vec<Unit>> {
+) -> CargoResult<(Vec<Unit>, AllowedKinds)> {
     let config = ws.config();
     // Helper for creating a list of `Unit` structures
     let new_unit =
@@ -941,6 +944,9 @@ fn generate_targets(
     // Create a list of proposed targets.
     let mut proposals: Vec<Proposal<'_>> = Vec::new();
 
+    let mut allowed_kinds = HashSet::<DepKind>::new();
+    allowed_kinds.insert(DepKind::Build);
+
     match *filter {
         CompileFilter::Default {
             required_features_filterable,
@@ -968,6 +974,8 @@ fn generate_targets(
                     }
                 }
             }
+            allowed_kinds.insert(DepKind::Normal);
+            allowed_kinds.insert(DepKind::Development);
         }
         CompileFilter::Only {
             all_targets,
@@ -1026,6 +1034,21 @@ fn generate_targets(
                 CompileMode::Check { .. } => CompileMode::Check { test: true },
                 _ => mode,
             };
+
+            if *lib != LibRule::False {
+                match (bins, examples, tests, benches) {
+                    (FilterRule::All, FilterRule::All, FilterRule::All, FilterRule::All) => {
+                        allowed_kinds.insert(DepKind::Development);
+                    }
+                    _ => (),
+                }
+                match (bins, examples, tests, benches) {
+                    (FilterRule::All, ..) => {
+                        allowed_kinds.insert(DepKind::Normal);
+                    }
+                    _ => (),
+                }
+            }
 
             proposals.extend(list_rule_targets(
                 packages,
@@ -1109,7 +1132,8 @@ fn generate_targets(
         }
         // else, silently skip target.
     }
-    Ok(units.into_iter().collect())
+
+    Ok((units.into_iter().collect(), allowed_kinds))
 }
 
 /// Warns if a target's required-features references a feature that doesn't exist.

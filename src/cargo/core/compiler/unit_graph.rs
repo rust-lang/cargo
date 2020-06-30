@@ -1,11 +1,12 @@
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{PackageId, Target};
+use crate::core::{Dependency, PackageId, Target};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use crate::Config;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 
 /// The dependency graph of Units.
@@ -16,6 +17,8 @@ pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;
 pub struct UnitDep {
     /// The dependency unit.
     pub unit: Unit,
+    /// The manifest dependency that gave rise to this dependency
+    pub dependency: UnitDependency,
     /// The purpose of this dependency (a dependency for a test, or a build
     /// script, etc.). Do not use this after the unit graph has been built.
     pub unit_for: UnitFor,
@@ -25,6 +28,15 @@ pub struct UnitDep {
     pub public: bool,
     /// If `true`, the dependency should not be added to Rust's prelude.
     pub noprelude: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub struct UnitDependency(pub Option<Dependency>);
+
+impl Hash for UnitDependency {
+    fn hash<H: Hasher>(&self, _: &mut H) {
+        // ...
+    }
 }
 
 const VERSION: u32 = 1;

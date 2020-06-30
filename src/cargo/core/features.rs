@@ -582,6 +582,7 @@ pub struct CliUnstable {
     pub timings: Option<Vec<String>>,
     pub unstable_options: bool,
     pub weak_dep_features: bool,
+    pub warn_unused_deps: bool,
 }
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -799,6 +800,7 @@ impl CliUnstable {
             "crate-versions" => stabilized_warn(k, "1.47", STABILIZED_CRATE_VERSIONS),
             "package-features" => stabilized_warn(k, "1.51", STABILIZED_PACKAGE_FEATURES),
             "future-incompat-report" => self.enable_future_incompat_feature = parse_empty(k, v)?,
+            "warn-unused-deps" => self.warn_unused_deps = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

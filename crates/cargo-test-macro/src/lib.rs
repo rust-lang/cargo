@@ -14,6 +14,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     ))));
 
     let build_std = contains_ident(&attr, "build_std");
+    let unused_dependencies = contains_ident(&attr, "unused_dependencies");
 
     for token in item {
         let group = match token {
@@ -34,12 +35,14 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
         let mut new_body =
             to_token_stream("let _test_guard = cargo_test_support::paths::init_root();");
 
-        // If this is a `build_std` test (aka `tests/build-std/*.rs`) then they
-        // only run on nightly and they only run when specifically instructed to
-        // on CI.
-        if build_std {
+        // If this is a test that only runs on nightly (`build_std` and `unused_dependencies`)
+        if build_std || unused_dependencies {
             let ts = to_token_stream("if !cargo_test_support::is_nightly() { return }");
             new_body.extend(ts);
+        }
+        // `build_std` tests (aka `tests/build-std/*.rs`) only run
+        // when specifically instructed to on CI.
+        if build_std {
             let ts = to_token_stream(
                 "if std::env::var(\"CARGO_RUN_BUILD_STD_TESTS\").is_err() { return }",
             );

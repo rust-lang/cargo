@@ -15,7 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
+use crate::core::compiler::unit_graph::{UnitDep, UnitDependency, UnitGraph};
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::dependency::DepKind;
@@ -146,6 +146,9 @@ fn attach_std_deps(
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
             deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
                 unit: unit.clone(),
+                // There is no dependency in the manifest giving rise to this
+                // as the dependency is implicit
+                dependency: UnitDependency(None),
                 unit_for: UnitFor::new_normal(),
                 extern_crate_name: unit.pkg.name(),
                 // TODO: Does this `public` make sense?
@@ -269,13 +272,36 @@ fn compute_deps(
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = unit_for.with_dependency(unit, lib);
 
+        // TODO this does not take into account cases where a dependency
+        // comes from multiple sources like appears both as dev-dependency
+        // and proper dependency, same dependency through multiple cfg's, etc.
+        let dep = deps.iter().next().cloned();
+
         let start = ret.len();
         if state.config.cli_unstable().dual_proc_macros && lib.proc_macro() && !unit.kind.is_host()
         {
-            let unit_dep = new_unit_dep(state, unit, pkg, lib, dep_unit_for, unit.kind, mode)?;
+            let dep_cloned = dep.clone();
+            let unit_dep = new_unit_dep(
+                state,
+                unit,
+                pkg,
+                lib,
+                dep_cloned,
+                dep_unit_for,
+                unit.kind,
+                mode,
+            )?;
             ret.push(unit_dep);
-            let unit_dep =
-                new_unit_dep(state, unit, pkg, lib, dep_unit_for, CompileKind::Host, mode)?;
+            let unit_dep = new_unit_dep(
+                state,
+                unit,
+                pkg,
+                lib,
+                dep,
+                dep_unit_for,
+                CompileKind::Host,
+                mode,
+            )?;
             ret.push(unit_dep);
         } else {
             let unit_dep = new_unit_dep(
@@ -283,6 +309,7 @@ fn compute_deps(
                 unit,
                 pkg,
                 lib,
+                dep,
                 dep_unit_for,
                 unit.kind.for_target(lib),
                 mode,
@@ -351,6 +378,7 @@ fn compute_deps(
                         unit,
                         &unit.pkg,
                         t,
+                        None,
                         UnitFor::new_normal(),
                         unit.kind.for_target(t),
                         CompileMode::Build,
@@ -400,6 +428,7 @@ fn compute_deps_custom_build(
         unit,
         &unit.pkg,
         &unit.target,
+        None,
         script_unit_for,
         // Build scripts always compiled for the host.
         CompileKind::Host,
@@ -435,6 +464,7 @@ fn compute_deps_doc(
             unit,
             dep,
             lib,
+            None,
             dep_unit_for,
             unit.kind.for_target(lib),
             mode,
@@ -447,6 +477,7 @@ fn compute_deps_doc(
                 unit,
                 dep,
                 lib,
+                None,
                 dep_unit_for,
                 unit.kind.for_target(lib),
                 unit.mode,
@@ -482,6 +513,7 @@ fn maybe_lib(
                 unit,
                 &unit.pkg,
                 t,
+                None,
                 dep_unit_for,
                 unit.kind.for_target(t),
                 mode,
@@ -541,6 +573,7 @@ fn dep_build_script(
                 unit,
                 &unit.pkg,
                 t,
+                None,
                 script_unit_for,
                 unit.kind,
                 CompileMode::RunCustomBuild,
@@ -574,6 +607,7 @@ fn new_unit_dep(
     parent: &Unit,
     pkg: &Package,
     target: &Target,
+    dependency: Option<Dependency>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -587,7 +621,9 @@ fn new_unit_dep(
         mode,
         kind,
     );
-    new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
+    new_unit_dep_with_profile(
+        state, parent, pkg, target, dependency, unit_for, kind, mode, profile,
+    )
 }
 
 fn new_unit_dep_with_profile(
@@ -595,6 +631,7 @@ fn new_unit_dep_with_profile(
     parent: &Unit,
     pkg: &Package,
     target: &Target,
+    dependency: Option<Dependency>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -616,6 +653,7 @@ fn new_unit_dep_with_profile(
         .intern(pkg, target, profile, kind, mode, features, state.is_std, 0);
     Ok(UnitDep {
         unit,
+        dependency: UnitDependency(dependency),
         unit_for,
         extern_crate_name,
         public,

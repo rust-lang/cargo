@@ -1,4 +1,5 @@
 use crate::core::compiler::unit_graph::UnitGraph;
+use crate::core::compiler::unused_dependencies::AllowedKinds;
 use crate::core::compiler::{BuildConfig, CompileKind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::PackageSet;
@@ -30,6 +31,7 @@ pub struct BuildContext<'a, 'cfg> {
     pub profiles: Profiles,
     pub build_config: &'a BuildConfig,
 
+    pub allowed_kinds: AllowedKinds,
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
@@ -56,6 +58,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         ws: &'a Workspace<'cfg>,
         packages: PackageSet<'cfg>,
         build_config: &'a BuildConfig,
+        allowed_kinds: AllowedKinds,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData,
@@ -74,6 +77,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             config: ws.config(),
             packages,
             build_config,
+            allowed_kinds,
             profiles,
             extra_compiler_args,
             target_data,
