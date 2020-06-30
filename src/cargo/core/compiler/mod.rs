@@ -720,11 +720,18 @@ fn add_error_format_and_color(
     cmd.arg(json);
 
     if nightly_features_allowed() {
-        if let (Some(width), _) | (_, Some(width)) = (
-            cx.bcx.config.cli_unstable().terminal_width,
-            cx.bcx.config.shell().accurate_err_width(),
-        ) {
-            cmd.arg(format!("-Zterminal-width={}", width));
+        let config = cx.bcx.config;
+        match (config.cli_unstable().terminal_width, config.shell().accurate_err_width()) {
+            // Terminal width explicitly provided - only useful for testing.
+            (Some(Some(width)), _) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // Terminal width was not explicitly provided but flag was provided - common case.
+            (Some(None), Some(width)) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // User didn't opt-in.
+            _ => (),
         }
     }
 
