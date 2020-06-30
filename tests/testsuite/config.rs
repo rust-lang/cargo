@@ -1097,12 +1097,12 @@ Caused by:
 #[cargo_test]
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
-fn config_unstable_table() {
+fn unstable_table_notation() {
     cargo::core::enable_nightly_features();
     write_config(
         "\
 [unstable]
-print-im-a-teapot = 'yes'
+print-im-a-teapot = true
 ",
     );
     let config = ConfigBuilder::new().build();
@@ -1111,11 +1111,11 @@ print-im-a-teapot = 'yes'
 
 #[cargo_test]
 /// Assert that dotted notation works for configuring unstable options
-fn config_unstable_dotted() {
+fn unstable_dotted_notation() {
     cargo::core::enable_nightly_features();
     write_config(
         "\
-unstable.print-im-a-teapot = 'yes'
+unstable.print-im-a-teapot = true
 ",
     );
     let config = ConfigBuilder::new().build();
@@ -1124,11 +1124,11 @@ unstable.print-im-a-teapot = 'yes'
 
 #[cargo_test]
 /// Assert that Zflags on the CLI take precedence over those from config
-fn config_unstable_cli_wins() {
+fn unstable_cli_precedence() {
     cargo::core::enable_nightly_features();
     write_config(
         "\
-unstable.print-im-a-teapot = 'yes'
+unstable.print-im-a-teapot = true
 ",
     );
     let config = ConfigBuilder::new().build();
@@ -1142,8 +1142,8 @@ unstable.print-im-a-teapot = 'yes'
 
 #[cargo_test]
 /// Assert that atempting to set an unstable flag that doesn't exist via config
-/// errors out the same as it would on the command line
-fn config_unstable_invalid_flag() {
+/// errors out the same as it would on the command line (nightly only)
+fn unstable_invalid_flag_errors_on_nightly() {
     cargo::core::enable_nightly_features();
     write_config(
         "\
@@ -1158,6 +1158,32 @@ Invalid [unstable] entry in Cargo config
 Caused by:
   unknown `-Z` flag specified: an-invalid-flag",
     );
+}
+
+#[cargo_test]
+/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// is ignored on stable
+fn unstable_invalid_flag_ignored_on_stable() {
+    write_config(
+        "\
+unstable.an-invalid-flag = 'yes'
+",
+    );
+    assert!(ConfigBuilder::new().build_err().is_ok());
+}
+
+#[cargo_test]
+/// Assert that unstable options can be configured with the `unstable` table in
+/// cargo config files
+fn unstable_flags_ignored_on_stable() {
+    write_config(
+        "\
+[unstable]
+print-im-a-teapot = true
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
 }
 
 #[cargo_test]

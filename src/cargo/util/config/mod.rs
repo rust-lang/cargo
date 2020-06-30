@@ -63,7 +63,7 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
 
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, bail};
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
@@ -745,18 +745,13 @@ impl Config {
         // If nightly features are enabled, allow setting Z-flags from config
         // using the `unstable` table. Ignore that block otherwise.
         if nightly_features_allowed() {
-            if let Some(unstable_configs) =
-                self.get::<Option<HashMap<String, String>>>("unstable")?
-            {
-                self.unstable_flags
-                    .update_with_table(&unstable_configs)
-                    .with_context(|| "Invalid [unstable] entry in Cargo config")?;
-
-                // NB. It sucks to parse these twice, but doing it again here
-                //     allows the CLI to override config files for both enabling
-                //     and disabling.
-                self.unstable_flags.parse(unstable_flags)?;
+            if let Some(unstable_flags) = self.get::<Option<CliUnstable>>("unstable")? {
+                self.unstable_flags = unstable_flags;
             }
+            // NB. It sucks to parse these twice, but doing it again here
+            //     allows the CLI to override config files for both enabling
+            //     and disabling.
+            self.unstable_flags.parse(unstable_flags)?;
         }
 
         Ok(())
