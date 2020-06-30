@@ -490,7 +490,7 @@ fn compute_metadata(
     // cause a new hash due to the rustc version changing, but this allows
     // cargo to be extra careful to deal with different versions of cargo that
     // use the same rustc version.
-    1.hash(&mut hasher);
+    2.hash(&mut hasher);
 
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere without worrying about conflicts.

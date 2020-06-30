@@ -24,6 +24,9 @@ fn check_forbidden_code() {
         }
         let c = fs::read_to_string(path).unwrap();
         for (line_index, line) in c.lines().enumerate() {
+            if line.trim().starts_with("//") {
+                continue;
+            }
             if line_has_print(line) {
                 if entry.file_name().to_str().unwrap() == "cargo_new.rs" && line.contains("Hello") {
                     // An exception.

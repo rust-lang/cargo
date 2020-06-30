@@ -2472,3 +2472,110 @@ fn lld_is_fresh() {
         .with_stderr("[FRESH] foo [..]\n[FINISHED] [..]")
         .run();
 }
+
+#[cargo_test]
+fn env_in_code_causes_rebuild() {
+    // Only nightly 1.46 has support in dep-info files for this
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", option_env!("FOO"));
+                    println!("{:?}", option_env!("FOO\nBAR"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").env_remove("FOO").run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr("[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr("[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    let interesting = " #!$\nabc\r\\\t\u{8}\r\n";
+    p.cargo("build").env("FOO", interesting).run();
+    p.cargo("build")
+        .env("FOO", interesting)
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    p.cargo("build").env("FOO\nBAR", interesting).run();
+    p.cargo("build")
+        .env("FOO\nBAR", interesting)
+        .with_stderr("[FINISHED][..]")
+        .run();
+}
+
+#[cargo_test]
+fn env_build_script_no_rebuild() {
+    // Only nightly 1.46 has support in dep-info files for this
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rustc-env=FOO=bar");
+                }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", env!("FOO"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+}
