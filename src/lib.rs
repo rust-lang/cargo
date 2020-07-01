@@ -53,7 +53,7 @@ pub trait Env {
 /// is using. Code that is not performing in-process threaded testing requiring
 /// isolated rustup/cargo directories does not need this trait or the _from
 /// functions.
-struct OsEnv {}
+pub struct OsEnv {}
 impl Env for OsEnv {
     fn home_dir(&self) -> Option<PathBuf> {
         home_dir_inner()
@@ -66,7 +66,7 @@ impl Env for OsEnv {
     }
 }
 
-static OS_ENV: OsEnv = OsEnv {};
+pub static OS_ENV: OsEnv = OsEnv {};
 
 /// Returns the path of the current user's home directory if known.
 ///
