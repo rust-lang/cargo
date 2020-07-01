@@ -151,7 +151,10 @@ impl Layout {
         // here. Use this opportunity to exclude it from backups as well if the
         // system supports it since this is a freshly created folder.
         //
-        paths::create_dir_all_excluded_from_backups_atomic(dest.as_path_unlocked())?;
+        paths::create_dir_all_excluded_from_backups_atomic(root.as_path_unlocked())?;
+        // Now that the excluded from backups target root is created we can create the
+        // actual destination (sub)subdirectory.
+        paths::create_dir_all(dest.as_path_unlocked())?;
 
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this

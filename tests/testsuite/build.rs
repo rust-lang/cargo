@@ -4998,7 +4998,7 @@ fn target_directory_is_excluded_from_backups() {
         .build();
 
     p.cargo("build").run();
-    let cachedir_tag = p.target_debug_dir().join("CACHEDIR.TAG");
+    let cachedir_tag = p.build_dir().join("CACHEDIR.TAG");
     assert!(cachedir_tag.is_file());
     assert!(fs::read_to_string(&cachedir_tag)
         .unwrap()
@@ -5012,7 +5012,7 @@ fn target_directory_is_not_excluded_from_backups_if_it_already_exists() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    let cachedir_tag = p.target_debug_dir().join("CACHEDIR.TAG");
+    let cachedir_tag = p.build_dir().join("CACHEDIR.TAG");
     p.cargo("build").run();
     fs::remove_file(&cachedir_tag).unwrap();
     p.cargo("build").run();
