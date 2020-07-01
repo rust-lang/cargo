@@ -1551,3 +1551,67 @@ fn crate_versions_flag_is_overridden() {
         .run();
     asserts(output_documentation());
 }
+
+#[cargo_test]
+fn target_directory_is_excluded_from_backups() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    let cachedir_tag = p.root().join("target/doc/CACHEDIR.TAG");
+    assert!(cachedir_tag.is_file());
+    assert!(fs::read_to_string(&cachedir_tag)
+        .unwrap()
+        .starts_with("Signature: 8a477f597d28d172789f06886806bc55"));
+}
+
+#[cargo_test]
+fn target_directory_is_not_excluded_from_backups_if_it_already_exists() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    fs::create_dir_all(p.root().join("target/doc")).unwrap();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    let cachedir_tag = p.root().join("target/doc/CACHEDIR.TAG");
+    assert!(!&cachedir_tag.is_file());
+}

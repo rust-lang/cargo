@@ -557,7 +557,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
-    paths::create_dir_all(&doc_dir)?;
+    paths::create_dir_all_excluded_from_backups_atomic(&doc_dir)?;
 
     rustdoc.arg("-o").arg(doc_dir);
 
