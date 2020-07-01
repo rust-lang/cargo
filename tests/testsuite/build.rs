@@ -4991,29 +4991,20 @@ fn reduced_reproduction_8249() {
 }
 
 #[cargo_test]
-fn target_directory_is_excluded_from_backups() {
+fn target_directory_backup_exclusion() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
+    // Newly created target/ should have CACHEDIR.TAG inside...
     p.cargo("build").run();
     let cachedir_tag = p.build_dir().join("CACHEDIR.TAG");
     assert!(cachedir_tag.is_file());
     assert!(fs::read_to_string(&cachedir_tag)
         .unwrap()
         .starts_with("Signature: 8a477f597d28d172789f06886806bc55"));
-}
-
-#[cargo_test]
-fn target_directory_is_not_excluded_from_backups_if_it_already_exists() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .build();
-
-    let cachedir_tag = p.build_dir().join("CACHEDIR.TAG");
-    p.cargo("build").run();
+    // ...but if target/ already exists CACHEDIR.TAG should not be created in it.
     fs::remove_file(&cachedir_tag).unwrap();
     p.cargo("build").run();
     assert!(!&cachedir_tag.is_file());
