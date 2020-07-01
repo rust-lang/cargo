@@ -6,7 +6,7 @@ describes the high-level structure of Cargo and [E-easy] bugs on the
 issue tracker.
 
 If you have a general question about Cargo or it's internals, feel free to ask
-on [Discord].
+on [Zulip].
 
 ## Code of Conduct
 
@@ -54,7 +54,7 @@ a working solution faster as it can iterate outside of cargo's release cadence.
 If you're looking for somewhere to start, check out the [E-easy][E-Easy] and
 [E-mentor][E-mentor] tags.
 
-Feel free to ask for guidelines on how to tackle a problem on [Discord] or open a
+Feel free to ask for guidelines on how to tackle a problem on [Zulip] or open a
 [new issue][new-issues]. This is especially important if you want to add new
 features to Cargo or make large changes to the already existing code-base.
 Cargo's core developers will do their best to provide help.
@@ -145,7 +145,7 @@ the `CARGO_RUN_BUILD_STD_TESTS=1` environment variable and running `cargo test
 After the pull request is made, a friendly bot will automatically assign a
 reviewer; the review-process will make sure that the proposed changes are
 sound. Please give the assigned reviewer sufficient time, especially during
-weekends. If you don't get a reply, you may poke the core developers on [Discord].
+weekends. If you don't get a reply, you may poke the core developers on [Zulip].
 
 A merge of Cargo's master-branch and your changes is immediately queued
 to be tested after the pull request is made. In case unforeseen
@@ -226,7 +226,7 @@ adding labels to triage issues:
 [E-mentor]: https://github.com/rust-lang/cargo/labels/E-mentor
 [I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
-[Discord]: https://discordapp.com/invite/rust-lang
+[Zulip]: https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo
 [`crates/cargo-test-support/src/lib.rs`]: crates/cargo-test-support/src/lib.rs
 [irlo]: https://internals.rust-lang.org/
 [subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
