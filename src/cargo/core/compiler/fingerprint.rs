@@ -1964,7 +1964,6 @@ impl EncodedDepInfo {
             dst.push((val >> 8) as u8);
             dst.push((val >> 16) as u8);
             dst.push((val >> 24) as u8);
-            assert!(val >> 32 == 0);
         }
     }
 }
