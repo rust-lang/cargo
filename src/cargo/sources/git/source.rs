@@ -176,7 +176,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
+        let path_source =
+            PathSource::new_recursive(&checkout_path.canonicalize()?, source_id, self.config);
 
         self.path_source = Some(path_source);
         self.locked_rev = Some(actual_rev);
