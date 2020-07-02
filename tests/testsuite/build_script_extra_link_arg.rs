@@ -19,7 +19,7 @@ fn build_script_extra_link_arg_bin() {
 
     p.cargo("build -Zextra-link-arg -v")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
+        .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
         )
@@ -43,7 +43,7 @@ fn build_script_extra_link_arg() {
 
     p.cargo("build -Zextra-link-arg -v")
         .masquerade_as_nightly_cargo()
-        .with_status(101)
+        .without_status()
         .with_stderr_contains(
             "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
         )
