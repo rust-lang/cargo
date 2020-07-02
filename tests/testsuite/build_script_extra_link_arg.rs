@@ -65,7 +65,7 @@ fn build_script_extra_link_arg_warn_without_flag() {
         )
         .build();
 
-    p.cargo("build -vv")
+    p.cargo("build -v")
         .with_status(0)
         .with_stderr_contains("warning: cargo:rustc-link-arg requires -Zextra-link-arg flag")
         .run();
