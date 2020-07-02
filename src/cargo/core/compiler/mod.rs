@@ -721,7 +721,10 @@ fn add_error_format_and_color(
 
     if nightly_features_allowed() {
         let config = cx.bcx.config;
-        match (config.cli_unstable().terminal_width, config.shell().accurate_err_width()) {
+        match (
+            config.cli_unstable().terminal_width,
+            config.shell().err_width().diagnostic_terminal_width(),
+        ) {
             // Terminal width explicitly provided - only useful for testing.
             (Some(Some(width)), _) => {
                 cmd.arg(format!("-Zterminal-width={}", width));
