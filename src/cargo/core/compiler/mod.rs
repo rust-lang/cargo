@@ -215,7 +215,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let link_type = (&unit.target).into();
-    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
 
     let dep_info_name = match cx.files().metadata(unit) {
         Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
@@ -264,7 +263,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     &build_scripts,
                     pass_l_flag,
                     link_type,
-                    extra_link_arg,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
@@ -347,7 +345,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
         link_type: Option<LinkType>,
-        extra_link_arg: bool,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -370,14 +367,11 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     }
                 }
                 if link_type.is_some() {
-                    output
-                        .linker_args
-                        .iter()
-                        .filter(|x| x.0.is_none() || x.0 == link_type)
-                        .filter(|x| x.0 == Some(LinkType::Cdylib) || extra_link_arg)
-                        .for_each(|x| {
-                            rustc.arg("-C").arg(format!("link-arg={}", x.1));
-                        });
+                    for (lt, arg) in &output.linker_args {
+                        if lt.is_none() || *lt == link_type {
+                            rustc.arg("-C").arg(format!("link-arg={}", arg));
+                        }
+                    }
                 }
             }
         }
