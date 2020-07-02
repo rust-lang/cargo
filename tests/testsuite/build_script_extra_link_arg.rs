@@ -3,7 +3,7 @@
 use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
-fn build_script_extra_bin_link_args() {
+fn build_script_extra_link_arg_bin() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
@@ -27,7 +27,7 @@ fn build_script_extra_bin_link_args() {
 }
 
 #[cargo_test]
-fn build_script_extra_link_args() {
+fn build_script_extra_link_arg() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
@@ -51,7 +51,7 @@ fn build_script_extra_link_args() {
 }
 
 #[cargo_test]
-fn build_script_extra_link_args_warn_on_stable() {
+fn build_script_extra_link_arg_warn_without_flag() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
