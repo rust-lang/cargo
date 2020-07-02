@@ -214,7 +214,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let link_type = unit.target.into();
+    let link_type = (&unit.target).into();
     let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
 
     let dep_info_name = match cx.files().metadata(unit) {
