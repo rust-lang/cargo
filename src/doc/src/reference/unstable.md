@@ -20,6 +20,37 @@ timings = 'yes'
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 
+### extra-link-arg
+* Original Pull Request: [#7811](https://github.com/rust-lang/cargo/pull/7811)
+
+The `-Z extra-link-arg` flag makes the following two instructions available
+in build scripts:
+
+* [`cargo:rustc-bin-link-arg=FLAG`](#rustc-bin-link-arg) — Passes custom
+  flags to a linker for bin crates.
+* [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) — Passes custom
+  flags to a linker for all supported crates.
+
+<a id="rustc-bin-link-arg"></a>
+#### `cargo:rustc-bin-link-arg=FLAG`
+
+The `rustc-bin-link-arg` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+binary target. Its usage is highly platform specific. It is useful
+to set a linker script or other linker options.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
+<a id="rustc-link-arg"></a>
+#### `cargo:rustc-link-arg=FLAG`
+
+The `rustc-link-arg` instruction tells Cargo to pass the [`-C link-arg=FLAG`
+option][link-arg] to the compiler, but only when building a supported target
+(currently a binary or `cdylib` library). Its usage is highly platform
+specific. It is useful to set the shared library version or linker script.
+
+[link-arg]: ../../rustc/codegen-options/index.md#link-arg
+
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
 * Tracking Issue: [#7404](https://github.com/rust-lang/cargo/issues/7404)
