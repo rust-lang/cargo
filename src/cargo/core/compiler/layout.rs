@@ -150,10 +150,11 @@ impl Layout {
         // If the root directory doesn't already exist go ahead and create it
         // here. Use this opportunity to exclude it from backups as well if the
         // system supports it since this is a freshly created folder.
-        if !dest.as_path_unlocked().exists() {
-            dest.create_dir()?;
-            exclude_from_backups(dest.as_path_unlocked());
-        }
+        //
+        paths::create_dir_all_excluded_from_backups_atomic(root.as_path_unlocked())?;
+        // Now that the excluded from backups target root is created we can create the
+        // actual destination (sub)subdirectory.
+        paths::create_dir_all(dest.as_path_unlocked())?;
 
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
@@ -218,33 +219,4 @@ impl Layout {
     pub fn build(&self) -> &Path {
         &self.build
     }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn exclude_from_backups(_: &Path) {}
-
-#[cfg(target_os = "macos")]
-/// Marks files or directories as excluded from Time Machine on macOS
-///
-/// This is recommended to prevent derived/temporary files from bloating backups.
-fn exclude_from_backups(path: &Path) {
-    use core_foundation::base::TCFType;
-    use core_foundation::{number, string, url};
-    use std::ptr;
-
-    // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
-    let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
-    let path = url::CFURL::from_path(path, false);
-    if let (Some(path), Ok(is_excluded_key)) = (path, is_excluded_key) {
-        unsafe {
-            url::CFURLSetResourcePropertyForKey(
-                path.as_concrete_TypeRef(),
-                is_excluded_key.as_concrete_TypeRef(),
-                number::kCFBooleanTrue as *const _,
-                ptr::null_mut(),
-            );
-        }
-    }
-    // Errors are ignored, since it's an optional feature and failure
-    // doesn't prevent Cargo from working
 }

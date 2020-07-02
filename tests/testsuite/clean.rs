@@ -432,7 +432,9 @@ fn assert_all_clean(build_dir: &Path) {
     }) {
         let entry = entry.unwrap();
         let path = entry.path();
-        if let ".rustc_info.json" | ".cargo-lock" = path.file_name().unwrap().to_str().unwrap() {
+        if let ".rustc_info.json" | ".cargo-lock" | "CACHEDIR.TAG" =
+            path.file_name().unwrap().to_str().unwrap()
+        {
             continue;
         }
         if path.is_symlink() || path.is_file() {
