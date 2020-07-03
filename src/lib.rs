@@ -36,11 +36,15 @@ use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Permits parameterising the home functions via the _from variants - used for
+/// Permits parameterizing the home functions via the _from variants - used for
 /// in-process unit testing by rustup.
 pub trait Env {
+    /// Return the path to the the users home dir, or None if any error occurs:
+    /// see home_inner.
     fn home_dir(&self) -> Option<PathBuf>;
+    /// Return the current working directory.
     fn current_dir(&self) -> io::Result<PathBuf>;
+    /// Get an environment variable, as per std::env::var_os.
     fn var_os(&self, key: &str) -> Option<OsString>;
 }
 
@@ -53,7 +57,7 @@ pub trait Env {
 /// is using. Code that is not performing in-process threaded testing requiring
 /// isolated rustup/cargo directories does not need this trait or the _from
 /// functions.
-pub struct OsEnv {}
+pub struct OsEnv;
 impl Env for OsEnv {
     fn home_dir(&self) -> Option<PathBuf> {
         home_dir_inner()
@@ -66,7 +70,7 @@ impl Env for OsEnv {
     }
 }
 
-pub static OS_ENV: OsEnv = OsEnv {};
+pub const OS_ENV: OsEnv = OsEnv {};
 
 /// Returns the path of the current user's home directory if known.
 ///
@@ -97,10 +101,7 @@ pub fn home_dir() -> Option<PathBuf> {
     home_dir_from(&OS_ENV)
 }
 
-/// Variant of home_dir where the environment source is parameterised. This is
-/// specifically to support in-process testing scenarios as environment
-/// variables and user home metadata are normally process global state. See the
-/// OsEnv trait.
+/// Returns the path of the current user's home directory from [`Env::home_dir`].
 pub fn home_dir_from(env: &dyn Env) -> Option<PathBuf> {
     env.home_dir()
 }
@@ -145,10 +146,10 @@ pub fn cargo_home() -> io::Result<PathBuf> {
     cargo_home_from(&OS_ENV)
 }
 
-/// Variant of cargo_home where the environment source is parameterised. This is
+/// Variant of cargo_home where the environment source is parameterized. This is
 /// specifically to support in-process testing scenarios as environment
 /// variables and user home metadata are normally process global state. See the
-/// OsEnv trait.
+/// [`Env`] trait.
 pub fn cargo_home_from(env: &dyn Env) -> io::Result<PathBuf> {
     let cwd = env.current_dir()?;
     cargo_home_with_cwd_from(env, &cwd)
@@ -161,7 +162,7 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 }
 
 /// Variant of cargo_home_with_cwd where the environment source is
-/// parameterised. This is specifically to support in-process testing scenarios
+/// parameterized. This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the OsEnv trait.
 pub fn cargo_home_with_cwd_from(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
@@ -212,7 +213,7 @@ pub fn rustup_home() -> io::Result<PathBuf> {
 }
 
 /// Variant of cargo_home_with_cwd where the environment source is
-/// parameterised. This is specifically to support in-process testing scenarios
+/// parameterized. This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the OsEnv trait.
 pub fn rustup_home_from(env: &dyn Env) -> io::Result<PathBuf> {
@@ -227,7 +228,7 @@ pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
 }
 
 /// Variant of cargo_home_with_cwd where the environment source is
-/// parameterised. This is specifically to support in-process testing scenarios
+/// parameterized. This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the OsEnv trait.
 pub fn rustup_home_with_cwd_from(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
