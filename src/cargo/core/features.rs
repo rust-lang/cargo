@@ -334,9 +334,7 @@ impl Features {
 ///
 /// If you have any trouble with this, please let us know!
 #[derive(Default, Debug, Deserialize)]
-#[serde(default)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all="kebab-case")]
+#[serde(default, deny_unknown_fields, rename_all="kebab-case")]
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
