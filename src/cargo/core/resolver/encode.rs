@@ -164,11 +164,17 @@ impl EncodableResolve {
                 }
                 let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
-                    // It must have been removed and should be ignored.
+                    // It must have been removed and should be ignored only if we can override Cargo.lock.
                     None => {
+                        if !ws.config().lock_update_allowed() {
+                            anyhow::bail!(
+                                "path dependecy now missing but Cargo.lock is locked {} v{}"
+                            );
+                        }
                         debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
                         continue;
                     }
+
                     Some(&source) => PackageId::new(&pkg.name, &pkg.version, source)?,
                 };
 
