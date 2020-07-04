@@ -475,13 +475,11 @@ pub fn create_bcx<'a, 'cfg>(
                 extra_args = Some(args);
             }
 
-            if let Some(mut args) = extra_args {
-                match extra_compiler_args.get_mut(&unit) {
-                    None => {
-                        extra_compiler_args.insert(unit.clone(), args);
-                    }
-                    Some(existing) => existing.append(&mut args),
-                }
+            if let Some(args) = extra_args {
+                extra_compiler_args
+                    .entry(unit.clone())
+                    .or_default()
+                    .extend(args);
             }
         }
     }
