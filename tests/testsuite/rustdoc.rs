@@ -45,10 +45,8 @@ fn rustdoc_binary_args_passed() {
 
     p.cargo("rustdoc -v")
         .arg("--")
-        .arg("--theme")
-        .arg("dark")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --theme dark[..]`")
-        .with_status(101)
+        .arg("--markdown-no-toc")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --markdown-no-toc[..]`")
         .run();
 }
 
