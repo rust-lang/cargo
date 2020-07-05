@@ -195,11 +195,31 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         }
     }
 
+    fn deserialize_enum<V>(
+        self,
+        _name: &'static str,
+        _variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        let value = self
+            .config
+            .get_string_priv(&self.key)?
+            .ok_or_else(|| ConfigError::missing(&self.key))?;
+
+        let Value { val, definition } = value;
+        visitor
+            .visit_enum(val.into_deserializer())
+            .map_err(|e: ConfigError| e.with_key_context(&self.key, definition))
+    }
+
     // These aren't really supported, yet.
     serde::forward_to_deserialize_any! {
         f32 f64 char str bytes
         byte_buf unit unit_struct
-        enum identifier ignored_any
+        identifier ignored_any
     }
 }
 

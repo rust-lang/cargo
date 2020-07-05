@@ -1276,3 +1276,26 @@ strip = 'debuginfo'
     let strip = p.strip.unwrap();
     assert_eq!(strip, Strip::DebugInfo);
 }
+
+#[cargo_test]
+fn parse_enum_fail() {
+    write_config(
+        "\
+[profile.release]
+strip = 'invalid'
+",
+    );
+
+    let config = new_config();
+
+    assert_error(
+        config
+            .get::<toml::TomlProfile>("profile.release")
+            .unwrap_err(),
+        "\
+error in [..]/.cargo/config: could not load config key `profile.release.strip`
+
+Caused by:
+  unknown variant `invalid`, expected one of `debuginfo`, `none`, `symbols`",
+    );
+}
