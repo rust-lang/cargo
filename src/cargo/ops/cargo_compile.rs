@@ -476,7 +476,10 @@ pub fn create_bcx<'a, 'cfg>(
             }
 
             if let Some(args) = extra_args {
-                extra_compiler_args.insert(unit.clone(), args.clone());
+                extra_compiler_args
+                    .entry(unit.clone())
+                    .or_default()
+                    .extend(args);
             }
         }
     }

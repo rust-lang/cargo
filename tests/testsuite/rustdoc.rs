@@ -40,6 +40,17 @@ fn rustdoc_args() {
 }
 
 #[cargo_test]
+fn rustdoc_binary_args_passed() {
+    let p = project().file("src/main.rs", "").build();
+
+    p.cargo("rustdoc -v")
+        .arg("--")
+        .arg("--markdown-no-toc")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --markdown-no-toc[..]`")
+        .run();
+}
+
+#[cargo_test]
 fn rustdoc_foo_with_bar_dependency() {
     let foo = project()
         .file(
