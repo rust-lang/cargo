@@ -1845,3 +1845,47 @@ dependency `bar` does not specify a version.
         )
         .run();
 }
+
+#[cargo_test]
+fn long_file_names() {
+    // Filenames over 100 characters require a GNU extension tarfile.
+    // See #8453.
+
+    registry::init();
+    let long_name = concat!(
+        "012345678901234567890123456789012345678901234567890123456789",
+        "012345678901234567890123456789012345678901234567890123456789",
+        "012345678901234567890123456789012345678901234567890123456789"
+    );
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            license = "MIT"
+            description = "foo"
+            homepage = "foo"
+
+            [dependencies]
+            "#,
+        )
+        .file(long_name, "something")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package").run();
+    p.cargo("package --list")
+        .with_stdout(&format!(
+            "\
+{}
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+",
+            long_name
+        ))
+        .run();
+}

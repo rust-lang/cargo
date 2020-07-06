@@ -501,28 +501,7 @@ fn tar(
         config
             .shell()
             .verbose(|shell| shell.status("Archiving", &rel_str))?;
-        // The `tar::Builder` type by default will build GNU archives, but
-        // unfortunately we force it here to use UStar archives instead. The
-        // UStar format has more limitations on the length of path name that it
-        // can encode, so it's not quite as nice to use.
-        //
-        // Older cargos, however, had a bug where GNU archives were interpreted
-        // as UStar archives. This bug means that if we publish a GNU archive
-        // which has fully filled out metadata it'll be corrupt when unpacked by
-        // older cargos.
-        //
-        // Hopefully in the future after enough cargos have been running around
-        // with the bugfixed tar-rs library we'll be able to switch this over to
-        // GNU archives, but for now we'll just say that you can't encode paths
-        // in archives that are *too* long.
-        //
-        // For an instance of this in the wild, use the tar-rs 0.3.3 library to
-        // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
-        // look at rust-lang/cargo#2326.
-        let mut header = Header::new_ustar();
-        header
-            .set_path(&ar_path)
-            .chain_err(|| format!("failed to add to archive: `{}`", rel_str))?;
+        let mut header = Header::new_gnu();
         match contents {
             FileContents::OnDisk(disk_path) => {
                 let mut file = File::open(&disk_path).chain_err(|| {
@@ -533,9 +512,10 @@ fn tar(
                 })?;
                 header.set_metadata(&metadata);
                 header.set_cksum();
-                ar.append(&header, &mut file).chain_err(|| {
-                    format!("could not archive source file `{}`", disk_path.display())
-                })?;
+                ar.append_data(&mut header, &ar_path, &mut file)
+                    .chain_err(|| {
+                        format!("could not archive source file `{}`", disk_path.display())
+                    })?;
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
@@ -553,7 +533,7 @@ fn tar(
                 );
                 header.set_size(contents.len() as u64);
                 header.set_cksum();
-                ar.append(&header, contents.as_bytes())
+                ar.append_data(&mut header, &ar_path, contents.as_bytes())
                     .chain_err(|| format!("could not archive source file `{}`", rel_str))?;
             }
         }
