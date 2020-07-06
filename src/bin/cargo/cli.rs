@@ -256,6 +256,12 @@ impl GlobalArgs {
 }
 
 fn cli() -> App {
+    let is_rustup = std::env::var_os("RUSTUP_HOME").is_some();
+    let usage = if is_rustup {
+        "cargo [+toolchain] [OPTIONS] [SUBCOMMAND]"
+    } else {
+        "cargo [OPTIONS] [SUBCOMMAND]"
+    };
     App::new("cargo")
         .settings(&[
             AppSettings::UnifiedHelpMessage,
@@ -263,6 +269,7 @@ fn cli() -> App {
             AppSettings::VersionlessSubcommands,
             AppSettings::AllowExternalSubcommands,
         ])
+        .usage(usage)
         .template(
             "\
 Rust's package manager

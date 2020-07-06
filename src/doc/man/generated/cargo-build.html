@@ -350,6 +350,14 @@ offline.</p>
 <h3 id="cargo_build_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
+<dt class="hdlist1"><strong>+TOOLCHAIN</strong></dt>
+<dd>
+<p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
+as <code>+stable</code> or <code>+nightly</code>).
+See the <a href="https://github.com/rust-lang/rustup/">rustup documentation</a>
+for more information about how toolchain overrides work.</p>
+</dd>
 <dt class="hdlist1"><strong>-h</strong></dt>
 <dt class="hdlist1"><strong>--help</strong></dt>
 <dd>
