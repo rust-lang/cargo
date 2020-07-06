@@ -52,13 +52,13 @@ fn try_help(config: &Config) -> CargoResult<bool> {
         None => return Ok(false),
     };
     if resolve_executable(Path::new("man")).is_ok() {
-        let man = match extract_man(&subcommand, "1")? {
+        let man = match extract_man(&subcommand, "1") {
             Some(man) => man,
             None => return Ok(false),
         };
         write_and_spawn(&man, "man")?;
     } else {
-        let txt = match extract_man(&subcommand, "txt")? {
+        let txt = match extract_man(&subcommand, "txt") {
             Some(txt) => txt,
             None => return Ok(false),
         };
@@ -96,10 +96,12 @@ fn check_alias(config: &Config, subcommand: &str) -> Option<String> {
 /// Extracts the given man page from the compressed archive.
 ///
 /// Returns None if the command wasn't found.
-fn extract_man(subcommand: &str, extension: &str) -> CargoResult<Option<Vec<u8>>> {
+fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
     let extract_name = OsString::from(format!("cargo-{}.{}", subcommand, extension));
     let gz = GzDecoder::new(COMPRESSED_MAN);
     let mut ar = tar::Archive::new(gz);
+    // Unwraps should be safe here, since this is a static archive generated
+    // by our build script. It should never be an invalid format!
     for entry in ar.entries().unwrap() {
         let mut entry = entry.unwrap();
         let path = entry.path().unwrap();
@@ -108,9 +110,9 @@ fn extract_man(subcommand: &str, extension: &str) -> CargoResult<Option<Vec<u8>>
         }
         let mut result = Vec::new();
         entry.read_to_end(&mut result).unwrap();
-        return Ok(Some(result));
+        return Some(result);
     }
-    Ok(None)
+    None
 }
 
 /// Write the contents of a man page to disk and spawn the given command to
