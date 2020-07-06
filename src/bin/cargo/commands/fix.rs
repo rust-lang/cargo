@@ -72,37 +72,7 @@ pub fn cli() -> App {
                 .long("allow-staged")
                 .help("Fix code even if the working directory has staged changes"),
         )
-        .after_help(
-            "\
-This Cargo subcommand will automatically take rustc's suggestions from
-diagnostics like warnings and apply them to your source code. This is intended
-to help automate tasks that rustc itself already knows how to tell you to fix!
-The `cargo fix` subcommand is also being developed for the Rust 2018 edition
-to provide code the ability to easily opt-in to the new edition without having
-to worry about any breakage.
-
-Executing `cargo fix` will under the hood execute `cargo check`. Any warnings
-applicable to your crate will be automatically fixed (if possible) and all
-remaining warnings will be displayed when the check process is finished. For
-example if you'd like to prepare for the 2018 edition, you can do so by
-executing:
-
-    cargo fix --edition
-
-which behaves the same as `cargo check --all-targets`. Similarly if you'd like
-to fix code for different platforms you can do:
-
-    cargo fix --edition --target x86_64-pc-windows-gnu
-
-or if your crate has optional features:
-
-    cargo fix --edition --no-default-features --features foo
-
-If you encounter any problems with `cargo fix` or otherwise have any questions
-or feature requests please don't hesitate to file an issue at
-https://github.com/rust-lang/cargo
-",
-        )
+        .after_help("Run `cargo help fix` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

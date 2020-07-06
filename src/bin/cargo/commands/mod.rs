@@ -85,6 +85,7 @@ pub mod fetch;
 pub mod fix;
 pub mod generate_lockfile;
 pub mod git_checkout;
+pub mod help;
 pub mod init;
 pub mod install;
 pub mod locate_project;

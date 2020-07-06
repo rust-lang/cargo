@@ -1,0 +1,34 @@
+use flate2::{Compression, GzBuilder};
+use std::ffi::OsStr;
+use std::fs;
+use std::path::Path;
+
+fn main() {
+    compress_man();
+}
+
+fn compress_man() {
+    let out_path = Path::new(&std::env::var("OUT_DIR").unwrap()).join("man.tgz");
+    let dst = fs::File::create(out_path).unwrap();
+    let encoder = GzBuilder::new()
+        .filename("man.tar")
+        .write(dst, Compression::best());
+    let mut ar = tar::Builder::new(encoder);
+
+    let mut add_files = |dir, extension| {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension() != Some(extension) {
+                continue;
+            }
+            println!("cargo:rerun-if-changed={}", path.display());
+            ar.append_path_with_name(&path, path.file_name().unwrap())
+                .unwrap();
+        }
+    };
+
+    add_files(Path::new("src/etc/man"), OsStr::new("1"));
+    add_files(Path::new("src/doc/man/generated_txt"), OsStr::new("txt"));
+    let encoder = ar.into_inner().unwrap();
+    encoder.finish().unwrap();
+}

@@ -18,6 +18,7 @@ pub fn cli() -> App {
             .value_name("LIMIT"),
         )
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
+        .after_help("Run `cargo help search` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

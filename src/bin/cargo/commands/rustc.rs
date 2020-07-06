@@ -30,22 +30,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .after_help(
-            "\
-The specified target for the current package (or package specified by SPEC if
-provided) will be compiled along with all of its dependencies. The specified
-<args>... will all be passed to the final compiler invocation, not any of the
-dependencies. Note that the compiler will still unconditionally receive
-arguments such as -L, --extern, and --crate-type, and the specified <args>...
-will simply be added to the compiler invocation.
-
-This command requires that only one target is being compiled. If more than one
-target is available for the current package the filters of --lib, --bin, etc,
-must be used to select which target is compiled. To pass flags to all compiler
-processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
-`build.rustflags` configuration option.
-",
-        )
+        .after_help("Run `cargo help rustc` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
