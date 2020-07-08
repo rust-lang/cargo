@@ -1857,6 +1857,32 @@ fn long_file_names() {
         "012345678901234567890123456789012345678901234567890123456789",
         "012345678901234567890123456789012345678901234567890123456789"
     );
+    if cfg!(windows) {
+        // Long paths on Windows require a special registry entry that is
+        // disabled by default (even on Windows 10).
+        // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+        // If the directory where Cargo runs happens to be more than 80 characters
+        // long, then it will bump into this limit.
+        //
+        // First create a directory to account for various paths Cargo will
+        // be using in the target directory (such as "target/package/foo-0.1.0").
+        let test_path = paths::root().join("test-dir-probe-long-path-support");
+        test_path.mkdir_p();
+        let test_path = test_path.join(long_name);
+        if let Err(e) = File::create(&test_path) {
+            use std::io::Write;
+            writeln!(
+                std::io::stderr(),
+                "\nSkipping long_file_names test, this OS or filesystem does not \
+                appear to support long file paths: {:?}\n{:?}",
+                e,
+                test_path
+            )
+            .unwrap();
+            return;
+        }
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
