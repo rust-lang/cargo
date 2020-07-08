@@ -1142,26 +1142,6 @@ unstable.print-im-a-teapot = true
 
 #[cargo_test]
 /// Assert that atempting to set an unstable flag that doesn't exist via config
-/// errors out the same as it would on the command line (nightly only)
-fn unstable_invalid_flag_errors_on_nightly() {
-    cargo::core::enable_nightly_features();
-    write_config(
-        "\
-unstable.an-invalid-flag = 'yes'
-",
-    );
-    assert_error(
-        ConfigBuilder::new().build_err().unwrap_err(),
-        "\
-Invalid [unstable] entry in Cargo config
-
-Caused by:
-  unknown `-Z` flag specified: an-invalid-flag",
-    );
-}
-
-#[cargo_test]
-/// Assert that atempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
     write_config(
