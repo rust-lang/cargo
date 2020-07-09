@@ -13,6 +13,15 @@ use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Uni
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, StableHasher};
 
+/// This is a generic version number that can be changed to make
+/// backwards-incompatible changes to any file structures in the output
+/// directory. For example, the fingerprint files or the build-script
+/// output files. Normally cargo updates ship with rustc updates which will
+/// cause a new hash due to the rustc version changing, but this allows
+/// cargo to be extra careful to deal with different versions of cargo that
+/// use the same rustc version.
+const METADATA_VERSION: u8 = 2;
+
 /// The `Metadata` is a hash used to make unique file names for each unit in a
 /// build. It is also use for symbol mangling.
 ///
@@ -162,7 +171,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Used for the metadata when `metadata` returns `None`.
     pub fn target_short_hash(&self, unit: &Unit) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
-        util::short_hash(&hashable)
+        util::short_hash(&(METADATA_VERSION, hashable))
     }
 
     /// Returns the directory where the artifacts for the given unit are
@@ -483,14 +492,7 @@ fn compute_metadata(
     }
     let mut hasher = StableHasher::new();
 
-    // This is a generic version number that can be changed to make
-    // backwards-incompatible changes to any file structures in the output
-    // directory. For example, the fingerprint files or the build-script
-    // output files. Normally cargo updates ship with rustc updates which will
-    // cause a new hash due to the rustc version changing, but this allows
-    // cargo to be extra careful to deal with different versions of cargo that
-    // use the same rustc version.
-    2.hash(&mut hasher);
+    METADATA_VERSION.hash(&mut hasher);
 
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere without worrying about conflicts.
