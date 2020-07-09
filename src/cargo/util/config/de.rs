@@ -298,20 +298,11 @@ impl<'config> ConfigMapAccess<'config> {
         // If the caller is interested in a field which we can provide from
         // the environment, get it from there.
         for field in given_fields {
-            let is_prefix = given_fields
-                .iter()
-                .any(|f| f != field && f.starts_with(field));
             let mut field_key = de.key.clone();
             field_key.push(field);
             for env_key in de.config.env.keys() {
-                if is_prefix {
-                    if env_key == field_key.as_env_key() {
-                        fields.insert(KeyKind::Normal(field.to_string()));
-                    }
-                } else {
-                    if env_key.starts_with(field_key.as_env_key()) {
-                        fields.insert(KeyKind::Normal(field.to_string()));
-                    }
+                if env_key.starts_with(field_key.as_env_key()) {
+                    fields.insert(KeyKind::Normal(field.to_string()));
                 }
             }
         }

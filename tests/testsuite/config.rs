@@ -1299,8 +1299,13 @@ fn overlapping_env_config() {
 }
 
 #[cargo_test]
-fn overlapping_env_with_defaults() {
+fn overlapping_env_with_defaults_errors_out() {
     // Issue where one key is a prefix of another.
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this test.
     #[derive(Deserialize, Default)]
     #[serde(default, rename_all = "kebab-case")]
     struct Ambig {
@@ -1310,10 +1315,8 @@ fn overlapping_env_with_defaults() {
     let config = ConfigBuilder::new()
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
-
-    let s: Ambig = config.get("ambig").unwrap();
-    assert_eq!(s.debug_assertions, true);
-    assert_eq!(s.debug, u32::default());
+    let err = config.get::<Ambig>("ambig").err().unwrap();
+    assert!(format!("{}", err).contains("missing config key `ambig.debug`"));
 
     let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "5").build();
     let s: Ambig = config.get("ambig").unwrap();
@@ -1340,7 +1343,12 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     }
 
     // Containing struct with a prefix of inner
-    // Check that the nested struct can have fields defined by env
+    //
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this case.
     #[derive(Deserialize, Default)]
     #[serde(default)]
     struct PrefixContainer {
@@ -1350,12 +1358,26 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     let config = ConfigBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .build();
+    let err = config
+        .get::<PrefixContainer>("prefixcontainer")
+        .err()
+        .unwrap();
+    assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
+    let config = ConfigBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .env("CARGO_PREFIXCONTAINER_INN", "true")
+        .build();
     let f: PrefixContainer = config.get("prefixcontainer").unwrap();
-    assert_eq!(f.inn, bool::default());
     assert_eq!(f.inner.value, 12);
+    assert_eq!(f.inn, true);
 
     // Containing struct where the inner value's field is a prefix of another
-    // Check that the nested struct can have fields defined by env
+    //
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this case.
     #[derive(Deserialize, Default)]
     #[serde(default)]
     struct InversePrefixContainer {
@@ -1363,14 +1385,11 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         inner: Inner,
     }
     let config = ConfigBuilder::new()
-        .env("CARGO_INVERSEREFIXCONTAINER_INNER_VALUE", "12")
+        .env("CARGO_INVERSEPREFIXCONTAINER_INNER_VALUE", "12")
         .build();
     let f: InversePrefixContainer = config.get("inverseprefixcontainer").unwrap();
     assert_eq!(f.inner_field, bool::default());
-    // NB. This is a limitation of our env variable parsing. We can't currently
-    //     handle situations where just a value of the inner struct is set, but
-    //     it's also named as a prefix of another field on the outer struct.
-    // assert_eq!(f.inner.value, 12);
+    assert_eq!(f.inner.value, 12);
 }
 
 #[cargo_test]
