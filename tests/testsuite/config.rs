@@ -687,10 +687,7 @@ Caused by:
         f3: i64,
         big: i64,
     }
-    assert_error(
-        config.get::<S>("S").unwrap_err(),
-        "missing config key `S.f3`",
-    );
+    assert_error(config.get::<S>("S").unwrap_err(), "missing field `f3`");
 }
 
 #[cargo_test]
@@ -1095,6 +1092,78 @@ Caused by:
 }
 
 #[cargo_test]
+/// Assert that unstable options can be configured with the `unstable` table in
+/// cargo config files
+fn unstable_table_notation() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+[unstable]
+print-im-a-teapot = true
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+}
+
+#[cargo_test]
+/// Assert that dotted notation works for configuring unstable options
+fn unstable_dotted_notation() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+unstable.print-im-a-teapot = true
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+}
+
+#[cargo_test]
+/// Assert that Zflags on the CLI take precedence over those from config
+fn unstable_cli_precedence() {
+    cargo::core::enable_nightly_features();
+    write_config(
+        "\
+unstable.print-im-a-teapot = true
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+
+    let config = ConfigBuilder::new()
+        .unstable_flag("print-im-a-teapot=no")
+        .build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
+}
+
+#[cargo_test]
+/// Assert that atempting to set an unstable flag that doesn't exist via config
+/// is ignored on stable
+fn unstable_invalid_flag_ignored_on_stable() {
+    write_config(
+        "\
+unstable.an-invalid-flag = 'yes'
+",
+    );
+    assert!(ConfigBuilder::new().build_err().is_ok());
+}
+
+#[cargo_test]
+/// Assert that unstable options can be configured with the `unstable` table in
+/// cargo config files
+fn unstable_flags_ignored_on_stable() {
+    write_config(
+        "\
+[unstable]
+print-im-a-teapot = true
+",
+    );
+    let config = ConfigBuilder::new().build();
+    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
+}
+
+#[cargo_test]
 fn table_merge_failure() {
     // Config::merge fails to merge entries in two tables.
     write_config_at(
@@ -1178,6 +1247,27 @@ fn struct_with_opt_inner_struct() {
 }
 
 #[cargo_test]
+fn struct_with_default_inner_struct() {
+    // Struct with serde defaults.
+    // Check that can be defined with environment variable.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Inner {
+        value: i32,
+    }
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Foo {
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_FOO_INNER_VALUE", "12")
+        .build();
+    let f: Foo = config.get("foo").unwrap();
+    assert_eq!(f.inner.value, 12);
+}
+
+#[cargo_test]
 fn overlapping_env_config() {
     // Issue where one key is a prefix of another.
     #[derive(Deserialize)]
@@ -1206,6 +1296,100 @@ fn overlapping_env_config() {
     let s: Ambig = config.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, Some(true));
     assert_eq!(s.debug, Some(1));
+}
+
+#[cargo_test]
+fn overlapping_env_with_defaults_errors_out() {
+    // Issue where one key is a prefix of another.
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this test.
+    #[derive(Deserialize, Default)]
+    #[serde(default, rename_all = "kebab-case")]
+    struct Ambig {
+        debug: u32,
+        debug_assertions: bool,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+    let err = config.get::<Ambig>("ambig").err().unwrap();
+    assert!(format!("{}", err).contains("missing config key `ambig.debug`"));
+
+    let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "5").build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, bool::default());
+    assert_eq!(s.debug, 5);
+
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG", "1")
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, true);
+    assert_eq!(s.debug, 1);
+}
+
+#[cargo_test]
+fn struct_with_overlapping_inner_struct_and_defaults() {
+    // Struct with serde defaults.
+    // Check that can be defined with environment variable.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Inner {
+        value: i32,
+    }
+
+    // Containing struct with a prefix of inner
+    //
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this case.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct PrefixContainer {
+        inn: bool,
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let err = config
+        .get::<PrefixContainer>("prefixcontainer")
+        .err()
+        .unwrap();
+    assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
+    let config = ConfigBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .env("CARGO_PREFIXCONTAINER_INN", "true")
+        .build();
+    let f: PrefixContainer = config.get("prefixcontainer").unwrap();
+    assert_eq!(f.inner.value, 12);
+    assert_eq!(f.inn, true);
+
+    // Containing struct where the inner value's field is a prefix of another
+    //
+    // This is a limitation of mapping environment variables on to a hierarchy.
+    // Check that we error out when we hit ambiguity in this way, rather than
+    // the more-surprising defaulting through.
+    // If, in the future, we can handle this more correctly, feel free to delete
+    // this case.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct InversePrefixContainer {
+        inner_field: bool,
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_INVERSEPREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let f: InversePrefixContainer = config.get("inverseprefixcontainer").unwrap();
+    assert_eq!(f.inner_field, bool::default());
+    assert_eq!(f.inner.value, 12);
 }
 
 #[cargo_test]

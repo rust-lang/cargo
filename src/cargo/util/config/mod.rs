@@ -742,10 +742,17 @@ impl Config {
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
 
+        // If nightly features are enabled, allow setting Z-flags from config
+        // using the `unstable` table. Ignore that block otherwise.
         if nightly_features_allowed() {
-            if let Some(val) = self.get::<Option<bool>>("unstable.mtime_on_use")? {
-                self.unstable_flags.mtime_on_use |= val;
+            if let Some(unstable_flags) = self.get::<Option<CliUnstable>>("unstable")? {
+                self.unstable_flags = unstable_flags;
             }
+            // NB. It's not ideal to parse these twice, but doing it again here
+            //     allows the CLI to override config files for both enabling
+            //     and disabling, and doing it up top allows CLI Zflags to
+            //     control config parsing behavior.
+            self.unstable_flags.parse(unstable_flags)?;
         }
 
         Ok(())

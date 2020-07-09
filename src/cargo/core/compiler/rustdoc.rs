@@ -52,7 +52,8 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
     }
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Default)]
+#[serde(default)]
 pub struct RustdocExternMap {
     registries: HashMap<String, String>,
     std: Option<RustdocExternMode>,

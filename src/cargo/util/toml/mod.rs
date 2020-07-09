@@ -394,7 +394,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
-#[serde(rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case")]
 pub struct TomlProfile {
     pub opt_level: Option<TomlOptLevel>,
     pub lto: Option<StringOrBool>,

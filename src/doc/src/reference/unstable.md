@@ -7,6 +7,16 @@ see a list of flags available.
 `-Z unstable-options` is a generic flag for enabling other unstable
 command-line flags. Options requiring this will be called out below.
 
+Anything which can be configured with a Z flag can also be set in the cargo
+config file (`.cargo/config.toml`) in the `unstable` table. For example:
+
+```toml
+[unstable]
+mtime-on-use = 'yes'
+multitarget = 'yes'
+timings = 'yes'
+```
+
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 

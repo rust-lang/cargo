@@ -333,7 +333,8 @@ impl Features {
 ///    and then test for your flag or your value and act accordingly.
 ///
 /// If you have any trouble with this, please let us know!
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize)]
+#[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
