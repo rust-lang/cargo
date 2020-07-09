@@ -2,8 +2,7 @@
 
 Experimental Cargo features are only available on the nightly channel. You
 typically use one of the `-Z` flags to enable them. Run `cargo -Z help` to
-see a list of flags available. All Z flags accept either dashes or underscores
-as separators.
+see a list of flags available.
 
 `-Z unstable-options` is a generic flag for enabling other unstable
 command-line flags. Options requiring this will be called out below.
