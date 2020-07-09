@@ -7,8 +7,8 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, lines_match, main_file, project,
-    rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match, main_file,
+    project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
@@ -5102,4 +5102,28 @@ fn target_directory_backup_exclusion() {
     fs::remove_file(&cachedir_tag).unwrap();
     p.cargo("build").run();
     assert!(!&cachedir_tag.is_file());
+}
+
+#[cargo_test]
+fn simple_terminal_width() {
+    if !is_nightly() {
+        // --terminal-width is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                fn main() {
+                    let _: () = 42;
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Zterminal-width=20")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("3 | ..._: () = 42;")
+        .run();
 }

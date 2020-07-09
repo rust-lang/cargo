@@ -47,6 +47,7 @@ pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, Strip};
 use crate::core::{Edition, Feature, PackageId, Target};
@@ -709,6 +710,7 @@ fn add_error_format_and_color(
         // to emit a message that cargo will intercept.
         json.push_str(",artifacts");
     }
+
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
             json.push_str(",diagnostic-short");
@@ -716,6 +718,26 @@ fn add_error_format_and_color(
         _ => {}
     }
     cmd.arg(json);
+
+    if nightly_features_allowed() {
+        let config = cx.bcx.config;
+        match (
+            config.cli_unstable().terminal_width,
+            config.shell().err_width().diagnostic_terminal_width(),
+        ) {
+            // Terminal width explicitly provided - only useful for testing.
+            (Some(Some(width)), _) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // Terminal width was not explicitly provided but flag was provided - common case.
+            (Some(None), Some(width)) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // User didn't opt-in.
+            _ => (),
+        }
+    }
+
     Ok(())
 }
 

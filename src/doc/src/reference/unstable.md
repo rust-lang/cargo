@@ -826,3 +826,37 @@ sysroot. If you are using rustup, this documentation can be installed with
 The default value is `"remote"`.
 
 The value may also take a URL for a custom location.
+
+### terminal-width
+This feature provides a new flag, `-Z terminal-width`, which is used to pass
+a terminal width to `rustc` so that error messages containing long lines
+can be intelligently truncated.
+
+For example, passing `-Z terminal-width=20` (an arbitrarily low value) might
+produce the following error:
+
+```text
+error[E0308]: mismatched types
+  --> src/main.rs:2:17
+  |
+2 | ..._: () = 42;
+  |       --   ^^ expected `()`, found integer
+  |       |
+  |       expected due to this
+
+error: aborting due to previous error
+```
+
+In contrast, without `-Z terminal-width`, the error would look as shown below:
+
+```text
+error[E0308]: mismatched types
+ --> src/main.rs:2:17
+  |
+2 |     let _: () = 42;
+  |            --   ^^ expected `()`, found integer
+  |            |
+  |            expected due to this
+
+error: aborting due to previous error
+```

@@ -6,6 +6,31 @@ use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
 
+pub enum TtyWidth {
+    NoTty,
+    Known(usize),
+    Guess(usize),
+}
+
+impl TtyWidth {
+    /// Returns the width provided with `-Z terminal-width` to rustc to truncate diagnostics with
+    /// long lines.
+    pub fn diagnostic_terminal_width(&self) -> Option<usize> {
+        match *self {
+            TtyWidth::NoTty | TtyWidth::Guess(_) => None,
+            TtyWidth::Known(width) => Some(width),
+        }
+    }
+
+    /// Returns the width used by progress bars for the tty.
+    pub fn progress_max_width(&self) -> Option<usize> {
+        match *self {
+            TtyWidth::NoTty => None,
+            TtyWidth::Known(width) | TtyWidth::Guess(width) => Some(width),
+        }
+    }
+}
+
 /// The requested verbosity of output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Verbosity {
@@ -125,12 +150,12 @@ impl Shell {
     }
 
     /// Returns the width of the terminal in spaces, if any.
-    pub fn err_width(&self) -> Option<usize> {
+    pub fn err_width(&self) -> TtyWidth {
         match self.output {
             ShellOut::Stream {
                 stderr_tty: true, ..
             } => imp::stderr_width(),
-            _ => None,
+            _ => TtyWidth::NoTty,
         }
     }
 
@@ -408,21 +433,21 @@ impl ColorChoice {
 
 #[cfg(unix)]
 mod imp {
-    use super::Shell;
+    use super::{Shell, TtyWidth};
     use std::mem;
 
-    pub fn stderr_width() -> Option<usize> {
+    pub fn stderr_width() -> TtyWidth {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();
             // The .into() here is needed for FreeBSD which defines TIOCGWINSZ
             // as c_uint but ioctl wants c_ulong.
             if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ.into(), &mut winsize) < 0 {
-                return None;
+                return TtyWidth::NoTty;
             }
             if winsize.ws_col > 0 {
-                Some(winsize.ws_col as usize)
+                TtyWidth::Known(winsize.ws_col as usize)
             } else {
-                None
+                TtyWidth::NoTty
             }
         }
     }
@@ -445,14 +470,14 @@ mod imp {
     use winapi::um::wincon::*;
     use winapi::um::winnt::*;
 
-    pub(super) use super::default_err_erase_line as err_erase_line;
+    pub(super) use super::{default_err_erase_line as err_erase_line, TtyWidth};
 
-    pub fn stderr_width() -> Option<usize> {
+    pub fn stderr_width() -> TtyWidth {
         unsafe {
             let stdout = GetStdHandle(STD_ERROR_HANDLE);
             let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
             if GetConsoleScreenBufferInfo(stdout, &mut csbi) != 0 {
-                return Some((csbi.srWindow.Right - csbi.srWindow.Left) as usize);
+                return TtyWidth::Known((csbi.srWindow.Right - csbi.srWindow.Left) as usize);
             }
 
             // On mintty/msys/cygwin based terminals, the above fails with
@@ -468,7 +493,7 @@ mod imp {
                 ptr::null_mut(),
             );
             if h == INVALID_HANDLE_VALUE {
-                return None;
+                return TtyWidth::NoTty;
             }
 
             let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
@@ -484,17 +509,21 @@ mod imp {
                 // resize the console correctly, but there's no reasonable way
                 // to detect which kind of terminal we are running in, or if
                 // GetConsoleScreenBufferInfo returns accurate information.
-                return Some(cmp::min(60, width));
+                return TtyWidth::Guess(cmp::min(60, width));
             }
-            None
+
+            TtyWidth::NoTty
         }
     }
 }
 
 #[cfg(windows)]
 fn default_err_erase_line(shell: &mut Shell) {
-    if let Some(max_width) = imp::stderr_width() {
-        let blank = " ".repeat(max_width);
-        drop(write!(shell.output.stderr(), "{}\r", blank));
+    match imp::stderr_width() {
+        TtyWidth::Known(max_width) | TtyWidth::Guess(max_width) => {
+            let blank = " ".repeat(max_width);
+            drop(write!(shell.output.stderr(), "{}\r", blank));
+        }
+        _ => (),
     }
 }

@@ -50,7 +50,7 @@ impl<'cfg> Progress<'cfg> {
         }
 
         Progress {
-            state: cfg.shell().err_width().map(|n| State {
+            state: cfg.shell().err_width().progress_max_width().map(|n| State {
                 config: cfg,
                 format: Format {
                     style,
@@ -216,7 +216,7 @@ impl<'cfg> State<'cfg> {
     }
 
     fn try_update_max_width(&mut self) {
-        if let Some(n) = self.config.shell().err_width() {
+        if let Some(n) = self.config.shell().err_width().progress_max_width() {
             self.format.max_width = n;
         }
     }
