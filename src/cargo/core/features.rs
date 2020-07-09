@@ -334,66 +334,30 @@ impl Features {
 ///
 /// If you have any trouble with this, please let us know!
 #[derive(Default, Debug, Deserialize)]
-#[serde(rename_all="kebab-case")]
+#[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
-    #[serde(deserialize_with="default_false")]
     pub print_im_a_teapot: bool,
-    #[serde(deserialize_with="default_false")]
     pub unstable_options: bool,
-    #[serde(deserialize_with="default_false")]
     pub no_index_update: bool,
-    #[serde(deserialize_with="default_false")]
     pub avoid_dev_deps: bool,
-    #[serde(deserialize_with="default_false")]
     pub minimal_versions: bool,
-    #[serde(deserialize_with="default_false")]
     pub package_features: bool,
-    #[serde(deserialize_with="default_false")]
     pub advanced_env: bool,
-    #[serde(deserialize_with="default_false")]
     pub config_include: bool,
-    #[serde(deserialize_with="default_false")]
     pub dual_proc_macros: bool,
-    #[serde(deserialize_with="default_false")]
     pub mtime_on_use: bool,
-    #[serde(deserialize_with="default_false")]
     pub named_profiles: bool,
-    #[serde(deserialize_with="default_false")]
     pub binary_dep_depinfo: bool,
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
-    #[serde(deserialize_with="default_false")]
     pub doctest_xcompile: bool,
-    #[serde(deserialize_with="default_false")]
     pub panic_abort_tests: bool,
-    #[serde(deserialize_with="default_false")]
     pub jobserver_per_rustc: bool,
     pub features: Option<Vec<String>>,
-    #[serde(deserialize_with="default_false")]
     pub crate_versions: bool,
-    #[serde(deserialize_with="default_false")]
     pub separate_nightlies: bool,
-    #[serde(deserialize_with="default_false")]
     pub multitarget: bool,
-    #[serde(deserialize_with="default_false")]
     pub rustdoc_map: bool,
-}
-
-/// Treat boolean Zflags as optionals for deserializing them.
-/// This allows missing settings to default to disabled (effectively recreating
-/// the serde `default` behavior). Our Deserializer merges multiple sources
-/// inline, so the serde facilities for handling missing or additional fields
-/// don't quite fit.
-///
-/// TODO: This limitation can likely be removed by refactoring 
-///       `de::ConfigMapAccess` to iterate the union of the config and env sets.
-fn default_false<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: Deserialize<'de> + Default,
-{
-    let option = Option::deserialize(deserializer)?;
-    Ok(option.unwrap_or_default())
 }
 
 impl CliUnstable {
