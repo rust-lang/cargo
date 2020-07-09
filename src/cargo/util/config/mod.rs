@@ -748,9 +748,10 @@ impl Config {
             if let Some(unstable_flags) = self.get::<Option<CliUnstable>>("unstable")? {
                 self.unstable_flags = unstable_flags;
             }
-            // NB. It sucks to parse these twice, but doing it again here
+            // NB. It's not ideal to parse these twice, but doing it again here
             //     allows the CLI to override config files for both enabling
-            //     and disabling.
+            //     and disabling, and doing it up top allows CLI Zflags to
+            //     control config parsing behavior.
             self.unstable_flags.parse(unstable_flags)?;
         }
 
