@@ -1247,6 +1247,27 @@ fn struct_with_opt_inner_struct() {
 }
 
 #[cargo_test]
+fn struct_with_default_inner_struct() {
+    // Struct with serde defaults.
+    // Check that can be defined with environment variable.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Inner {
+        value: i32,
+    }
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Foo {
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_FOO_INNER_VALUE", "12")
+        .build();
+    let f: Foo = config.get("foo").unwrap();
+    assert_eq!(f.inner.value, 12);
+}
+
+#[cargo_test]
 fn overlapping_env_config() {
     // Issue where one key is a prefix of another.
     #[derive(Deserialize)]
@@ -1275,6 +1296,81 @@ fn overlapping_env_config() {
     let s: Ambig = config.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, Some(true));
     assert_eq!(s.debug, Some(1));
+}
+
+#[cargo_test]
+fn overlapping_env_with_defaults() {
+    // Issue where one key is a prefix of another.
+    #[derive(Deserialize, Default)]
+    #[serde(default, rename_all = "kebab-case")]
+    struct Ambig {
+        debug: u32,
+        debug_assertions: bool,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, true);
+    assert_eq!(s.debug, u32::default());
+
+    let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "5").build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, bool::default());
+    assert_eq!(s.debug, 5);
+
+    let config = ConfigBuilder::new()
+        .env("CARGO_AMBIG_DEBUG", "1")
+        .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
+        .build();
+    let s: Ambig = config.get("ambig").unwrap();
+    assert_eq!(s.debug_assertions, true);
+    assert_eq!(s.debug, 1);
+}
+
+#[cargo_test]
+fn struct_with_overlapping_inner_struct_and_defaults() {
+    // Struct with serde defaults.
+    // Check that can be defined with environment variable.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct Inner {
+        value: i32,
+    }
+
+    // Containing struct with a prefix of inner
+    // Check that the nested struct can have fields defined by env
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct PrefixContainer {
+        inn: bool,
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let f: PrefixContainer = config.get("prefixcontainer").unwrap();
+    assert_eq!(f.inn, bool::default());
+    assert_eq!(f.inner.value, 12);
+
+    // Containing struct where the inner value's field is a prefix of another
+    // Check that the nested struct can have fields defined by env
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct InversePrefixContainer {
+        inner_field: bool,
+        inner: Inner,
+    }
+    let config = ConfigBuilder::new()
+        .env("CARGO_INVERSEREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let f: InversePrefixContainer = config.get("inverseprefixcontainer").unwrap();
+    assert_eq!(f.inner_field, bool::default());
+    // NB. This is a limitation of our env variable parsing. We can't currently
+    //     handle situations where just a value of the inner struct is set, but
+    //     it's also named as a prefix of another field on the outer struct.
+    // assert_eq!(f.inner.value, 12);
 }
 
 #[cargo_test]
