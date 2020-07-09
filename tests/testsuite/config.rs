@@ -687,10 +687,7 @@ Caused by:
         f3: i64,
         big: i64,
     }
-    assert_error(
-        config.get::<S>("S").unwrap_err(),
-        "missing config key `S.f3`",
-    );
+    assert_error(config.get::<S>("S").unwrap_err(), "missing field `f3`");
 }
 
 #[cargo_test]
