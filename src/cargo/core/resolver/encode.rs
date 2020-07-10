@@ -98,7 +98,7 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
+use crate::core::{Dependency, GitReference, Package, PackageId, SourceId, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::{internal, Graph};
@@ -659,6 +659,13 @@ pub fn encodable_package_id(id: PackageId, state: &EncodeState<'_>) -> Encodable
 fn encode_source(id: SourceId) -> Option<SourceId> {
     if id.is_path() {
         None
+    } else if let Some(git_reference) = id.git_reference() {
+        match git_reference {
+            GitReference::Branch(branch) if branch == "master" => {
+                Some(id.with_default_git_reference())
+            }
+            _ => Some(id),
+        }
     } else {
         Some(id)
     }

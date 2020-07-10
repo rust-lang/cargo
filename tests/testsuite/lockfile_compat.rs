@@ -566,6 +566,39 @@ dependencies = [
     assert_lockfiles_eq(&lockfile, &lock);
 }
 
+// If explicitly specifying the master branch makes no difference
+#[cargo_test]
+fn master_branch_not_mentioned() {
+    let git = git::new("bar", |p| {
+        p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = {{ git = '{}', branch = "master" }}
+        "#,
+                git.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let lockfile = p.read_lockfile();
+    assert!(!lockfile.contains("master"), "master in {}", lockfile);
+}
+
 #[cargo_test]
 fn v2_path_and_crates_io() {
     let cksum010 = Package::new("a", "0.1.0").publish();

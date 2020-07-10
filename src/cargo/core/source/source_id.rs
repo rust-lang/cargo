@@ -322,6 +322,15 @@ impl SourceId {
         }
     }
 
+    /// Creates a new `SourceId` from this source with Git reference turned into default
+    pub fn with_default_git_reference(self) -> SourceId {
+        assert!(self.is_git());
+        SourceId::wrap(SourceIdInner {
+            kind: SourceKind::Git(GitReference::DefaultBranch),
+            ..(*self.inner).clone()
+        })
+    }
+
     /// Creates a new `SourceId` from this source with the given `precise`.
     pub fn with_precise(self, v: Option<String>) -> SourceId {
         SourceId::wrap(SourceIdInner {
