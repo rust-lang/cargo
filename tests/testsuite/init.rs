@@ -108,7 +108,7 @@ fn git_ignore_exists_no_conflicting_entries() {
     assert_eq!(
         contents,
         "**/some.file\n\n\
-         #Added by cargo\n\
+         # Added by cargo\n\
          \n\
          /target\n\
          Cargo.lock\n",
