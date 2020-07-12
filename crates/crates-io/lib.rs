@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::io::Cursor;
 use std::time::Instant;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, format_err, Result};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
@@ -212,7 +212,8 @@ impl Registry {
         headers.append(&format!("Authorization: {}", token))?;
         self.handle.http_headers(headers)?;
 
-        let body = self.handle(&mut |buf| body.read(buf).unwrap_or(0))?;
+        let body = self.handle(&mut |buf| body.read(buf).unwrap_or(0));
+        let body = body.map_err(|e| format_err!("publishing to {}: {}", url, e))?;
 
         let response = if body.is_empty() {
             "{}".parse()?
