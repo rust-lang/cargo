@@ -468,6 +468,7 @@ fn update_precise_first_run() {
             "lib"
           ],
           "doctest": true,
+          "test": true,
           "edition": "2015",
           "kind": [
             "lib"
@@ -508,7 +509,8 @@ fn update_precise_first_run() {
             "lib"
           ],
           "name": "serde",
-          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs"
+          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs",
+          "test": true
         }
       ],
       "version": "0.2.0"

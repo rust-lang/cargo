@@ -595,7 +595,7 @@ fn bench_autodiscover_2015() {
                 version = "0.0.1"
                 authors = []
                 edition = "2015"
-                
+
                 [features]
                 magic = []
 
@@ -1628,7 +1628,8 @@ fn json_artifact_includes_executable_for_benchmark() {
                     "doctest": false,
                     "edition": "2015",
                     "name": "benchmark",
-                    "src_path": "[..]/foo/benches/benchmark.rs"
+                    "src_path": "[..]/foo/benches/benchmark.rs",
+                    "test": false
                 }
             }
 

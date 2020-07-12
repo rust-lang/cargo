@@ -142,7 +142,8 @@ following structure:
         "name": "my-package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
-        "doctest": true
+        "doctest": true,
+        "test": true
     },
     /* The profile indicates which compiler settings were used. */
     "profile": {

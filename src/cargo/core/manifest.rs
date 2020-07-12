@@ -263,6 +263,8 @@ struct SerializedTarget<'a> {
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
     doctest: bool,
+    /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
+    test: bool,
 }
 
 impl ser::Serialize for Target {
@@ -283,6 +285,7 @@ impl ser::Serialize for Target {
                 .required_features()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
             doctest: self.doctested() && self.doctestable(),
+            test: self.tested(),
         }
         .serialize(s)
     }

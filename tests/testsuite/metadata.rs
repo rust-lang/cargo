@@ -42,6 +42,7 @@ fn cargo_metadata_simple() {
                             "bin"
                         ],
                         "doctest": false,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/foo.rs"
@@ -135,6 +136,7 @@ crate-type = ["lib", "staticlib"]
                             "staticlib"
                         ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -216,6 +218,7 @@ optional_feat = []
                             "lib"
                         ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -328,6 +331,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "lib"
                         ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -363,6 +367,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "lib"
                         ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -423,6 +428,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "bin"
                         ],
                         "doctest": false,
+                        "test": true,
                         "edition": "2015",
                         "kind": [
                             "bin"
@@ -458,6 +464,7 @@ fn cargo_metadata_with_deps_and_version() {
                             "lib"
                         ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "kind": [
                             "lib"
@@ -591,6 +598,7 @@ name = "ex"
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -599,6 +607,7 @@ name = "ex"
                         "kind": [ "example" ],
                         "crate_types": [ "bin" ],
                         "doctest": false,
+                        "test": false,
                         "edition": "2015",
                         "name": "ex",
                         "src_path": "[..]/foo/examples/ex.rs"
@@ -678,6 +687,7 @@ crate-type = ["rlib", "dylib"]
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]/foo/src/lib.rs"
@@ -686,6 +696,7 @@ crate-type = ["rlib", "dylib"]
                         "kind": [ "example" ],
                         "crate_types": [ "rlib", "dylib" ],
                         "doctest": false,
+                        "test": false,
                         "edition": "2015",
                         "name": "ex",
                         "src_path": "[..]/foo/examples/ex.rs"
@@ -772,6 +783,7 @@ fn workspace_metadata() {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "bar",
                         "src_path": "[..]bar/src/lib.rs"
@@ -805,6 +817,7 @@ fn workspace_metadata() {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "baz",
                         "src_path": "[..]baz/src/lib.rs"
@@ -893,6 +906,7 @@ fn workspace_metadata_no_deps() {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "bar",
                         "src_path": "[..]bar/src/lib.rs"
@@ -926,6 +940,7 @@ fn workspace_metadata_no_deps() {
                         "kind": [ "lib" ],
                         "crate_types": ["lib"],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "baz",
                         "src_path": "[..]baz/src/lib.rs"
@@ -986,6 +1001,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "kind":["bin"],
             "crate_types":["bin"],
             "doctest": false,
+            "test": true,
             "edition": "2015",
             "name":"foo",
             "src_path":"[..]/foo/src/foo.rs"
@@ -1168,6 +1184,7 @@ fn package_metadata() {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]foo/src/lib.rs"
@@ -1241,6 +1258,7 @@ fn package_publish() {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
                         "doctest": true,
+                        "test": true,
                         "edition": "2015",
                         "name": "foo",
                         "src_path": "[..]foo/src/lib.rs"
@@ -1315,6 +1333,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "lib"
                     ],
                     "doctest": true,
+                    "test": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1397,6 +1416,7 @@ fn package_edition_2018() {
                                 "lib"
                             ],
                             "doctest": true,
+                            "test": true,
                             "edition": "2018",
                             "kind": [
                                 "lib"
@@ -1483,6 +1503,7 @@ fn target_edition_2018() {
                                 "lib"
                             ],
                             "doctest": true,
+                            "test": true,
                             "edition": "2018",
                             "kind": [
                                 "lib"
@@ -1495,6 +1516,7 @@ fn target_edition_2018() {
                                 "bin"
                             ],
                             "doctest": false,
+                            "test": true,
                             "edition": "2015",
                             "kind": [
                                 "bin"
@@ -1582,6 +1604,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "doctest": true,
+                    "test": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1617,6 +1640,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "doctest": true,
+                    "test": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1677,6 +1701,7 @@ fn rename_dependency() {
                         "lib"
                     ],
                     "doctest": true,
+                    "test": true,
                     "edition": "2015",
                     "kind": [
                         "lib"
@@ -1793,6 +1818,7 @@ fn metadata_links() {
             "lib"
           ],
           "doctest": true,
+          "test": true,
           "edition": "2015",
           "kind": [
             "lib"
@@ -1805,6 +1831,7 @@ fn metadata_links() {
             "bin"
           ],
           "doctest": false,
+          "test": false,
           "edition": "2015",
           "kind": [
             "custom-build"
@@ -1896,7 +1923,8 @@ fn deps_with_bin_only() {
           "name": "foo",
           "src_path": "[..]/foo/src/lib.rs",
           "edition": "2015",
-          "doctest": true
+          "doctest": true,
+          "test": true
         }
       ],
       "features": {},
@@ -1995,6 +2023,7 @@ fn filter_platform() {
           "name": "alt-dep",
           "src_path": "[..]/alt-dep-0.0.1/src/lib.rs",
           "edition": "2015",
+          "test": true,
           "doctest": true
         }
       ],
@@ -2033,6 +2062,7 @@ fn filter_platform() {
           "name": "cfg-dep",
           "src_path": "[..]/cfg-dep-0.0.1/src/lib.rs",
           "edition": "2015",
+          "test": true,
           "doctest": true
         }
       ],
@@ -2071,6 +2101,7 @@ fn filter_platform() {
           "name": "host-dep",
           "src_path": "[..]/host-dep-0.0.1/src/lib.rs",
           "edition": "2015",
+          "test": true,
           "doctest": true
         }
       ],
@@ -2109,6 +2140,7 @@ fn filter_platform() {
           "name": "normal-dep",
           "src_path": "[..]/normal-dep-0.0.1/src/lib.rs",
           "edition": "2015",
+          "test": true,
           "doctest": true
         }
       ],
@@ -2196,6 +2228,7 @@ fn filter_platform() {
           "name": "foo",
           "src_path": "[..]/foo/src/lib.rs",
           "edition": "2015",
+          "test": true,
           "doctest": true
         }
       ],

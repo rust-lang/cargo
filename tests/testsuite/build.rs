@@ -3142,7 +3142,8 @@ fn compiler_json_error_format() {
             "doctest": false,
             "edition": "2015",
             "name":"build-script-build",
-            "src_path":"[..]build.rs"
+            "src_path":"[..]build.rs",
+            "test": false
         },
         "profile": {
             "debug_assertions": true,
@@ -3166,7 +3167,8 @@ fn compiler_json_error_format() {
             "doctest": true,
             "edition": "2015",
             "name":"bar",
-            "src_path":"[..]lib.rs"
+            "src_path":"[..]lib.rs",
+            "test": true
         },
         "message":"{...}"
     }
@@ -3189,7 +3191,8 @@ fn compiler_json_error_format() {
             "doctest": true,
             "edition": "2015",
             "name":"bar",
-            "src_path":"[..]lib.rs"
+            "src_path":"[..]lib.rs",
+            "test": true
         },
         "filenames":[
             "[..].rlib",
@@ -3217,7 +3220,8 @@ fn compiler_json_error_format() {
             "doctest": false,
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..]main.rs"
+            "src_path":"[..]main.rs",
+            "test": true
         },
         "message":"{...}"
     }
@@ -3231,7 +3235,8 @@ fn compiler_json_error_format() {
             "doctest": false,
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..]main.rs"
+            "src_path":"[..]main.rs",
+            "test": true
         },
         "profile": {
             "debug_assertions": true,
@@ -3299,7 +3304,8 @@ fn message_format_json_forward_stderr() {
             "doctest": false,
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..]"
+            "src_path":"[..]",
+            "test": true
         },
         "message":"{...}"
     }
@@ -3313,7 +3319,8 @@ fn message_format_json_forward_stderr() {
             "doctest": false,
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..]"
+            "src_path":"[..]",
+            "test": true
         },
         "profile":{
             "debug_assertions":false,
