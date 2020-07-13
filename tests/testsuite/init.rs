@@ -82,9 +82,9 @@ fn simple_git_ignore_exists() {
         contents,
         "/target\n\
          **/some.file\n\n\
-         #Added by cargo\n\
+         # Added by cargo\n\
          #\n\
-         #already existing elements were commented out\n\
+         # already existing elements were commented out\n\
          \n\
          #/target\n\
          Cargo.lock\n",
@@ -108,7 +108,7 @@ fn git_ignore_exists_no_conflicting_entries() {
     assert_eq!(
         contents,
         "**/some.file\n\n\
-         #Added by cargo\n\
+         # Added by cargo\n\
          \n\
          /target\n\
          Cargo.lock\n",
