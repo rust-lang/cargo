@@ -538,14 +538,26 @@ impl<'cfg> Workspace<'cfg> {
             None
         };
 
-        for path in members_paths {
+        for path in &members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
         }
 
         if let Some(default) = default_members_paths {
             for path in default {
-                let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
+                let normalized_path = paths::normalize_path(&path);
+                let manifest_path = normalized_path.join("Cargo.toml");
                 if !self.members.contains(&manifest_path) {
+                    // default-members are allowed to be excluded, but they
+                    // still must be referred to by the original (unfiltered)
+                    // members list. Note that we aren't testing against the
+                    // manifest path, both because `members_paths` doesn't
+                    // include `/Cargo.toml`, and because excluded paths may not
+                    // be crates.
+                    let exclude = members_paths.contains(&normalized_path)
+                        && workspace_config.is_excluded(&normalized_path);
+                    if exclude {
+                        continue;
+                    }
                     anyhow::bail!(
                         "package `{}` is listed in workspace’s default-members \
                          but is not a member.",
