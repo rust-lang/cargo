@@ -350,6 +350,7 @@ pub struct CliUnstable {
     pub binary_dep_depinfo: bool,
     #[serde(deserialize_with = "deserialize_build_std")]
     pub build_std: Option<Vec<String>>,
+    pub build_std_features: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
     pub panic_abort_tests: bool,
@@ -455,6 +456,7 @@ impl CliUnstable {
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
+            "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,

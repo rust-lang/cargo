@@ -9,6 +9,7 @@ path = "lib.rs"
 
 [dependencies]
 proc_macro = { path = "../libproc_macro" }
+std = { path = "../libstd" }
 panic_unwind = { path = "../libpanic_unwind" }
 compiler_builtins = { path = "../libcompiler_builtins" }
 registry-dep-using-std = { version = "*", features = ['mockbuild'] }
@@ -16,3 +17,5 @@ registry-dep-using-std = { version = "*", features = ['mockbuild'] }
 [features]
 panic-unwind = []
 backtrace = []
+feature1 = ["std/feature1"]
+default = []

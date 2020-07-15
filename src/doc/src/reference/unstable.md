@@ -358,6 +358,15 @@ something doesn't quite work the way you'd like it to, feel free to check out
 the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
+### build-std-features
+* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+
+This flag is a sibling to the `-Zbuild-std` feature flag. This will configure
+the features enabled for the standard library itself when building the standard
+library. The default enabled features, at this time, are `backtrace` and
+`panic_unwind`. This flag expects a comma-separated list and, if provided, will
+override the default list of features enabled.
+
 ### timings
 * Tracking Issue: [#7405](https://github.com/rust-lang/cargo/issues/7405)
 

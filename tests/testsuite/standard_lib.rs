@@ -632,3 +632,26 @@ fn cargo_config_injects_compiler_builtins() {
         .with_stderr_does_not_contain("[..]libstd[..]")
         .run();
 }
+
+#[cargo_test]
+fn different_features() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                pub fn foo() {
+                    std::conditional_function();
+                }
+            ",
+        )
+        .build();
+    p.cargo("build")
+        .build_std(&setup)
+        .arg("-Zbuild-std-features=feature1")
+        .target_host()
+        .run();
+}
