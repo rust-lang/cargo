@@ -190,7 +190,8 @@ fn build_resolve_graph_r(
             }
         })
         .filter_map(|(dep_id, deps)| {
-            let dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            dep_kinds.sort();
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
