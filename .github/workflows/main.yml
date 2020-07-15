@@ -1,0 +1,124 @@
+name: CI
+on:
+  push:
+    branches-ignore: [master]
+  pull_request:
+    branches: ['*']
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Check Code style quickly by running `rustfmt` over all code
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup update stable && rustup default stable
+    - run: rustup component add rustfmt
+    - run: cargo fmt --all -- --check
+    - run: cd crates/cargo-test-macro && cargo fmt --all -- --check
+    - run: cd crates/cargo-test-support && cargo fmt --all -- --check
+    - run: cd crates/crates-io && cargo fmt --all -- --check
+    - run: cd crates/resolver-tests && cargo fmt --all -- --check
+    - run: cd crates/cargo-platform && cargo fmt --all -- --check
+
+  test:
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_PROFILE_DEV_DEBUG: 1
+      CARGO_PROFILE_TEST_DEBUG: 1
+      CARGO_INCREMENTAL: 0
+    strategy:
+      matrix:
+        include:
+        - os: ubuntu-latest
+          rust: stable
+          other: i686-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: beta
+          other: i686-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: nightly
+          other: i686-unknown-linux-gnu
+        - os: macos-latest
+          rust: stable
+          other: x86_64-apple-ios
+        - os: windows-latest
+          rust: stable-msvc
+          other: i686-pc-windows-msvc
+        - os: windows-latest
+          rust: nightly-gnu
+          other: i686-pc-windows-gnu
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+    - run: rustup target add ${{ matrix.other }}
+    - run: rustup component add rustc-dev llvm-tools-preview rust-docs
+      if: startsWith(matrix.rust, 'nightly')
+    - run: sudo apt update -y && sudo apt install gcc-multilib -y
+      if: matrix.os == 'ubuntu-latest'
+    - run: rustup component add rustfmt || echo "rustfmt not available"
+
+    # Deny warnings on CI to avoid warnings getting into the codebase, and note
+    # the `force-system-lib-on-osx` which is intended to fix compile issues on
+    # OSX where compiling curl from source on OSX yields linker errors on Azure.
+    #
+    # Note that the curl issue is traced back to alexcrichton/curl-rust#279
+    # where it looks like the OSX version we're actually running on is such that
+    # a symbol is emitted that's never worked. For now force the system library
+    # to be used to fix the link errors.
+    - run: cargo test --features 'deny-warnings curl/force-system-lib-on-osx'
+    - run: cargo test -p cargo-test-support
+    - run: cargo test -p cargo-platform
+
+  resolver:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup update stable && rustup default stable
+    - run: cargo test --manifest-path crates/resolver-tests/Cargo.toml
+
+  build_std:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup update nightly && rustup default nightly
+    - run: rustup component add rust-src
+    - run: cargo build
+    - run: cargo test --test build-std
+      env:
+        CARGO_RUN_BUILD_STD_TESTS: 1
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup update nightly && rustup default nightly
+    - run: rustup component add rust-docs
+    - run: |
+        mkdir mdbook
+        curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
+        echo ::add-path::`pwd`/mdbook
+    - run: cargo doc --no-deps
+    - run: cd src/doc && mdbook build --dest-dir ../../target/doc
+    - run: |
+        cd src/doc
+        curl -sSLo linkcheck.sh \
+          https://raw.githubusercontent.com/rust-lang/rust/master/src/tools/linkchecker/linkcheck.sh
+        sh linkcheck.sh --all cargo
+
+  success:
+    name: bors build finished
+    needs: [docs, rustfmt, test, resolver, build_std]
+    runs-on: ubuntu-latest
+    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: echo ok
+  failure:
+    name: bors build finished
+    needs: [docs, rustfmt, test, resolver, build_std]
+    runs-on: ubuntu-latest
+    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    steps:
+    - run: exit 1
