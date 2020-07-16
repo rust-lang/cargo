@@ -348,6 +348,7 @@ pub struct CliUnstable {
     pub mtime_on_use: bool,
     pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
+    #[serde(deserialize_with = "deserialize_build_std")]
     pub build_std: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
@@ -359,6 +360,20 @@ pub struct CliUnstable {
     pub multitarget: bool,
     pub rustdoc_map: bool,
     pub terminal_width: Option<Option<usize>>,
+}
+
+fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
+        Some(list) => list,
+        None => return Ok(None),
+    };
+    let v = crates.join(",");
+    Ok(Some(
+        crate::core::compiler::standard_lib::parse_unstable_flag(Some(&v)),
+    ))
 }
 
 impl CliUnstable {

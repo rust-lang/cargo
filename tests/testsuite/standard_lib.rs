@@ -128,7 +128,7 @@ fn setup() -> Option<Setup> {
     })
 }
 
-fn enable_build_std(e: &mut Execs, setup: &Setup, arg: Option<&str>) {
+fn enable_build_std(e: &mut Execs, setup: &Setup) {
     // First up, force Cargo to use our "mock sysroot" which mimics what
     // libstd looks like upstream.
     let root = paths::root();
@@ -142,12 +142,6 @@ fn enable_build_std(e: &mut Execs, setup: &Setup, arg: Option<&str>) {
         .join("tests/testsuite/mock-std");
     e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
 
-    // Actually enable `-Zbuild-std` for now
-    let arg = match arg {
-        Some(s) => format!("-Zbuild-std={}", s),
-        None => "-Zbuild-std".to_string(),
-    };
-    e.arg(arg);
     e.masquerade_as_nightly_cargo();
 
     // We do various shenanigans to ensure our "mock sysroot" actually links
@@ -181,12 +175,14 @@ trait BuildStd: Sized {
 
 impl BuildStd for Execs {
     fn build_std(&mut self, setup: &Setup) -> &mut Self {
-        enable_build_std(self, setup, None);
+        enable_build_std(self, setup);
+        self.arg("-Zbuild-std");
         self
     }
 
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
-        enable_build_std(self, setup, Some(arg));
+        enable_build_std(self, setup);
+        self.arg(format!("-Zbuild-std={}", arg));
         self
     }
 
@@ -603,4 +599,36 @@ fn ignores_incremental() {
         .to_str()
         .unwrap()
         .starts_with("foo-"));
+}
+
+#[cargo_test]
+fn cargo_config_injects_compiler_builtins() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {
+                    assert_eq!(u8::MIN, 0);
+                }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                build-std = ['core']
+            "#,
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib");
+    enable_build_std(&mut build, &setup);
+    build
+        .target_host()
+        .with_stderr_does_not_contain("[..]libstd[..]")
+        .run();
 }
