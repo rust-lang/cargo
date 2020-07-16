@@ -433,41 +433,6 @@ fn update_precise_first_run() {
     {
       "authors": [],
       "categories": [],
-      "dependencies": [],
-      "description": null,
-      "edition": "2015",
-      "features": {},
-      "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-      "keywords": [],
-      "license": null,
-      "license_file": null,
-      "links": null,
-      "manifest_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/Cargo.toml",
-      "metadata": null,
-      "publish": null,
-      "name": "serde",
-      "readme": null,
-      "repository": null,
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "targets": [
-        {
-          "crate_types": [
-            "lib"
-          ],
-          "doctest": true,
-          "edition": "2015",
-          "kind": [
-            "lib"
-          ],
-          "name": "serde",
-          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs"
-        }
-      ],
-      "version": "0.2.0"
-    },
-    {
-      "authors": [],
-      "categories": [],
       "dependencies": [
         {
           "features": [],
@@ -512,6 +477,41 @@ fn update_precise_first_run() {
         }
       ],
       "version": "0.0.1"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "dependencies": [],
+      "description": null,
+      "edition": "2015",
+      "features": {},
+      "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "name": "serde",
+      "readme": null,
+      "repository": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "serde",
+          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs"
+        }
+      ],
+      "version": "0.2.0"
     }
   ],
   "resolve": {

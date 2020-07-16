@@ -1444,7 +1444,7 @@ fn lines_match_works() {
 /// You can use `[..]` wildcard in strings (useful for OS-dependent things such
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
-/// (e.g., rustc) rather than Cargo itself). Arrays are sorted before comparison.
+/// (e.g., rustc) rather than Cargo itself).
 pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
     match find_json_mismatch_r(expected, actual) {
         Some((expected_part, actual_part)) => Err(format!(
@@ -1472,26 +1472,10 @@ fn find_json_mismatch_r<'a>(
                 return Some((expected, actual));
             }
 
-            let mut l = l.iter().collect::<Vec<_>>();
-            let mut r = r.iter().collect::<Vec<_>>();
-
-            l.retain(
-                |l| match r.iter().position(|r| find_json_mismatch_r(l, r).is_none()) {
-                    Some(i) => {
-                        r.remove(i);
-                        false
-                    }
-                    None => true,
-                },
-            );
-
-            if !l.is_empty() {
-                assert!(!r.is_empty());
-                Some((l[0], r[0]))
-            } else {
-                assert_eq!(r.len(), 0);
-                None
-            }
+            l.iter()
+                .zip(r.iter())
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .next()
         }
         (&Object(ref l), &Object(ref r)) => {
             let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));

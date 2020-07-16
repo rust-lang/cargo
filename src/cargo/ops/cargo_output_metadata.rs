@@ -7,7 +7,7 @@ use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use cargo_platform::Platform;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 const VERSION: u32 = 1;
@@ -131,7 +131,7 @@ fn build_resolve_graph(
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,
     // but that would be somewhat complex.
-    let mut package_map: HashMap<PackageId, Package> = ws_resolve
+    let package_map: BTreeMap<PackageId, Package> = ws_resolve
         .pkg_set
         .get_many(ws_resolve.pkg_set.package_ids())?
         .into_iter()
@@ -141,7 +141,7 @@ fn build_resolve_graph(
 
     // Start from the workspace roots, and recurse through filling out the
     // map, filtering targets as necessary.
-    let mut node_map = HashMap::new();
+    let mut node_map = BTreeMap::new();
     for member_pkg in ws.members() {
         build_resolve_graph_r(
             &mut node_map,
@@ -154,21 +154,22 @@ fn build_resolve_graph(
     }
     // Get a Vec of Packages.
     let actual_packages = package_map
-        .drain()
+        .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
         .collect();
+
     let mr = MetadataResolve {
-        nodes: node_map.drain().map(|(_pkg_id, node)| node).collect(),
+        nodes: node_map.into_iter().map(|(_pkg_id, node)| node).collect(),
         root: ws.current_opt().map(|pkg| pkg.package_id()),
     };
     Ok((actual_packages, mr))
 }
 
 fn build_resolve_graph_r(
-    node_map: &mut HashMap<PackageId, MetadataResolveNode>,
+    node_map: &mut BTreeMap<PackageId, MetadataResolveNode>,
     pkg_id: PackageId,
     resolve: &Resolve,
-    package_map: &HashMap<PackageId, Package>,
+    package_map: &BTreeMap<PackageId, Package>,
     target_data: &RustcTargetData,
     requested_kinds: &[CompileKind],
 ) {
@@ -190,7 +191,8 @@ fn build_resolve_graph_r(
             }
         })
         .filter_map(|(dep_id, deps)| {
-            let dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            dep_kinds.sort();
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
