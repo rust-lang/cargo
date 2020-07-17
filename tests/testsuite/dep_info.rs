@@ -37,7 +37,7 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
     fn read_usize(bytes: &mut &[u8]) -> usize {
         let ret = &bytes[..4];
         *bytes = &bytes[4..];
-        ((ret[0] as usize) << 0)
+        (ret[0] as usize)
             | ((ret[1] as usize) << 8)
             | ((ret[2] as usize) << 16)
             | ((ret[3] as usize) << 24)

@@ -22,8 +22,8 @@ use std::str;
 
 fn make_crate_prefix(name: &str) -> String {
     match name.len() {
-        1 => format!("1"),
-        2 => format!("2"),
+        1 => String::from("1"),
+        2 => String::from("2"),
         3 => format!("3/{}", &name[..1]),
         _ => format!("{}/{}", &name[0..2], &name[2..4]),
     }

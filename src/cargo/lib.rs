@@ -18,8 +18,8 @@
 #![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
 #![allow(clippy::write_with_newline)] // too pedantic
 #![allow(clippy::inefficient_to_string)] // this causes suggestions that result in `(*s).to_string()`
+#![allow(clippy::collapsible_if)] // too pedantic
 #![warn(clippy::needless_borrow)]
-#![warn(clippy::redundant_clone)]
 // Unit is now interned, and would probably be better as pass-by-copy, but
 // doing so causes a lot of & and * shenanigans that makes the code arguably
 // less clear and harder to read.
@@ -165,7 +165,7 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
         drop(writeln!(shell.err(), "\nCaused by:"));
         for line in cause.to_string().lines() {
             if line.is_empty() {
-                drop(writeln!(shell.err(), ""));
+                drop(writeln!(shell.err()));
             } else {
                 drop(writeln!(shell.err(), "  {}", line));
             }

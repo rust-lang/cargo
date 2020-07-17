@@ -150,7 +150,7 @@ impl GitDatabase {
     ) -> CargoResult<GitCheckout<'_>> {
         let mut checkout = None;
         if let Ok(repo) = git2::Repository::open(dest) {
-            let mut co = GitCheckout::new(dest, self, rev.clone(), repo);
+            let mut co = GitCheckout::new(dest, self, rev, repo);
             if !co.is_fresh() {
                 // After a successful fetch operation the subsequent reset can
                 // fail sometimes for corrupt repositories where the fetch
@@ -751,15 +751,15 @@ pub fn fetch(
         }
 
         GitReference::DefaultBranch => {
-            refspecs.push(format!("HEAD:refs/remotes/origin/HEAD"));
+            refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
         }
 
         // For `rev` dependencies we don't know what the rev will point to. To
         // handle this situation we fetch all branches and tags, and then we
         // pray it's somewhere in there.
         GitReference::Rev(_) => {
-            refspecs.push(format!("refs/heads/*:refs/remotes/origin/*"));
-            refspecs.push(format!("HEAD:refs/remotes/origin/HEAD"));
+            refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
+            refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
             tags = true;
         }
     }

@@ -487,7 +487,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Cargo
     // easily sure that rename() will succeed (the new name needs to be on the same mount
     // point as the old one).
     let tempdir = TempFileBuilder::new().prefix(base).tempdir_in(parent)?;
-    exclude_from_backups(&tempdir.path());
+    exclude_from_backups(tempdir.path());
     // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
     // here to create the directory directly and fs::create_dir_all() explicitly treats
     // the directory being created concurrently by another thread or process as success,
