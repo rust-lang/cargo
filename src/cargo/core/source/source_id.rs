@@ -63,12 +63,10 @@ enum SourceKind {
 pub enum GitReference {
     /// From a tag.
     Tag(String),
-    /// From a branch.
+    /// From the HEAD of a branch.
     Branch(String),
     /// From a specific revision.
     Rev(String),
-    /// The default branch of the repository, the reference named `HEAD`.
-    DefaultBranch,
 }
 
 impl SourceId {
@@ -116,7 +114,7 @@ impl SourceId {
         match kind {
             "git" => {
                 let mut url = url.into_url()?;
-                let mut reference = GitReference::DefaultBranch;
+                let mut reference = GitReference::Branch("master".to_string());
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
                         // Map older 'ref' to branch.
@@ -551,10 +549,10 @@ impl<'a> fmt::Display for SourceIdIntoUrl<'a> {
 
 impl GitReference {
     /// Returns a `Display`able view of this git reference, or None if using
-    /// the head of the default branch
+    /// the head of the "master" branch
     pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
         match *self {
-            GitReference::DefaultBranch => None,
+            GitReference::Branch(ref s) if *s == "master" => None,
             _ => Some(PrettyRef { inner: self }),
         }
     }
@@ -571,7 +569,6 @@ impl<'a> fmt::Display for PrettyRef<'a> {
             GitReference::Branch(ref b) => write!(f, "branch={}", b),
             GitReference::Tag(ref s) => write!(f, "tag={}", s),
             GitReference::Rev(ref s) => write!(f, "rev={}", s),
-            GitReference::DefaultBranch => unreachable!(),
         }
     }
 }
@@ -584,11 +581,11 @@ mod tests {
     #[test]
     fn github_sources_equal() {
         let loc = "https://github.com/foo/bar".into_url().unwrap();
-        let default = SourceKind::Git(GitReference::DefaultBranch);
-        let s1 = SourceId::new(default.clone(), loc).unwrap();
+        let master = SourceKind::Git(GitReference::Branch("master".to_string()));
+        let s1 = SourceId::new(master.clone(), loc).unwrap();
 
         let loc = "git://github.com/foo/bar".into_url().unwrap();
-        let s2 = SourceId::new(default, loc.clone()).unwrap();
+        let s2 = SourceId::new(master, loc.clone()).unwrap();
 
         assert_eq!(s1, s2);
 

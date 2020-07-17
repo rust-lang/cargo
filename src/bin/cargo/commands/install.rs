@@ -140,7 +140,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         } else if let Some(rev) = args.value_of("rev") {
             GitReference::Rev(rev.to_string())
         } else {
-            GitReference::DefaultBranch
+            GitReference::Branch("master".to_string())
         };
         SourceId::for_git(&url, gitref)?
     } else if let Some(path) = args.value_of_path("path", config) {

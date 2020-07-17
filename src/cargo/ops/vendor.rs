@@ -275,7 +275,6 @@ fn sync(
                     GitReference::Branch(ref b) => branch = Some(b.clone()),
                     GitReference::Tag(ref t) => tag = Some(t.clone()),
                     GitReference::Rev(ref r) => rev = Some(r.clone()),
-                    GitReference::DefaultBranch => {}
                 }
             }
             VendorSource::Git {
