@@ -419,7 +419,7 @@ fn named_config_profile() {
     let bo = profiles.get_profile(a_pkg, true, true, UnitFor::new_host(false), mode);
     assert_eq!(bo.name, "foo");
     assert_eq!(bo.codegen_units, Some(6)); // "foo" build override from config
-    assert_eq!(bo.opt_level, "1"); // SAME as normal
+    assert_eq!(bo.opt_level, "0"); // default to zero
     assert_eq!(bo.debuginfo, Some(1)); // SAME as normal
     assert_eq!(bo.debug_assertions, false); // "foo" build override from manifest
     assert_eq!(bo.overflow_checks, true); // SAME as normal
