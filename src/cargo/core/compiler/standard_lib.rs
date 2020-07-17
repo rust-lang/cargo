@@ -99,11 +99,18 @@ pub fn resolve_std<'cfg>(
     spec_pkgs.push("test".to_string());
     let spec = Packages::Packages(spec_pkgs);
     let specs = spec.to_package_id_specs(&std_ws)?;
-    let features = vec!["panic-unwind".to_string(), "backtrace".to_string()];
+    let features = match &config.cli_unstable().build_std_features {
+        Some(list) => list.clone(),
+        None => vec![
+            "panic-unwind".to_string(),
+            "backtrace".to_string(),
+            "default".to_string(),
+        ],
+    };
     // dev_deps setting shouldn't really matter here.
     let opts = ResolveOpts::new(
         /*dev_deps*/ false, &features, /*all_features*/ false,
-        /*uses_default_features*/ true,
+        /*uses_default_features*/ false,
     );
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
