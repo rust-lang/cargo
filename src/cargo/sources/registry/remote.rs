@@ -49,7 +49,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             source_id,
             config,
             // TODO: we should probably make this configurable
-            index_git_ref: GitReference::DefaultBranch,
+            index_git_ref: GitReference::Branch("master".to_string()),
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),

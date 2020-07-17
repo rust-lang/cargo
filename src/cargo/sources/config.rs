@@ -225,7 +225,7 @@ restore the source replacement configuration to continue the build
                     Some(b) => GitReference::Tag(b.val),
                     None => match def.rev {
                         Some(b) => GitReference::Rev(b.val),
-                        None => GitReference::DefaultBranch,
+                        None => GitReference::Branch("master".to_string()),
                     },
                 },
             };

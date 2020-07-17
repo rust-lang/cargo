@@ -261,6 +261,10 @@ mod test {
     }
 
     fn src(s: &str) -> SourceId {
-        SourceId::for_git(&s.into_url().unwrap(), GitReference::DefaultBranch).unwrap()
+        SourceId::for_git(
+            &s.into_url().unwrap(),
+            GitReference::Branch("master".to_string()),
+        )
+        .unwrap()
     }
 }
