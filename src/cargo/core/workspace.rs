@@ -873,11 +873,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(ref p) => p.clone(),
                 MaybePackage::Virtual(_) => continue,
             };
-            let mut src = PathSource::new(
-                pkg.manifest_path(),
-                pkg.package_id().source_id(),
-                self.config,
-            );
+            let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), self.config);
             src.preload_with(pkg);
             registry.add_preloaded(Box::new(src));
         }

@@ -857,19 +857,29 @@ fn no_rebuild_when_rename_dir() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            foo = { path = "foo" }
-        "#,
+                [workspace]
+
+                [dependencies]
+                foo = { path = "foo" }
+            "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/_unused.rs", "")
+        .file("build.rs", "fn main() {}")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("foo/src/lib.rs", "")
+        .file("foo/build.rs", "fn main() {}")
         .build();
+
+    // make sure the most recently modified file is `src/lib.rs`, not
+    // `Cargo.toml`, to expose a historical bug where we forgot to strip the
+    // `Cargo.toml` path from looking for the package root.
+    cargo_test_support::sleep_ms(100);
+    fs::write(p.root().join("src/lib.rs"), "").unwrap();
 
     p.cargo("build").run();
     let mut new = p.root();
