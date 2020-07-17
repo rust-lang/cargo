@@ -184,6 +184,11 @@ fn complicated() {
 
                 [profile.release]
                 lto = true
+
+                # force build deps to share an opt-level with the rest of the
+                # graph so they only get built once.
+                [profile.release.build-override]
+                opt-level = 3
             "#,
         )
         .file("build.rs", "fn main() { dep_build::foo() }")

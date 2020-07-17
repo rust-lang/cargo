@@ -1223,22 +1223,23 @@ impl Execs {
                 // test suite to pass for now, but we may need to get more fancy
                 // if tests start failing again.
                 a.sort_by_key(|s| s.len());
-                let e = out.lines();
+                let mut failures = Vec::new();
 
-                for e_line in e {
+                for e_line in out.lines() {
                     match a.iter().position(|a_line| lines_match(e_line, a_line)) {
-                        Some(index) => a.remove(index),
-                        None => {
-                            return Err(format!(
-                                "Did not find expected line:\n\
-                                 {}\n\
-                                 Remaining available output:\n\
-                                 {}\n",
-                                e_line,
-                                a.join("\n")
-                            ));
+                        Some(index) => {
+                            a.remove(index);
                         }
-                    };
+                        None => failures.push(e_line),
+                    }
+                }
+                if failures.len() > 0 {
+                    return Err(format!(
+                        "Did not find expected line(s):\n{}\n\
+                         Remaining available output:\n{}\n",
+                        failures.join("\n"),
+                        a.join("\n")
+                    ));
                 }
                 if !a.is_empty() {
                     Err(format!(
