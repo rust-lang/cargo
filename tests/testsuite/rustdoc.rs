@@ -1,6 +1,6 @@
 //! Tests for the `cargo rustdoc` command.
 
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, cross_compile, project};
 
 #[cargo_test]
 fn rustdoc_simple() {
@@ -13,7 +13,7 @@ fn rustdoc_simple() {
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -32,7 +32,7 @@ fn rustdoc_args() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -122,7 +122,7 @@ fn rustdoc_only_bar_dependency() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -144,7 +144,7 @@ fn rustdoc_same_name_documents_lib() {
         -o [CWD]/target/doc \
         [..] \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -203,21 +203,26 @@ fn proc_macro_crate_type() {
 }
 
 #[cargo_test]
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn rustdoc_target() {
+    if cross_compile::disabled() {
+        return;
+    }
+
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustdoc --verbose --target x86_64-unknown-linux-gnu")
-        .with_stderr(
+    p.cargo("rustdoc --verbose --target")
+        .arg(cross_compile::alternate())
+        .with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-    --target x86_64-unknown-linux-gnu \
-    -o [CWD]/target/x86_64-unknown-linux-gnu/doc \
+    --target {target} \
+    -o [CWD]/target/{target}/doc \
     [..] \
-    -L dependency=[CWD]/target/x86_64-unknown-linux-gnu/debug/deps \
-    -L dependency=[CWD]/target/debug/deps`
+    -L dependency=[CWD]/target/{target}/debug/deps \
+    -L dependency=[CWD]/target/debug/deps[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
+            target = cross_compile::alternate()
+        ))
         .run();
 }
