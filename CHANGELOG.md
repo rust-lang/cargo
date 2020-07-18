@@ -128,7 +128,7 @@
   command finishes. Regular builds continue to fail if stdout or stderr is
   closed, matching the behavior of many other build systems.
   [#8236](https://github.com/rust-lang/cargo/pull/8236)
-- If `cargo install` is given an exact version, like `--version=1.2.3`, it
+- If `cargo install` is given an exact version, like `--version =1.2.3`, it
   will now avoid updating the index if that version is already installed, and
   exit quickly indicating it is already installed.
   [#8022](https://github.com/rust-lang/cargo/pull/8022)
