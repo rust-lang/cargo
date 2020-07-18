@@ -5,10 +5,6 @@ use std::process::Output;
 
 #[cargo_test]
 fn with_deps() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     Package::new("bar", "0.0.1").publish();
 
     let p = project()
@@ -36,10 +32,6 @@ fn with_deps() {
 
 #[cargo_test]
 fn shared_deps() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     Package::new("bar", "0.0.1").publish();
 
     let p = project()
@@ -70,10 +62,6 @@ fn shared_deps() {
 
 #[cargo_test]
 fn build_dep_not_ltod() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     Package::new("bar", "0.0.1").publish();
 
     let p = project()
@@ -102,10 +90,6 @@ fn build_dep_not_ltod() {
 
 #[cargo_test]
 fn complicated() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     Package::new("dep-shared", "0.0.1")
         .file("src/lib.rs", "pub fn foo() {}")
         .publish();
@@ -233,10 +217,6 @@ fn complicated() {
 
 #[cargo_test]
 fn off_in_manifest_works() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() {}")
         .publish();
@@ -284,10 +264,6 @@ fn off_in_manifest_works() {
 
 #[cargo_test]
 fn between_builds() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -325,10 +301,6 @@ fn between_builds() {
 
 #[cargo_test]
 fn test_all() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -352,10 +324,6 @@ fn test_all() {
 
 #[cargo_test]
 fn test_all_and_bench() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -495,9 +463,6 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
 
 #[cargo_test]
 fn cdylib_and_rlib() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project_with_dep("'cdylib', 'rlib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
     verify_lto(
@@ -564,9 +529,6 @@ fn cdylib_and_rlib() {
 
 #[cargo_test]
 fn dylib() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project_with_dep("'dylib'");
     let output = p.cargo("build --release -v").exec_with_output().unwrap();
     verify_lto(&output, "registry", "--crate-type lib", Lto::OnlyObject);
@@ -623,9 +585,6 @@ fn dylib() {
 
 #[cargo_test]
 fn test_profile() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
         .publish();
@@ -677,9 +636,6 @@ fn test_profile() {
 
 #[cargo_test]
 fn dev_profile() {
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     // Mixing dev=LTO with test=not-LTO
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "pub fn foo() -> i32 { 123 } ")
