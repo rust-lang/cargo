@@ -139,7 +139,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(multi_opt("target", target, "TRIPLE"))
+        self._arg(multi_opt("target", "TRIPLE", target))
     }
 
     fn arg_target_dir(self) -> Self {
