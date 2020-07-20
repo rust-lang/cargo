@@ -2831,6 +2831,14 @@ fn default_not_master() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
+warning: fetching `master` branch from `[..]` but the `HEAD` \
+    reference for this repository is not the \
+    `master` branch. This behavior will change \
+    in Cargo in the future and your build may \
+    break, so it's recommended to place \
+    `branch = \"master\"` in Cargo.toml when \
+    depending on this git repository to ensure \
+    that your build will continue to work.
 [COMPILING] dep1 v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
