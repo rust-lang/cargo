@@ -1672,7 +1672,7 @@ fn excluded_default_members_crate_glob() {
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("bar/baz/src/main.rs", "fn main() {}")
         .file("bar/quux/Cargo.toml", &basic_manifest("quux", "0.1.0"))
-        .file("bar/quux/src/lib.rs", "");
+        .file("bar/quux/src/main.rs", "fn main() {}");
 
     let p = p.build();
     p.cargo("build").run();
@@ -1680,10 +1680,12 @@ fn excluded_default_members_crate_glob() {
     assert!(p.root().join("target").is_dir());
     assert!(!p.bin("foo").is_file());
     assert!(p.bin("baz").is_file());
+    assert!(!p.bin("quux").exists());
 
     p.cargo("build --workspace").run();
     assert!(p.root().join("target").is_dir());
     assert!(p.bin("foo").is_file());
+    assert!(!p.bin("quux").exists());
 
     p.cargo("build").cwd("bar/quux").run();
     assert!(p.root().join("bar/quux/target").is_dir());
