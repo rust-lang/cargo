@@ -555,9 +555,6 @@ impl GitReference {
     pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
         match self {
             GitReference::DefaultBranch => None,
-            // See module comments in src/cargo/sources/git/utils.rs for why
-            // `DefaultBranch` is treated specially here.
-            GitReference::Branch(m) if m == "master" => None,
             _ => Some(PrettyRef { inner: self }),
         }
     }

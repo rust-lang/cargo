@@ -66,6 +66,11 @@ pub enum ResolveVersion {
     /// listed inline. Introduced in 2019 in version 1.38. New lockfiles use
     /// V2 by default starting in 1.41.
     V2,
+    /// A format that explicitly lists a `version` at the top of the file as
+    /// well as changing how git dependencies are encoded. Dependencies with
+    /// `branch = "master"` are no longer encoded the same way as those without
+    /// branch specifiers.
+    V3,
 }
 
 impl Resolve {
@@ -374,8 +379,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
     /// Returns the version of the encoding that's being used for this lock
     /// file.
-    pub fn version(&self) -> &ResolveVersion {
-        &self.version
+    pub fn version(&self) -> ResolveVersion {
+        self.version
     }
 
     pub fn summary(&self, pkg_id: PackageId) -> &Summary {

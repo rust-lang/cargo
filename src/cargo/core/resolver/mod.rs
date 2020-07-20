@@ -1071,7 +1071,7 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
     let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
-        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state);
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state, resolve.version());
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             anyhow::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \
