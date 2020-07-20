@@ -217,12 +217,17 @@ impl GitReference {
                     .target()
                     .ok_or_else(|| anyhow::format_err!("branch `{}` did not have a target", s))?
             }
+
+            // See the module docs for why we're using `master` here.
             GitReference::DefaultBranch => {
-                let refname = "refs/remotes/origin/HEAD";
-                let id = repo.refname_to_id(refname)?;
-                let obj = repo.find_object(id, None)?;
-                let obj = obj.peel(ObjectType::Commit)?;
-                obj.id()
+                let master = repo
+                    .find_branch("origin/master", git2::BranchType::Remote)
+                    .chain_err(|| "failed to find branch `master`")?;
+                let master = master
+                    .get()
+                    .target()
+                    .ok_or_else(|| anyhow::format_err!("branch `master` did not have a target"))?;
+                master
             }
 
             GitReference::Rev(s) => {
@@ -757,6 +762,7 @@ pub fn fetch(
         }
 
         GitReference::DefaultBranch => {
+            refspecs.push(format!("refs/heads/master:refs/remotes/origin/master"));
             refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
         }
 
@@ -984,7 +990,8 @@ fn github_up_to_date(
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
         GitReference::Tag(tag) => tag,
-        GitReference::DefaultBranch => "HEAD",
+        // See the module docs for why we're using `master` here.
+        GitReference::DefaultBranch => "master",
         GitReference::Rev(_) => {
             debug!("can't use github fast path with `rev`");
             return Ok(false);

@@ -1,7 +1,7 @@
 use std::cmp::{self, Ordering};
 use std::collections::HashSet;
 use std::fmt::{self, Formatter};
-use std::hash::{self, Hash};
+use std::hash::{self, Hash, Hasher};
 use std::path::Path;
 use std::ptr;
 use std::sync::Mutex;
@@ -59,7 +59,7 @@ enum SourceKind {
 }
 
 /// Information to find a specific commit in a Git repository.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone)]
 pub enum GitReference {
     /// From a tag.
     Tag(String),
@@ -553,8 +553,11 @@ impl GitReference {
     /// Returns a `Display`able view of this git reference, or None if using
     /// the head of the default branch
     pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
-        match *self {
+        match self {
             GitReference::DefaultBranch => None,
+            // See module comments in src/cargo/sources/git/utils.rs for why
+            // `DefaultBranch` is treated specially here.
+            GitReference::Branch(m) if m == "master" => None,
             _ => Some(PrettyRef { inner: self }),
         }
     }
@@ -572,6 +575,77 @@ impl<'a> fmt::Display for PrettyRef<'a> {
             GitReference::Tag(ref s) => write!(f, "tag={}", s),
             GitReference::Rev(ref s) => write!(f, "rev={}", s),
             GitReference::DefaultBranch => unreachable!(),
+        }
+    }
+}
+
+// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
+// is treated specially here.
+impl PartialEq for GitReference {
+    fn eq(&self, other: &GitReference) -> bool {
+        match (self, other) {
+            (GitReference::Tag(a), GitReference::Tag(b)) => a == b,
+            (GitReference::Rev(a), GitReference::Rev(b)) => a == b,
+            (GitReference::Branch(b), GitReference::DefaultBranch)
+            | (GitReference::DefaultBranch, GitReference::Branch(b)) => b == "master",
+            (GitReference::DefaultBranch, GitReference::DefaultBranch) => true,
+            (GitReference::Branch(a), GitReference::Branch(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for GitReference {}
+
+// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
+// is treated specially here.
+impl Hash for GitReference {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        match self {
+            GitReference::Tag(a) => {
+                0u8.hash(hasher);
+                a.hash(hasher);
+            }
+            GitReference::Rev(a) => {
+                1u8.hash(hasher);
+                a.hash(hasher);
+            }
+            GitReference::Branch(a) => {
+                2u8.hash(hasher);
+                a.hash(hasher);
+            }
+            GitReference::DefaultBranch => {
+                2u8.hash(hasher);
+                "master".hash(hasher);
+            }
+        }
+    }
+}
+
+impl PartialOrd for GitReference {
+    fn partial_cmp(&self, other: &GitReference) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
+// is treated specially here.
+impl Ord for GitReference {
+    fn cmp(&self, other: &GitReference) -> Ordering {
+        use GitReference::*;
+        match (self, other) {
+            (Tag(a), Tag(b)) => a.cmp(b),
+            (Tag(_), _) => Ordering::Less,
+            (_, Tag(_)) => Ordering::Greater,
+
+            (Rev(a), Rev(b)) => a.cmp(b),
+            (Rev(_), _) => Ordering::Less,
+            (_, Rev(_)) => Ordering::Greater,
+
+            (Branch(b), DefaultBranch) => b.as_str().cmp("master"),
+            (DefaultBranch, Branch(b)) => "master".cmp(b),
+            (Branch(a), Branch(b)) => a.cmp(b),
+            (DefaultBranch, DefaultBranch) => Ordering::Equal,
         }
     }
 }
