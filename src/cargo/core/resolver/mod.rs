@@ -133,7 +133,8 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();

@@ -2957,3 +2957,65 @@ dependencies = [
     );
     project.cargo("build").run();
 }
+
+#[cargo_test]
+fn two_dep_forms() {
+    let project = project();
+
+    let (git_project, _repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = 'master' }}
+                    a = {{ path = 'a' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "a"
+                    version = "0.5.0"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    project
+        .cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+warning: two git dependencies found for `[..]` where one uses `branch = \"master\"` \
+and the other doesn't; this will break in a future version of Cargo, so please \
+ensure the dependency forms are consistent
+warning: [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}

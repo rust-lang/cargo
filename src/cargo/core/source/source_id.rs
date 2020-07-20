@@ -1,23 +1,21 @@
-use std::cmp::{self, Ordering};
-use std::collections::HashSet;
-use std::fmt::{self, Formatter};
-use std::hash::{self, Hash, Hasher};
-use std::path::Path;
-use std::ptr;
-use std::sync::Mutex;
-
-use log::trace;
-use serde::de;
-use serde::ser;
-use url::Url;
-
 use crate::core::PackageId;
 use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use crate::util::{CanonicalUrl, CargoResult, Config, IntoUrl};
+use log::trace;
+use serde::de;
+use serde::ser;
+use std::cmp::{self, Ordering};
+use std::collections::HashSet;
+use std::fmt::{self, Formatter};
+use std::hash::{self, Hash};
+use std::path::Path;
+use std::ptr;
+use std::sync::Mutex;
+use url::Url;
 
 lazy_static::lazy_static! {
-    static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
+    static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Default::default();
 }
 
 /// Unique identifier for a source of packages.
@@ -59,7 +57,7 @@ enum SourceKind {
 }
 
 /// Information to find a specific commit in a Git repository.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum GitReference {
     /// From a tag.
     Tag(String),
@@ -369,15 +367,79 @@ impl SourceId {
     }
 }
 
+impl PartialEq for SourceId {
+    fn eq(&self, other: &SourceId) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
 impl PartialOrd for SourceId {
     fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+// Custom comparison defined as canonical URL equality for git sources and URL
+// equality for other sources, ignoring the `precise` and `name` fields.
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.inner.cmp(other.inner)
+        // If our interior pointers are to the exact same `SourceIdInner` then
+        // we're guaranteed to be equal.
+        if ptr::eq(self.inner, other.inner) {
+            return Ordering::Equal;
+        }
+
+        // Sort first based on `kind`, deferring to the URL comparison below if
+        // the kinds are equal.
+        match (&self.inner.kind, &other.inner.kind) {
+            (SourceKind::Path, SourceKind::Path) => {}
+            (SourceKind::Path, _) => return Ordering::Less,
+            (_, SourceKind::Path) => return Ordering::Greater,
+
+            (SourceKind::Registry, SourceKind::Registry) => {}
+            (SourceKind::Registry, _) => return Ordering::Less,
+            (_, SourceKind::Registry) => return Ordering::Greater,
+
+            (SourceKind::LocalRegistry, SourceKind::LocalRegistry) => {}
+            (SourceKind::LocalRegistry, _) => return Ordering::Less,
+            (_, SourceKind::LocalRegistry) => return Ordering::Greater,
+
+            (SourceKind::Directory, SourceKind::Directory) => {}
+            (SourceKind::Directory, _) => return Ordering::Less,
+            (_, SourceKind::Directory) => return Ordering::Greater,
+
+            (SourceKind::Git(a), SourceKind::Git(b)) => {
+                use GitReference::*;
+                let ord = match (a, b) {
+                    (Tag(a), Tag(b)) => a.cmp(b),
+                    (Tag(_), _) => Ordering::Less,
+                    (_, Tag(_)) => Ordering::Greater,
+
+                    (Rev(a), Rev(b)) => a.cmp(b),
+                    (Rev(_), _) => Ordering::Less,
+                    (_, Rev(_)) => Ordering::Greater,
+
+                    // See module comments in src/cargo/sources/git/utils.rs
+                    // for why `DefaultBranch` is treated specially here.
+                    (Branch(a), DefaultBranch) => a.as_str().cmp("master"),
+                    (DefaultBranch, Branch(b)) => "master".cmp(b),
+                    (Branch(a), Branch(b)) => a.cmp(b),
+                    (DefaultBranch, DefaultBranch) => Ordering::Equal,
+                };
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+            }
+        }
+
+        // If the `kind` and the `url` are equal, then for git sources we also
+        // ensure that the canonical urls are equal.
+        match (&self.inner.kind, &other.inner.kind) {
+            (SourceKind::Git(_), SourceKind::Git(_)) => {
+                self.inner.canonical_url.cmp(&other.inner.canonical_url)
+            }
+            _ => self.inner.url.cmp(&other.inner.url),
+        }
     }
 }
 
@@ -441,60 +503,37 @@ impl fmt::Display for SourceId {
     }
 }
 
-// Custom equality defined as canonical URL equality for git sources and
-// URL equality for other sources, ignoring the `precise` and `name` fields.
-impl PartialEq for SourceId {
-    fn eq(&self, other: &SourceId) -> bool {
-        if ptr::eq(self.inner, other.inner) {
-            return true;
-        }
-        if self.inner.kind != other.inner.kind {
-            return false;
-        }
-        if self.inner.url == other.inner.url {
-            return true;
-        }
-
-        match (&self.inner.kind, &other.inner.kind) {
-            (SourceKind::Git(ref1), SourceKind::Git(ref2)) => {
-                ref1 == ref2 && self.inner.canonical_url == other.inner.canonical_url
-            }
-            _ => false,
-        }
-    }
-}
-
-impl PartialOrd for SourceIdInner {
-    fn partial_cmp(&self, other: &SourceIdInner) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for SourceIdInner {
-    fn cmp(&self, other: &SourceIdInner) -> Ordering {
-        match self.kind.cmp(&other.kind) {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
-        match self.url.cmp(&other.url) {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
-        match (&self.kind, &other.kind) {
-            (SourceKind::Git(ref1), SourceKind::Git(ref2)) => {
-                (ref1, &self.canonical_url).cmp(&(ref2, &other.canonical_url))
-            }
-            _ => self.kind.cmp(&other.kind),
-        }
-    }
-}
-
 // The hash of SourceId is used in the name of some Cargo folders, so shouldn't
 // vary. `as_str` gives the serialisation of a url (which has a spec) and so
 // insulates against possible changes in how the url crate does hashing.
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
-        self.inner.kind.hash(into);
+        match &self.inner.kind {
+            SourceKind::Git(GitReference::Tag(a)) => {
+                0u8.hash(into);
+                a.hash(into);
+            }
+            SourceKind::Git(GitReference::Rev(a)) => {
+                1u8.hash(into);
+                a.hash(into);
+            }
+            SourceKind::Git(GitReference::Branch(a)) => {
+                2u8.hash(into);
+                a.hash(into);
+            }
+            // For now hash `DefaultBranch` the same way as `Branch("master")`,
+            // and for more details see module comments in
+            // src/cargo/sources/git/utils.rs for why `DefaultBranch`
+            SourceKind::Git(GitReference::DefaultBranch) => {
+                2u8.hash(into);
+                "master".hash(into);
+            }
+
+            SourceKind::Path => 4u8.hash(into),
+            SourceKind::Registry => 5u8.hash(into),
+            SourceKind::LocalRegistry => 6u8.hash(into),
+            SourceKind::Directory => 7u8.hash(into),
+        }
         match self.inner.kind {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
             _ => self.inner.url.as_str().hash(into),
@@ -572,77 +611,6 @@ impl<'a> fmt::Display for PrettyRef<'a> {
             GitReference::Tag(ref s) => write!(f, "tag={}", s),
             GitReference::Rev(ref s) => write!(f, "rev={}", s),
             GitReference::DefaultBranch => unreachable!(),
-        }
-    }
-}
-
-// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
-// is treated specially here.
-impl PartialEq for GitReference {
-    fn eq(&self, other: &GitReference) -> bool {
-        match (self, other) {
-            (GitReference::Tag(a), GitReference::Tag(b)) => a == b,
-            (GitReference::Rev(a), GitReference::Rev(b)) => a == b,
-            (GitReference::Branch(b), GitReference::DefaultBranch)
-            | (GitReference::DefaultBranch, GitReference::Branch(b)) => b == "master",
-            (GitReference::DefaultBranch, GitReference::DefaultBranch) => true,
-            (GitReference::Branch(a), GitReference::Branch(b)) => a == b,
-            _ => false,
-        }
-    }
-}
-
-impl Eq for GitReference {}
-
-// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
-// is treated specially here.
-impl Hash for GitReference {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        match self {
-            GitReference::Tag(a) => {
-                0u8.hash(hasher);
-                a.hash(hasher);
-            }
-            GitReference::Rev(a) => {
-                1u8.hash(hasher);
-                a.hash(hasher);
-            }
-            GitReference::Branch(a) => {
-                2u8.hash(hasher);
-                a.hash(hasher);
-            }
-            GitReference::DefaultBranch => {
-                2u8.hash(hasher);
-                "master".hash(hasher);
-            }
-        }
-    }
-}
-
-impl PartialOrd for GitReference {
-    fn partial_cmp(&self, other: &GitReference) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-// See module comments in src/cargo/sources/git/utils.rs for why `DefaultBranch`
-// is treated specially here.
-impl Ord for GitReference {
-    fn cmp(&self, other: &GitReference) -> Ordering {
-        use GitReference::*;
-        match (self, other) {
-            (Tag(a), Tag(b)) => a.cmp(b),
-            (Tag(_), _) => Ordering::Less,
-            (_, Tag(_)) => Ordering::Greater,
-
-            (Rev(a), Rev(b)) => a.cmp(b),
-            (Rev(_), _) => Ordering::Less,
-            (_, Rev(_)) => Ordering::Greater,
-
-            (Branch(b), DefaultBranch) => b.as_str().cmp("master"),
-            (DefaultBranch, Branch(b)) => "master".cmp(b),
-            (Branch(a), Branch(b)) => a.cmp(b),
-            (DefaultBranch, DefaultBranch) => Ordering::Equal,
         }
     }
 }

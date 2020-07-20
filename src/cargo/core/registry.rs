@@ -1,16 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::bail;
-use log::{debug, trace};
-use semver::VersionReq;
-use url::Url;
-
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::{profile, CanonicalUrl, Config};
+use anyhow::bail;
+use log::{debug, trace};
+use semver::VersionReq;
+use url::Url;
 
 /// Source of information about a group of packages.
 ///
@@ -135,14 +134,14 @@ impl<'cfg> PackageRegistry<'cfg> {
             // We've previously loaded this source, and we've already locked it,
             // so we're not allowed to change it even if `namespace` has a
             // slightly different precise version listed.
-            Some(&(_, Kind::Locked)) => {
+            Some((_, Kind::Locked)) => {
                 debug!("load/locked   {}", namespace);
                 return Ok(());
             }
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
-            Some(&(ref previous, _)) if previous.precise().is_none() => {
+            Some((previous, _)) if previous.precise().is_none() => {
                 debug!("load/precise  {}", namespace);
                 return Ok(());
             }
@@ -150,7 +149,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             // If the previous source has the same precise version as we do,
             // then we're done, otherwise we need to need to move forward
             // updating this source.
-            Some(&(ref previous, _)) => {
+            Some((previous, _)) => {
                 if previous.precise() == namespace.precise() {
                     debug!("load/match    {}", namespace);
                     return Ok(());

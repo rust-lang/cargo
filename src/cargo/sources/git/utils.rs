@@ -1129,8 +1129,7 @@ fn github_up_to_date(
     let github_branch_name = match reference {
         GitReference::Branch(branch) => branch,
         GitReference::Tag(tag) => tag,
-        // See the module docs for why we're using `master` here.
-        GitReference::DefaultBranch => "master",
+        GitReference::DefaultBranch => "HEAD",
         GitReference::Rev(_) => {
             debug!("can't use github fast path with `rev`");
             return Ok(false);

@@ -9,20 +9,19 @@
 //!
 //! This module impl that cache in all the gory details
 
+use crate::core::resolver::context::Context;
+use crate::core::resolver::errors::describe_path;
+use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
+use crate::core::resolver::{ActivateResult, ResolveOpts};
+use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
+use crate::core::{GitReference, SourceId};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
+use crate::util::Config;
+use log::debug;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
-
-use log::debug;
-
-use crate::core::resolver::context::Context;
-use crate::core::resolver::errors::describe_path;
-use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
-use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::interning::InternedString;
-
-use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{ActivateResult, ResolveOpts};
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
@@ -41,6 +40,10 @@ pub struct RegistryQueryer<'a> {
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
+    /// Where to print warnings, if configured.
+    config: Option<&'a Config>,
+    /// Sources that we've already wared about possibly colliding in the future.
+    warned_git_collisions: HashSet<SourceId>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -49,6 +52,7 @@ impl<'a> RegistryQueryer<'a> {
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,
+        config: Option<&'a Config>,
     ) -> Self {
         RegistryQueryer {
             registry,
@@ -58,6 +62,8 @@ impl<'a> RegistryQueryer<'a> {
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
+            config,
+            warned_git_collisions: HashSet::new(),
         }
     }
 
@@ -69,6 +75,44 @@ impl<'a> RegistryQueryer<'a> {
         self.used_replacements.get(&p)
     }
 
+    /// Issues a future-compatible warning targeted at removing reliance on
+    /// unifying behavior between these two dependency directives:
+    ///
+    /// ```toml
+    /// [dependencies]
+    /// a = { git = 'https://example.org/foo' }
+    /// a = { git = 'https://example.org/foo', branch = 'master }
+    /// ```
+    ///
+    /// Historical versions of Cargo considered these equivalent but going
+    /// forward we'd like to fix this. For more details see the comments in
+    /// src/cargo/sources/git/utils.rs
+    fn warn_colliding_git_sources(&mut self, id: SourceId) -> CargoResult<()> {
+        let config = match self.config {
+            Some(config) => config,
+            None => return Ok(()),
+        };
+        let prev = match self.warned_git_collisions.replace(id) {
+            Some(prev) => prev,
+            None => return Ok(()),
+        };
+        match (id.git_reference(), prev.git_reference()) {
+            (Some(GitReference::DefaultBranch), Some(GitReference::Branch(b)))
+            | (Some(GitReference::Branch(b)), Some(GitReference::DefaultBranch))
+                if b == "master" => {}
+            _ => return Ok(()),
+        }
+
+        config.shell().warn(&format!(
+            "two git dependencies found for `{}` \
+             where one uses `branch = \"master\"` and the other doesn't; \
+             this will break in a future version of Cargo, so please \
+             ensure the dependency forms are consistent",
+            id.url(),
+        ))?;
+        Ok(())
+    }
+
     /// Queries the `registry` to return a list of candidates for `dep`.
     ///
     /// This method is the location where overrides are taken into account. If
@@ -76,6 +120,7 @@ impl<'a> RegistryQueryer<'a> {
     /// applied by performing a second query for what the override should
     /// return.
     pub fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Summary>>> {
+        self.warn_colliding_git_sources(dep.source_id())?;
         if let Some(out) = self.registry_cache.get(dep).cloned() {
             return Ok(out);
         }
