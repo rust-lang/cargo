@@ -4,9 +4,11 @@
 //! "fake" crates.io is used. Otherwise `vendor` would download the crates.io
 //! index from the network.
 
+use std::fs;
+
 use cargo_test_support::git;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, project, Project};
+use cargo_test_support::{basic_lib_manifest, paths, project, Project};
 
 #[cargo_test]
 fn vendor_simple() {
@@ -630,4 +632,46 @@ fn config_instructions_works() {
         .with_stderr_contains("[..]foo/vendor/altdep/src/lib.rs[..]")
         .with_stderr_contains("[..]foo/vendor/gitdep/src/lib.rs[..]")
         .run();
+}
+
+#[cargo_test]
+fn git_crlf_preservation() {
+    // Check that newlines don't get changed when you vendor
+    // (will only fail if your system is setup with core.autocrlf=true on windows)
+    let input = "hello \nthere\nmy newline\nfriends";
+    let git_project = git::new("git", |p| {
+        p.file("Cargo.toml", &basic_lib_manifest("a"))
+            .file("src/lib.rs", input)
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+            [core]
+            autocrlf = true
+        "#,
+    )
+    .unwrap();
+
+    p.cargo("vendor --respect-source-config").run();
+    let output = p.read_file("vendor/a/src/lib.rs");
+    assert_eq!(input, output);
 }
