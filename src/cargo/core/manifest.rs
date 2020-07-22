@@ -431,6 +431,10 @@ impl Manifest {
     pub fn targets(&self) -> &[Target] {
         &self.targets
     }
+    // It is used by cargo-c, please do not remove it
+    pub fn targets_mut(&mut self) -> &mut [Target] {
+        &mut self.targets
+    }
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
