@@ -546,7 +546,9 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
-                "rustc-cdylib-link-arg" => linker_args.push((Some(LinkType::Cdylib), value)),
+                "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
+                    linker_args.push((Some(LinkType::Cdylib), value))
+                }
                 "rustc-link-arg-bins" => {
                     if extra_link_arg {
                         linker_args.push((Some(LinkType::Bin), value));

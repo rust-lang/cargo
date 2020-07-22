@@ -132,7 +132,7 @@ fn parse_links_overrides(
                         .library_paths
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
-                "rustc-cdylib-link-arg" => {
+                "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     let args = value.list(key)?;
                     let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
                     output.linker_args.extend(args);
