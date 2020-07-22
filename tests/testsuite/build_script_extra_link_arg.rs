@@ -11,7 +11,7 @@ fn build_script_extra_link_arg_bin() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-bin-link-arg=--this-is-a-bogus-flag");
+                    println!("cargo:rustc-link-arg-bins=--this-is-a-bogus-flag");
                 }
             "#,
         )

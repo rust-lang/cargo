@@ -26,15 +26,15 @@ Some unstable features will require you to specify the `cargo-features` key in
 The `-Z extra-link-arg` flag makes the following two instructions available
 in build scripts:
 
-* [`cargo:rustc-bin-link-arg=FLAG`](#rustc-bin-link-arg) — Passes custom
+* [`cargo:rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) — Passes custom
   flags to a linker for bin crates.
 * [`cargo:rustc-link-arg=FLAG`](#rustc-link-arg) — Passes custom
   flags to a linker for all supported crates.
 
-<a id="rustc-bin-link-arg"></a>
-#### `cargo:rustc-bin-link-arg=FLAG`
+<a id="rustc-link-arg-bins"></a>
+#### `cargo:rustc-link-arg-bins=FLAG`
 
-The `rustc-bin-link-arg` instruction tells Cargo to pass the [`-C
+The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 binary target. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.

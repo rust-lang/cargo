@@ -137,7 +137,7 @@ fn parse_links_overrides(
                     let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
                     output.linker_args.extend(args);
                 }
-                "rustc-bin-link-arg" => {
+                "rustc-link-arg-bins" => {
                     if extra_link_arg {
                         let args = value.list(key)?;
                         let args = args.iter().map(|v| (Some(LinkType::Bin), v.0.clone()));
