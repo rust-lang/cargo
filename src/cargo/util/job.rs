@@ -2,7 +2,7 @@
 //!
 //! Most of the time when you're running cargo you expect Ctrl-C to actually
 //! terminate the entire tree of processes in play, not just the one at the top
-//! (cago). This currently works "by default" on Unix platforms because Ctrl-C
+//! (cargo). This currently works "by default" on Unix platforms because Ctrl-C
 //! actually sends a signal to the *process group* rather than the parent
 //! process, so everything will get torn down. On Windows, however, this does
 //! not happen and Ctrl-C just kills cargo.

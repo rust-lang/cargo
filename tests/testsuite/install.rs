@@ -9,8 +9,10 @@ use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
 use cargo_test_support::paths;
-use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, cargo_process, project, NO_SUCH_FILE_ERR_MSG};
+use cargo_test_support::registry::{registry_path, registry_url, Package};
+use cargo_test_support::{
+    basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
+};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -50,6 +52,35 @@ fn simple() {
 }
 
 #[cargo_test]
+fn with_index() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --index")
+        .arg(registry_url().to_string())
+        .with_stderr(&format!(
+            "\
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `{reg}`)
+[INSTALLING] foo v0.0.1 (registry `{reg}`)
+[COMPILING] foo v0.0.1 (registry `{reg}`)
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 (registry `{reg}`)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("uninstall foo")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test]
 fn multiple_pkgs() {
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.2");
@@ -73,7 +104,7 @@ fn multiple_pkgs() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
-[ERROR] could not find `baz` in registry `[..]`
+[ERROR] could not find `baz` in registry `[..]` with version `*`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
@@ -145,7 +176,7 @@ fn missing() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] could not find `bar` in registry `[..]`
+[ERROR] could not find `bar` in registry `[..]` with version `*`
 ",
         )
         .run();
@@ -275,6 +306,35 @@ fn install_path() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn install_target_dir() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("install --target-dir td_test")
+        .with_stderr(
+            "\
+[WARNING] Using `cargo install` [..]
+[INSTALLING] foo v0.0.1 [..]
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] release [..]
+[INSTALLING] [..]foo[EXE]
+[INSTALLED] package `foo v0.0.1 [..]foo[..]` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+
+    let mut path = p.root();
+    path.push("td_test");
+    assert!(path.exists());
+
+    #[cfg(not(windows))]
+    path.push("release/foo");
+    #[cfg(windows)]
+    path.push("release/foo.exe");
+    assert!(path.exists());
 }
 
 #[cargo_test]
@@ -843,7 +903,7 @@ fn uninstall_cwd_no_project() {
 
 Caused by:
   {err_msg}",
-            err_msg = NO_SUCH_FILE_ERR_MSG,
+            err_msg = no_such_file_err_msg(),
         ))
         .run();
 }
@@ -1456,5 +1516,42 @@ fn git_install_reads_workspace_manifest() {
     cargo_process(&format!("install --git {}", p.url().to_string()))
         .with_status(101)
         .with_stderr_contains("  invalid type: integer `3`[..]")
+        .run();
+}
+
+#[cargo_test]
+fn install_git_with_symlink_home() {
+    // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
+    // symlink, and uses an build script.
+    if !symlink_supported() {
+        return;
+    }
+    let p = git::new("foo", |p| {
+        p.file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+            .file("src/main.rs", "fn main() {}")
+            // This triggers discover_git_and_list_files for detecting changed files.
+            .file("build.rs", "fn main() {}")
+    });
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let actual = paths::root().join("actual-home");
+    t!(std::fs::create_dir(&actual));
+    t!(symlink(&actual, paths::home().join(".cargo")));
+    cargo_process("install --git")
+        .arg(p.url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] git repository [..]
+[INSTALLING] foo v1.0.0 [..]
+[COMPILING] foo v1.0.0 [..]
+[FINISHED] [..]
+[INSTALLING] [..]home/.cargo/bin/foo[..]
+[INSTALLED] package `foo [..]
+[WARNING] be sure to add [..]
+",
+        )
         .run();
 }

@@ -2,12 +2,12 @@
 .\"     Title: cargo-owner
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-06-03
+.\"      Date: 2019-09-05
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-OWNER" "1" "2019-06-03" "\ \&" "\ \&"
+.TH "CARGO\-OWNER" "1" "2019-09-05" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -153,6 +153,16 @@ May also be specified with the \fBterm.color\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
+.sp
+\fB+TOOLCHAIN\fP
+.RS 4
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
+begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fP or \fB+nightly\fP).
+See the \c
+.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+for more information about how toolchain overrides work.
+.RE
 .sp
 \fB\-h\fP, \fB\-\-help\fP
 .RS 4

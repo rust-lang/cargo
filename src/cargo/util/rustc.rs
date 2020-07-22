@@ -1,17 +1,15 @@
-#![allow(deprecated)] // for SipHasher
-
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::core::InternedString;
+use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{self, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{self, profile, CargoResult, CargoResultExt, ProcessBuilder, StableHasher};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -222,7 +220,7 @@ impl Drop for Cache {
 }
 
 fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
-    let mut hasher = SipHasher::new();
+    let mut hasher = StableHasher::new();
 
     let path = paths::resolve_executable(path)?;
     path.hash(&mut hasher);
@@ -266,7 +264,7 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
 }
 
 fn process_fingerprint(cmd: &ProcessBuilder) -> u64 {
-    let mut hasher = SipHasher::new();
+    let mut hasher = StableHasher::new();
     cmd.get_args().hash(&mut hasher);
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();

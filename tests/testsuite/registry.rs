@@ -223,9 +223,9 @@ fn wrong_version() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
-  candidate versions found which didn't match: 0.0.2, 0.0.1
-  location searched: `[..]` index (which is replacing registry `[..]`)
+error: failed to select a version for the requirement `foo = \">=1.0.0\"`
+candidate versions found which didn't match: 0.0.2, 0.0.1
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -238,9 +238,9 @@ required by package `foo v0.0.1 ([..])`
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
-  candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
-  location searched: `[..]` index (which is replacing registry `[..]`)
+error: failed to select a version for the requirement `foo = \">=1.0.0\"`
+candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -359,13 +359,18 @@ fn package_with_path_deps() {
         .file("notyet/src/lib.rs", "")
         .build();
 
-    p.cargo("package -v")
+    p.cargo("package")
         .with_status(101)
         .with_stderr_contains(
             "\
-[ERROR] no matching package named `notyet` found
-location searched: registry [..]
-required by package `foo v0.0.1 ([..])`
+[PACKAGING] foo [..]
+[UPDATING] [..]
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `notyet` found
+  location searched: registry `https://github.com/rust-lang/crates.io-index`
+  required by package `foo v0.0.1 [..]`
 ",
         )
         .run();
@@ -375,8 +380,8 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("package")
         .with_stderr(
             "\
-[UPDATING] `[..]` index
 [PACKAGING] foo v0.0.1 ([CWD])
+[UPDATING] `[..]` index
 [VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
@@ -538,9 +543,9 @@ fn relying_on_a_yank_is_bad() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to select a version for the requirement `baz = \"= 0.0.2\"`
-  candidate versions found which didn't match: 0.0.1
-  location searched: `[..]` index (which is replacing registry `[..]`)
+error: failed to select a version for the requirement `baz = \"=0.0.2\"`
+candidate versions found which didn't match: 0.0.1
+location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `bar v0.0.1`
     ... which is depended on by `foo [..]`
 ",
@@ -2113,7 +2118,7 @@ fn registry_index_rejected() {
 
 Caused by:
   the `registry.index` config value is no longer supported
-Use `[source]` replacement to alter the default index for crates.io.
+  Use `[source]` replacement to alter the default index for crates.io.
 ",
         )
         .run();

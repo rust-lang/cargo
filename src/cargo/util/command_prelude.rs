@@ -1,9 +1,9 @@
 use crate::core::compiler::{BuildConfig, MessageFormat};
-use crate::core::InternedString;
 use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::interning::InternedString;
 use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
@@ -117,7 +117,7 @@ pub trait AppExt: Sized {
         self._arg(multi_opt(
             "features",
             "FEATURES",
-            "Space-separated list of features to activate",
+            "Space or comma separated list of features to activate",
         ))
         ._arg(opt("all-features", "Activate all available features"))
         ._arg(opt(
@@ -139,7 +139,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
-        self._arg(opt("target", target).value_name("TRIPLE"))
+        self._arg(multi_opt("target", target, "TRIPLE"))
     }
 
     fn arg_target_dir(self) -> Self {
@@ -321,8 +321,8 @@ pub trait ArgMatchesExt {
         self.value_of_u32("jobs")
     }
 
-    fn target(&self) -> Option<String> {
-        self._value_of("target").map(|s| s.to_string())
+    fn targets(&self) -> Vec<String> {
+        self._values_of("target")
     }
 
     fn get_profile_name(
@@ -454,7 +454,7 @@ pub trait ArgMatchesExt {
             }
         }
 
-        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
+        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.targets(), mode)?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");

@@ -2,7 +2,9 @@
 
 use std::env;
 use std::fs::{self, File};
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::str;
 
 use cargo_test_support::cargo_process;
@@ -370,4 +372,25 @@ fn z_flags_help() {
     cargo_process("-Z help")
         .with_stdout_contains("    -Z unstable-options -- Allow the usage of unstable options")
         .run();
+}
+
+#[cargo_test]
+fn closed_output_ok() {
+    // Checks that closed output doesn't cause an error.
+    let mut p = cargo_process("--list").build_command();
+    p.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = p.spawn().unwrap();
+    // Close stdout
+    drop(child.stdout.take());
+    // Read stderr
+    let mut s = String::new();
+    child
+        .stderr
+        .as_mut()
+        .unwrap()
+        .read_to_string(&mut s)
+        .unwrap();
+    let status = child.wait().unwrap();
+    assert!(status.success());
+    assert!(s.is_empty(), s);
 }

@@ -548,7 +548,14 @@ fn passwords_in_registries_index_url_forbidden() {
 
     p.cargo("publish --registry alternative")
         .with_status(101)
-        .with_stderr_contains("error: Registry URLs may not contain passwords")
+        .with_stderr(
+            "\
+error: invalid index URL for registry `alternative` defined in [..]/home/.cargo/config
+
+Caused by:
+  registry URLs may not contain passwords
+",
+        )
         .run();
 }
 
@@ -817,7 +824,8 @@ fn alt_reg_metadata() {
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
                 "version": 1,
-                "workspace_root": "[..]/foo"
+                "workspace_root": "[..]/foo",
+                "metadata": null
             }"#,
         )
         .run();
@@ -828,28 +836,6 @@ fn alt_reg_metadata() {
             r#"
              {
                 "packages": [
-                    {
-                        "name": "altdep2",
-                        "version": "0.0.1",
-                        "id": "altdep2 0.0.1 (registry+file:[..]/alternative-registry)",
-                        "license": null,
-                        "license_file": null,
-                        "description": null,
-                        "source": "registry+file:[..]/alternative-registry",
-                        "dependencies": [],
-                        "targets": "{...}",
-                        "features": {},
-                        "manifest_path": "[..]/altdep2-0.0.1/Cargo.toml",
-                        "metadata": null,
-                        "publish": null,
-                        "authors": [],
-                        "categories": [],
-                        "keywords": [],
-                        "readme": null,
-                        "repository": null,
-                        "edition": "2015",
-                        "links": null
-                    },
                     {
                         "name": "altdep",
                         "version": "0.0.1",
@@ -875,6 +861,50 @@ fn alt_reg_metadata() {
                         "targets": "{...}",
                         "features": {},
                         "manifest_path": "[..]/altdep-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "publish": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "altdep2",
+                        "version": "0.0.1",
+                        "id": "altdep2 0.0.1 (registry+file:[..]/alternative-registry)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+file:[..]/alternative-registry",
+                        "dependencies": [],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/altdep2-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "publish": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "bar",
+                        "version": "0.0.1",
+                        "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+https://github.com/rust-lang/crates.io-index",
+                        "dependencies": [],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/bar-0.0.1/Cargo.toml",
                         "metadata": null,
                         "publish": null,
                         "authors": [],
@@ -966,28 +996,6 @@ fn alt_reg_metadata() {
                         "repository": null,
                         "edition": "2015",
                         "links": null
-                    },
-                    {
-                        "name": "bar",
-                        "version": "0.0.1",
-                        "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-                        "license": null,
-                        "license_file": null,
-                        "description": null,
-                        "source": "registry+https://github.com/rust-lang/crates.io-index",
-                        "dependencies": [],
-                        "targets": "{...}",
-                        "features": {},
-                        "manifest_path": "[..]/bar-0.0.1/Cargo.toml",
-                        "metadata": null,
-                        "publish": null,
-                        "authors": [],
-                        "categories": [],
-                        "keywords": [],
-                        "readme": null,
-                        "repository": null,
-                        "edition": "2015",
-                        "links": null
                     }
                 ],
                 "workspace_members": [
@@ -996,7 +1004,8 @@ fn alt_reg_metadata() {
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
                 "version": 1,
-                "workspace_root": "[..]/foo"
+                "workspace_root": "[..]/foo",
+                "metadata": null
             }"#,
         )
         .run();
@@ -1046,6 +1055,41 @@ fn unknown_registry() {
             r#"
             {
               "packages": [
+                {
+                  "name": "bar",
+                  "version": "0.0.1",
+                  "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "registry+https://github.com/rust-lang/crates.io-index",
+                  "dependencies": [
+                    {
+                      "name": "baz",
+                      "source": "registry+file://[..]/alternative-registry",
+                      "req": "^0.0.1",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": "file:[..]/alternative-registry"
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "publish": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                },
                 {
                   "name": "baz",
                   "version": "0.0.1",
@@ -1102,41 +1146,6 @@ fn unknown_registry() {
                   "repository": null,
                   "edition": "2015",
                   "links": null
-                },
-                {
-                  "name": "bar",
-                  "version": "0.0.1",
-                  "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-                  "license": null,
-                  "license_file": null,
-                  "description": null,
-                  "source": "registry+https://github.com/rust-lang/crates.io-index",
-                  "dependencies": [
-                    {
-                      "name": "baz",
-                      "source": "registry+file://[..]/alternative-registry",
-                      "req": "^0.0.1",
-                      "kind": null,
-                      "rename": null,
-                      "optional": false,
-                      "uses_default_features": true,
-                      "features": [],
-                      "target": null,
-                      "registry": "file:[..]/alternative-registry"
-                    }
-                  ],
-                  "targets": "{...}",
-                  "features": {},
-                  "manifest_path": "[..]",
-                  "metadata": null,
-                  "publish": null,
-                  "authors": [],
-                  "categories": [],
-                  "keywords": [],
-                  "readme": null,
-                  "repository": null,
-                  "edition": "2015",
-                  "links": null
                 }
               ],
               "workspace_members": [
@@ -1145,7 +1154,8 @@ fn unknown_registry() {
               "resolve": "{...}",
               "target_directory": "[..]/foo/target",
               "version": 1,
-              "workspace_root": "[..]/foo"
+              "workspace_root": "[..]/foo",
+              "metadata": null
             }
             "#,
         )
@@ -1239,6 +1249,9 @@ fn registries_index_relative_path_not_allowed() {
         .with_stderr(&format!(
             "\
 error: failed to parse manifest at `{root}/foo/Cargo.toml`
+
+Caused by:
+  invalid index URL for registry `relative` defined in [..]/.cargo/config
 
 Caused by:
   invalid url `alternative-registry`: relative URL without a base

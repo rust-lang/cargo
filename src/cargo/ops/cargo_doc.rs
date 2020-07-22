@@ -25,15 +25,15 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         options.compile_opts.all_features,
         !options.compile_opts.no_default_features,
     );
-    let requested_kind = options.compile_opts.build_config.requested_kind;
-    let target_data = RustcTargetData::new(ws, requested_kind)?;
+    let target_data = RustcTargetData::new(ws, &options.compile_opts.build_config.requested_kinds)?;
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
-        requested_kind,
+        &options.compile_opts.build_config.requested_kinds,
         &opts,
         &specs,
         HasDevUnits::No,
+        crate::core::resolver::features::ForceAllTargets::No,
     )?;
 
     let ids = ws_resolve.targeted_resolve.specs_to_ids(&specs)?;
@@ -69,15 +69,20 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         }
     }
 
+    let open_kind = if options.open_result {
+        Some(options.compile_opts.build_config.single_requested_kind()?)
+    } else {
+        None
+    };
+
     let compilation = ops::compile(ws, &options.compile_opts)?;
 
-    if options.open_result {
+    if let Some(kind) = open_kind {
         let name = match names.first() {
             Some(s) => s.to_string(),
             None => return Ok(()),
         };
-        let path = compilation
-            .root_output
+        let path = compilation.root_output[&kind]
             .with_file_name("doc")
             .join(&name)
             .join("index.html");

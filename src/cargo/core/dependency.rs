@@ -6,9 +6,9 @@ use serde::ser;
 use serde::Serialize;
 use std::rc::Rc;
 
-use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::Config;
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -393,8 +393,7 @@ impl Dependency {
     /// Returns `true` if this is a "locked" dependency, basically whether it has
     /// an exact version req.
     pub fn is_locked(&self) -> bool {
-        // Kind of a hack to figure this out, but it works!
-        self.inner.req.to_string().starts_with('=')
+        self.inner.req.is_exact()
     }
 
     /// Returns `false` if the dependency is only used to build the local package.

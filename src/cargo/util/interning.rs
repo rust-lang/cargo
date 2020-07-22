@@ -11,7 +11,7 @@ use std::ptr;
 use std::str;
 use std::sync::Mutex;
 
-pub fn leak(s: String) -> &'static str {
+fn leak(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 

@@ -2,12 +2,12 @@
 .\"     Title: cargo-metadata
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-02-24
+.\"      Date: 2020-07-04
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-METADATA" "1" "2020-02-24" "\ \&" "\ \&"
+.TH "CARGO\-METADATA" "1" "2020-07-04" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -289,6 +289,15 @@ The output has the following format:
     "version": 1,
     /* The absolute path to the root of the workspace. */
     "workspace_root": "/path/to/my\-package"
+    /* Workspace metadata.
+       This is null if no metadata is specified. */
+    "metadata": {
+        "docs": {
+            "rs": {
+                "all\-features": true
+            }
+        }
+    }
 }
 .fi
 .if n .RE
@@ -438,6 +447,16 @@ May also be specified with the \fBnet.offline\fP \c
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
+.sp
+\fB+TOOLCHAIN\fP
+.RS 4
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
+begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fP or \fB+nightly\fP).
+See the \c
+.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+for more information about how toolchain overrides work.
+.RE
 .sp
 \fB\-h\fP, \fB\-\-help\fP
 .RS 4

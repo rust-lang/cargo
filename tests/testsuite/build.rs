@@ -1,14 +1,19 @@
 //! Tests for the `cargo build` command.
 
-use cargo::util::paths::dylib_path_envvar;
+use cargo::{
+    core::compiler::CompileMode, core::Workspace, ops::CompileOptions,
+    util::paths::dylib_path_envvar, Config,
+};
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, main_file, project, rustc_host,
-    sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match, main_file,
+    project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
+use std::io::Read;
+use std::process::Stdio;
 
 #[cargo_test]
 fn cargo_compile_simple() {
@@ -395,6 +400,55 @@ Caused by:
 (currently \"cdylib, rlib\")",
         )
         .run();
+}
+
+#[cargo_test]
+fn cargo_compile_api_exposes_artifact_paths() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "the_foo_bin"
+            path = "src/bin.rs"
+
+            [lib]
+            name = "the_foo_lib"
+            path = "src/foo.rs"
+            crate-type = ["cdylib", "rlib"]
+        "#,
+        )
+        .file("src/foo.rs", "pub fn bar() {}")
+        .file("src/bin.rs", "pub fn main() {}")
+        .build();
+
+    let config = Config::default().unwrap();
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
+    let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
+
+    let result = cargo::ops::compile(&ws, &compile_options).unwrap();
+
+    assert_eq!(1, result.binaries.len());
+    assert!(result.binaries[0].1.exists());
+    assert!(result.binaries[0]
+        .1
+        .to_str()
+        .unwrap()
+        .contains("the_foo_bin"));
+
+    assert_eq!(1, result.cdylibs.len());
+    // The exact library path varies by platform, but should certainly exist at least
+    assert!(result.cdylibs[0].1.exists());
+    assert!(result.cdylibs[0]
+        .1
+        .to_str()
+        .unwrap()
+        .contains("the_foo_lib"));
 }
 
 #[cargo_test]
@@ -1023,7 +1077,7 @@ fn incompatible_dependencies() {
 error: failed to select a version for `bad`.
     ... required by package `qux v0.1.0`
     ... which is depended on by `foo v0.0.1 ([..])`
-versions that meet the requirements `>= 1.0.1` are: 1.0.2, 1.0.1
+versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
@@ -1068,7 +1122,7 @@ fn incompatible_dependencies_with_multi_semver() {
             "\
 error: failed to select a version for `bad`.
     ... required by package `foo v0.0.1 ([..])`
-versions that meet the requirements `>= 1.0.1, <= 2.0.0` are: 2.0.0, 1.0.1
+versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
@@ -1228,6 +1282,12 @@ fn crate_env_vars() {
         homepage = "https://example.com"
         repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
+        license = "MIT OR Apache-2.0"
+        license_file = "license.txt"
+
+        [[bin]]
+        name = "foo-bar"
+        path = "src/main.rs"
         "#,
         )
         .file(
@@ -1245,7 +1305,12 @@ fn crate_env_vars() {
             static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
             static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
             static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
+            static LICENSE: &'static str = env!("CARGO_PKG_LICENSE");
+            static LICENSE_FILE: &'static str = env!("CARGO_PKG_LICENSE_FILE");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+            static BIN_NAME: &'static str = env!("CARGO_BIN_NAME");
+            static CRATE_NAME: &'static str = env!("CARGO_CRATE_NAME");
+
 
             fn main() {
                 let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
@@ -1254,8 +1319,11 @@ fn crate_env_vars() {
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
+                 assert_eq!("foo-bar", BIN_NAME);
+                 assert_eq!("foo_bar", CRATE_NAME);
                  assert_eq!("https://example.com", HOMEPAGE);
                  assert_eq!("https://example.com/repo.git", REPOSITORY);
+                 assert_eq!("MIT OR Apache-2.0", LICENSE);
                  assert_eq!("This is foo", DESCRIPTION);
                 let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
@@ -1282,7 +1350,7 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    p.process(&p.bin("foo"))
+    p.process(&p.bin("foo-bar"))
         .with_stdout("0-5-1 @ alpha.1 in [CWD]")
         .run();
 
@@ -3297,6 +3365,43 @@ fn no_warn_about_package_metadata() {
 }
 
 #[cargo_test]
+fn no_warn_about_workspace_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+
+            [workspace.metadata]
+            something = "something_else"
+            x = 1
+            y = 2
+
+            [workspace.metadata.another]
+            bar = 12
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] foo v0.0.1 ([..])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_build_empty_target() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -4147,7 +4252,7 @@ fn uplift_dsym_of_bin_on_mac() {
     assert!(p.target_debug_dir().join("foo.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_dir());
     assert!(p.target_debug_dir().join("b.dSYM").is_symlink());
-    assert!(p.target_debug_dir().join("examples/c.dSYM").is_symlink());
+    assert!(p.target_debug_dir().join("examples/c.dSYM").is_dir());
     assert!(!p.target_debug_dir().join("c.dSYM").exists());
     assert!(!p.target_debug_dir().join("d.dSYM").exists());
 }
@@ -4817,4 +4922,208 @@ fn user_specific_cfgs_are_filtered_out() {
     p.cargo("rustc -- --cfg debug_assertions --cfg proc_macro")
         .run();
     p.process(&p.bin("foo")).run();
+}
+
+#[cargo_test]
+fn close_output() {
+    // What happens when stdout or stderr is closed during a build.
+
+    // Server to know when rustc has spawned.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                proc-macro = true
+
+                [[bin]]
+                name = "foobar"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            &r#"
+                use proc_macro::TokenStream;
+                use std::io::Read;
+
+                #[proc_macro]
+                pub fn repro(_input: TokenStream) -> TokenStream {
+                    println!("hello stdout!");
+                    eprintln!("hello stderr!");
+                    // Tell the test we have started.
+                    let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
+                    // Wait for the test to tell us to start printing.
+                    let mut buf = [0];
+                    drop(socket.read_exact(&mut buf));
+                    let use_stderr = std::env::var("__CARGO_REPRO_STDERR").is_ok();
+                    for i in 0..10000 {
+                        if use_stderr {
+                            eprintln!("{}", i);
+                        } else {
+                            println!("{}", i);
+                        }
+                    }
+                    TokenStream::new()
+                }
+            "#
+            .replace("__ADDR__", &addr.to_string()),
+        )
+        .file(
+            "src/bin/foobar.rs",
+            r#"
+                foo::repro!();
+
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    // The `stderr` flag here indicates if this should forcefully close stderr or stdout.
+    let spawn = |stderr: bool| {
+        let mut cmd = p.cargo("build").build_command();
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+        if stderr {
+            cmd.env("__CARGO_REPRO_STDERR", "1");
+        }
+        let mut child = cmd.spawn().unwrap();
+        // Wait for proc macro to start.
+        let pm_conn = listener.accept().unwrap().0;
+        // Close stderr or stdout.
+        if stderr {
+            drop(child.stderr.take());
+        } else {
+            drop(child.stdout.take());
+        }
+        // Tell the proc-macro to continue;
+        drop(pm_conn);
+        // Read the output from the other channel.
+        let out: &mut dyn Read = if stderr {
+            child.stdout.as_mut().unwrap()
+        } else {
+            child.stderr.as_mut().unwrap()
+        };
+        let mut result = String::new();
+        out.read_to_string(&mut result).unwrap();
+        let status = child.wait().unwrap();
+        assert!(!status.success());
+        result
+    };
+
+    let stderr = spawn(false);
+    assert!(
+        lines_match(
+            "\
+[COMPILING] foo [..]
+hello stderr!
+[ERROR] [..]
+[WARNING] build failed, waiting for other jobs to finish...
+[ERROR] build failed
+",
+            &stderr,
+        ),
+        "lines differ:\n{}",
+        stderr
+    );
+
+    // Try again with stderr.
+    p.build_dir().rm_rf();
+    let stdout = spawn(true);
+    assert!(
+        lines_match("hello stdout!\n", &stdout),
+        "lines differ:\n{}",
+        stdout
+    );
+}
+
+use cargo_test_support::registry::Dependency;
+
+#[cargo_test]
+fn reduced_reproduction_8249() {
+    // https://github.com/rust-lang/cargo/issues/8249
+    Package::new("a-src", "0.1.0").links("a").publish();
+    Package::new("a-src", "0.2.0").links("a").publish();
+
+    Package::new("b", "0.1.0")
+        .add_dep(Dependency::new("a-src", "0.1").optional(true))
+        .publish();
+    Package::new("b", "0.2.0")
+        .add_dep(Dependency::new("a-src", "0.2").optional(true))
+        .publish();
+
+    Package::new("c", "1.0.0")
+        .add_dep(&Dependency::new("b", "0.1.0"))
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                b = { version = "*", features = ["a-src"] }
+                a-src = "*"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    cargo::util::paths::append(&p.root().join("Cargo.toml"), b"c = \"*\"").unwrap();
+    p.cargo("check").run();
+    p.cargo("check").run();
+}
+
+#[cargo_test]
+fn target_directory_backup_exclusion() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    // Newly created target/ should have CACHEDIR.TAG inside...
+    p.cargo("build").run();
+    let cachedir_tag = p.build_dir().join("CACHEDIR.TAG");
+    assert!(cachedir_tag.is_file());
+    assert!(fs::read_to_string(&cachedir_tag)
+        .unwrap()
+        .starts_with("Signature: 8a477f597d28d172789f06886806bc55"));
+    // ...but if target/ already exists CACHEDIR.TAG should not be created in it.
+    fs::remove_file(&cachedir_tag).unwrap();
+    p.cargo("build").run();
+    assert!(!&cachedir_tag.is_file());
+}
+
+#[cargo_test]
+fn simple_terminal_width() {
+    if !is_nightly() {
+        // --terminal-width is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                fn main() {
+                    let _: () = 42;
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Zterminal-width=20")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("3 | ..._: () = 42;")
+        .run();
 }

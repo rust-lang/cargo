@@ -1,7 +1,9 @@
-use crate::core::compiler::{CompileKind, CompileMode};
-use crate::core::manifest::{LibKind, Target, TargetKind};
-use crate::core::{profiles::Profile, InternedString, Package};
+use crate::core::compiler::{CompileKind, CompileMode, CrateType};
+use crate::core::manifest::{Target, TargetKind};
+use crate::core::{profiles::Profile, Package};
 use crate::util::hex::short_hash;
+use crate::util::interning::InternedString;
+use crate::util::Config;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
@@ -66,6 +68,19 @@ impl UnitInner {
     /// finish in their entirety before this one is started.
     pub fn requires_upstream_objects(&self) -> bool {
         self.mode.is_any_test() || self.target.kind().requires_upstream_objects()
+    }
+
+    /// Returns whether or not this is a "local" package.
+    ///
+    /// A "local" package is one that the user can likely edit, or otherwise
+    /// wants warnings, etc.
+    pub fn is_local(&self) -> bool {
+        self.pkg.package_id().source_id().is_path() && !self.is_std
+    }
+
+    /// Returns whether or not warnings should be displayed for this unit.
+    pub fn show_warnings(&self, config: &Config) -> bool {
+        self.is_local() || config.extra_verbose()
     }
 }
 
@@ -164,9 +179,9 @@ impl UnitInterner {
             //
             // At some point in the future, it would be nice to have a
             // first-class way of overriding or specifying crate-types.
-            (true, TargetKind::Lib(crate_types)) if crate_types.contains(&LibKind::Dylib) => {
+            (true, TargetKind::Lib(crate_types)) if crate_types.contains(&CrateType::Dylib) => {
                 let mut new_target = Target::clone(target);
-                new_target.set_kind(TargetKind::Lib(vec![LibKind::Rlib]));
+                new_target.set_kind(TargetKind::Lib(vec![CrateType::Rlib]));
                 new_target
             }
             _ => target.clone(),
@@ -190,6 +205,6 @@ impl UnitInterner {
         }
         let item = Rc::new(item.clone());
         me.cache.insert(item.clone());
-        return item;
+        item
     }
 }

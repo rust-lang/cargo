@@ -102,7 +102,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if args.is_present("version") {
         let verbose = args.occurrences_of("verbose") > 0;
         let version = cli::get_version_string(verbose);
-        print!("{}", version);
+        cargo::drop_print!(config, "{}", version);
         return Ok(());
     }
     let prefix = if args.is_present("no-indent") {
@@ -129,15 +129,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         )?;
     }
 
-    let target = if args.is_present("all-targets") {
+    let targets = if args.is_present("all-targets") {
         config
             .shell()
             .warn("the --all-targets flag has been changed to --target=all")?;
-        Some("all")
+        vec!["all".to_string()]
     } else {
-        args.value_of("target")
+        args._values_of("target")
     };
-    let target = tree::Target::from_cli(target);
+    let target = tree::Target::from_cli(targets);
 
     let edge_kinds = parse_edge_kinds(config, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
@@ -206,7 +206,7 @@ fn parse_edge_kinds(config: &Config, args: &ArgMatches<'_>) -> CargoResult<HashS
             .warn("the --no-dev-dependencies flag has changed to -e=no-dev")?;
         kinds.push("no-dev");
     }
-    if kinds.len() == 0 {
+    if kinds.is_empty() {
         kinds.extend(&["normal", "build", "dev"]);
     }
 

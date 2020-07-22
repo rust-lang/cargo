@@ -4,13 +4,16 @@ mod build_plan;
 mod compilation;
 mod compile_kind;
 mod context;
+mod crate_type;
 mod custom_build;
 mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
 mod links;
+mod lto;
 mod output_depinfo;
+pub mod rustdoc;
 pub mod standard_lib;
 mod timings;
 mod unit;
@@ -29,22 +32,27 @@ use lazycell::LazyCell;
 use log::debug;
 
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::build_context::{BuildContext, FileFlavor, RustcTargetData, TargetInfo};
+pub use self::build_context::{BuildContext, FileFlavor, FileType, RustcTargetData, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::context::{Context, Metadata};
+pub use self::crate_type::CrateType;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
 pub use self::job::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::{JobQueue, JobState};
+pub(crate) use self::layout::Layout;
+pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::nightly_features_allowed;
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{Lto, PanicStrategy, Profile};
-use crate::core::{Edition, Feature, InternedString, PackageId, Target};
+use crate::core::profiles::{PanicStrategy, Profile, Strip};
+use crate::core::{Edition, Feature, PackageId, Target};
 use crate::util::errors::{self, CargoResult, CargoResultExt, ProcessError, VerboseError};
+use crate::util::interning::InternedString;
 use crate::util::machine_message::Message;
 use crate::util::{self, machine_message, ProcessBuilder};
 use crate::util::{internal, join_paths, paths, profile};
@@ -64,7 +72,7 @@ pub trait Executor: Send + Sync + 'static {
     /// this package.
     fn exec(
         &self,
-        cmd: ProcessBuilder,
+        cmd: &ProcessBuilder,
         id: PackageId,
         target: &Target,
         mode: CompileMode,
@@ -87,7 +95,7 @@ pub struct DefaultExecutor;
 impl Executor for DefaultExecutor {
     fn exec(
         &self,
-        cmd: ProcessBuilder,
+        cmd: &ProcessBuilder,
         _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
@@ -136,13 +144,13 @@ fn compile<'cfg>(
             };
             work.then(link_targets(cx, unit, false)?)
         } else {
-            let work = if cx.bcx.show_warnings(unit.pkg.package_id()) {
+            let work = if unit.show_warnings(bcx.config) {
                 replay_output_cache(
                     unit.pkg.package_id(),
                     &unit.target,
                     cx.files().message_cache_path(unit),
                     cx.bcx.build_config.message_format,
-                    cx.bcx.config.shell().supports_color(),
+                    cx.bcx.config.shell().err_supports_color(),
                 )
             } else {
                 Work::noop()
@@ -189,17 +197,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let pass_cdylib_link_args = unit.target.is_cdylib();
-    let do_rename = unit.target.allows_dashes() && !unit.mode.is_any_test();
-    let real_name = unit.target.name().to_string();
-    let crate_name = unit.target.crate_name();
 
-    // Rely on `target_filenames` iterator as source of truth rather than rederiving filestem.
-    let rustc_dep_info_loc = if do_rename && cx.files().metadata(unit).is_none() {
-        root.join(&crate_name)
-    } else {
-        root.join(&cx.files().file_stem(unit))
-    }
-    .with_extension("d");
+    let dep_info_name = match cx.files().metadata(unit) {
+        Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
+        None => format!("{}.d", unit.target.crate_name()),
+    };
+    let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(cx.bcx.rustflags_args(unit));
@@ -223,6 +226,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         .to_path_buf();
     let fingerprint_dir = cx.files().fingerprint_dir(unit);
     let script_metadata = cx.find_build_script_metadata(unit.clone());
+    let is_local = unit.is_local();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -279,7 +283,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
             exec.exec(
-                rustc,
+                &rustc,
                 package_id,
                 &target,
                 mode,
@@ -290,20 +294,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             .chain_err(|| format!("could not compile `{}`.", name))?;
         }
 
-        if do_rename && real_name != crate_name {
-            let dst = &outputs[0].path;
-            let src = dst.with_file_name(
-                dst.file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .replace(&real_name, &crate_name),
-            );
-            if src.exists() && src.file_name() != dst.file_name() {
-                fs::rename(&src, &dst).chain_err(|| format!("could not rename crate {:?}", src))?;
-            }
-        }
-
         if rustc_dep_info_loc.exists() {
             fingerprint::translate_dep_info(
                 &rustc_dep_info_loc,
@@ -311,8 +301,9 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &cwd,
                 &pkg_root,
                 &target_dir,
+                &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
-                current_id.source_id().is_path(),
+                is_local,
             )
             .chain_err(|| {
                 internal(format!(
@@ -320,8 +311,9 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     rustc_dep_info_loc.display()
                 ))
             })?;
-            debug!("rewinding mtime of {:?} to {}", dep_info_loc, timestamp);
-            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
+            // This mtime shift allows Cargo to detect if a source file was
+            // modified in the middle of the build.
+            paths::set_file_time_no_err(dep_info_loc, timestamp);
         }
 
         Ok(())
@@ -529,7 +521,7 @@ where
 
 fn prepare_rustc(
     cx: &mut Context<'_, '_>,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
     unit: &Unit,
 ) -> CargoResult<ProcessBuilder> {
     let is_primary = cx.is_primary_package(unit);
@@ -537,7 +529,7 @@ fn prepare_rustc(
 
     let mut base = cx
         .compilation
-        .rustc_process(&unit.pkg, is_primary, is_workspace)?;
+        .rustc_process(unit, is_primary, is_workspace)?;
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
@@ -553,7 +545,7 @@ fn prepare_rustc(
 
 fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(&unit.pkg, &unit.target)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(unit)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
@@ -583,6 +575,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
+    rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
 
     rustdoc.args(bcx.rustdocflags_args(unit));
 
@@ -687,12 +680,12 @@ fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
-    if !bcx.show_warnings(unit.pkg.package_id()) {
+    if !unit.show_warnings(bcx.config) {
         cmd.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they
     // don't fail compilation.
-    } else if !unit.pkg.package_id().source_id().is_path() {
+    } else if !unit.is_local() {
         cmd.arg("--cap-lints").arg("warn");
     }
 }
@@ -717,6 +710,7 @@ fn add_error_format_and_color(
         // to emit a message that cargo will intercept.
         json.push_str(",artifacts");
     }
+
     match cx.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
             json.push_str(",diagnostic-short");
@@ -724,6 +718,26 @@ fn add_error_format_and_color(
         _ => {}
     }
     cmd.arg(json);
+
+    if nightly_features_allowed() {
+        let config = cx.bcx.config;
+        match (
+            config.cli_unstable().terminal_width,
+            config.shell().err_width().diagnostic_terminal_width(),
+        ) {
+            // Terminal width explicitly provided - only useful for testing.
+            (Some(Some(width)), _) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // Terminal width was not explicitly provided but flag was provided - common case.
+            (Some(None), Some(width)) => {
+                cmd.arg(format!("-Zterminal-width={}", width));
+            }
+            // User didn't opt-in.
+            _ => (),
+        }
+    }
+
     Ok(())
 }
 
@@ -731,14 +745,13 @@ fn build_base_args(
     cx: &mut Context<'_, '_>,
     cmd: &mut ProcessBuilder,
     unit: &Unit,
-    crate_types: &[&str],
+    crate_types: &[CrateType],
 ) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
     let bcx = cx.bcx;
     let Profile {
         ref opt_level,
-        ref lto,
         codegen_units,
         debuginfo,
         debug_assertions,
@@ -746,6 +759,7 @@ fn build_base_args(
         rpath,
         ref panic,
         incremental,
+        strip,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -762,7 +776,7 @@ fn build_base_args(
 
     if !test {
         for crate_type in crate_types.iter() {
-            cmd.arg("--crate-type").arg(crate_type);
+            cmd.arg("--crate-type").arg(crate_type.as_str());
         }
     }
 
@@ -778,7 +792,7 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| *p != unit.pkg));
+        || (crate_types.contains(&CrateType::Dylib) && bcx.ws.members().any(|p| *p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -791,32 +805,42 @@ fn build_base_args(
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    // Disable LTO for host builds as prefer_dynamic and it are mutually
-    // exclusive.
-    let lto_possible = unit.target.can_lto() && !unit.target.for_host();
-    match lto {
-        Lto::Bool(true) => {
-            if lto_possible {
-                cmd.args(&["-C", "lto"]);
-            }
+    match cx.lto[unit] {
+        lto::Lto::Run(None) => {
+            cmd.arg("-C").arg("lto");
         }
-        Lto::Named(s) => {
-            if lto_possible {
-                cmd.arg("-C").arg(format!("lto={}", s));
-            }
+        lto::Lto::Run(Some(s)) => {
+            cmd.arg("-C").arg(format!("lto={}", s));
         }
-        // If LTO isn't being enabled then there's no need for bitcode to be
-        // present in the intermediate artifacts, so shave off some build time
-        // by removing it.
-        Lto::Bool(false) => {
+        lto::Lto::Off => {
+            cmd.arg("-C").arg("lto=off");
+        }
+        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
+        lto::Lto::OnlyBitcode => {
+            // Note that this compiler flag, like the one below, is just an
+            // optimization in terms of build time. If we don't pass it then
+            // both object code and bitcode will show up. This is lagely just
+            // compat until the feature lands on stable and we can remove the
+            // conditional branch.
             if cx
                 .bcx
                 .target_data
                 .info(CompileKind::Host)
-                .supports_bitcode_in_rlib
+                .supports_embed_bitcode
                 .unwrap()
             {
-                cmd.arg("-Cbitcode-in-rlib=no");
+                cmd.arg("-Clinker-plugin-lto");
+            }
+        }
+        lto::Lto::OnlyObject => {
+            if cx
+                .bcx
+                .target_data
+                .info(CompileKind::Host)
+                .supports_embed_bitcode
+                .unwrap()
+            {
+                cmd.arg("-Cembed-bitcode=no");
             }
         }
     }
@@ -917,6 +941,10 @@ fn build_base_args(
         opt(cmd, "-C", "incremental=", Some(dir));
     }
 
+    if strip != Strip::None {
+        cmd.arg("-Z").arg(format!("strip={}", strip));
+    }
+
     if unit.is_std {
         // -Zforce-unstable-if-unmarked prevents the accidental use of
         // unstable crates within the sysroot (such as "extern crate libc" or
@@ -975,7 +1003,7 @@ fn build_deps_args(
     // error in the future (see PR #4797).
     if !deps
         .iter()
-        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.linkable())
+        .any(|dep| !dep.unit.mode.is_doc() && dep.unit.target.is_linkable())
     {
         if let Some(dep) = deps
             .iter()
@@ -1058,19 +1086,18 @@ pub fn extern_args(
             };
 
             let outputs = cx.outputs(&dep.unit)?;
-            let mut outputs = outputs.iter().filter_map(|output| match output.flavor {
-                FileFlavor::Linkable { rmeta } => Some((output, rmeta)),
-                _ => None,
-            });
 
-            if cx.only_requires_rmeta(unit, &dep.unit) {
-                let (output, _rmeta) = outputs
-                    .find(|(_output, rmeta)| *rmeta)
-                    .expect("failed to find rlib dep for pipelined dep");
+            if cx.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
+                // Example: rlib dependency for an rlib, rmeta is all that is required.
+                let output = outputs
+                    .iter()
+                    .find(|output| output.flavor == FileFlavor::Rmeta)
+                    .expect("failed to find rmeta dep for pipelined dep");
                 pass(&output.path);
             } else {
-                for (output, rmeta) in outputs {
-                    if !rmeta {
+                // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
+                for output in outputs.iter() {
+                    if output.flavor == FileFlavor::Linkable {
                         pass(&output.path);
                     }
                 }
@@ -1079,7 +1106,7 @@ pub fn extern_args(
         };
 
     for dep in deps {
-        if dep.unit.target.linkable() && !dep.unit.mode.is_doc() {
+        if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             link_to(dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }
@@ -1117,7 +1144,7 @@ struct OutputOptions {
 impl OutputOptions {
     fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
         let look_for_metadata_directive = cx.rmeta_required(unit);
-        let color = cx.bcx.config.shell().supports_color();
+        let color = cx.bcx.config.shell().err_supports_color();
         let path = cx.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
@@ -1152,7 +1179,7 @@ fn on_stderr_line(
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
-            let f = cell.try_borrow_mut_with(|| File::create(path))?;
+            let f = cell.try_borrow_mut_with(|| paths::create(path))?;
             debug_assert!(!line.contains('\n'));
             f.write_all(line.as_bytes())?;
             f.write_all(&[b'\n'])?;
@@ -1340,7 +1367,7 @@ fn replay_output_cache(
         // We sometimes have gigabytes of output from the compiler, so avoid
         // loading it all into memory at once, as that can cause OOM where
         // otherwise there would be none.
-        let file = fs::File::open(&path)?;
+        let file = paths::open(&path)?;
         let mut reader = std::io::BufReader::new(file);
         let mut line = String::new();
         loop {

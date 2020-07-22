@@ -1445,3 +1445,570 @@ fn canonicalize_a_bunch() {
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
+
+#[cargo_test]
+fn update_unused_new_version() {
+    // If there is an unused patch entry, and then you update the patch,
+    // make sure `cargo update` will be able to fix the lock file.
+    Package::new("bar", "0.1.5").publish();
+
+    // Start with a lock file to 0.1.5, and an "unused" patch because the
+    // version is too old.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bar = "0.1.5"
+
+                [patch.crates-io]
+                bar = { path = "../bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Patch is too old.
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.4"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr_contains("[WARNING] Patch `bar v0.1.4 [..] was not used in the crate graph.")
+        .run();
+    // unused patch should be in the lock file
+    let lock = p.read_lockfile();
+    let toml: toml::Value = toml::from_str(&lock).unwrap();
+    assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
+    assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
+    assert_eq!(
+        toml["patch"]["unused"][0]["version"].as_str(),
+        Some("0.1.4")
+    );
+
+    // Oh, OK, let's update to the latest version.
+    bar.change_file("Cargo.toml", &basic_manifest("bar", "0.1.6"));
+
+    // Create a backup so we can test it with different options.
+    fs::copy(p.root().join("Cargo.lock"), p.root().join("Cargo.lock.bak")).unwrap();
+
+    // Try to build again, this should automatically update Cargo.lock.
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[COMPILING] bar v0.1.6 ([..]/bar)
+[COMPILING] foo v0.0.1 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+    // This should not update any registry.
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    assert!(!p.read_lockfile().contains("unused"));
+
+    // Restore the lock file, and see if `update` will work, too.
+    fs::copy(p.root().join("Cargo.lock.bak"), p.root().join("Cargo.lock")).unwrap();
+
+    // Try `update -p`.
+    p.cargo("update -p bar")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[ADDING] bar v0.1.6 ([..]/bar)
+[REMOVING] bar v0.1.5
+",
+        )
+        .run();
+
+    // Try with bare `cargo update`.
+    fs::copy(p.root().join("Cargo.lock.bak"), p.root().join("Cargo.lock")).unwrap();
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[ADDING] bar v0.1.6 ([..]/bar)
+[REMOVING] bar v0.1.5
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn too_many_matches() {
+    // The patch locations has multiple versions that match.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.0").alternative(true).publish();
+    Package::new("bar", "0.1.1").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { version = "0.1", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Picks 0.1.1, the most recent version.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]/alternative-registry` index
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  patch for `bar` in `registry `[..]/alternative-registry`` resolved to more than one candidate
+  Found versions: 0.1.0, 0.1.1
+  Update the patch definition to select only one package.
+  For example, add an `=` version requirement to the patch definition, such as `version = \"=0.1.1\"`.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn no_matches() {
+    // A patch to a location that does not contain the named package.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { path = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("abc", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  The patch location `[..]/foo/bar` does not appear to contain any packages matching the name `bar`.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn mismatched_version() {
+    // A patch to a location that has an old version.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.1"
+
+                [patch.crates-io]
+                bar = { path = "bar", version = "0.1.1" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, \
+  but the patch definition requires `^0.1.1`.
+  Check that the version in the patch location is what you expect, \
+  and update the patch definition to match.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn patch_walks_backwards() {
+    // Starting with a locked patch, change the patch so it points to an older version.
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [patch.crates-io]
+            bar = {path="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[CHECKING] bar v0.1.1 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // Somehow the user changes the version backwards.
+    p.change_file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"));
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[CHECKING] bar v0.1.0 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn patch_walks_backwards_restricted() {
+    // This is the same as `patch_walks_backwards`, but the patch contains a
+    // `version` qualifier. This is unusual, just checking a strange edge case.
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [patch.crates-io]
+            bar = {path="bar", version="0.1.1"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[CHECKING] bar v0.1.1 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // Somehow the user changes the version backwards.
+    p.change_file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"));
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  The patch location `[..]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  Check that the version in the patch location is what you expect, and update the patch definition to match.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn patched_dep_new_version() {
+    // What happens when a patch is locked, and then one of the patched
+    // dependencies needs to be updated. In this case, the baz requirement
+    // gets updated from 0.1.0 to 0.1.1.
+    Package::new("bar", "0.1.0").dep("baz", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [patch.crates-io]
+            bar = {path="bar"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+
+            [dependencies]
+            baz = "0.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // Lock everything.
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.0 [..]
+[CHECKING] baz v0.1.0
+[CHECKING] bar v0.1.0 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    Package::new("baz", "0.1.1").publish();
+
+    // Just the presence of the new version should not have changed anything.
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+
+    // Modify the patch so it requires the new version.
+    p.change_file(
+        "bar/Cargo.toml",
+        r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+
+            [dependencies]
+            baz = "0.1.1"
+        "#,
+    );
+
+    // Should unlock and update cleanly.
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.1 (registry `[..]/registry`)
+[CHECKING] baz v0.1.1
+[CHECKING] bar v0.1.0 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn patch_update_doesnt_update_other_sources() {
+    // Very extreme edge case, make sure a patch update doesn't update other
+    // sources.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.0").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            bar_alt = { version = "0.1", registry = "alternative", package = "bar"  }
+
+            [patch.crates-io]
+            bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_unordered(
+            "\
+[UPDATING] `[..]/registry` index
+[UPDATING] `[..]/alternative-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[..]/alternative-registry`)
+[CHECKING] bar v0.1.0 (registry `[..]/alternative-registry`)
+[CHECKING] bar v0.1.0 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    // Publish new versions in both sources.
+    Package::new("bar", "0.1.1").publish();
+    Package::new("bar", "0.1.1").alternative(true).publish();
+
+    // Since it is locked, nothing should change.
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+
+    // Require new version on crates.io.
+    p.change_file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"));
+
+    // This should not update bar_alt.
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/registry` index
+[CHECKING] bar v0.1.1 ([..]/foo/bar)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn can_update_with_alt_reg() {
+    // A patch to an alt reg can update.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.0").alternative(true).publish();
+    Package::new("bar", "0.1.1").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { version = "=0.1.1", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `[..]/registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.1 (registry `[..]/alternative-registry`)
+[CHECKING] bar v0.1.1 (registry `[..]/alternative-registry`)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    Package::new("bar", "0.1.2").alternative(true).publish();
+
+    // Should remain locked.
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+
+    // This does nothing, due to `=` requirement.
+    p.cargo("update -p bar")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `[..]/registry` index
+",
+        )
+        .run();
+
+    // Bump to 0.1.2.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+
+            [patch.crates-io]
+            bar = { version = "=0.1.2", registry = "alternative" }
+        "#,
+    );
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `[..]/alternative-registry` index
+[UPDATING] `[..]/registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.2 (registry `[..]/alternative-registry`)
+[CHECKING] bar v0.1.2 (registry `[..]/alternative-registry`)
+[CHECKING] foo v0.1.0 ([..]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+}

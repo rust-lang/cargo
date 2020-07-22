@@ -18,7 +18,7 @@ pub fn cli() -> App {
         .arg(
             opt("git", "Git URL to install the specified crate from")
                 .value_name("URL")
-                .conflicts_with_all(&["path", "registry"]),
+                .conflicts_with_all(&["path", "index", "registry"]),
         )
         .arg(
             opt("branch", "Branch to use when installing from git")
@@ -38,7 +38,7 @@ pub fn cli() -> App {
         .arg(
             opt("path", "Filesystem path to local crate to install")
                 .value_name("PATH")
-                .conflicts_with_all(&["git", "registry"]),
+                .conflicts_with_all(&["git", "index", "registry"]),
         )
         .arg(opt(
             "list",
@@ -57,12 +57,19 @@ pub fn cli() -> App {
             "Install all examples",
         )
         .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
+        .arg(
+            opt("index", "Registry index to install from")
+                .value_name("INDEX")
+                .requires("crate")
+                .conflicts_with_all(&["git", "path", "registry"]),
+        )
         .arg(
             opt("registry", "Registry to use")
                 .value_name("REGISTRY")
                 .requires("crate")
-                .conflicts_with_all(&["git", "path"]),
+                .conflicts_with_all(&["git", "path", "index"]),
         )
         .after_help(
             "\
@@ -100,8 +107,6 @@ continuous integration systems.",
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let registry = args.registry(config)?;
-
     if let Some(path) = args.value_of_path("path", config) {
         config.reload_rooted_at(path)?;
     } else {
@@ -135,7 +140,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         } else if let Some(rev) = args.value_of("rev") {
             GitReference::Rev(rev.to_string())
         } else {
-            GitReference::Branch("master".to_string())
+            GitReference::DefaultBranch
         };
         SourceId::for_git(&url, gitref)?
     } else if let Some(path) = args.value_of_path("path", config) {
@@ -143,8 +148,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
-    } else if let Some(registry) = registry {
+    } else if let Some(registry) = args.registry(config)? {
         SourceId::alt_registry(config, &registry)?
+    } else if let Some(index) = args.value_of("index") {
+        SourceId::for_registry(&index.into_url()?)?
     } else {
         SourceId::crates_io(config)?
     };

@@ -135,11 +135,15 @@ available.
 
 include::options-registry.adoc[]
 
+include::options-index.adoc[]
+
 include::options-features.adoc[]
 
 === Compilation Options
 
 include::options-target-triple.adoc[]
+
+include::options-target-dir.adoc[]
 
 *--debug*::
     Build with the `dev` profile instead the `release` profile.

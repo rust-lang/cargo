@@ -15,11 +15,11 @@ use std::rc::Rc;
 
 use log::debug;
 
-use crate::core::interning::InternedString;
 use crate::core::resolver::context::Context;
 use crate::core::resolver::errors::describe_path;
 use crate::core::{Dependency, FeatureValue, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{ActivateResult, ResolveOpts};
@@ -402,15 +402,13 @@ impl Requirements<'_> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if let Some(dep) = self
+        if self
             .summary
             .dependencies()
             .iter()
-            .find(|p| p.name_in_toml() == package)
+            .any(|dep| dep.name_in_toml() == package && dep.is_optional())
         {
-            if dep.is_optional() {
-                self.used.insert(package);
-            }
+            self.used.insert(package);
         }
         self.deps
             .entry(package)

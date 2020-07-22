@@ -73,7 +73,7 @@ _cargo()
 	local opt__rustdoc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --release --open --target-dir --profile"
 	local opt__search="$opt_common $opt_lock --limit --index --registry"
 	local opt__test="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --doc --target --no-run --release --no-fail-fast --target-dir --profile"
-	local opt__tree="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock --target --no-filter-targets --no-dev-dependencies -i --invert --no-indent --prefix-depth --no-dedupe --duplicates -d --charset -f --format --graph-features"
+	local opt__tree="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock --target -i --invert --prefix --no-dedupe --duplicates -d --charset -f --format -e --edges"
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg --bin --root"
 	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --precise --dry-run"
 	local opt__vendor="$opt_common $opt_mani $opt_lock $opt_sync --no-delete --respect-source-config --versioned-dirs"

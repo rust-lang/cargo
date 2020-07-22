@@ -1318,7 +1318,7 @@ error: failed to parse manifest at `[..]/foo/Cargo.toml`
 Caused by:
   feature `resolver` is required
 
-consider adding `cargo-features = [\"resolver\"]` to the manifest
+  consider adding `cargo-features = [\"resolver\"]` to the manifest
 ",
         )
         .run();
@@ -1347,7 +1347,7 @@ error: failed to parse manifest at `[..]/foo/Cargo.toml`
 Caused by:
   feature `resolver` is required
 
-consider adding `cargo-features = [\"resolver\"]` to the manifest
+  consider adding `cargo-features = [\"resolver\"]` to the manifest
 ",
         )
         .run();
@@ -1592,6 +1592,17 @@ fn resolver_enables_new_features() {
     p.cargo("run --bin a")
         .masquerade_as_nightly_cargo()
         .env("EXPECTED_FEATS", "1")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] common [..]
+[COMPILING] common v1.0.0
+[COMPILING] a v0.1.0 [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/a[EXE]`
+",
+        )
         .run();
 
     // only normal+dev
@@ -1708,4 +1719,33 @@ resolver = "2"
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         &[("Cargo.toml", &rewritten_toml)],
     );
+}
+
+#[cargo_test]
+fn tree_all() {
+    // `cargo tree` with the new feature resolver.
+    Package::new("log", "0.4.8").feature("serde", &[]).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'cfg(whatever)'.dependencies]
+                log = {version="*", features=["serde"]}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("tree --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]/foo)
+└── log v0.4.8
+",
+        )
+        .run();
 }

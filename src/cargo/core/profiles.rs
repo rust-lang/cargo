@@ -1,8 +1,8 @@
 use crate::core::compiler::CompileMode;
-use crate::core::interning::InternedString;
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{Feature, Features, PackageId, PackageIdSpec, Resolve, Shell};
 use crate::util::errors::CargoResultExt;
+use crate::util::interning::InternedString;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
 use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::bail;
@@ -287,6 +287,7 @@ impl Profiles {
         &self,
         pkg_id: PackageId,
         is_member: bool,
+        is_local: bool,
         unit_for: UnitFor,
         mode: CompileMode,
     ) -> Profile {
@@ -360,7 +361,7 @@ impl Profiles {
         // itself (aka crates.io / git dependencies)
         //
         // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if !pkg_id.source_id().is_path() {
+        if !is_local {
             profile.incremental = false;
         }
         profile.name = profile_name;
@@ -486,7 +487,18 @@ fn merge_toml_overrides(
     toml: &TomlProfile,
 ) {
     if unit_for.is_for_host() {
-        if let Some(ref build_override) = toml.build_override {
+        // For-host units are things like procedural macros, build scripts, and
+        // their dependencies. For these units most projects simply want them
+        // to compile quickly and the runtime doesn't matter too much since
+        // they tend to process very little data. For this reason we default
+        // them to a "compile as quickly as possible" mode which for now means
+        // basically turning down the optimization level and avoid limiting
+        // codegen units. This ensures that we spend little time optimizing as
+        // well as enabling parallelism by not constraining codegen units.
+        profile.opt_level = InternedString::new("0");
+        profile.codegen_units = None;
+
+        if let Some(build_override) = &toml.build_override {
             merge_profile(profile, build_override);
         }
     }
@@ -532,6 +544,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
+        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no") => {
+            profile.lto = Lto::Off
+        }
         Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
@@ -564,6 +579,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
+    if let Some(strip) = toml.strip {
+        profile.strip = strip;
+    }
 }
 
 /// The root profile (dev/release).
@@ -594,6 +612,7 @@ pub struct Profile {
     pub rpath: bool,
     pub incremental: bool,
     pub panic: PanicStrategy,
+    pub strip: Strip,
 }
 
 impl Default for Profile {
@@ -610,6 +629,7 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
+            strip: Strip::None,
         }
     }
 }
@@ -634,6 +654,7 @@ compact_debug! {
                 rpath
                 incremental
                 panic
+                strip
             )]
         }
     }
@@ -720,6 +741,7 @@ impl Profile {
         bool,
         bool,
         PanicStrategy,
+        Strip,
     ) {
         (
             self.opt_level,
@@ -731,6 +753,7 @@ impl Profile {
             self.rpath,
             self.incremental,
             self.panic,
+            self.strip,
         )
     }
 }
@@ -738,8 +761,10 @@ impl Profile {
 /// The link-time-optimization setting.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum Lto {
-    /// False = no LTO
+    /// Explicitly no LTO, disables thin-LTO.
+    Off,
     /// True = "Fat" LTO
+    /// False = rustc default (no args), currently "thin LTO"
     Bool(bool),
     /// Named LTO settings like "thin".
     Named(InternedString),
@@ -751,6 +776,7 @@ impl serde::ser::Serialize for Lto {
         S: serde::ser::Serializer,
     {
         match self {
+            Lto::Off => "off".serialize(s),
             Lto::Bool(b) => b.to_string().serialize(s),
             Lto::Named(n) => n.serialize(s),
         }
@@ -775,6 +801,30 @@ impl fmt::Display for PanicStrategy {
     }
 }
 
+/// The setting for choosing which symbols to strip
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Strip {
+    /// Only strip debugging symbols
+    DebugInfo,
+    /// Don't remove any symbols
+    None,
+    /// Strip all non-exported symbols from the final binary
+    Symbols,
+}
+
+impl fmt::Display for Strip {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Strip::DebugInfo => "debuginfo",
+            Strip::None => "none",
+            Strip::Symbols => "symbols",
+        }
+        .fmt(f)
+    }
+}
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

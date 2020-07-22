@@ -23,6 +23,10 @@ fn simple_list() {
                 "id": 70,
                 "login": "github:rust-lang:core",
                 "name": "Core"
+            },
+            {
+                "id": 123,
+                "login": "octocat"
             }
         ]
     }"#;
@@ -43,7 +47,14 @@ fn simple_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("owner -l --token sekrit").run();
+    p.cargo("owner -l --token sekrit")
+        .with_stdout(
+            "\
+github:rust-lang:core (Core)
+octocat
+",
+        )
+        .run();
 }
 
 #[cargo_test]

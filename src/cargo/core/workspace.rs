@@ -13,11 +13,12 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::RequestedFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, InternedString, PackageId, PackageIdSpec};
+use crate::core::{Dependency, PackageId, PackageIdSpec};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::toml::{read_manifest, TomlProfiles};
 use crate::util::{Config, Filesystem};
@@ -88,6 +89,9 @@ pub struct Workspace<'cfg> {
 
     /// The resolver behavior specified with the `resolver` field.
     resolve_behavior: Option<ResolveBehavior>,
+
+    /// Workspace-level custom metadata
+    custom_metadata: Option<toml::Value>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -126,6 +130,7 @@ pub struct WorkspaceRootConfig {
     members: Option<Vec<String>>,
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
+    custom_metadata: Option<toml::Value>,
 }
 
 /// An iterator over the member packages of a workspace, returned by
@@ -145,7 +150,19 @@ impl<'cfg> Workspace<'cfg> {
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
         ws.target_dir = config.target_dir()?;
-        ws.root_manifest = ws.find_root(manifest_path)?;
+
+        if manifest_path.is_relative() {
+            anyhow::bail!(
+                "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
+                manifest_path
+            )
+        } else {
+            ws.root_manifest = ws.find_root(manifest_path)?;
+        }
+
+        ws.custom_metadata = ws
+            .load_workspace_config()?
+            .and_then(|cfg| cfg.custom_metadata);
         ws.find_members()?;
         ws.resolve_behavior = match ws.root_maybe() {
             MaybePackage::Package(p) => p.manifest().resolve_behavior(),
@@ -173,6 +190,7 @@ impl<'cfg> Workspace<'cfg> {
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
             resolve_behavior: None,
+            custom_metadata: None,
         }
     }
 
@@ -386,6 +404,30 @@ impl<'cfg> Workspace<'cfg> {
         self
     }
 
+    pub fn custom_metadata(&self) -> Option<&toml::Value> {
+        self.custom_metadata.as_ref()
+    }
+
+    pub fn load_workspace_config(&mut self) -> CargoResult<Option<WorkspaceRootConfig>> {
+        // If we didn't find a root, it must mean there is no [workspace] section, and thus no
+        // metadata.
+        if let Some(root_path) = &self.root_manifest {
+            let root_package = self.packages.load(root_path)?;
+            match root_package.workspace_config() {
+                WorkspaceConfig::Root(ref root_config) => {
+                    return Ok(Some(root_config.clone()));
+                }
+
+                _ => anyhow::bail!(
+                    "root of a workspace inferred but wasn't a root: {}",
+                    root_path.display()
+                ),
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Finds the root of a workspace for the crate whose manifest is located
     /// at `manifest_path`.
     ///
@@ -467,8 +509,8 @@ impl<'cfg> Workspace<'cfg> {
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
     fn find_members(&mut self) -> CargoResult<()> {
-        let root_manifest_path = match self.root_manifest {
-            Some(ref path) => path.clone(),
+        let workspace_config = match self.load_workspace_config()? {
+            Some(workspace_config) => workspace_config,
             None => {
                 debug!("find_members - only me as a member");
                 self.members.push(self.current_manifest.clone());
@@ -481,30 +523,20 @@ impl<'cfg> Workspace<'cfg> {
             }
         };
 
-        let members_paths;
-        let default_members_paths;
-        {
-            let root_package = self.packages.load(&root_manifest_path)?;
-            match *root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
-                    members_paths = root_config
-                        .members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
-                    default_members_paths = if root_manifest_path == self.current_manifest {
-                        if let Some(ref default) = root_config.default_members {
-                            Some(root_config.members_paths(default)?)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    };
-                }
-                _ => anyhow::bail!(
-                    "root of a workspace inferred but wasn't a root: {}",
-                    root_manifest_path.display()
-                ),
+        // self.root_manifest must be Some to have retrieved workspace_config
+        let root_manifest_path = self.root_manifest.clone().unwrap();
+
+        let members_paths =
+            workspace_config.members_paths(workspace_config.members.as_ref().unwrap_or(&vec![]))?;
+        let default_members_paths = if root_manifest_path == self.current_manifest {
+            if let Some(ref default) = workspace_config.default_members {
+                Some(workspace_config.members_paths(default)?)
+            } else {
+                None
             }
-        }
+        } else {
+            None
+        };
 
         for path in members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
@@ -792,7 +824,9 @@ impl<'cfg> Workspace<'cfg> {
                 if !manifest.patch().is_empty() {
                     emit_warning("patch")?;
                 }
-                if manifest.resolve_behavior() != self.resolve_behavior {
+                if manifest.resolve_behavior().is_some()
+                    && manifest.resolve_behavior() != self.resolve_behavior
+                {
                     // Only warn if they don't match.
                     emit_warning("resolver")?;
                 }
@@ -839,11 +873,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(ref p) => p.clone(),
                 MaybePackage::Virtual(_) => continue,
             };
-            let mut src = PathSource::new(
-                pkg.manifest_path(),
-                pkg.package_id().source_id(),
-                self.config,
-            );
+            let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), self.config);
             src.preload_with(pkg);
             registry.add_preloaded(Box::new(src));
         }
@@ -861,7 +891,7 @@ impl<'cfg> Workspace<'cfg> {
                     let err = anyhow::format_err!("{}", warning.message);
                     let cx =
                         anyhow::format_err!("failed to parse manifest at `{}`", path.display());
-                    return Err(err.context(cx).into());
+                    return Err(err.context(cx));
                 } else {
                     let msg = if self.root_manifest.is_none() {
                         warning.message.to_string()
@@ -1118,12 +1148,14 @@ impl WorkspaceRootConfig {
         members: &Option<Vec<String>>,
         default_members: &Option<Vec<String>>,
         exclude: &Option<Vec<String>>,
+        custom_metadata: &Option<toml::Value>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
             root_dir: root_dir.to_path_buf(),
             members: members.clone(),
             default_members: default_members.clone(),
             exclude: exclude.clone().unwrap_or_default(),
+            custom_metadata: custom_metadata.clone(),
         }
     }
 

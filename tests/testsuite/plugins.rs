@@ -435,5 +435,5 @@ fn shared_panic_abort_plugins() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build -v").run();
 }

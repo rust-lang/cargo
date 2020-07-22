@@ -12,7 +12,7 @@
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::{FeatureResolver, ResolvedFeatures};
+use crate::core::resolver::features::{FeatureResolver, ForceAllTargets, ResolvedFeatures};
 use crate::core::resolver::{self, HasDevUnits, Resolve, ResolveOpts};
 use crate::core::summary::Summary;
 use crate::core::Feature;
@@ -20,7 +20,7 @@ use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Worksp
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::profile;
+use crate::util::{profile, CanonicalUrl};
 use log::{debug, trace};
 use std::collections::HashSet;
 
@@ -75,10 +75,11 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 pub fn resolve_ws_with_opts<'cfg>(
     ws: &Workspace<'cfg>,
     target_data: &RustcTargetData,
-    requested_target: CompileKind,
+    requested_targets: &[CompileKind],
     opts: &ResolveOpts,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
+    force_all_targets: ForceAllTargets,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -135,7 +136,7 @@ pub fn resolve_ws_with_opts<'cfg>(
         &resolved_with_overrides,
         &member_ids,
         has_dev_units,
-        requested_target,
+        requested_targets,
         target_data,
     )?;
 
@@ -146,8 +147,9 @@ pub fn resolve_ws_with_opts<'cfg>(
         &pkg_set,
         &opts.features,
         specs,
-        requested_target,
+        requested_targets,
         has_dev_units,
+        force_all_targets,
     )?;
 
     Ok(WorkspaceResolve {
@@ -214,17 +216,16 @@ pub fn resolve_with_previous<'cfg>(
     //
     // TODO: this seems like a hokey reason to single out the registry as being
     // different.
-    let mut to_avoid_sources: HashSet<SourceId> = HashSet::new();
-    if let Some(to_avoid) = to_avoid {
-        to_avoid_sources.extend(
-            to_avoid
-                .iter()
+    let to_avoid_sources: HashSet<SourceId> = to_avoid
+        .map(|set| {
+            set.iter()
                 .map(|p| p.source_id())
-                .filter(|s| !s.is_registry()),
-        );
-    }
+                .filter(|s| !s.is_registry())
+                .collect()
+        })
+        .unwrap_or_default();
 
-    let keep = |p: &PackageId| {
+    let pre_patch_keep = |p: &PackageId| {
         !to_avoid_sources.contains(&p.source_id())
             && match to_avoid {
                 Some(set) => !set.contains(p),
@@ -232,28 +233,18 @@ pub fn resolve_with_previous<'cfg>(
             }
     };
 
-    // In the case where a previous instance of resolve is available, we
-    // want to lock as many packages as possible to the previous version
-    // without disturbing the graph structure.
-    let mut try_to_use = HashSet::new();
-    if let Some(r) = previous {
-        trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, &keep);
-
-        // Everything in the previous lock file we want to keep is prioritized
-        // in dependency selection if it comes up, aka we want to have
-        // conservative updates.
-        try_to_use.extend(r.iter().filter(keep).inspect(|id| {
-            debug!("attempting to prefer {}", id);
-        }));
-    }
-
+    // This is a set of PackageIds of `[patch]` entries that should not be
+    // locked.
+    let mut avoid_patch_ids = HashSet::new();
     if register_patches {
         for (url, patches) in ws.root_patch() {
             let previous = match previous {
                 Some(r) => r,
                 None => {
-                    registry.patch(url, patches)?;
+                    let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
+                    let unlock_ids = registry.patch(url, &patches)?;
+                    // Since nothing is locked, this shouldn't possibly return anything.
+                    assert!(unlock_ids.is_empty());
                     continue;
                 }
             };
@@ -262,19 +253,57 @@ pub fn resolve_with_previous<'cfg>(
                 .map(|dep| {
                     let unused = previous.unused_patches().iter().cloned();
                     let candidates = previous.iter().chain(unused);
-                    match candidates.filter(keep).find(|&id| dep.matches_id(id)) {
+                    match candidates
+                        .filter(pre_patch_keep)
+                        .find(|&id| dep.matches_id(id))
+                    {
                         Some(id) => {
-                            let mut dep = dep.clone();
-                            dep.lock_to(id);
-                            dep
+                            let mut locked_dep = dep.clone();
+                            locked_dep.lock_to(id);
+                            (dep, Some((locked_dep, id)))
                         }
-                        None => dep.clone(),
+                        None => (dep, None),
                     }
                 })
                 .collect::<Vec<_>>();
-            registry.patch(url, &patches)?;
+            let canonical = CanonicalUrl::new(url)?;
+            for (orig_patch, unlock_id) in registry.patch(url, &patches)? {
+                // Avoid the locked patch ID.
+                avoid_patch_ids.insert(unlock_id);
+                // Also avoid the thing it is patching.
+                avoid_patch_ids.extend(previous.iter().filter(|id| {
+                    orig_patch.matches_ignoring_source(*id)
+                        && *id.source_id().canonical_url() == canonical
+                }));
+            }
         }
+    }
+    debug!("avoid_patch_ids={:?}", avoid_patch_ids);
 
+    let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
+
+    // In the case where a previous instance of resolve is available, we
+    // want to lock as many packages as possible to the previous version
+    // without disturbing the graph structure.
+    if let Some(r) = previous {
+        trace!("previous: {:?}", r);
+        register_previous_locks(ws, registry, r, &keep);
+    }
+    // Everything in the previous lock file we want to keep is prioritized
+    // in dependency selection if it comes up, aka we want to have
+    // conservative updates.
+    let try_to_use = previous
+        .map(|r| {
+            r.iter()
+                .filter(keep)
+                .inspect(|id| {
+                    debug!("attempting to prefer {}", id);
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    if register_patches {
         registry.lock_patches();
     }
 
@@ -559,6 +588,7 @@ fn register_previous_locks(
     // the registry as a locked dependency.
     let keep = |id: &PackageId| keep(id) && !avoid_locking.contains(id);
 
+    registry.clear_lock();
     for node in resolve.iter().filter(keep) {
         let deps = resolve
             .deps_not_replaced(node)

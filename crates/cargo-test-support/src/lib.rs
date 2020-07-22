@@ -117,7 +117,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
 use std::time::{self, Duration};
-use std::usize;
 
 use cargo::util::{is_ci, CargoResult, ProcessBuilder, ProcessError, Rustc};
 use serde_json::{self, Value};
@@ -1224,22 +1223,23 @@ impl Execs {
                 // test suite to pass for now, but we may need to get more fancy
                 // if tests start failing again.
                 a.sort_by_key(|s| s.len());
-                let e = out.lines();
+                let mut failures = Vec::new();
 
-                for e_line in e {
+                for e_line in out.lines() {
                     match a.iter().position(|a_line| lines_match(e_line, a_line)) {
-                        Some(index) => a.remove(index),
-                        None => {
-                            return Err(format!(
-                                "Did not find expected line:\n\
-                                 {}\n\
-                                 Remaining available output:\n\
-                                 {}\n",
-                                e_line,
-                                a.join("\n")
-                            ));
+                        Some(index) => {
+                            a.remove(index);
                         }
-                    };
+                        None => failures.push(e_line),
+                    }
+                }
+                if failures.len() > 0 {
+                    return Err(format!(
+                        "Did not find expected line(s):\n{}\n\
+                         Remaining available output:\n{}\n",
+                        failures.join("\n"),
+                        a.join("\n")
+                    ));
                 }
                 if !a.is_empty() {
                     Err(format!(
@@ -1445,7 +1445,7 @@ fn lines_match_works() {
 /// You can use `[..]` wildcard in strings (useful for OS-dependent things such
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
-/// (e.g., rustc) rather than Cargo itself). Arrays are sorted before comparison.
+/// (e.g., rustc) rather than Cargo itself).
 pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
     match find_json_mismatch_r(expected, actual) {
         Some((expected_part, actual_part)) => Err(format!(
@@ -1473,26 +1473,10 @@ fn find_json_mismatch_r<'a>(
                 return Some((expected, actual));
             }
 
-            let mut l = l.iter().collect::<Vec<_>>();
-            let mut r = r.iter().collect::<Vec<_>>();
-
-            l.retain(
-                |l| match r.iter().position(|r| find_json_mismatch_r(l, r).is_none()) {
-                    Some(i) => {
-                        r.remove(i);
-                        false
-                    }
-                    None => true,
-                },
-            );
-
-            if !l.is_empty() {
-                assert!(!r.is_empty());
-                Some((l[0], r[0]))
-            } else {
-                assert_eq!(r.len(), 0);
-                None
-            }
+            l.iter()
+                .zip(r.iter())
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
+                .next()
         }
         (&Object(ref l), &Object(ref r)) => {
             let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));
@@ -1723,6 +1707,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         .env_remove("RUSTDOC")
         .env_remove("RUSTC_WRAPPER")
         .env_remove("RUSTFLAGS")
+        .env_remove("RUSTDOCFLAGS")
         .env_remove("XDG_CONFIG_HOME") // see #2345
         .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
         .env_remove("EMAIL")
@@ -1841,10 +1826,6 @@ pub fn symlink_supported() -> bool {
 }
 
 /// The error message for ENOENT.
-///
-/// It's generally not good to match against OS error messages, but I think
-/// this one is relatively stable.
-#[cfg(windows)]
-pub const NO_SUCH_FILE_ERR_MSG: &str = "The system cannot find the file specified. (os error 2)";
-#[cfg(not(windows))]
-pub const NO_SUCH_FILE_ERR_MSG: &str = "No such file or directory (os error 2)";
+pub fn no_such_file_err_msg() -> String {
+    std::io::Error::from_raw_os_error(2).to_string()
+}

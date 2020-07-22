@@ -32,7 +32,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   feature `metabuild` is required
 
-consider adding `cargo-features = [\"metabuild\"]` to the manifest
+  consider adding `cargo-features = [\"metabuild\"]` to the manifest
 ",
         )
         .run();
@@ -497,7 +497,7 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": null,
             "deps": [0, 1],
-            "outputs": ["[..]/target/debug/build/foo-[..]/metabuild_foo-[..][EXE]"],
+            "outputs": "{...}",
             "links": "{...}",
             "program": "rustc",
             "args": "{...}",
@@ -686,9 +686,7 @@ fn metabuild_json_artifact() {
 {
   "executable": null,
   "features": [],
-  "filenames": [
-    "[..]/foo/target/debug/build/foo-[..]/metabuild-foo[EXE]"
-  ],
+  "filenames": "{...}",
   "fresh": false,
   "package_id": "foo [..]",
   "profile": "{...}",

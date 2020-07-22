@@ -5,6 +5,7 @@
 import os
 import re
 import subprocess
+import time
 import urllib.request
 from urllib.error import HTTPError
 
@@ -32,17 +33,20 @@ def maybe_publish(path):
     version = re.search('^version = "([^"]+)"', content, re.M).group(1)
     if already_published(name, version):
         print('%s %s is already published, skipping' % (name, version))
-        return
+        return False
     subprocess.check_call(['cargo', 'publish', '--no-verify'], cwd=path)
+    return True
 
 
 def main():
-    print('Doing dry run first...')
-    for path in TO_PUBLISH:
-        subprocess.check_call(['cargo', 'publish', '--no-verify', '--dry-run'], cwd=path)
     print('Starting publish...')
-    for path in TO_PUBLISH:
-        maybe_publish(path)
+    for i, path in enumerate(TO_PUBLISH):
+        if maybe_publish(path):
+            if i < len(TO_PUBLISH)-1:
+                # Sleep to allow the index to update. This should probably
+                # check that the index is updated, or use a retry loop
+                # instead.
+                time.sleep(5)
     print('Publish complete!')
 
 

@@ -197,13 +197,18 @@ impl<'cfg> PathSource<'cfg> {
                 repo.path().display()
             )
         })?;
-        let repo_relative_path = root.strip_prefix(repo_root).chain_err(|| {
-            format!(
-                "expected git repo {} to be parent of package {}",
-                repo.path().display(),
-                root.display()
-            )
-        })?;
+        let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!(
+                    "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
+                    root,
+                    repo_root,
+                    e
+                );
+                return Ok(None);
+            }
+        };
         let manifest_path = repo_relative_path.join("Cargo.toml");
         if index.get_path(&manifest_path, 0).is_some() {
             return Ok(Some(self.list_files_git(pkg, &repo, filter)?));
@@ -517,6 +522,10 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         let (max, max_path) = self.last_modified_file(pkg)?;
+        // Note that we try to strip the prefix of this package to get a
+        // relative path to ensure that the fingerprint remains consistent
+        // across entire project directory renames.
+        let max_path = max_path.strip_prefix(&self.path).unwrap_or(&max_path);
         Ok(format!("{} ({})", max, max_path.display()))
     }
 

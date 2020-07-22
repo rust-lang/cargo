@@ -37,7 +37,7 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         self.nodes.get(from)?.get(to)
     }
 
-    pub fn edges(&self, from: &N) -> impl Iterator<Item = &(N, E)> {
+    pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> {
         self.nodes.get(from).into_iter().flat_map(|x| x.iter())
     }
 
@@ -95,8 +95,8 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
             p.iter()
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
-                .find(|&(node, _)| !result.contains(&node))
-                .map(|(ref p, _)| p)
+                .find(|(node, _)| !result.contains(node))
+                .map(|(p, _)| p)
         }) {
             result.push(p);
             pkg = p;
@@ -114,11 +114,11 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         let first_pkg_depending_on = |pkg: &N, res: &[&N]| {
             self.nodes
                 .iter()
-                .filter(|&(_, adjacent)| adjacent.contains_key(pkg))
+                .filter(|(_, adjacent)| adjacent.contains_key(pkg))
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
-                .find(|&(node, _)| !res.contains(&node))
-                .map(|(ref p, _)| p)
+                .find(|(node, _)| !res.contains(node))
+                .map(|(p, _)| p)
         };
         while let Some(p) = first_pkg_depending_on(pkg, &result) {
             result.push(p);

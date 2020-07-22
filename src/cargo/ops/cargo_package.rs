@@ -15,12 +15,12 @@ use tar::{Archive, Builder, EntryType, Header};
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
-use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::toml::TomlManifest;
 use crate::util::{self, restricted_names, Config, FileLock};
+use crate::{drop_println, ops};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -29,7 +29,7 @@ pub struct PackageOpts<'cfg> {
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
-    pub target: Option<String>,
+    pub targets: Vec<String>,
     pub features: Vec<String>,
     pub all_features: bool,
     pub no_default_features: bool,
@@ -50,8 +50,17 @@ struct ArchiveFile {
 enum FileContents {
     /// Absolute path to the file on disk to add to the archive.
     OnDisk(PathBuf),
-    /// Contents of a file generated in memory.
-    Generated(String),
+    /// Generates a file.
+    Generated(GeneratedFile),
+}
+
+enum GeneratedFile {
+    /// Generates `Cargo.toml` by rewriting the original.
+    Manifest,
+    /// Generates `Cargo.lock` in some cases (like if there is a binary).
+    Lockfile,
+    /// Adds a `.cargo-vcs_info.json` file if in a (clean) git repo.
+    VcsInfo(String),
 }
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
@@ -70,8 +79,6 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     if opts.check_metadata {
         check_metadata(pkg, config)?;
     }
-
-    verify_dependencies(pkg)?;
 
     if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
         config.shell().warn(
@@ -95,10 +102,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
 
     if opts.list {
         for ar_file in ar_files {
-            println!("{}", ar_file.rel_str);
+            drop_println!(config, "{}", ar_file.rel_str);
         }
         return Ok(None);
     }
+
+    verify_dependencies(pkg)?;
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
     let dir = ws.target_dir().join("package");
@@ -156,11 +165,10 @@ fn build_ar_list(
                     rel_str: "Cargo.toml.orig".to_string(),
                     contents: FileContents::OnDisk(src_file),
                 });
-                let generated = pkg.to_registry_toml(ws)?;
                 result.push(ArchiveFile {
                     rel_path,
                     rel_str,
-                    contents: FileContents::Generated(generated),
+                    contents: FileContents::Generated(GeneratedFile::Manifest),
                 });
             }
             "Cargo.lock" => continue,
@@ -179,18 +187,17 @@ fn build_ar_list(
         }
     }
     if pkg.include_lockfile() {
-        let new_lock = build_lock(ws)?;
         result.push(ArchiveFile {
             rel_path: PathBuf::from("Cargo.lock"),
             rel_str: "Cargo.lock".to_string(),
-            contents: FileContents::Generated(new_lock),
+            contents: FileContents::Generated(GeneratedFile::Lockfile),
         });
     }
     if let Some(vcs_info) = vcs_info {
         result.push(ArchiveFile {
             rel_path: PathBuf::from(VCS_INFO_FILE),
             rel_str: VCS_INFO_FILE.to_string(),
-            contents: FileContents::Generated(vcs_info),
+            contents: FileContents::Generated(GeneratedFile::VcsInfo(vcs_info)),
         });
     }
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
@@ -494,28 +501,7 @@ fn tar(
         config
             .shell()
             .verbose(|shell| shell.status("Archiving", &rel_str))?;
-        // The `tar::Builder` type by default will build GNU archives, but
-        // unfortunately we force it here to use UStar archives instead. The
-        // UStar format has more limitations on the length of path name that it
-        // can encode, so it's not quite as nice to use.
-        //
-        // Older cargos, however, had a bug where GNU archives were interpreted
-        // as UStar archives. This bug means that if we publish a GNU archive
-        // which has fully filled out metadata it'll be corrupt when unpacked by
-        // older cargos.
-        //
-        // Hopefully in the future after enough cargos have been running around
-        // with the bugfixed tar-rs library we'll be able to switch this over to
-        // GNU archives, but for now we'll just say that you can't encode paths
-        // in archives that are *too* long.
-        //
-        // For an instance of this in the wild, use the tar-rs 0.3.3 library to
-        // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
-        // look at rust-lang/cargo#2326.
-        let mut header = Header::new_ustar();
-        header
-            .set_path(&ar_path)
-            .chain_err(|| format!("failed to add to archive: `{}`", rel_str))?;
+        let mut header = Header::new_gnu();
         match contents {
             FileContents::OnDisk(disk_path) => {
                 let mut file = File::open(&disk_path).chain_err(|| {
@@ -526,11 +512,17 @@ fn tar(
                 })?;
                 header.set_metadata(&metadata);
                 header.set_cksum();
-                ar.append(&header, &mut file).chain_err(|| {
-                    format!("could not archive source file `{}`", disk_path.display())
-                })?;
+                ar.append_data(&mut header, &ar_path, &mut file)
+                    .chain_err(|| {
+                        format!("could not archive source file `{}`", disk_path.display())
+                    })?;
             }
-            FileContents::Generated(contents) => {
+            FileContents::Generated(generated_kind) => {
+                let contents = match generated_kind {
+                    GeneratedFile::Manifest => pkg.to_registry_toml(ws)?,
+                    GeneratedFile::Lockfile => build_lock(ws)?,
+                    GeneratedFile::VcsInfo(s) => s,
+                };
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);
                 header.set_mtime(
@@ -541,7 +533,7 @@ fn tar(
                 );
                 header.set_size(contents.len() as u64);
                 header.set_cksum();
-                ar.append(&header, contents.as_bytes())
+                ar.append_data(&mut header, &ar_path, contents.as_bytes())
                     .chain_err(|| format!("could not archive source file `{}`", rel_str))?;
             }
         }
@@ -704,7 +696,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     ops::compile_with_exec(
         &ws,
         &ops::CompileOptions {
-            build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
+            build_config: BuildConfig::new(config, opts.jobs, &opts.targets, CompileMode::Build)?,
             features: opts.features.clone(),
             no_default_features: opts.no_default_features,
             all_features: opts.all_features,

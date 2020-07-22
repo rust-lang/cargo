@@ -1,6 +1,7 @@
-use crate::core::{InternedString, PackageId};
+use crate::core::PackageId;
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use std::fs::File;
@@ -85,7 +86,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // crate files here never change in that we're not the one writing them,
         // so it's not our responsibility to synchronize access to them.
         let path = self.root.join(&crate_file).into_path_unlocked();
-        let mut crate_file = File::open(&path)?;
+        let mut crate_file = paths::open(&path)?;
 
         // If we've already got an unpacked version of this crate, then skip the
         // checksum below as it is in theory already verified.

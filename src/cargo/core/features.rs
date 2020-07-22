@@ -214,6 +214,9 @@ features! {
 
         // Opt-in new-resolver behavior.
         [unstable] resolver: bool,
+
+        // Allow to specify whether binaries should be stripped.
+        [unstable] strip: bool,
     }
 }
 
@@ -330,7 +333,8 @@ impl Features {
 ///    and then test for your flag or your value and act accordingly.
 ///
 /// If you have any trouble with this, please let us know!
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize)]
+#[serde(default, rename_all = "kebab-case")]
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
@@ -344,7 +348,9 @@ pub struct CliUnstable {
     pub mtime_on_use: bool,
     pub named_profiles: bool,
     pub binary_dep_depinfo: bool,
+    #[serde(deserialize_with = "deserialize_build_std")]
     pub build_std: Option<Vec<String>>,
+    pub build_std_features: Option<Vec<String>>,
     pub timings: Option<Vec<String>>,
     pub doctest_xcompile: bool,
     pub panic_abort_tests: bool,
@@ -352,6 +358,23 @@ pub struct CliUnstable {
     pub features: Option<Vec<String>>,
     pub crate_versions: bool,
     pub separate_nightlies: bool,
+    pub multitarget: bool,
+    pub rustdoc_map: bool,
+    pub terminal_width: Option<Option<usize>>,
+}
+
+fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let crates = match <Option<Vec<String>>>::deserialize(deserializer)? {
+        Some(list) => list,
+        None => return Ok(None),
+    };
+    let v = crates.join(",");
+    Ok(Some(
+        crate::core::compiler::standard_lib::parse_unstable_flag(Some(&v)),
+    ))
 }
 
 impl CliUnstable {
@@ -406,6 +429,16 @@ impl CliUnstable {
             Ok(true)
         };
 
+        fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
+            Ok(match value {
+                Some(value) => match value.parse::<usize>() {
+                    Ok(value) => Some(value),
+                    Err(e) => bail!("expected a number, found: {}", e),
+                },
+                None => None,
+            })
+        }
+
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
@@ -423,6 +456,7 @@ impl CliUnstable {
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
+            "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "timings" => self.timings = Some(parse_timings(v)),
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
@@ -430,6 +464,9 @@ impl CliUnstable {
             "features" => self.features = Some(parse_features(v)),
             "crate-versions" => self.crate_versions = parse_empty(k, v)?,
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
+            "multitarget" => self.multitarget = parse_empty(k, v)?,
+            "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
+            "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

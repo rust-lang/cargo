@@ -22,8 +22,9 @@ use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
-use crate::core::{InternedString, Package, PackageId, PackageSet, Target, Workspace};
+use crate::core::{Package, PackageId, PackageSet, Target, Workspace};
 use crate::ops::resolve_all_features;
+use crate::util::interning::InternedString;
 use crate::util::Config;
 use crate::CargoResult;
 use log::trace;
@@ -55,7 +56,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
     roots: &[Unit],
-    std_roots: &[Unit],
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
     target_data: &'a RustcTargetData,
     profiles: &'a Profiles,
@@ -108,27 +109,30 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 /// Compute all the dependencies for the standard library.
 fn calc_deps_of_std(
     mut state: &mut State<'_, '_>,
-    std_roots: &[Unit],
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
 ) -> CargoResult<Option<UnitGraph>> {
     if std_roots.is_empty() {
         return Ok(None);
     }
     // Compute dependencies for the standard library.
     state.is_std = true;
-    deps_of_roots(std_roots, &mut state)?;
+    for roots in std_roots.values() {
+        deps_of_roots(roots, &mut state)?;
+    }
     state.is_std = false;
-    Ok(Some(std::mem::replace(
-        &mut state.unit_dependencies,
-        HashMap::new(),
-    )))
+    Ok(Some(std::mem::take(&mut state.unit_dependencies)))
 }
 
 /// Add the standard library units to the `unit_dependencies`.
-fn attach_std_deps(state: &mut State<'_, '_>, std_roots: &[Unit], std_unit_deps: UnitGraph) {
+fn attach_std_deps(
+    state: &mut State<'_, '_>,
+    std_roots: &HashMap<CompileKind, Vec<Unit>>,
+    std_unit_deps: UnitGraph,
+) {
     // Attach the standard library as a dependency of every target unit.
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots.iter().map(|unit| UnitDep {
+            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
                 unit: unit.clone(),
                 unit_for: UnitFor::new_normal(),
                 extern_crate_name: unit.pkg.name(),
@@ -470,7 +474,7 @@ fn maybe_lib(
     unit.pkg
         .targets()
         .iter()
-        .find(|t| t.linkable())
+        .find(|t| t.is_linkable())
         .map(|t| {
             let mode = check_or_build_mode(unit.mode, t);
             new_unit_dep(
@@ -574,10 +578,14 @@ fn new_unit_dep(
     kind: CompileKind,
     mode: CompileMode,
 ) -> CargoResult<UnitDep> {
-    let profile =
-        state
-            .profiles
-            .get_profile(pkg.package_id(), state.ws.is_member(pkg), unit_for, mode);
+    let is_local = pkg.package_id().source_id().is_path() && !state.is_std;
+    let profile = state.profiles.get_profile(
+        pkg.package_id(),
+        state.ws.is_member(pkg),
+        is_local,
+        unit_for,
+        mode,
+    );
     new_unit_dep_with_profile(state, parent, pkg, target, unit_for, kind, mode, profile)
 }
 
@@ -671,7 +679,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
                 // Only deps with `links`.
                 .filter(|other| {
                     other.unit.pkg != unit.pkg
-                        && other.unit.target.linkable()
+                        && other.unit.target.is_linkable()
                         && other.unit.pkg.manifest().links().is_some()
                 })
                 // Get the RunCustomBuild for other lib.

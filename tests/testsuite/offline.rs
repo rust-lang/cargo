@@ -526,8 +526,8 @@ fn offline_resolve_optional_fail() {
         .with_status(101)
         .with_stderr("\
 [ERROR] failed to select a version for the requirement `dep = \"^2.0\"`
-  candidate versions found which didn't match: 1.0.0
-  location searched: `[..]` index (which is replacing registry `https://github.com/rust-lang/crates.io-index`)
+candidate versions found which didn't match: 1.0.0
+location searched: `[..]` index (which is replacing registry `https://github.com/rust-lang/crates.io-index`)
 required by package `foo v0.1.0 ([..]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
 As a reminder, you're using offline mode (--offline) which can sometimes cause \

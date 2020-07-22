@@ -10,11 +10,12 @@ use serde::ser;
 use serde::Serialize;
 use url::Url;
 
-use crate::core::interning::InternedString;
+use crate::core::compiler::CrateType;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
+use crate::util::interning::InternedString;
 use crate::util::toml::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 
@@ -96,73 +97,13 @@ pub struct ManifestMetadata {
     pub links: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum LibKind {
-    Lib,
-    Rlib,
-    Dylib,
-    ProcMacro,
-    Other(String),
-}
-
-impl LibKind {
-    /// Returns the argument suitable for `--crate-type` to pass to rustc.
-    pub fn crate_type(&self) -> &str {
-        match *self {
-            LibKind::Lib => "lib",
-            LibKind::Rlib => "rlib",
-            LibKind::Dylib => "dylib",
-            LibKind::ProcMacro => "proc-macro",
-            LibKind::Other(ref s) => s,
-        }
-    }
-
-    pub fn linkable(&self) -> bool {
-        match *self {
-            LibKind::Lib | LibKind::Rlib | LibKind::Dylib | LibKind::ProcMacro => true,
-            LibKind::Other(..) => false,
-        }
-    }
-
-    pub fn requires_upstream_objects(&self) -> bool {
-        match *self {
-            // "lib" == "rlib" and is a compilation that doesn't actually
-            // require upstream object files to exist, only upstream metadata
-            // files. As a result, it doesn't require upstream artifacts
-            LibKind::Lib | LibKind::Rlib => false,
-
-            // Everything else, however, is some form of "linkable output" or
-            // something that requires upstream object files.
-            _ => true,
-        }
-    }
-}
-
-impl fmt::Debug for LibKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.crate_type().fmt(f)
-    }
-}
-
-impl<'a> From<&'a String> for LibKind {
-    fn from(string: &'a String) -> Self {
-        match string.as_ref() {
-            "lib" => LibKind::Lib,
-            "rlib" => LibKind::Rlib,
-            "dylib" => LibKind::Dylib,
-            "proc-macro" => LibKind::ProcMacro,
-            s => LibKind::Other(s.to_string()),
-        }
-    }
-}
-
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TargetKind {
-    Lib(Vec<LibKind>),
+    Lib(Vec<CrateType>),
     Bin,
     Test,
     Bench,
-    ExampleLib(Vec<LibKind>),
+    ExampleLib(Vec<CrateType>),
     ExampleBin,
     CustomBuild,
 }
@@ -173,8 +114,8 @@ impl ser::Serialize for TargetKind {
         S: ser::Serializer,
     {
         use self::TargetKind::*;
-        match *self {
-            Lib(ref kinds) => s.collect_seq(kinds.iter().map(LibKind::crate_type)),
+        match self {
+            Lib(kinds) => s.collect_seq(kinds.iter().map(|t| t.to_string())),
             Bin => ["bin"].serialize(s),
             ExampleBin | ExampleLib(_) => ["example"].serialize(s),
             Test => ["test"].serialize(s),
@@ -221,6 +162,18 @@ impl TargetKind {
                 kinds.iter().any(|k| k.requires_upstream_objects())
             }
             _ => true,
+        }
+    }
+
+    /// Returns the arguments suitable for `--crate-type` to pass to rustc.
+    pub fn rustc_crate_types(&self) -> Vec<CrateType> {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => kinds.clone(),
+            TargetKind::CustomBuild
+            | TargetKind::Bench
+            | TargetKind::Test
+            | TargetKind::ExampleBin
+            | TargetKind::Bin => vec![CrateType::Bin],
         }
     }
 }
@@ -303,7 +256,7 @@ struct SerializedTarget<'a> {
     kind: &'a TargetKind,
     /// Corresponds to `--crate-type` compiler attribute.
     /// See https://doc.rust-lang.org/reference/linkage.html
-    crate_types: Vec<&'a str>,
+    crate_types: Vec<CrateType>,
     name: &'a str,
     src_path: Option<&'a PathBuf>,
     edition: &'a str,
@@ -478,6 +431,10 @@ impl Manifest {
     pub fn targets(&self) -> &[Target] {
         &self.targets
     }
+    // It is used by cargo-c, please do not remove it
+    pub fn targets_mut(&mut self) -> &mut [Target] {
+        &mut self.targets
+    }
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
@@ -547,7 +504,7 @@ impl Manifest {
     pub fn print_teapot(&self, config: &Config) {
         if let Some(teapot) = self.im_a_teapot {
             if config.cli_unstable().print_im_a_teapot {
-                println!("im-a-teapot = {}", teapot);
+                crate::drop_println!(config, "im-a-teapot = {}", teapot);
             }
         }
     }
@@ -659,7 +616,7 @@ impl Target {
 
     pub fn lib_target(
         name: &str,
-        crate_targets: Vec<LibKind>,
+        crate_targets: Vec<CrateType>,
         src_path: PathBuf,
         edition: Edition,
     ) -> Target {
@@ -669,7 +626,7 @@ impl Target {
             .set_name(name)
             .set_doctest(true)
             .set_doc(true);
-        return target;
+        target
     }
 
     pub fn bin_target(
@@ -684,7 +641,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_doc(true);
-        return target;
+        target
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
@@ -696,7 +653,7 @@ impl Target {
             .set_for_host(true)
             .set_benched(false)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn metabuild_target(name: &str) -> Target {
@@ -707,20 +664,17 @@ impl Target {
             .set_for_host(true)
             .set_benched(false)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn example_target(
         name: &str,
-        crate_targets: Vec<LibKind>,
+        crate_targets: Vec<CrateType>,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
         edition: Edition,
     ) -> Target {
-        let kind = if crate_targets.is_empty()
-            || crate_targets
-                .iter()
-                .all(|t| *t == LibKind::Other("bin".into()))
+        let kind = if crate_targets.is_empty() || crate_targets.iter().all(|t| *t == CrateType::Bin)
         {
             TargetKind::ExampleBin
         } else {
@@ -733,7 +687,7 @@ impl Target {
             .set_required_features(required_features)
             .set_tested(false)
             .set_benched(false);
-        return target;
+        target
     }
 
     pub fn test_target(
@@ -748,7 +702,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_benched(false);
-        return target;
+        target
     }
 
     pub fn bench_target(
@@ -763,7 +717,7 @@ impl Target {
             .set_name(name)
             .set_required_features(required_features)
             .set_tested(false);
-        return target;
+        target
     }
 
     pub fn name(&self) -> &str {
@@ -812,19 +766,11 @@ impl Target {
 
     pub fn doctestable(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(ref kinds) => kinds
-                .iter()
-                .any(|k| *k == LibKind::Rlib || *k == LibKind::Lib || *k == LibKind::ProcMacro),
+            TargetKind::Lib(ref kinds) => kinds.iter().any(|k| {
+                *k == CrateType::Rlib || *k == CrateType::Lib || *k == CrateType::ProcMacro
+            }),
             _ => false,
         }
-    }
-
-    /// Whether or not this target allows dashes in its filename.
-    ///
-    /// Rustc will always emit filenames with underscores, and Cargo will
-    /// rename them back to dashes if this is true.
-    pub fn allows_dashes(&self) -> bool {
-        self.is_bin() || self.is_example() || self.is_custom_build()
     }
 
     pub fn is_lib(&self) -> bool {
@@ -836,29 +782,25 @@ impl Target {
 
     pub fn is_dylib(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(libs) => libs.iter().any(|l| *l == LibKind::Dylib),
+            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Dylib),
             _ => false,
         }
     }
 
     pub fn is_cdylib(&self) -> bool {
-        let libs = match self.kind() {
-            TargetKind::Lib(libs) => libs,
-            _ => return false,
-        };
-        libs.iter().any(|l| match *l {
-            LibKind::Other(ref s) => s == "cdylib",
+        match self.kind() {
+            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Cdylib),
             _ => false,
-        })
+        }
     }
 
     /// Returns whether this target produces an artifact which can be linked
     /// into a Rust crate.
     ///
     /// This only returns true for certain kinds of libraries.
-    pub fn linkable(&self) -> bool {
+    pub fn is_linkable(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(kinds) => kinds.iter().any(|k| k.linkable()),
+            TargetKind::Lib(kinds) => kinds.iter().any(|k| k.is_linkable()),
             _ => false,
         }
     }
@@ -900,28 +842,8 @@ impl Target {
     }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
-    pub fn rustc_crate_types(&self) -> Vec<&str> {
-        match self.kind() {
-            TargetKind::Lib(ref kinds) | TargetKind::ExampleLib(ref kinds) => {
-                kinds.iter().map(LibKind::crate_type).collect()
-            }
-            TargetKind::CustomBuild
-            | TargetKind::Bench
-            | TargetKind::Test
-            | TargetKind::ExampleBin
-            | TargetKind::Bin => vec!["bin"],
-        }
-    }
-
-    pub fn can_lto(&self) -> bool {
-        match self.kind() {
-            TargetKind::Lib(ref v) => {
-                !v.contains(&LibKind::Rlib)
-                    && !v.contains(&LibKind::Dylib)
-                    && !v.contains(&LibKind::Lib)
-            }
-            _ => true,
-        }
+    pub fn rustc_crate_types(&self) -> Vec<CrateType> {
+        self.kind().rustc_crate_types()
     }
 
     pub fn set_tested(&mut self, tested: bool) -> &mut Target {

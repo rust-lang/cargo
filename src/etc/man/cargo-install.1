@@ -2,12 +2,12 @@
 .\"     Title: cargo-install
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-02-06
+.\"      Date: 2020-07-01
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INSTALL" "1" "2020-02-06" "\ \&" "\ \&"
+.TH "CARGO\-INSTALL" "1" "2020-07-01" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -293,6 +293,11 @@ Name of the registry to use. Registry names are defined in \c
 If not specified, the default registry is used, which is defined by the
 \fBregistry.default\fP config key which defaults to \fBcrates\-io\fP.
 .RE
+.sp
+\fB\-\-index\fP \fIINDEX\fP
+.RS 4
+The URL of the registry index to use.
+.RE
 .SS "Feature Selection"
 .sp
 The feature flags allow you to control the enabled features for the "current"
@@ -338,6 +343,16 @@ Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
 .URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
 documentation for more details.
+.RE
+.sp
+\fB\-\-target\-dir\fP \fIDIRECTORY\fP
+.RS 4
+Directory for all generated artifacts and intermediate files. May also be
+specified with the \fBCARGO_TARGET_DIR\fP environment variable, or the
+\fBbuild.target\-dir\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+Defaults
+to \fBtarget\fP in the root of the workspace.
 .RE
 .sp
 \fB\-\-debug\fP
@@ -441,6 +456,16 @@ May also be specified with the \fBterm.color\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
 .SS "Common Options"
+.sp
+\fB+TOOLCHAIN\fP
+.RS 4
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
+begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fP or \fB+nightly\fP).
+See the \c
+.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+for more information about how toolchain overrides work.
+.RE
 .sp
 \fB\-h\fP, \fB\-\-help\fP
 .RS 4

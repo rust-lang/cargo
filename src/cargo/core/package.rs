@@ -20,7 +20,6 @@ use serde::Serialize;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::interning::InternedString;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
@@ -28,6 +27,7 @@ use crate::core::{FeatureMap, SourceMap, Summary, Workspace};
 use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
+use crate::util::interning::InternedString;
 use crate::util::network::Retry;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
@@ -472,7 +472,7 @@ impl<'cfg> PackageSet<'cfg> {
         resolve: &Resolve,
         root_ids: &[PackageId],
         has_dev_units: HasDevUnits,
-        requested_kind: CompileKind,
+        requested_kinds: &[CompileKind],
         target_data: &RustcTargetData,
     ) -> CargoResult<()> {
         fn collect_used_deps(
@@ -480,7 +480,7 @@ impl<'cfg> PackageSet<'cfg> {
             resolve: &Resolve,
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
-            requested_kind: CompileKind,
+            requested_kinds: &[CompileKind],
             target_data: &RustcTargetData,
         ) -> CargoResult<()> {
             if !used.insert(pkg_id) {
@@ -495,9 +495,11 @@ impl<'cfg> PackageSet<'cfg> {
                     // dependencies are used both for target and host. To tighten this
                     // up, this function would need to track "for_host" similar to how
                     // unit dependencies handles it.
-                    if !target_data.dep_platform_activated(dep, requested_kind)
-                        && !target_data.dep_platform_activated(dep, CompileKind::Host)
-                    {
+                    let activated = requested_kinds
+                        .iter()
+                        .chain(Some(&CompileKind::Host))
+                        .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                    if !activated {
                         return false;
                     }
                     true
@@ -509,7 +511,7 @@ impl<'cfg> PackageSet<'cfg> {
                     resolve,
                     dep_id,
                     has_dev_units,
-                    requested_kind,
+                    requested_kinds,
                     target_data,
                 )?;
             }
@@ -527,7 +529,7 @@ impl<'cfg> PackageSet<'cfg> {
                 resolve,
                 *id,
                 has_dev_units,
-                requested_kind,
+                requested_kinds,
                 target_data,
             )?;
         }
@@ -733,7 +735,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 .pending
                 .remove(&token)
                 .expect("got a token for a non-in-progress transfer");
-            let data = mem::replace(&mut *dl.data.borrow_mut(), Vec::new());
+            let data = mem::take(&mut *dl.data.borrow_mut());
             let mut handle = self.set.multi.remove(handle)?;
             self.pending_ids.remove(&dl.id);
 

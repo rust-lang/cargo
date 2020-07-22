@@ -214,8 +214,8 @@ may be found in [the chapter on build scripts](build-scripts.md).
         ["SOME_KEY", "some value"],
         ["ANOTHER_KEY", "another value"]
     ],
-    /* A path which is used as a value of `OUT_DIR` environmental variable
-       when compiling current package.
+    /* An absolute path which is used as a value of `OUT_DIR` environmental
+       variable when compiling current package.
     */
     "out_dir": "/some/path/in/target/dir"
 }

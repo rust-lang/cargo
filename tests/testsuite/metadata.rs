@@ -67,7 +67,8 @@ fn cargo_metadata_simple() {
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -159,7 +160,8 @@ crate-type = ["lib", "staticlib"]
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -248,7 +250,8 @@ optional_feat = []
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -287,6 +290,54 @@ fn cargo_metadata_with_deps_and_version() {
             r#"
     {
         "packages": [
+            {
+                "authors": [],
+                "categories": [],
+                "dependencies": [
+                    {
+                        "features": [],
+                        "kind": null,
+                        "name": "baz",
+                        "optional": false,
+                        "registry": null,
+                        "rename": null,
+                        "req": "^0.0.1",
+                        "source": "registry+https://github.com/rust-lang/crates.io-index",
+                        "target": null,
+                        "uses_default_features": true
+                    }
+                ],
+                "description": null,
+                "edition": "2015",
+                "features": {},
+                "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                "keywords": [],
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
+                "publish": null,
+                "name": "bar",
+                "readme": null,
+                "repository": null,
+                "source": "registry+https://github.com/rust-lang/crates.io-index",
+                "targets": [
+                    {
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "doctest": true,
+                        "edition": "2015",
+                        "kind": [
+                            "lib"
+                        ],
+                        "name": "bar",
+                        "src_path": "[..]src/lib.rs"
+                    }
+                ],
+                "version": "0.0.1"
+            },
             {
                 "authors": [],
                 "categories": [],
@@ -416,69 +467,34 @@ fn cargo_metadata_with_deps_and_version() {
                     }
                 ],
                 "version": "0.0.1"
-            },
-            {
-                "authors": [],
-                "categories": [],
-                "dependencies": [
-                    {
-                        "features": [],
-                        "kind": null,
-                        "name": "baz",
-                        "optional": false,
-                        "registry": null,
-                        "rename": null,
-                        "req": "^0.0.1",
-                        "source": "registry+https://github.com/rust-lang/crates.io-index",
-                        "target": null,
-                        "uses_default_features": true
-                    }
-                ],
-                "description": null,
-                "edition": "2015",
-                "features": {},
-                "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-                "keywords": [],
-                "license": null,
-                "license_file": null,
-                "links": null,
-                "manifest_path": "[..]Cargo.toml",
-                "metadata": null,
-                "publish": null,
-                "name": "bar",
-                "readme": null,
-                "repository": null,
-                "source": "registry+https://github.com/rust-lang/crates.io-index",
-                "targets": [
-                    {
-                        "crate_types": [
-                            "lib"
-                        ],
-                        "doctest": true,
-                        "edition": "2015",
-                        "kind": [
-                            "lib"
-                        ],
-                        "name": "bar",
-                        "src_path": "[..]src/lib.rs"
-                    }
-                ],
-                "version": "0.0.1"
             }
         ],
         "resolve": {
             "nodes": [
                 {
-                    "dependencies": [],
-                    "deps": [],
+                    "dependencies": [
+                        "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    ],
+                    "deps": [
+                        {
+                            "dep_kinds": [
+                              {
+                                "kind": null,
+                                "target": null
+                              }
+                            ],
+                            "name": "baz",
+                            "pkg": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                        }
+                    ],
                     "features": [],
-                    "id": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                 },
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                 },
                 {
                     "dependencies": [
@@ -511,23 +527,10 @@ fn cargo_metadata_with_deps_and_version() {
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 },
                 {
-                    "dependencies": [
-                        "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
-                    ],
-                    "deps": [
-                        {
-                            "dep_kinds": [
-                              {
-                                "kind": null,
-                                "target": null
-                              }
-                            ],
-                            "name": "baz",
-                            "pkg": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
-                        }
-                    ],
+                    "dependencies": [],
+                    "deps": [],
                     "features": [],
-                    "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
                 }
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
@@ -537,7 +540,8 @@ fn cargo_metadata_with_deps_and_version() {
         "workspace_members": [
             "foo 0.5.0 (path+file:[..]foo)"
         ],
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -622,7 +626,8 @@ name = "ex"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -708,7 +713,8 @@ crate-type = ["rlib", "dylib"]
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -722,6 +728,14 @@ fn workspace_metadata() {
             r#"
             [workspace]
             members = ["bar", "baz"]
+
+            [workspace.metadata]
+            tool1 = "hello"
+            tool2 = [1, 2, 3]
+
+            [workspace.metadata.foo]
+            bar = 3
+
         "#,
         )
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -802,27 +816,34 @@ fn workspace_metadata() {
                 "publish": null
             }
         ],
-        "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
+        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": {
             "nodes": [
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "baz 0.5.0 (path+file:[..]baz)"
+                    "id": "bar 0.5.0 (path+file:[..]bar)"
                 },
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "bar 0.5.0 (path+file:[..]bar)"
+                    "id": "baz 0.5.0 (path+file:[..]baz)"
                 }
             ],
             "root": null
         },
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": {
+            "tool1": "hello",
+            "tool2": [1, 2, 3],
+            "foo": {
+              "bar": 3
+            }
+        }
     }"#,
         )
         .run();
@@ -916,11 +937,12 @@ fn workspace_metadata_no_deps() {
                 "publish": null
             }
         ],
-        "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
+        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -979,7 +1001,8 @@ const MANIFEST_OUTPUT: &str = r#"
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
-    "workspace_root": "[..]/foo"
+    "workspace_root": "[..]/foo",
+    "metadata": null
 }"#;
 
 #[cargo_test]
@@ -1115,6 +1138,7 @@ fn package_metadata() {
             baz = "quux"
         "#,
         )
+        .file("README.md", "")
         .file("src/lib.rs", "")
         .build();
 
@@ -1163,7 +1187,8 @@ fn package_metadata() {
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -1186,6 +1211,7 @@ fn package_publish() {
             publish = ["my-registry"]
         "#,
         )
+        .file("README.md", "")
         .file("src/lib.rs", "")
         .build();
 
@@ -1230,7 +1256,8 @@ fn package_publish() {
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..]/foo"
+        "workspace_root": "[..]/foo",
+        "metadata": null
     }"#,
         )
         .run();
@@ -1315,7 +1342,8 @@ fn cargo_metadata_path_to_cargo_toml_project() {
             "workspace_members": [
                 "bar 0.5.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
 "#,
         )
@@ -1396,7 +1424,8 @@ fn package_edition_2018() {
             "workspace_members": [
                 "foo 0.1.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
         "#,
         )
@@ -1493,7 +1522,8 @@ fn target_edition_2018() {
             "workspace_members": [
                 "foo 0.1.0 (path+file:[..])"
             ],
-            "workspace_root": "[..]"
+            "workspace_root": "[..]",
+            "metadata": null
         }
         "#,
         )
@@ -1527,66 +1557,6 @@ fn rename_dependency() {
             r#"
 {
     "packages": [
-        {
-            "authors": [],
-            "categories": [],
-            "dependencies": [
-                {
-                    "features": [],
-                    "kind": null,
-                    "name": "bar",
-                    "optional": false,
-                    "rename": null,
-                    "registry": null,
-                    "req": "^0.1.0",
-                    "source": "registry+https://github.com/rust-lang/crates.io-index",
-                    "target": null,
-                    "uses_default_features": true
-                },
-                {
-                    "features": [],
-                    "kind": null,
-                    "name": "bar",
-                    "optional": false,
-                    "rename": "baz",
-                    "registry": null,
-                    "req": "^0.2.0",
-                    "source": "registry+https://github.com/rust-lang/crates.io-index",
-                    "target": null,
-                    "uses_default_features": true
-                }
-            ],
-            "description": null,
-            "edition": "2015",
-            "features": {},
-            "id": "foo 0.0.1[..]",
-            "keywords": [],
-            "license": null,
-            "license_file": null,
-            "links": null,
-            "manifest_path": "[..]",
-            "metadata": null,
-            "publish": null,
-            "name": "foo",
-            "readme": null,
-            "repository": null,
-            "source": null,
-            "targets": [
-                {
-                    "crate_types": [
-                        "lib"
-                    ],
-                    "doctest": true,
-                    "edition": "2015",
-                    "kind": [
-                        "lib"
-                    ],
-                    "name": "foo",
-                    "src_path": "[..]"
-                }
-            ],
-            "version": "0.0.1"
-        },
         {
             "authors": [],
             "categories": [],
@@ -1656,6 +1626,66 @@ fn rename_dependency() {
                 }
             ],
             "version": "0.2.0"
+        },
+        {
+            "authors": [],
+            "categories": [],
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "bar",
+                    "optional": false,
+                    "rename": null,
+                    "registry": null,
+                    "req": "^0.1.0",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "bar",
+                    "optional": false,
+                    "rename": "baz",
+                    "registry": null,
+                    "req": "^0.2.0",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "description": null,
+            "edition": "2015",
+            "features": {},
+            "id": "foo 0.0.1[..]",
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "links": null,
+            "manifest_path": "[..]",
+            "metadata": null,
+            "publish": null,
+            "name": "foo",
+            "readme": null,
+            "repository": null,
+            "source": null,
+            "targets": [
+                {
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "doctest": true,
+                    "edition": "2015",
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]"
+                }
+            ],
+            "version": "0.0.1"
         }
     ],
     "resolve": {
@@ -1664,13 +1694,13 @@ fn rename_dependency() {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
             },
             {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
             },
             {
                 "dependencies": [
@@ -1710,7 +1740,8 @@ fn rename_dependency() {
     "workspace_members": [
         "foo 0.0.1[..]"
     ],
-    "workspace_root": "[..]"
+    "workspace_root": "[..]",
+    "metadata": null
 }"#,
         )
         .run();
@@ -1801,7 +1832,8 @@ fn metadata_links() {
   "workspace_members": [
     "foo 0.5.0 [..]"
   ],
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#,
         )
@@ -1896,7 +1928,8 @@ fn deps_with_bin_only() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#,
         )
@@ -1976,7 +2009,7 @@ fn filter_platform() {
       "repository": null,
       "edition": "2015",
       "links": null
-    },
+    }
     "#;
 
     let cfg_dep = r#"
@@ -2014,7 +2047,7 @@ fn filter_platform() {
       "repository": null,
       "edition": "2015",
       "links": null
-    },
+    }
     "#;
 
     let host_dep = r#"
@@ -2052,7 +2085,7 @@ fn filter_platform() {
       "repository": null,
       "edition": "2015",
       "links": null
-    },
+    }
     "#;
 
     let normal_dep = r#"
@@ -2090,7 +2123,7 @@ fn filter_platform() {
       "repository": null,
       "edition": "2015",
       "links": null
-    },
+    }
     "#;
 
     let foo = r#"
@@ -2188,11 +2221,11 @@ fn filter_platform() {
             &r#"
 {
   "packages": [
-    $ALT_DEP
-    $CFG_DEP
-    $HOST_DEP
+    $ALT_DEP,
+    $CFG_DEP,
+    $FOO,
+    $HOST_DEP,
     $NORMAL_DEP
-    $FOO
   ],
   "workspace_members": [
     "foo 0.1.0 (path+file:[..]foo)"
@@ -2280,7 +2313,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
@@ -2300,9 +2334,9 @@ fn filter_platform() {
             &r#"
 {
   "packages": [
-    $ALT_DEP
+    $ALT_DEP,
+    $FOO,
     $NORMAL_DEP
-    $FOO
   ],
   "workspace_members": "{...}",
   "resolve": {
@@ -2354,7 +2388,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#
             .replace("$ALT_TRIPLE", alt_target)
@@ -2371,9 +2406,9 @@ fn filter_platform() {
             &r#"
 {
   "packages": [
-    $HOST_DEP
+    $FOO,
+    $HOST_DEP,
     $NORMAL_DEP
-    $FOO
   ],
   "workspace_members": "{...}",
   "resolve": {
@@ -2425,7 +2460,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]foo/target",
   "version": 1,
-  "workspace_root": "[..]foo"
+  "workspace_root": "[..]foo",
+  "metadata": null
 }
 "#
             .replace("$HOST_TRIPLE", &rustc_host())
@@ -2443,10 +2479,10 @@ fn filter_platform() {
             &r#"
 {
   "packages": [
-    $CFG_DEP
-    $HOST_DEP
+    $CFG_DEP,
+    $FOO,
+    $HOST_DEP,
     $NORMAL_DEP
-    $FOO
   ],
   "workspace_members": "{...}",
   "resolve": {
@@ -2515,7 +2551,8 @@ fn filter_platform() {
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
-  "workspace_root": "[..]/foo"
+  "workspace_root": "[..]/foo",
+  "metadata": null
 }
 "#
             .replace("$HOST_TRIPLE", &rustc_host())
@@ -2565,6 +2602,7 @@ fn dep_kinds() {
   "target_directory": "{...}",
   "version": 1,
   "workspace_root": "{...}",
+  "metadata": null,
   "resolve": {
     "nodes": [
       {
@@ -2679,14 +2717,9 @@ fn dep_kinds_workspace() {
   "target_directory": "[..]/foo/target",
   "version": 1,
   "workspace_root": "[..]/foo",
+  "metadata": null,
   "resolve": {
     "nodes": [
-      {
-        "id": "dep 0.5.0 (path+file://[..]/foo/dep)",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
       {
         "id": "bar 0.1.0 (path+file://[..]/foo/bar)",
         "dependencies": [
@@ -2704,6 +2737,12 @@ fn dep_kinds_workspace() {
             ]
           }
         ],
+        "features": []
+      },
+      {
+        "id": "dep 0.5.0 (path+file://[..]/foo/dep)",
+        "dependencies": [],
+        "deps": [],
         "features": []
       },
       {

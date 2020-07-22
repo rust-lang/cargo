@@ -127,9 +127,17 @@ looks like:
 
 The keys are:
 - `dl`: This is the URL for downloading crates listed in the index. The value
-  may have the markers `{crate}` and `{version}` which are replaced with the
-  name and version of the crate to download. If the markers are not present,
-  then the value `/{crate}/{version}/download` is appended to the end.
+  may have the following markers which will be replaced with their
+  corresponding value:
+
+  - `{crate}`: The name of crate.
+  - `{version}`: The crate version.
+  - `{prefix}`: A directory prefix computed from the crate name. For example,
+    a crate named `cargo` has a prefix of `ca/rg`. See below for details.
+  - `{lowerprefix}`: Lowercase variant of `{prefix}`.
+
+  If none of the markers are present, then the value
+  `/{crate}/{version}/download` is appended to the end.
 - `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
   API is described below.
@@ -158,6 +166,21 @@ directories:
 > Note: Although the index filenames are in lowercase, the fields that contain
 > package names in `Cargo.toml` and the index JSON data are case-sensitive and
 > may contain upper and lower case characters.
+
+The directory name above is calculated based on the package name converted to
+lowercase; it is represented by the marker `{lowerprefix}`.  When the original
+package name is used without case conversion, the resulting directory name is
+represented by the marker `{prefix}`.  For example, the package `MyCrate` would
+have a `{prefix}` of `My/Cr` and a `{lowerprefix}` of `my/cr`.  In general,
+using `{prefix}` is recommended over `{lowerprefix}`, but there are pros and
+cons to each choice.  Using `{prefix}` on case-insensitive filesystems results
+in (harmless-but-inelegant) directory aliasing.  For example, `crate` and
+`CrateTwo` have `{prefix}` values of `cr/at` and `Cr/at`; these are distinct on
+Unix machines but alias to the same directory on Windows.  Using directories
+with normalized case avoids aliasing, but on case-sensitive filesystems it's
+harder to suport older versions of Cargo that lack `{prefix}`/`{lowerprefix}`.
+For example, nginx rewrite rules can easily construct `{prefix}` but can't
+perform case-conversion to construct `{lowerprefix}`.
 
 Registries should consider enforcing limitations on package names added to
 their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`

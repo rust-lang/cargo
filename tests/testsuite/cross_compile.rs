@@ -1067,3 +1067,52 @@ fn cross_test_dylib() {
         .with_stdout_contains_n("test foo ... ok", 2)
         .run();
 }
+
+#[cargo_test]
+fn doctest_xcompile_linker() {
+    if cross_compile::disabled() {
+        return;
+    }
+    if !is_nightly() {
+        // -Zdoctest-xcompile is unstable
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [target.{}]
+                    linker = "my-linker-tool"
+                "#,
+                target
+            ),
+        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file(
+            "src/lib.rs",
+            r#"
+                /// ```
+                /// assert_eq!(1, 1);
+                /// ```
+                pub fn foo() {}
+            "#,
+        )
+        .build();
+
+    // Fails because `my-linker-tool` doesn't actually exist.
+    p.cargo("test --doc -v -Zdoctest-xcompile --target")
+        .arg(&target)
+        .with_status(101)
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(&format!(
+            "\
+[RUNNING] `rustdoc --crate-type lib --test [..]\
+    --target {target} [..] -C linker=my-linker-tool[..]
+",
+            target = target,
+        ))
+        .run();
+}

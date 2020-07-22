@@ -1,12 +1,13 @@
-use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
+use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
-use crate::core::{Dependency, InternedString, Package, PackageId, Workspace};
+use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
+use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use cargo_platform::Platform;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 const VERSION: u32 = 1;
@@ -17,7 +18,7 @@ pub struct OutputMetadataOptions {
     pub all_features: bool,
     pub no_deps: bool,
     pub version: u32,
-    pub filter_platform: Option<String>,
+    pub filter_platforms: Vec<String>,
 }
 
 /// Loads the manifest, resolves the dependencies of the package to the concrete
@@ -46,6 +47,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
+        metadata: ws.custom_metadata().cloned(),
     })
 }
 
@@ -60,6 +62,7 @@ pub struct ExportInfo {
     target_directory: PathBuf,
     version: u32,
     workspace_root: PathBuf,
+    metadata: Option<toml::Value>,
 }
 
 #[derive(Serialize)]
@@ -105,11 +108,9 @@ fn build_resolve_graph(
 ) -> CargoResult<(Vec<Package>, MetadataResolve)> {
     // TODO: Without --filter-platform, features are being resolved for `host` only.
     // How should this work?
-    let requested_kind = match &metadata_opts.filter_platform {
-        Some(t) => CompileKind::Target(CompileTarget::new(t)?),
-        None => CompileKind::Host,
-    };
-    let target_data = RustcTargetData::new(ws, requested_kind)?;
+    let requested_kinds =
+        CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms)?;
+    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;
     let resolve_opts = ResolveOpts::new(
@@ -121,15 +122,16 @@ fn build_resolve_graph(
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &target_data,
-        requested_kind,
+        &requested_kinds,
         &resolve_opts,
         &specs,
         HasDevUnits::Yes,
+        crate::core::resolver::features::ForceAllTargets::No,
     )?;
     // Download all Packages. This is needed to serialize the information
     // for every package. In theory this could honor target filtering,
     // but that would be somewhat complex.
-    let mut package_map: HashMap<PackageId, Package> = ws_resolve
+    let package_map: BTreeMap<PackageId, Package> = ws_resolve
         .pkg_set
         .get_many(ws_resolve.pkg_set.package_ids())?
         .into_iter()
@@ -139,7 +141,7 @@ fn build_resolve_graph(
 
     // Start from the workspace roots, and recurse through filling out the
     // map, filtering targets as necessary.
-    let mut node_map = HashMap::new();
+    let mut node_map = BTreeMap::new();
     for member_pkg in ws.members() {
         build_resolve_graph_r(
             &mut node_map,
@@ -147,28 +149,29 @@ fn build_resolve_graph(
             &ws_resolve.targeted_resolve,
             &package_map,
             &target_data,
-            requested_kind,
+            &requested_kinds,
         );
     }
     // Get a Vec of Packages.
     let actual_packages = package_map
-        .drain()
+        .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
         .collect();
+
     let mr = MetadataResolve {
-        nodes: node_map.drain().map(|(_pkg_id, node)| node).collect(),
+        nodes: node_map.into_iter().map(|(_pkg_id, node)| node).collect(),
         root: ws.current_opt().map(|pkg| pkg.package_id()),
     };
     Ok((actual_packages, mr))
 }
 
 fn build_resolve_graph_r(
-    node_map: &mut HashMap<PackageId, MetadataResolveNode>,
+    node_map: &mut BTreeMap<PackageId, MetadataResolveNode>,
     pkg_id: PackageId,
     resolve: &Resolve,
-    package_map: &HashMap<PackageId, Package>,
+    package_map: &BTreeMap<PackageId, Package>,
     target_data: &RustcTargetData,
-    requested_kind: CompileKind,
+    requested_kinds: &[CompileKind],
 ) {
     if node_map.contains_key(&pkg_id) {
         return;
@@ -177,15 +180,19 @@ fn build_resolve_graph_r(
 
     let deps: Vec<Dep> = resolve
         .deps(pkg_id)
-        .filter(|(_dep_id, deps)| match requested_kind {
-            CompileKind::Target(_) => deps
-                .iter()
-                .any(|dep| target_data.dep_platform_activated(dep, requested_kind)),
-            // No --filter-platform is interpreted as "all platforms".
-            CompileKind::Host => true,
+        .filter(|(_dep_id, deps)| {
+            if requested_kinds == [CompileKind::Host] {
+                true
+            } else {
+                requested_kinds.iter().any(|kind| {
+                    deps.iter()
+                        .any(|dep| target_data.dep_platform_activated(dep, *kind))
+                })
+            }
         })
         .filter_map(|(dep_id, deps)| {
-            let dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            let mut dep_kinds: Vec<_> = deps.iter().map(DepKindInfo::from).collect();
+            dep_kinds.sort();
             package_map
                 .get(&dep_id)
                 .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
@@ -213,7 +220,7 @@ fn build_resolve_graph_r(
             resolve,
             package_map,
             target_data,
-            requested_kind,
+            requested_kinds,
         );
     }
 }

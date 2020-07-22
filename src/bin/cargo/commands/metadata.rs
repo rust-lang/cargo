@@ -1,7 +1,5 @@
 use crate::command_prelude::*;
-
 use cargo::ops::{self, OutputMetadataOptions};
-use cargo::print_json;
 
 pub fn cli() -> App {
     subcommand("metadata")
@@ -12,13 +10,11 @@ pub fn cli() -> App {
         )
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_features()
-        .arg(
-            opt(
-                "filter-platform",
-                "Only include resolve dependencies matching the given target-triple",
-            )
-            .value_name("TRIPLE"),
-        )
+        .arg(multi_opt(
+            "filter-platform",
+            "TRIPLE",
+            "Only include resolve dependencies matching the given target-triple",
+        ))
         .arg(opt(
             "no-deps",
             "Output information only about the workspace members \
@@ -51,11 +47,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
         no_deps: args.is_present("no-deps"),
-        filter_platform: args.value_of("filter-platform").map(|s| s.to_string()),
+        filter_platforms: args._values_of("filter-platform"),
         version,
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    print_json(&result);
+    config.shell().print_json(&result);
     Ok(())
 }

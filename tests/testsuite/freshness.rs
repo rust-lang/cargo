@@ -10,6 +10,7 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
+use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, is_coarse_mtime, project, rustc_host, sleep_ms};
@@ -490,8 +491,8 @@ fn changing_bin_features_caches_targets() {
     /* Targets should be cached from the first build */
 
     let mut e = p.cargo("build");
-    // MSVC does not include hash in binary filename, so it gets recompiled.
-    if cfg!(target_env = "msvc") {
+    // MSVC/apple does not include hash in binary filename, so it gets recompiled.
+    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -500,7 +501,7 @@ fn changing_bin_features_caches_targets() {
     p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     let mut e = p.cargo("build --features foo");
-    if cfg!(target_env = "msvc") {
+    if cfg!(any(target_env = "msvc", target_vendor = "apple")) {
         e.with_stderr("[COMPILING] foo[..]\n[FINISHED] dev[..]");
     } else {
         e.with_stderr("[FINISHED] dev[..]");
@@ -856,19 +857,29 @@ fn no_rebuild_when_rename_dir() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            foo = { path = "foo" }
-        "#,
+                [workspace]
+
+                [dependencies]
+                foo = { path = "foo" }
+            "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/_unused.rs", "")
+        .file("build.rs", "fn main() {}")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("foo/src/lib.rs", "")
+        .file("foo/build.rs", "fn main() {}")
         .build();
+
+    // make sure the most recently modified file is `src/lib.rs`, not
+    // `Cargo.toml`, to expose a historical bug where we forgot to strip the
+    // `Cargo.toml` path from looking for the package root.
+    cargo_test_support::sleep_ms(100);
+    fs::write(p.root().join("src/lib.rs"), "").unwrap();
 
     p.cargo("build").run();
     let mut new = p.root();
@@ -2316,8 +2327,14 @@ LLVM version: 9.0
 fn linking_interrupted() {
     // Interrupt during the linking phase shouldn't leave test executable as "fresh".
 
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
+    // This is used to detect when linking starts, then to pause the linker so
+    // that the test can kill cargo.
+    let link_listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let link_addr = link_listener.local_addr().unwrap();
+
+    // This is used to detect when rustc exits.
+    let rustc_listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let rustc_addr = rustc_listener.local_addr().unwrap();
 
     // Create a linker that we can interrupt.
     let linker = project()
@@ -2326,8 +2343,6 @@ fn linking_interrupted() {
         .file(
             "src/main.rs",
             &r#"
-            use std::io::Read;
-
             fn main() {
                 // Figure out the output filename.
                 let output = match std::env::args().find(|a| a.starts_with("/OUT:")) {
@@ -2346,14 +2361,40 @@ fn linking_interrupted() {
                 std::fs::write(&output, "").unwrap();
                 // Tell the test that we are ready to be interrupted.
                 let mut socket = std::net::TcpStream::connect("__ADDR__").unwrap();
-                // Wait for the test to tell us to exit.
-                let _ = socket.read(&mut [0; 1]);
+                // Wait for the test to kill us.
+                std::thread::sleep(std::time::Duration::new(60, 0));
             }
             "#
-            .replace("__ADDR__", &addr.to_string()),
+            .replace("__ADDR__", &link_addr.to_string()),
         )
         .build();
     linker.cargo("build").run();
+
+    // Create a wrapper around rustc that will tell us when rustc is finished.
+    let rustc = project()
+        .at("rustc-waiter")
+        .file("Cargo.toml", &basic_manifest("rustc-waiter", "1.0.0"))
+        .file(
+            "src/main.rs",
+            &r#"
+            fn main() {
+                let mut conn = None;
+                // Check for a normal build (not -vV or --print).
+                if std::env::args().any(|arg| arg == "t1") {
+                    // Tell the test that rustc has started.
+                    conn = Some(std::net::TcpStream::connect("__ADDR__").unwrap());
+                }
+                let status = std::process::Command::new("rustc")
+                    .args(std::env::args().skip(1))
+                    .status()
+                    .expect("rustc to run");
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#
+            .replace("__ADDR__", &rustc_addr.to_string()),
+        )
+        .build();
+    rustc.cargo("build").run();
 
     // Build it once so that the fingerprint gets saved to disk.
     let p = project()
@@ -2361,28 +2402,38 @@ fn linking_interrupted() {
         .file("tests/t1.rs", "")
         .build();
     p.cargo("test --test t1 --no-run").run();
+
     // Make a change, start a build, then interrupt it.
     p.change_file("src/lib.rs", "// modified");
     let linker_env = format!(
         "CARGO_TARGET_{}_LINKER",
         rustc_host().to_uppercase().replace('-', "_")
     );
+    // NOTE: This assumes that the paths to the linker or rustc are not in the
+    // fingerprint. But maybe they should be?
     let mut cmd = p
         .cargo("test --test t1 --no-run")
         .env(&linker_env, linker.bin("linker"))
+        .env("RUSTC", rustc.bin("rustc-waiter"))
         .build_command();
     let mut child = cmd
         .stdout(Stdio::null())
         .stderr(Stdio::null())
+        .env("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE", "1")
         .spawn()
         .unwrap();
+    // Wait for rustc to start.
+    let mut rustc_conn = rustc_listener.accept().unwrap().0;
     // Wait for linking to start.
-    let mut conn = listener.accept().unwrap().0;
+    drop(link_listener.accept().unwrap());
 
     // Interrupt the child.
-    child.kill().unwrap();
-    // Note: rustc and the linker are still running, let them exit here.
-    conn.write(b"X").unwrap();
+    death::ctrl_c(&mut child);
+    assert!(!child.wait().unwrap().success());
+    // Wait for rustc to exit. If we don't wait, then the command below could
+    // start while rustc is still being torn down.
+    let mut buf = [0];
+    drop(rustc_conn.read_exact(&mut buf));
 
     // Build again, shouldn't be fresh.
     p.cargo("test --test t1")
@@ -2394,4 +2445,147 @@ fn linking_interrupted() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+#[cfg_attr(
+    not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")),
+    ignore
+)]
+fn lld_is_fresh() {
+    // Check for bug when using lld linker that it remains fresh with dylib.
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [target.x86_64-pc-windows-msvc]
+                linker = "rust-lld"
+                rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build -v")
+        .with_stderr("[FRESH] foo [..]\n[FINISHED] [..]")
+        .run();
+}
+
+#[cargo_test]
+fn env_in_code_causes_rebuild() {
+    // Only nightly 1.46 has support in dep-info files for this
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", option_env!("FOO"));
+                    println!("{:?}", option_env!("FOO\nBAR"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").env_remove("FOO").run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr("[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr("[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[COMPILING][..]\n[FINISHED][..]")
+        .run();
+    p.cargo("build")
+        .env_remove("FOO")
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    let interesting = " #!$\nabc\r\\\t\u{8}\r\n";
+    p.cargo("build").env("FOO", interesting).run();
+    p.cargo("build")
+        .env("FOO", interesting)
+        .with_stderr("[FINISHED][..]")
+        .run();
+
+    p.cargo("build").env("FOO\nBAR", interesting).run();
+    p.cargo("build")
+        .env("FOO\nBAR", interesting)
+        .with_stderr("[FINISHED][..]")
+        .run();
+}
+
+#[cargo_test]
+fn env_build_script_no_rebuild() {
+    // Only nightly 1.46 has support in dep-info files for this
+    if !cargo_test_support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rustc-env=FOO=bar");
+                }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{:?}", env!("FOO"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }

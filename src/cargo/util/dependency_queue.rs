@@ -53,7 +53,7 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
 }
 
 impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
-    /// Adds a new ndoe and its dependencies to this queue.
+    /// Adds a new node and its dependencies to this queue.
     ///
     /// The `key` specified is a new node in the dependency graph, and the node
     /// depend on all the dependencies iterated by `dependencies`. Each

@@ -75,7 +75,8 @@ fn simple() {
         "overflow_checks": true,
         "rpath": false,
         "incremental": false,
-        "panic": "unwind"
+        "panic": "unwind",
+        "strip": "none"
       },
       "platform": null,
       "mode": "build",
@@ -115,7 +116,8 @@ fn simple() {
         "overflow_checks": true,
         "rpath": false,
         "incremental": false,
-        "panic": "unwind"
+        "panic": "unwind",
+        "strip": "none"
       },
       "platform": null,
       "mode": "build",
@@ -155,7 +157,8 @@ fn simple() {
         "overflow_checks": true,
         "rpath": false,
         "incremental": false,
-        "panic": "unwind"
+        "panic": "unwind",
+        "strip": "none"
       },
       "platform": null,
       "mode": "build",
@@ -188,7 +191,8 @@ fn simple() {
         "overflow_checks": true,
         "rpath": false,
         "incremental": false,
-        "panic": "unwind"
+        "panic": "unwind",
+        "strip": "none"
       },
       "platform": null,
       "mode": "build",

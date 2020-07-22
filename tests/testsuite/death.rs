@@ -8,52 +8,8 @@ use std::thread;
 
 use cargo_test_support::{project, slow_cpu_multiplier};
 
-#[cfg(unix)]
-fn enabled() -> bool {
-    true
-}
-
-// On Windows support for these tests is only enabled through the usage of job
-// objects. Support for nested job objects, however, was added in recent-ish
-// versions of Windows, so this test may not always be able to succeed.
-//
-// As a result, we try to add ourselves to a job object here
-// can succeed or not.
-#[cfg(windows)]
-fn enabled() -> bool {
-    use winapi::um::{handleapi, jobapi, jobapi2, processthreadsapi};
-
-    unsafe {
-        // If we're not currently in a job, then we can definitely run these
-        // tests.
-        let me = processthreadsapi::GetCurrentProcess();
-        let mut ret = 0;
-        let r = jobapi::IsProcessInJob(me, 0 as *mut _, &mut ret);
-        assert_ne!(r, 0);
-        if ret == ::winapi::shared::minwindef::FALSE {
-            return true;
-        }
-
-        // If we are in a job, then we can run these tests if we can be added to
-        // a nested job (as we're going to create a nested job no matter what as
-        // part of these tests.
-        //
-        // If we can't be added to a nested job, then these tests will
-        // definitely fail, and there's not much we can do about that.
-        let job = jobapi2::CreateJobObjectW(0 as *mut _, 0 as *const _);
-        assert!(!job.is_null());
-        let r = jobapi2::AssignProcessToJobObject(job, me);
-        handleapi::CloseHandle(job);
-        r != 0
-    }
-}
-
 #[cargo_test]
 fn ctrl_c_kills_everyone() {
-    if !enabled() {
-        return;
-    }
-
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
@@ -132,7 +88,7 @@ fn ctrl_c_kills_everyone() {
 }
 
 #[cfg(unix)]
-fn ctrl_c(child: &mut Child) {
+pub fn ctrl_c(child: &mut Child) {
     let r = unsafe { libc::kill(-(child.id() as i32), libc::SIGINT) };
     if r < 0 {
         panic!("failed to kill: {}", io::Error::last_os_error());
@@ -140,6 +96,6 @@ fn ctrl_c(child: &mut Child) {
 }
 
 #[cfg(windows)]
-fn ctrl_c(child: &mut Child) {
+pub fn ctrl_c(child: &mut Child) {
     child.kill().unwrap();
 }

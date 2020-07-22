@@ -1,8 +1,12 @@
-use crate::core::{InternedString, PackageId, SourceId};
+use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, VERSION_TEMPLATE};
+use crate::sources::registry::{
+    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
+    VERSION_TEMPLATE,
+};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use lazycell::LazyCell;
@@ -16,10 +20,20 @@ use std::mem;
 use std::path::Path;
 use std::str;
 
+fn make_crate_prefix(name: &str) -> String {
+    match name.len() {
+        1 => String::from("1"),
+        2 => String::from("2"),
+        3 => format!("3/{}", &name[..1]),
+        _ => format!("{}/{}", &name[0..2], &name[2..4]),
+    }
+}
+
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
     cache_path: Filesystem,
     source_id: SourceId,
+    index_git_ref: GitReference,
     config: &'cfg Config,
     tree: RefCell<Option<git2::Tree<'static>>>,
     repo: LazyCell<git2::Repository>,
@@ -34,6 +48,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
+            // TODO: we should probably make this configurable
+            index_git_ref: GitReference::DefaultBranch,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),
@@ -85,7 +101,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
-            let oid = self.repo()?.refname_to_id("refs/remotes/origin/master")?;
+            let repo = self.repo()?;
+            let oid = self.index_git_ref.resolve(repo)?;
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())
@@ -215,17 +232,17 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .shell()
             .status("Updating", self.source_id.display_index())?;
 
-        // git fetch origin master
+        // Fetch the latest version of our `index_git_ref` into the index
+        // checkout.
         let url = self.source_id.url();
-        let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url.as_str(), refspec, self.config)
+        git::fetch(repo, url.as_str(), &self.index_git_ref, self.config)
             .chain_err(|| format!("failed to fetch `{}`", url))?;
         self.config.updated_sources().insert(self.source_id);
 
         // Create a dummy file to record the mtime for when we updated the
         // index.
-        File::create(&path.join(LAST_UPDATED_FILE))?;
+        paths::create(&path.join(LAST_UPDATED_FILE))?;
 
         Ok(())
     }
@@ -250,12 +267,19 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         let config = self.config()?.unwrap();
         let mut url = config.dl;
-        if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
+        if !url.contains(CRATE_TEMPLATE)
+            && !url.contains(VERSION_TEMPLATE)
+            && !url.contains(PREFIX_TEMPLATE)
+            && !url.contains(LOWER_PREFIX_TEMPLATE)
+        {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
+        let prefix = make_crate_prefix(&*pkg.name());
         let url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string());
+            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
+            .replace(PREFIX_TEMPLATE, &prefix)
+            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase());
 
         Ok(MaybeLock::Download {
             url,
@@ -283,7 +307,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .create(true)
             .read(true)
             .write(true)
-            .open(&path)?;
+            .open(&path)
+            .chain_err(|| format!("failed to open `{}`", path.display()))?;
         let meta = dst.metadata()?;
         if meta.len() > 0 {
             return Ok(dst);
@@ -311,5 +336,20 @@ impl<'cfg> Drop for RemoteRegistry<'cfg> {
     fn drop(&mut self) {
         // Just be sure to drop this before our other fields
         self.tree.borrow_mut().take();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::make_crate_prefix;
+
+    #[test]
+    fn crate_prefix() {
+        assert_eq!(make_crate_prefix("a"), "1");
+        assert_eq!(make_crate_prefix("ab"), "2");
+        assert_eq!(make_crate_prefix("abc"), "3/a");
+        assert_eq!(make_crate_prefix("Abc"), "3/A");
+        assert_eq!(make_crate_prefix("AbCd"), "Ab/Cd");
+        assert_eq!(make_crate_prefix("aBcDe"), "aB/cD");
     }
 }

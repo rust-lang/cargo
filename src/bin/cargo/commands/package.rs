@@ -42,7 +42,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             list: args.is_present("list"),
             check_metadata: !args.is_present("no-metadata"),
             allow_dirty: args.is_present("allow-dirty"),
-            target: args.target(),
+            targets: args.targets(),
             jobs: args.jobs()?,
             features: args._values_of("features"),
             all_features: args.is_present("all-features"),

@@ -128,7 +128,7 @@ fn setup() -> Option<Setup> {
     })
 }
 
-fn enable_build_std(e: &mut Execs, setup: &Setup, arg: Option<&str>) {
+fn enable_build_std(e: &mut Execs, setup: &Setup) {
     // First up, force Cargo to use our "mock sysroot" which mimics what
     // libstd looks like upstream.
     let root = paths::root();
@@ -142,12 +142,6 @@ fn enable_build_std(e: &mut Execs, setup: &Setup, arg: Option<&str>) {
         .join("tests/testsuite/mock-std");
     e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
 
-    // Actually enable `-Zbuild-std` for now
-    let arg = match arg {
-        Some(s) => format!("-Zbuild-std={}", s),
-        None => "-Zbuild-std".to_string(),
-    };
-    e.arg(arg);
     e.masquerade_as_nightly_cargo();
 
     // We do various shenanigans to ensure our "mock sysroot" actually links
@@ -181,12 +175,14 @@ trait BuildStd: Sized {
 
 impl BuildStd for Execs {
     fn build_std(&mut self, setup: &Setup) -> &mut Self {
-        enable_build_std(self, setup, None);
+        enable_build_std(self, setup);
+        self.arg("-Zbuild-std");
         self
     }
 
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
-        enable_build_std(self, setup, Some(arg));
+        enable_build_std(self, setup);
+        self.arg(format!("-Zbuild-std={}", arg));
         self
     }
 
@@ -303,7 +299,7 @@ fn lib_nostd() {
             r#"
                 #![no_std]
                 pub fn foo() {
-                    assert_eq!(core::u8::MIN, 0);
+                    assert_eq!(u8::MIN, 0);
                 }
             "#,
         )
@@ -518,7 +514,7 @@ fn doctest() {
         )
         .build();
 
-    p.cargo("test --doc -v")
+    p.cargo("test --doc -v -Zdoctest-xcompile")
         .build_std(&setup)
         .with_stdout_contains("test src/lib.rs - f [..] ... ok")
         .target_host()
@@ -575,4 +571,87 @@ fn macro_expanded_shadow() {
         .build();
 
     p.cargo("build -v").build_std(&setup).target_host().run();
+}
+
+#[cargo_test]
+fn ignores_incremental() {
+    // Incremental is not really needed for std, make sure it is disabled.
+    // Incremental also tends to have bugs that affect std libraries more than
+    // any other crate.
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build")
+        .env("CARGO_INCREMENTAL", "1")
+        .build_std(&setup)
+        .target_host()
+        .run();
+    let incremental: Vec<_> = p
+        .glob(format!("target/{}/debug/incremental/*", rustc_host()))
+        .map(|e| e.unwrap())
+        .collect();
+    assert_eq!(incremental.len(), 1);
+    assert!(incremental[0]
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .starts_with("foo-"));
+}
+
+#[cargo_test]
+fn cargo_config_injects_compiler_builtins() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {
+                    assert_eq!(u8::MIN, 0);
+                }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [unstable]
+                build-std = ['core']
+            "#,
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib");
+    enable_build_std(&mut build, &setup);
+    build
+        .target_host()
+        .with_stderr_does_not_contain("[..]libstd[..]")
+        .run();
+}
+
+#[cargo_test]
+fn different_features() {
+    let setup = match setup() {
+        Some(s) => s,
+        None => return,
+    };
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                pub fn foo() {
+                    std::conditional_function();
+                }
+            ",
+        )
+        .build();
+    p.cargo("build")
+        .build_std(&setup)
+        .arg("-Zbuild-std-features=feature1")
+        .target_host()
+        .run();
 }

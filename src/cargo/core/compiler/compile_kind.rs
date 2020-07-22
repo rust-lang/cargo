@@ -1,7 +1,10 @@
-use crate::core::{InternedString, Target};
+use crate::core::Target;
 use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::interning::InternedString;
 use crate::util::Config;
+use anyhow::bail;
 use serde::Serialize;
+use std::collections::BTreeSet;
 use std::path::Path;
 
 /// Indicator for how a unit is being compiled.
@@ -41,30 +44,42 @@ impl CompileKind {
         }
     }
 
-    /// Creates a new `CompileKind` based on the requested target.
+    /// Creates a new list of `CompileKind` based on the requested list of
+    /// targets.
     ///
-    /// If no target is given, this consults the config if the default is set.
-    /// Otherwise returns `CompileKind::Host`.
-    pub fn from_requested_target(
+    /// If no targets are given then this returns a single-element vector with
+    /// `CompileKind::Host`.
+    pub fn from_requested_targets(
         config: &Config,
-        target: Option<&str>,
-    ) -> CargoResult<CompileKind> {
-        let kind = match target {
-            Some(s) => CompileKind::Target(CompileTarget::new(s)?),
-            None => match &config.build_config()?.target {
-                Some(val) => {
-                    let value = if val.raw_value().ends_with(".json") {
-                        let path = val.clone().resolve_path(config);
-                        path.to_str().expect("must be utf-8 in toml").to_string()
-                    } else {
-                        val.raw_value().to_string()
-                    };
-                    CompileKind::Target(CompileTarget::new(&value)?)
-                }
-                None => CompileKind::Host,
-            },
+        targets: &[String],
+    ) -> CargoResult<Vec<CompileKind>> {
+        if targets.len() > 1 && !config.cli_unstable().multitarget {
+            bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
+        }
+        if !targets.is_empty() {
+            return Ok(targets
+                .iter()
+                .map(|value| Ok(CompileKind::Target(CompileTarget::new(value)?)))
+                // First collect into a set to deduplicate any `--target` passed
+                // more than once...
+                .collect::<CargoResult<BTreeSet<_>>>()?
+                // ... then generate a flat list for everything else to use.
+                .into_iter()
+                .collect());
+        }
+        let kind = match &config.build_config()?.target {
+            Some(val) => {
+                let value = if val.raw_value().ends_with(".json") {
+                    let path = val.clone().resolve_path(config);
+                    path.to_str().expect("must be utf-8 in toml").to_string()
+                } else {
+                    val.raw_value().to_string()
+                };
+                CompileKind::Target(CompileTarget::new(&value)?)
+            }
+            None => CompileKind::Host,
         };
-        Ok(kind)
+        Ok(vec![kind])
     }
 }
 

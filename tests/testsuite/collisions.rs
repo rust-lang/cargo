@@ -91,9 +91,9 @@ This may become a hard error in the future; see <https://github.com/rust-lang/ca
 }
 
 #[cargo_test]
-// --out-dir and examples are currently broken on MSVC.
+// --out-dir and examples are currently broken on MSVC and apple.
 // See https://github.com/rust-lang/cargo/issues/7493
-#[cfg(not(target_env = "msvc"))]
+#[cfg_attr(any(target_env = "msvc", target_vendor = "apple"), ignore)]
 fn collision_export() {
     // `--out-dir` combines some things which can cause conflicts.
     let p = project()

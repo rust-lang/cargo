@@ -15,9 +15,10 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use super::{
-    LibKind, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
-    TomlExampleTarget, TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
+    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
+use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::restricted_names;
@@ -222,15 +223,15 @@ fn clean_lib(
             if kinds.len() > 1 {
                 anyhow::bail!("cannot mix `proc-macro` crate type with others");
             }
-            vec![LibKind::ProcMacro]
+            vec![CrateType::ProcMacro]
         }
         (_, Some(true), Some(true)) => {
             anyhow::bail!("`lib.plugin` and `lib.proc-macro` cannot both be `true`")
         }
         (Some(kinds), _, _) => kinds.iter().map(|s| s.into()).collect(),
-        (None, Some(true), _) => vec![LibKind::Dylib],
-        (None, _, Some(true)) => vec![LibKind::ProcMacro],
-        (None, _, _) => vec![LibKind::Lib],
+        (None, Some(true), _) => vec![CrateType::Dylib],
+        (None, _, Some(true)) => vec![CrateType::ProcMacro],
+        (None, _, _) => vec![CrateType::Lib],
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
@@ -773,7 +774,7 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
         .set_doctest(toml.doctest.unwrap_or_else(|| t2.doctested()))
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
         .set_harness(toml.harness.unwrap_or_else(|| t2.harness()))
-        .set_proc_macro(toml.proc_macro.unwrap_or_else(|| t2.proc_macro()))
+        .set_proc_macro(toml.proc_macro().unwrap_or_else(|| t2.proc_macro()))
         .set_for_host(match (toml.plugin, toml.proc_macro()) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,

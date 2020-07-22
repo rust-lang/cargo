@@ -69,7 +69,7 @@ use self::types::{FeaturesSet, RcVecIter, RemainingDeps, ResolverProgress};
 pub use self::encode::Metadata;
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::errors::{ActivateError, ActivateResult, ResolveError};
-pub use self::features::HasDevUnits;
+pub use self::features::{ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
 
@@ -844,7 +844,7 @@ fn generalize_conflicting(
     for (critical_parent, critical_parents_deps) in
         cx.parents.edges(&backtrack_critical_id).filter(|(p, _)| {
             // it will only help backjump further if it is older then the critical_age
-            cx.is_active(*p).expect("parent not currently active!?") < backtrack_critical_age
+            cx.is_active(**p).expect("parent not currently active!?") < backtrack_critical_age
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {

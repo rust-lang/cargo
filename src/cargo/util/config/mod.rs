@@ -70,6 +70,7 @@ use serde::Deserialize;
 use url::Url;
 
 use self::ConfigValue as CV;
+use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
 use crate::core::{nightly_features_allowed, CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
@@ -121,7 +122,7 @@ macro_rules! get_value_typed {
 /// relating to cargo itself.
 #[derive(Debug)]
 pub struct Config {
-    /// The location of the user's 'home' directory. OS-dependent.
+    /// The location of the user's Cargo home directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
@@ -172,6 +173,7 @@ pub struct Config {
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
+    doc_extern_map: LazyCell<RustdocExternMap>,
 }
 
 impl Config {
@@ -241,6 +243,7 @@ impl Config {
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
+            doc_extern_map: LazyCell::new(),
         }
     }
 
@@ -739,10 +742,17 @@ impl Config {
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
 
+        // If nightly features are enabled, allow setting Z-flags from config
+        // using the `unstable` table. Ignore that block otherwise.
         if nightly_features_allowed() {
-            if let Some(val) = self.get::<Option<bool>>("unstable.mtime_on_use")? {
-                self.unstable_flags.mtime_on_use |= val;
+            if let Some(unstable_flags) = self.get::<Option<CliUnstable>>("unstable")? {
+                self.unstable_flags = unstable_flags;
             }
+            // NB. It's not ideal to parse these twice, but doing it again here
+            //     allows the CLI to override config files for both enabling
+            //     and disabling, and doing it up top allows CLI Zflags to
+            //     control config parsing behavior.
+            self.unstable_flags.parse(unstable_flags)?;
         }
 
         Ok(())
@@ -1008,12 +1018,16 @@ impl Config {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         validate_package_name(registry, "registry name", "")?;
-        Ok(
-            match self.get_string(&format!("registries.{}.index", registry))? {
-                Some(index) => self.resolve_registry_index(index)?,
-                None => bail!("No index found for registry: `{}`", registry),
-            },
-        )
+        if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
+            self.resolve_registry_index(&index).chain_err(|| {
+                format!(
+                    "invalid index URL for registry `{}` defined in {}",
+                    registry, index.definition
+                )
+            })
+        } else {
+            bail!("no index found for registry: `{}`", registry);
+        }
     }
 
     /// Returns an error if `registry.index` is set.
@@ -1027,7 +1041,8 @@ impl Config {
         Ok(())
     }
 
-    fn resolve_registry_index(&self, index: Value<String>) -> CargoResult<Url> {
+    fn resolve_registry_index(&self, index: &Value<String>) -> CargoResult<Url> {
+        // This handles relative file: URLs, relative to the config definition.
         let base = index
             .definition
             .root(self)
@@ -1036,7 +1051,7 @@ impl Config {
         let _parsed = index.val.into_url()?;
         let url = index.val.into_url_with_base(Some(&*base))?;
         if url.password().is_some() {
-            bail!("Registry URLs may not contain passwords");
+            bail!("registry URLs may not contain passwords");
         }
         Ok(url)
     }
@@ -1152,6 +1167,14 @@ impl Config {
     pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
         self.target_cfgs
             .try_borrow_with(|| target::load_target_cfgs(self))
+    }
+
+    pub fn doc_extern_map(&self) -> CargoResult<&RustdocExternMap> {
+        // Note: This does not support environment variables. The `Unit`
+        // fundamentally does not have access to the registry name, so there is
+        // nothing to query. Plumbing the name into SourceId is quite challenging.
+        self.doc_extern_map
+            .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
     }
 
     /// Returns the `[target]` table definition for the given target triple.
@@ -1436,12 +1459,10 @@ impl ConfigValue {
     fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                let new = mem::replace(new, Vec::new());
-                old.extend(new.into_iter());
+                old.extend(mem::take(new).into_iter());
             }
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
-                let new = mem::replace(new, HashMap::new());
-                for (key, value) in new {
+                for (key, value) in mem::take(new) {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
                             let new_def = value.definition().clone();
@@ -1622,9 +1643,11 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;
-    file.write_all(contents.as_bytes())?;
+    file.write_all(contents.as_bytes())
+        .chain_err(|| format!("failed to write to `{}`", file.path().display()))?;
     file.file().set_len(contents.len() as u64)?;
-    set_permissions(file.file(), 0o600)?;
+    set_permissions(file.file(), 0o600)
+        .chain_err(|| format!("failed to set permissions of `{}`", file.path().display()))?;
 
     return Ok(());
 
@@ -1741,4 +1764,46 @@ impl StringList {
     pub fn as_slice(&self) -> &[String] {
         &self.0
     }
+}
+
+#[macro_export]
+macro_rules! __shell_print {
+    ($config:expr, $which:ident, $newline:literal, $($arg:tt)*) => ({
+        let mut shell = $config.shell();
+        let out = shell.$which();
+        drop(out.write_fmt(format_args!($($arg)*)));
+        if $newline {
+            drop(out.write_all(b"\n"));
+        }
+    });
+}
+
+#[macro_export]
+macro_rules! drop_println {
+    ($config:expr) => ( $crate::drop_print!($config, "\n") );
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, out, true, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_eprintln {
+    ($config:expr) => ( $crate::drop_eprint!($config, "\n") );
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, err, true, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_print {
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, out, false, $($arg)*)
+    );
+}
+
+#[macro_export]
+macro_rules! drop_eprint {
+    ($config:expr, $($arg:tt)*) => (
+        $crate::__shell_print!($config, err, false, $($arg)*)
+    );
 }

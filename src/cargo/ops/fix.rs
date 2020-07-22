@@ -41,7 +41,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, ExitStatus};
 use std::str;
@@ -55,7 +54,7 @@ use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::{self, Config, ProcessBuilder};
+use crate::util::{self, paths, Config, ProcessBuilder};
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
@@ -256,8 +255,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         if !output.status.success() {
             if env::var_os(BROKEN_CODE_ENV).is_none() {
                 for (path, file) in fixes.files.iter() {
-                    fs::write(path, &file.original_code)
-                        .with_context(|| format!("failed to write file `{}`", path))?;
+                    paths::write(path, &file.original_code)?;
                 }
             }
             log_failed_fix(&output.stderr)?;
@@ -517,7 +515,7 @@ fn rustfix_and_fix(
             }
         }
         let new_code = fixed.finish()?;
-        fs::write(&file, new_code).with_context(|| format!("failed to write file `{}`", file))?;
+        paths::write(&file, new_code)?;
     }
 
     Ok(())
@@ -526,9 +524,14 @@ fn rustfix_and_fix(
 fn exit_with(status: ExitStatus) -> ! {
     #[cfg(unix)]
     {
+        use std::io::Write;
         use std::os::unix::prelude::*;
         if let Some(signal) = status.signal() {
-            eprintln!("child failed with signal `{}`", signal);
+            drop(writeln!(
+                std::io::stderr().lock(),
+                "child failed with signal `{}`",
+                signal
+            ));
             process::exit(2);
         }
     }

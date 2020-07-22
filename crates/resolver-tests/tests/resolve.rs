@@ -25,7 +25,7 @@ proptest! {
                 0
             } else {
                 // but that local builds will give a small clear test case.
-                std::u32::MAX
+                u32::MAX
             },
         result_cache: prop::test_runner::basic_result_cache,
         .. ProptestConfig::default()
@@ -1456,6 +1456,31 @@ fn conflict_store_more_then_one_match() {
     ];
     let reg = registry(input);
     let _ = resolve_and_validated(vec![dep("nA")], &reg, None);
+}
+
+#[test]
+fn bad_lockfile_from_8249() {
+    let input = vec![
+        pkg!(("a-sys", "0.2.0")),
+        pkg!(("a-sys", "0.1.0")),
+        pkg!(("b", "0.1.0") => [
+            dep_req("a-sys", "0.1"), // should be optional: true, but not deeded for now
+        ]),
+        pkg!(("c", "1.0.0") => [
+            dep_req("b", "=0.1.0"),
+        ]),
+        pkg!("foo" => [
+            dep_req("a-sys", "=0.2.0"),
+            {
+                let mut b = dep_req("b", "=0.1.0");
+                b.set_features(vec!["a-sys"]);
+                b
+            },
+            dep_req("c", "=1.0.0"),
+        ]),
+    ];
+    let reg = registry(input);
+    let _ = resolve_and_validated(vec![dep("foo")], &reg, None);
 }
 
 #[test]

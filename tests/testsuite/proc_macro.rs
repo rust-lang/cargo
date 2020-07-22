@@ -470,3 +470,72 @@ fn proc_macro_extern_prelude() {
     p.cargo("test").run();
     p.cargo("doc").run();
 }
+
+#[cargo_test]
+fn proc_macro_built_once() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ['a', 'b']
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+
+                [build-dependencies]
+                the-macro = { path = '../the-macro' }
+            "#,
+        )
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/main.rs", "fn main() {}")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+
+                [dependencies]
+                the-macro = { path = '../the-macro', features = ['a'] }
+            "#,
+        )
+        .file("b/src/main.rs", "fn main() {}")
+        .file(
+            "the-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "the-macro"
+                version = "0.1.0"
+
+                [lib]
+                proc_macro = true
+
+                [features]
+                a = []
+            "#,
+        )
+        .file("the-macro/src/lib.rs", "")
+        .build();
+    p.cargo("build -Zfeatures=all --verbose")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[COMPILING] the-macro [..]
+[RUNNING] `rustc --crate-name the_macro [..]`
+[COMPILING] b [..]
+[RUNNING] `rustc --crate-name b [..]`
+[COMPILING] a [..]
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]build[..]script[..]build[..]`
+[RUNNING] `rustc --crate-name a [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}

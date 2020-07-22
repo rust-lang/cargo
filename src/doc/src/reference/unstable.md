@@ -7,6 +7,16 @@ see a list of flags available.
 `-Z unstable-options` is a generic flag for enabling other unstable
 command-line flags. Options requiring this will be called out below.
 
+Anything which can be configured with a Z flag can also be set in the cargo
+config file (`.cargo/config.toml`) in the `unstable` table. For example:
+
+```toml
+[unstable]
+mtime-on-use = 'yes'
+multitarget = 'yes'
+timings = 'yes'
+```
+
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 
@@ -97,6 +107,25 @@ information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```
 cargo test --target foo -Zdoctest-xcompile
+```
+
+### multitarget
+* Tracking Issue: [#8176](https://github.com/rust-lang/cargo/issues/8176)
+
+This flag allows passing multiple `--target` flags to the `cargo` subcommand
+selected. When multiple `--target` flags are passed the selected build targets
+will be built for each of the selected architectures.
+
+For example to compile a library for both 32 and 64-bit:
+
+```
+cargo build --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
+```
+
+or running tests for both targets:
+
+```
+cargo test --target x86_64-unknown-linux-gnu --target i686-unknown-linux-gnu
 ```
 
 ### Custom named profiles
@@ -328,6 +357,15 @@ Also if you'd like to see a feature that's not yet implemented and/or if
 something doesn't quite work the way you'd like it to, feel free to check out
 the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
+
+### build-std-features
+* Tracking Repository: https://github.com/rust-lang/wg-cargo-std-aware
+
+This flag is a sibling to the `-Zbuild-std` feature flag. This will configure
+the features enabled for the standard library itself when building the standard
+library. The default enabled features, at this time, are `backtrace` and
+`panic_unwind`. This flag expects a comma-separated list and, if provided, will
+override the default list of features enabled.
 
 ### timings
 * Tracking Issue: [#7405](https://github.com/rust-lang/cargo/issues/7405)
@@ -746,4 +784,98 @@ The following is a description of the JSON structure:
   */
   "roots": [0],
 }
+```
+
+### Profile `strip` option
+* Tracking Issue: [rust-lang/rust#72110](https://github.com/rust-lang/rust/issues/72110)
+
+This feature provides a new option in the `[profile]` section to strip either
+symbols or debuginfo from a binary. This can be enabled like so:
+
+```toml
+cargo-features = ["strip"]
+
+[package]
+# ...
+
+[profile.release]
+strip = "debuginfo"
+```
+
+Other possible values of `strip` are `none` and `symbols`. The default is
+`none`.
+
+### rustdoc-map
+* Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
+
+This feature adds configuration settings that are passed to `rustdoc` so that
+it can generate links to dependencies whose documentation is hosted elsewhere
+when the dependency is not documented. First, add this to `.cargo/config`:
+
+```toml
+[doc.extern-map.registries]
+crates-io = "https://docs.rs/"
+```
+
+Then, when building documentation, use the following flags to cause links
+to dependencies to link to [docs.rs](https://docs.rs/):
+
+```
+cargo +nightly doc --no-deps -Zrustdoc-map
+```
+
+The `registries` table contains a mapping of registry name to the URL to link
+to. The URL may have the markers `{pkg_name}` and `{version}` which will get
+replaced with the corresponding values. If neither are specified, then Cargo
+defaults to appending `{pkg_name}/{version}/` to the end of the URL.
+
+Another config setting is available to redirect standard library links. By
+default, rustdoc creates links to <https://doc.rust-lang.org/nightly/>. To
+change this behavior, use the `doc.extern-map.std` setting:
+
+```toml
+[doc.extern-map]
+std = "local"
+```
+
+A value of `"local"` means to link to the documentation found in the `rustc`
+sysroot. If you are using rustup, this documentation can be installed with
+`rustup component add rust-docs`.
+
+The default value is `"remote"`.
+
+The value may also take a URL for a custom location.
+
+### terminal-width
+This feature provides a new flag, `-Z terminal-width`, which is used to pass
+a terminal width to `rustc` so that error messages containing long lines
+can be intelligently truncated.
+
+For example, passing `-Z terminal-width=20` (an arbitrarily low value) might
+produce the following error:
+
+```text
+error[E0308]: mismatched types
+  --> src/main.rs:2:17
+  |
+2 | ..._: () = 42;
+  |       --   ^^ expected `()`, found integer
+  |       |
+  |       expected due to this
+
+error: aborting due to previous error
+```
+
+In contrast, without `-Z terminal-width`, the error would look as shown below:
+
+```text
+error[E0308]: mismatched types
+ --> src/main.rs:2:17
+  |
+2 |     let _: () = 42;
+  |            --   ^^ expected `()`, found integer
+  |            |
+  |            expected due to this
+
+error: aborting due to previous error
 ```

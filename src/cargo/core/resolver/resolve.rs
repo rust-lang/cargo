@@ -1,8 +1,8 @@
 use super::encode::Metadata;
 use crate::core::dependency::DepKind;
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::Graph;
 use std::borrow::Borrow;
 use std::cmp;
@@ -16,14 +16,14 @@ use std::fmt;
 /// for each package.
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
-    /// from `Cargo.toml`. We need a `Vec` here because the same package
+    /// from `Cargo.toml`. We need a `HashSet` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, HashSet<Dependency>>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
     reverse_replacements: HashMap<PackageId, PackageId>,
-    /// An empty `HashSet` to avoid creating a new `HashSet` for every package
+    /// An empty `Vec` to avoid creating a new `Vec` for every package
     /// that does not have any features, and to avoid using `Option` to
     /// simplify the API.
     empty_features: Vec<InternedString>,
@@ -119,10 +119,9 @@ impl Resolve {
 
     pub fn register_used_patches(&mut self, patches: &[Summary]) {
         for summary in patches {
-            if self.iter().any(|id| id == summary.package_id()) {
-                continue;
-            }
-            self.unused_patches.push(summary.package_id());
+            if !self.graph.contains(&summary.package_id()) {
+                self.unused_patches.push(summary.package_id())
+            };
         }
     }
 

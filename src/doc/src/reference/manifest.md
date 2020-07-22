@@ -165,6 +165,12 @@ will interpret it as Markdown and render it on the crate's page.
 readme = "README.md"
 ```
 
+If no value is specified for this field, and a file named `README.md`,
+`README.txt` or `README` exists in the package root, then the name of that
+file will be used. You can suppress this behavior by setting this field to
+`false`. If the field is set to `true`, a default value of `README.md` will
+be assumed.
+
 #### The `homepage` field
 
 The `homepage` field should be a URL to a site that is the home page for your
@@ -419,6 +425,15 @@ name = "..."
 package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
+
+There is a similar table at the workspace level at
+[`workspace.metadata`][workspace-metadata]. While cargo does not specify a
+format for the content of either of these tables, it is suggested that
+external tools may wish to use them in a consistent fashion, such as referring
+to the data in `workspace.metadata` if data is missing from `package.metadata`,
+if that makes sense for the tool in question.
+
+[workspace-metadata]: workspaces.md#the-workspacemetadata-table
 
 #### The `default-run` field
 

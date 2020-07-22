@@ -9,7 +9,6 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
 use std::fmt;
-use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -525,12 +524,12 @@ impl IgnoreList {
             _ => &self.ignore,
         };
 
-        let mut out = "\n\n#Added by cargo\n".to_string();
+        let mut out = "\n\n# Added by cargo\n".to_string();
         if ignore_items
             .iter()
             .any(|item| existing_items.contains(item))
         {
-            out.push_str("#\n#already existing elements were commented out\n");
+            out.push_str("#\n# already existing elements were commented out\n");
         }
         out.push('\n');
 
@@ -562,10 +561,10 @@ fn write_ignore_file(
         VersionControl::NoVcs => return Ok("".to_string()),
     };
 
-    let ignore: String = match fs::File::open(&fp_ignore) {
-        Err(why) => match why.kind() {
-            ErrorKind::NotFound => list.format_new(vcs),
-            _ => return Err(anyhow::format_err!("{}", why)),
+    let ignore: String = match paths::open(&fp_ignore) {
+        Err(err) => match err.downcast_ref::<std::io::Error>() {
+            Some(io_err) if io_err.kind() == ErrorKind::NotFound => list.format_new(vcs),
+            _ => return Err(err),
         },
         Ok(file) => list.format_existing(BufReader::new(file), vcs),
     };

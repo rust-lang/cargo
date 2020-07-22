@@ -862,6 +862,36 @@ This will be considered an error in future versions
 }
 
 #[cargo_test]
+fn fragment_in_git_url() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies.bar]
+            git = "http://127.0.0.1#foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[WARNING] URL fragment `#foo` in git URL is ignored for dependency (bar). \
+If you were trying to specify a specific git revision, \
+use `rev = \"foo\"` in the dependency declaration.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn bad_source_config1() {
     let p = project()
         .file("src/lib.rs", "")
@@ -1368,8 +1398,8 @@ Caused by:
 
 Caused by:
   invalid configuration for key `target.cfg(not(target_os = \"none\")).runner`
-expected a string or array of strings, but found a boolean for \
-`target.cfg(not(target_os = \"none\")).runner` in [..]/foo/.cargo/config
+  expected a string or array of strings, but found a boolean for \
+  `target.cfg(not(target_os = \"none\")).runner` in [..]/foo/.cargo/config
 ",
         )
         .run();

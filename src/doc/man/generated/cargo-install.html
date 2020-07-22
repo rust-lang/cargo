@@ -197,6 +197,10 @@ Cargo installing at the same time.</p>
 If not specified, the default registry is used, which is defined by the
 <code>registry.default</code> config key which defaults to <code>crates-io</code>.</p>
 </dd>
+<dt class="hdlist1"><strong>--index</strong> <em>INDEX</em></dt>
+<dd>
+<p>The URL of the registry index to use.</p>
+</dd>
 </dl>
 </div>
 </div>
@@ -253,6 +257,13 @@ list of supported targets.</p>
 target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</p>
 </div>
+</dd>
+<dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
+<dd>
+<p>Directory for all generated artifacts and intermediate files. May also be
+specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
+to <code>target</code> in the root of the workspace.</p>
 </dd>
 <dt class="hdlist1"><strong>--debug</strong></dt>
 <dd>
@@ -358,6 +369,14 @@ terminal.</p>
 <h3 id="cargo_install_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
+<dt class="hdlist1"><strong>+TOOLCHAIN</strong></dt>
+<dd>
+<p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
+as <code>+stable</code> or <code>+nightly</code>).
+See the <a href="https://github.com/rust-lang/rustup/">rustup documentation</a>
+for more information about how toolchain overrides work.</p>
+</dd>
 <dt class="hdlist1"><strong>-h</strong></dt>
 <dt class="hdlist1"><strong>--help</strong></dt>
 <dd>

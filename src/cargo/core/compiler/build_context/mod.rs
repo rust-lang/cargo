@@ -1,16 +1,17 @@
 use crate::core::compiler::unit_graph::UnitGraph;
 use crate::core::compiler::{BuildConfig, CompileKind, Unit};
 use crate::core::profiles::Profiles;
-use crate::core::{InternedString, Workspace};
-use crate::core::{PackageId, PackageSet};
+use crate::core::PackageSet;
+use crate::core::Workspace;
 use crate::util::config::Config;
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::Rustc;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 mod target_info;
-pub use self::target_info::{FileFlavor, RustcTargetData, TargetInfo};
+pub use self::target_info::{FileFlavor, FileType, RustcTargetData, TargetInfo};
 
 /// The build context, containing all information about a build task.
 ///
@@ -97,10 +98,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     pub fn rustdocflags_args(&self, unit: &Unit) -> &[String] {
         &self.target_data.info(unit.kind).rustdocflags
-    }
-
-    pub fn show_warnings(&self, pkg: PackageId) -> bool {
-        pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {

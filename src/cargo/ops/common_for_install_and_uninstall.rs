@@ -5,7 +5,6 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, format_err};
-use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 
 use crate::core::compiler::Freshness;
@@ -13,7 +12,7 @@ use crate::core::{Dependency, Package, PackageId, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Config, ToSemver};
+use crate::util::Config;
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -521,16 +520,14 @@ pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSour
 }
 
 /// Gets a Package based on command-line requirements.
-pub fn select_pkg<'a, T>(
-    mut source: T,
-    name: Option<&str>,
-    vers: Option<&str>,
+pub fn select_dep_pkg<T>(
+    source: &mut T,
+    dep: Dependency,
     config: &Config,
     needs_update: bool,
-    list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
 ) -> CargoResult<Package>
 where
-    T: Source + 'a,
+    T: Source,
 {
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
@@ -541,83 +538,42 @@ where
         source.update()?;
     }
 
-    if let Some(name) = name {
-        let vers = if let Some(v) = vers {
-            // If the version begins with character <, >, =, ^, ~ parse it as a
-            // version range, otherwise parse it as a specific version
-            let first = v
-                .chars()
-                .next()
-                .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
-
-            let is_req = "<>=^~".contains(first) || v.contains('*');
-            if is_req {
-                match v.parse::<VersionReq>() {
-                    Ok(v) => Some(v.to_string()),
-                    Err(_) => bail!(
-                        "the `--vers` provided, `{}`, is \
-                         not a valid semver version requirement\n\n\
-                         Please have a look at \
-                         https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
-                         for the correct format",
-                        v
-                    ),
-                }
-            } else {
-                match v.to_semver() {
-                    Ok(v) => Some(format!("={}", v)),
-                    Err(e) => {
-                        let mut msg = format!(
-                            "the `--vers` provided, `{}`, is \
-                             not a valid semver version: {}\n",
-                            v, e
-                        );
-
-                        // If it is not a valid version but it is a valid version
-                        // requirement, add a note to the warning
-                        if v.parse::<VersionReq>().is_ok() {
-                            msg.push_str(&format!(
-                                "\nif you want to specify semver range, \
-                                 add an explicit qualifier, like ^{}",
-                                v
-                            ));
-                        }
-                        bail!(msg);
-                    }
-                }
-            }
-        } else {
-            None
-        };
-        let vers = vers.as_deref();
-        let vers_spec = if vers.is_none() && source.source_id().is_registry() {
-            // Avoid pre-release versions from crate.io
-            // unless explicitly asked for
-            Some("*")
-        } else {
-            vers
-        };
-        let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
-        let deps = source.query_vec(&dep)?;
-        match deps.iter().map(|p| p.package_id()).max() {
-            Some(pkgid) => {
-                let pkg = Box::new(&mut source).download_now(pkgid, config)?;
-                Ok(pkg)
-            }
-            None => {
-                let vers_info = vers
-                    .map(|v| format!(" with version `{}`", v))
-                    .unwrap_or_default();
-                bail!(
-                    "could not find `{}` in {}{}",
-                    name,
-                    source.source_id(),
-                    vers_info
-                )
-            }
+    let deps = source.query_vec(&dep)?;
+    match deps.iter().map(|p| p.package_id()).max() {
+        Some(pkgid) => {
+            let pkg = Box::new(source).download_now(pkgid, config)?;
+            Ok(pkg)
         }
+        None => bail!(
+            "could not find `{}` in {} with version `{}`",
+            dep.package_name(),
+            source.source_id(),
+            dep.version_req(),
+        ),
+    }
+}
+
+pub fn select_pkg<T, F>(
+    source: &mut T,
+    dep: Option<Dependency>,
+    mut list_all: F,
+    config: &Config,
+) -> CargoResult<Package>
+where
+    T: Source,
+    F: FnMut(&mut T) -> CargoResult<Vec<Package>>,
+{
+    // This operation may involve updating some sources or making a few queries
+    // which may involve frobbing caches, as a result make sure we synchronize
+    // with other global Cargos
+    let _lock = config.acquire_package_cache_lock()?;
+
+    source.update()?;
+
+    return if let Some(dep) = dep {
+        select_dep_pkg(source, dep, config, false)
     } else {
-        let candidates = list_all(&mut source)?;
+        let candidates = list_all(source)?;
         let binaries = candidates
             .iter()
             .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);
@@ -630,23 +586,23 @@ where
                 Some(p) => p,
                 None => bail!(
                     "no packages found with binaries or \
-                     examples"
+                         examples"
                 ),
             },
         };
-        return Ok(pkg.clone());
+        Ok(pkg.clone())
+    };
 
-        fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
-            pkgs.sort_unstable_by_key(|a| a.name());
-            format!(
-                "multiple packages with {} found: {}",
-                kind,
-                pkgs.iter()
-                    .map(|p| p.name().as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        }
+    fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
+        pkgs.sort_unstable_by_key(|a| a.name());
+        format!(
+            "multiple packages with {} found: {}",
+            kind,
+            pkgs.iter()
+                .map(|p| p.name().as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 

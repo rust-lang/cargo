@@ -14,14 +14,19 @@ use cargo_test_support::{
     basic_manifest, cargo_process, cross_compile, execs, git, process, project, Execs,
 };
 
-// Helper for publishing a package.
-fn pkg(name: &str, vers: &str) {
+fn pkg_maybe_yanked(name: &str, vers: &str, yanked: bool) {
     Package::new(name, vers)
+        .yanked(yanked)
         .file(
             "src/main.rs",
             r#"fn main() { println!("{}", env!("CARGO_PKG_VERSION")) }"#,
         )
         .publish();
+}
+
+// Helper for publishing a package.
+fn pkg(name: &str, vers: &str) {
+    pkg_maybe_yanked(name, vers, false)
 }
 
 fn v1_path() -> PathBuf {
@@ -225,7 +230,6 @@ fn ambiguous_version_no_longer_allowed() {
     cargo_process("install foo --version=1.0")
         .with_stderr(
             "\
-[UPDATING] `[..]` index
 [ERROR] the `--vers` provided, `1.0`, is not a valid semver version: cannot parse '1.0' as a semver
 
 if you want to specify semver range, add an explicit qualifier, like ^1.0
@@ -745,4 +749,112 @@ fn deletes_orphaned() {
     validate_trackers("foo", "0.2.0", &["foo", "ex1", "ex2"]);
     // 0.1.0 should not have any entries.
     validate_trackers("foo", "0.1.0", &[]);
+}
+
+#[cargo_test]
+fn already_installed_exact_does_not_update() {
+    pkg("foo", "1.0.0");
+    cargo_process("install foo  --version=1.0.0").run();
+    cargo_process("install foo --version=1.0.0")
+        .with_stderr(
+            "\
+[IGNORED] package `foo v1.0.0` is already installed[..]
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+
+    cargo_process("install foo --version=>=1.0.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[IGNORED] package `foo v1.0.0` is already installed[..]
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+    pkg("foo", "1.0.1");
+    cargo_process("install foo --version=>=1.0.0")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v1.0.1 (registry [..])
+[INSTALLING] foo v1.0.1
+[COMPILING] foo v1.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn already_installed_updates_yank_status_on_upgrade() {
+    pkg("foo", "1.0.0");
+    pkg_maybe_yanked("foo", "1.0.1", true);
+    cargo_process("install foo  --version=1.0.0").run();
+
+    cargo_process("install foo --version=1.0.1")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[ERROR] could not find `foo` in registry `[..]` with version `=1.0.1`
+",
+        )
+        .run();
+
+    pkg_maybe_yanked("foo", "1.0.1", false);
+
+    pkg("foo", "1.0.1");
+    cargo_process("install foo --version=1.0.1")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v1.0.1 (registry [..])
+[INSTALLING] foo v1.0.1
+[COMPILING] foo v1.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn partially_already_installed_does_one_update() {
+    pkg("foo", "1.0.0");
+    cargo_process("install foo  --version=1.0.0").run();
+    pkg("bar", "1.0.0");
+    pkg("baz", "1.0.0");
+    cargo_process("install foo bar baz --version=1.0.0")
+        .with_stderr(
+            "\
+[IGNORED] package `foo v1.0.0` is already installed[..]
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry [..])
+[INSTALLING] bar v1.0.0
+[COMPILING] bar v1.0.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
+[INSTALLED] package `bar v1.0.0` (executable `bar[EXE]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v1.0.0 (registry [..])
+[INSTALLING] baz v1.0.0
+[COMPILING] baz v1.0.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/baz[EXE]
+[INSTALLED] package `baz v1.0.0` (executable `baz[EXE]`)
+[SUMMARY] Successfully installed foo, bar, baz!
+[WARNING] be sure to add [..]
+",
+        )
+        .run();
 }

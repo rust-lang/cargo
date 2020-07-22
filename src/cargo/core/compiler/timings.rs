@@ -8,9 +8,8 @@ use crate::core::compiler::BuildContext;
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
-use crate::util::{paths, CargoResult, Config};
+use crate::util::{paths, CargoResult, CargoResultExt, Config};
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -122,6 +121,17 @@ impl<'cfg> Timings<'cfg> {
             .collect();
         let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
         let profile = bcx.build_config.requested_profile.to_string();
+        let last_cpu_state = if enabled {
+            match State::current() {
+                Ok(state) => Some(state),
+                Err(e) => {
+                    log::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
 
         Timings {
             config: bcx.config,
@@ -138,7 +148,7 @@ impl<'cfg> Timings<'cfg> {
             unit_times: Vec::new(),
             active: HashMap::new(),
             concurrency: Vec::new(),
-            last_cpu_state: if enabled { State::current().ok() } else { None },
+            last_cpu_state,
             last_cpu_recording: Instant::now(),
             cpu_usage: Vec::new(),
         }
@@ -235,7 +245,7 @@ impl<'cfg> Timings<'cfg> {
                 rmeta_time: unit_time.rmeta_time,
             }
             .to_json_string();
-            self.config.shell().stdout_println(msg);
+            crate::drop_println!(self.config, "{}", msg);
         }
         self.unit_times.push(unit_time);
     }
@@ -287,7 +297,10 @@ impl<'cfg> Timings<'cfg> {
         }
         let current = match State::current() {
             Ok(s) => s,
-            Err(_) => return,
+            Err(e) => {
+                log::info!("failed to get CPU state: {:?}", e);
+                return;
+            }
         };
         let pct_idle = current.idle_since(prev);
         *prev = current;
@@ -309,7 +322,8 @@ impl<'cfg> Timings<'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(bcx, error)?;
+            self.report_html(bcx, error)
+                .chain_err(|| "failed to save timing report")?;
         }
         Ok(())
     }
@@ -323,7 +337,7 @@ impl<'cfg> Timings<'cfg> {
         let duration = d_as_f64(self.start.elapsed());
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
         let filename = format!("cargo-timing-{}.html", timestamp);
-        let mut f = BufWriter::new(File::create(&filename)?);
+        let mut f = BufWriter::new(paths::create(&filename)?);
         let roots: Vec<&str> = self
             .root_targets
             .iter()
@@ -614,7 +628,13 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         .lines()
         .next()
         .expect("rustc version");
-    let requested_target = bcx.target_data.short_name(&bcx.build_config.requested_kind);
+    let requested_target = bcx
+        .build_config
+        .requested_kinds
+        .iter()
+        .map(|kind| bcx.target_data.short_name(kind))
+        .collect::<Vec<_>>()
+        .join(", ");
     format!(
         "{}<br>Host: {}<br>Target: {}",
         version,

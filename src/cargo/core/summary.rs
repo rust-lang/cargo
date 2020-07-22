@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use serde::{Serialize, Serializer};
 
-use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, SourceId};
+use crate::util::interning::InternedString;
 use semver::Version;
 
 use crate::util::CargoResult;
@@ -115,8 +115,7 @@ impl Summary {
     {
         {
             let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
-            let deps = mem::replace(slot, Vec::new());
-            *slot = deps.into_iter().map(f).collect();
+            *slot = mem::take(slot).into_iter().map(f).collect();
         }
         self
     }
