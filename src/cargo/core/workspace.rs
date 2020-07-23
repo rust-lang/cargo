@@ -1206,7 +1206,16 @@ impl WorkspaceRootConfig {
             if expanded_paths.is_empty() {
                 expanded_list.push(pathbuf);
             } else {
-                expanded_list.extend(expanded_paths);
+                // Some OS can create system support files anywhere.
+                // (e.g. macOS creates `.DS_Store` file if you visit a directory using Finder.)
+                // Such files can be reported as a member path unexpectedly.
+                // Check and filter out non-directory paths to prevent pushing such accidental unwanted path
+                // as a member.
+                for expanded_path in expanded_paths {
+                    if expanded_path.is_dir() {
+                        expanded_list.push(expanded_path);
+                    }
+                }
             }
         }
 

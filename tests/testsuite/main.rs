@@ -62,6 +62,7 @@ mod locate_project;
 mod lockfile_compat;
 mod login;
 mod lto;
+mod member_discovery;
 mod member_errors;
 mod message_format;
 mod metabuild;
