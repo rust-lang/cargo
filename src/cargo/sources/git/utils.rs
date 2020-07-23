@@ -328,6 +328,12 @@ impl<'a> GitCheckout<'a> {
         let ok_file = self.location.join(".cargo-ok");
         let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
+
+        // Ensure libgit2 won't mess with newlines when we vendor.
+        if let Ok(mut git_config) = self.repo.config() {
+            git_config.set_bool("core.autocrlf", false)?;
+        }
+
         let object = self.repo.find_object(self.revision, None)?;
         reset(&self.repo, &object, config)?;
         paths::create(ok_file)?;
