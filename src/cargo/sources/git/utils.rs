@@ -66,10 +66,10 @@
 //! Another issue pointed out in #8364 was that `Cargo.lock` files were no
 //! longer compatible on stable and nightly with each other. The underlying
 //! issue is that Cargo was serializing `branch = "master"` *differently* on
-//! nightly than it was on stable. Historical implementations of Cargo
-//! desugared `branch = "master"` to having not dependency directives in
-//! `Cargo.lock`, which means when reading `Cargo.lock` we can't differentiate
-//! what's for the default branch and what's for the `master` branch.
+//! nightly than it was on stable. Historical implementations of Cargo would
+//! encode `DefaultBranch` and `Branch("master")` the same way in `Cargo.lock`,
+//! so when reading a lock file we have no way of differentiating between the
+//! two.
 //!
 //! To handle this difference in encoding of `Cargo.lock` we'll be employing
 //! the standard scheme to change `Cargo.lock`:
