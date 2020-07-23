@@ -10,7 +10,7 @@ limit to the number of versions which can be published, however.
 
 ### Before your first publish
 
-First thing’s first, you’ll need an account on [crates.io] to acquire
+First things first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
 account (required for now). After this, visit your [Account
 Settings](https://crates.io/me) page and run the [`cargo login`] command
