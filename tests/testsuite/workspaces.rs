@@ -1629,6 +1629,96 @@ fn exclude_but_also_depend() {
 }
 
 #[cargo_test]
+fn excluded_default_members_still_must_be_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+            default-members = ["foo", "bar"]
+            exclude = ["bar"]
+        "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file("bar/something.txt", "");
+    let p = p.build();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: package `[..]bar` is listed in workspace’s default-members \
+but is not a member.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn excluded_default_members_crate_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar/*"]
+            default-members = ["bar/*"]
+            exclude = ["bar/quux"]
+        "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .file("bar/quux/Cargo.toml", &basic_manifest("quux", "0.1.0"))
+        .file("bar/quux/src/main.rs", "fn main() {}");
+
+    let p = p.build();
+    p.cargo("build").run();
+
+    assert!(p.root().join("target").is_dir());
+    assert!(!p.bin("foo").is_file());
+    assert!(p.bin("baz").is_file());
+    assert!(!p.bin("quux").exists());
+
+    p.cargo("build --workspace").run();
+    assert!(p.root().join("target").is_dir());
+    assert!(p.bin("foo").is_file());
+    assert!(!p.bin("quux").exists());
+
+    p.cargo("build").cwd("bar/quux").run();
+    assert!(p.root().join("bar/quux/target").is_dir());
+}
+
+#[cargo_test]
+fn excluded_default_members_not_crate_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar/*"]
+            default-members = ["bar/*"]
+            exclude = ["bar/docs"]
+        "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .file("bar/docs/readme.txt", "This folder is not a crate!");
+
+    let p = p.build();
+    p.cargo("build").run();
+
+    assert!(!p.bin("foo").is_file());
+    assert!(p.bin("baz").is_file());
+    p.cargo("build --workspace").run();
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn glob_syntax() {
     let p = project()
         .file(
