@@ -1287,11 +1287,7 @@ fn doc_cap_lints() {
     p.root().join("target").rm_rf();
 
     p.cargo("doc -vv")
-        .with_stderr_contains(
-            "\
-[WARNING] `[bad_link]` cannot be resolved[..]
-",
-        )
+        .with_stderr_contains("[WARNING] [..]`bad_link`[..]")
         .run();
 }
 
@@ -1334,7 +1330,7 @@ fn short_message_format() {
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
     p.cargo("doc --message-format=short")
         .with_status(101)
-        .with_stderr_contains("src/lib.rs:4:6: error: `[bad_link]` cannot be resolved[..]")
+        .with_stderr_contains("src/lib.rs:4:6: error: [..]`bad_link`[..]")
         .run();
 }
 
