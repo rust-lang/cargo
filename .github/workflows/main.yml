@@ -61,16 +61,9 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: rustup component add rustfmt || echo "rustfmt not available"
 
-    # Deny warnings on CI to avoid warnings getting into the codebase, and note
-    # the `force-system-lib-on-osx` which is intended to fix compile issues on
-    # OSX where compiling curl from source on OSX yields linker errors on Azure.
-    #
-    # Note that the curl issue is traced back to alexcrichton/curl-rust#279
-    # where it looks like the OSX version we're actually running on is such that
-    # a symbol is emitted that's never worked. For now force the system library
-    # to be used to fix the link errors.
-    - run: cargo test --features 'deny-warnings curl/force-system-lib-on-osx'
-    - run: cargo test -p cargo-test-support
+    # Deny warnings on CI to avoid warnings getting into the codebase.
+    - run: cargo test --features 'deny-warnings'
+    - run: cargo test --features 'deny-warnings' -p cargo-test-support
     - run: cargo test -p cargo-platform
 
   resolver:
