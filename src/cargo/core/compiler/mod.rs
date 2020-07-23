@@ -817,31 +817,10 @@ fn build_base_args(
         }
         lto::Lto::ObjectAndBitcode => {} // this is rustc's default
         lto::Lto::OnlyBitcode => {
-            // Note that this compiler flag, like the one below, is just an
-            // optimization in terms of build time. If we don't pass it then
-            // both object code and bitcode will show up. This is lagely just
-            // compat until the feature lands on stable and we can remove the
-            // conditional branch.
-            if cx
-                .bcx
-                .target_data
-                .info(CompileKind::Host)
-                .supports_embed_bitcode
-                .unwrap()
-            {
-                cmd.arg("-Clinker-plugin-lto");
-            }
+            cmd.arg("-Clinker-plugin-lto");
         }
         lto::Lto::OnlyObject => {
-            if cx
-                .bcx
-                .target_data
-                .info(CompileKind::Host)
-                .supports_embed_bitcode
-                .unwrap()
-            {
-                cmd.arg("-Cembed-bitcode=no");
-            }
+            cmd.arg("-Cembed-bitcode=no");
         }
     }
 

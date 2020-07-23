@@ -1,9 +1,77 @@
 # Changelog
 
-## Cargo 1.46 (2020-08-27)
-[9fcb8c1d...HEAD](https://github.com/rust-lang/cargo/compare/9fcb8c1d...HEAD)
+## Cargo 1.47 (2020-10-08)
+[4f74d9b2...HEAD](https://github.com/rust-lang/cargo/compare/4f74d9b2...HEAD)
 
 ### Added
+
+### Changed
+- The comments added to `.gitignore` when it is modified have been tweaked to
+  add some spacing.
+  [#8476](https://github.com/rust-lang/cargo/pull/8476)
+- `cargo metadata` output should now be sorted to be deterministic.
+  [#8489](https://github.com/rust-lang/cargo/pull/8489)
+- By default, build scripts and proc-macros are now built with `opt-level=0`
+  and the default codegen units, even in release mode.
+  [#8500](https://github.com/rust-lang/cargo/pull/8500)
+
+### Fixed
+- Fixed issue where if a project directory was moved, and one of the
+  build scripts did not use the `rerun-if-changed` directive, then that
+  build script was being rebuilt when it shouldn't.
+  [#8497](https://github.com/rust-lang/cargo/pull/8497)
+
+### Nightly only
+- Added support for `-Z terminal-width` which tells `rustc` the width of the
+  terminal so that it can format diagnostics better.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#terminal-width)
+  [#8427](https://github.com/rust-lang/cargo/pull/8427)
+- Added ability to configure `-Z` unstable flags in config files via the
+  `[unstable]` table.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html)
+  [#8393](https://github.com/rust-lang/cargo/pull/8393)
+- Added [`-Z build-std-features`] flag to set features for the standard library.
+  [#8490](https://github.com/rust-lang/cargo/pull/8490)
+
+## Cargo 1.46 (2020-08-27)
+[9fcb8c1d...rust-1.46.0](https://github.com/rust-lang/cargo/compare/9fcb8c1d...rust-1.46.0)
+
+### Added
+- The `dl` key in `config.json` of a registry index now supports the
+  replacement markers `{prefix}` and `{lowerprefix}` to allow spreading crates
+  across directories similar to how the index itself is structured.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/registries.html#index-format)
+  [#8267](https://github.com/rust-lang/cargo/pull/8267)
+- Added new environment variables that are set during compilation:
+  - `CARGO_CRATE_NAME`: The name of the crate being built.
+  - `CARGO_BIN_NAME`: The name of the executable binary (if this is a binary crate).
+  - `CARGO_PKG_LICENSE`: The `license` field from the manifest.
+  - `CARGO_PKG_LICENSE_FILE`: The `license-file` field from the manifest.
+  [#8270](https://github.com/rust-lang/cargo/pull/8270)
+  [#8325](https://github.com/rust-lang/cargo/pull/8325)
+  [#8387](https://github.com/rust-lang/cargo/pull/8387)
+- If the value for `readme` is not specified in `Cargo.toml`, it is now
+  automatically inferred from the existence of a file named `README`,
+  `README.md`, or `README.txt`. This can be suppressed by setting
+  `readme = false`.
+  [#8277](https://github.com/rust-lang/cargo/pull/8277)
+- `cargo install` now supports the `--index` flag to install directly from an index.
+  [#8344](https://github.com/rust-lang/cargo/pull/8344)
+- Added the `metadata` table to the `workspace` definition in `Cargo.toml`.
+  This can be used for arbitrary data similar to the `package.metadata` table.
+  [#8323](https://github.com/rust-lang/cargo/pull/8323)
+- Added the `--target-dir` flag to `cargo install` to set the target directory.
+  [#8391](https://github.com/rust-lang/cargo/pull/8391)
+- Changes to environment variables used by the
+  [`env!`](https://doc.rust-lang.org/std/macro.env.html) or
+  [`option_env!`](https://doc.rust-lang.org/std/macro.option_env.html) macros
+  are now automatically detected to trigger a rebuild.
+  [#8421](https://github.com/rust-lang/cargo/pull/8421)
+- The `target` directory now includes the `CACHEDIR.TAG` file which is used by
+  some tools to exclude the directory from backups.
+  [#8378](https://github.com/rust-lang/cargo/pull/8378)
+- Added docs about rustup's `+toolchain` syntax.
+  [#8455](https://github.com/rust-lang/cargo/pull/8455)
 
 ### Changed
 - A warning is now displayed if a git dependency includes a `#` fragment in
@@ -11,6 +79,17 @@
   URLs with this syntax, but it does not have any meaning outside of the
   `Cargo.lock` file, and would not work properly.
   [#8297](https://github.com/rust-lang/cargo/pull/8297)
+- Various optimizations and fixes for bitcode embedding and LTO.
+  [#8349](https://github.com/rust-lang/cargo/pull/8349)
+- Reduced the amount of data fetched for git dependencies. If Cargo knows the
+  branch or tag to fetch, it will now only fetch that branch or tag instead of
+  all branches and tags.
+  [#8363](https://github.com/rust-lang/cargo/pull/8363)
+- Enhanced git fetch error messages.
+  [#8409](https://github.com/rust-lang/cargo/pull/8409)
+- `.crate` files are now generated with GNU tar format instead of UStar, which
+  supports longer file names.
+  [#8453](https://github.com/rust-lang/cargo/pull/8453)
 
 ### Fixed
 - Fixed a rare situation where an update to `Cargo.lock` failed once, but then
@@ -22,6 +101,27 @@
 - Updated libgit2, which brings in a fix for zlib errors for some remote
   git servers like googlesource.com.
   [#8320](https://github.com/rust-lang/cargo/pull/8320)
+- Fixed the GitHub fast-path check for up-to-date git dependencies on
+  non-master branches.
+  [#8363](https://github.com/rust-lang/cargo/pull/8363)
+- Fixed issue when enabling a feature with `pkg/feature` syntax, and `pkg` is
+  an optional dependency, but also a dev-dependency, and the dev-dependency
+  appears before the optional normal dependency in the registry summary, then
+  the optional dependency would not get activated.
+  [#8395](https://github.com/rust-lang/cargo/pull/8395)
+- Fixed `clean -p` deleting the build directory if there is a test named
+  `build`.
+  [#8398](https://github.com/rust-lang/cargo/pull/8398)
+- Fixed indentation of multi-line Cargo error messages.
+  [#8409](https://github.com/rust-lang/cargo/pull/8409)
+- Fixed issue where the automatic inclusion of the `--document-private-items`
+  flag for rustdoc would override any flags passed to the `cargo rustdoc`
+  command.
+  [#8449](https://github.com/rust-lang/cargo/pull/8449)
+- Cargo will now include a version in the hash of the fingerprint directories
+  to support backwards-incompatible changes to the fingerprint structure.
+  [#8473](https://github.com/rust-lang/cargo/pull/8473)
+  [#8488](https://github.com/rust-lang/cargo/pull/8488)
 
 ### Nightly only
 - Added `-Zrustdoc-map` feature which provides external mappings for rustdoc
@@ -31,7 +131,10 @@
 - Fixed feature calculation when a proc-macro is declared in `Cargo.toml` with
   an underscore (like `proc_macro = true`).
   [#8319](https://github.com/rust-lang/cargo/pull/8319)
-
+- Added support for setting `-Clinker` with `-Zdoctest-xcompile`.
+  [#8359](https://github.com/rust-lang/cargo/pull/8359)
+- Fixed setting the `strip` profile field in config files.
+  [#8454](https://github.com/rust-lang/cargo/pull/8454)
 
 ## Cargo 1.45 (2020-07-16)
 [ebda5065e...rust-1.45.0](https://github.com/rust-lang/cargo/compare/ebda5065...rust-1.45.0)
