@@ -214,21 +214,4 @@ impl CompileMode {
     pub fn is_run_custom_build(self) -> bool {
         self == CompileMode::RunCustomBuild
     }
-
-    /// List of all modes (currently used by `cargo clean -p` for computing
-    /// all possible outputs).
-    pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 9] = [
-            CompileMode::Test,
-            CompileMode::Build,
-            CompileMode::Check { test: true },
-            CompileMode::Check { test: false },
-            CompileMode::Bench,
-            CompileMode::Doc { deps: true },
-            CompileMode::Doc { deps: false },
-            CompileMode::Doctest,
-            CompileMode::RunCustomBuild,
-        ];
-        &ALL
-    }
 }
