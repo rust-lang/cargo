@@ -1479,10 +1479,6 @@ fn bin_private_items_deps() {
 
 #[cargo_test]
 fn crate_versions() {
-    // Testing flag that will reach stable on 1.44
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1496,8 +1492,14 @@ fn crate_versions() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("-Z crate-versions doc")
-        .masquerade_as_nightly_cargo()
+    p.cargo("doc -v")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v1.2.4 [..]
+[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 1.2.4`
+[FINISHED] [..]
+",
+        )
         .run();
 
     let output_path = p.root().join("target/doc/foo/index.html");
@@ -1508,10 +1510,6 @@ fn crate_versions() {
 
 #[cargo_test]
 fn crate_versions_flag_is_overridden() {
-    // Testing flag that will reach stable on 1.44
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1534,16 +1532,13 @@ fn crate_versions_flag_is_overridden() {
         assert!(html.contains("Version 2.0.3"));
     };
 
-    p.cargo("-Z crate-versions doc")
-        .masquerade_as_nightly_cargo()
+    p.cargo("doc")
         .env("RUSTDOCFLAGS", "--crate-version 2.0.3")
         .run();
     asserts(output_documentation());
 
     p.build_dir().rm_rf();
 
-    p.cargo("-Z crate-versions rustdoc -- --crate-version 2.0.3")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("rustdoc -- --crate-version 2.0.3").run();
     asserts(output_documentation());
 }

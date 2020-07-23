@@ -579,7 +579,9 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
     rustdoc.args(bcx.rustdocflags_args(unit));
 
-    add_crate_versions_if_requested(bcx, unit, &mut rustdoc);
+    if !crate_version_flag_already_present(&rustdoc) {
+        append_crate_version_flag(unit, &mut rustdoc);
+    }
 
     let name = unit.pkg.name().to_string();
     let build_script_outputs = Arc::clone(&cx.build_script_outputs);
@@ -615,16 +617,6 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
             .chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
     }))
-}
-
-fn add_crate_versions_if_requested(
-    bcx: &BuildContext<'_, '_>,
-    unit: &Unit,
-    rustdoc: &mut ProcessBuilder,
-) {
-    if bcx.config.cli_unstable().crate_versions && !crate_version_flag_already_present(rustdoc) {
-        append_crate_version_flag(unit, rustdoc);
-    }
 }
 
 // The --crate-version flag could have already been passed in RUSTDOCFLAGS

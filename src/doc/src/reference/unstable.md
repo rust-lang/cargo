@@ -646,13 +646,6 @@ resolver = "2"
 The `resolver` field is ignored in dependencies, only the top-level project or
 workspace can control the new behavior.
 
-### crate-versions
-* Tracking Issue: [#7907](https://github.com/rust-lang/cargo/issues/7907)
-
-The `-Z crate-versions` flag will make `cargo doc` include appropriate crate versions for the current crate and all of its dependencies (unless `--no-deps` was provided) in the compiled documentation.
-
-You can find an example screenshot for the cargo itself in the tracking issue.
-
 ### unit-graph
 * Tracking Issue: [#8002](https://github.com/rust-lang/cargo/issues/8002)
 
