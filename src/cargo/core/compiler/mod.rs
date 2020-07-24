@@ -357,6 +357,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
+
             if key.0 == current_id {
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
@@ -366,11 +367,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                         rustc.arg("-l").arg(name);
                     }
                 }
-                if link_type.is_some() {
-                    for (lt, arg) in &output.linker_args {
-                        if lt.is_none() || *lt == link_type {
-                            rustc.arg("-C").arg(format!("link-arg={}", arg));
-                        }
+            }
+
+            if link_type.is_some() {
+                for (lt, arg) in &output.linker_args {
+                    if lt.is_none() || *lt == link_type {
+                        rustc.arg("-C").arg(format!("link-arg={}", arg));
                     }
                 }
             }
