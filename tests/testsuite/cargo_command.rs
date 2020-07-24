@@ -79,6 +79,17 @@ fn list_commands_with_descriptions() {
 }
 
 #[cargo_test]
+fn list_aliases_with_descriptions() {
+    let p = project().build();
+    p.cargo("--list")
+        .with_stdout_contains("    b                    alias: build")
+        .with_stdout_contains("    c                    alias: check")
+        .with_stdout_contains("    r                    alias: run")
+        .with_stdout_contains("    t                    alias: test")
+        .run();
+}
+
+#[cargo_test]
 fn list_command_looks_at_path() {
     let proj = project().build();
     let proj = fake_file(
