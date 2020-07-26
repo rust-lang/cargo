@@ -52,10 +52,25 @@ pub struct PublishOpts<'cfg> {
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let pkg = ws.current()?;
+    let mut publish_registry = opts.registry.clone();
 
     if let Some(ref allowed_registries) = *pkg.publish() {
-        let reg_name = opts
-            .registry
+        if publish_registry.is_none() && allowed_registries.len() == 1 {
+            // If there is only one allowed registry, push to that one directly,
+            // even though there is no registry specified in the command.
+            let default_registry = &allowed_registries[0];
+            if default_registry != CRATES_IO_REGISTRY {
+                // Don't change the registry for crates.io and don't warn the user.
+                // crates.io will be defaulted even without this.
+                opts.config.shell().note(&format!(
+                    "Found `{}` as only allowed registry. Publishing to it automatically.",
+                    default_registry
+                ))?;
+                publish_registry = Some(default_registry.clone());
+            }
+        }
+
+        let reg_name = publish_registry
             .clone()
             .unwrap_or_else(|| CRATES_IO_REGISTRY.to_string());
         if !allowed_registries.contains(&reg_name) {
@@ -72,7 +87,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.config,
         opts.token.clone(),
         opts.index.clone(),
-        opts.registry.clone(),
+        publish_registry,
         true,
         !opts.dry_run,
     )?;
