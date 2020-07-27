@@ -87,7 +87,7 @@ optional dependencies. This allows packages to internally enable/disable
 features without requiring a new dependency.
 
 > **Note**: [crates.io] requires feature names to only contain ASCII letters,
-> digits, `_`, or `-`.
+> digits, `_`, `-`, or `+`.
 
 ### Usage in end products
 
