@@ -120,6 +120,10 @@ fn resolve_to_string_orig(
         }
     }
 
+    if let Some(version) = toml.get("version") {
+        out.push_str(&format!("version = {}\n\n", version));
+    }
+
     let deps = toml["package"].as_array().unwrap();
     for dep in deps {
         let dep = dep.as_table().unwrap();
@@ -147,12 +151,9 @@ fn resolve_to_string_orig(
     // encodings going forward, though, we want to be sure that our encoded lock
     // file doesn't contain any trailing newlines so trim out the extra if
     // necessary.
-    match resolve.version() {
-        ResolveVersion::V1 => {}
-        _ => {
-            while out.ends_with("\n\n") {
-                out.pop();
-            }
+    if resolve.version() >= ResolveVersion::V2 {
+        while out.ends_with("\n\n") {
+            out.pop();
         }
     }
 

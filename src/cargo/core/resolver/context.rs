@@ -1,16 +1,13 @@
-use std::collections::HashMap;
-use std::num::NonZeroU64;
-
-use anyhow::format_err;
-use log::debug;
-
-use crate::core::{Dependency, PackageId, SourceId, Summary};
-use crate::util::interning::InternedString;
-use crate::util::Graph;
-
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
+use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::util::interning::InternedString;
+use crate::util::Graph;
+use anyhow::format_err;
+use log::debug;
+use std::collections::HashMap;
+use std::num::NonZeroU64;
 
 pub use super::encode::Metadata;
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
