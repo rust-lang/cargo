@@ -2,12 +2,12 @@
 .\"     Title: cargo-test
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-06-25
+.\"      Date: 2020-07-28
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-TEST" "1" "2020-06-25" "\ \&" "\ \&"
+.TH "CARGO\-TEST" "1" "2020-07-28" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -41,8 +41,10 @@ dashes (\fB\-\-\fP) are passed to the test binaries and thus to \fIlibtest\fP (r
 built in unit\-test and micro\-benchmarking framework).  If you\(cqre passing
 arguments to both Cargo and the binary, the ones after \fB\-\-\fP go to the binary,
 the ones before go to Cargo.  For details about libtest\(cqs arguments see the
-output of \fBcargo test \-\- \-\-help\fP.  As an example, this will run all tests with
-\fBfoo\fP in their name on 3 threads in parallel:
+output of \fBcargo test \-\- \-\-help\fP.
+.sp
+As an example, this will filter for tests with \fBfoo\fP in their name and run them
+on 3 threads in parallel:
 .sp
 .if n .RS 4
 .nf
@@ -677,6 +679,23 @@ cargo test
 .el \{\
 .  sp -1
 .  IP " 2." 4.2
+.\}
+Run only tests whose names match against a filter string:
+.sp
+.if n .RS 4
+.nf
+cargo test name_filter
+.fi
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 3." 4.2
 .\}
 Run only a specific test within a specific integration test:
 .sp
