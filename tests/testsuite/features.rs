@@ -291,7 +291,7 @@ fn invalid9() {
         .build();
 
     p.cargo("build --features bar")
-.with_stderr(
+        .with_stderr(
             "\
 error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
 ",
@@ -1514,14 +1514,14 @@ fn namespaced_shadowed_dep() {
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-            "\
+        "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `baz` includes the optional dependency of the same name, but this is left implicit in the features included by this feature.
   Consider adding `crate:baz` to this feature's requirements.
 ",
-        )
+    )
         .run();
 }
 
@@ -1550,7 +1550,7 @@ fn namespaced_shadowed_non_optional() {
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-            "\
+        "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -1558,7 +1558,7 @@ Caused by:
   Additionally, the dependency must be marked as optional to be included in the feature definition.
   Consider adding `crate:baz` to this feature's requirements and marking the dependency as `optional = true`
 ",
-        )
+    )
         .run();
 }
 
@@ -1587,15 +1587,14 @@ fn namespaced_implicit_non_optional() {
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
-            "\
+        "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   Feature `bar` includes `baz` which is not defined as a feature.
   A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition
 ",
-        ).run(
-    );
+    ).run();
 }
 
 #[cargo_test]
@@ -2188,5 +2187,49 @@ fn registry_summary_order_doesnt_matter() {
 ",
         )
         .with_stdout("it works")
+        .run();
+}
+
+#[cargo_test]
+fn nonexistent_required_features() {
+    Package::new("required_dependency", "0.1.0")
+        .feature("simple", &[])
+        .publish();
+    Package::new("optional_dependency", "0.2.0")
+        .feature("optional", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            [features]
+            existing = []
+            fancy = ["optional_dependency"]
+            [dependencies]
+            required_dependency = { version = "0.1", optional = false}
+            optional_dependency = { version = "0.2", optional = true}
+            [[example]]
+            name = "ololo"
+            required-features = ["not_present",
+                                 "existing",
+                                 "fancy",
+                                 "required_dependency/not_existing",
+                                 "required_dependency/simple",
+                                 "optional_dependency/optional",
+                                 "not_specified_dependency/some_feature"]"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/ololo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --examples")
+        .with_stderr_contains(
+            r#"warning: feature `not_present` is not present in [features] section.
+warning: feature `not_existing` does not exist in package `required_dependency v0.1.0`.
+warning: dependency `not_specified_dependency` specified in required-features as `not_specified_dependency/some_feature` does not exist."#,
+        )
         .run();
 }
