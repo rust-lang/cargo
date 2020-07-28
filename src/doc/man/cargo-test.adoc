@@ -21,8 +21,10 @@ dashes (`--`) are passed to the test binaries and thus to _libtest_ (rustc's
 built in unit-test and micro-benchmarking framework).  If you're passing
 arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.  For details about libtest's arguments see the
-output of `cargo test \-- --help`.  As an example, this will run all tests with
-`foo` in their name on 3 threads in parallel:
+output of `cargo test \-- --help`.
+
+As an example, this will filter for tests with `foo` in their name and run them
+on 3 threads in parallel:
 
     cargo test foo -- --test-threads 3
 
@@ -151,6 +153,10 @@ include::section-exit-status.adoc[]
 . Execute all the unit and integration tests of the current package:
 
     cargo test
+
+. Run only tests whose names match against a filter string:
+
+    cargo test name_filter
 
 . Run only a specific test within a specific integration test:
 
