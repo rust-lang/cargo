@@ -47,23 +47,19 @@ fn main() {
     }
 }
 
-const BUILTIN_ALIASES: [(&str, &str); 4] = [
-    ("b", "alias: build"),
-    ("c", "alias: check"),
-    ("r", "alias: run"),
-    ("t", "alias: test"),
+/// Table for defining the aliases which come builtin in `Cargo`.
+/// The contents are structured as: `(alias, aliased_command, description)`.
+const BUILTIN_ALIASES: [(&str, &str, &str); 4] = [
+    ("b", "build", "alias: build"),
+    ("c", "check", "alias: check"),
+    ("r", "run", "alias: run"),
+    ("t", "test", "alias: test"),
 ];
 
 /// Function which contains the list of all of the builtin aliases and it's
 /// corresponding execs represented as &str.
-fn builtin_aliases_execs(cmd: &str) -> Option<&str> {
-    match cmd {
-        "b" => Some("build"),
-        "c" => Some("check"),
-        "r" => Some("run"),
-        "t" => Some("test"),
-        _ => None,
-    }
+fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
+    BUILTIN_ALIASES.iter().find(|alias| alias.0 == cmd)
 }
 
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
@@ -81,7 +77,7 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
     };
 
     let result = user_alias.or_else(|| match builtin_aliases_execs(command) {
-        Some(command_str) => Some(vec![command_str.to_string()]),
+        Some(command_str) => Some(vec![command_str.1.to_string()]),
         None => None,
     });
     Ok(result)
@@ -122,10 +118,13 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
             about: cmd.p.meta.about.map(|s| s.to_string()),
         });
     }
+
+    // Add the builtin_aliases and them descriptions to the
+    // `commands` `BTreeSet`.
     for command in &BUILTIN_ALIASES {
         commands.insert(CommandInfo::BuiltIn {
             name: command.0.to_string(),
-            about: Some(command.1.to_string()),
+            about: Some(command.2.to_string()),
         });
     }
 
