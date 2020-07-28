@@ -27,17 +27,17 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 }
 
 /// Generate a toml String of Cargo.lock from a Resolve.
-pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<String> {
+pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
     let (_orig, out, _ws_root) = resolve_to_string_orig(ws, resolve)?;
     Ok(out)
 }
 
-pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<()> {
-    let (orig, out, ws_root) = resolve_to_string_orig(ws, resolve)?;
+pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
+    let (orig, mut out, ws_root) = resolve_to_string_orig(ws, resolve)?;
 
     // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
-    if let Some(orig) = orig {
+    if let Some(orig) = &orig {
         if are_equal_lockfiles(orig, &out, ws) {
             return Ok(());
         }
@@ -62,6 +62,16 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         );
     }
 
+    // While we're updating the lock file anyway go ahead and update its
+    // encoding to whatever the latest default is. That way we can slowly roll
+    // out lock file updates as they're otherwise already updated, and changes
+    // which don't touch dependencies won't seemingly spuriously update the lock
+    // file.
+    if resolve.version() < ResolveVersion::default() {
+        resolve.set_version(ResolveVersion::default());
+        out = serialize_resolve(resolve, orig.as_deref());
+    }
+
     // Ok, if that didn't work just write it out
     ws_root
         .open_rw("Cargo.lock", ws.config(), "Cargo.lock file")
@@ -76,7 +86,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
 
 fn resolve_to_string_orig(
     ws: &Workspace<'_>,
-    resolve: &Resolve,
+    resolve: &mut Resolve,
 ) -> CargoResult<(Option<String>, String, Filesystem)> {
     // Load the original lock file if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
@@ -86,7 +96,11 @@ fn resolve_to_string_orig(
         f.read_to_string(&mut s)?;
         Ok(s)
     });
+    let out = serialize_resolve(resolve, orig.as_ref().ok().map(|s| &**s));
+    Ok((orig.ok(), out, ws_root))
+}
 
+fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     let toml = toml::Value::try_from(resolve).unwrap();
 
     let mut out = String::new();
@@ -100,7 +114,7 @@ fn resolve_to_string_orig(
     out.push_str(extra_line);
     out.push('\n');
     // and preserve any other top comments
-    if let Ok(orig) = &orig {
+    if let Some(orig) = orig {
         let mut comments = orig.lines().take_while(|line| line.starts_with('#'));
         if let Some(first) = comments.next() {
             if first != marker_line {
@@ -156,11 +170,11 @@ fn resolve_to_string_orig(
             out.pop();
         }
     }
-
-    Ok((orig.ok(), out, ws_root))
+    out
 }
 
-fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> bool {
+fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
+    let mut orig = orig.to_string();
     if has_crlf_line_endings(&orig) {
         orig = orig.replace("\r\n", "\n");
     }

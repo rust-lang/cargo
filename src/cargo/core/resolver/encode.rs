@@ -19,17 +19,32 @@
 //! We do, however, want to change `Cargo.lock` over time. (and we have!). To do
 //! this the rules that we currently have are:
 //!
-//! * Add support for the new format to Cargo
-//! * Continue to, by default, generate the old format
-//! * Preserve the new format if found
-//! * Wait a "long time" (e.g. 6 months or so)
-//! * Change Cargo to by default emit the new format
+//! * Add support for the new format to Cargo. This involves code changes in
+//!   Cargo itself, likely by adding a new variant of `ResolveVersion` and
+//!   branching on that where necessary. This is accompanied with tests in the
+//!   `lockfile_compat` module.
+//!
+//!   * Do not update `ResolveVersion::default()`. The new lockfile format will
+//!     not be used yet.
+//!
+//!   * Preserve the new format if found. This means that if Cargo finds the new
+//!     version it'll keep using it, but otherwise it continues to use whatever
+//!     format it previously found.
+//!
+//! * Wait a "long time". This is at least until the changes here hit stable
+//!   Rust. Often though we wait a little longer to let the changes percolate
+//!   into one or two older stable releases.
+//!
+//! * Change the return value of `ResolveVersion::default()` to the new format.
+//!   This will cause new lock files to use the latest encoding as well as
+//!   causing any operation which updates the lock file to update to the new
+//!   format.
 //!
 //! This migration scheme in general means that Cargo we'll get *support* for a
-//! new format into Cargo ASAP, but it won't really be exercised yet (except in
-//! Cargo's own tests really). Eventually when stable/beta/nightly all have
-//! support for the new format (and maybe a few previous stable versions) we
-//! flip the switch. Projects on nightly will quickly start seeing changes, but
+//! new format into Cargo ASAP, but it won't be exercised yet (except in Cargo's
+//! own tests). Eventually when stable/beta/nightly all have support for the new
+//! format (and maybe a few previous stable versions) we flip the switch.
+//! Projects on nightly will quickly start seeing changes, but
 //! stable/beta/nightly will all understand this new format and will preserve
 //! it.
 //!
