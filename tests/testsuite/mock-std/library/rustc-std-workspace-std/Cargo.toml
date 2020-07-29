@@ -1,5 +1,5 @@
 [package]
-name = "rustc-std-workspace-core"
+name = "rustc-std-workspace-std"
 version = "1.9.0"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 edition = "2018"
@@ -8,4 +8,4 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
-core = { path = "../../libcore" }
+std = { path = "../std" }
