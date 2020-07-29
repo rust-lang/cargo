@@ -470,8 +470,31 @@ impl ProfileMaker {
         unit_for: UnitFor,
     ) -> Profile {
         let mut profile = self.default;
+
+        // First apply profile-specific settings, things like
+        // `[profile.release]`
         if let Some(toml) = &self.toml {
             merge_profile(&mut profile, toml);
+        }
+
+        // Next start overriding those settings. First comes build dependencies
+        // which default to opt-level 0...
+        if unit_for.is_for_host() {
+            // For-host units are things like procedural macros, build scripts, and
+            // their dependencies. For these units most projects simply want them
+            // to compile quickly and the runtime doesn't matter too much since
+            // they tend to process very little data. For this reason we default
+            // them to a "compile as quickly as possible" mode which for now means
+            // basically turning down the optimization level and avoid limiting
+            // codegen units. This ensures that we spend little time optimizing as
+            // well as enabling parallelism by not constraining codegen units.
+            profile.opt_level = InternedString::new("0");
+            profile.codegen_units = None;
+        }
+        // ... and next comes any other sorts of overrides specified in
+        // profiles, such as `[profile.release.build-override]` or
+        // `[profile.release.package.foo]`
+        if let Some(toml) = &self.toml {
             merge_toml_overrides(pkg_id, is_member, unit_for, &mut profile, toml);
         }
         profile
@@ -487,17 +510,6 @@ fn merge_toml_overrides(
     toml: &TomlProfile,
 ) {
     if unit_for.is_for_host() {
-        // For-host units are things like procedural macros, build scripts, and
-        // their dependencies. For these units most projects simply want them
-        // to compile quickly and the runtime doesn't matter too much since
-        // they tend to process very little data. For this reason we default
-        // them to a "compile as quickly as possible" mode which for now means
-        // basically turning down the optimization level and avoid limiting
-        // codegen units. This ensures that we spend little time optimizing as
-        // well as enabling parallelism by not constraining codegen units.
-        profile.opt_level = InternedString::new("0");
-        profile.codegen_units = None;
-
         if let Some(build_override) = &toml.build_override {
             merge_profile(profile, build_override);
         }

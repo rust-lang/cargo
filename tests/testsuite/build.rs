@@ -5127,3 +5127,38 @@ fn simple_terminal_width() {
         .with_stderr_contains("3 | ..._: () = 42;")
         .run();
 }
+
+#[cargo_test]
+fn build_script_o0_default() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v --release")
+        .with_stderr_does_not_contain("[..]build_script_build[..]opt-level[..]")
+        .run();
+}
+
+#[cargo_test]
+fn build_script_o0_default_even_with_release() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release]
+                opt-level = 1
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v --release")
+        .with_stderr_does_not_contain("[..]build_script_build[..]opt-level[..]")
+        .run();
+}
