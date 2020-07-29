@@ -165,7 +165,7 @@ fn resolve_with_registry<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
-    let resolve = resolve_with_previous(
+    let mut resolve = resolve_with_previous(
         registry,
         ws,
         &ResolveOpts::everything(),
@@ -176,7 +176,7 @@ fn resolve_with_registry<'cfg>(
     )?;
 
     if !ws.is_ephemeral() && ws.require_optional_deps() {
-        ops::write_pkg_lockfile(ws, &resolve)?;
+        ops::write_pkg_lockfile(ws, &mut resolve)?;
     }
     Ok(resolve)
 }

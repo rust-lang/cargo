@@ -21,7 +21,7 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = ops::resolve_with_previous(
+    let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         &ResolveOpts::everything(),
@@ -30,7 +30,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         &[],
         true,
     )?;
-    ops::write_pkg_lockfile(ws, &resolve)?;
+    ops::write_pkg_lockfile(ws, &mut resolve)?;
     Ok(())
 }
 
@@ -113,7 +113,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         registry.add_sources(sources)?;
     }
 
-    let resolve = ops::resolve_with_previous(
+    let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         &ResolveOpts::everything(),
@@ -153,7 +153,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             .shell()
             .warn("not updating lockfile due to dry run")?;
     } else {
-        ops::write_pkg_lockfile(ws, &resolve)?;
+        ops::write_pkg_lockfile(ws, &mut resolve)?;
     }
     return Ok(());
 

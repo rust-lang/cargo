@@ -284,14 +284,14 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
 
     // Regenerate Cargo.lock using the old one as a guide.
     let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let (pkg_set, new_resolve) = ops::resolve_ws(&tmp_ws)?;
+    let (pkg_set, mut new_resolve) = ops::resolve_ws(&tmp_ws)?;
 
     if let Some(orig_resolve) = orig_resolve {
         compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
     }
     check_yanked(config, &pkg_set, &new_resolve)?;
 
-    ops::resolve_to_string(&tmp_ws, &new_resolve)
+    ops::resolve_to_string(&tmp_ws, &mut new_resolve)
 }
 
 // Checks that the package has some piece of metadata that a human can
