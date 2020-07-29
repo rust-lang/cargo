@@ -147,6 +147,11 @@ the latest commit on a branch named `next`:
 rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 ```
 
+Once a `git` dependency has been added, Cargo will lock that dependency to the
+latest commit at the time. New commits will not be pulled down automatically
+once the lock is in place. However, they can be pulled down manually with
+`cargo update`.
+
 See [Git Authentication] for help with git authentication for private repos.
 
 > **Note**: [crates.io] does not allow packages to be published with `git`
@@ -445,5 +450,3 @@ log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
     }
 })();
 </script>
-
-
