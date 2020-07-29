@@ -4,14 +4,11 @@ version = "0.1.0"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 edition = "2018"
 
-[lib]
-path = "lib.rs"
-
 [dependencies]
-proc_macro = { path = "../libproc_macro" }
-std = { path = "../libstd" }
-panic_unwind = { path = "../libpanic_unwind" }
-compiler_builtins = { path = "../libcompiler_builtins" }
+proc_macro = { path = "../proc_macro" }
+std = { path = "../std" }
+panic_unwind = { path = "../panic_unwind" }
+compiler_builtins = { path = "../compiler_builtins" }
 registry-dep-using-std = { version = "*", features = ['mockbuild'] }
 
 [features]

@@ -8,4 +8,4 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
-alloc = { path = "../../liballoc" }
+alloc = { path = "../alloc" }

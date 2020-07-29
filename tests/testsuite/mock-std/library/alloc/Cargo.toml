@@ -1,0 +1,8 @@
+[package]
+name = "alloc"
+version = "0.1.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+edition = "2018"
+
+[dependencies]
+registry-dep-using-core = { version = "*", features = ['mockbuild'] }
