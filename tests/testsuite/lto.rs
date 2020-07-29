@@ -617,7 +617,8 @@ fn test_profile() {
         .build();
 
     p.cargo("test -v")
-        .with_stderr("\
+        // unordered because the two `foo` builds start in parallel
+        .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
@@ -669,7 +670,8 @@ fn dev_profile() {
         .build();
 
     p.cargo("test -v")
-        .with_stderr("\
+        // unordered because the two `foo` builds start in parallel
+        .with_stderr_unordered("\
 [UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
