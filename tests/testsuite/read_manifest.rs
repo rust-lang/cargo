@@ -27,6 +27,7 @@ fn manifest_output(readme_value: &str) -> String {
         "kind":["bin"],
         "crate_types":["bin"],
         "doctest": false,
+        "test": true,
         "edition": "2015",
         "name":"foo",
         "src_path":"[..]/foo/src/foo.rs"

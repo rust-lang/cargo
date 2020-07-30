@@ -694,6 +694,7 @@ The following is a description of the JSON structure:
         "name": "my-package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
+        "test": true,
         "doctest": true
       },
       /* The profile settings for this unit.

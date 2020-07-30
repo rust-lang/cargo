@@ -1984,7 +1984,7 @@ fn bin_is_preserved() {
     p.cargo("build -v").run();
     assert!(p.bin("foo").is_file());
 
-    println!("testing");
+    println!("test");
     p.cargo("test -v").run();
     assert!(p.bin("foo").is_file());
 }
@@ -3358,7 +3358,8 @@ fn json_artifact_includes_test_flag() {
             "doctest": true,
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..]lib.rs"
+            "src_path":"[..]lib.rs",
+            "test": true
         },
         "filenames":"{...}",
         "fresh": false
@@ -3394,7 +3395,8 @@ fn json_artifact_includes_executable_for_library_tests() {
                     "doctest": true,
                     "edition": "2015",
                     "name": "foo",
-                    "src_path": "[..]/foo/src/lib.rs"
+                    "src_path": "[..]/foo/src/lib.rs",
+                    "test": true
                 }
             }
 
@@ -3430,7 +3432,8 @@ fn json_artifact_includes_executable_for_integration_tests() {
                     "doctest": false,
                     "edition": "2015",
                     "name": "integration_test",
-                    "src_path": "[..]/foo/tests/integration_test.rs"
+                    "src_path": "[..]/foo/tests/integration_test.rs",
+                    "test": true
                 }
             }
 

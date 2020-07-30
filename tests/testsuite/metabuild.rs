@@ -701,7 +701,8 @@ fn metabuild_json_artifact() {
       "custom-build"
     ],
     "name": "metabuild-foo",
-    "src_path": "[..]/foo/target/.metabuild/metabuild-foo-[..].rs"
+    "src_path": "[..]/foo/target/.metabuild/metabuild-foo-[..].rs",
+    "test": false
   }
 }
 
@@ -750,7 +751,8 @@ fn metabuild_failed_build_json() {
       "custom-build"
     ],
     "name": "metabuild-foo",
-    "src_path": null
+    "src_path": null,
+    "test": false
   }
 }
 "#,

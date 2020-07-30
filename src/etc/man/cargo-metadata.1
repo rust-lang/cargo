@@ -155,7 +155,11 @@ The output has the following format:
                     /* Whether or not this target has doc tests enabled, and
                        the target is compatible with doc testing.
                     */
-                    "doctest": false
+                    "doctest": false,
+                    /* Whether or not this target has the `test` field set in the manifest,
+                       causing it to be compiled with `--test`.
+                    */
+                    "test": true
                 }
             ],
             /* Set of features defined for the package.
