@@ -545,24 +545,17 @@ where
             Ok(pkg)
         }
         None => {
-            // check whether the package is yanked or not
-            if source.is_yanked(
-                PackageId::new(dep.package_name(), dep.version_req(), source.source_id()).into_ok(),
-            ) {
-                bail!(
-                    "provided package has been yanked `{}` in {} with version `{}`",
-                    dep.package_name(),
-                    source.source_id(),
-                    dep.version_req(),
-                )
-            } else {
-                bail!(
-                    "could not find `{}` in {} with version `{}`",
-                    dep.package_name(),
-                    source.source_id(),
-                    dep.version_req(),
-                )
+            for pkg_id in deps.iter() {
+                if source.is_yanked(pkg_id.package_id()).unwrap_or(false) {
+                    bail!("provided package has been yanked `{}`", pkg_id.package_id())
+                }
             }
+            bail!(
+                "could not find `{}` in {} with version `{}`",
+                dep.package_name(),
+                source.source_id(),
+                dep.version_req(),
+            )
         }
     }
 }
