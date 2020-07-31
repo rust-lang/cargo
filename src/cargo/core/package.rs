@@ -210,7 +210,10 @@ impl Package {
     pub fn authors(&self) -> &Vec<String> {
         &self.manifest().metadata().authors
     }
-    /// Returns `true` if the package is set to publish.
+
+    /// Returns `None` if the package is set to publish.
+    /// Returns `Some(allowed_registries)` if publishing is limited to specified
+    /// registries or if package is set to not publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
         self.manifest().publish()
     }
