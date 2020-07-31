@@ -716,6 +716,82 @@ fn publish_allowed_registry() {
 }
 
 #[cargo_test]
+fn publish_implicitly_to_only_allowed_registry() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            publish = ["alternative"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish").run();
+
+    publish::validate_alt_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
+
+#[cargo_test]
+fn publish_fail_with_no_registry_specified() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            publish = ["alternative", "test"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] `foo` cannot be published.
+The registry `crates-io` is not listed in the `publish` value in Cargo.toml.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn block_publish_no_registry() {
     registry::init();
 
