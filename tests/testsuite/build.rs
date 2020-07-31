@@ -1,14 +1,17 @@
 //! Tests for the `cargo build` command.
 
 use cargo::{
-    core::compiler::CompileMode, core::Workspace, ops::CompileOptions,
-    util::paths::dylib_path_envvar, Config,
+    core::compiler::CompileMode,
+    core::{Shell, Workspace},
+    ops::CompileOptions,
+    util::paths::dylib_path_envvar,
+    Config,
 };
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match, main_file,
-    project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
@@ -427,7 +430,8 @@ fn cargo_compile_api_exposes_artifact_paths() {
         .file("src/bin.rs", "pub fn main() {}")
         .build();
 
-    let config = Config::default().unwrap();
+    let shell = Shell::from_write(Box::new(Vec::new()));
+    let config = Config::new(shell, env::current_dir().unwrap(), paths::home());
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
 
