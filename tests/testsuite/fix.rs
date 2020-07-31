@@ -686,7 +686,7 @@ fn shows_warnings() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: use of deprecated item[..]")
+        .with_stderr_contains("[..]warning: use of deprecated[..]")
         .run();
 }
 
@@ -929,11 +929,11 @@ fn shows_warnings_on_second_run_without_changes() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: use of deprecated item[..]")
+        .with_stderr_contains("[..]warning: use of deprecated[..]")
         .run();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: use of deprecated item[..]")
+        .with_stderr_contains("[..]warning: use of deprecated[..]")
         .run();
 }
 
