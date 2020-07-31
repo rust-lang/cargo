@@ -506,33 +506,42 @@ impl fmt::Display for SourceId {
 // The hash of SourceId is used in the name of some Cargo folders, so shouldn't
 // vary. `as_str` gives the serialisation of a url (which has a spec) and so
 // insulates against possible changes in how the url crate does hashing.
+//
+// Note that the semi-funky hashing here is done to handle `DefaultBranch`
+// hashing the same as `"master"`, and also to hash the same as previous
+// versions of Cargo while it's somewhat convenient to do so (that way all
+// versions of Cargo use the same checkout).
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         match &self.inner.kind {
             SourceKind::Git(GitReference::Tag(a)) => {
-                0u8.hash(into);
-                a.hash(into);
-            }
-            SourceKind::Git(GitReference::Rev(a)) => {
-                1u8.hash(into);
+                0usize.hash(into);
+                0usize.hash(into);
                 a.hash(into);
             }
             SourceKind::Git(GitReference::Branch(a)) => {
-                2u8.hash(into);
+                0usize.hash(into);
+                1usize.hash(into);
                 a.hash(into);
             }
             // For now hash `DefaultBranch` the same way as `Branch("master")`,
             // and for more details see module comments in
             // src/cargo/sources/git/utils.rs for why `DefaultBranch`
             SourceKind::Git(GitReference::DefaultBranch) => {
-                2u8.hash(into);
+                0usize.hash(into);
+                1usize.hash(into);
                 "master".hash(into);
             }
+            SourceKind::Git(GitReference::Rev(a)) => {
+                0usize.hash(into);
+                2usize.hash(into);
+                a.hash(into);
+            }
 
-            SourceKind::Path => 4u8.hash(into),
-            SourceKind::Registry => 5u8.hash(into),
-            SourceKind::LocalRegistry => 6u8.hash(into),
-            SourceKind::Directory => 7u8.hash(into),
+            SourceKind::Path => 1usize.hash(into),
+            SourceKind::Registry => 2usize.hash(into),
+            SourceKind::LocalRegistry => 3usize.hash(into),
+            SourceKind::Directory => 4usize.hash(into),
         }
         match self.inner.kind {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
