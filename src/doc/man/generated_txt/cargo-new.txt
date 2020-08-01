@@ -1,0 +1,145 @@
+CARGO-NEW(1)
+
+NAME
+       cargo-new - Create a new Cargo package
+
+SYNOPSIS
+       cargo new [options] path
+
+DESCRIPTION
+       This command will create a new Cargo package in the given directory.
+       This includes a simple template with a Cargo.toml manifest, sample
+       source file, and a VCS ignore file. If the directory is not already in a
+       VCS repository, then a new repository is created (see --vcs below).
+
+       The "authors" field in the manifest is determined from the environment
+       or configuration settings. A name is required and is determined from
+       (first match wins):
+
+       o  cargo-new.name Cargo config value
+
+       o  CARGO_NAME environment variable
+
+       o  GIT_AUTHOR_NAME environment variable
+
+       o  GIT_COMMITTER_NAME environment variable
+
+       o  user.name git configuration value
+
+       o  USER environment variable
+
+       o  USERNAME environment variable
+
+       o  NAME environment variable
+
+       The email address is optional and is determined from:
+
+       o  cargo-new.email Cargo config value
+
+       o  CARGO_EMAIL environment variable
+
+       o  GIT_AUTHOR_EMAIL environment variable
+
+       o  GIT_COMMITTER_EMAIL environment variable
+
+       o  user.email git configuration value
+
+       o  EMAIL environment variable
+
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/config.html> for more
+       information about configuration files.
+
+       See cargo-init(1) for a similar command which will create a new manifest
+       in an existing directory.
+
+OPTIONS
+   New Options
+       --bin
+           Create a package with a binary target (src/main.rs). This is the
+           default behavior.
+
+       --lib
+           Create a package with a library target (src/lib.rs).
+
+       --edition edition
+           Specify the Rust edition to use. Default is 2018. Possible values:
+           2015, 2018
+
+       --name name
+           Set the package name. Defaults to the directory name.
+
+       --vcs vcs
+           Initialize a new VCS repository for the given version control system
+           (git, hg, pijul, or fossil) or do not initialize any version control
+           at all (none). If not specified, defaults to git or the
+           configuration value cargo-new.vcs, or none if already inside a VCS
+           repository.
+
+       --registry registry
+           This sets the publish field in Cargo.toml to the given registry name
+           which will restrict publishing only to that registry.
+
+           Registry names are defined in Cargo config files
+           <https://doc.rust-lang.org/cargo/reference/config.html>. If not
+           specified, the default registry defined by the registry.default
+           config key is used. If the default registry is not set and
+           --registry is not used, the publish field will not be set which
+           means that publishing will not be restricted.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Create a binary Cargo package in the given directory:
+
+              cargo new foo
+
+SEE ALSO
+       cargo(1), cargo-init(1)
+

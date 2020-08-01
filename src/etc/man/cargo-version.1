@@ -1,99 +1,52 @@
 '\" t
-.\"     Title: cargo-version
-.\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
-.\"    Manual: \ \&
-.\"    Source: \ \&
-.\"  Language: English
-.\"
-.TH "CARGO\-VERSION" "1" "2019-09-05" "\ \&" "\ \&"
-.ie \n(.g .ds Aq \(aq
-.el       .ds Aq '
-.ss \n[.ss] 0
+.TH "CARGO\-VERSION" "1"
 .nh
 .ad l
-.de URL
-\fI\\$2\fP <\\$1>\\$3
-..
-.als MTO URL
-.if \n[.g] \{\
-.  mso www.tmac
-.  am URL
-.    ad l
-.  .
-.  am MTO
-.    ad l
-.  .
-.  LINKSTYLE blue R < >
-.\}
+.ss \n[.ss] 0
 .SH "NAME"
 cargo\-version \- Show version information
 .SH "SYNOPSIS"
-.sp
-\fBcargo version [\fIOPTIONS\fP]\fP
+\fBcargo version\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-.sp
 Displays the version of Cargo.
 .SH "OPTIONS"
 .sp
-\fB\-v\fP, \fB\-\-verbose\fP
+\fB\-v\fR, 
+\fB\-\-verbose\fR
 .RS 4
 Display additional version information.
 .RE
 .SH "EXAMPLES"
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Display the version:
+\h'-04' 1.\h'+01'Display the version:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo version
 .fi
-.if n .RE
+.RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 2.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 2." 4.2
-.\}
-The version is also available via flags:
+\h'-04' 2.\h'+01'The version is also available via flags:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo \-\-version
 cargo \-V
 .fi
-.if n .RE
+.RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 3.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 3." 4.2
-.\}
-Display extra version information:
+\h'-04' 3.\h'+01'Display extra version information:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo \-Vv
 .fi
-.if n .RE
+.RE
 .RE
 .SH "SEE ALSO"
-.sp
-\fBcargo\fP(1)
+\fBcargo\fR(1)
