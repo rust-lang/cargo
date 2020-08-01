@@ -545,7 +545,7 @@ where
             Ok(pkg)
         }
         None => {
-            let version: String = dep.version_req().clone().to_string();
+            let version: String = dep.version_req().to_string();
             let pkg_id: PackageId =
                 PackageId::new(dep.package_name(), &version[1..], source.source_id())?;
             if source.is_yanked(pkg_id).unwrap_or(false) {
