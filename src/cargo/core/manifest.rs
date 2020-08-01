@@ -220,10 +220,7 @@ impl TargetSourcePath {
     }
 
     pub fn is_path(&self) -> bool {
-        match self {
-            TargetSourcePath::Path(_) => true,
-            _ => false,
-        }
+        matches!(self, TargetSourcePath::Path(_))
     }
 }
 
@@ -777,10 +774,7 @@ impl Target {
     }
 
     pub fn is_lib(&self) -> bool {
-        match self.kind() {
-            TargetKind::Lib(_) => true,
-            _ => false,
-        }
+        matches!(self.kind(), TargetKind::Lib(_))
     }
 
     pub fn is_dylib(&self) -> bool {
@@ -813,10 +807,10 @@ impl Target {
     }
 
     pub fn is_example(&self) -> bool {
-        match self.kind() {
-            TargetKind::ExampleBin | TargetKind::ExampleLib(..) => true,
-            _ => false,
-        }
+        matches!(
+            self.kind(),
+            TargetKind::ExampleBin | TargetKind::ExampleLib(..)
+        )
     }
 
     /// Returns `true` if it is a binary or executable example.
@@ -828,10 +822,7 @@ impl Target {
     /// Returns `true` if it is an executable example.
     pub fn is_exe_example(&self) -> bool {
         // Needed for --all-examples in contexts where only runnable examples make sense
-        match self.kind() {
-            TargetKind::ExampleBin => true,
-            _ => false,
-        }
+        matches!(self.kind(), TargetKind::ExampleBin)
     }
 
     pub fn is_test(&self) -> bool {

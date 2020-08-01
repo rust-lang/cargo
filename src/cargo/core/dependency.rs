@@ -413,10 +413,7 @@ impl Dependency {
     }
 
     pub fn is_build(&self) -> bool {
-        match self.inner.kind {
-            DepKind::Build => true,
-            _ => false,
-        }
+        matches!(self.inner.kind, DepKind::Build)
     }
 
     pub fn is_optional(&self) -> bool {

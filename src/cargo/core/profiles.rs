@@ -296,10 +296,7 @@ impl Profiles {
             // `--release` and `--debug` predicates, and convert back from
             // ProfileKind::Custom instantiation.
 
-            let release = match self.requested_profile.as_str() {
-                "release" | "bench" => true,
-                _ => false,
-            };
+            let release = matches!(self.requested_profile.as_str(), "release" | "bench");
 
             match mode {
                 CompileMode::Test | CompileMode::Bench => {
