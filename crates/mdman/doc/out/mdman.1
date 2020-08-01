@@ -1,0 +1,124 @@
+'\" t
+.TH "MDMAN" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "NAME"
+mdman \- Converts markdown to a man page
+.SH "SYNOPSIS"
+\fBmdman\fR [\fIoptions\fR] \fB\-t\fR \fItype\fR \fB\-o\fR \fIoutdir\fR \fIsources...\fR
+.SH "DESCRIPTION"
+Converts a markdown file to a man page.
+.sp
+The source file is first processed as a
+\fIhandlebars\fR <https://handlebarsjs.com/> template. Then, it is processed as
+markdown into the target format. This supports different output formats,
+such as troff or plain text.
+.sp
+Every man page should start with a level\-1 header with the man name and
+section, such as \fB# mdman(1)\fR\&.
+.sp
+The handlebars template has several special tags to assist with generating the
+man page:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Every block of command\-line options must be wrapped between \fB{{#options}}\fR
+and \fB{{/options}}\fR tags. This tells the processor where the options start
+and end.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Each option must be expressed with a \fB{{#option}}\fR block. The parameters to
+the the block are a sequence of strings indicating the option. For example,
+\fB{{#option "`\-p` _spec_..." "`\-\-package` _spec_..."}}\fR is an option that
+has two different forms. The text within the string is processed as markdown.
+It is recommended to use formatting similar to this example.
+.sp
+The content of the \fB{{#option}}\fR block should contain a detailed description
+of the option.
+.sp
+Use the \fB{{/option}}\fR tag to end the option block.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'References to other man pages should use the \fB{{man name section}}\fR
+expression. For example, \fB{{man "mdman" 1}}\fR will generate a reference to
+the \fBmdman(1)\fR man page. For non\-troff output, the \fB\-\-man\fR option will tell
+\fBmdman\fR how to create links to the man page. If there is no matching \fB\-\-man\fR
+option, then it links to a file named \fIname\fR\fB\&.md\fR in the same directory.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Variables can be set with \fB{{*set name="value"}}\fR\&. These variables can
+then be referenced with \fB{{name}}\fR expressions.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Partial templates should be placed in a directory named \fBincludes\fR
+next to the source file. Templates can be included with an expression like
+\fB{{> template\-name}}\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Other helpers include:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fB{{lower value}}\fR Converts the given value to lowercase.
+.RE
+.RE
+.SH "OPTIONS"
+.sp
+\fB\-t\fR \fItype\fR
+.RS 4
+Specifies the output type. The following output types are supported:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBman\fR \[em]\ A troff\-style man page. Outputs with a numbered extension (like
+\fB\&.1\fR) matching the man page section.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBmd\fR \[em]\ A markdown file, after all handlebars processing has been finished.
+Outputs with the \fB\&.md\fR extension.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBtxt\fR \[em]\ A text file, rendered for situations where a man page viewer isn't
+available. Outputs with the \fB\&.txt\fR extension.
+.RE
+.RE
+.sp
+\fB\-o\fR \fIoutdir\fR
+.RS 4
+Specifies the directory where to save the output.
+.RE
+.sp
+\fB\-\-url\fR \fIbase_url\fR
+.RS 4
+Specifies a base URL to use for relative URLs within the document. Any
+relative URL will be joined with this URL.
+.RE
+.sp
+\fB\-\-man\fR \fIname\fR\fB:\fR\fIsection\fR\fB=\fR\fIurl\fR
+.RS 4
+Specifies a URL to use for the given man page. When the \fB{{man name section}}\fR expression is used, the given URL will be inserted as a link. This
+may be specified multiple times. If a man page reference does not have a
+matching \fB\-\-man\fR entry, then a relative link to a file named \fIname\fR\fB\&.md\fR will
+be used.
+.RE
+.sp
+\fIsources...\fR
+.RS 4
+The source input filename, may be specified multiple times.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Convert the given documents to man pages:
+.sp
+.RS 4
+.nf
+mdman \-t man \-o doc doc/mdman.md
+.fi
+.RE
+.RE

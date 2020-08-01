@@ -1,0 +1,94 @@
+'\" t
+.TH "MY\-COMMAND" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "NAME"
+my\-command \- A brief description
+.SH "SYNOPSIS"
+\fBmy\-command\fR [\fB\-\-abc\fR | \fB\-\-xyz\fR] \fIname\fR
+.br
+\fBmy\-command\fR [\fB\-f\fR \fIfile\fR]
+.br
+\fBmy\-command\fR (\fB\-m\fR | \fB\-M\fR) [\fIoldbranch\fR] \fInewbranch\fR
+.br
+\fBmy\-command\fR (\fB\-d\fR | \fB\-D\fR) [\fB\-r\fR] \fIbranchname\fR\&...
+.SH "DESCRIPTION"
+A description of the command.
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'One
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Sub one
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Sub two
+.RE
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Two
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Three
+.RE
+.SH "OPTIONS"
+.SS "Command options"
+.sp
+\fB\-\-foo\-bar\fR
+.RS 4
+Demo \fIemphasis\fR, \fBstrong\fR, ~~strike~~
+.RE
+.sp
+\fB\-p\fR \fIspec\fR, 
+\fB\-\-package\fR \fIspec\fR
+.RS 4
+This has multiple flags.
+.RE
+.sp
+\fInamed\-arg...\fR
+.RS 4
+A named argument.
+.RE
+.SS "Common Options"
+.sp
+\fB@\fR\fIfilename\fR
+.RS 4
+Load from filename.
+.RE
+.sp
+\fB\-\-foo\fR [\fIbar\fR]
+.RS 4
+Flag with optional value.
+.RE
+.sp
+\fB\-\-foo\fR[\fB=\fR\fIbar\fR]
+.RS 4
+Alternate syntax for optional value (with required = for disambiguation).
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+\h'-04' 1.\h'+01'An example
+.sp
+.RS 4
+.nf
+my\-command \-\-abc
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Another example
+.sp
+.RS 4
+.nf
+my\-command \-\-xyz
+.fi
+.RE
+.RE
+.SH "SEE ALSO"
+\fBother\-command\fR(1) \fBabc\fR(7)

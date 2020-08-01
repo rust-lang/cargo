@@ -1,0 +1,57 @@
+MY-COMMAND(1)
+
+NAME
+       my-command - A brief description
+
+SYNOPSIS
+       my-command [--abc | --xyz] name
+       my-command [-f file]
+       my-command (-m | -M) [oldbranch] newbranch
+       my-command (-d | -D) [-r] branchname...
+
+DESCRIPTION
+       A description of the command.
+
+       o  One
+          o  Sub one
+
+          o  Sub two
+
+       o  Two
+
+       o  Three
+
+OPTIONS
+   Command options
+       --foo-bar
+           Demo emphasis, strong, ~~strike~~
+
+       -p spec, --package spec
+           This has multiple flags.
+
+       named-arg...
+           A named argument.
+
+   Common Options
+       @filename
+           Load from filename.
+
+       --foo [bar]
+           Flag with optional value.
+
+       --foo[=bar]
+           Alternate syntax for optional value (with required = for
+           disambiguation).
+
+EXAMPLES
+       1. An example
+
+              my-command --abc
+
+       2. Another example
+
+              my-command --xyz
+
+SEE ALSO
+       other-command(1) abc(7)
+
