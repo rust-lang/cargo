@@ -1555,3 +1555,12 @@ fn install_git_with_symlink_home() {
         )
         .run();
 }
+
+#[cargo_test]
+fn install_yanked_cargo_package() {
+    Package::new("baz", "0.0.1").yanked(true).publish();
+    cargo_process("install baz --version 0.0.1")
+        .with_status(101)
+        .with_stderr("error: cannot install package `baz`, it has been yanked from registry `https://github.com/rust-lang/crates.io-index`")
+        .run();
+}

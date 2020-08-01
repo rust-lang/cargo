@@ -545,17 +545,23 @@ where
             Ok(pkg)
         }
         None => {
-            for pkg_id in deps.iter() {
-                if source.is_yanked(pkg_id.package_id()).unwrap_or(false) {
-                    bail!("provided package has been yanked `{}`", pkg_id.package_id())
-                }
+            let version: String = dep.version_req().clone().to_string();
+            let pkg_id: PackageId =
+                PackageId::new(dep.package_name(), &version[1..], source.source_id())?;
+            if source.is_yanked(pkg_id).unwrap_or(false) {
+                bail!(
+                    "cannot install package `{}`, it has been yanked from {}",
+                    pkg_id.name(),
+                    pkg_id.source_id()
+                )
+            } else {
+                bail!(
+                    "could not find `{}` in {} with version `{}`",
+                    dep.package_name(),
+                    source.source_id(),
+                    dep.version_req(),
+                )
             }
-            bail!(
-                "could not find `{}` in {} with version `{}`",
-                dep.package_name(),
-                source.source_id(),
-                dep.version_req(),
-            )
         }
     }
 }
