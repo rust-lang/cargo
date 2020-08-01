@@ -1236,7 +1236,7 @@ fn doc_private_ws() {
 }
 
 const BAD_INTRA_LINK_LIB: &str = r#"
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(broken_intra_doc_links)]
 
 /// [bad_link]
 pub fn foo() {}
