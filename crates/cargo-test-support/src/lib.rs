@@ -1233,7 +1233,7 @@ impl Execs {
                         None => failures.push(e_line),
                     }
                 }
-                if failures.len() > 0 {
+                if !failures.is_empty() {
                     return Err(format!(
                         "Did not find expected line(s):\n{}\n\
                          Remaining available output:\n{}\n",

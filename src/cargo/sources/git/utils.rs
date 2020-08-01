@@ -901,7 +901,7 @@ pub fn fetch(
 
         GitReference::DefaultBranch => {
             // See the module docs for why we're fetching `master` here.
-            refspecs.push(format!("refs/heads/master:refs/remotes/origin/master"));
+            refspecs.push(String::from("refs/heads/master:refs/remotes/origin/master"));
             refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
         }
 
