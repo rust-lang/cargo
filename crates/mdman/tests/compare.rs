@@ -29,6 +29,8 @@ fn run(name: &str) {
             std::fs::write(&expected_path, result).unwrap();
         } else {
             let expected = std::fs::read_to_string(&expected_path).unwrap();
+            // Fix if Windows checked out with autocrlf.
+            let expected = expected.replace("\r\n", "\n");
             assert_eq!(expected, result);
         }
     }

@@ -54,6 +54,9 @@ pub fn convert(
         Format::Text => Box::new(format::text::TextFormatter::new(url)),
     };
     let expanded = hbs::expand(file, &*formatter)?;
+    // pulldown-cmark can behave a little differently with Windows newlines,
+    // just normalize it.
+    let expanded = expanded.replace("\r\n", "\n");
     formatter.render(&expanded)
 }
 

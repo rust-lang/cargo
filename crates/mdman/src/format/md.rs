@@ -28,7 +28,7 @@ impl MdFormatter {
 
 impl super::Formatter for MdFormatter {
     fn render(&self, input: &str) -> Result<String, Error> {
-        Ok(input.to_string())
+        Ok(input.replace("\r\n", "\n"))
     }
 
     fn render_options_start(&self) -> &'static str {
