@@ -1,27 +1,25 @@
-= cargo-bench(1)
-:idprefix: cargo_bench_
-:doctype: manpage
-:actionverb: Benchmark
-:nouns: benchmarks
+# cargo-bench(1)
+{{*set actionverb="Benchmark"}}
+{{*set nouns="benchmarks"}}
 
-== NAME
+## NAME
 
 cargo-bench - Execute benchmarks of a package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo bench [_OPTIONS_] [BENCHNAME] [-- _BENCH-OPTIONS_]`
+`cargo bench` [_options_] [_benchname_] [`--` _bench-options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Compile and execute benchmarks.
 
-The benchmark filtering argument `BENCHNAME` and all the arguments following
+The benchmark filtering argument _benchname_ and all the arguments following
 the two dashes (`--`) are passed to the benchmark binaries and thus to
-_libtest_ (rustc's built in unit-test and micro-benchmarking framework).  If
-you're passing arguments to both Cargo and the binary, the ones after `--` go
-to the binary, the ones before go to Cargo.  For details about libtest's
-arguments see the output of `cargo bench \-- --help`.  As an example, this will
+_libtest_ (rustc's built in unit-test and micro-benchmarking framework). If
+you are passing arguments to both Cargo and the binary, the ones after `--` go
+to the binary, the ones before go to Cargo. For details about libtest's
+arguments see the output of `cargo bench -- --help`.  As an example, this will
 run only the benchmark named `foo` (and skip other similarly named benchmarks
 like `foobar`):
 
@@ -36,27 +34,24 @@ The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
 function to handle running benchmarks.
 
-
 > **Note**: The
-> link:https://doc.rust-lang.org/nightly/unstable-book/library-features/test.html[`#[bench\]` attribute]
+> [`#[bench]` attribute](https://doc.rust-lang.org/nightly/unstable-book/library-features/test.html)
 > is currently unstable and only available on the
-> link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel].
+> [nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html).
 > There are some packages available on
-> link:https://crates.io/keywords/benchmark[crates.io] that may help with
+> [crates.io](https://crates.io/keywords/benchmark) that may help with
 > running benchmarks on the stable channel, such as
-> link:https://crates.io/crates/criterion[Criterion].
+> [Criterion](https://crates.io/crates/criterion).
 
-== OPTIONS
+## OPTIONS
 
-=== Benchmark Options
+### Benchmark Options
 
-include::options-test.adoc[]
+{{> options-test }}
 
-=== Package Selection
+{{> section-package-selection }}
 
-include::options-packages.adoc[]
-
-=== Target Selection
+### Target Selection
 
 When no target selection options are given, `cargo bench` will build the
 following targets of the selected packages:
@@ -75,19 +70,25 @@ them from being benchmarked by default. Target selection options that take a
 target by name ignore the `bench` flag and will always benchmark the given
 target.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-=== Output Options
+{{> options-target-triple }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-=== Display Options
+### Output Options
+
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
+
+### Display Options
 
 By default the Rust test harness hides output from benchmark execution to keep
 results readable. Benchmark output can be recovered (e.g., for debugging) by
@@ -95,33 +96,39 @@ passing `--nocapture` to the benchmark binaries:
 
     cargo bench -- --nocapture
 
-include::options-display.adoc[]
+{{#options}}
 
-include::options-message-format.adoc[]
+{{> options-display }}
 
-=== Manifest Options
+{{> options-message-format }}
 
-include::options-manifest-path.adoc[]
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-options-common }}
+
+### Miscellaneous Options
 
 The `--jobs` argument affects the building of the benchmark executable but
 does not affect how many threads are used when running the benchmarks. The
 Rust test harness runs benchmarks serially in a single thread.
 
-include::options-jobs.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-== PROFILES
+## PROFILES
 
 Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-linkcargo:reference/profiles.html[the reference]
+[the reference](../reference/profiles.html)
 for more details.
 
 Benchmarks are always built with the `bench` profile. Binary and lib targets
@@ -130,23 +137,23 @@ are built with the `release` profiles when linked to binaries and benchmarks.
 Dependencies use the `release` profile.
 
 If you need a debug build of a benchmark, try building it with
-man:cargo-build[1] which will use the `test` profile which is by default
+{{man "cargo-build" 1}} which will use the `test` profile which is by default
 unoptimized and includes debug information. You can then run the debug-enabled
 benchmark manually.
 
-include::section-environment.adoc[]
+{{> section-environment }}
 
-include::section-exit-status.adoc[]
+{{> section-exit-status }}
 
-== EXAMPLES
+## EXAMPLES
 
-. Build and execute all the benchmarks of the current package:
+1. Build and execute all the benchmarks of the current package:
 
-    cargo bench
+       cargo bench
 
-. Run only a specific benchmark within a specific benchmark target:
+2. Run only a specific benchmark within a specific benchmark target:
 
-    cargo bench --bench bench_name -- modname::some_benchmark
+       cargo bench --bench bench_name -- modname::some_benchmark
 
-== SEE ALSO
-man:cargo[1], man:cargo-test[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-test" 1}}

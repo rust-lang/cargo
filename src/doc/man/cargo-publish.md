@@ -1,90 +1,105 @@
-= cargo-publish(1)
-:idprefix: cargo_publish_
-:doctype: manpage
-:actionverb: Publish
+# cargo-publish(1)
+{{*set actionverb="Publish"}}
 
-== NAME
+## NAME
 
 cargo-publish - Upload a package to the registry
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo publish [_OPTIONS_]`
+`cargo publish` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will create a distributable, compressed `.crate` file with the
 source code of the package in the current directory and upload it to a
-registry. The default registry is https://crates.io. This performs the
+registry. The default registry is <https://crates.io>. This performs the
 following steps:
 
-. Performs a few checks, including:
-  - Checks the `package.publish` key in the manifest for restrictions on which
-    registries you are allowed to publish to.
-. Create a `.crate` file by following the steps in man:cargo-package[1].
-. Upload the crate to the registry. Note that the server will perform
-  additional checks on the crate.
+1. Performs a few checks, including:
+   - Checks the `package.publish` key in the manifest for restrictions on
+     which registries you are allowed to publish to.
+2. Create a `.crate` file by following the steps in {{man "cargo-package" 1}}.
+3. Upload the crate to the registry. Note that the server will perform
+   additional checks on the crate.
 
 This command requires you to be authenticated with either the `--token` option
-or using man:cargo-login[1].
+or using {{man "cargo-login" 1}}.
 
-See linkcargo:reference/publishing.html[the reference] for more details about
+See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
-== OPTIONS
+## OPTIONS
 
-=== Publish Options
+### Publish Options
 
-*--dry-run*::
-  Perform all checks without uploading.
+{{#options}}
 
-include::options-token.adoc[]
+{{#option "`--dry-run`" }}
+Perform all checks without uploading.
+{{/option}}
 
-*--no-verify*::
-    Don't verify the contents by building them.
+{{> options-token }}
 
-*--allow-dirty*::
-    Allow working directories with uncommitted VCS changes to be packaged.
+{{#option "`--no-verify`" }}
+Don't verify the contents by building them.
+{{/option}}
 
-include::options-index.adoc[]
+{{#option "`--allow-dirty`" }}
+Allow working directories with uncommitted VCS changes to be packaged.
+{{/option}}
 
-include::options-registry.adoc[]
+{{> options-index }}
 
-=== Compilation Options
+{{> options-registry }}
 
-include::options-target-triple.adoc[]
+{{/options}}
 
-include::options-target-dir.adoc[]
+### Compilation Options
 
-include::options-features.adoc[]
+{{#options}}
 
-=== Manifest Options
+{{> options-target-triple }}
 
-include::options-manifest-path.adoc[]
+{{> options-target-dir }}
 
-include::options-locked.adoc[]
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-features }}
 
-include::options-jobs.adoc[]
+### Manifest Options
 
-=== Display Options
+{{#options}}
 
-include::options-display.adoc[]
+{{> options-manifest-path }}
 
-=== Common Options
+{{> options-locked }}
 
-include::options-common.adoc[]
+{{/options}}
 
-include::section-environment.adoc[]
+### Miscellaneous Options
 
-include::section-exit-status.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-== EXAMPLES
+### Display Options
 
-. Publish the current package:
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-    cargo publish
+{{> section-options-common }}
 
-== SEE ALSO
-man:cargo[1], man:cargo-package[1], man:cargo-login[1]
+{{> section-environment }}
+
+{{> section-exit-status }}
+
+## EXAMPLES
+
+1. Publish the current package:
+
+       cargo publish
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-package" 1}}, {{man "cargo-login" 1}}

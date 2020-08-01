@@ -1,41 +1,43 @@
-= cargo-doc(1)
-:idprefix: cargo_doc_
-:doctype: manpage
-:actionverb: Document
+# cargo-doc(1)
+{{*set actionverb="Document"}}
 
-== NAME
+## NAME
 
 cargo-doc - Build a package's documentation
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo doc [_OPTIONS_]`
+`cargo doc` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Build the documentation for the local package and all dependencies. The output
 is placed in `target/doc` in rustdoc's usual format.
 
-== OPTIONS
+## OPTIONS
 
-=== Documentation Options
+### Documentation Options
 
-*--open*::
-    Open the docs in a browser after building them. This will use your default
-    browser unless you define another one in the `BROWSER` environment
-    variable.
+{{#options}}
 
-*--no-deps*::
-    Do not build documentation for dependencies.
+{{#option "`--open`" }}
+Open the docs in a browser after building them. This will use your default
+browser unless you define another one in the `BROWSER` environment variable.
+{{/option}}
 
-*--document-private-items*::
-    Include non-public items in the documentation.
+{{#option "`--no-deps`" }}
+Do not build documentation for dependencies.
+{{/option}}
 
-=== Package Selection
+{{#option "`--document-private-items`" }}
+Include non-public items in the documentation.
+{{/option}}
 
-include::options-packages.adoc[]
+{{/options}}
 
-=== Target Selection
+{{> section-package-selection }}
+
+### Target Selection
 
 When no target selection options are given, `cargo doc` will document all
 binary and library targets of the selected package. The binary will be skipped
@@ -46,52 +48,64 @@ The default behavior can be changed by setting `doc = false` for the target in
 the manifest settings. Using target selection options will ignore the `doc`
 flag and will always document the given target.
 
-include::options-targets-lib-bin.adoc[]
+{{#options}}
+{{> options-targets-lib-bin }}
+{{/options}}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-include::options-release.adoc[]
+{{> options-target-triple }}
 
-=== Output Options
+{{> options-release }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-=== Display Options
+### Output Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
 
-include::options-message-format.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
 
-include::options-manifest-path.adoc[]
+{{> options-message-format }}
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-options-common }}
 
-include::options-jobs.adoc[]
+### Miscellaneous Options
 
-include::section-profiles.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-profiles }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Build the local package documentation and its dependencies and output to
-`target/doc`.
+## EXAMPLES
 
-    cargo doc
+1. Build the local package documentation and its dependencies and output to
+   `target/doc`.
 
-== SEE ALSO
-man:cargo[1], man:cargo-rustdoc[1], man:rustdoc[1]
+       cargo doc
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-rustdoc" 1}}, {{man "rustdoc" 1}}

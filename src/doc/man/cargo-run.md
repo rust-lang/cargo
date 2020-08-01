@@ -1,17 +1,15 @@
-= cargo-run(1)
-:idprefix: cargo_run_
-:doctype: manpage
-:actionverb: Run
+# cargo-run(1)
+{{*set actionverb="Run"}}
 
-== NAME
+## NAME
 
 cargo-run - Run the current package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo run [_OPTIONS_] [-- _ARGS_]`
+`cargo run` [_options_] [`--` _args_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Run a binary or example of the local package.
 
@@ -19,72 +17,90 @@ All the arguments following the two dashes (`--`) are passed to the binary to
 run. If you're passing arguments to both Cargo and the binary, the ones after
 `--` go to the binary, the ones before go to Cargo.
 
-== OPTIONS
+## OPTIONS
 
-=== Package Selection
+{{> section-options-package }}
 
-include::options-package.adoc[]
-
-=== Target Selection
+### Target Selection
 
 When no target selection options are given, `cargo run` will run the binary
 target. If there are multiple binary targets, you must pass a target flag to
 choose one. Or, the `default-run` field may be specified in the `[package]`
 section of `Cargo.toml` to choose the name of the binary to run by default.
 
-*--bin* _NAME_::
-    Run the specified binary.
+{{#options}}
 
-*--example* _NAME_::
-    Run the specified example.
+{{#option "`--bin` _name_" }}
+Run the specified binary.
+{{/option}}
 
-include::options-features.adoc[]
+{{#option "`--example` _name_" }}
+Run the specified example.
+{{/option}}
 
-=== Compilation Options
+{{/options}}
 
-include::options-target-triple.adoc[]
+{{> section-features }}
 
-include::options-release.adoc[]
+### Compilation Options
 
-=== Output Options
+{{#options}}
 
-include::options-target-dir.adoc[]
+{{> options-target-triple }}
 
-=== Display Options
+{{> options-release }}
 
-include::options-display.adoc[]
+{{/options}}
 
-include::options-message-format.adoc[]
+### Output Options
 
-=== Manifest Options
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
 
-include::options-manifest-path.adoc[]
+### Display Options
 
-include::options-locked.adoc[]
+{{#options}}
 
-=== Common Options
+{{> options-display }}
 
-include::options-common.adoc[]
+{{> options-message-format }}
 
-=== Miscellaneous Options
+{{/options}}
 
-include::options-jobs.adoc[]
+### Manifest Options
 
-include::section-profiles.adoc[]
+{{#options}}
 
-include::section-environment.adoc[]
+{{> options-manifest-path }}
 
-include::section-exit-status.adoc[]
+{{> options-locked }}
 
-== EXAMPLES
+{{/options}}
 
-. Build the local package and run its main target (assuming only one binary):
+{{> section-options-common }}
 
-    cargo run
+### Miscellaneous Options
 
-. Run an example with extra arguments:
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-    cargo run --example exname -- --exoption exarg1 exarg2
+{{> section-profiles }}
 
-== SEE ALSO
-man:cargo[1], man:cargo-build[1]
+{{> section-environment }}
+
+{{> section-exit-status }}
+
+## EXAMPLES
+
+1. Build the local package and run its main target (assuming only one binary):
+
+       cargo run
+
+2. Run an example with extra arguments:
+
+       cargo run --example exname -- --exoption exarg1 exarg2
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-build" 1}}

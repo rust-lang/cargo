@@ -1,21 +1,19 @@
-= cargo-pkgid(1)
-:idprefix: cargo_pkgid_
-:doctype: manpage
+# cargo-pkgid(1)
 
-== NAME
+## NAME
 
 cargo-pkgid - Print a fully qualified package specification
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo pkgid [_OPTIONS_] [_SPEC_]`
+`cargo pkgid` [_options_] [_spec_]
 
-== DESCRIPTION
+## DESCRIPTION
 
-Given a _SPEC_ argument, print out the fully qualified package ID specifier
+Given a _spec_ argument, print out the fully qualified package ID specifier
 for a package or dependency in the current workspace. This command will
-generate an error if _SPEC_ is ambiguous as to which package it refers to in
-the dependency graph. If no _SPEC_ is given, then the specifier for the local
+generate an error if _spec_ is ambiguous as to which package it refers to in
+the dependency graph. If no _spec_ is given, then the specifier for the local
 package is printed.
 
 This command requires that a lockfile is available and dependencies have been
@@ -23,72 +21,65 @@ fetched.
 
 A package specifier consists of a name, version, and source URL. You are
 allowed to use partial specifiers to succinctly match a specific package as
-long as it matches only one package. The format of a _SPEC_ can be one of the
+long as it matches only one package. The format of a _spec_ can be one of the
 following:
 
-[%autowidth]
-.SPEC Query Format
-|===
-|SPEC Structure |Example SPEC
+SPEC Structure             | Example SPEC
+---------------------------|--------------
+_name_                     | `bitflags`
+_name_`:`_version_         | `bitflags:1.0.4`
+_url_                      | `https://github.com/rust-lang/cargo`
+_url_`#`_version_          | `https://github.com/rust-lang/cargo#0.33.0`
+_url_`#`_name_             | `https://github.com/rust-lang/crates.io-index#bitflags`
+_url_`#`_name_`:`_version_ | `https://github.com/rust-lang/cargo#crates-io:0.21.0`
 
-|__NAME__
-|`bitflags`
+## OPTIONS
 
-|__NAME__``:``__VERSION__
-|`bitflags:1.0.4`
+### Package Selection
 
-|__URL__
-|`https://github.com/rust-lang/cargo`
+{{#options}}
 
-|__URL__``#``__VERSION__
-|`https://github.com/rust-lang/cargo#0.33.0`
+{{#option "`-p` _spec_" "`--package` _spec_" }}
+Get the package ID for the given package instead of the current package.
+{{/option}}
 
-|__URL__``#``__NAME__
-|`https://github.com/rust-lang/crates.io-index#bitflags`
+{{/options}}
 
-|__URL__``#``__NAME__``:``__VERSION__
-|`https://github.com/rust-lang/cargo#crates-io:0.21.0`
-|===
+### Display Options
 
-== OPTIONS
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Package Selection
+### Manifest Options
 
-*-p* _SPEC_::
-*--package* _SPEC_::
-    Get the package ID for the given package instead of the current package.
+{{#options}}
 
-=== Display Options
+{{> options-manifest-path }}
 
-include::options-display.adoc[]
+{{> options-locked }}
 
-=== Manifest Options
+{{/options}}
 
-include::options-manifest-path.adoc[]
+{{> section-options-common }}
 
-include::options-locked.adoc[]
+{{> section-environment }}
 
-=== Common Options
+{{> section-exit-status }}
 
-include::options-common.adoc[]
+## EXAMPLES
 
-include::section-environment.adoc[]
+1. Retrieve package specification for `foo` package:
 
-include::section-exit-status.adoc[]
+       cargo pkgid foo
 
-== EXAMPLES
+2. Retrieve package specification for version 1.0.0 of `foo`:
 
-. Retrieve package specification for `foo` package:
+       cargo pkgid foo:1.0.0
 
-    cargo pkgid foo
+3. Retrieve package specification for `foo` from crates.io:
 
-. Retrieve package specification for version 1.0.0 of `foo`:
+       cargo pkgid https://github.com/rust-lang/crates.io-index#foo
 
-    cargo pkgid foo:1.0.0
-
-. Retrieve package specification for `foo` from crates.io:
-
-    cargo pkgid https://github.com/rust-lang/crates.io-index#foo
-
-== SEE ALSO
-man:cargo[1], man:cargo-generate-lockfile[1], man:cargo-metadata[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}

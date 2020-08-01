@@ -1,76 +1,83 @@
-= cargo-clean(1)
-:idprefix: cargo_clean_
-:doctype: manpage
-:actionverb: Clean
+# cargo-clean(1)
+{{*set actionverb="Clean"}}
 
-== NAME
+## NAME
 
 cargo-clean - Remove generated artifacts
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo clean [_OPTIONS_]`
+`cargo clean` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Remove artifacts from the target directory that Cargo has generated in the
 past.
 
 With no options, `cargo clean` will delete the entire target directory.
 
-== OPTIONS
+## OPTIONS
 
-=== Package Selection
+### Package Selection
 
 When no packages are selected, all packages and all dependencies in the
 workspace are cleaned.
 
-*-p* _SPEC_...::
-*--package* _SPEC_...::
-    Clean only the specified packages. This flag may be specified
-    multiple times. See man:cargo-pkgid[1] for the SPEC format.
+{{#options}}
+{{#option "`-p` _spec_..." "`--package` _spec_..." }}
+Clean only the specified packages. This flag may be specified
+multiple times. See {{man "cargo-pkgid" 1}} for the SPEC format.
+{{/option}}
+{{/options}}
 
-=== Clean Options
+### Clean Options
 
-*--doc*::
-    This option will cause `cargo clean` to remove only the `doc` directory in
-    the target directory.
+{{#options}}
 
-*--release*::
-    Clean all artifacts that were built with the `release` or `bench`
-    profiles.
+{{#option "`--doc`" }}
+This option will cause `cargo clean` to remove only the `doc` directory in
+the target directory.
+{{/option}}
 
-include::options-target-dir.adoc[]
+{{#option "`--release`" }}
+Clean all artifacts that were built with the `release` or `bench` profiles.
+{{/option}}
 
-include::options-target-triple.adoc[]
+{{> options-target-dir }}
 
-=== Display Options
+{{> options-target-triple }}
 
-include::options-display.adoc[]
+{{/options}}
 
-=== Manifest Options
+### Display Options
 
-include::options-manifest-path.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-options-common }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Remove the entire target directory:
+## EXAMPLES
 
-    cargo clean
+1. Remove the entire target directory:
 
-. Remove only the release artifacts:
+       cargo clean
 
-    cargo clean --release
+2. Remove only the release artifacts:
 
-== SEE ALSO
-man:cargo[1], man:cargo-build[1]
+       cargo clean --release
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-build" 1}}

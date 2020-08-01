@@ -1,8 +1,11 @@
-*--lib*::
-    {actionverb} the package's library.
+{{#option "`--lib`" }}
+{{actionverb}} the package's library.
+{{/option}}
 
-*--bin* _NAME_...::
-    {actionverb} the specified binary. This flag may be specified multiple times.
+{{#option "`--bin` _name_..." }}
+{{actionverb}} the specified binary. This flag may be specified multiple times.
+{{/option}}
 
-*--bins*::
-    {actionverb} all binary targets.
+{{#option "`--bins`" }}
+{{actionverb}} all binary targets.
+{{/option}}

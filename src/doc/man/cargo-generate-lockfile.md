@@ -1,49 +1,49 @@
-= cargo-generate-lockfile(1)
-:idprefix: cargo_generate-lockfile_
-:doctype: manpage
+# cargo-generate-lockfile(1)
 
-== NAME
+## NAME
 
 cargo-generate-lockfile - Generate the lockfile for a package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo generate-lockfile [_OPTIONS_]`
+`cargo generate-lockfile` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will create the `Cargo.lock` lockfile for the current package or
 workspace. If the lockfile already exists, it will be rebuilt if there are any
 manifest changes or dependency updates.
 
-See also man:cargo-update[1] which is also capable of creating a `Cargo.lock`
+See also {{man "cargo-update" 1}} which is also capable of creating a `Cargo.lock`
 lockfile and has more options for controlling update behavior.
 
-== OPTIONS
+## OPTIONS
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Manifest Options
+### Manifest Options
 
-include::options-manifest-path.adoc[]
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-locked.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Create or update the lockfile for the current package or workspace:
 
-. Create or update the lockfile for the current package or workspace:
+       cargo generate-lockfile
 
-    cargo generate-lockfile
-
-== SEE ALSO
-man:cargo[1], man:cargo-update[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-update" 1}}

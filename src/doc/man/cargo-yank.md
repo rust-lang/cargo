@@ -1,16 +1,14 @@
-= cargo-yank(1)
-:idprefix: cargo_yank_
-:doctype: manpage
+# cargo-yank(1)
 
-== NAME
+## NAME
 
 cargo-yank - Remove a pushed crate from the index
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo yank [_OPTIONS_] --vers _VERSION_ [_CRATE_]`
+`cargo yank` [_options_] `--vers` _version_ [_crate_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 The yank command removes a previously published crate's version from the
 server's index. This command does not delete any data, and the crate will
@@ -21,44 +19,52 @@ download the yanked version to use it. Cargo will, however, not allow any new
 crates to be locked to any yanked version.
 
 This command requires you to be authenticated with either the `--token` option
-or using man:cargo-login[1].
+or using {{man "cargo-login" 1}}.
 
 If the crate name is not specified, it will use the package name from the
 current directory.
 
-== OPTIONS
+## OPTIONS
 
-=== Yank Options
+### Yank Options
 
-*--vers* _VERSION_::
-    The version to yank or un-yank.
+{{#options}}
 
-*--undo*::
-    Undo a yank, putting a version back into the index.
+{{#option "`--vers` _version_" }}
+The version to yank or un-yank.
+{{/option}}
 
-include::options-token.adoc[]
+{{#option "`--undo`" }}
+Undo a yank, putting a version back into the index.
+{{/option}}
 
-include::options-index.adoc[]
+{{> options-token }}
 
-include::options-registry.adoc[]
+{{> options-index }}
 
-=== Display Options
+{{> options-registry }}
 
-include::options-display.adoc[]
+{{/options}}
 
-=== Common Options
+### Display Options
 
-include::options-common.adoc[]
+{{#options}}
 
-include::section-environment.adoc[]
+{{> options-display }}
 
-include::section-exit-status.adoc[]
+{{/options}}
 
-== EXAMPLES
+{{> section-options-common }}
 
-. Yank a crate from the index:
+{{> section-environment }}
 
-    cargo yank --vers 1.0.7 foo
+{{> section-exit-status }}
 
-== SEE ALSO
-man:cargo[1], man:cargo-login[1], man:cargo-publish[1]
+## EXAMPLES
+
+1. Yank a crate from the index:
+
+       cargo yank --vers 1.0.7 foo
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-login" 1}}, {{man "cargo-publish" 1}}

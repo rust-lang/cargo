@@ -1,81 +1,90 @@
-= cargo-update(1)
-:idprefix: cargo_update_
-:doctype: manpage
+# cargo-update(1)
 
-== NAME
+## NAME
 
 cargo-update - Update dependencies as recorded in the local lock file
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo update [_OPTIONS_]`
+`cargo update` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will update dependencies in the `Cargo.lock` file to the latest
 version. It requires that the `Cargo.lock` file already exists as generated
-by commands such as man:cargo-build[1] or man:cargo-generate-lockfile[1].
+by commands such as {{man "cargo-build" 1}} or {{man "cargo-generate-lockfile" 1}}.
 
-== OPTIONS
+## OPTIONS
 
-=== Update Options
+### Update Options
 
-*-p* _SPEC_...::
-*--package* _SPEC_...::
-    Update only the specified packages. This flag may be specified
-    multiple times. See man:cargo-pkgid[1] for the SPEC format.
-+
+{{#options}}
+
+{{#option "`-p` _spec_..." "`--package` _spec_..." }}
+Update only the specified packages. This flag may be specified
+multiple times. See {{man "cargo-pkgid" 1}} for the SPEC format.
+
 If packages are specified with the `-p` flag, then a conservative update of
 the lockfile will be performed. This means that only the dependency specified
 by SPEC will be updated. Its transitive dependencies will be updated only if
 SPEC cannot be updated without updating dependencies.  All other dependencies
 will remain locked at their currently recorded versions.
-+
+
 If `-p` is not specified, all dependencies are updated.
+{{/option}}
 
-*--aggressive*::
-    When used with `-p`, dependencies of _SPEC_ are forced to update as well.
-    Cannot be used with `--precise`.
+{{#option "`--aggressive`" }}
+When used with `-p`, dependencies of _spec_ are forced to update as well.
+Cannot be used with `--precise`.
+{{/option}}
 
-*--precise* _PRECISE_::
-    When used with `-p`, allows you to specify a specific version number to
-    set the package to. If the package comes from a git repository, this can
-    be a git revision (such as a SHA hash or tag).
+{{#option "`--precise` _precise_" }}
+When used with `-p`, allows you to specify a specific version number to set
+the package to. If the package comes from a git repository, this can be a git
+revision (such as a SHA hash or tag).
+{{/option}}
 
-*--dry-run*::
-    Displays what would be updated, but doesn't actually write the lockfile.
+{{#option "`--dry-run`" }}
+Displays what would be updated, but doesn't actually write the lockfile.
+{{/option}}
 
-=== Display Options
+{{/options}}
 
-include::options-display.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-include::options-manifest-path.adoc[]
+### Manifest Options
 
-include::options-locked.adoc[]
+{{#options}}
 
-=== Common Options
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
 
-include::section-environment.adoc[]
+{{/options}}
 
-include::section-exit-status.adoc[]
+{{> section-options-common }}
 
-== EXAMPLES
+{{> section-environment }}
 
-. Update all dependencies in the lockfile:
+{{> section-exit-status }}
 
-    cargo update
+## EXAMPLES
 
-. Update only specific dependencies:
+1. Update all dependencies in the lockfile:
 
-    cargo update -p foo -p bar
+       cargo update
 
-. Set a specific dependency to a specific version:
+2. Update only specific dependencies:
 
-    cargo update -p foo --precise 1.2.3
+       cargo update -p foo -p bar
 
-== SEE ALSO
-man:cargo[1], man:cargo-generate-lockfile[1]
+3. Set a specific dependency to a specific version:
+
+       cargo update -p foo --precise 1.2.3
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}

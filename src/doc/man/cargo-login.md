@@ -1,51 +1,51 @@
-= cargo-login(1)
-:idprefix: cargo_login_
-:doctype: manpage
+# cargo-login(1)
 
-== NAME
+## NAME
 
 cargo-login - Save an API token from the registry locally
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo login [_OPTIONS_] [_TOKEN_]`
+`cargo login` [_options_] [_token_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will save the API token to disk so that commands that require
-authentication, such as man:cargo-publish[1], will be automatically
+authentication, such as {{man "cargo-publish" 1}}, will be automatically
 authenticated. The token is saved in `$CARGO_HOME/credentials.toml`. `CARGO_HOME`
 defaults to `.cargo` in your home directory.
 
-If the _TOKEN_ argument is not specified, it will be read from stdin.
+If the _token_ argument is not specified, it will be read from stdin.
 
-The API token for crates.io may be retrieved from https://crates.io/me.
+The API token for crates.io may be retrieved from <https://crates.io/me>.
 
 Take care to keep the token secret, it should not be shared with anyone else.
 
-== OPTIONS
+## OPTIONS
 
-=== Login Options
+### Login Options
 
-include::options-registry.adoc[]
+{{#options}}
+{{> options-registry }}
+{{/options}}
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Save the API token to disk:
 
-. Save the API token to disk:
+       cargo login
 
-    cargo login
-
-== SEE ALSO
-man:cargo[1], man:cargo-publish[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-publish" 1}}

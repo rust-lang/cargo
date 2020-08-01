@@ -1,98 +1,108 @@
-= cargo-rustdoc(1)
-:idprefix: cargo_rustdoc_
-:doctype: manpage
-:actionverb: Document
+# cargo-rustdoc(1)
+{{*set actionverb="Document"}}
 
-== NAME
+## NAME
 
 cargo-rustdoc - Build a package's documentation, using specified custom flags
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo rustdoc [_OPTIONS_] [-- _ARGS_]`
+`cargo rustdoc` [_options_] [`--` _args_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 The specified target for the current package (or package specified by `-p` if
-provided) will be documented with the specified _ARGS_ being passed to the
+provided) will be documented with the specified _args_ being passed to the
 final rustdoc invocation. Dependencies will not be documented as part of this
 command. Note that rustdoc will still unconditionally receive arguments such
-as `-L`, `--extern`, and `--crate-type`, and the specified _ARGS_ will simply
+as `-L`, `--extern`, and `--crate-type`, and the specified _args_ will simply
 be added to the rustdoc invocation.
 
-See https://doc.rust-lang.org/rustdoc/index.html for documentation on rustdoc
+See <https://doc.rust-lang.org/rustdoc/index.html> for documentation on rustdoc
 flags.
 
-include::description-one-target.adoc[]
+{{> description-one-target }}
 To pass flags to all rustdoc processes spawned by Cargo, use the
-`RUSTDOCFLAGS` linkcargo:reference/environment-variables.html[environment variable]
-or the `build.rustdocflags` linkcargo:reference/config.html[config value].
+`RUSTDOCFLAGS` [environment variable](../reference/environment-variables.html)
+or the `build.rustdocflags` [config value](../reference/config.html).
 
-== OPTIONS
+## OPTIONS
 
-=== Documentation Options
+### Documentation Options
 
-*--open*::
-    Open the docs in a browser after building them. This will use your default
-    browser unless you define another one in the `BROWSER` environment
-    variable.
+{{#options}}
 
-=== Package Selection
+{{#option "`--open`" }}
+Open the docs in a browser after building them. This will use your default
+browser unless you define another one in the `BROWSER` environment variable.
+{{/option}}
 
-include::options-package.adoc[]
+{{/options}}
 
-=== Target Selection
+{{> section-options-package }}
+
+### Target Selection
 
 When no target selection options are given, `cargo rustdoc` will document all
 binary and library targets of the selected package. The binary will be skipped
 if its name is the same as the lib target. Binaries are skipped if they have
 `required-features` that are missing.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-include::options-release.adoc[]
+{{> options-target-triple }}
 
-=== Output Options
+{{> options-release }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-=== Display Options
+### Output Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
 
-include::options-message-format.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
 
-include::options-manifest-path.adoc[]
+{{> options-message-format }}
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-options-common }}
 
-include::options-jobs.adoc[]
+### Miscellaneous Options
 
-include::section-profiles.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-profiles }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Build documentation with custom CSS included from a given file:
+## EXAMPLES
 
-    cargo rustdoc --lib -- --extend-css extra.css
+1. Build documentation with custom CSS included from a given file:
 
-== SEE ALSO
-man:cargo[1], man:cargo-doc[1], man:rustdoc[1]
+       cargo rustdoc --lib -- --extend-css extra.css
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-doc" 1}}, {{man "rustdoc" 1}}

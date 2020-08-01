@@ -1,3 +1,5 @@
+### Package Selection
+
 By default, when no package selection options are given, the packages selected
 depend on the selected manifest file (based on the current working directory if
 `--manifest-path` is not given). If the manifest is the root of a workspace then
@@ -9,19 +11,26 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 `--workspace`), and a non-virtual workspace will include only the root crate itself.
 
-*-p* _SPEC_...::
-*--package* _SPEC_...::
-    {actionverb} only the specified packages. See man:cargo-pkgid[1] for the
-    SPEC format. This flag may be specified multiple times.
+{{#options}}
 
-*--workspace*::
-    {actionverb} all members in the workspace.
+{{#option "`-p` _spec_..." "`--package` _spec_..."}}
+{{actionverb}} only the specified packages. See {{man "cargo-pkgid" 1}} for the
+SPEC format. This flag may be specified multiple times.
+{{/option}}
 
-ifndef::noall[]
-*--all*::
-    Deprecated alias for `--workspace`.
-endif::noall[]
+{{#option "`--workspace`" }}
+{{actionverb}} all members in the workspace.
+{{/option}}
 
-*--exclude* _SPEC_...::
-    Exclude the specified packages. Must be used in conjunction with the
-    `--workspace` flag. This flag may be specified multiple times.
+{{#unless noall}}
+{{#option "`--all`" }}
+Deprecated alias for `--workspace`.
+{{/option}}
+{{/unless}}
+
+{{#option "`--exclude` _SPEC_..." }}
+Exclude the specified packages. Must be used in conjunction with the
+`--workspace` flag. This flag may be specified multiple times.
+{{/option}}
+
+{{/options}}

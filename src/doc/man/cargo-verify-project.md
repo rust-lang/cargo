@@ -1,16 +1,14 @@
-= cargo-verify-project(1)
-:idprefix: cargo_verify-project_
-:doctype: manpage
+# cargo-verify-project(1)
 
-== NAME
+## NAME
 
 cargo-verify-project - Check correctness of crate manifest
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo verify-project [_OPTIONS_]`
+`cargo verify-project` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will parse the local manifest and check its validity. It emits a
 JSON object with the result. A successful validation will display:
@@ -21,37 +19,40 @@ An invalid workspace will display:
 
     {"invalid":"human-readable error message"}
 
-== OPTIONS
+## OPTIONS
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
 
-=== Manifest Options
+{{> options-display }}
 
-include::options-manifest-path.adoc[]
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
 
-include::options-common.adoc[]
+{{> options-manifest-path }}
 
-include::section-environment.adoc[]
+{{> options-locked }}
 
-== Exit Status
+{{/options}}
 
-0::
-    The workspace is OK.
+{{> section-options-common }}
 
-1::
-    The workspace is invalid.
+{{> section-environment }}
 
-== EXAMPLES
+## EXIT STATUS
 
-. Check the current workspace for errors:
+* `0`: The workspace is OK.
+* `1`: The workspace is invalid.
 
-    cargo verify-project
+## EXAMPLES
 
-== SEE ALSO
-man:cargo[1], man:cargo-package[1]
+1. Check the current workspace for errors:
+
+       cargo verify-project
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-package" 1}}

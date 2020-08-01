@@ -1,18 +1,16 @@
-= cargo-test(1)
-:idprefix: cargo_test_
-:doctype: manpage
-:actionverb: Test
-:nouns: tests
+# cargo-test(1)
+{{*set actionverb="Test"}}
+{{*set nouns="tests"}}
 
-== NAME
+## NAME
 
 cargo-test - Execute unit and integration tests of a package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo test [_OPTIONS_] [TESTNAME] [-- _TEST-OPTIONS_]`
+`cargo test` [_options_] [_testname_] [`--` _test-options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Compile and execute unit and integration tests.
 
@@ -21,7 +19,7 @@ dashes (`--`) are passed to the test binaries and thus to _libtest_ (rustc's
 built in unit-test and micro-benchmarking framework).  If you're passing
 arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.  For details about libtest's arguments see the
-output of `cargo test \-- --help`.
+output of `cargo test -- --help`.
 
 As an example, this will filter for tests with `foo` in their name and run them
 on 3 threads in parallel:
@@ -30,7 +28,7 @@ on 3 threads in parallel:
 
 Tests are built with the `--test` option to `rustc` which creates an
 executable with a `main` function that automatically runs all functions
-annotated with the `\#[test]` attribute in multiple threads. `#[bench]`
+annotated with the `#[test]` attribute in multiple threads. `#[bench]`
 annotated functions will also be run with one iteration to verify that they
 are functional.
 
@@ -40,20 +38,18 @@ function to handle running tests.
 
 Documentation tests are also run by default, which is handled by `rustdoc`. It
 extracts code samples from documentation comments and executes them. See the
-link:https://doc.rust-lang.org/rustdoc/[rustdoc book] for more information on
+[rustdoc book](https://doc.rust-lang.org/rustdoc/) for more information on
 writing doc tests.
 
-== OPTIONS
+## OPTIONS
 
-=== Test Options
+### Test Options
 
-include::options-test.adoc[]
+{{> options-test }}
 
-=== Package Selection
+{{> section-package-selection }}
 
-include::options-packages.adoc[]
-
-=== Target Selection
+### Target Selection
 
 When no target selection options are given, `cargo test` will build the
 following targets of the selected packages:
@@ -78,31 +74,42 @@ library in the manifest.
 
 Binary targets are automatically built if there is an integration test or
 benchmark. This allows an integration test to execute the binary to exercise
-and test its behavior. The `CARGO_BIN_EXE_<name>`
-linkcargo:reference/environment-variables.html#environment-variables-cargo-sets-for-crates[environment variable]
+and test its behavior. The `CARGO_bin_EXE_<name>`
+[environment variable](../reference/environment-variables.html#environment-variables-cargo-sets-for-crates)
 is set when the integration test is built so that it can use the
-link:https://doc.rust-lang.org/std/macro.env.html[`env` macro] to locate the
+[`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the
 executable.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-*--doc*::
-    Test only the library's documentation. This cannot be mixed with other
-    target options.
+{{#options}}
 
-include::options-features.adoc[]
+{{#option "`--doc`" }}
+Test only the library's documentation. This cannot be mixed with other
+target options.
+{{/option}}
 
-=== Compilation Options
+{{/options}}
 
-include::options-target-triple.adoc[]
+{{> section-features }}
 
-include::options-release.adoc[]
+### Compilation Options
 
-=== Output Options
+{{#options}}
 
-include::options-target-dir.adoc[]
+{{> options-target-triple }}
 
-=== Display Options
+{{> options-release }}
+
+{{/options}}
+
+### Output Options
+
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
+
+### Display Options
 
 By default the Rust test harness hides output from test execution to keep
 results readable. Test output can be recovered (e.g., for debugging) by passing
@@ -110,21 +117,27 @@ results readable. Test output can be recovered (e.g., for debugging) by passing
 
     cargo test -- --nocapture
 
-include::options-display.adoc[]
+{{#options}}
 
-include::options-message-format.adoc[]
+{{> options-display }}
 
-=== Manifest Options
+{{> options-message-format }}
 
-include::options-manifest-path.adoc[]
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
 
-include::options-common.adoc[]
+{{> options-manifest-path }}
 
-=== Miscellaneous Options
+{{> options-locked }}
+
+{{/options}}
+
+{{> section-options-common }}
+
+### Miscellaneous Options
 
 The `--jobs` argument affects the building of the test executable but does not
 affect how many threads are used when running the tests. The Rust test harness
@@ -132,9 +145,13 @@ includes an option to control the number of threads used:
 
     cargo test -j 2 -- --test-threads=2
 
-include::options-jobs.adoc[]
+{{#options}}
 
-include::section-profiles.adoc[]
+{{> options-jobs }}
+
+{{/options}}
+
+{{> section-profiles }}
 
 Unit tests are separate executable artifacts which use the `test`/`bench`
 profiles. Example targets are built the same as with `cargo build` (using the
@@ -144,23 +161,23 @@ which case they use the `test`/`bench` profiles. Library targets are built
 with the `dev`/`release` profiles when linked to an integration test, binary,
 or doctest.
 
-include::section-environment.adoc[]
+{{> section-environment }}
 
-include::section-exit-status.adoc[]
+{{> section-exit-status }}
 
-== EXAMPLES
+## EXAMPLES
 
-. Execute all the unit and integration tests of the current package:
+1. Execute all the unit and integration tests of the current package:
 
-    cargo test
+       cargo test
 
-. Run only tests whose names match against a filter string:
+2. Run only tests whose names match against a filter string:
 
-    cargo test name_filter
+       cargo test name_filter
 
-. Run only a specific test within a specific integration test:
+3. Run only a specific test within a specific integration test:
 
-    cargo test --test int_test_name -- modname::test_name
+       cargo test --test int_test_name -- modname::test_name
 
-== SEE ALSO
-man:cargo[1], man:cargo-bench[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-bench" 1}}

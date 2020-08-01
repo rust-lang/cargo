@@ -1,57 +1,63 @@
-= cargo-uninstall(1)
-:idprefix: cargo_uninstall_
-:doctype: manpage
+# cargo-uninstall(1)
 
-== NAME
+## NAME
 
 cargo-uninstall - Remove a Rust binary
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo uninstall [_OPTIONS_] [_SPEC_...]`
+`cargo uninstall` [_options_] [_spec_...]
 
-== DESCRIPTION
+## DESCRIPTION
 
-This command removes a package installed with man:cargo-install[1]. The _SPEC_
+This command removes a package installed with {{man "cargo-install" 1}}. The _spec_
 argument is a package ID specification of the package to remove (see
-man:cargo-pkgid[1]).
+{{man "cargo-pkgid" 1}}).
 
 By default all binaries are removed for a crate but the `--bin` and
 `--example` flags can be used to only remove particular binaries.
 
-include::description-install-root.adoc[]
+{{> description-install-root }}
 
-== OPTIONS
+## OPTIONS
 
-=== Install Options
+### Install Options
 
-*-p*::
-*--package* _SPEC_...::
-    Package to uninstall.
+{{#options}}
 
-*--bin* _NAME_...::
-    Only uninstall the binary _NAME_.
+{{#option "`-p`" "`--package` _spec_..." }}
+Package to uninstall.
+{{/option}}
 
-*--root* _DIR_::
-    Directory to uninstall packages from.
+{{#option "`--bin` _name_..." }}
+Only uninstall the binary _name_.
+{{/option}}
 
-=== Display Options
+{{#option "`--root` _dir_" }}
+Directory to uninstall packages from.
+{{/option}}
 
-include::options-display.adoc[]
+{{/options}}
 
-=== Common Options
+### Display Options
 
-include::options-common.adoc[]
+{{#options}}
 
-include::section-environment.adoc[]
+{{> options-display }}
 
-include::section-exit-status.adoc[]
+{{/options}}
 
-== EXAMPLES
+{{> section-options-common }}
 
-. Uninstall a previously installed package.
+{{> section-environment }}
 
-    cargo uninstall ripgrep
+{{> section-exit-status }}
 
-== SEE ALSO
-man:cargo[1], man:cargo-install[1]
+## EXAMPLES
+
+1. Uninstall a previously installed package.
+
+       cargo uninstall ripgrep
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-install" 1}}

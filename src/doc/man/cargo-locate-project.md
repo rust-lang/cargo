@@ -1,46 +1,46 @@
-= cargo-locate-project(1)
-:idprefix: cargo_locate-project_
-:doctype: manpage
+# cargo-locate-project(1)
 
-== NAME
+## NAME
 
 cargo-locate-project - Print a JSON representation of a Cargo.toml file's location
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo locate-project [_OPTIONS_]`
+`cargo locate-project` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will print a JSON object to stdout with the full path to the
 `Cargo.toml` manifest.
 
-See also man:cargo-metadata[1] which is capable of returning the path to a
+See also {{man "cargo-metadata" 1}} which is capable of returning the path to a
 workspace root.
 
-== OPTIONS
+## OPTIONS
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Manifest Options
+### Manifest Options
 
-include::options-manifest-path.adoc[]
+{{#options}}
+{{> options-manifest-path }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Display the path to the manifest based on the current directory:
 
-. Display the path to the manifest based on the current directory:
+       cargo locate-project
 
-    cargo locate-project
-
-== SEE ALSO
-man:cargo[1], man:cargo-metadata[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-metadata" 1}}

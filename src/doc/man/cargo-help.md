@@ -1,28 +1,26 @@
-= cargo-help(1)
-:idprefix: cargo_help_
-:doctype: manpage
+# cargo-help(1)
 
-== NAME
+## NAME
 
 cargo-help - Get help for a Cargo command
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo help [_SUBCOMMAND_]`
+`cargo help` [_subcommand_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Prints a help message for the given command.
 
-== EXAMPLES
+## EXAMPLES
 
-. Get help for a command:
+1. Get help for a command:
 
-    cargo help build
+       cargo help build
 
-. Help is also available with the `--help` flag:
+2. Help is also available with the `--help` flag:
 
-    cargo build --help
+       cargo build --help
 
-== SEE ALSO
-man:cargo[1]
+## SEE ALSO
+{{man "cargo" 1}}

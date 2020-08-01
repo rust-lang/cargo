@@ -1,4 +1,4 @@
-== ENVIRONMENT
+## ENVIRONMENT
 
-See linkcargo:reference/environment-variables.html[the reference] for
+See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.

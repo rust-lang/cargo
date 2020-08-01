@@ -1,29 +1,39 @@
-*--bin*::
-    Create a package with a binary target (`src/main.rs`).
-    This is the default behavior.
+{{#options}}
 
-*--lib*::
-    Create a package with a library target (`src/lib.rs`).
+{{#option "`--bin`" }}
+Create a package with a binary target (`src/main.rs`).
+This is the default behavior.
+{{/option}}
 
-*--edition* _EDITION_::
-    Specify the Rust edition to use. Default is 2018.
-    Possible values: 2015, 2018
+{{#option "`--lib`" }}
+Create a package with a library target (`src/lib.rs`).
+{{/option}}
 
-*--name* _NAME_::
-    Set the package name. Defaults to the directory name.
+{{#option "`--edition` _edition_" }}
+Specify the Rust edition to use. Default is 2018.
+Possible values: 2015, 2018
+{{/option}}
 
-*--vcs* _VCS_::
-    Initialize a new VCS repository for the given version control system (git,
-    hg, pijul, or fossil) or do not initialize any version control at all
-    (none). If not specified, defaults to `git` or the configuration value
-    `cargo-new.vcs`, or `none` if already inside a VCS repository.
+{{#option "`--name` _name_" }}
+Set the package name. Defaults to the directory name.
+{{/option}}
 
-*--registry* _REGISTRY_::
-    This sets the `publish` field in `Cargo.toml` to the given registry name
-    which will restrict publishing only to that registry.
-+
-Registry names are defined in linkcargo:reference/config.html[Cargo config files].
+{{#option "`--vcs` _vcs_" }}
+Initialize a new VCS repository for the given version control system (git,
+hg, pijul, or fossil) or do not initialize any version control at all
+(none). If not specified, defaults to `git` or the configuration value
+`cargo-new.vcs`, or `none` if already inside a VCS repository.
+{{/option}}
+
+{{#option "`--registry` _registry_" }}
+This sets the `publish` field in `Cargo.toml` to the given registry name
+which will restrict publishing only to that registry.
+
+Registry names are defined in [Cargo config files](../reference/config.html).
 If not specified, the default registry defined by the `registry.default`
 config key is used. If the default registry is not set and `--registry` is not
 used, the `publish` field will not be set which means that publishing will not
 be restricted.
+{{/option}}
+
+{{/options}}

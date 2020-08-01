@@ -1,39 +1,41 @@
-= cargo-version(1)
-:idprefix: cargo_version_
-:doctype: manpage
+# cargo-version(1)
 
-== NAME
+## NAME
 
 cargo-version - Show version information
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo version [_OPTIONS_]`
+`cargo version` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Displays the version of Cargo.
 
-== OPTIONS
+## OPTIONS
 
-*-v*::
-*--verbose*::
-    Display additional version information.
+{{#options}}
 
-== EXAMPLES
+{{#option "`-v`" "`--verbose`" }}
+Display additional version information.
+{{/option}}
 
-. Display the version:
+{{/options}}
 
-    cargo version
+## EXAMPLES
 
-. The version is also available via flags:
+1. Display the version:
 
-    cargo --version
-    cargo -V
+       cargo version
 
-. Display extra version information:
+2. The version is also available via flags:
 
-    cargo -Vv
+       cargo --version
+       cargo -V
 
-== SEE ALSO
-man:cargo[1]
+3. Display extra version information:
+
+       cargo -Vv
+
+## SEE ALSO
+{{man "cargo" 1}}

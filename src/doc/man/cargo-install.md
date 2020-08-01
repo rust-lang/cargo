@@ -1,33 +1,30 @@
-= cargo-install(1)
-:idprefix: cargo_install_
-:doctype: manpage
-:actionverb: Install
+# cargo-install(1)
+{{*set actionverb="Install"}}
 
-== NAME
+## NAME
 
 cargo-install - Build and install a Rust binary
 
-== SYNOPSIS
+## SYNOPSIS
 
-[%hardbreaks]
-`cargo install [_OPTIONS_] _CRATE_...`
-`cargo install [_OPTIONS_] --path _PATH_`
-`cargo install [_OPTIONS_] --git _URL_ [_CRATE_...]`
-`cargo install [_OPTIONS_] --list`
+`cargo install` [_options_] _crate_...\
+`cargo install` [_options_] `--path` _path_\
+`cargo install` [_options_] `--git` _url_ [_crate_...]\
+`cargo install` [_options_] `--list`
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command manages Cargo's local set of installed binary crates. Only
-packages which have executable `\[[bin]]` or `\[[example]]` targets can be
+packages which have executable `[[bin]]` or `[[example]]` targets can be
 installed, and all executables are installed into the installation root's
 `bin` folder.
 
-include::description-install-root.adoc[]
+{{> description-install-root }}
 
 There are multiple sources from which a crate can be installed. The default
 location is crates.io but the `--git`, `--path`, and `--registry` flags can
 change this source. If the source contains more than one package (such as
-crates.io or a git repository with multiple crates) the _CRATE_ argument is
+crates.io or a git repository with multiple crates) the _crate_ argument is
 required to indicate which crate should be installed.
 
 Crates from crates.io can optionally specify the version they wish to install
@@ -71,116 +68,140 @@ not start publishing `Cargo.lock` files until version 1.37, which means
 packages published with prior versions will not have a `Cargo.lock` file
 available.
 
-== OPTIONS
+## OPTIONS
 
-=== Install Options
+### Install Options
 
-*--vers* _VERSION_::
-*--version* _VERSION_::
-    Specify a version to install. This may be a
-    linkcargo:reference/specifying-dependencies.md[version requirement], like
-    `~1.2`, to have Cargo select the newest version from the given
-    requirement. If the version does not have a requirement operator (such as
-    `^` or `~`), then it must be in the form _MAJOR.MINOR.PATCH_, and will
-    install exactly that version; it is *not* treated as a caret requirement
-    like Cargo dependencies are.
+{{#options}}
 
-*--git* _URL_::
-    Git URL to install the specified crate from.
+{{#option "`--vers` _version_" "`--version` _version_" }}
+Specify a version to install. This may be a [version
+requirement](../reference/specifying-dependencies.md), like `~1.2`, to have Cargo
+select the newest version from the given requirement. If the version does not
+have a requirement operator (such as `^` or `~`), then it must be in the form
+_MAJOR.MINOR.PATCH_, and will install exactly that version; it is *not*
+treated as a caret requirement like Cargo dependencies are.
+{{/option}}
 
-*--branch* _BRANCH_::
-    Branch to use when installing from git.
+{{#option "`--git` _url_" }}
+Git URL to install the specified crate from.
+{{/option}}
 
-*--tag* _TAG_::
-    Tag to use when installing from git.
+{{#option "`--branch` _branch_" }}
+Branch to use when installing from git.
+{{/option}}
 
-*--rev* _SHA_::
-    Specific commit to use when installing from git.
+{{#option "`--tag` _tag_" }}
+Tag to use when installing from git.
+{{/option}}
 
-*--path* _PATH_::
-    Filesystem path to local crate to install.
+{{#option "`--rev` _sha_" }}
+Specific commit to use when installing from git.
+{{/option}}
 
-*--list*::
-    List all installed packages and their versions.
+{{#option "`--path` _path_" }}
+Filesystem path to local crate to install.
+{{/option}}
 
-*-f*::
-*--force*::
-    Force overwriting existing crates or binaries. This can be used if a
-    package has installed a binary with the same name as another package. This
-    is also useful if something has changed on the system that you want to
-    rebuild with, such as a newer version of `rustc`.
+{{#option "`--list`" }}
+List all installed packages and their versions.
+{{/option}}
 
-*--no-track*::
-    By default, Cargo keeps track of the installed packages with a metadata
-    file stored in the installation root directory. This flag tells Cargo not
-    to use or create that file. With this flag, Cargo will refuse to overwrite
-    any existing files unless the `--force` flag is used. This also disables
-    Cargo's ability to protect against multiple concurrent invocations of
-    Cargo installing at the same time.
+{{#option "`-f`" "`--force`" }}
+Force overwriting existing crates or binaries. This can be used if a package
+has installed a binary with the same name as another package. This is also
+useful if something has changed on the system that you want to rebuild with,
+such as a newer version of `rustc`.
+{{/option}}
 
-*--bin* _NAME_...::
-    Install only the specified binary.
+{{#option "`--no-track`" }}
+By default, Cargo keeps track of the installed packages with a metadata file
+stored in the installation root directory. This flag tells Cargo not to use or
+create that file. With this flag, Cargo will refuse to overwrite any existing
+files unless the `--force` flag is used. This also disables Cargo's ability to
+protect against multiple concurrent invocations of Cargo installing at the
+same time.
+{{/option}}
 
-*--bins*::
-    Install all binaries.
+{{#option "`--bin` _name_..." }}
+Install only the specified binary.
+{{/option}}
 
-*--example* _NAME_...::
-    Install only the specified example.
+{{#option "`--bins`" }}
+Install all binaries.
+{{/option}}
 
-*--examples*::
-    Install all examples.
+{{#option "`--example` _name_..." }}
+Install only the specified example.
+{{/option}}
 
-*--root* _DIR_::
-    Directory to install packages into.
+{{#option "`--examples`" }}
+Install all examples.
+{{/option}}
 
-include::options-registry.adoc[]
+{{#option "`--root` _dir_" }}
+Directory to install packages into.
+{{/option}}
 
-include::options-index.adoc[]
+{{> options-registry }}
 
-include::options-features.adoc[]
+{{> options-index }}
 
-=== Compilation Options
+{{/options}}
 
-include::options-target-triple.adoc[]
+{{> section-features }}
 
-include::options-target-dir.adoc[]
+### Compilation Options
 
-*--debug*::
-    Build with the `dev` profile instead the `release` profile.
+{{#options}}
 
-=== Manifest Options
+{{> options-target-triple }}
 
-include::options-locked.adoc[]
+{{> options-target-dir }}
 
-=== Miscellaneous Options
+{{#option "`--debug`" }}
+Build with the `dev` profile instead the `release` profile.
+{{/option}}
 
-include::options-jobs.adoc[]
+{{/options}}
 
-=== Display Options
+### Manifest Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-locked }}
+{{/options}}
 
-=== Common Options
+### Miscellaneous Options
 
-include::options-common.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::section-environment.adoc[]
+### Display Options
 
-include::section-exit-status.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-== EXAMPLES
+{{> section-options-common }}
 
-. Install or upgrade a package from crates.io:
+{{> section-environment }}
 
-    cargo install ripgrep
+{{> section-exit-status }}
 
-. Install or reinstall the package in the current directory:
+## EXAMPLES
 
-    cargo install --path .
+1. Install or upgrade a package from crates.io:
 
-. View the list of installed packages:
+       cargo install ripgrep
 
-    cargo install --list
+2. Install or reinstall the package in the current directory:
 
-== SEE ALSO
-man:cargo[1], man:cargo-uninstall[1], man:cargo-search[1], man:cargo-publish[1]
+       cargo install --path .
+
+3. View the list of installed packages:
+
+       cargo install --list
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-uninstall" 1}}, {{man "cargo-search" 1}}, {{man "cargo-publish" 1}}

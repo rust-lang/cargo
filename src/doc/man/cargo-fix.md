@@ -1,17 +1,15 @@
-= cargo-fix(1)
-:idprefix: cargo_fix_
-:doctype: manpage
-:actionverb: Fix
+# cargo-fix(1)
+{{*set actionverb="Fix"}}
 
-== NAME
+## NAME
 
 cargo-fix - Automatically fix lint warnings reported by rustc
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo fix [_OPTIONS_]`
+`cargo fix` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
@@ -20,7 +18,7 @@ The `cargo fix` subcommand is also being developed for the Rust 2018 edition
 to provide code the ability to easily opt-in to the new edition without having
 to worry about any breakage.
 
-Executing `cargo fix` will under the hood execute man:cargo-check[1]. Any warnings
+Executing `cargo fix` will under the hood execute {{man "cargo-check" 1}}. Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
 example if you'd like to prepare for the 2018 edition, you can do so by
@@ -43,100 +41,118 @@ pass `--target` to fix code for the given target.
 
 If you encounter any problems with `cargo fix` or otherwise have any questions
 or feature requests please don't hesitate to file an issue at
-https://github.com/rust-lang/cargo
+<https://github.com/rust-lang/cargo>
 
-== OPTIONS
+## OPTIONS
 
-=== Fix options
+### Fix options
 
-*--broken-code*::
-    Fix code even if it already has compiler errors. This is useful if `cargo
-    fix` fails to apply the changes. It will apply the changes and leave the
-    broken code in the working directory for you to inspect and manually fix.
+{{#options}}
 
-*--edition*::
-    Apply changes that will update the code to the latest edition. This will
-    not update the edition in the `Cargo.toml` manifest, which must be updated
-    manually.
+{{#option "`--broken-code`" }}
+Fix code even if it already has compiler errors. This is useful if `cargo fix`
+fails to apply the changes. It will apply the changes and leave the broken
+code in the working directory for you to inspect and manually fix.
+{{/option}}
 
-*--edition-idioms*::
-    Apply suggestions that will update code to the preferred style for the
-    current edition.
+{{#option "`--edition`" }}
+Apply changes that will update the code to the latest edition. This will not
+update the edition in the `Cargo.toml` manifest, which must be updated
+manually.
+{{/option}}
 
-*--allow-no-vcs*::
-    Fix code even if a VCS was not detected.
+{{#option "`--edition-idioms`" }}
+Apply suggestions that will update code to the preferred style for the current
+edition.
+{{/option}}
 
-*--allow-dirty*::
-    Fix code even if the working directory has changes.
+{{#option "`--allow-no-vcs`" }}
+Fix code even if a VCS was not detected.
+{{/option}}
 
-*--allow-staged*::
-    Fix code even if the working directory has staged changes.
+{{#option "`--allow-dirty`" }}
+Fix code even if the working directory has changes.
+{{/option}}
 
-=== Package Selection
+{{#option "`--allow-staged`" }}
+Fix code even if the working directory has staged changes.
+{{/option}}
 
-include::options-packages.adoc[]
+{{/options}}
 
-=== Target Selection
+{{> section-package-selection }}
+
+### Target Selection
 
 When no target selection options are given, `cargo fix` will fix all targets
 (`--all-targets` implied). Binaries are skipped if they have
 `required-features` that are missing.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-include::options-release.adoc[]
+{{> options-target-triple }}
 
-include::options-profile.adoc[]
+{{> options-release }}
 
-=== Output Options
+{{> options-profile }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-=== Display Options
+### Output Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
 
-include::options-message-format.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
 
-include::options-manifest-path.adoc[]
+{{> options-message-format }}
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-options-common }}
 
-include::options-jobs.adoc[]
+### Miscellaneous Options
 
-include::section-profiles.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-profiles }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Apply compiler suggestions to the local package:
+## EXAMPLES
 
-    cargo fix
+1. Apply compiler suggestions to the local package:
 
-. Convert a 2015 edition to 2018:
+       cargo fix
 
-    cargo fix --edition
+2. Convert a 2015 edition to 2018:
 
-. Apply suggested idioms for the current edition:
+       cargo fix --edition
 
-    cargo fix --edition-idioms
+3. Apply suggested idioms for the current edition:
 
-== SEE ALSO
-man:cargo[1], man:cargo-check[1]
+       cargo fix --edition-idioms
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-check" 1}}

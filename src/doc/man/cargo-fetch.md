@@ -1,17 +1,15 @@
-= cargo-fetch(1)
-:idprefix: cargo_fetch_
-:doctype: manpage
-:actionverb: Fetch
+# cargo-fetch(1)
+{{*set actionverb="Fetch"}}
 
-== NAME
+## NAME
 
 cargo-fetch - Fetch dependencies of a package from the network
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo fetch [_OPTIONS_]`
+`cargo fetch` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 If a `Cargo.lock` file is available, this command will ensure that all of the
 git dependencies and/or registry dependencies are downloaded and locally
@@ -23,39 +21,43 @@ file before fetching the dependencies.
 
 If `--target` is not specified, then all target dependencies are fetched.
 
-See also the link:https://crates.io/crates/cargo-prefetch[cargo-prefetch]
+See also the [cargo-prefetch](https://crates.io/crates/cargo-prefetch)
 plugin which adds a command to download popular crates. This may be useful if
 you plan to use Cargo without a network with the `--offline` flag.
 
-== OPTIONS
+## OPTIONS
 
-=== Fetch options
+### Fetch options
 
-include::options-target-triple.adoc[]
+{{#options}}
+{{> options-target-triple }}
+{{/options}}
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Manifest Options
+### Manifest Options
 
-include::options-manifest-path.adoc[]
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-locked.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Fetch all dependencies:
 
-. Fetch all dependencies:
+       cargo fetch
 
-    cargo fetch
-
-== SEE ALSO
-man:cargo[1], man:cargo-update[1], man:cargo-generate-lockfile[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-update" 1}}, {{man "cargo-generate-lockfile" 1}}

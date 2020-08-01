@@ -1,98 +1,107 @@
-= cargo-build(1)
-:idprefix: cargo_build_
-:doctype: manpage
-:actionverb: Build
+# cargo-build(1)
+{{*set actionverb="Build"}}
 
-== NAME
+## NAME
 
 cargo-build - Compile the current package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo build [_OPTIONS_]`
+`cargo build` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Compile local packages and all of their dependencies.
 
-== OPTIONS
+## OPTIONS
 
-=== Package Selection
+{{> section-package-selection }}
 
-include::options-packages.adoc[]
-
-=== Target Selection
+### Target Selection
 
 When no target selection options are given, `cargo build` will build all
 binary and library targets of the selected packages. Binaries are skipped if
 they have `required-features` that are missing.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-include::options-release.adoc[]
+{{> options-target-triple }}
 
-=== Output Options
+{{> options-release }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-*--out-dir* _DIRECTORY_::
-    Copy final artifacts to this directory.
-+
+### Output Options
+
+{{#options}}
+{{> options-target-dir }}
+
+{{#option "`--out-dir` _directory_" }}
+Copy final artifacts to this directory.
+
 This option is unstable and available only on the
-link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel]
+[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
 and requires the `-Z unstable-options` flag to enable.
 See https://github.com/rust-lang/cargo/issues/6790 for more information.
+{{/option}}
 
-=== Display Options
+{{/options}}
 
-include::options-display.adoc[]
+### Display Options
 
-include::options-message-format.adoc[]
+{{#options}}
+{{> options-display }}
 
-*--build-plan*::
-    Outputs a series of JSON messages to stdout that indicate the commands to
-    run the build.
-+
+{{> options-message-format }}
+
+{{#option "`--build-plan`" }}
+Outputs a series of JSON messages to stdout that indicate the commands to run
+the build.
+
 This option is unstable and available only on the
-link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel]
+[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
 and requires the `-Z unstable-options` flag to enable.
-See https://github.com/rust-lang/cargo/issues/5579 for more information.
+See <https://github.com/rust-lang/cargo/issues/5579> for more information.
+{{/option}}
+{{/options}}
 
-=== Manifest Options
+### Manifest Options
 
-include::options-manifest-path.adoc[]
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-locked.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+### Miscellaneous Options
 
-=== Miscellaneous Options
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::options-jobs.adoc[]
+{{> section-profiles }}
 
-include::section-profiles.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Build the local package and all of its dependencies:
 
-. Build the local package and all of its dependencies:
+       cargo build
 
-    cargo build
+2. Build with optimizations:
 
-. Build with optimizations:
+       cargo build --release
 
-    cargo build --release
-
-== SEE ALSO
-man:cargo[1], man:cargo-rustc[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-rustc" 1}}

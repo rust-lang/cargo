@@ -1,17 +1,15 @@
-= cargo-metadata(1)
-:idprefix: cargo_metadata_
-:doctype: manpage
+# cargo-metadata(1)
 :source-highlighter: highlightjs
 
-== NAME
+## NAME
 
 cargo-metadata - Machine-readable metadata about the current package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo metadata [_OPTIONS_]`
+`cargo metadata` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
@@ -19,15 +17,14 @@ resolved dependencies of the current package.
 It is recommended to include the `--format-version` flag to future-proof
 your code to ensure the output is in the format you are expecting.
 
-See the link:https://crates.io/crates/cargo_metadata[cargo_metadata crate]
+See the [cargo_metadata crate](https://crates.io/crates/cargo_metadata)
 for a Rust API for reading the metadata.
 
-== OUTPUT FORMAT
+## OUTPUT FORMAT
 
 The output has the following format:
 
-[source,javascript]
-----
+```javascript
 {
     /* Array of all packages in the workspace.
        It also includes all feature-enabled dependencies unless --no-deps is used.
@@ -281,53 +278,62 @@ The output has the following format:
         }
     }
 }
-----
+````
 
-== OPTIONS
+## OPTIONS
 
-=== Output Options
+### Output Options
 
-*--no-deps*::
-    Output information only about the workspace members and don't fetch
-    dependencies.
+{{#options}}
 
-*--format-version* _VERSION_::
-    Specify the version of the output format to use. Currently `1` is the only
-    possible value.
+{{#option "`--no-deps`" }}
+Output information only about the workspace members and don't fetch
+dependencies.
+{{/option}}
 
-*--filter-platform* _TRIPLE_::
-    This filters the `resolve` output to only include dependencies for the
-    given target triple. Without this flag, the resolve includes all targets.
-+
+{{#option "`--format-version` _version_" }}
+Specify the version of the output format to use. Currently `1` is the only
+possible value.
+{{/option}}
+
+{{#option "`--filter-platform` _triple_" }}
+This filters the `resolve` output to only include dependencies for the
+given target triple. Without this flag, the resolve includes all targets.
+
 Note that the dependencies listed in the "packages" array still includes all
 dependencies. Each package definition is intended to be an unaltered
 reproduction of the information within `Cargo.toml`.
+{{/option}}
 
-include::options-features.adoc[]
+{{/options}}
 
-=== Display Options
+{{> section-features }}
 
-include::options-display.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-include::options-manifest-path.adoc[]
+### Manifest Options
 
-include::options-locked.adoc[]
+{{#options}}
+{{> options-manifest-path }}
 
-=== Common Options
+{{> options-locked }}
+{{/options}}
 
-include::options-common.adoc[]
+{{> section-options-common }}
 
-include::section-environment.adoc[]
+{{> section-environment }}
 
-include::section-exit-status.adoc[]
+{{> section-exit-status }}
 
-== EXAMPLES
+## EXAMPLES
 
-. Output JSON about the current package:
+1. Output JSON about the current package:
 
-    cargo metadata --format-version=1
+       cargo metadata --format-version=1
 
-== SEE ALSO
-man:cargo[1]
+## SEE ALSO
+{{man "cargo" 1}}

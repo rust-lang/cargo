@@ -1,17 +1,15 @@
-= cargo-check(1)
-:idprefix: cargo_check_
-:doctype: manpage
-:actionverb: Check
+# cargo-check(1)
+{{*set actionverb="Check"}}
 
-== NAME
+## NAME
 
 cargo-check - Check the current package
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo check [_OPTIONS_]`
+`cargo check` [_options_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 Check a local package and all of its dependencies for errors. This will
 essentially compile the packages without performing the final step of code
@@ -19,69 +17,77 @@ generation, which is faster than running `cargo build`. The compiler will save
 metadata files to disk so that future runs will reuse them if the source has
 not been modified.
 
-== OPTIONS
+## OPTIONS
 
-=== Package Selection
+{{> section-package-selection }}
 
-include::options-packages.adoc[]
-
-=== Target Selection
+### Target Selection
 
 When no target selection options are given, `cargo check` will check all
 binary and library targets of the selected packages. Binaries are skipped if
 they have `required-features` that are missing.
 
-include::options-targets.adoc[]
+{{> options-targets }}
 
-include::options-features.adoc[]
+{{> section-features }}
 
-=== Compilation Options
+### Compilation Options
 
-include::options-target-triple.adoc[]
+{{#options}}
 
-include::options-release.adoc[]
+{{> options-target-triple }}
 
-include::options-profile.adoc[]
+{{> options-release }}
 
-=== Output Options
+{{> options-profile }}
 
-include::options-target-dir.adoc[]
+{{/options}}
 
-=== Display Options
+### Output Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-target-dir }}
+{{/options}}
 
-include::options-message-format.adoc[]
+### Display Options
 
-=== Manifest Options
+{{#options}}
+{{> options-display }}
 
-include::options-manifest-path.adoc[]
+{{> options-message-format }}
+{{/options}}
 
-include::options-locked.adoc[]
+### Manifest Options
 
-=== Common Options
+{{#options}}
+{{> options-manifest-path }}
 
-include::options-common.adoc[]
+{{> options-locked }}
+{{/options}}
 
-=== Miscellaneous Options
+{{> section-options-common }}
 
-include::options-jobs.adoc[]
+### Miscellaneous Options
 
-include::section-profiles.adoc[]
+{{#options}}
+{{> options-jobs }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-profiles }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Check the local package for errors:
+## EXAMPLES
 
-    cargo check
+1. Check the local package for errors:
 
-. Check all targets, including unit tests:
+       cargo check
 
-    cargo check --all-targets --profile=test
+2. Check all targets, including unit tests:
 
-== SEE ALSO
-man:cargo[1], man:cargo-build[1]
+       cargo check --all-targets --profile=test
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-build" 1}}

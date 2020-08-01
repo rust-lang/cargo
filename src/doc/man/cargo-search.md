@@ -1,49 +1,52 @@
-= cargo-search(1)
-:idprefix: cargo_search_
-:doctype: manpage
+# cargo-search(1)
 
-== NAME
+## NAME
 
 cargo-search - Search packages in crates.io
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo search [_OPTIONS_] [_QUERY_...]`
+`cargo search` [_options_] [_query_...]
 
-== DESCRIPTION
+## DESCRIPTION
 
-This performs a textual search for crates on https://crates.io. The matching
+This performs a textual search for crates on <https://crates.io>. The matching
 crates will be displayed along with their description in TOML format suitable
 for copying into a `Cargo.toml` manifest.
 
-== OPTIONS
+## OPTIONS
 
-=== Search Options
+### Search Options
 
-*--limit* _LIMIT_::
-    Limit the number of results (default: 10, max: 100).
+{{#options}}
 
-include::options-index.adoc[]
+{{#option "`--limit` _limit_" }}
+Limit the number of results (default: 10, max: 100).
+{{/option}}
 
-include::options-registry.adoc[]
+{{> options-index }}
 
-=== Display Options
+{{> options-registry }}
 
-include::options-display.adoc[]
+{{/options}}
 
-=== Common Options
+### Display Options
 
-include::options-common.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-include::section-environment.adoc[]
+{{> section-options-common }}
 
-include::section-exit-status.adoc[]
+{{> section-environment }}
 
-== EXAMPLES
+{{> section-exit-status }}
 
-. Search for a package from crates.io:
+## EXAMPLES
 
-    cargo search serde
+1. Search for a package from crates.io:
 
-== SEE ALSO
-man:cargo[1], man:cargo-install[1], man:cargo-publish[1]
+       cargo search serde
+
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-install" 1}}, {{man "cargo-publish" 1}}

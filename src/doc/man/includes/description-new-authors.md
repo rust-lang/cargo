@@ -20,5 +20,5 @@ The email address is optional and is determined from:
 - `user.email` git configuration value
 - `EMAIL` environment variable
 
-See linkcargo:reference/config.html[the reference] for more information about
+See [the reference](../reference/config.html) for more information about
 configuration files.

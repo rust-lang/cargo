@@ -1,16 +1,14 @@
-= cargo-init(1)
-:idprefix: cargo_init_
-:doctype: manpage
+# cargo-init(1)
 
-== NAME
+## NAME
 
 cargo-init - Create a new Cargo package in an existing directory
 
-== SYNOPSIS
+## SYNOPSIS
 
-`cargo init [_OPTIONS_] [_PATH_]`
+`cargo init` [_options_] [_path_]
 
-== DESCRIPTION
+## DESCRIPTION
 
 This command will create a new Cargo manifest in the current directory. Give a
 path as an argument to create in the given directory.
@@ -22,34 +20,34 @@ will be used. If not, then a sample `src/main.rs` file will be created, or
 If the directory is not already in a VCS repository, then a new repository
 is created (see `--vcs` below).
 
-include::description-new-authors.adoc[]
+{{> description-new-authors }}
 
-See man:cargo-new[1] for a similar command which will create a new package in
+See {{man "cargo-new" 1}} for a similar command which will create a new package in
 a new directory.
 
-== OPTIONS
+## OPTIONS
 
-=== Init Options
+### Init Options
 
-include::options-new.adoc[]
+{{> options-new }}
 
-=== Display Options
+### Display Options
 
-include::options-display.adoc[]
+{{#options}}
+{{> options-display }}
+{{/options}}
 
-=== Common Options
+{{> section-options-common }}
 
-include::options-common.adoc[]
+{{> section-environment }}
 
-include::section-environment.adoc[]
+{{> section-exit-status }}
 
-include::section-exit-status.adoc[]
+## EXAMPLES
 
-== EXAMPLES
+1. Create a binary Cargo package in the current directory:
 
-. Create a binary Cargo package in the current directory:
+       cargo init
 
-    cargo init
-
-== SEE ALSO
-man:cargo[1], man:cargo-new[1]
+## SEE ALSO
+{{man "cargo" 1}}, {{man "cargo-new" 1}}
