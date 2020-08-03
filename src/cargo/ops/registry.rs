@@ -665,7 +665,7 @@ pub fn registry_login(
         None => {
             drop_println!(
                 config,
-                "please visit {}/me and paste the API Token below",
+                "please paste the API Token found on {}/me below",
                 registry.host()
             );
             let mut line = String::new();
