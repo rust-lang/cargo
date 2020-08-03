@@ -119,7 +119,7 @@ impl Context {
                 if let Some(link) = summary.links() {
                     if self.links.insert(link, id).is_some() {
                         return Err(format_err!(
-                            "Attempting to resolve a dependency with more then \
+                            "Attempting to resolve a dependency with more than \
                              one crate with links={}.\nThis will not build as \
                              is. Consider rebuilding the .lock file.",
                             &*link
@@ -395,7 +395,7 @@ impl PublicDependency {
             // for each (transitive) parent that can newly see `t`
             let mut stack = vec![(parent, is_public)];
             while let Some((p, public)) = stack.pop() {
-                // TODO: don't look at the same thing more then once
+                // TODO: don't look at the same thing more than once
                 if let Some(o) = self.inner.get(&p).and_then(|x| x.get(&t.name())) {
                     if o.0 != t {
                         // the (transitive) parent can already see a different version by `t`s name.
