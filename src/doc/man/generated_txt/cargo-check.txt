@@ -1,0 +1,300 @@
+CARGO-CHECK(1)
+
+NAME
+       cargo-check - Check the current package
+
+SYNOPSIS
+       cargo check [options]
+
+DESCRIPTION
+       Check a local package and all of its dependencies for errors. This will
+       essentially compile the packages without performing the final step of
+       code generation, which is faster than running cargo build. The compiler
+       will save metadata files to disk so that future runs will reuse them if
+       the source has not been modified.
+
+OPTIONS
+   Package Selection
+       By default, when no package selection options are given, the packages
+       selected depend on the selected manifest file (based on the current
+       working directory if --manifest-path is not given). If the manifest is
+       the root of a workspace then the workspaces default members are
+       selected, otherwise only the package defined by the manifest will be
+       selected.
+
+       The default members of a workspace can be set explicitly with the
+       workspace.default-members key in the root manifest. If this is not set,
+       a virtual workspace will include all workspace members (equivalent to
+       passing --workspace), and a non-virtual workspace will include only the
+       root crate itself.
+
+       -p spec..., --package spec...
+           Check only the specified packages. See cargo-pkgid(1) for the SPEC
+           format. This flag may be specified multiple times.
+
+       --workspace
+           Check all members in the workspace.
+
+       --all
+           Deprecated alias for --workspace.
+
+       --exclude SPEC...
+           Exclude the specified packages. Must be used in conjunction with the
+           --workspace flag. This flag may be specified multiple times.
+
+   Target Selection
+       When no target selection options are given, cargo check will check all
+       binary and library targets of the selected packages. Binaries are
+       skipped if they have required-features that are missing.
+
+       Passing target selection flags will check only the specified targets.
+
+       --lib
+           Check the package's library.
+
+       --bin name...
+           Check the specified binary. This flag may be specified multiple
+           times.
+
+       --bins
+           Check all binary targets.
+
+       --example name...
+           Check the specified example. This flag may be specified multiple
+           times.
+
+       --examples
+           Check all example targets.
+
+       --test name...
+           Check the specified integration test. This flag may be specified
+           multiple times.
+
+       --tests
+           Check all targets in test mode that have the test = true manifest
+           flag set. By default this includes the library and binaries built as
+           unittests, and integration tests. Be aware that this will also build
+           any required dependencies, so the lib target may be built twice
+           (once as a unittest, and once as a dependency for binaries,
+           integration tests, etc.). Targets may be enabled or disabled by
+           setting the test flag in the manifest settings for the target.
+
+       --bench name...
+           Check the specified benchmark. This flag may be specified multiple
+           times.
+
+       --benches
+           Check all targets in benchmark mode that have the bench = true
+           manifest flag set. By default this includes the library and binaries
+           built as benchmarks, and bench targets. Be aware that this will also
+           build any required dependencies, so the lib target may be built
+           twice (once as a benchmark, and once as a dependency for binaries,
+           benchmarks, etc.). Targets may be enabled or disabled by setting the
+           bench flag in the manifest settings for the target.
+
+       --all-targets
+           Check all targets. This is equivalent to specifying --lib --bins
+           --tests --benches --examples.
+
+   Feature Selection
+       The feature flags allow you to control the enabled features for the
+       "current" package. The "current" package is the package in the current
+       directory, or the one specified in --manifest-path. If running in the
+       root of a virtual workspace, then the default features are selected for
+       all workspace members, or all features if --all-features is specified.
+
+       When no feature options are given, the default feature is activated for
+       every selected package.
+
+       --features features
+           Space or comma separated list of features to activate. These
+           features only apply to the current directory's package. Features of
+           direct dependencies may be enabled with <dep-name>/<feature-name>
+           syntax. This flag may be specified multiple times, which enables all
+           specified features.
+
+       --all-features
+           Activate all available features of all selected packages.
+
+       --no-default-features
+           Do not activate the default feature of the current directory's
+           package.
+
+   Compilation Options
+       --target triple
+           Check for the given architecture. The default is the host
+           architecture. The general format of the triple is
+           <arch><sub>-<vendor>-<sys>-<abi>. Run rustc --print target-list for
+           a list of supported targets.
+
+           This may also be specified with the build.target config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+           Note that specifying this flag makes Cargo run in a different mode
+           where the target artifacts are placed in a separate directory. See
+           the build cache
+           <https://doc.rust-lang.org/cargo/guide/build-cache.html>
+           documentation for more details.
+
+       --release
+           Check optimized artifacts with the release profile. See the PROFILES
+           section for details on how this affects profile selection.
+
+       --profile name
+           Changes check behavior. Currently only test is supported, which will
+           check with the #[cfg(test)] attribute enabled. This is useful to
+           have it check unit tests which are usually excluded via the cfg
+           attribute. This does not change the actual profile used.
+
+   Output Options
+       --target-dir directory
+           Directory for all generated artifacts and intermediate files. May
+           also be specified with the CARGO_TARGET_DIR environment variable, or
+           the build.target-dir config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
+           target in the root of the workspace.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       --message-format fmt
+           The output format for diagnostic messages. Can be specified multiple
+           times and consists of comma-separated values. Valid values:
+
+           o  human (default): Display in a human-readable text format.
+
+           o  short: Emit shorter, human-readable text messages.
+
+           o  json: Emit JSON messages to stdout. See the reference
+              <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
+              for more details.
+
+           o  json-diagnostic-short: Ensure the rendered field of JSON messages
+              contains the "short" rendering from rustc.
+
+           o  json-diagnostic-rendered-ansi: Ensure the rendered field of JSON
+              messages contains embedded ANSI color codes for respecting
+              rustc's default color scheme.
+
+           o  json-render-diagnostics: Instruct Cargo to not include rustc
+              diagnostics in in JSON messages printed, but instead Cargo itself
+              should render the JSON diagnostics coming from rustc. Cargo's own
+              JSON diagnostics and others coming from rustc are still emitted.
+
+   Manifest Options
+       --manifest-path path
+           Path to the Cargo.toml file. By default, Cargo searches for the
+           Cargo.toml file in the current directory or any parent directory.
+
+       --frozen, --locked
+           Either of these flags requires that the Cargo.lock file is
+           up-to-date. If the lock file is missing, or it needs to be updated,
+           Cargo will exit with an error. The --frozen flag also prevents Cargo
+           from attempting to access the network to determine if it is
+           out-of-date.
+
+           These may be used in environments where you want to assert that the
+           Cargo.lock file is up-to-date (such as a CI build) or want to avoid
+           network access.
+
+       --offline
+           Prevents Cargo from accessing the network for any reason. Without
+           this flag, Cargo will stop with an error if it needs to access the
+           network and the network is not available. With this flag, Cargo will
+           attempt to proceed without the network if possible.
+
+           Beware that this may result in different dependency resolution than
+           online mode. Cargo will restrict itself to crates that are
+           downloaded locally, even if there might be a newer version as
+           indicated in the local copy of the index. See the cargo-fetch(1)
+           command to download dependencies before going offline.
+
+           May also be specified with the net.offline config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+   Miscellaneous Options
+       -j N, --jobs N
+           Number of parallel jobs to run. May also be specified with the
+           build.jobs config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
+           the number of CPUs.
+
+PROFILES
+       Profiles may be used to configure compiler options such as optimization
+       levels and debug settings. See the reference
+       <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
+       details.
+
+       Profile selection depends on the target and crate being built. By
+       default the dev or test profiles are used. If the --release flag is
+       given, then the release or bench profiles are used.
+
+       +----------------------------------------+-------------+--------------+
+       | Target                                 | Default     | --release    |
+       |                                        | Profile     | Profile      |
+       +----------------------------------------+-------------+--------------+
+       | lib, bin, example                      | dev         | release      |
+       +----------------------------------------+-------------+--------------+
+       | test, bench, or any target in "test"   | test        | bench        |
+       | or "bench" mode                        |             |              |
+       +----------------------------------------+-------------+--------------+
+
+       Dependencies use the dev/release profiles.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Check the local package for errors:
+
+              cargo check
+
+       2. Check all targets, including unit tests:
+
+              cargo check --all-targets --profile=test
+
+SEE ALSO
+       cargo(1), cargo-build(1)
+

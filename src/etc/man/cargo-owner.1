@@ -1,248 +1,175 @@
 '\" t
-.\"     Title: cargo-owner
-.\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-09-05
-.\"    Manual: \ \&
-.\"    Source: \ \&
-.\"  Language: English
-.\"
-.TH "CARGO\-OWNER" "1" "2019-09-05" "\ \&" "\ \&"
-.ie \n(.g .ds Aq \(aq
-.el       .ds Aq '
-.ss \n[.ss] 0
+.TH "CARGO\-OWNER" "1"
 .nh
 .ad l
-.de URL
-\fI\\$2\fP <\\$1>\\$3
-..
-.als MTO URL
-.if \n[.g] \{\
-.  mso www.tmac
-.  am URL
-.    ad l
-.  .
-.  am MTO
-.    ad l
-.  .
-.  LINKSTYLE blue R < >
-.\}
+.ss \n[.ss] 0
 .SH "NAME"
 cargo\-owner \- Manage the owners of a crate on the registry
 .SH "SYNOPSIS"
-.sp
-\fBcargo owner [\fIOPTIONS\fP] \-\-add \fILOGIN\fP [\fICRATE\fP]\fP
+\fBcargo owner\fR [\fIoptions\fR] \fB\-\-add\fR \fIlogin\fR [\fIcrate\fR]
 .br
-\fBcargo owner [\fIOPTIONS\fP] \-\-remove \fILOGIN\fP [\fICRATE\fP]\fP
+\fBcargo owner\fR [\fIoptions\fR] \fB\-\-remove\fR \fIlogin\fR [\fIcrate\fR]
 .br
-\fBcargo owner [\fIOPTIONS\fP] \-\-list [\fICRATE\fP]\fP
+\fBcargo owner\fR [\fIoptions\fR] \fB\-\-list\fR [\fIcrate\fR]
 .SH "DESCRIPTION"
-.sp
 This command will modify the owners for a crate on the registry. Owners of a
 crate can upload new versions and yank old versions. Non\-team owners can also
 modify the set of owners, so take care!
 .sp
-This command requires you to be authenticated with either the \fB\-\-token\fP option
-or using \fBcargo\-login\fP(1).
+This command requires you to be authenticated with either the \fB\-\-token\fR option
+or using \fBcargo\-login\fR(1).
 .sp
 If the crate name is not specified, it will use the package name from the
 current directory.
 .sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/publishing.html#cargo\-owner" "the reference" " "
-for more
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html#cargo\-owner> for more
 information about owners and publishing.
 .SH "OPTIONS"
 .SS "Owner Options"
 .sp
-\fB\-a\fP, \fB\-\-add\fP \fILOGIN\fP...
+\fB\-a\fR, 
+\fB\-\-add\fR \fIlogin\fR\&...
 .RS 4
 Invite the given user or team as an owner.
 .RE
 .sp
-\fB\-r\fP, \fB\-\-remove\fP \fILOGIN\fP...
+\fB\-r\fR, 
+\fB\-\-remove\fR \fIlogin\fR\&...
 .RS 4
 Remove the given user or team as an owner.
 .RE
 .sp
-\fB\-l\fP, \fB\-\-list\fP
+\fB\-l\fR, 
+\fB\-\-list\fR
 .RS 4
 List owners of a crate.
 .RE
 .sp
-\fB\-\-token\fP \fITOKEN\fP
+\fB\-\-token\fR \fItoken\fR
 .RS 4
 API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by \fBcargo\-login\fP(1)).
+the credentials file (which is created by \fBcargo\-login\fR(1)).
 .sp
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config" " "
-environment variables can be
+\fICargo config\fR <https://doc.rust\-lang.org/cargo/reference/config.html> environment variables can be
 used to override the tokens stored in the credentials file. The token for
-crates.io may be specified with the \fBCARGO_REGISTRY_TOKEN\fP environment
+crates.io may be specified with the \fBCARGO_REGISTRY_TOKEN\fR environment
 variable. Tokens for other registries may be specified with environment
-variables of the form \fBCARGO_REGISTRIES_NAME_TOKEN\fP where \fBNAME\fP is the name
+variables of the form \fBCARGO_REGISTRIES_NAME_TOKEN\fR where \fBNAME\fR is the name
 of the registry in all capital letters.
 .RE
 .sp
-\fB\-\-index\fP \fIINDEX\fP
+\fB\-\-index\fR \fIindex\fR
 .RS 4
 The URL of the registry index to use.
 .RE
 .sp
-\fB\-\-registry\fP \fIREGISTRY\fP
+\fB\-\-registry\fR \fIregistry\fR
 .RS 4
-Name of the registry to use. Registry names are defined in \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config files" "."
-If not specified, the default registry is used, which is defined by the
-\fBregistry.default\fP config key which defaults to \fBcrates\-io\fP.
+Name of the registry to use. Registry names are defined in \fICargo config
+files\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. If not specified, the default registry is used,
+which is defined by the \fBregistry.default\fR config key which defaults to
+\fBcrates\-io\fR\&.
 .RE
 .SS "Display Options"
 .sp
-\fB\-v\fP, \fB\-\-verbose\fP
+\fB\-v\fR, 
+\fB\-\-verbose\fR
 .RS 4
 Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
-May also be specified with the \fBterm.verbose\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.verbose\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
-\fB\-q\fP, \fB\-\-quiet\fP
+\fB\-q\fR, 
+\fB\-\-quiet\fR
 .RS 4
 No output printed to stdout.
 .RE
 .sp
-\fB\-\-color\fP \fIWHEN\fP
+\fB\-\-color\fR \fIwhen\fR
 .RS 4
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBauto\fP (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBalways\fP: Always display colors.
+\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBnever\fP: Never display colors.
+\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
 .RE
 .sp
-May also be specified with the \fBterm.color\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.color\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Common Options"
 .sp
-\fB+TOOLCHAIN\fP
+\fB+\fR\fItoolchain\fR
 .RS 4
-If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
-begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
-as \fB+stable\fP or \fB+nightly\fP).
-See the \c
-.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fR
+begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fR or \fB+nightly\fR).
+See the \fIrustup documentation\fR <https://github.com/rust\-lang/rustup/>
 for more information about how toolchain overrides work.
 .RE
 .sp
-\fB\-h\fP, \fB\-\-help\fP
+\fB\-h\fR, 
+\fB\-\-help\fR
 .RS 4
 Prints help information.
 .RE
 .sp
-\fB\-Z\fP \fIFLAG\fP...
+\fB\-Z\fR \fIflag\fR
 .RS 4
-Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
-details.
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RE
 .SH "ENVIRONMENT"
-.sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
-for
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
-0
 .RS 4
-Cargo succeeded.
+\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
 .RE
 .sp
-101
 .RS 4
-Cargo failed to complete.
+\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-List owners of a package:
+\h'-04' 1.\h'+01'List owners of a package:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo owner \-\-list foo
 .fi
-.if n .RE
+.RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 2.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 2." 4.2
-.\}
-Invite an owner to a package:
+\h'-04' 2.\h'+01'Invite an owner to a package:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo owner \-\-add username foo
 .fi
-.if n .RE
+.RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 3.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 3." 4.2
-.\}
-Remove an owner from a package:
+\h'-04' 3.\h'+01'Remove an owner from a package:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo owner \-\-remove username foo
 .fi
-.if n .RE
+.RE
 .RE
 .SH "SEE ALSO"
-.sp
-\fBcargo\fP(1), \fBcargo\-login\fP(1), \fBcargo\-publish\fP(1)
+\fBcargo\fR(1), \fBcargo\-login\fR(1), \fBcargo\-publish\fR(1)

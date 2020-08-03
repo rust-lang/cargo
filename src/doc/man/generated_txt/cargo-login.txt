@@ -1,0 +1,87 @@
+CARGO-LOGIN(1)
+
+NAME
+       cargo-login - Save an API token from the registry locally
+
+SYNOPSIS
+       cargo login [options] [token]
+
+DESCRIPTION
+       This command will save the API token to disk so that commands that
+       require authentication, such as cargo-publish(1), will be automatically
+       authenticated. The token is saved in $CARGO_HOME/credentials.toml.
+       CARGO_HOME defaults to .cargo in your home directory.
+
+       If the token argument is not specified, it will be read from stdin.
+
+       The API token for crates.io may be retrieved from
+       <https://crates.io/me>.
+
+       Take care to keep the token secret, it should not be shared with anyone
+       else.
+
+OPTIONS
+   Login Options
+       --registry registry
+           Name of the registry to use. Registry names are defined in Cargo
+           config files
+           <https://doc.rust-lang.org/cargo/reference/config.html>. If not
+           specified, the default registry is used, which is defined by the
+           registry.default config key which defaults to crates-io.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Save the API token to disk:
+
+              cargo login
+
+SEE ALSO
+       cargo(1), cargo-publish(1)
+

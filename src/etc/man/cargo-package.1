@@ -1,270 +1,169 @@
 '\" t
-.\"     Title: cargo-package
-.\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-06-25
-.\"    Manual: \ \&
-.\"    Source: \ \&
-.\"  Language: English
-.\"
-.TH "CARGO\-PACKAGE" "1" "2020-06-25" "\ \&" "\ \&"
-.ie \n(.g .ds Aq \(aq
-.el       .ds Aq '
-.ss \n[.ss] 0
+.TH "CARGO\-PACKAGE" "1"
 .nh
 .ad l
-.de URL
-\fI\\$2\fP <\\$1>\\$3
-..
-.als MTO URL
-.if \n[.g] \{\
-.  mso www.tmac
-.  am URL
-.    ad l
-.  .
-.  am MTO
-.    ad l
-.  .
-.  LINKSTYLE blue R < >
-.\}
+.ss \n[.ss] 0
 .SH "NAME"
 cargo\-package \- Assemble the local package into a distributable tarball
 .SH "SYNOPSIS"
-.sp
-\fBcargo package [\fIOPTIONS\fP]\fP
+\fBcargo package\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-.sp
-This command will create a distributable, compressed \fB.crate\fP file with the
+This command will create a distributable, compressed \fB\&.crate\fR file with the
 source code of the package in the current directory. The resulting file will
-be stored in the \fBtarget/package\fP directory. This performs the following
+be stored in the \fBtarget/package\fR directory. This performs the following
 steps:
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Load and check the current workspace, performing some basic checks.
+\h'-04' 1.\h'+01'Load and check the current workspace, performing some basic checks.
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-Path dependencies are not allowed unless they have a version key. Cargo
+\h'-04'\(bu\h'+02'Path dependencies are not allowed unless they have a version key. Cargo
 will ignore the path key for dependencies in published packages.
-\fBdev\-dependencies\fP do not have this restriction.
+\fBdev\-dependencies\fR do not have this restriction.
 .RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 2.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 2." 4.2
-.\}
-Create the compressed \fB.crate\fP file.
+\h'-04' 2.\h'+01'Create the compressed \fB\&.crate\fR file.
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-The original \fBCargo.toml\fP file is rewritten and normalized.
+\h'-04'\(bu\h'+02'The original \fBCargo.toml\fR file is rewritten and normalized.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fB[patch]\fP, \fB[replace]\fP, and \fB[workspace]\fP sections are removed from the
+\h'-04'\(bu\h'+02'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
 manifest.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBCargo.lock\fP is automatically included if the package contains an
-executable binary or example target. \fBcargo\-install\fP(1) will use the
-packaged lock file if the \fB\-\-locked\fP flag is used.
+\h'-04'\(bu\h'+02'\fBCargo.lock\fR is automatically included if the package contains an
+executable binary or example target. \fBcargo\-install\fR(1) will use the
+packaged lock file if the \fB\-\-locked\fR flag is used.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-A \fB.cargo_vcs_info.json\fP file is included that contains information
+\h'-04'\(bu\h'+02'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
 about the current VCS checkout hash if available (not included with
-\fB\-\-allow\-dirty\fP).
+\fB\-\-allow\-dirty\fR).
 .RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 3.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 3." 4.2
-.\}
-Extract the \fB.crate\fP file and build it to verify it can build.
+\h'-04' 3.\h'+01'Extract the \fB\&.crate\fR file and build it to verify it can build.
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-This will rebuild your package from scratch to ensure that it can be
-built from a pristine state. The \fB\-\-no\-verify\fP flag can be used to skip
+\h'-04'\(bu\h'+02'This will rebuild your package from scratch to ensure that it can be
+built from a pristine state. The \fB\-\-no\-verify\fR flag can be used to skip
 this step.
 .RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 4.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 4." 4.2
-.\}
-Check that build scripts did not modify any source files.
+\h'-04' 4.\h'+01'Check that build scripts did not modify any source files.
 .RE
 .sp
-The list of files included can be controlled with the \fBinclude\fP and \fBexclude\fP
+The list of files included can be controlled with the \fBinclude\fR and \fBexclude\fR
 fields in the manifest.
 .sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/publishing.html" "the reference" " "
-for more details about
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html> for more details about
 packaging and publishing.
 .SH "OPTIONS"
 .SS "Package Options"
 .sp
-\fB\-l\fP, \fB\-\-list\fP
+\fB\-l\fR, 
+\fB\-\-list\fR
 .RS 4
 Print files included in a package without making one.
 .RE
 .sp
-\fB\-\-no\-verify\fP
+\fB\-\-no\-verify\fR
 .RS 4
-Don\(cqt verify the contents by building them.
+Don't verify the contents by building them.
 .RE
 .sp
-\fB\-\-no\-metadata\fP
+\fB\-\-no\-metadata\fR
 .RS 4
-Ignore warnings about a lack of human\-usable metadata (such as the
-description or the license).
+Ignore warnings about a lack of human\-usable metadata (such as the description
+or the license).
 .RE
 .sp
-\fB\-\-allow\-dirty\fP
+\fB\-\-allow\-dirty\fR
 .RS 4
 Allow working directories with uncommitted VCS changes to be packaged.
 .RE
 .SS "Compilation Options"
 .sp
-\fB\-\-target\fP \fITRIPLE\fP
+\fB\-\-target\fR \fItriple\fR
 .RS 4
 Package for the given architecture. The default is the host
 architecture. The general format of the triple is
-\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP. Run \fBrustc \-\-print target\-list\fP for a
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
-This may also be specified with the \fBbuild.target\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+This may also be specified with the \fBbuild.target\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .sp
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
-documentation for more details.
+\fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .sp
-\fB\-\-target\-dir\fP \fIDIRECTORY\fP
+\fB\-\-target\-dir\fR \fIdirectory\fR
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
-specified with the \fBCARGO_TARGET_DIR\fP environment variable, or the
-\fBbuild.target\-dir\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
-Defaults
-to \fBtarget\fP in the root of the workspace.
+specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
+to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Feature Selection"
-.sp
 The feature flags allow you to control the enabled features for the "current"
 package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fP. If running in the root of a virtual
+one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
 workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fP is specified.
+or all features if \fB\-\-all\-features\fR is specified.
 .sp
-When no feature options are given, the \fBdefault\fP feature is activated for
+When no feature options are given, the \fBdefault\fR feature is activated for
 every selected package.
 .sp
-\fB\-\-features\fP \fIFEATURES\fP
+\fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. These features only
-apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+apply to the current directory's package. Features of direct dependencies
+may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
 specified multiple times, which enables all specified features.
 .RE
 .sp
-\fB\-\-all\-features\fP
+\fB\-\-all\-features\fR
 .RS 4
 Activate all available features of all selected packages.
 .RE
 .sp
-\fB\-\-no\-default\-features\fP
+\fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fP feature of the current directory\(cqs
-package.
+Do not activate the \fBdefault\fR feature of the current directory's package.
 .RE
 .SS "Manifest Options"
 .sp
-\fB\-\-manifest\-path\fP \fIPATH\fP
+\fB\-\-manifest\-path\fR \fIpath\fR
 .RS 4
-Path to the \fBCargo.toml\fP file. By default, Cargo searches for the
-\fBCargo.toml\fP file in the current directory or any parent directory.
+Path to the \fBCargo.toml\fR file. By default, Cargo searches for the
+\fBCargo.toml\fR file in the current directory or any parent directory.
 .RE
 .sp
-\fB\-\-frozen\fP, \fB\-\-locked\fP
+\fB\-\-frozen\fR, 
+\fB\-\-locked\fR
 .RS 4
-Either of these flags requires that the \fBCargo.lock\fP file is
+Either of these flags requires that the \fBCargo.lock\fR file is
 up\-to\-date. If the lock file is missing, or it needs to be updated, Cargo will
-exit with an error. The \fB\-\-frozen\fP flag also prevents Cargo from
+exit with an error. The \fB\-\-frozen\fR flag also prevents Cargo from
 attempting to access the network to determine if it is out\-of\-date.
 .sp
 These may be used in environments where you want to assert that the
-\fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
+\fBCargo.lock\fR file is up\-to\-date (such as a CI build) or want to avoid network
 access.
 .RE
 .sp
-\fB\-\-offline\fP
+\fB\-\-offline\fR
 .RS 4
 Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
@@ -274,135 +173,100 @@ proceed without the network if possible.
 Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the \fBcargo\-fetch\fP(1) command to download dependencies before going
+See the \fBcargo\-fetch\fR(1) command to download dependencies before going
 offline.
 .sp
-May also be specified with the \fBnet.offline\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Miscellaneous Options"
 .sp
-\fB\-j\fP \fIN\fP, \fB\-\-jobs\fP \fIN\fP
+\fB\-j\fR \fIN\fR, 
+\fB\-\-jobs\fR \fIN\fR
 .RS 4
 Number of parallel jobs to run. May also be specified with the
-\fBbuild.jobs\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
-Defaults to
+\fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
 .SS "Display Options"
 .sp
-\fB\-v\fP, \fB\-\-verbose\fP
+\fB\-v\fR, 
+\fB\-\-verbose\fR
 .RS 4
 Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
-May also be specified with the \fBterm.verbose\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.verbose\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
-\fB\-q\fP, \fB\-\-quiet\fP
+\fB\-q\fR, 
+\fB\-\-quiet\fR
 .RS 4
 No output printed to stdout.
 .RE
 .sp
-\fB\-\-color\fP \fIWHEN\fP
+\fB\-\-color\fR \fIwhen\fR
 .RS 4
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBauto\fP (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBalways\fP: Always display colors.
+\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBnever\fP: Never display colors.
+\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
 .RE
 .sp
-May also be specified with the \fBterm.color\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.color\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Common Options"
 .sp
-\fB+TOOLCHAIN\fP
+\fB+\fR\fItoolchain\fR
 .RS 4
-If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
-begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
-as \fB+stable\fP or \fB+nightly\fP).
-See the \c
-.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fR
+begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fR or \fB+nightly\fR).
+See the \fIrustup documentation\fR <https://github.com/rust\-lang/rustup/>
 for more information about how toolchain overrides work.
 .RE
 .sp
-\fB\-h\fP, \fB\-\-help\fP
+\fB\-h\fR, 
+\fB\-\-help\fR
 .RS 4
 Prints help information.
 .RE
 .sp
-\fB\-Z\fP \fIFLAG\fP...
+\fB\-Z\fR \fIflag\fR
 .RS 4
-Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
-details.
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RE
 .SH "ENVIRONMENT"
-.sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
-for
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
-0
 .RS 4
-Cargo succeeded.
+\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
 .RE
 .sp
-101
 .RS 4
-Cargo failed to complete.
+\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Create a compressed \fB.crate\fP file of the current package:
+\h'-04' 1.\h'+01'Create a compressed \fB\&.crate\fR file of the current package:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo package
 .fi
-.if n .RE
+.RE
 .RE
 .SH "SEE ALSO"
-.sp
-\fBcargo\fP(1), \fBcargo\-publish\fP(1)
+\fBcargo\fR(1), \fBcargo\-publish\fR(1)

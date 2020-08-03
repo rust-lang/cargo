@@ -1,0 +1,109 @@
+CARGO-YANK(1)
+
+NAME
+       cargo-yank - Remove a pushed crate from the index
+
+SYNOPSIS
+       cargo yank [options] --vers version [crate]
+
+DESCRIPTION
+       The yank command removes a previously published crate's version from the
+       server's index. This command does not delete any data, and the crate
+       will still be available for download via the registry's download link.
+
+       Note that existing crates locked to a yanked version will still be able
+       to download the yanked version to use it. Cargo will, however, not allow
+       any new crates to be locked to any yanked version.
+
+       This command requires you to be authenticated with either the --token
+       option or using cargo-login(1).
+
+       If the crate name is not specified, it will use the package name from
+       the current directory.
+
+OPTIONS
+   Yank Options
+       --vers version
+           The version to yank or un-yank.
+
+       --undo
+           Undo a yank, putting a version back into the index.
+
+       --token token
+           API token to use when authenticating. This overrides the token
+           stored in the credentials file (which is created by cargo-login(1)).
+
+           Cargo config <https://doc.rust-lang.org/cargo/reference/config.html>
+           environment variables can be used to override the tokens stored in
+           the credentials file. The token for crates.io may be specified with
+           the CARGO_REGISTRY_TOKEN environment variable. Tokens for other
+           registries may be specified with environment variables of the form
+           CARGO_REGISTRIES_NAME_TOKEN where NAME is the name of the registry
+           in all capital letters.
+
+       --index index
+           The URL of the registry index to use.
+
+       --registry registry
+           Name of the registry to use. Registry names are defined in Cargo
+           config files
+           <https://doc.rust-lang.org/cargo/reference/config.html>. If not
+           specified, the default registry is used, which is defined by the
+           registry.default config key which defaults to crates-io.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Yank a crate from the index:
+
+              cargo yank --vers 1.0.7 foo
+
+SEE ALSO
+       cargo(1), cargo-login(1), cargo-publish(1)
+

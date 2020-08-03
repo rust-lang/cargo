@@ -1,0 +1,78 @@
+CARGO-LOCATE-PROJECT(1)
+
+NAME
+       cargo-locate-project - Print a JSON representation of a Cargo.toml
+       file's location
+
+SYNOPSIS
+       cargo locate-project [options]
+
+DESCRIPTION
+       This command will print a JSON object to stdout with the full path to
+       the Cargo.toml manifest.
+
+       See also cargo-metadata(1) which is capable of returning the path to a
+       workspace root.
+
+OPTIONS
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Manifest Options
+       --manifest-path path
+           Path to the Cargo.toml file. By default, Cargo searches for the
+           Cargo.toml file in the current directory or any parent directory.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Display the path to the manifest based on the current directory:
+
+              cargo locate-project
+
+SEE ALSO
+       cargo(1), cargo-metadata(1)
+

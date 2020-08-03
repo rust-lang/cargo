@@ -1,488 +1,356 @@
 '\" t
-.\"     Title: cargo-bench
-.\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-06-25
-.\"    Manual: \ \&
-.\"    Source: \ \&
-.\"  Language: English
-.\"
-.TH "CARGO\-BENCH" "1" "2020-06-25" "\ \&" "\ \&"
-.ie \n(.g .ds Aq \(aq
-.el       .ds Aq '
-.ss \n[.ss] 0
+.TH "CARGO\-BENCH" "1"
 .nh
 .ad l
-.de URL
-\fI\\$2\fP <\\$1>\\$3
-..
-.als MTO URL
-.if \n[.g] \{\
-.  mso www.tmac
-.  am URL
-.    ad l
-.  .
-.  am MTO
-.    ad l
-.  .
-.  LINKSTYLE blue R < >
-.\}
+.ss \n[.ss] 0
 .SH "NAME"
 cargo\-bench \- Execute benchmarks of a package
 .SH "SYNOPSIS"
-.sp
-\fBcargo bench [\fIOPTIONS\fP] [BENCHNAME] [\-\- \fIBENCH\-OPTIONS\fP]\fP
+\fBcargo bench\fR [\fIoptions\fR] [\fIbenchname\fR] [\fB\-\-\fR \fIbench\-options\fR]
 .SH "DESCRIPTION"
-.sp
 Compile and execute benchmarks.
 .sp
-The benchmark filtering argument \fBBENCHNAME\fP and all the arguments following
-the two dashes (\fB\-\-\fP) are passed to the benchmark binaries and thus to
-\fIlibtest\fP (rustc\(cqs built in unit\-test and micro\-benchmarking framework).  If
-you\(cqre passing arguments to both Cargo and the binary, the ones after \fB\-\-\fP go
-to the binary, the ones before go to Cargo.  For details about libtest\(cqs
-arguments see the output of \fBcargo bench \-\- \-\-help\fP.  As an example, this will
-run only the benchmark named \fBfoo\fP (and skip other similarly named benchmarks
-like \fBfoobar\fP):
+The benchmark filtering argument \fIbenchname\fR and all the arguments following
+the two dashes (\fB\-\-\fR) are passed to the benchmark binaries and thus to
+\fIlibtest\fR (rustc's built in unit\-test and micro\-benchmarking framework). If
+you are passing arguments to both Cargo and the binary, the ones after \fB\-\-\fR go
+to the binary, the ones before go to Cargo. For details about libtest's
+arguments see the output of \fBcargo bench \-\- \-\-help\fR\&.  As an example, this will
+run only the benchmark named \fBfoo\fR (and skip other similarly named benchmarks
+like \fBfoobar\fR):
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo bench \-\- foo \-\-exact
 .fi
-.if n .RE
+.RE
 .sp
-Benchmarks are built with the \fB\-\-test\fP option to \fBrustc\fP which creates an
-executable with a \fBmain\fP function that automatically runs all functions
-annotated with the \fB#[bench]\fP attribute. Cargo passes the \fB\-\-bench\fP flag to
+Benchmarks are built with the \fB\-\-test\fR option to \fBrustc\fR which creates an
+executable with a \fBmain\fR function that automatically runs all functions
+annotated with the \fB#[bench]\fR attribute. Cargo passes the \fB\-\-bench\fR flag to
 the test harness to tell it to run only benchmarks.
 .sp
-The libtest harness may be disabled by setting \fBharness = false\fP in the target
-manifest settings, in which case your code will need to provide its own \fBmain\fP
+The libtest harness may be disabled by setting \fBharness = false\fR in the target
+manifest settings, in which case your code will need to provide its own \fBmain\fR
 function to handle running benchmarks.
 .RS 3
-.ll -.6i
+.ll -5
 .sp
-\fBNote\fP: The
-\c
-.URL "https://doc.rust\-lang.org/nightly/unstable\-book/library\-features/test.html" "\fB#[bench]\fP attribute"
+\fBNote\fR: The
+\fI\f(BI#[bench]\fI attribute\fR <https://doc.rust\-lang.org/nightly/unstable\-book/library\-features/test.html>
 is currently unstable and only available on the
-.URL "https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html" "nightly channel" "."
+\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>\&.
 There are some packages available on
-.URL "https://crates.io/keywords/benchmark" "crates.io" " "
-that may help with
+\fIcrates.io\fR <https://crates.io/keywords/benchmark> that may help with
 running benchmarks on the stable channel, such as
-.URL "https://crates.io/crates/criterion" "Criterion" "."
+\fICriterion\fR <https://crates.io/crates/criterion>\&.
 .br
 .RE
 .ll
 .SH "OPTIONS"
 .SS "Benchmark Options"
 .sp
-\fB\-\-no\-run\fP
+\fB\-\-no\-run\fR
 .RS 4
-Compile, but don\(cqt run benchmarks.
+Compile, but don't run benchmarks.
 .RE
 .sp
-\fB\-\-no\-fail\-fast\fP
+\fB\-\-no\-fail\-fast\fR
 .RS 4
 Run all benchmarks regardless of failure. Without this flag, Cargo will exit
-after the first executable fails. The Rust test harness will run all
-benchmarks within the executable to completion, this flag only applies to
-the executable as a whole.
+after the first executable fails. The Rust test harness will run all benchmarks
+within the executable to completion, this flag only applies to the executable
+as a whole.
 .RE
 .SS "Package Selection"
-.sp
 By default, when no package selection options are given, the packages selected
 depend on the selected manifest file (based on the current working directory if
-\fB\-\-manifest\-path\fP is not given). If the manifest is the root of a workspace then
+\fB\-\-manifest\-path\fR is not given). If the manifest is the root of a workspace then
 the workspaces default members are selected, otherwise only the package defined
 by the manifest will be selected.
 .sp
 The default members of a workspace can be set explicitly with the
-\fBworkspace.default\-members\fP key in the root manifest. If this is not set, a
+\fBworkspace.default\-members\fR key in the root manifest. If this is not set, a
 virtual workspace will include all workspace members (equivalent to passing
-\fB\-\-workspace\fP), and a non\-virtual workspace will include only the root crate itself.
+\fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-\fB\-p\fP \fISPEC\fP..., \fB\-\-package\fP \fISPEC\fP...
+\fB\-p\fR \fIspec\fR\&..., 
+\fB\-\-package\fR \fIspec\fR\&...
 .RS 4
-Benchmark only the specified packages. See \fBcargo\-pkgid\fP(1) for the
+Benchmark only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-workspace\fP
+\fB\-\-workspace\fR
 .RS 4
 Benchmark all members in the workspace.
 .RE
 .sp
-\fB\-\-all\fP
+\fB\-\-all\fR
 .RS 4
-Deprecated alias for \fB\-\-workspace\fP.
+Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
-\fB\-\-exclude\fP \fISPEC\fP...
+\fB\-\-exclude\fR \fISPEC\fR\&...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-workspace\fP flag. This flag may be specified multiple times.
+\fB\-\-workspace\fR flag. This flag may be specified multiple times.
 .RE
 .SS "Target Selection"
-.sp
-When no target selection options are given, \fBcargo bench\fP will build the
+When no target selection options are given, \fBcargo bench\fR will build the
 following targets of the selected packages:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-lib — used to link with binaries and benchmarks
+\h'-04'\(bu\h'+02'lib \[em] used to link with binaries and benchmarks
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-bins (only if benchmark targets are built and required features are
+\h'-04'\(bu\h'+02'bins (only if benchmark targets are built and required features are
 available)
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-lib as a benchmark
+\h'-04'\(bu\h'+02'lib as a benchmark
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-bins as benchmarks
+\h'-04'\(bu\h'+02'bins as benchmarks
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-benchmark targets
+\h'-04'\(bu\h'+02'benchmark targets
 .RE
 .sp
-The default behavior can be changed by setting the \fBbench\fP flag for the target
-in the manifest settings. Setting examples to \fBbench = true\fP will build and
-run the example as a benchmark. Setting targets to \fBbench = false\fP will stop
+The default behavior can be changed by setting the \fBbench\fR flag for the target
+in the manifest settings. Setting examples to \fBbench = true\fR will build and
+run the example as a benchmark. Setting targets to \fBbench = false\fR will stop
 them from being benchmarked by default. Target selection options that take a
-target by name ignore the \fBbench\fP flag and will always benchmark the given
+target by name ignore the \fBbench\fR flag and will always benchmark the given
 target.
 .sp
-Passing target selection flags will benchmark only the
-specified targets.
+Passing target selection flags will benchmark only the specified
+targets.
 .sp
-\fB\-\-lib\fP
+\fB\-\-lib\fR
 .RS 4
-Benchmark the package\(cqs library.
+Benchmark the package's library.
 .RE
 .sp
-\fB\-\-bin\fP \fINAME\fP...
+\fB\-\-bin\fR \fIname\fR\&...
 .RS 4
 Benchmark the specified binary. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-bins\fP
+\fB\-\-bins\fR
 .RS 4
 Benchmark all binary targets.
 .RE
 .sp
-\fB\-\-example\fP \fINAME\fP...
+\fB\-\-example\fR \fIname\fR\&...
 .RS 4
 Benchmark the specified example. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-examples\fP
+\fB\-\-examples\fR
 .RS 4
 Benchmark all example targets.
 .RE
 .sp
-\fB\-\-test\fP \fINAME\fP...
+\fB\-\-test\fR \fIname\fR\&...
 .RS 4
-Benchmark the specified integration test. This flag may be specified multiple
-times.
+Benchmark the specified integration test. This flag may be specified
+multiple times.
 .RE
 .sp
-\fB\-\-tests\fP
+\fB\-\-tests\fR
 .RS 4
-Benchmark all targets in test mode that have the \fBtest = true\fP manifest
+Benchmark all targets in test mode that have the \fBtest = true\fR manifest
 flag set. By default this includes the library and binaries built as
 unittests, and integration tests. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a
 unittest, and once as a dependency for binaries, integration tests, etc.).
-Targets may be enabled or disabled by setting the \fBtest\fP flag in the
+Targets may be enabled or disabled by setting the \fBtest\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-bench\fP \fINAME\fP...
+\fB\-\-bench\fR \fIname\fR\&...
 .RS 4
 Benchmark the specified benchmark. This flag may be specified multiple times.
 .RE
 .sp
-\fB\-\-benches\fP
+\fB\-\-benches\fR
 .RS 4
-Benchmark all targets in benchmark mode that have the \fBbench = true\fP
+Benchmark all targets in benchmark mode that have the \fBbench = true\fR
 manifest flag set. By default this includes the library and binaries built
 as benchmarks, and bench targets. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a
 benchmark, and once as a dependency for binaries, benchmarks, etc.).
-Targets may be enabled or disabled by setting the \fBbench\fP flag in the
+Targets may be enabled or disabled by setting the \fBbench\fR flag in the
 manifest settings for the target.
 .RE
 .sp
-\fB\-\-all\-targets\fP
+\fB\-\-all\-targets\fR
 .RS 4
-Benchmark all targets. This is equivalent to specifying \fB\-\-lib \-\-bins
-\-\-tests \-\-benches \-\-examples\fP.
+Benchmark all targets. This is equivalent to specifying \fB\-\-lib \-\-bins \-\-tests \-\-benches \-\-examples\fR\&.
 .RE
 .SS "Feature Selection"
-.sp
 The feature flags allow you to control the enabled features for the "current"
 package. The "current" package is the package in the current directory, or the
-one specified in \fB\-\-manifest\-path\fP. If running in the root of a virtual
+one specified in \fB\-\-manifest\-path\fR\&. If running in the root of a virtual
 workspace, then the default features are selected for all workspace members,
-or all features if \fB\-\-all\-features\fP is specified.
+or all features if \fB\-\-all\-features\fR is specified.
 .sp
-When no feature options are given, the \fBdefault\fP feature is activated for
+When no feature options are given, the \fBdefault\fR feature is activated for
 every selected package.
 .sp
-\fB\-\-features\fP \fIFEATURES\fP
+\fB\-\-features\fR \fIfeatures\fR
 .RS 4
 Space or comma separated list of features to activate. These features only
-apply to the current directory\(cqs package. Features of direct dependencies
-may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax. This flag may be
+apply to the current directory's package. Features of direct dependencies
+may be enabled with \fB<dep\-name>/<feature\-name>\fR syntax. This flag may be
 specified multiple times, which enables all specified features.
 .RE
 .sp
-\fB\-\-all\-features\fP
+\fB\-\-all\-features\fR
 .RS 4
 Activate all available features of all selected packages.
 .RE
 .sp
-\fB\-\-no\-default\-features\fP
+\fB\-\-no\-default\-features\fR
 .RS 4
-Do not activate the \fBdefault\fP feature of the current directory\(cqs
-package.
+Do not activate the \fBdefault\fR feature of the current directory's package.
 .RE
 .SS "Compilation Options"
 .sp
-\fB\-\-target\fP \fITRIPLE\fP
+\fB\-\-target\fR \fItriple\fR
 .RS 4
 Benchmark for the given architecture. The default is the host
 architecture. The general format of the triple is
-\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP. Run \fBrustc \-\-print target\-list\fP for a
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
 list of supported targets.
 .sp
-This may also be specified with the \fBbuild.target\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+This may also be specified with the \fBbuild.target\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .sp
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-.URL "https://doc.rust\-lang.org/cargo/guide/build\-cache.html" "build cache" " "
-documentation for more details.
+\fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
 .RE
 .SS "Output Options"
 .sp
-\fB\-\-target\-dir\fP \fIDIRECTORY\fP
+\fB\-\-target\-dir\fR \fIdirectory\fR
 .RS 4
 Directory for all generated artifacts and intermediate files. May also be
-specified with the \fBCARGO_TARGET_DIR\fP environment variable, or the
-\fBbuild.target\-dir\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
-Defaults
-to \fBtarget\fP in the root of the workspace.
+specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
+\fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults
+to \fBtarget\fR in the root of the workspace.
 .RE
 .SS "Display Options"
-.sp
 By default the Rust test harness hides output from benchmark execution to keep
 results readable. Benchmark output can be recovered (e.g., for debugging) by
-passing \fB\-\-nocapture\fP to the benchmark binaries:
+passing \fB\-\-nocapture\fR to the benchmark binaries:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo bench \-\- \-\-nocapture
 .fi
-.if n .RE
+.RE
 .sp
-\fB\-v\fP, \fB\-\-verbose\fP
+\fB\-v\fR, 
+\fB\-\-verbose\fR
 .RS 4
 Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
-May also be specified with the \fBterm.verbose\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.verbose\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
-\fB\-q\fP, \fB\-\-quiet\fP
+\fB\-q\fR, 
+\fB\-\-quiet\fR
 .RS 4
 No output printed to stdout.
 .RE
 .sp
-\fB\-\-color\fP \fIWHEN\fP
+\fB\-\-color\fR \fIwhen\fR
 .RS 4
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBauto\fP (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBalways\fP: Always display colors.
+\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBnever\fP: Never display colors.
+\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
 .RE
 .sp
-May also be specified with the \fBterm.color\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.color\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
-\fB\-\-message\-format\fP \fIFMT\fP
+\fB\-\-message\-format\fR \fIfmt\fR
 .RS 4
 The output format for diagnostic messages. Can be specified multiple times
 and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBhuman\fP (default): Display in a human\-readable text format.
+\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBshort\fP: Emit shorter, human\-readable text messages.
+\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBjson\fP: Emit JSON messages to stdout. See
-\c
-.URL "https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages" "the reference"
+\h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
+\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
 for more details.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBjson\-diagnostic\-short\fP: Ensure the \fBrendered\fP field of JSON messages contains
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
 the "short" rendering from rustc.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBjson\-diagnostic\-rendered\-ansi\fP: Ensure the \fBrendered\fP field of JSON messages
-contains embedded ANSI color codes for respecting rustc\(cqs default color
+\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
+contains embedded ANSI color codes for respecting rustc's default color
 scheme.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBjson\-render\-diagnostics\fP: Instruct Cargo to not include rustc diagnostics in
+\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics in
 in JSON messages printed, but instead Cargo itself should render the
-JSON diagnostics coming from rustc. Cargo\(cqs own JSON diagnostics and others
+JSON diagnostics coming from rustc. Cargo's own JSON diagnostics and others
 coming from rustc are still emitted.
 .RE
 .RE
 .SS "Manifest Options"
 .sp
-\fB\-\-manifest\-path\fP \fIPATH\fP
+\fB\-\-manifest\-path\fR \fIpath\fR
 .RS 4
-Path to the \fBCargo.toml\fP file. By default, Cargo searches for the
-\fBCargo.toml\fP file in the current directory or any parent directory.
+Path to the \fBCargo.toml\fR file. By default, Cargo searches for the
+\fBCargo.toml\fR file in the current directory or any parent directory.
 .RE
 .sp
-\fB\-\-frozen\fP, \fB\-\-locked\fP
+\fB\-\-frozen\fR, 
+\fB\-\-locked\fR
 .RS 4
-Either of these flags requires that the \fBCargo.lock\fP file is
+Either of these flags requires that the \fBCargo.lock\fR file is
 up\-to\-date. If the lock file is missing, or it needs to be updated, Cargo will
-exit with an error. The \fB\-\-frozen\fP flag also prevents Cargo from
+exit with an error. The \fB\-\-frozen\fR flag also prevents Cargo from
 attempting to access the network to determine if it is out\-of\-date.
 .sp
 These may be used in environments where you want to assert that the
-\fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
+\fBCargo.lock\fR file is up\-to\-date (such as a CI build) or want to avoid network
 access.
 .RE
 .sp
-\fB\-\-offline\fP
+\fB\-\-offline\fR
 .RS 4
 Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
@@ -492,117 +360,91 @@ proceed without the network if possible.
 Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the \fBcargo\-fetch\fP(1) command to download dependencies before going
+See the \fBcargo\-fetch\fR(1) command to download dependencies before going
 offline.
 .sp
-May also be specified with the \fBnet.offline\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Common Options"
 .sp
-\fB+TOOLCHAIN\fP
+\fB+\fR\fItoolchain\fR
 .RS 4
-If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
-begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
-as \fB+stable\fP or \fB+nightly\fP).
-See the \c
-.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fR
+begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fR or \fB+nightly\fR).
+See the \fIrustup documentation\fR <https://github.com/rust\-lang/rustup/>
 for more information about how toolchain overrides work.
 .RE
 .sp
-\fB\-h\fP, \fB\-\-help\fP
+\fB\-h\fR, 
+\fB\-\-help\fR
 .RS 4
 Prints help information.
 .RE
 .sp
-\fB\-Z\fP \fIFLAG\fP...
+\fB\-Z\fR \fIflag\fR
 .RS 4
-Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
-details.
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RE
 .SS "Miscellaneous Options"
-.sp
-The \fB\-\-jobs\fP argument affects the building of the benchmark executable but
+The \fB\-\-jobs\fR argument affects the building of the benchmark executable but
 does not affect how many threads are used when running the benchmarks. The
 Rust test harness runs benchmarks serially in a single thread.
 .sp
-\fB\-j\fP \fIN\fP, \fB\-\-jobs\fP \fIN\fP
+\fB\-j\fR \fIN\fR, 
+\fB\-\-jobs\fR \fIN\fR
 .RS 4
 Number of parallel jobs to run. May also be specified with the
-\fBbuild.jobs\fP \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
-Defaults to
+\fBbuild.jobs\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. Defaults to
 the number of CPUs.
 .RE
 .SH "PROFILES"
-.sp
 Profiles may be used to configure compiler options such as optimization levels
 and debug settings. See
-\c
-.URL "https://doc.rust\-lang.org/cargo/reference/profiles.html" "the reference"
+\fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html>
 for more details.
 .sp
-Benchmarks are always built with the \fBbench\fP profile. Binary and lib targets
-are built separately as benchmarks with the \fBbench\fP profile. Library targets
-are built with the \fBrelease\fP profiles when linked to binaries and benchmarks.
-Dependencies use the \fBrelease\fP profile.
+Benchmarks are always built with the \fBbench\fR profile. Binary and lib targets
+are built separately as benchmarks with the \fBbench\fR profile. Library targets
+are built with the \fBrelease\fR profiles when linked to binaries and benchmarks.
+Dependencies use the \fBrelease\fR profile.
 .sp
 If you need a debug build of a benchmark, try building it with
-\fBcargo\-build\fP(1) which will use the \fBtest\fP profile which is by default
+\fBcargo\-build\fR(1) which will use the \fBtest\fR profile which is by default
 unoptimized and includes debug information. You can then run the debug\-enabled
 benchmark manually.
 .SH "ENVIRONMENT"
-.sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
-for
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
-0
 .RS 4
-Cargo succeeded.
+\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
 .RE
 .sp
-101
 .RS 4
-Cargo failed to complete.
+\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Build and execute all the benchmarks of the current package:
+\h'-04' 1.\h'+01'Build and execute all the benchmarks of the current package:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo bench
 .fi
-.if n .RE
+.RE
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 2.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 2." 4.2
-.\}
-Run only a specific benchmark within a specific benchmark target:
+\h'-04' 2.\h'+01'Run only a specific benchmark within a specific benchmark target:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo bench \-\-bench bench_name \-\- modname::some_benchmark
 .fi
-.if n .RE
+.RE
 .RE
 .SH "SEE ALSO"
-.sp
-\fBcargo\fP(1), \fBcargo\-test\fP(1)
+\fBcargo\fR(1), \fBcargo\-test\fR(1)

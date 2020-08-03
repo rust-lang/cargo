@@ -1,0 +1,142 @@
+CARGO-PKGID(1)
+
+NAME
+       cargo-pkgid - Print a fully qualified package specification
+
+SYNOPSIS
+       cargo pkgid [options] [spec]
+
+DESCRIPTION
+       Given a spec argument, print out the fully qualified package ID
+       specifier for a package or dependency in the current workspace. This
+       command will generate an error if spec is ambiguous as to which package
+       it refers to in the dependency graph. If no spec is given, then the
+       specifier for the local package is printed.
+
+       This command requires that a lockfile is available and dependencies have
+       been fetched.
+
+       A package specifier consists of a name, version, and source URL. You are
+       allowed to use partial specifiers to succinctly match a specific package
+       as long as it matches only one package. The format of a spec can be one
+       of the following:
+
+       +-----------------+--------------------------------------------------+
+       | SPEC Structure  | Example SPEC                                     |
+       +-----------------+--------------------------------------------------+
+       | name            | bitflags                                         |
+       +-----------------+--------------------------------------------------+
+       | name:version    | bitflags:1.0.4                                   |
+       +-----------------+--------------------------------------------------+
+       | url             | https://github.com/rust-lang/cargo               |
+       +-----------------+--------------------------------------------------+
+       | url#version     | https://github.com/rust-lang/cargo#0.33.0        |
+       +-----------------+--------------------------------------------------+
+       | url#name        |                                                  |
+       |                 | https://github.com/rust-lang/crates.io-index#bitflags |
+       +-----------------+--------------------------------------------------+
+       |                 |                                                  |
+       | url#name:version | https://github.com/rust-lang/cargo#crates-io:0.21.0 |
+       +-----------------+--------------------------------------------------+
+
+OPTIONS
+   Package Selection
+       -p spec, --package spec
+           Get the package ID for the given package instead of the current
+           package.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Manifest Options
+       --manifest-path path
+           Path to the Cargo.toml file. By default, Cargo searches for the
+           Cargo.toml file in the current directory or any parent directory.
+
+       --frozen, --locked
+           Either of these flags requires that the Cargo.lock file is
+           up-to-date. If the lock file is missing, or it needs to be updated,
+           Cargo will exit with an error. The --frozen flag also prevents Cargo
+           from attempting to access the network to determine if it is
+           out-of-date.
+
+           These may be used in environments where you want to assert that the
+           Cargo.lock file is up-to-date (such as a CI build) or want to avoid
+           network access.
+
+       --offline
+           Prevents Cargo from accessing the network for any reason. Without
+           this flag, Cargo will stop with an error if it needs to access the
+           network and the network is not available. With this flag, Cargo will
+           attempt to proceed without the network if possible.
+
+           Beware that this may result in different dependency resolution than
+           online mode. Cargo will restrict itself to crates that are
+           downloaded locally, even if there might be a newer version as
+           indicated in the local copy of the index. See the cargo-fetch(1)
+           command to download dependencies before going offline.
+
+           May also be specified with the net.offline config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Retrieve package specification for foo package:
+
+              cargo pkgid foo
+
+       2. Retrieve package specification for version 1.0.0 of foo:
+
+              cargo pkgid foo:1.0.0
+
+       3. Retrieve package specification for foo from crates.io:
+
+              cargo pkgid https://github.com/rust-lang/crates.io-index#foo
+
+SEE ALSO
+       cargo(1), cargo-generate-lockfile(1), cargo-metadata(1)
+

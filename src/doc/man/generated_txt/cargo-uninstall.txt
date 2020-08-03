@@ -1,0 +1,96 @@
+CARGO-UNINSTALL(1)
+
+NAME
+       cargo-uninstall - Remove a Rust binary
+
+SYNOPSIS
+       cargo uninstall [options] [spec...]
+
+DESCRIPTION
+       This command removes a package installed with cargo-install(1). The spec
+       argument is a package ID specification of the package to remove (see
+       cargo-pkgid(1)).
+
+       By default all binaries are removed for a crate but the --bin and
+       --example flags can be used to only remove particular binaries.
+
+       The installation root is determined, in order of precedence:
+
+       o  --root option
+
+       o  CARGO_INSTALL_ROOT environment variable
+
+       o  install.root Cargo config value
+          <https://doc.rust-lang.org/cargo/reference/config.html>
+
+       o  CARGO_HOME environment variable
+
+       o  $HOME/.cargo
+
+OPTIONS
+   Install Options
+       -p, --package spec...
+           Package to uninstall.
+
+       --bin name...
+           Only uninstall the binary name.
+
+       --root dir
+           Directory to uninstall packages from.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Uninstall a previously installed package.
+
+              cargo uninstall ripgrep
+
+SEE ALSO
+       cargo(1), cargo-install(1)
+

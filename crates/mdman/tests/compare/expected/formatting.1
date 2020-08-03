@@ -1,0 +1,118 @@
+'\" t
+.TH "FORMATTING" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.sp
+This is \fBnested \f(BIformatting\fB \fBtext\fB\fR\&.
+.SH "SECOND HEADING"
+Some text at second level.
+.SS "Third heading"
+Some text at third level.
+.SS "Fourth heading"
+Some text at fourth level.
+.SH "Quotes and blocks."
+Here are some quotes and blocks.
+.RS 3
+.ll -5
+.sp
+This is a block quote. Ambidextrously koala apart that prudent blindly alas
+far amid dear goodness turgid so exact inside oh and alas much fanciful that
+dark on spoon\-fed adequately insolent walking crud.
+.br
+.RE
+.ll
+.sp
+.RS 4
+.nf
+This is a code block. Groundhog watchfully sudden firefly some self\-consciously hotly jeepers satanic after that this parrot this at virtuous
+some mocking the leaned jeez nightingale as much mallard so because jeez
+turned dear crud grizzly strenuously.
+
+    Indented and should be unmodified.
+.fi
+.RE
+.sp
+.RS 4
+.nf
+This is an indented code block. Egregiously yikes animatedly since outside beseechingly a badger hey shakily giraffe a one wow one this
+goodness regarding reindeer so astride before.
+
+    Doubly indented
+.fi
+.RE
+.SH "Lists"
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Ordered list
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Unordered list
+.sp
+With a second paragraph inside it
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Inner ordered list
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Another
+.RE
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Eggs
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Milk
+.sp
+.RS 4
+\h'-04' 5.\h'+01'Don't start at one.
+.RE
+.sp
+.RS 4
+\h'-04' 6.\h'+01'tamarind
+.RE
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Second element
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Third element
+.RE
+.SH "Breaks"
+This has a
+.br
+hard break in it
+and a soft one.
+.SH "Horizontal rule"
+This should contain a line:
+\l'\n(.lu'
+.sp
+Nice!
+.SH "Strange characters"
+Handles escaping for characters
+.sp
+\&.dot at the start of a line.
+.sp
+\(rsfBnot really troff
+.sp
+Various characters \(rs \- \[en] \[em] \- | | `
+.sp
+.RS 4
+.nf
+tree
+`\-\- example
+    |\-\- salamander
+    |   |\-\- honey
+    |   `\-\- some
+    |\-\- fancifully
+    `\-\- trout
+.fi
+.RE
+.sp
+\ \ \ \ non\-breaking space.

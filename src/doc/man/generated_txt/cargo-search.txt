@@ -1,0 +1,84 @@
+CARGO-SEARCH(1)
+
+NAME
+       cargo-search - Search packages in crates.io
+
+SYNOPSIS
+       cargo search [options] [query...]
+
+DESCRIPTION
+       This performs a textual search for crates on <https://crates.io>. The
+       matching crates will be displayed along with their description in TOML
+       format suitable for copying into a Cargo.toml manifest.
+
+OPTIONS
+   Search Options
+       --limit limit
+           Limit the number of results (default: 10, max: 100).
+
+       --index index
+           The URL of the registry index to use.
+
+       --registry registry
+           Name of the registry to use. Registry names are defined in Cargo
+           config files
+           <https://doc.rust-lang.org/cargo/reference/config.html>. If not
+           specified, the default registry is used, which is defined by the
+           registry.default config key which defaults to crates-io.
+
+   Display Options
+       -v, --verbose
+           Use verbose output. May be specified twice for "very verbose" output
+           which includes extra output such as dependency warnings and build
+           script output. May also be specified with the term.verbose config
+           value <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+       -q, --quiet
+           No output printed to stdout.
+
+       --color when
+           Control when colored output is used. Valid values:
+
+           o  auto (default): Automatically detect if color support is
+              available on the terminal.
+
+           o  always: Always display colors.
+
+           o  never: Never display colors.
+
+           May also be specified with the term.color config value
+           <https://doc.rust-lang.org/cargo/reference/config.html>.
+
+   Common Options
+       +toolchain
+           If Cargo has been installed with rustup, and the first argument to
+           cargo begins with +, it will be interpreted as a rustup toolchain
+           name (such as +stable or +nightly). See the rustup documentation
+           <https://github.com/rust-lang/rustup/> for more information about
+           how toolchain overrides work.
+
+       -h, --help
+           Prints help information.
+
+       -Z flag
+           Unstable (nightly-only) flags to Cargo. Run cargo -Z help for
+           details.
+
+ENVIRONMENT
+       See the reference
+       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>
+       for details on environment variables that Cargo reads.
+
+EXIT STATUS
+       o  0: Cargo succeeded.
+
+       o  101: Cargo failed to complete.
+
+EXAMPLES
+       1. Search for a package from crates.io:
+
+              cargo search serde
+
+SEE ALSO
+       cargo(1), cargo-install(1), cargo-publish(1)
+

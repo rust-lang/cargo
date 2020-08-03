@@ -1,173 +1,113 @@
 '\" t
-.\"     Title: cargo-login
-.\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2020-06-25
-.\"    Manual: \ \&
-.\"    Source: \ \&
-.\"  Language: English
-.\"
-.TH "CARGO\-LOGIN" "1" "2020-06-25" "\ \&" "\ \&"
-.ie \n(.g .ds Aq \(aq
-.el       .ds Aq '
-.ss \n[.ss] 0
+.TH "CARGO\-LOGIN" "1"
 .nh
 .ad l
-.de URL
-\fI\\$2\fP <\\$1>\\$3
-..
-.als MTO URL
-.if \n[.g] \{\
-.  mso www.tmac
-.  am URL
-.    ad l
-.  .
-.  am MTO
-.    ad l
-.  .
-.  LINKSTYLE blue R < >
-.\}
+.ss \n[.ss] 0
 .SH "NAME"
 cargo\-login \- Save an API token from the registry locally
 .SH "SYNOPSIS"
-.sp
-\fBcargo login [\fIOPTIONS\fP] [\fITOKEN\fP]\fP
+\fBcargo login\fR [\fIoptions\fR] [\fItoken\fR]
 .SH "DESCRIPTION"
-.sp
 This command will save the API token to disk so that commands that require
-authentication, such as \fBcargo\-publish\fP(1), will be automatically
-authenticated. The token is saved in \fB$CARGO_HOME/credentials.toml\fP. \fBCARGO_HOME\fP
-defaults to \fB.cargo\fP in your home directory.
+authentication, such as \fBcargo\-publish\fR(1), will be automatically
+authenticated. The token is saved in \fB$CARGO_HOME/credentials.toml\fR\&. \fBCARGO_HOME\fR
+defaults to \fB\&.cargo\fR in your home directory.
 .sp
-If the \fITOKEN\fP argument is not specified, it will be read from stdin.
+If the \fItoken\fR argument is not specified, it will be read from stdin.
 .sp
-The API token for crates.io may be retrieved from \c
-.URL "https://crates.io/me" "" "."
+The API token for crates.io may be retrieved from <https://crates.io/me>\&.
 .sp
 Take care to keep the token secret, it should not be shared with anyone else.
 .SH "OPTIONS"
 .SS "Login Options"
 .sp
-\fB\-\-registry\fP \fIREGISTRY\fP
+\fB\-\-registry\fR \fIregistry\fR
 .RS 4
-Name of the registry to use. Registry names are defined in \c
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config files" "."
-If not specified, the default registry is used, which is defined by the
-\fBregistry.default\fP config key which defaults to \fBcrates\-io\fP.
+Name of the registry to use. Registry names are defined in \fICargo config
+files\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. If not specified, the default registry is used,
+which is defined by the \fBregistry.default\fR config key which defaults to
+\fBcrates\-io\fR\&.
 .RE
 .SS "Display Options"
 .sp
-\fB\-v\fP, \fB\-\-verbose\fP
+\fB\-v\fR, 
+\fB\-\-verbose\fR
 .RS 4
 Use verbose output. May be specified twice for "very verbose" output which
 includes extra output such as dependency warnings and build script output.
-May also be specified with the \fBterm.verbose\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.verbose\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .sp
-\fB\-q\fP, \fB\-\-quiet\fP
+\fB\-q\fR, 
+\fB\-\-quiet\fR
 .RS 4
 No output printed to stdout.
 .RE
 .sp
-\fB\-\-color\fP \fIWHEN\fP
+\fB\-\-color\fR \fIwhen\fR
 .RS 4
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBauto\fP (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBalways\fP: Always display colors.
+\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBnever\fP: Never display colors.
+\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
 .RE
 .sp
-May also be specified with the \fBterm.color\fP
-.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+May also be specified with the \fBterm.color\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .RE
 .SS "Common Options"
 .sp
-\fB+TOOLCHAIN\fP
+\fB+\fR\fItoolchain\fR
 .RS 4
-If Cargo has been installed with rustup, and the first argument to \fBcargo\fP
-begins with \fB+\fP, it will be interpreted as a rustup toolchain name (such
-as \fB+stable\fP or \fB+nightly\fP).
-See the \c
-.URL "https://github.com/rust\-lang/rustup/" "rustup documentation"
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fR
+begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fR or \fB+nightly\fR).
+See the \fIrustup documentation\fR <https://github.com/rust\-lang/rustup/>
 for more information about how toolchain overrides work.
 .RE
 .sp
-\fB\-h\fP, \fB\-\-help\fP
+\fB\-h\fR, 
+\fB\-\-help\fR
 .RS 4
 Prints help information.
 .RE
 .sp
-\fB\-Z\fP \fIFLAG\fP...
+\fB\-Z\fR \fIflag\fR
 .RS 4
-Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
-details.
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
 .RE
 .SH "ENVIRONMENT"
-.sp
-See \c
-.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
-for
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
 details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
-0
 .RS 4
-Cargo succeeded.
+\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
 .RE
 .sp
-101
 .RS 4
-Cargo failed to complete.
+\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp
 .RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Save the API token to disk:
+\h'-04' 1.\h'+01'Save the API token to disk:
 .sp
-.if n .RS 4
+.RS 4
 .nf
 cargo login
 .fi
-.if n .RE
+.RE
 .RE
 .SH "SEE ALSO"
-.sp
-\fBcargo\fP(1), \fBcargo\-publish\fP(1)
+\fBcargo\fR(1), \fBcargo\-publish\fR(1)
