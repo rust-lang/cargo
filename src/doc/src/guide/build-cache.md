@@ -83,6 +83,7 @@ configuration][config]. Refer to sccache documentation for more details.
 
 [`RUSTFLAGS`]: ../reference/config.md#buildrustflags
 [`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
+[`build.rustc-wrapper`]: ../reference/config.md#buildrustc-wrapper
 [`build.target-dir`]: ../reference/config.md#buildtarget-dir
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo package`]: ../commands/cargo-package.md
