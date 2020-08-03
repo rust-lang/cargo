@@ -34,21 +34,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .after_help(
-            "\
-The specified target for the current package (or package specified by SPEC if
-provided) will be documented with the specified `<opts>...` being passed to the
-final rustdoc invocation. Dependencies will not be documented as part of this
-command. Note that rustdoc will still unconditionally receive arguments such
-as `-L`, `--extern`, and `--crate-type`, and the specified `<opts>...` will
-simply be added to the rustdoc invocation.
-
-If the `--package` argument is given, then SPEC is a package ID specification
-which indicates which package should be documented. If it is not given, then the
-current package is documented. For more information on SPEC and its format, see
-the `cargo help pkgid` command.
-",
-        )
+        .after_help("Run `cargo help rustdoc` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

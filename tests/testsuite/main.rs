@@ -52,6 +52,7 @@ mod generate_lockfile;
 mod git;
 mod git_auth;
 mod git_gc;
+mod help;
 mod init;
 mod install;
 mod install_upgrade;

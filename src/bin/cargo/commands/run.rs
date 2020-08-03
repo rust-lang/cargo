@@ -25,18 +25,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
-        .after_help(
-            "\
-If neither `--bin` nor `--example` are given, then if the package only has one
-bin target it will be run. Otherwise `--bin` specifies the bin target to run,
-and `--example` specifies the example target to run. At most one of `--bin` or
-`--example` can be provided.
-
-All the arguments following the two dashes (`--`) are passed to the binary to
-run. If you're passing arguments to both Cargo and the binary, the ones after
-`--` go to the binary, the ones before go to Cargo.
-",
-        )
+        .after_help("Run `cargo help run` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

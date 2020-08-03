@@ -106,6 +106,10 @@ features = [
 cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
 cargo-test-support = { path = "crates/cargo-test-support", version = "0.1.0" }
 
+[build-dependencies]
+flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
+tar = { version = "0.4.26", default-features = false }
+
 [[bin]]
 name = "cargo"
 test = false

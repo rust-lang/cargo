@@ -10,6 +10,11 @@ pub fn main(config: &mut Config) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
+
+    if commands::help::handle_embedded_help(config) {
+        return Ok(());
+    }
+
     let args = match cli().get_matches_safe() {
         Ok(args) => args,
         Err(e) => {

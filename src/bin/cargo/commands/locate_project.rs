@@ -6,6 +6,7 @@ pub fn cli() -> App {
         .about("Print a JSON representation of a Cargo.toml file's location")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_manifest_path()
+        .after_help("Run `cargo help locate-project` for more detailed information.\n")
 }
 
 #[derive(Serialize)]

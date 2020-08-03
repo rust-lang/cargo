@@ -339,49 +339,11 @@ fn cargo_subcommand_args() {
 }
 
 #[cargo_test]
-fn cargo_help() {
-    cargo_process("").run();
-    cargo_process("help").run();
-    cargo_process("-h").run();
-    cargo_process("help build").run();
-    cargo_process("build -h").run();
-    cargo_process("help help").run();
-}
-
-#[cargo_test]
-fn cargo_help_external_subcommand() {
-    Package::new("cargo-fake-help", "1.0.0")
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                if ::std::env::args().nth(2) == Some(String::from("--help")) {
-                    println!("fancy help output");
-                }
-            }"#,
-        )
-        .publish();
-    cargo_process("install cargo-fake-help").run();
-    cargo_process("help fake-help")
-        .with_stdout("fancy help output\n")
-        .run();
-}
-
-#[cargo_test]
 fn explain() {
     cargo_process("--explain E0001")
         .with_stdout_contains(
             "This error suggests that the expression arm corresponding to the noted pattern",
         )
-        .run();
-}
-
-// Test that the output of `cargo -Z help` shows a different help screen with
-// all the `-Z` flags.
-#[cargo_test]
-fn z_flags_help() {
-    cargo_process("-Z help")
-        .with_stdout_contains("    -Z unstable-options -- Allow the usage of unstable options")
         .run();
 }
 

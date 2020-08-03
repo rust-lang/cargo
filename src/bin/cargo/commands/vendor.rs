@@ -52,18 +52,7 @@ pub fn cli() -> App {
                 .long("disallow-duplicates")
                 .hidden(true),
         )
-        .after_help(
-            "\
-This cargo subcommand will vendor all crates.io and git dependencies for a
-project into the specified directory at `<path>`. After this command completes
-the vendor directory specified by `<path>` will contain all remote sources from
-dependencies specified. Additional manifests beyond the default one can be
-specified with the `-s` option.
-
-The `cargo vendor` command will also print out the configuration necessary
-to use the vendored sources, which you will need to add to `.cargo/config`.
-",
-        )
+        .after_help("Run `cargo help vendor` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {

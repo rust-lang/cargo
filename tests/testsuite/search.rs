@@ -244,14 +244,3 @@ fn multiple_query_params() {
         .with_stdout_contains(SEARCH_RESULTS)
         .run();
 }
-
-#[cargo_test]
-fn help() {
-    cargo_process("search -h").run();
-    cargo_process("help search").run();
-    // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr("").run();
-    cargo_process("search --help")
-        .with_stdout_contains("[..] --frozen [..]")
-        .run();
-}

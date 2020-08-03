@@ -10,14 +10,7 @@ pub fn cli() -> App {
         .arg_package_spec_simple("Package to uninstall")
         .arg(multi_opt("bin", "NAME", "Only uninstall the binary NAME"))
         .arg(opt("root", "Directory to uninstall packages from").value_name("DIR"))
-        .after_help(
-            "\
-The argument SPEC is a package ID specification (see `cargo help pkgid`) to
-specify which crate should be uninstalled. By default all binaries are
-uninstalled for a crate but the `--bin` and `--example` flags can be used to
-only uninstall particular binaries.
-",
-        )
+        .after_help("Run `cargo help uninstall` for more detailed information.\n")
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
