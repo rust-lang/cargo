@@ -116,7 +116,7 @@ impl<'s> Iterator for UncanonicalizedIter<'s> {
                 .chars()
                 .scan(0u16, |s, c| {
                     // the check against 15 here's to prevent
-                    // shift overflow on inputs with more then 15 hyphens
+                    // shift overflow on inputs with more than 15 hyphens
                     if (c == '_' || c == '-') && *s <= 15 {
                         let switch = (self.hyphen_combination_num & (1u16 << *s)) > 0;
                         let out = if (c == '_') ^ switch { '_' } else { '-' };
