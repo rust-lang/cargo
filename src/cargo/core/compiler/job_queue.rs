@@ -402,10 +402,8 @@ impl<'cfg> JobQueue<'cfg> {
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
         crossbeam_utils::thread::scope(move |scope| {
-            match state.drain_the_queue(cx, plan, scope, &helper) {
-                Some(err) => Err(err),
-                None => Ok(()),
-            }
+            let (result,) = state.drain_the_queue(cx, plan, scope, &helper);
+            result
         })
         .expect("child threads shouldn't panic")
     }
@@ -623,15 +621,16 @@ impl<'cfg> DrainState<'cfg> {
     /// This is the "main" loop, where Cargo does all work to run the
     /// compiler.
     ///
-    /// This returns an Option to prevent the use of `?` on `Result` types
-    /// because it is important for the loop to carefully handle errors.
+    /// This returns a tuple of `Result` to prevent the use of `?` on
+    /// `Result` types because it is important for the loop to
+    /// carefully handle errors.
     fn drain_the_queue(
         mut self,
         cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
         scope: &Scope<'_>,
         jobserver_helper: &HelperThread,
-    ) -> Option<anyhow::Error> {
+    ) -> (Result<(), anyhow::Error>,) {
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -701,7 +700,7 @@ impl<'cfg> DrainState<'cfg> {
             if error.is_some() {
                 crate::display_error(&e, &mut cx.bcx.config.shell());
             } else {
-                return Some(e);
+                return (Err(e),);
             }
         }
         if cx.bcx.build_config.emit_json() {
@@ -713,13 +712,13 @@ impl<'cfg> DrainState<'cfg> {
                 if error.is_some() {
                     crate::display_error(&e.into(), &mut cx.bcx.config.shell());
                 } else {
-                    return Some(e.into());
+                    return (Err(e.into()),);
                 }
             }
         }
 
         if let Some(e) = error {
-            Some(e)
+            (Err(e),)
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
             let message = format!(
                 "{} [{}] target(s) in {}",
@@ -729,10 +728,10 @@ impl<'cfg> DrainState<'cfg> {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
             }
-            None
+            (Ok(()),)
         } else {
             debug!("queue: {:#?}", self.queue);
-            Some(internal("finished with jobs still left in the queue"))
+            (Err(internal("finished with jobs still left in the queue")),)
         }
     }
 
