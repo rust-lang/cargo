@@ -543,12 +543,10 @@ impl<'gctx> JobQueue<'gctx> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        thread::scope(
-            move |scope| match state.drain_the_queue(build_runner, scope, &helper) {
-                Some(err) => Err(err),
-                None => Ok(()),
-            },
-        )
+        thread::scope(move |scope| {
+            let (result,) = state.drain_the_queue(build_runner, scope, &helper);
+            result
+        })
     }
 }
 
@@ -762,14 +760,15 @@ impl<'gctx> DrainState<'gctx> {
     /// This is the "main" loop, where Cargo does all work to run the
     /// compiler.
     ///
-    /// This returns an Option to prevent the use of `?` on `Result` types
-    /// because it is important for the loop to carefully handle errors.
+    /// This returns a tuple of `Result` to prevent the use of `?` on
+    /// `Result` types because it is important for the loop to
+    /// carefully handle errors.
     fn drain_the_queue<'s>(
         mut self,
         build_runner: &mut BuildRunner<'_, '_>,
         scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
-    ) -> Option<anyhow::Error> {
+    ) -> (Result<(), anyhow::Error>,) {
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -853,7 +852,7 @@ impl<'gctx> DrainState<'gctx> {
         if let Some(error) = errors.to_error() {
             // Any errors up to this point have already been printed via the
             // `display_error` inside `handle_error`.
-            Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
+            (Err(anyhow::Error::new(AlreadyPrintedError::new(error))),)
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
             let profile_link = build_runner.bcx.gctx.shell().err_hyperlink(
                 "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
@@ -868,10 +867,10 @@ impl<'gctx> DrainState<'gctx> {
                 &self.per_package_future_incompat_reports,
             );
 
-            None
+            (Ok(()),)
         } else {
             debug!("queue: {:#?}", self.queue);
-            Some(internal("finished with jobs still left in the queue"))
+            (Err(internal("finished with jobs still left in the queue")),)
         }
     }
 
