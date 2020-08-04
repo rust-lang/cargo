@@ -4975,11 +4975,22 @@ fn close_output() {
                     let mut buf = [0];
                     drop(socket.read_exact(&mut buf));
                     let use_stderr = std::env::var("__CARGO_REPRO_STDERR").is_ok();
-                    for i in 0..10000 {
+                    // Emit at least 1MB of data.
+                    // Linux pipes can buffer up to 64KB.
+                    // This test seems to be sensitive to having other threads
+                    // calling fork. My hypothesis is that the stdout/stderr
+                    // file descriptors are duplicated into the child process,
+                    // and during the short window between fork and exec, the
+                    // file descriptor is kept alive long enough for the
+                    // build to finish. It's a half-baked theory, but this
+                    // seems to prevent the spurious errors in CI.
+                    // An alternative solution is to run this test in
+                    // a single-threaded environment.
+                    for i in 0..100000 {
                         if use_stderr {
-                            eprintln!("{}", i);
+                            eprintln!("0123456789{}", i);
                         } else {
-                            println!("{}", i);
+                            println!("0123456789{}", i);
                         }
                     }
                     TokenStream::new()
