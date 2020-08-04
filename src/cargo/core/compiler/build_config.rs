@@ -86,10 +86,7 @@ impl BuildConfig {
     /// Whether or not the *user* wants JSON output. Whether or not rustc
     /// actually uses JSON is decided in `add_error_format`.
     pub fn emit_json(&self) -> bool {
-        match self.message_format {
-            MessageFormat::Json { .. } => true,
-            _ => false,
-        }
+        matches!(self.message_format, MessageFormat::Json { .. })
     }
 
     pub fn test(&self) -> bool {
@@ -171,18 +168,12 @@ impl ser::Serialize for CompileMode {
 impl CompileMode {
     /// Returns `true` if the unit is being checked.
     pub fn is_check(self) -> bool {
-        match self {
-            CompileMode::Check { .. } => true,
-            _ => false,
-        }
+        matches!(self, CompileMode::Check { .. })
     }
 
     /// Returns `true` if this is generating documentation.
     pub fn is_doc(self) -> bool {
-        match self {
-            CompileMode::Doc { .. } => true,
-            _ => false,
-        }
+        matches!(self, CompileMode::Doc { .. })
     }
 
     /// Returns `true` if this a doc test.
@@ -193,21 +184,21 @@ impl CompileMode {
     /// Returns `true` if this is any type of test (test, benchmark, doc test, or
     /// check test).
     pub fn is_any_test(self) -> bool {
-        match self {
+        matches!(
+            self,
             CompileMode::Test
-            | CompileMode::Bench
-            | CompileMode::Check { test: true }
-            | CompileMode::Doctest => true,
-            _ => false,
-        }
+                | CompileMode::Bench
+                | CompileMode::Check { test: true }
+                | CompileMode::Doctest
+        )
     }
 
     /// Returns `true` if this is something that passes `--test` to rustc.
     pub fn is_rustc_test(self) -> bool {
-        match self {
-            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true } => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true }
+        )
     }
 
     /// Returns `true` if this is the *execution* of a `build.rs` script.

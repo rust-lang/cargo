@@ -1870,6 +1870,8 @@ fn long_file_names() {
         test_path.mkdir_p();
         let test_path = test_path.join(long_name);
         if let Err(e) = File::create(&test_path) {
+            // write to stderr directly to avoid output from being captured
+            // and always display text, even without --nocapture
             use std::io::Write;
             writeln!(
                 std::io::stderr(),

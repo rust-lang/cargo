@@ -27,10 +27,7 @@ pub enum CompileKind {
 
 impl CompileKind {
     pub fn is_host(&self) -> bool {
-        match self {
-            CompileKind::Host => true,
-            _ => false,
-        }
+        matches!(self, CompileKind::Host)
     }
 
     pub fn for_target(self, target: &Target) -> CompileKind {

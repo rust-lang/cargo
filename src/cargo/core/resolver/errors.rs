@@ -254,7 +254,7 @@ pub(super) fn activation_error(
             if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s), true) {
                 return to_resolve_err(e);
             };
-            candidates.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+            candidates.sort_unstable_by_key(|a| a.name());
             candidates.dedup_by(|a, b| a.name() == b.name());
             let mut candidates: Vec<_> = candidates
                 .iter()
