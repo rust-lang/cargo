@@ -546,29 +546,27 @@ where
         }
         None => {
             let version: String = dep.version_req().to_string();
-            match PackageId::new(dep.package_name(), &version[1..], source.source_id()) {
-                Ok(pkg_id) => {
-                    if source.is_yanked(pkg_id).unwrap_or(false) {
-                        bail!(
-                            "cannot install package `{}`, it has been yanked from {}",
-                            pkg_id.name(),
-                            pkg_id.source_id()
-                        )
-                    } else {
-                        bail!(
-                            "could not find `{}` in {} with version `{}`",
-                            dep.package_name(),
-                            source.source_id(),
-                            dep.version_req(),
-                        )
-                    }
-                }
-                Err(_) => bail!(
+            let pkg_id;
+            if dep.version_req().is_exact() {
+                pkg_id = PackageId::new(dep.package_name(), &version[1..], source.source_id());
+            } else {
+                pkg_id = PackageId::new(dep.package_name(), &version[..], source.source_id());
+            }
+            let is_yanked =
+                pkg_id.map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false));
+            if is_yanked {
+                bail!(
+                    "cannot install package `{}`, it has been yanked from {}",
+                    dep.package_name(),
+                    source.source_id()
+                )
+            } else {
+                bail!(
                     "could not find `{}` in {} with version `{}`",
                     dep.package_name(),
                     source.source_id(),
                     dep.version_req(),
-                ),
+                )
             }
         }
     }
