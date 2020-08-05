@@ -545,15 +545,13 @@ where
             Ok(pkg)
         }
         None => {
-            let version: String = dep.version_req().to_string();
-            let pkg_id;
-            if dep.version_req().is_exact() {
-                pkg_id = PackageId::new(dep.package_name(), &version[1..], source.source_id());
+            let is_yanked: bool = if dep.version_req().is_exact() {
+                let version: String = dep.version_req().to_string();
+                PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
             } else {
-                pkg_id = PackageId::new(dep.package_name(), &version[..], source.source_id());
-            }
-            let is_yanked =
-                pkg_id.map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false));
+                false
+            };
             if is_yanked {
                 bail!(
                     "cannot install package `{}`, it has been yanked from {}",
