@@ -32,7 +32,7 @@ myproject v0.1.0 (/myproject)
 ```
 
 Packages marked with `(*)` have been "de-duplicated". The dependencies for the
-package have already been shown elswhere in the graph, and so are not
+package have already been shown elsewhere in the graph, and so are not
 repeated. Use the `--no-dedupe` option to repeat the duplicates.
 
 The `-e` flag can be used to select the dependency kinds to display. The
