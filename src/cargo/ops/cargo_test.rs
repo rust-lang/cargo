@@ -168,6 +168,7 @@ fn run_doc_tests(
             args,
             unstable_opts,
             unit,
+            unit_deps,
             linker,
             script_meta,
         } = doctest_info;
@@ -228,6 +229,12 @@ fn run_doc_tests(
             p.arg("-L").arg(arg);
         }
 
+        if config.cli_unstable().warn_unused_deps {
+            p.arg("-Z").arg("unstable-options");
+            p.arg("--error-format=json");
+            p.arg("--json=unused-externs");
+        }
+
         for native_dep in compilation.native_dirs.iter() {
             p.arg("-L").arg(native_dep);
         }
@@ -245,12 +252,42 @@ fn run_doc_tests(
         config
             .shell()
             .verbose(|shell| shell.status("Running", p.to_string()))?;
-        if let Err(e) = p.exec() {
+
+        let mut unused_dep_state = compilation.unused_dep_state.clone().unwrap();
+        if let Err(e) = p.exec_with_streaming(
+            &mut |line| {
+                writeln!(config.shell().out(), "{}", line)?;
+                Ok(())
+            },
+            &mut |line| {
+                #[derive(serde::Deserialize)]
+                struct UnusedExterns {
+                    unused_extern_names: Vec<String>,
+                }
+                if let Ok(uext) = serde_json::from_str::<UnusedExterns>(line) {
+                    unused_dep_state.record_unused_externs_for_unit(
+                        &unit_deps,
+                        unit,
+                        uext.unused_extern_names,
+                    );
+                    // Supress output of the json formatted unused extern message
+                    return Ok(());
+                }
+                writeln!(config.shell().err(), "{}", line)?;
+                Ok(())
+            },
+            false,
+        ) {
             let e = e.downcast::<ProcessError>()?;
             errors.push(e);
             if !options.no_fail_fast {
                 return Ok((Test::Doc, errors));
             }
+        }
+        if config.cli_unstable().warn_unused_deps {
+            // Emit unused dependencies report which has been held back
+            // until now, as doctests could use things
+            unused_dep_state.emit_unused_late_warnings(config)?;
         }
     }
     Ok((Test::Doc, errors))

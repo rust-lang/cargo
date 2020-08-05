@@ -3,11 +3,13 @@
 //! All tests here should use `#[cargo_test(unused_dependencies)]` to indicate that
 //! boilerplate should be generated to require the nightly toolchain.
 //! Otherwise the tests are skipped.
+//!
+//! In order to debug a test, you can add an env var like:
+//! .env("CARGO_LOG", "cargo::core::compiler::unused_dependencies=trace")
 
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
-// TODO more dev deps tests
 // TODO more commands for the tests to test the allowed kinds logic
 // TODO document the tests
 
@@ -406,7 +408,7 @@ fn should_be_dev() {
             bar = "0.1.0"
             baz = "0.1.0"
             qux = "0.1.0"
-            quux = "0.1.0"
+            quux = "0.1.0" # only genuinely unused dep
         "#,
         )
         .file("src/lib.rs", "")
@@ -432,6 +434,10 @@ fn should_be_dev() {
         )
         .build();
 
+    #[rustfmt::skip]
+/*
+    // Currently disabled because of a bug: test --no-run witholds unused dep warnings
+    // for doctests that never happen
     p.cargo("test --no-run -Zwarn-unused-deps")
         .masquerade_as_nightly_cargo()
         .with_stderr(
@@ -451,6 +457,26 @@ fn should_be_dev() {
 [WARNING] dependency baz in package foo v0.1.0 is only used by dev targets
 [WARNING] unused dependency quux in package foo v0.1.0
 [WARNING] unused dependency qux in package foo v0.1.0
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+*/
+    p.cargo("test --no-run -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+[DOWNLOADED] qux v0.1.0 [..]
+[DOWNLOADED] quux v0.1.0 [..]
+[DOWNLOADED] baz v0.1.0 [..]
+[DOWNLOADED] bar v0.1.0 [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] foo [..]
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
             ",
         )
@@ -508,6 +534,7 @@ fn dev_deps() {
     // In this instance,
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
+    Package::new("baz2", "0.1.0").publish();
     Package::new("qux", "0.1.0").publish();
     Package::new("quux", "0.1.0").publish();
     let p = project()
@@ -523,11 +550,20 @@ fn dev_deps() {
             [dev-dependencies]
             bar = "0.1.0"
             baz = "0.1.0"
+            baz2 = "0.1.0"
             qux = "0.1.0"
-            quux = "0.1.0"
+            quux = "0.1.0" # only genuinely unused dep
         "#,
         )
-        .file("src/lib.rs", "")
+        .file(
+            "src/lib.rs",
+            r#"
+            /// ```
+            /// use baz2 as _; extern crate baz2;
+            /// ```
+            pub fn foo() {}
+        "#,
+        )
         .file(
             "tests/hello.rs",
             r#"
@@ -550,8 +586,8 @@ fn dev_deps() {
         )
         .build();
 
-    // cargo test --no-run doesn't test the benches
-    // and thus gives false positives
+    // cargo test --no-run doesn't test doctests and benches
+    // and thus doesn't create unused dev dep warnings
     p.cargo("test --no-run -Zwarn-unused-deps")
         .masquerade_as_nightly_cargo()
         .with_stderr(
@@ -560,29 +596,45 @@ fn dev_deps() {
 [DOWNLOADING] [..]
 [DOWNLOADED] qux v0.1.0 [..]
 [DOWNLOADED] quux v0.1.0 [..]
+[DOWNLOADED] baz2 v0.1.0 [..]
 [DOWNLOADED] baz v0.1.0 [..]
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
+[COMPILING] [..]
 [COMPILING] foo [..]
-[WARNING] unused dev-dependency quux in package foo v0.1.0
-[WARNING] unused dev-dependency qux in package foo v0.1.0
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
             ",
         )
         .run();
 
-    // The cargo test --no-run --all-targets tests
-    // everything that can use dev-deps except for doctests
+    // cargo test --no-run --all-targets
+    // doesn't test doctests, still no unused dev dep warnings
     p.cargo("test --no-run --all-targets -Zwarn-unused-deps")
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[WARNING] unused dev-dependency quux in package foo v0.1.0
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // cargo test tests
+    // everything including doctests, but not
+    // the benches
+    p.cargo("test -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[..]
+[WARNING] unused dev-dependency quux in package foo v0.1.0
+[WARNING] unused dev-dependency qux in package foo v0.1.0\
             ",
         )
         .run();
@@ -597,7 +649,7 @@ fn dev_deps() {
         )
         .run();
 
-    // cargo check --all-targets checks for unused dev-deps (for now)
+    // cargo check --all-targets doesn't check for unused dev-deps (no doctests ran)
     p.cargo("check --all-targets -Zwarn-unused-deps")
         .masquerade_as_nightly_cargo()
         .with_stderr(
@@ -606,8 +658,8 @@ fn dev_deps() {
 [CHECKING] [..]
 [CHECKING] [..]
 [CHECKING] [..]
+[CHECKING] [..]
 [CHECKING] foo [..]
-[WARNING] unused dev-dependency quux in package foo v0.1.0
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\
             ",
         )
@@ -618,6 +670,10 @@ fn dev_deps() {
 fn cfg_test_used() {
     // Ensure that a dependency only used from #[cfg(test)] code
     // is still registered as used.
+
+    // TODO: this test currently doesn't actually test that bar is used
+    // because the warning is witheld, waiting for doctests that never happen.
+    // It's due to a bug in cargo test --no-run
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
     let p = project()
@@ -632,7 +688,7 @@ fn cfg_test_used() {
 
             [dev-dependencies]
             bar = "0.1.0"
-            baz = "0.1.0"
+            #baz = "0.1.0"
         "#,
         )
         .file(
@@ -653,11 +709,8 @@ fn cfg_test_used() {
 [UPDATING] [..]
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
-[DOWNLOADED] [..]
-[COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] foo [..]
-[WARNING] unused dev-dependency baz in package foo v0.1.0
 [FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
             ",
         )

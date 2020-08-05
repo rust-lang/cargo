@@ -168,7 +168,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         // Now that we've figured out everything that we're going to do, do it!
-        queue.execute(&mut self, &mut plan)?;
+        let unused_dep_state = queue.execute(&mut self, &mut plan)?;
+
+        self.compilation.unused_dep_state = Some(unused_dep_state);
 
         if build_plan {
             plan.set_inputs(self.build_plan_inputs()?);
@@ -255,6 +257,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     unit: unit.clone(),
+                    unit_deps: self.unit_deps(&unit).to_vec(),
                     args,
                     unstable_opts,
                     linker: self.bcx.linker(unit.kind),

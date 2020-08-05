@@ -1,5 +1,5 @@
 use super::unit::Unit;
-use super::Context;
+use super::{Context, UnitDep};
 use crate::core::compiler::build_config::CompileMode;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::TargetKind;
@@ -7,13 +7,14 @@ use crate::core::Dependency;
 use crate::core::PackageId;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::Config;
 use log::trace;
 
 use std::collections::{HashMap, HashSet};
 
 pub type AllowedKinds = HashSet<DepKind>;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct State {
     /// All externs of a root unit.
     externs: HashMap<InternedString, Option<Dependency>>,
@@ -24,6 +25,7 @@ struct State {
     reports_needed_by: HashSet<Unit>,
 }
 
+#[derive(Clone)]
 pub struct UnusedDepState {
     states: HashMap<(PackageId, Option<DepKind>), State>,
     /// Tracking for which units we have received reports from.
@@ -51,6 +53,8 @@ fn dep_kind_of(unit: &Unit) -> DepKind {
         TargetKind::Lib(_) => match unit.mode {
             // To support lib.rs with #[cfg(test)] use foo_crate as _;
             CompileMode::Test => DepKind::Development,
+            // To correctly register dev-dependencies
+            CompileMode::Doctest => DepKind::Development,
             _ => DepKind::Normal,
         },
         TargetKind::Bin => DepKind::Normal,
@@ -120,10 +124,9 @@ impl UnusedDepState {
                 root.pkg.name(),
                 unit_desc(root),
             );
-            // We aren't getting output from doctests, so skip them (for now)
             if root.mode == CompileMode::Doctest {
-                trace!("    -> skipping doctest");
-                continue;
+                //trace!("    -> skipping doctest");
+                //continue;
             }
             for dep in cx.unit_deps(root).iter() {
                 trace!(
@@ -156,13 +159,12 @@ impl UnusedDepState {
     /// and then updating the global list of used externs
     pub fn record_unused_externs_for_unit(
         &mut self,
-        cx: &mut Context<'_, '_>,
+        unit_deps: &[UnitDep],
         unit: &Unit,
         unused_externs: Vec<String>,
     ) {
         self.reports_obtained.insert(unit.clone());
-        let usable_deps_iter = cx
-            .unit_deps(unit)
+        let usable_deps_iter = unit_deps
             .iter()
             // compare with similar check in extern_args
             .filter(|dep| dep.unit.target.is_linkable() && !dep.unit.mode.is_doc());
@@ -194,7 +196,7 @@ impl UnusedDepState {
                 let record_kind = dep_kind_of(unit);
                 trace!(
                     "   => updating state of {}dep",
-                    dep_kind_desc(Some(record_kind))
+                    dep_kind_desc(Some(record_kind)),
                 );
                 state
                     .used_externs
@@ -202,10 +204,20 @@ impl UnusedDepState {
             }
         }
     }
-    pub fn emit_unused_warnings(&self, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+    pub fn emit_unused_early_warnings(&self, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+        self.emit_unused_warnings_inner(cx.bcx.config, Some(&cx.bcx.allowed_kinds))
+    }
+    pub fn emit_unused_late_warnings(&self, config: &Config) -> CargoResult<()> {
+        self.emit_unused_warnings_inner(config, None)
+    }
+    fn emit_unused_warnings_inner(
+        &self,
+        config: &Config,
+        allowed_kinds_or_late: Option<&AllowedKinds>,
+    ) -> CargoResult<()> {
         trace!(
             "Allowed dependency kinds for the unused deps check: {:?}",
-            cx.bcx.allowed_kinds
+            allowed_kinds_or_late
         );
 
         // Sort the states to have a consistent output
@@ -247,12 +259,15 @@ impl UnusedDepState {
                 } else {
                     continue;
                 };
-                if !cx.bcx.allowed_kinds.contains(dep_kind) {
-                    // We can't warn for dependencies of this target kind
-                    // as we aren't compiling all the units
-                    // that use the dependency kind
-                    trace!("Supressing unused deps warning of {} in pkg {} v{} as mode '{}dep' not allowed", dependency.name_in_toml(), pkg_id.name(), pkg_id.version(), dep_kind_desc(Some(*dep_kind)));
-                    continue;
+                if let Some(allowed_kinds) = allowed_kinds_or_late {
+                    if !allowed_kinds.contains(dep_kind) {
+                        // We can't warn for dependencies of this target kind
+                        // as we aren't compiling all the units
+                        // that use the dependency kind
+                        trace!("Supressing unused deps warning of {} in pkg {} v{} as mode '{}dep' not allowed", dependency.name_in_toml(), pkg_id.name(), pkg_id.version(), dep_kind_desc(Some(*dep_kind)));
+                        continue;
+                    }
+                } else {
                 }
                 if dependency.name_in_toml().starts_with("_") {
                     // Dependencies starting with an underscore
@@ -270,7 +285,7 @@ impl UnusedDepState {
                 {
                     // The dependency is used but only by dev targets,
                     // which means it should be a dev-dependency instead
-                    cx.bcx.config.shell().warn(format!(
+                    config.shell().warn(format!(
                         "dependency {} in package {} v{} is only used by dev targets",
                         dependency.name_in_toml(),
                         pkg_id.name(),
@@ -279,7 +294,7 @@ impl UnusedDepState {
                     continue;
                 }
 
-                cx.bcx.config.shell().warn(format!(
+                config.shell().warn(format!(
                     "unused {}dependency {} in package {} v{}",
                     dep_kind_desc(Some(*dep_kind)),
                     dependency.name_in_toml(),

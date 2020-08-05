@@ -415,7 +415,11 @@ impl<'cfg> JobQueue<'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(
+        mut self,
+        cx: &mut Context<'_, '_>,
+        plan: &mut BuildPlan,
+    ) -> CargoResult<UnusedDepState> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -435,7 +439,7 @@ impl<'cfg> JobQueue<'cfg> {
             progress,
             next_id: 0,
             timings: self.timings,
-            unused_dep_state: UnusedDepState::new_with_graph(cx), // TODO
+            unused_dep_state: UnusedDepState::new_with_graph(cx),
             tokens: Vec::new(),
             rustc_tokens: HashMap::new(),
             to_send_clients: BTreeMap::new(),
@@ -629,8 +633,12 @@ impl<'cfg> DrainState<'cfg> {
             }
             Message::UnusedExterns(id, unused_externs) => {
                 let unit = &self.active[&id];
-                self.unused_dep_state
-                    .record_unused_externs_for_unit(cx, unit, unused_externs);
+                let unit_deps = cx.unit_deps(&unit);
+                self.unused_dep_state.record_unused_externs_for_unit(
+                    unit_deps,
+                    unit,
+                    unused_externs,
+                );
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
@@ -716,7 +724,7 @@ impl<'cfg> DrainState<'cfg> {
         plan: &mut BuildPlan,
         scope: &Scope<'_>,
         jobserver_helper: &HelperThread,
-    ) -> (Result<(), anyhow::Error>,) {
+    ) -> (Result<UnusedDepState, anyhow::Error>,) {
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -805,7 +813,7 @@ impl<'cfg> DrainState<'cfg> {
         }
 
         if !cx.bcx.build_config.build_plan && cx.bcx.config.cli_unstable().warn_unused_deps {
-            drop(self.unused_dep_state.emit_unused_warnings(cx));
+            drop(self.unused_dep_state.emit_unused_early_warnings(cx));
         }
 
         if let Some(e) = error {
@@ -821,7 +829,7 @@ impl<'cfg> DrainState<'cfg> {
                 self.emit_future_incompat(cx);
             }
 
-            (Ok(()),)
+            (Ok(self.unused_dep_state),)
         } else {
             debug!("queue: {:#?}", self.queue);
             (Err(internal("finished with jobs still left in the queue")),)
