@@ -544,12 +544,29 @@ where
             let pkg = Box::new(source).download_now(pkgid, config)?;
             Ok(pkg)
         }
-        None => bail!(
-            "could not find `{}` in {} with version `{}`",
-            dep.package_name(),
-            source.source_id(),
-            dep.version_req(),
-        ),
+        None => {
+            let is_yanked: bool = if dep.version_req().is_exact() {
+                let version: String = dep.version_req().to_string();
+                PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                    .map_or(false, |pkg_id| source.is_yanked(pkg_id).unwrap_or(false))
+            } else {
+                false
+            };
+            if is_yanked {
+                bail!(
+                    "cannot install package `{}`, it has been yanked from {}",
+                    dep.package_name(),
+                    source.source_id()
+                )
+            } else {
+                bail!(
+                    "could not find `{}` in {} with version `{}`",
+                    dep.package_name(),
+                    source.source_id(),
+                    dep.version_req(),
+                )
+            }
+        }
     }
 }
 

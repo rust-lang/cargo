@@ -5,14 +5,15 @@ use std::io::prelude::*;
 
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
-use cargo_test_support::install::{
-    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
-};
-use cargo_test_support::paths;
 use cargo_test_support::registry::{registry_path, registry_url, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, symlink_supported, t,
 };
+
+use cargo_test_support::install::{
+    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
+};
+use cargo_test_support::paths;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -1552,6 +1553,18 @@ fn install_git_with_symlink_home() {
 [INSTALLED] package `foo [..]
 [WARNING] be sure to add [..]
 ",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn install_yanked_cargo_package() {
+    Package::new("baz", "0.0.1").yanked(true).publish();
+    cargo_process("install baz --version 0.0.1")
+        .with_status(101)
+        .with_stderr_contains(
+            "error: cannot install package `baz`, it has been yanked from registry \
+         `https://github.com/rust-lang/crates.io-index`",
         )
         .run();
 }
