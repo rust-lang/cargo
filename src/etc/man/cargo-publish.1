@@ -74,10 +74,13 @@ The URL of the registry index to use.
 .sp
 \fB\-\-registry\fR \fIregistry\fR
 .RS 4
-Name of the registry to use. Registry names are defined in \fICargo config
-files\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. If not specified, the default registry is used,
-which is defined by the \fBregistry.default\fR config key which defaults to
-\fBcrates\-io\fR\&.
+Name of the registry to publish to. Registry names are defined in \fICargo
+config files\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. If not specified, and there is a
+\fI\f(BIpackage.publish\fI\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-publish\-field> field in
+\fBCargo.toml\fR with a single registry, then it will publish to that registry.
+Otherwise it will use the default registry, which is defined by the
+\fI\f(BIregistry.default\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registry\-default> config key
+which defaults to \fBcrates\-io\fR\&.
 .RE
 .SS "Compilation Options"
 .sp

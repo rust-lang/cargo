@@ -51,7 +51,15 @@ Allow working directories with uncommitted VCS changes to be packaged.
 
 {{> options-index }}
 
-{{> options-registry }}
+{{#option "`--registry` _registry_"}}
+Name of the registry to publish to. Registry names are defined in [Cargo
+config files](../reference/config.html). If not specified, and there is a
+[`package.publish`](../reference/manifest.html#the-publish-field) field in
+`Cargo.toml` with a single registry, then it will publish to that registry.
+Otherwise it will use the default registry, which is defined by the
+[`registry.default`](../reference/config.html#registry-default) config key
+which defaults to `crates-io`.
+{{/option}}
 
 {{/options}}
 

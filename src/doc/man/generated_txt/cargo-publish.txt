@@ -56,11 +56,16 @@ OPTIONS
            The URL of the registry index to use.
 
        --registry registry
-           Name of the registry to use. Registry names are defined in Cargo
-           config files
+           Name of the registry to publish to. Registry names are defined in
+           Cargo config files
            <https://doc.rust-lang.org/cargo/reference/config.html>. If not
-           specified, the default registry is used, which is defined by the
-           registry.default config key which defaults to crates-io.
+           specified, and there is a package.publish
+           <https://doc.rust-lang.org/cargo/reference/manifest.html#the-publish-field>
+           field in Cargo.toml with a single registry, then it will publish to
+           that registry. Otherwise it will use the default registry, which is
+           defined by the registry.default
+           <https://doc.rust-lang.org/cargo/reference/config.html#registry-default>
+           config key which defaults to crates-io.
 
    Compilation Options
        --target triple
