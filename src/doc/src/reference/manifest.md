@@ -406,6 +406,9 @@ allowed to be published to.
 publish = ["some-registry-name"]
 ```
 
+If publish array contains a single registry, `cargo publish` command will use
+it when `--registry` flag is not specified.
+
 <a id="the-metadata-table-optional"></a>
 #### The `metadata` table
 
