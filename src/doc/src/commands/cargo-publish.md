@@ -65,11 +65,13 @@ of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---registry"><a class="option-anchor" href="#option-cargo-publish---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config
-files</a>. If not specified, the default registry is used,
-which is defined by the <code>registry.default</code> config key which defaults to
-<code>crates-io</code>.</dd>
-
+<dd class="option-desc">Name of the registry to publish to. Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo
+config files</a>. If not specified, and there is a
+<a href="https://doc.rust-lang.org/cargo/reference/manifest.html#the-publish-field"><code>package.publish</code></a> field in
+<code>Cargo.toml</code> with a single registry, then it will publish to that registry.
+Otherwise it will use the default registry, which is defined by the
+<a href="https://doc.rust-lang.org/cargo/reference/config.html#registry-default"><code>registry.default</code></a> config key
+which defaults to <code>crates-io</code>.</dd>
 
 
 </dl>
