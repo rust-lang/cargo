@@ -876,7 +876,7 @@ fn build_base_args(
         CompileMode::Check { doc: true, .. } | CompileMode::Doc { .. } => {
             cmd.arg("--cfg").arg("doc");
         }
-        _ => {},
+        _ => {}
     }
 
     match cx.files().metadata(unit) {

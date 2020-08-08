@@ -1565,7 +1565,8 @@ fn dependency_cfg_doc() {
             #[cfg(doc)]
             pub const A: u32 = 0;
             pub const B: u32 = A;
-        ")
+        ",
+        )
         .file("main.rs", "fn main() { let _ = foo::B; }")
         .build();
 
