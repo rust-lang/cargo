@@ -1542,3 +1542,42 @@ fn crate_versions_flag_is_overridden() {
     p.cargo("rustdoc -- --crate-version 2.0.3").run();
     asserts(output_documentation());
 }
+
+#[cargo_test]
+fn dependency_cfg_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [lib]
+            [[bin]]
+            name = "main"
+            path = "main.rs"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            #[cfg(doc)]
+            pub const A: u32 = 0;
+            pub const B: u32 = A;
+        ")
+        .file("main.rs", "fn main() { let _ = foo::B; }")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+}

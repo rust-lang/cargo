@@ -621,8 +621,8 @@ impl CompileFilter {
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
-            CompileMode::Check { test: true } => true,
-            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { test: false } => {
+            CompileMode::Check { test: true, .. } => true,
+            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { test: false, .. } => {
                 match *self {
                     CompileFilter::Default { .. } => false,
                     CompileFilter::Only {
@@ -868,7 +868,7 @@ fn generate_targets(
             };
             let test_mode = match mode {
                 CompileMode::Build => CompileMode::Test,
-                CompileMode::Check { .. } => CompileMode::Check { test: true },
+                CompileMode::Check { doc, .. } => CompileMode::Check { doc, test: true },
                 _ => mode,
             };
             // If `--benches` was specified, add all targets that would be
@@ -879,7 +879,7 @@ fn generate_targets(
             };
             let bench_mode = match mode {
                 CompileMode::Build => CompileMode::Bench,
-                CompileMode::Check { .. } => CompileMode::Check { test: true },
+                CompileMode::Check { doc, .. } => CompileMode::Check { doc, test: true },
                 _ => mode,
             };
 

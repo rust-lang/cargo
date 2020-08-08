@@ -89,7 +89,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
-    let mode = CompileMode::Check { test };
+    let mode = CompileMode::Check { test, doc: false };
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.

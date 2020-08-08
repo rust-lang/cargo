@@ -131,8 +131,8 @@ pub enum CompileMode {
     Build,
     /// Building a target with `rustc` to emit `rmeta` metadata only. If
     /// `test` is true, then it is also compiled with `--test` to check it like
-    /// a test.
-    Check { test: bool },
+    /// a test. If `doc` is true, then it is compiled with `--cfg doc`.
+    Check { test: bool, doc: bool },
     /// Used to indicate benchmarks should be built. This is not used in
     /// `Unit`, because it is essentially the same as `Test` (indicating
     /// `--test` should be passed to rustc) and by using `Test` instead it
@@ -188,7 +188,7 @@ impl CompileMode {
             self,
             CompileMode::Test
                 | CompileMode::Bench
-                | CompileMode::Check { test: true }
+                | CompileMode::Check { test: true, .. }
                 | CompileMode::Doctest
         )
     }
@@ -197,7 +197,7 @@ impl CompileMode {
     pub fn is_rustc_test(self) -> bool {
         matches!(
             self,
-            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true }
+            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true, .. }
         )
     }
 

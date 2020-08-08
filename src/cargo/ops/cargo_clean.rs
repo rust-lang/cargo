@@ -140,7 +140,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
             for &mode in &[
                 CompileMode::Build,
                 CompileMode::Test,
-                CompileMode::Check { test: false },
+                CompileMode::Check { test: false, doc: false },
             ] {
                 for (compile_kind, layout) in &layouts {
                     let triple = target_data.short_name(compile_kind);

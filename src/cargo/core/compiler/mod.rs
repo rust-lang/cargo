@@ -872,6 +872,13 @@ fn build_base_args(
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
+    match unit.mode {
+        CompileMode::Check { doc: true, .. } | CompileMode::Doc { .. } => {
+            cmd.arg("--cfg").arg("doc");
+        }
+        _ => {},
+    }
+
     match cx.files().metadata(unit) {
         Some(m) => {
             cmd.arg("-C").arg(&format!("metadata={}", m));

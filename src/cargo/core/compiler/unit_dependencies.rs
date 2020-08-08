@@ -561,7 +561,12 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
             } else {
                 // Regular dependencies should not be checked with --test.
                 // Regular dependencies of doc targets should emit rmeta only.
-                CompileMode::Check { test: false }
+                let doc = match mode {
+                    CompileMode::Check { doc, .. } => doc,
+                    CompileMode::Doc { .. } => true,
+                    _ => false,
+                };
+                CompileMode::Check { test: false, doc }
             }
         }
         _ => CompileMode::Build,
