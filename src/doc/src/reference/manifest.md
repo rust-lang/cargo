@@ -218,8 +218,8 @@ the user must comply with both licenses simultaneously. The `WITH` operator
 indicates a license with a special exception. Some examples:
 
 * `MIT OR Apache-2.0`
-* `LGPL-2.1 AND MIT AND BSD-2-Clause`
-* `GPL-2.0+ WITH Bison-exception-2.2`
+* `LGPL-2.1-only AND MIT AND BSD-2-Clause`
+* `GPL-2.0-or-later WITH Bison-exception-2.2`
 
 If a package is using a nonstandard license, then the `license-file` field may
 be specified in lieu of the `license` field.
