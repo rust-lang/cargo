@@ -16,6 +16,17 @@ pub fn cli() -> App {
             "Exclude packages from the build",
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
+        .arg(
+            opt(
+                "deps",
+                "Build documentation for given kinds of dependencies",
+            )
+            .takes_value(true)
+            .multiple(true)
+            .require_delimiter(true)
+            .possible_values(&["all", "build", "dev", "normal"])
+            .conflicts_with("no-deps"),
+        )
         .arg(opt("document-private-items", "Document private items"))
         .arg_jobs()
         .arg_targets_lib_bin(
@@ -36,11 +47,38 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let mode = CompileMode::Doc {
-        deps: !args.is_present("no-deps"),
-    };
-    let mut compile_opts =
-        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
+
+    let mut deps_mode = DocDepsMode::default();
+    if let Some(deps) = args.values_of("deps") {
+        config.cli_unstable().fail_if_stable_opt("--deps", 8608)?;
+
+        // Disable documenting of transitive dependencies.
+        deps_mode.deps = false;
+        for dep in deps {
+            match dep {
+                "all" => {
+                    deps_mode.build = true;
+                    deps_mode.normal = true;
+                    deps_mode.dev = true;
+                }
+                "build" => deps_mode.build = true,
+                "normal" => deps_mode.normal = true,
+                "dev" => deps_mode.dev = true,
+                _ => unreachable!(),
+            }
+        }
+    } else {
+        let no_deps = args.is_present("no-deps");
+        deps_mode.deps = !no_deps;
+        deps_mode.normal = !no_deps;
+    }
+
+    let mut compile_opts = args.compile_options(
+        config,
+        CompileMode::Doc(deps_mode),
+        Some(&ws),
+        ProfileChecking::Checked,
+    )?;
     compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
 
     let doc_opts = DocOptions {

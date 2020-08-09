@@ -2,7 +2,7 @@
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, Project};
 use cargo_test_support::{is_nightly, rustc_host};
 use std::fs;
 use std::str;
@@ -1541,4 +1541,70 @@ fn crate_versions_flag_is_overridden() {
 
     p.cargo("rustdoc -- --crate-version 2.0.3").run();
     asserts(output_documentation());
+}
+
+fn build_doc_project() -> Project {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            num = { path = "num" }
+
+            [build-dependencies]
+            baz = { path = "baz" }
+
+            [dev-dependencies]
+            dev = { path = "dev" }
+        "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("num/Cargo.toml", &basic_manifest("num", "1.0.0"))
+        .file("num/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "1.0.0"))
+        .file("baz/src/lib.rs", "")
+        .file("dev/Cargo.toml", &basic_manifest("dev", "1.0.0"))
+        .file("dev/src/lib.rs", "")
+        .build()
+}
+
+#[cargo_test]
+fn doc_deps_dev() {
+    build_doc_project()
+        .cargo("doc -Zunstable-options --deps=dev")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..] Documenting dev v1.0.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.0.1 ([..])")
+        .with_stderr_does_not_contain("[..] Documenting baz v1.0.0 ([..])")
+        .with_stderr_does_not_contain("[..] Documenting num v1.0.0 ([..])")
+        .run();
+}
+
+#[cargo_test]
+fn doc_deps_build_normal() {
+    build_doc_project()
+        .cargo("doc -Zunstable-options --deps=build,normal")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..] Documenting baz v1.0.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.0.1 ([..])")
+        .with_stderr_contains("[..] Documenting num v1.0.0 ([..])")
+        .with_stderr_does_not_contain("[..] Documenting dev v1.0.0 ([..])")
+        .run();
+}
+
+#[cargo_test]
+fn doc_deps_all() {
+    build_doc_project()
+        .cargo("doc -Zunstable-options --deps=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..] Documenting baz v1.0.0 ([..])")
+        .with_stderr_contains("[..] Documenting dev v1.0.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.0.1 ([..])")
+        .with_stderr_contains("[..] Documenting num v1.0.0 ([..])")
+        .run();
 }

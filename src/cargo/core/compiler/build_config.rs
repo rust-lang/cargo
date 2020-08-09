@@ -139,12 +139,24 @@ pub enum CompileMode {
     /// allows some de-duping of Units to occur.
     Bench,
     /// A target that will be documented with `rustdoc`.
-    /// If `deps` is true, then it will also document all dependencies.
-    Doc { deps: bool },
+    Doc(DocDepsMode),
     /// A target that will be tested with `rustdoc`.
     Doctest,
     /// A marker for Units that represent the execution of a `build.rs` script.
     RunCustomBuild,
+}
+
+/// Describes what kinds of dependencies should be documented.
+#[derive(Clone, Copy, Default, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
+pub struct DocDepsMode {
+    /// Document build dependencies.
+    pub build: bool,
+    /// Document development dependencies.
+    pub dev: bool,
+    /// Document normal dependencies.
+    pub normal: bool,
+    /// Whether to document dependencies of other crates being documented.
+    pub deps: bool,
 }
 
 impl ser::Serialize for CompileMode {

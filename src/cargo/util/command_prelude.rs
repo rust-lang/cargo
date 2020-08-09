@@ -15,7 +15,7 @@ use clap::{self, SubCommand};
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
-pub use crate::core::compiler::CompileMode;
+pub use crate::core::compiler::{CompileMode, DocDepsMode};
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 

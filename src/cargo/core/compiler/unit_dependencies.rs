@@ -17,7 +17,7 @@
 
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::UnitInterner;
-use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, DocDepsMode, RustcTargetData, Unit};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
@@ -404,14 +404,23 @@ fn compute_deps_custom_build(
 
 /// Returns the dependencies necessary to document a package.
 fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<UnitDep>> {
+    let deps_mode = match unit.mode {
+        CompileMode::Doc(deps_mode) => deps_mode,
+        _ => unreachable!(),
+    };
+
     let target_data = state.target_data;
     let deps = state
         .resolve()
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
-            deps.iter().any(|dep| match dep.kind() {
-                DepKind::Normal => target_data.dep_platform_activated(dep, unit.kind),
-                _ => false,
+            deps.iter().any(|dep| {
+                let required = match dep.kind() {
+                    DepKind::Normal => true,
+                    DepKind::Build => deps_mode.build,
+                    DepKind::Development => deps_mode.dev,
+                };
+                required && target_data.dep_platform_activated(dep, unit.kind)
             })
         });
 
@@ -419,7 +428,7 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
-    for (id, _deps) in deps {
+    for (id, deps) in deps {
         let dep = state.get(id);
         let lib = match dep.targets().iter().find(|t| t.is_lib()) {
             Some(lib) => lib,
@@ -441,7 +450,14 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
             mode,
         )?;
         ret.push(lib_unit_dep);
-        if let CompileMode::Doc { deps: true } = unit.mode {
+
+        let should_document = deps.iter().any(|dep| match dep.kind() {
+            DepKind::Normal => deps_mode.normal,
+            DepKind::Build => deps_mode.build,
+            DepKind::Development => deps_mode.dev,
+        });
+
+        if should_document {
             // Document this lib as well.
             let doc_unit_dep = new_unit_dep(
                 state,
@@ -450,7 +466,12 @@ fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<U
                 lib,
                 dep_unit_for,
                 unit.kind.for_target(lib),
-                unit.mode,
+                CompileMode::Doc(DocDepsMode {
+                    deps: deps_mode.deps,
+                    build: false,
+                    dev: false,
+                    normal: deps_mode.deps,
+                }),
             )?;
             ret.push(doc_unit_dep);
         }
