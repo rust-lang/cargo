@@ -51,7 +51,10 @@ fn jobserver_exists() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    // Explicitly use `-j2` to ensure that there's eventually going to be a
+    // token to read from `validate` above, since running the build script
+    // itself consumes a token.
+    p.cargo("build -j2").run();
 }
 
 #[cargo_test]
