@@ -14,9 +14,28 @@ use std::collections::{HashMap, HashSet};
 
 pub type AllowedKinds = HashSet<DepKind>;
 
+#[derive(serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
+/// Lint levels
+///
+/// Note that order is important here
+pub enum LintLevel {
+    // Allow isn't mentioned as the unused dependencies message
+    // isn't emitted if the lint is set to allow.
+    Warn,
+    Deny,
+    Forbid,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct UnusedExterns {
+    lint_level: LintLevel,
+    unused_extern_names: Vec<String>,
+}
+
 #[derive(Default, Clone)]
 struct State {
-    /// All externs of a root unit.
+    /// All externs passed to units
     externs: HashMap<InternedString, Option<Dependency>>,
     /// The used externs so far.
     /// The DepKind is included so that we can tell when
@@ -28,6 +47,8 @@ struct State {
 #[derive(Clone)]
 pub struct UnusedDepState {
     states: HashMap<(PackageId, Option<DepKind>), State>,
+    /// The worst encountered lint level so far
+    worst_lint_level: LintLevel,
     /// Tracking for which units we have received reports from.
     ///
     /// When we didn't receive reports, e.g. because of an error,
@@ -152,6 +173,7 @@ impl UnusedDepState {
 
         Self {
             states,
+            worst_lint_level: LintLevel::Warn,
             reports_obtained: HashSet::new(),
         }
     }
@@ -161,15 +183,18 @@ impl UnusedDepState {
         &mut self,
         unit_deps: &[UnitDep],
         unit: &Unit,
-        unused_externs: Vec<String>,
+        unused_externs: UnusedExterns,
     ) {
         self.reports_obtained.insert(unit.clone());
+        self.worst_lint_level = self.worst_lint_level.max(unused_externs.lint_level);
+
         let usable_deps_iter = unit_deps
             .iter()
             // compare with similar check in extern_args
             .filter(|dep| dep.unit.target.is_linkable() && !dep.unit.mode.is_doc());
 
         let unused_externs_set = unused_externs
+            .unused_extern_names
             .iter()
             .map(|ex| InternedString::new(ex))
             .collect::<HashSet<InternedString>>();
@@ -220,88 +245,107 @@ impl UnusedDepState {
             allowed_kinds_or_late
         );
 
-        // Sort the states to have a consistent output
-        let mut states_sorted = self.states.iter().collect::<Vec<_>>();
-        states_sorted.sort_by_key(|(k, _v)| k.clone());
-        for ((pkg_id, dep_kind), state) in states_sorted.iter() {
-            let outstanding_reports = state
-                .reports_needed_by
-                .iter()
-                .filter(|report| !self.reports_obtained.contains(report))
-                .collect::<Vec<_>>();
-            if !outstanding_reports.is_empty() {
-                trace!("Supressing unused deps warning of pkg {} v{} mode '{}dep' due to outstanding reports {:?}", pkg_id.name(), pkg_id.version(), dep_kind_desc(*dep_kind),
+        let mut error_count = 0;
+        {
+            let mut emit_lint: Box<dyn FnMut(String) -> CargoResult<()>> =
+                if self.worst_lint_level == LintLevel::Warn {
+                    Box::new(|msg| config.shell().warn(msg))
+                } else {
+                    Box::new(|msg| {
+                        error_count += 1;
+                        config.shell().error(msg)
+                    })
+                };
+
+            // Sort the states to have a consistent output
+            let mut states_sorted = self.states.iter().collect::<Vec<_>>();
+            states_sorted.sort_by_key(|(k, _v)| k.clone());
+            for ((pkg_id, dep_kind), state) in states_sorted.iter() {
+                let outstanding_reports = state
+                    .reports_needed_by
+                    .iter()
+                    .filter(|report| !self.reports_obtained.contains(report))
+                    .collect::<Vec<_>>();
+                if !outstanding_reports.is_empty() {
+                    trace!("Supressing unused deps warning of pkg {} v{} mode '{}dep' due to outstanding reports {:?}", pkg_id.name(), pkg_id.version(), dep_kind_desc(*dep_kind),
                 outstanding_reports.iter().map(|unit|
                 unit_desc(unit)).collect::<Vec<_>>());
 
-                // Some compilations errored without printing the unused externs.
-                // Don't print the warning in order to reduce false positive
-                // spam during errors.
-                continue;
-            }
-            // Sort the externs to have a consistent output
-            let mut externs_sorted = state.externs.iter().collect::<Vec<_>>();
-            externs_sorted.sort_by_key(|(k, _v)| k.clone());
-            for (ext, dependency) in externs_sorted.iter() {
-                let dep_kind = if let Some(dep_kind) = dep_kind {
-                    dep_kind
-                } else {
-                    // Internal dep_kind isn't interesting to us
-                    continue;
-                };
-                if state.used_externs.contains(&(**ext, *dep_kind)) {
-                    // The dependency is used
+                    // Some compilations errored without printing the unused externs.
+                    // Don't print the warning in order to reduce false positive
+                    // spam during errors.
                     continue;
                 }
-                // Implicitly added dependencies (in the same crate) aren't interesting
-                let dependency = if let Some(dependency) = dependency {
-                    dependency
-                } else {
-                    continue;
-                };
-                if let Some(allowed_kinds) = allowed_kinds_or_late {
-                    if !allowed_kinds.contains(dep_kind) {
-                        // We can't warn for dependencies of this target kind
-                        // as we aren't compiling all the units
-                        // that use the dependency kind
-                        trace!("Supressing unused deps warning of {} in pkg {} v{} as mode '{}dep' not allowed", dependency.name_in_toml(), pkg_id.name(), pkg_id.version(), dep_kind_desc(Some(*dep_kind)));
+                // Sort the externs to have a consistent output
+                let mut externs_sorted = state.externs.iter().collect::<Vec<_>>();
+                externs_sorted.sort_by_key(|(k, _v)| k.clone());
+                for (ext, dependency) in externs_sorted.iter() {
+                    let dep_kind = if let Some(dep_kind) = dep_kind {
+                        dep_kind
+                    } else {
+                        // Internal dep_kind isn't interesting to us
+                        continue;
+                    };
+                    if state.used_externs.contains(&(**ext, *dep_kind)) {
+                        // The dependency is used
                         continue;
                     }
-                } else {
-                }
-                if dependency.name_in_toml().starts_with("_") {
-                    // Dependencies starting with an underscore
-                    // are marked as ignored
-                    trace!(
-                        "Supressing unused deps warning of {} in pkg {} v{} due to name",
-                        dependency.name_in_toml(),
-                        pkg_id.name(),
-                        pkg_id.version()
-                    );
-                    continue;
-                }
-                if dep_kind == &DepKind::Normal
-                    && state.used_externs.contains(&(**ext, DepKind::Development))
-                {
-                    // The dependency is used but only by dev targets,
-                    // which means it should be a dev-dependency instead
-                    config.shell().warn(format!(
-                        "dependency {} in package {} v{} is only used by dev targets",
+                    // Implicitly added dependencies (in the same crate) aren't interesting
+                    let dependency = if let Some(dependency) = dependency {
+                        dependency
+                    } else {
+                        continue;
+                    };
+                    if let Some(allowed_kinds) = allowed_kinds_or_late {
+                        if !allowed_kinds.contains(dep_kind) {
+                            // We can't warn for dependencies of this target kind
+                            // as we aren't compiling all the units
+                            // that use the dependency kind
+                            trace!("Supressing unused deps warning of {} in pkg {} v{} as mode '{}dep' not allowed", dependency.name_in_toml(), pkg_id.name(), pkg_id.version(), dep_kind_desc(Some(*dep_kind)));
+                            continue;
+                        }
+                    } else {
+                    }
+                    if dependency.name_in_toml().starts_with("_") {
+                        // Dependencies starting with an underscore
+                        // are marked as ignored
+                        trace!(
+                            "Supressing unused deps warning of {} in pkg {} v{} due to name",
+                            dependency.name_in_toml(),
+                            pkg_id.name(),
+                            pkg_id.version()
+                        );
+                        continue;
+                    }
+                    if dep_kind == &DepKind::Normal
+                        && state.used_externs.contains(&(**ext, DepKind::Development))
+                    {
+                        // The dependency is used but only by dev targets,
+                        // which means it should be a dev-dependency instead
+                        emit_lint(format!(
+                            "dependency {} in package {} v{} is only used by dev targets",
+                            dependency.name_in_toml(),
+                            pkg_id.name(),
+                            pkg_id.version()
+                        ))?;
+                        continue;
+                    }
+
+                    emit_lint(format!(
+                        "unused {}dependency {} in package {} v{}",
+                        dep_kind_desc(Some(*dep_kind)),
                         dependency.name_in_toml(),
                         pkg_id.name(),
                         pkg_id.version()
                     ))?;
-                    continue;
                 }
-
-                config.shell().warn(format!(
-                    "unused {}dependency {} in package {} v{}",
-                    dep_kind_desc(Some(*dep_kind)),
-                    dependency.name_in_toml(),
-                    pkg_id.name(),
-                    pkg_id.version()
-                ))?;
             }
+        }
+        if error_count > 0 {
+            anyhow::bail!(
+                "exiting because of {} unused dependencies error(s)",
+                error_count
+            );
         }
         Ok(())
     }

@@ -1,3 +1,4 @@
+use crate::core::compiler::unused_dependencies::UnusedExterns;
 use crate::core::compiler::{Compilation, CompileKind, Doctest, UnitOutput};
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
@@ -260,16 +261,8 @@ fn run_doc_tests(
                 Ok(())
             },
             &mut |line| {
-                #[derive(serde::Deserialize)]
-                struct UnusedExterns {
-                    unused_extern_names: Vec<String>,
-                }
                 if let Ok(uext) = serde_json::from_str::<UnusedExterns>(line) {
-                    unused_dep_state.record_unused_externs_for_unit(
-                        &unit_deps,
-                        unit,
-                        uext.unused_extern_names,
-                    );
+                    unused_dep_state.record_unused_externs_for_unit(&unit_deps, unit, uext);
                     // Supress output of the json formatted unused extern message
                     return Ok(());
                 }

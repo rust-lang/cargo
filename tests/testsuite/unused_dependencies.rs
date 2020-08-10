@@ -11,6 +11,7 @@ use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
 // TODO more commands for the tests to test the allowed kinds logic
+// TODO ensure that build-dependencies are warned about when there's no build.rs at all
 // TODO document the tests
 
 #[cargo_test(unused_dependencies)]
@@ -377,6 +378,7 @@ fn unused_dep_lib_bin() {
         .run();
 }
 
+#[rustfmt::skip]
 #[cargo_test(unused_dependencies)]
 fn should_be_dev() {
     // Test the warning that a dependency should be a dev dep.
@@ -434,7 +436,6 @@ fn should_be_dev() {
         )
         .build();
 
-    #[rustfmt::skip]
 /*
     // Currently disabled because of a bug: test --no-run witholds unused dep warnings
     // for doctests that never happen
@@ -531,7 +532,6 @@ fn should_be_dev() {
 #[cargo_test(unused_dependencies)]
 fn dev_deps() {
     // Test for unused dev dependencies
-    // In this instance,
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
     Package::new("baz2", "0.1.0").publish();
@@ -664,6 +664,159 @@ fn dev_deps() {
             ",
         )
         .run();
+}
+
+#[rustfmt::skip]
+#[cargo_test(unused_dependencies)]
+fn lint_control() {
+    // Test for user control of lint severity
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+    Package::new("baz2", "0.1.0").publish();
+    Package::new("qux", "0.1.0").publish();
+    Package::new("quux", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [build-dependencies]
+            baz = "0.1.0"
+
+            [dependencies]
+            qux = "0.1.0"
+
+            [dev-dependencies]
+            bar = "0.1.0"
+            baz2 = "0.1.0"
+            quux = "0.1.0"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            /// ```
+            /// use baz2 as _; extern crate baz2;
+            /// ```
+            pub fn foo() {}
+        "#,
+        )
+        .file(
+            "tests/hello.rs",
+            r#"
+            #![deny(unused_crate_dependencies)]
+            use bar as _;
+            "#,
+        )
+        .build();
+
+    // cargo test --no-run doesn't test doctests and benches
+    // and thus doesn't create unused dev dep warnings
+    p.cargo("test --no-run -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+[DOWNLOADED] qux v0.1.0 [..]
+[DOWNLOADED] quux v0.1.0 [..]
+[DOWNLOADED] baz2 v0.1.0 [..]
+[DOWNLOADED] baz v0.1.0 [..]
+[DOWNLOADED] bar v0.1.0 [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] foo [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // cargo test --no-run --all-targets
+    // doesn't test doctests, still no unused dev dep warnings
+    p.cargo("test --no-run --all-targets -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[ERROR] unused dependency qux in package foo v0.1.0
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // cargo test tests
+    // everything including doctests, but not
+    // the benches
+    p.cargo("test -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[..]
+[ERROR] unused dependency qux in package foo v0.1.0
+[ERROR] unused dev-dependency quux in package foo v0.1.0\
+            ",
+        )
+        .run();
+
+    // cargo build doesn't build the tests
+    // so it can't find the error setting and thus emits a warning
+    p.cargo("build -Zwarn-unused-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[WARNING] unused dependency qux in package foo v0.1.0
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // TODO remove the /* */ when rustc sets the
+    // unused dependency lint to warn by default
+/*
+    // Passing -D for the lint turns it into an error
+    p.cargo("rustc -Zwarn-unused-deps -- -D unused-crate-dependencies")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[ERROR] unused dependency qux in package foo v0.1.0
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // Passing -F for the lint turns it into an error
+    p.cargo("rustc -Zwarn-unused-deps -- -F unused_crate_dependencies")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[ERROR] unused dependency qux in package foo v0.1.0
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+
+    // Passing -A for the lint removes it
+    p.cargo("rustc -Zwarn-unused-deps -- -Aunused_crate_dependencies")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\
+            ",
+        )
+        .run();
+*/
 }
 
 #[cargo_test(unused_dependencies)]

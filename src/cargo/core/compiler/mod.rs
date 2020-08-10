@@ -50,6 +50,7 @@ pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::unit_graph::UnitDep;
+use self::unused_dependencies::UnusedExterns;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
@@ -215,6 +216,10 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     let buildkey = unit.buildkey();
 
     add_cap_lints(cx.bcx, unit, &mut rustc);
+
+    if cx.bcx.config.cli_unstable().warn_unused_deps && unit.show_warnings(cx.bcx.config) {
+        rustc.arg("-W").arg("unused_crate_dependencies");
+    }
 
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
@@ -1338,16 +1343,9 @@ fn on_stderr_line_inner(
         }
     }
 
-    #[derive(serde::Deserialize)]
-    struct UnusedExterns {
-        unused_extern_names: Vec<String>,
-    }
     if let Ok(uext) = serde_json::from_str::<UnusedExterns>(compiler_message.get()) {
-        log::trace!(
-            "obtained unused externs list from rustc: `{:?}`",
-            uext.unused_extern_names
-        );
-        state.unused_externs(uext.unused_extern_names);
+        log::trace!("obtained unused externs message from rustc: `{:?}`", uext);
+        state.unused_externs(uext);
         return Ok(true);
     }
 
