@@ -35,6 +35,8 @@
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
     * [Registries](reference/registries.md)
+    * [Dependency Resolution](reference/resolver.md)
+    * [SemVer Compatibility](reference/semver.md)
     * [Unstable Features](reference/unstable.md)
 
 * [Cargo Commands](commands/index.md)
