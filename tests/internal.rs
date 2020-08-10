@@ -6,11 +6,18 @@ fn check_forbidden_code() {
     // Do not use certain macros, functions, etc.
     if !cargo::util::is_ci() {
         // Only check these on CI, otherwise it could be annoying.
+        use std::io::Write;
+        writeln!(
+            std::io::stderr(),
+            "\nSkipping check_forbidden_code test, set CI=1 to enable"
+        )
+        .unwrap();
         return;
     }
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    for entry in walkdir::WalkDir::new(path)
+    let root_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    for entry in walkdir::WalkDir::new(&root_path)
         .into_iter()
+        .filter_entry(|e| e.path() != root_path.join("doc"))
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
@@ -22,6 +29,7 @@ fn check_forbidden_code() {
         {
             continue;
         }
+        eprintln!("checking {}", path.display());
         let c = fs::read_to_string(path).unwrap();
         for (line_index, line) in c.lines().enumerate() {
             if line.trim().starts_with("//") {
