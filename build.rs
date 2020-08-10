@@ -14,10 +14,15 @@ fn compress_man() {
         .filename("man.tar")
         .write(dst, Compression::best());
     let mut ar = tar::Builder::new(encoder);
+    ar.mode(tar::HeaderMode::Deterministic);
 
     let mut add_files = |dir, extension| {
-        for entry in fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
+        let mut files = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .collect::<Vec<_>>();
+        files.sort();
+        for path in files {
             if path.extension() != Some(extension) {
                 continue;
             }
