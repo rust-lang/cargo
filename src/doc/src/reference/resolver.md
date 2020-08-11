@@ -213,7 +213,10 @@ the [`perf` feature], then the oldest version it can select is `1.3.0`,
 because versions prior to that did not contain the `perf` feature. Similarly,
 if a feature is removed from a new release, then packages that require that
 feature will be stuck on the older releases that contain that feature. It is
-discouraged to remove features in a SemVer-compatible release.
+discouraged to remove features in a SemVer-compatible release. Beware that
+optional dependencies also define an implicit feature, so removing an optional
+dependency or making it non-optional can cause problems, see [removing an
+optional dependency].
 
 [`im`]: https://crates.io/crates/im
 [`perf` feature]: https://github.com/rust-lang/regex/blob/1.3.0/Cargo.toml#L56
@@ -221,17 +224,20 @@ discouraged to remove features in a SemVer-compatible release.
 [`regex`]: https://crates.io/crates/regex
 [`serde` dependency]: https://github.com/bodil/im-rs/blob/v15.0.0/Cargo.toml#L46
 [features]: features.md
+[removing an optional dependency]: semver.md#cargo-remove-opt-dep
 [workspace]: workspaces.md
 
 ### `links`
 
 The [`links` field] is used to ensure only one copy of a native library is
-linked into a binary. It is an error if multiple SemVer-incompatible versions
-of a package with a `links` field appears in the resolve graph. For example,
-it is an error if one package depends on [`libgit2-sys`] version `0.11` and
-another depends on `0.12`, because Cargo is unable to unify those, but they
-both link to the `git2` native library. Due to this rigid requirement, it is
-encouraged to be very careful when making SemVer-incompatible releases with
+linked into a binary. The resolver will attempt to find a graph where there is
+only one instance of each `links` name. If it is unable to find a graph that
+satisfies that constraint, it will return an error.
+
+For example, it is an error if one package depends on [`libgit2-sys`] version
+`0.11` and another depends on `0.12`, because Cargo is unable to unify those,
+but they both link to the `git2` native library. Due to this requirement, it
+is encouraged to be very careful when making SemVer-incompatible releases with
 the `links` field if your library is in common use.
 
 [`links` field]: manifest.md#the-links-field
