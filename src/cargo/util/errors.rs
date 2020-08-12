@@ -401,7 +401,7 @@ pub fn process_error(
                 libc::SIGINT => ", SIGINT: terminal interrupt signal",
                 libc::SIGKILL => ", SIGKILL: kill",
                 libc::SIGPIPE => ", SIGPIPE: write on a pipe with no one to read",
-                libc::SIGQUIT => ", SIGQUIT: terminal quite signal",
+                libc::SIGQUIT => ", SIGQUIT: terminal quit signal",
                 libc::SIGSEGV => ", SIGSEGV: invalid memory reference",
                 libc::SIGTERM => ", SIGTERM: termination signal",
                 libc::SIGBUS => ", SIGBUS: access to undefined memory",
