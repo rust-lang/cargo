@@ -26,6 +26,7 @@ pub fn builtin() -> Vec<App> {
         rustc::cli(),
         rustdoc::cli(),
         search::cli(),
+        space::cli(),
         test::cli(),
         tree::cli(),
         uninstall::cli(),
@@ -63,6 +64,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "rustc" => rustc::exec,
         "rustdoc" => rustdoc::exec,
         "search" => search::exec,
+        "space" => space::exec,
         "test" => test::exec,
         "tree" => tree::exec,
         "uninstall" => uninstall::exec,
@@ -101,6 +103,7 @@ pub mod run;
 pub mod rustc;
 pub mod rustdoc;
 pub mod search;
+pub mod space;
 pub mod test;
 pub mod tree;
 pub mod uninstall;
