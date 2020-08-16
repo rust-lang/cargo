@@ -2514,6 +2514,57 @@ fn use_the_cli() {
 }
 
 #[cargo_test]
+fn ignore_fetch_modules() {
+    let project = project();
+
+    let git_project1 = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.1.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project1.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [git]
+                    ignore-fetch-modules = ["{}"]
+                "#,
+                git_project1.url()
+            ),
+        )
+        .build();
+
+    let stderr = "\
+[UPDATING] git repository `[..]`
+[COMPILING] dep1 [..]
+[RUNNING] `rustc [..]`
+[COMPILING] foo [..]
+[RUNNING] `rustc [..]`
+[FINISHED] [..]
+";
+
+    project.cargo("build -v").with_stderr(stderr).run();
+}
+
+#[cargo_test]
 fn templatedir_doesnt_cause_problems() {
     let git_project2 = git::new("dep2", |project| {
         project

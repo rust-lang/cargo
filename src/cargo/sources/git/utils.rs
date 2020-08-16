@@ -538,21 +538,41 @@ impl<'a> GitCheckout<'a> {
                     init(&path, false)?
                 }
             };
-            // Fetch data from origin and reset to the head commit
-            let reference = GitReference::Rev(head.to_string());
-            cargo_config
-                .shell()
-                .status("Updating", format!("git submodule `{}`", url))?;
-            fetch(&mut repo, url, &reference, cargo_config).chain_err(|| {
-                format!(
-                    "failed to fetch submodule `{}` from {}",
-                    child.name().unwrap_or(""),
-                    url
-                )
-            })?;
 
-            let obj = repo.find_object(head, None)?;
-            reset(&repo, &obj, cargo_config)?;
+            if let Some(_) = &cargo_config
+                .git_config()?
+                .ignore_fetch_modules
+                .as_ref()
+                .unwrap_or(&Vec::new())
+                .iter()
+                .find(|&s| {
+                    if let Some(_) = s.find(url) {
+                        true
+                    } else {
+                        false
+                    }
+                })
+            {
+                info!("Ignoring fetch for submodule {}", url);
+            } else {
+                // Fetch data from origin and reset to the head commit
+                let reference = GitReference::Rev(head.to_string());
+                cargo_config
+                    .shell()
+                    .status("Updating", format!("git submodule `{}`", url))?;
+
+                fetch(&mut repo, url, &reference, cargo_config).chain_err(|| {
+                    format!(
+                        "failed to fetch submodule `{}` from {}",
+                        child.name().unwrap_or(""),
+                        url
+                    )
+                })?;
+
+                let obj = repo.find_object(head, None)?;
+                reset(&repo, &obj, cargo_config)?;
+            }
+
             update_submodules(&repo, cargo_config)
         }
     }

@@ -92,6 +92,9 @@ retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
 offline = false             # do not access the network
 
+[git]
+ignore-fetch-modules = ["submodule1"] # git submodule will not be fetched
+
 [profile.<name>]         # Modify profile settings via config.
 opt-level = 0            # Optimization level.
 debug = true             # Include debug info.
