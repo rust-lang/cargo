@@ -66,7 +66,7 @@ fn add_deps_for_unit(
             fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
         {
             for path in paths.files {
-                deps.insert(path);
+                deps.insert(path.0); //FIXME can we track size/hash of custom builds?
             }
         } else {
             debug!(
@@ -141,7 +141,13 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous.files.iter().eq(deps.iter().map(Path::new)) {
+                    if previous
+                        .files
+                        .iter()
+                        .map(|(path, _size, _hash)| path)
+                        .eq(deps.iter().map(Path::new))
+                    {
+                        //FIXME we could check for size differences here?
                         continue;
                     }
                 }

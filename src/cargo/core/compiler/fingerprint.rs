@@ -314,7 +314,9 @@
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
+use std::fs;
 use std::hash::{self, Hasher};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -322,6 +324,7 @@ use std::time::SystemTime;
 
 use anyhow::{bail, format_err};
 use filetime::FileTime;
+use fxhash::FxHasher;
 use log::{debug, info};
 use serde::de;
 use serde::ser;
@@ -332,8 +335,7 @@ use crate::core::Package;
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
-use crate::util::paths;
-use crate::util::{internal, profile, ProcessBuilder};
+use crate::util::{internal, paths, profile, Config, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
 use super::job::{
@@ -341,6 +343,9 @@ use super::job::{
     Job, Work,
 };
 use super::{BuildContext, Context, FileFlavor, Unit};
+
+type FileSize = u32;
+type FileHash = u64;
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
@@ -709,7 +714,8 @@ impl LocalFingerprint {
     ///   is where we'll find whether files have actually changed
     fn find_stale_item(
         &self,
-        mtime_cache: &mut HashMap<PathBuf, FileTime>,
+        config: &Config,
+        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<Option<StaleItem>> {
@@ -737,16 +743,23 @@ impl LocalFingerprint {
                         current,
                     }));
                 }
-                Ok(find_stale_file(mtime_cache, &dep_info, info.files.iter()))
+                Ok(find_stale_file(config, mtime_cache, &dep_info, &info.files))
             }
 
             // We need to verify that no paths listed in `paths` are newer than
             // the `output` path itself, or the last time the build script ran.
-            LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
-                mtime_cache,
-                &target_root.join(output),
-                paths.iter().map(|p| pkg_root.join(p)),
-            )),
+            LocalFingerprint::RerunIfChanged { output, paths } => {
+                let c: Vec<_> = paths
+                    .iter()
+                    .map(|p| (pkg_root.join(p), 0u32, 0u64))
+                    .collect();
+                Ok(find_stale_file(
+                    config,
+                    mtime_cache,
+                    &target_root.join(output),
+                    &c,
+                ))
+            }
 
             // These have no dependencies on the filesystem, and their values
             // are included natively in the `Fingerprint` hash so nothing
@@ -961,12 +974,12 @@ impl Fingerprint {
     /// it to `UpToDate` if it can.
     fn check_filesystem(
         &mut self,
-        mtime_cache: &mut HashMap<PathBuf, FileTime>,
+        config: &Config,
+        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
-
         let mut mtimes = HashMap::new();
 
         // Get the `mtime` of all outputs. Optionally update their mtime
@@ -1055,7 +1068,7 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(item) = local.find_stale_item(mtime_cache, pkg_root, target_root)? {
+            if let Some(item) = local.find_stale_item(config, mtime_cache, pkg_root, target_root)? {
                 item.log();
                 return Ok(());
             }
@@ -1230,7 +1243,12 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx);
-    fingerprint.check_filesystem(&mut cx.mtime_cache, unit.pkg.root(), &target_root)?;
+    fingerprint.check_filesystem(
+        &cx.bcx.config,
+        &mut cx.mtime_cache,
+        unit.pkg.root(),
+        &target_root,
+    )?;
 
     let fingerprint = Arc::new(fingerprint);
     cx.fingerprints
@@ -1662,13 +1680,13 @@ pub fn parse_dep_info(
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
-    for (ty, path) in info.files {
+    for (size, hash, ty, path) in info.files {
         let path = match ty {
             DepInfoPathType::PackageRootRelative => pkg_root.join(path),
             // N.B. path might be absolute here in which case the join will have no effect
             DepInfoPathType::TargetRootRelative => target_root.join(path),
         };
-        ret.files.push(path);
+        ret.files.push((path, size, hash));
     }
     Ok(Some(ret))
 }
@@ -1683,30 +1701,37 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
     source.fingerprint(pkg)
 }
 
-fn find_stale_file<I>(
-    mtime_cache: &mut HashMap<PathBuf, FileTime>,
+//type It = ;
+fn find_stale_file(
+    config: &Config,
+    mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
     reference: &Path,
-    paths: I,
-) -> Option<StaleItem>
-where
-    I: IntoIterator,
-    I::Item: AsRef<Path>,
-{
+    paths: &[(PathBuf, u32, u64)],
+) -> Option<StaleItem> {
     let reference_mtime = match paths::mtime(reference) {
         Ok(mtime) => mtime,
         Err(..) => return Some(StaleItem::MissingFile(reference.to_path_buf())),
     };
 
-    for path in paths {
-        let path = path.as_ref();
-        let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
+    for (path, reference_size, reference_hash) in paths {
+        let path = &path;
+        let (path_mtime, path_size, path_hash) = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
                 let mtime = match paths::mtime(path) {
                     Ok(mtime) => mtime,
                     Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
                 };
-                *v.insert(mtime)
+                let current_size = if config.cli_unstable().hash_tracking {
+                    match std::fs::metadata(path) {
+                        // For file difference checking just check the lower bits of file size
+                        Ok(metadata) => metadata.len() as u32,
+                        Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())), //todo
+                    }
+                } else {
+                    0
+                };
+                *v.insert((mtime, current_size, 0u64)) // Hash calculated only if needed later.
             }
         };
 
@@ -1728,8 +1753,43 @@ where
         // if equal, files were changed just after a previous build finished.
         // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
         // measuring the start time of builds.
+
+        // Has size changed?
+        if config.cli_unstable().hash_tracking
+            && *reference_size > 0
+            && path_size != *reference_size
+        {
+            return Some(StaleItem::ChangedFile {
+                reference: reference.to_path_buf(),
+                reference_mtime,
+                stale: path.to_path_buf(),
+                stale_mtime: path_mtime,
+            });
+        }
+
         if path_mtime <= reference_mtime {
             continue;
+        }
+
+        // Same size but mtime is different. Probably there's no change...
+        // compute hash and compare to prevent change cascade...
+        if config.cli_unstable().hash_tracking && *reference_hash > 0 {
+            //FIXME put the result in the mtime_cache rather than hashing each time!
+            let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
+            let mut hasher = FxHasher::default();
+            let mut buffer = [0; 1024];
+            loop {
+                let count = reader.read(&mut buffer).unwrap(); //FIXME
+                if count == 0 {
+                    break;
+                }
+                hasher.write(&buffer[..count]);
+            }
+            let hash = hasher.finish();
+
+            if hash == *reference_hash {
+                continue;
+            }
         }
 
         return Some(StaleItem::ChangedFile {
@@ -1822,7 +1882,7 @@ pub fn translate_dep_info(
         .env
         .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
 
-    for file in depinfo.files {
+    for (file, size, hash) in depinfo.files {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
         let abs_file = rustc_cwd.join(file);
@@ -1844,7 +1904,7 @@ pub fn translate_dep_info(
             // effect.
             (DepInfoPathType::TargetRootRelative, &*abs_file)
         };
-        on_disk_info.files.push((ty, path.to_owned()));
+        on_disk_info.files.push((size, hash, ty, path.to_owned()));
     }
     paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
@@ -1853,7 +1913,8 @@ pub fn translate_dep_info(
 #[derive(Default)]
 pub struct RustcDepInfo {
     /// The list of files that the main target in the dep-info file depends on.
-    pub files: Vec<PathBuf>,
+    /// and lower 32bits of size and hash (or 0 if not there).
+    pub files: Vec<(PathBuf, u32, u64)>, //FIXME use Option<NonZeroU32> instead?
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
     ///
@@ -1871,7 +1932,7 @@ pub struct RustcDepInfo {
 // Cargo will read it for crates on all future compilations.
 #[derive(Default)]
 struct EncodedDepInfo {
-    files: Vec<(DepInfoPathType, PathBuf)>,
+    files: Vec<(FileSize, FileHash, DepInfoPathType, PathBuf)>,
     env: Vec<(String, Option<String>)>,
 }
 
@@ -1881,13 +1942,18 @@ impl EncodedDepInfo {
         let nfiles = read_usize(bytes)?;
         let mut files = Vec::with_capacity(nfiles as usize);
         for _ in 0..nfiles {
+            //FIXME: backward compatibility!!!
+            let size = read_usize(bytes)? as FileSize;
+            //debug!("read size as {}", size);
+            let hash = read_u64(bytes)?;
+            //debug!("read hash as {}", hash);
             let ty = match read_u8(bytes)? {
                 0 => DepInfoPathType::PackageRootRelative,
                 1 => DepInfoPathType::TargetRootRelative,
                 _ => return None,
             };
             let bytes = read_bytes(bytes)?;
-            files.push((ty, util::bytes2path(bytes).ok()?));
+            files.push((size, hash, ty, util::bytes2path(bytes).ok()?));
         }
 
         let nenv = read_usize(bytes)?;
@@ -1914,6 +1980,21 @@ impl EncodedDepInfo {
             )
         }
 
+        fn read_u64(bytes: &mut &[u8]) -> Option<u64> {
+            let ret = bytes.get(..8)?;
+            *bytes = &bytes[8..];
+            Some(
+                ((ret[0] as u64) << 0)
+                    | ((ret[1] as u64) << 8)
+                    | ((ret[2] as u64) << 16)
+                    | ((ret[3] as u64) << 24)
+                    | ((ret[4] as u64) << 32)
+                    | ((ret[5] as u64) << 40)
+                    | ((ret[6] as u64) << 48)
+                    | ((ret[7] as u64) << 56),
+            )
+        }
+
         fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
             let ret = *bytes.get(0)?;
             *bytes = &bytes[1..];
@@ -1932,7 +2013,11 @@ impl EncodedDepInfo {
         let mut ret = Vec::new();
         let dst = &mut ret;
         write_usize(dst, self.files.len());
-        for (ty, file) in self.files.iter() {
+        for (size, hash, ty, file) in self.files.iter() {
+            //debug!("writing depinfo size as {} ", *size as usize);
+            write_usize(dst, *size as usize);
+            //debug!("writing depinfo hash as {} ", *hash);
+            write_u64(dst, *hash);
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::TargetRootRelative => dst.push(1),
@@ -1965,6 +2050,17 @@ impl EncodedDepInfo {
             dst.push((val >> 16) as u8);
             dst.push((val >> 24) as u8);
         }
+
+        fn write_u64(dst: &mut Vec<u8>, val: u64) {
+            dst.push(val as u8);
+            dst.push((val >> 8) as u8);
+            dst.push((val >> 16) as u8);
+            dst.push((val >> 24) as u8);
+            dst.push((val >> 32) as u8);
+            dst.push((val >> 40) as u8);
+            dst.push((val >> 48) as u8);
+            dst.push((val >> 56) as u8);
+        }
     }
 }
 
@@ -1974,8 +2070,13 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     let mut ret = RustcDepInfo::default();
     let mut found_deps = false;
 
+    let mut prev_line: Option<&str> = None;
     for line in contents.lines() {
-        if let Some(rest) = line.strip_prefix("# env-dep:") {
+        //if let Some(rest) = line.strip_prefix("# env-dep:") {
+        let env_dep_prefix = "# env-dep:";
+        let size_dep_prefix = "# size:";
+        if line.starts_with(env_dep_prefix) {
+            let rest = &line[env_dep_prefix.len()..];
             let mut parts = rest.splitn(2, '=');
             let env_var = match parts.next() {
                 Some(s) => s,
@@ -1986,6 +2087,20 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 None => None,
             };
             ret.env.push((unescape_env(env_var)?, env_val));
+        } else if line.starts_with(size_dep_prefix) {
+            if let Some(prev) = prev_line {
+                let file = &prev[0..prev.len() - 1];
+                for i in 0..ret.files.len() {
+                    if ret.files[i].0.to_string_lossy() == file {
+                        let parts: Vec<_> = line["# size:".len()..].split(" ").collect();
+                        ret.files[i].1 = parts[0].trim().parse()?; //FIXME do we need trims?
+                        let hash = &parts[1]["hash:".len()..].trim();
+                        ret.files[i].2 = hash.parse()?;
+                        break;
+                    }
+                }
+                prev_line = None;
+            }
         } else if let Some(pos) = line.find(": ") {
             if found_deps {
                 continue;
@@ -2002,8 +2117,10 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                         internal("malformed dep-info format, trailing \\".to_string())
                     })?);
                 }
-                ret.files.push(file.into());
+                ret.files.push((file.into(), 0, 0));
             }
+        } else {
+            prev_line = Some(line);
         }
     }
     return Ok(ret);
