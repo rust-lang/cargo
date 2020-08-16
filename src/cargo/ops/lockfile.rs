@@ -193,7 +193,11 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     let mut current_iter = current.lines().skip_while(|line| line.starts_with('#'));
     loop {
         match (orig_iter.next(), current_iter.next()) {
-            (Some(o), Some(c)) => if o != c { return false },
+            (Some(o), Some(c)) => {
+                if o != c { 
+                    return false 
+                }
+            }
             (Some(_), None) => return false,
             (None, Some(_)) => return false,
             (None, None) => return true,
