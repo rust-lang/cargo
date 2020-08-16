@@ -194,8 +194,8 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     loop {
         match (orig_iter.next(), current_iter.next()) {
             (Some(o), Some(c)) => {
-                if o != c { 
-                    return false 
+                if o != c {
+                    return false;
                 }
             }
             (Some(_), None) => return false,
