@@ -57,6 +57,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             (None, Some(_)) => true,
             _ => false,
         };
+
         if use_env {
             // Future note: If you ever need to deserialize a non-self describing
             // map type, this should implement a starts_with check (similar to how
@@ -187,13 +188,17 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if name == "StringList" {
-            let vals = self.config.get_list_or_string(&self.key)?;
-            let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
-            visitor.visit_newtype_struct(vals.into_deserializer())
+        let merge = if name == "StringList" {
+            true
+        } else if name == "UnmergedStringList" {
+            false
         } else {
-            visitor.visit_newtype_struct(self)
-        }
+            return visitor.visit_newtype_struct(self);
+        };
+
+        let vals = self.config.get_list_or_string(&self.key, merge)?;
+        let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
+        visitor.visit_newtype_struct(vals.into_deserializer())
     }
 
     fn deserialize_enum<V>(

@@ -279,6 +279,36 @@ fn custom_runner_env() {
 }
 
 #[cargo_test]
+fn custom_runner_env_overrides_config() {
+    let target = rustc_host();
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+        [target.{}]
+        runner = "should-not-run -r"
+    "#,
+                target
+            ),
+        )
+        .build();
+
+    let key = format!(
+        "CARGO_TARGET_{}_RUNNER",
+        target.to_uppercase().replace('-', "_")
+    );
+
+    p.cargo("run")
+        .env(&key, "should-run --foo")
+        .stream()
+        .with_status(101)
+        .with_stderr_contains("[RUNNING] `should-run --foo target/debug/foo[EXE]`")
+        .run();
+}
+
+#[cargo_test]
 #[cfg(unix)] // Assumes `true` is in PATH.
 fn custom_runner_env_true() {
     // Check for a bug where "true" was interpreted as a boolean instead of

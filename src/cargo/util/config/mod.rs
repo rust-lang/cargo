@@ -587,8 +587,21 @@ impl Config {
     }
 
     /// Helper for StringList type to get something that is a string or list.
-    fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
+    fn get_list_or_string(
+        &self,
+        key: &ConfigKey,
+        merge: bool,
+    ) -> CargoResult<Vec<(String, Definition)>> {
         let mut res = Vec::new();
+
+        if !merge {
+            self.get_env_list(key, &mut res)?;
+
+            if !res.is_empty() {
+                return Ok(res);
+            }
+        }
+
         match self.get_cv(key)? {
             Some(CV::List(val, _def)) => res.extend(val),
             Some(CV::String(val, def)) => {
@@ -602,6 +615,7 @@ impl Config {
         }
 
         self.get_env_list(key, &mut res)?;
+
         Ok(res)
     }
 
@@ -1765,6 +1779,14 @@ impl StringList {
         &self.0
     }
 }
+
+/// StringList automatically merges config values with environment values,
+/// this instead follows the precedence rules, so that eg. a string list found
+/// in the environment will be used instead of one in a config file.
+///
+/// This is currently only used by `PathAndArgs`
+#[derive(Debug, Deserialize)]
+pub struct UnmergedStringList(Vec<String>);
 
 #[macro_export]
 macro_rules! __shell_print {
