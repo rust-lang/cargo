@@ -302,7 +302,6 @@ fn custom_runner_env_overrides_config() {
 
     p.cargo("run")
         .env(&key, "should-run --foo")
-        .stream()
         .with_status(101)
         .with_stderr_contains("[RUNNING] `should-run --foo target/debug/foo[EXE]`")
         .run();
