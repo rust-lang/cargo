@@ -1,7 +1,6 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::rustc_host;
-use cargo_test_support::{basic_lib_manifest, project};
+use cargo_test_support::{basic_lib_manifest, no_such_file_err_msg, project, rustc_host};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -274,7 +273,18 @@ fn custom_runner_env() {
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo [..]
+[FINISHED] dev [..]
+[RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`
+[ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
+
+Caused by:
+  {}
+",
+            no_such_file_err_msg()
+        ))
         .run();
 }
 

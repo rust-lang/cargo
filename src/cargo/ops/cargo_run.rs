@@ -4,13 +4,13 @@ use std::path::Path;
 
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
-use crate::util::{CargoResult, ProcessError};
+use crate::util::CargoResult;
 
 pub fn run(
     ws: &Workspace<'_>,
     options: &ops::CompileOptions,
     args: &[OsString],
-) -> CargoResult<Option<ProcessError>> {
+) -> CargoResult<()> {
     let config = ws.config();
 
     // We compute the `bins` here *just for diagnosis*. The actual set of
@@ -87,13 +87,5 @@ pub fn run(
 
     config.shell().status("Running", process.to_string())?;
 
-    let result = process.exec_replace();
-
-    match result {
-        Ok(()) => Ok(None),
-        Err(e) => {
-            let err = e.downcast::<ProcessError>()?;
-            Ok(Some(err))
-        }
-    }
+    process.exec_replace()
 }
