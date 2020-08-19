@@ -500,7 +500,7 @@ impl fmt::Display for EncodablePackageId {
             write!(f, " {}", s)?;
         }
         if let Some(s) = &self.source {
-            write!(f, " ({})", s.into_url())?;
+            write!(f, " ({})", s.as_url())?;
         }
         Ok(())
     }

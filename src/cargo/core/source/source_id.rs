@@ -144,8 +144,8 @@ impl SourceId {
     }
 
     /// A view of the `SourceId` that can be `Display`ed as a URL.
-    pub fn into_url(&self) -> SourceIdIntoUrl<'_> {
-        SourceIdIntoUrl {
+    pub fn as_url(&self) -> SourceIdAsUrl<'_> {
+        SourceIdAsUrl {
             inner: &*self.inner,
         }
     }
@@ -445,7 +445,7 @@ impl ser::Serialize for SourceId {
         if self.is_path() {
             None::<String>.serialize(s)
         } else {
-            s.collect_str(&self.into_url())
+            s.collect_str(&self.as_url())
         }
     }
 }
@@ -545,11 +545,11 @@ impl Hash for SourceId {
 }
 
 /// A `Display`able view into a `SourceId` that will write it as a url
-pub struct SourceIdIntoUrl<'a> {
+pub struct SourceIdAsUrl<'a> {
     inner: &'a SourceIdInner,
 }
 
-impl<'a> fmt::Display for SourceIdIntoUrl<'a> {
+impl<'a> fmt::Display for SourceIdAsUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
