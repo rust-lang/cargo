@@ -95,6 +95,14 @@ Versioning](https://semver.org/), so make sure you follow some basic rules:
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
+See the [Resolver] chapter for more information on how Cargo uses versions to
+resolve dependencies, and for guidelines on setting your own version. See the
+[Semver compatibility] chapter for more details on exactly what constitutes a
+breaking change.
+
+[Resolver]: resolver.md
+[Semver compatibility]: semver.md
+
 <a id="the-authors-field-optional"></a>
 #### The `authors` field
 

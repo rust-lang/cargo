@@ -56,6 +56,12 @@ To rebuild the man pages, run the script `build-man.sh` in the `src/doc` directo
 $ ./build-man.sh
 ```
 
+### SemVer chapter tests
+
+There is a script to verify that the examples in the SemVer chapter work as
+intended. To run the tests, go into the `semver-check` directory and run
+`cargo run`.
+
 ## Contributing
 
 We'd love your help with improving the documentation! Please feel free to
