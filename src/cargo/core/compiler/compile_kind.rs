@@ -72,7 +72,11 @@ impl CompileKind {
                 } else {
                     val.raw_value().to_string()
                 };
-                CompileKind::Target(CompileTarget::new(&value)?)
+                if value == "" {
+                    CompileKind::Host
+                } else {
+                    CompileKind::Target(CompileTarget::new(&value)?)
+                }
             }
             None => CompileKind::Host,
         };

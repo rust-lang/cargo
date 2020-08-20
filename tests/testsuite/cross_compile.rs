@@ -118,6 +118,37 @@ fn simple_cross_config() {
 }
 
 #[cargo_test]
+fn unset_default_target() {
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            target = ""
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {{}}
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn simple_deps() {
     if cross_compile::disabled() {
         return;
