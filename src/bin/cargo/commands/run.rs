@@ -72,14 +72,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| {
         let proc_err = match err.downcast_ref::<ProcessError>() {
             Some(e) => e,
-            None => return CliError::new(err.into(), 101),
+            None => return CliError::new(err, 101),
         };
 
         // If we never actually spawned the process then that sounds pretty
         // bad and we always want to forward that up.
         let exit = match proc_err.exit {
             Some(exit) => exit,
-            None => return CliError::new(err.into(), 101),
+            None => return CliError::new(err, 101),
         };
 
         // If `-q` was passed then we suppress extra error information about
@@ -90,7 +90,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         if is_quiet {
             CliError::code(exit_code)
         } else {
-            CliError::new(err.into(), exit_code)
+            CliError::new(err, exit_code)
         }
     })
 }

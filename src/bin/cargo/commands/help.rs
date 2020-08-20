@@ -120,7 +120,7 @@ fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
 fn write_and_spawn(contents: &[u8], command: &str) -> CargoResult<()> {
     let mut tmp = tempfile::Builder::new().prefix("cargo-man").tempfile()?;
     let f = tmp.as_file_mut();
-    f.write_all(&contents)?;
+    f.write_all(contents)?;
     f.flush()?;
     let mut cmd = std::process::Command::new(command)
         .arg(tmp.path())

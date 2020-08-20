@@ -93,7 +93,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
     verify_dependencies(pkg, &registry, reg_id)?;
 
-    // Prepare a tarball, with a non-surpressable warning if metadata
+    // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
     let tarball = ops::package(
         ws,
