@@ -5,7 +5,9 @@ use std::sync::{Arc, Mutex};
 use filetime::FileTime;
 use jobserver::Client;
 
-use crate::core::compiler::{self, compilation, Unit};
+use crate::core::compiler::{
+    self, compilation, fingerprint::FileHash, fingerprint::FileSize, Unit,
+};
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
@@ -38,7 +40,7 @@ pub struct Context<'a, 'cfg> {
     /// Fingerprints used to detect if a unit is out-of-date.
     pub fingerprints: HashMap<Unit, Arc<Fingerprint>>,
     /// Cache of file mtimes to reduce filesystem hits.
-    pub mtime_cache: HashMap<PathBuf, (FileTime, u32, u64)>,
+    pub mtime_cache: HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
     /// A set used to track which units have been compiled.
     /// A unit may appear in the job graph multiple times as a dependency of
     /// multiple packages, but it only needs to run once.

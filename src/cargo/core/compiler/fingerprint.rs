@@ -318,17 +318,18 @@ use std::fs;
 use std::hash::{self, Hasher};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::str;
+use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::{bail, format_err};
 use filetime::FileTime;
-use fxhash::FxHasher;
 use log::{debug, info};
+use md5::{Digest, Md5};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
+use sha1::Sha1;
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -344,8 +345,14 @@ use super::job::{
 };
 use super::{BuildContext, Context, FileFlavor, Unit};
 
-type FileSize = u32;
-type FileHash = u64;
+// While source files can't currently be > 4Gb, bin files could be.
+pub type FileSize = u64;
+
+#[derive(Clone)]
+pub struct FileHash {
+    kind: SourceFileHashAlgorithm,
+    hash: String,
+}
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
@@ -751,13 +758,22 @@ impl LocalFingerprint {
             LocalFingerprint::RerunIfChanged { output, paths } => {
                 let c: Vec<_> = paths
                     .iter()
-                    .map(|p| (pkg_root.join(p), 0u32, 0u64))
+                    .map(|p| {
+                        (
+                            pkg_root.join(p),
+                            0u64,
+                            FileHash {
+                                kind: SourceFileHashAlgorithm::Md5,
+                                hash: String::new(),
+                            },
+                        )
+                    })
                     .collect();
                 Ok(find_stale_file(
                     config,
                     mtime_cache,
                     &target_root.join(output),
-                    &c,
+                    c.as_slice(),
                 ))
             }
 
@@ -1706,7 +1722,7 @@ fn find_stale_file(
     config: &Config,
     mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
     reference: &Path,
-    paths: &[(PathBuf, u32, u64)],
+    paths: &[(PathBuf, FileSize, FileHash)],
 ) -> Option<StaleItem> {
     let reference_mtime = match paths::mtime(reference) {
         Ok(mtime) => mtime,
@@ -1716,7 +1732,7 @@ fn find_stale_file(
     for (path, reference_size, reference_hash) in paths {
         let path = &path;
         let (path_mtime, path_size, path_hash) = match mtime_cache.entry(path.to_path_buf()) {
-            Entry::Occupied(o) => *o.get(),
+            Entry::Occupied(o) => o.get().clone(), //FIXME? do we need to clone here?
             Entry::Vacant(v) => {
                 let mtime = match paths::mtime(path) {
                     Ok(mtime) => mtime,
@@ -1725,13 +1741,21 @@ fn find_stale_file(
                 let current_size = if config.cli_unstable().hash_tracking {
                     match std::fs::metadata(path) {
                         // For file difference checking just check the lower bits of file size
-                        Ok(metadata) => metadata.len() as u32,
+                        Ok(metadata) => metadata.len(),
                         Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())), //todo
                     }
                 } else {
                     0
                 };
-                *v.insert((mtime, current_size, 0u64)) // Hash calculated only if needed later.
+                v.insert((
+                    mtime,
+                    current_size,
+                    FileHash {
+                        kind: SourceFileHashAlgorithm::Md5,
+                        hash: String::new(),
+                    },
+                ))
+                .clone() // Hash calculated only if needed later.
             }
         };
 
@@ -1773,21 +1797,40 @@ fn find_stale_file(
 
         // Same size but mtime is different. Probably there's no change...
         // compute hash and compare to prevent change cascade...
-        if config.cli_unstable().hash_tracking && *reference_hash > 0 {
+        if config.cli_unstable().hash_tracking && reference_hash.hash.len() > 0 {
+            // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
+            // but not sure it's worth the additional complexity.
             //FIXME put the result in the mtime_cache rather than hashing each time!
             let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
-            let mut hasher = FxHasher::default();
-            let mut buffer = [0; 1024];
-            loop {
-                let count = reader.read(&mut buffer).unwrap(); //FIXME
-                if count == 0 {
-                    break;
-                }
-                hasher.write(&buffer[..count]);
-            }
-            let hash = hasher.finish();
 
-            if hash == *reference_hash {
+            let hash = match reference_hash.kind {
+                SourceFileHashAlgorithm::Md5 => {
+                    let mut hasher = Md5::new();
+                    let mut buffer = [0; 1024];
+                    loop {
+                        let count = reader.read(&mut buffer).unwrap(); //FIXME
+                        if count == 0 {
+                            break;
+                        }
+                        hasher.input(&buffer[..count]);
+                    }
+                    format!("{:?}", hasher.result())
+                }
+                SourceFileHashAlgorithm::Sha1 => {
+                    let mut hasher = Sha1::new();
+                    let mut buffer = [0; 1024];
+                    loop {
+                        let count = reader.read(&mut buffer).unwrap(); //FIXME
+                        if count == 0 {
+                            break;
+                        }
+                        hasher.input(&buffer[..count]);
+                    }
+                    format!("{:?}", hasher.result())
+                }
+            };
+
+            if hash == reference_hash.hash {
                 continue;
             }
         }
@@ -1805,6 +1848,24 @@ fn find_stale_file(
         reference, reference_mtime
     );
     None
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum SourceFileHashAlgorithm {
+    Md5,
+    Sha1,
+}
+
+impl FromStr for SourceFileHashAlgorithm {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<SourceFileHashAlgorithm, ()> {
+        match s {
+            "md5" => Ok(SourceFileHashAlgorithm::Md5),
+            "sha1" => Ok(SourceFileHashAlgorithm::Sha1),
+            _ => Err(()),
+        }
+    }
 }
 
 enum DepInfoPathType {
@@ -1914,7 +1975,7 @@ pub fn translate_dep_info(
 pub struct RustcDepInfo {
     /// The list of files that the main target in the dep-info file depends on.
     /// and lower 32bits of size and hash (or 0 if not there).
-    pub files: Vec<(PathBuf, u32, u64)>, //FIXME use Option<NonZeroU32> instead?
+    pub files: Vec<(PathBuf, FileSize, FileHash)>, //FIXME use Option<NonZero> instead?
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
     ///
@@ -1939,21 +2000,34 @@ struct EncodedDepInfo {
 impl EncodedDepInfo {
     fn parse(mut bytes: &[u8]) -> Option<EncodedDepInfo> {
         let bytes = &mut bytes;
-        let nfiles = read_usize(bytes)?;
+        let nfiles = read_usize(bytes).unwrap();
         let mut files = Vec::with_capacity(nfiles as usize);
         for _ in 0..nfiles {
             //FIXME: backward compatibility!!!
-            let size = read_usize(bytes)? as FileSize;
+            let size = read_u64(bytes)? as FileSize;
             //debug!("read size as {}", size);
-            let hash = read_u64(bytes)?;
+            let hash_buf = read_bytes(bytes)?;
+
+            let hash = String::from_utf8(hash_buf.to_vec()).unwrap();
+
             //debug!("read hash as {}", hash);
+            let kind = match read_u8(bytes)? {
+                0 => SourceFileHashAlgorithm::Md5,
+                1 => SourceFileHashAlgorithm::Sha1,
+                _ => return None,
+            };
             let ty = match read_u8(bytes)? {
                 0 => DepInfoPathType::PackageRootRelative,
                 1 => DepInfoPathType::TargetRootRelative,
                 _ => return None,
             };
             let bytes = read_bytes(bytes)?;
-            files.push((size, hash, ty, util::bytes2path(bytes).ok()?));
+            files.push((
+                size,
+                FileHash { kind, hash },
+                ty,
+                util::bytes2path(bytes).ok()?,
+            ));
         }
 
         let nenv = read_usize(bytes)?;
@@ -2015,9 +2089,14 @@ impl EncodedDepInfo {
         write_usize(dst, self.files.len());
         for (size, hash, ty, file) in self.files.iter() {
             //debug!("writing depinfo size as {} ", *size as usize);
-            write_usize(dst, *size as usize);
-            //debug!("writing depinfo hash as {} ", *hash);
-            write_u64(dst, *hash);
+            write_u64(dst, *size);
+            //debug!("writing depinfo hash as {} ", hash.hash.len());
+            write_bytes(dst, hash.hash.as_bytes());
+            //write(dst, hash.hash);
+            match hash.kind {
+                SourceFileHashAlgorithm::Md5 => dst.push(0),
+                SourceFileHashAlgorithm::Sha1 => dst.push(1),
+            }
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::TargetRootRelative => dst.push(1),
@@ -2094,8 +2173,13 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                     if ret.files[i].0.to_string_lossy() == file {
                         let parts: Vec<_> = line["# size:".len()..].split(" ").collect();
                         ret.files[i].1 = parts[0].trim().parse()?; //FIXME do we need trims?
-                        let hash = &parts[1]["hash:".len()..].trim();
-                        ret.files[i].2 = hash.parse()?;
+                        let kind_hash: Vec<_> = parts[1].split(":").collect();
+                        let hash = kind_hash[1];
+                        ret.files[i].2 = FileHash {
+                            kind: SourceFileHashAlgorithm::from_str(kind_hash[0])
+                                .expect("unknown hashing algo"),
+                            hash: hash.to_string(),
+                        };
                         break;
                     }
                 }
@@ -2117,7 +2201,14 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                         internal("malformed dep-info format, trailing \\".to_string())
                     })?);
                 }
-                ret.files.push((file.into(), 0, 0));
+                ret.files.push((
+                    file.into(),
+                    0,
+                    FileHash {
+                        kind: SourceFileHashAlgorithm::Md5,
+                        hash: String::new(),
+                    },
+                ));
             }
         } else {
             prev_line = Some(line);
