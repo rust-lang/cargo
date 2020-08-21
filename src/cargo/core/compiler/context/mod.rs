@@ -40,7 +40,7 @@ pub struct Context<'a, 'cfg> {
     /// Fingerprints used to detect if a unit is out-of-date.
     pub fingerprints: HashMap<Unit, Arc<Fingerprint>>,
     /// Cache of file mtimes to reduce filesystem hits.
-    pub mtime_cache: HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
+    pub mtime_cache: HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
     /// A set used to track which units have been compiled.
     /// A unit may appear in the job graph multiple times as a dependency of
     /// multiple packages, but it only needs to run once.

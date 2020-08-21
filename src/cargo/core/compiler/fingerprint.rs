@@ -722,7 +722,7 @@ impl LocalFingerprint {
     fn find_stale_item(
         &self,
         config: &Config,
-        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
+        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<Option<StaleItem>> {
@@ -991,7 +991,7 @@ impl Fingerprint {
     fn check_filesystem(
         &mut self,
         config: &Config,
-        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
+        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<()> {
@@ -1720,7 +1720,7 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
 //type It = ;
 fn find_stale_file(
     config: &Config,
-    mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, FileHash)>,
+    mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
     reference: &Path,
     paths: &[(PathBuf, FileSize, FileHash)],
 ) -> Option<StaleItem> {
@@ -1747,15 +1747,7 @@ fn find_stale_file(
                 } else {
                     0
                 };
-                v.insert((
-                    mtime,
-                    current_size,
-                    FileHash {
-                        kind: SourceFileHashAlgorithm::Md5,
-                        hash: String::new(),
-                    },
-                ))
-                .clone() // Hash calculated only if needed later.
+                v.insert((mtime, current_size, None)).clone() // Hash calculated only if needed later.
             }
         };
 
@@ -1797,37 +1789,48 @@ fn find_stale_file(
 
         // Same size but mtime is different. Probably there's no change...
         // compute hash and compare to prevent change cascade...
-        if config.cli_unstable().hash_tracking && reference_hash.hash.len() > 0 {
-            // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
-            // but not sure it's worth the additional complexity.
-            //FIXME put the result in the mtime_cache rather than hashing each time!
-            let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
+        if config.cli_unstable().hash_tracking && !reference_hash.hash.is_empty() {
+            let hash = if let Some(path_hash) = path_hash {
+                //FIXME use unwrap_or
+                path_hash.hash
+            } else {
+                // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
+                // but not sure it's worth the additional complexity.
+                //FIXME put the result in the mtime_cache rather than hashing each time!
+                let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
 
-            let hash = match reference_hash.kind {
-                SourceFileHashAlgorithm::Md5 => {
-                    let mut hasher = Md5::new();
-                    let mut buffer = [0; 1024];
-                    loop {
-                        let count = reader.read(&mut buffer).unwrap(); //FIXME
-                        if count == 0 {
-                            break;
+                let hash = match reference_hash.kind {
+                    SourceFileHashAlgorithm::Md5 => {
+                        let mut hasher = Md5::new();
+                        let mut buffer = [0; 1024];
+                        loop {
+                            let count = reader.read(&mut buffer).unwrap(); //FIXME
+                            if count == 0 {
+                                break;
+                            }
+                            hasher.input(&buffer[..count]);
                         }
-                        hasher.input(&buffer[..count]);
+                        format!("{:?}", hasher.result())
                     }
-                    format!("{:?}", hasher.result())
-                }
-                SourceFileHashAlgorithm::Sha1 => {
-                    let mut hasher = Sha1::new();
-                    let mut buffer = [0; 1024];
-                    loop {
-                        let count = reader.read(&mut buffer).unwrap(); //FIXME
-                        if count == 0 {
-                            break;
+                    SourceFileHashAlgorithm::Sha1 => {
+                        let mut hasher = Sha1::new();
+                        let mut buffer = [0; 1024];
+                        loop {
+                            let count = reader.read(&mut buffer).unwrap(); //FIXME
+                            if count == 0 {
+                                break;
+                            }
+                            hasher.input(&buffer[..count]);
                         }
-                        hasher.input(&buffer[..count]);
+                        format!("{:?}", hasher.result())
                     }
-                    format!("{:?}", hasher.result())
-                }
+                };
+                let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
+                cached.2 = Some(FileHash {
+                    kind: reference_hash.kind,
+                    hash: hash.clone(),
+                });
+                hash
             };
 
             if hash == reference_hash.hash {
