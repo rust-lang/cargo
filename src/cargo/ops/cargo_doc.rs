@@ -131,6 +131,54 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
     Ok(())
 }
 
+/// This function checks whether the latest version of `Rustc` used to compile this
+/// `Workspace`'s docs was the same as the one is being used in this `cargo doc` call.
+///
+/// In case it's not, it takes care of removig the `doc/` folder as well as overwriting
+/// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
+/// versions of the `js/html/css` files that `Rustc` autogenerates (which btw, do not have)
+/// any versioning.
+fn check_rustdoc_appropiate_versioning(
+    ws: &Workspace<'_>,
+    target_data: &RustcTargetData,
+) -> anyhow::Result<()> {
+    let actual_rustdoc_target_data =
+        RustDocTargetData::with_actual_rustc_version(&target_data.rustc.verbose_version);
+    let mut rustdoc_fingerprint_file = match File::open(RustDocTargetData::path_to_fingerprint(ws))
+    {
+        Ok(file) => file,
+        // If the file does not exist, create it with the actual `Rustc` version
+        // and try to delete the `doc/` folder.
+        //
+        // This is weird, but if someone deletes the fingerprint and compiled the docs
+        // of the target workspace with a previous `Rustc` version, we would fall under
+        // the same problem.
+        Err(_) => {
+            // Check if `doc/` folder exists and remove it. Otherways, simply create
+            // `.rustdoc_fingerprint.json` file.
+            remove_doc_directory(ws)?;
+            let rustdoc_fingerprint_file =
+                File::create(RustDocTargetData::path_to_fingerprint(ws))?;
+            // We write the actual `Rustc` version to it so that we just need to compile it straight
+            // since there's no `doc/` folder to remove.
+            to_writer(&rustdoc_fingerprint_file, &actual_rustdoc_target_data)?;
+            rustdoc_fingerprint_file
+        }
+    };
+
+    let previous_rustdoc_target_data = RustDocTargetData::from_file(&mut rustdoc_fingerprint_file)?;
+    // Check if rustc_version matches the one we just used. Otherways,
+    // re-write it and delete the ´doc/` folder (if exists).
+    if previous_rustdoc_target_data.rustc_verbose_version != target_data.rustc.verbose_version {
+        remove_doc_directory(ws)?;
+        // Remove `rustdoc_fingerprint_file` contents and write the new version used
+        // to compile the docs.
+        rustdoc_fingerprint_file.set_len(0)?;
+        to_writer(&rustdoc_fingerprint_file, &actual_rustdoc_target_data)?;
+    };
+    Ok(())
+}
+
 /// Tries to remove the Workspace's `target/doc/` directory wit all of it's contents
 /// returning an error if it's not possible.
 fn remove_doc_directory(ws: &Workspace<'_>) -> std::io::Result<()> {
