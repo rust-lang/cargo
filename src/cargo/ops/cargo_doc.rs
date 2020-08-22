@@ -131,6 +131,19 @@ fn open_docs(path: &Path, shell: &mut Shell) -> CargoResult<()> {
     Ok(())
 }
 
+/// Tries to remove the Workspace's `target/doc/` directory wit all of it's contents
+/// returning an error if it's not possible.
+fn remove_doc_directory(ws: &Workspace<'_>) -> std::io::Result<()> {
+    let doc_path = &ws.root().join("target").join("doc");
+    if doc_path.exists() {
+        // Try to remove the `doc/` folder if exists.
+        // XXX: What should we do if the op fails?
+        std::fs::remove_dir_all(doc_path)
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RustDocTargetData {
     rustc_verbose_version: String,
