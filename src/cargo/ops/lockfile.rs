@@ -174,35 +174,21 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 }
 
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
-    let mut orig = orig.to_string();
-    if has_crlf_line_endings(&orig) {
-        orig = orig.replace("\r\n", "\n");
-    }
-
     // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
     // common case where we can update lock files.
     if !ws.config().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
-            let old: resolver::EncodableResolve = toml::from_str(&orig)?;
+            let old: resolver::EncodableResolve = toml::from_str(orig)?;
             let new: resolver::EncodableResolve = toml::from_str(current)?;
-            Ok(old.into_resolve(&orig, ws)? == new.into_resolve(current, ws)?)
+            Ok(old.into_resolve(orig, ws)? == new.into_resolve(current, ws)?)
         })();
         if let Ok(true) = res {
             return true;
         }
     }
 
-    current == orig
-}
-
-fn has_crlf_line_endings(s: &str) -> bool {
-    // Only check the first line.
-    if let Some(lf) = s.find('\n') {
-        s[..lf].ends_with('\r')
-    } else {
-        false
-    }
+    orig.lines().eq(current.lines())
 }
 
 fn emit_package(dep: &toml::value::Table, out: &mut String) {
