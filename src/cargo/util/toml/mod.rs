@@ -76,6 +76,22 @@ fn do_read_manifest(
     };
 
     let manifest = Rc::new(manifest);
+
+    if let Some(deps) = manifest
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.dependencies.as_ref())
+    {
+        for (name, dep) in deps {
+            if dep.is_optional() {
+                bail!(
+                    "{} is optional, but workspace dependencies cannot be optional",
+                    name
+                );
+            }
+        }
+    }
+
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
@@ -773,6 +789,48 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
     }
 }
 
+pub fn map_deps(
+    config: &Config,
+    deps: Option<&BTreeMap<String, TomlDependency>>,
+    filter: impl Fn(&TomlDependency) -> bool,
+) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
+    let deps = match deps {
+        Some(deps) => deps,
+        None => return Ok(None),
+    };
+    let deps = deps
+        .iter()
+        .filter(|(_k, v)| filter(v))
+        .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
+        .collect::<CargoResult<BTreeMap<_, _>>>()?;
+    Ok(Some(deps))
+}
+
+fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
+    match dep {
+        TomlDependency::Detailed(d) => {
+            let mut d = d.clone();
+            // Path dependencies become crates.io deps.
+            d.path.take();
+            // Same with git dependencies.
+            d.git.take();
+            d.branch.take();
+            d.tag.take();
+            d.rev.take();
+            // registry specifications are elaborated to the index URL
+            if let Some(registry) = d.registry.take() {
+                let src = SourceId::alt_registry(config, &registry)?;
+                d.registry_index = Some(src.url().to_string());
+            }
+            Ok(TomlDependency::Detailed(d))
+        }
+        TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
+            version: Some(s.clone()),
+            ..Default::default()
+        })),
+    }
+}
+
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
 ///
 /// Note that the order of the fields matters, since this is the order they
@@ -822,12 +880,30 @@ pub struct TomlProject {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
-    members: Option<Vec<String>>,
+    pub members: Option<Vec<String>>,
     #[serde(rename = "default-members")]
-    default_members: Option<Vec<String>>,
-    exclude: Option<Vec<String>>,
-    metadata: Option<toml::Value>,
+    pub default_members: Option<Vec<String>>,
+    pub exclude: Option<Vec<String>>,
+    pub metadata: Option<toml::Value>,
     resolver: Option<String>,
+
+    // Properties that can be inherited by members.
+    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub version: Option<semver::Version>,
+    pub authors: Option<Vec<String>>,
+    pub description: Option<String>,
+    pub documentation: Option<String>,
+    pub readme: Option<StringOrBool>,
+    pub homepage: Option<String>,
+    pub repository: Option<String>,
+    pub license: Option<String>,
+    #[serde(rename = "license-file")]
+    pub license_file: Option<String>,
+    pub keywords: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
+    pub publish: Option<VecStringOrBool>,
+    pub edition: Option<String>,
+    pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
 impl TomlProject {
@@ -958,48 +1034,6 @@ impl TomlManifest {
             badges: self.badges.clone(),
             cargo_features,
         });
-
-        fn map_deps(
-            config: &Config,
-            deps: Option<&BTreeMap<String, TomlDependency>>,
-            filter: impl Fn(&TomlDependency) -> bool,
-        ) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
-            let deps = match deps {
-                Some(deps) => deps,
-                None => return Ok(None),
-            };
-            let deps = deps
-                .iter()
-                .filter(|(_k, v)| filter(v))
-                .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
-                .collect::<CargoResult<BTreeMap<_, _>>>()?;
-            Ok(Some(deps))
-        }
-
-        fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
-            match dep {
-                TomlDependency::Detailed(d) => {
-                    let mut d = d.clone();
-                    // Path dependencies become crates.io deps.
-                    d.path.take();
-                    // Same with git dependencies.
-                    d.git.take();
-                    d.branch.take();
-                    d.tag.take();
-                    d.rev.take();
-                    // registry specifications are elaborated to the index URL
-                    if let Some(registry) = d.registry.take() {
-                        let src = SourceId::alt_registry(config, &registry)?;
-                        d.registry_index = Some(src.url().to_string());
-                    }
-                    Ok(TomlDependency::Detailed(d))
-                }
-                TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
-                    version: Some(s.clone()),
-                    ..Default::default()
-                })),
-            }
-        }
     }
 
     pub fn to_real_manifest(
@@ -1227,13 +1261,9 @@ impl TomlManifest {
         };
 
         let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
-            (Some(config), None) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                package_root,
-                &config.members,
-                &config.default_members,
-                &config.exclude,
-                &config.metadata,
-            )),
+            (Some(toml_workspace), None) => WorkspaceConfig::Root(
+                WorkspaceRootConfig::from_toml_workspace(package_root, &config, toml_workspace)?,
+            ),
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
             },
@@ -1412,13 +1442,9 @@ impl TomlManifest {
             .map(|r| ResolveBehavior::from_manifest(r))
             .transpose()?;
         let workspace_config = match me.workspace {
-            Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                root,
-                &config.members,
-                &config.default_members,
-                &config.exclude,
-                &config.metadata,
-            )),
+            Some(ref toml_workspace) => WorkspaceConfig::Root(
+                WorkspaceRootConfig::from_toml_workspace(root, config, toml_workspace)?,
+            ),
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
             }
@@ -1590,6 +1616,13 @@ impl TomlDependency {
         match self {
             TomlDependency::Detailed(d) => d.version.is_some(),
             TomlDependency::Simple(..) => true,
+        }
+    }
+
+    fn is_optional(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
+            TomlDependency::Simple(..) => false,
         }
     }
 }

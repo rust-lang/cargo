@@ -20,7 +20,10 @@ use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::toml::{read_manifest, TomlProfiles};
+use crate::util::toml::{
+    map_deps, read_manifest, StringOrBool, TomlDependency, TomlProfiles, TomlWorkspace,
+    VecStringOrBool,
+};
 use crate::util::{Config, Filesystem};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -131,6 +134,23 @@ pub struct WorkspaceRootConfig {
     default_members: Option<Vec<String>>,
     exclude: Vec<String>,
     custom_metadata: Option<toml::Value>,
+
+    // Properties that can be inherited by members.
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    version: Option<semver::Version>,
+    authors: Option<Vec<String>>,
+    description: Option<String>,
+    documentation: Option<String>,
+    readme: Option<StringOrBool>,
+    homepage: Option<String>,
+    repository: Option<String>,
+    license: Option<String>,
+    license_file: Option<String>,
+    keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
 /// An iterator over the member packages of a workspace, returned by
@@ -1154,21 +1174,64 @@ impl MaybePackage {
 }
 
 impl WorkspaceRootConfig {
-    /// Creates a new Intermediate Workspace Root configuration.
-    pub fn new(
-        root_dir: &Path,
-        members: &Option<Vec<String>>,
-        default_members: &Option<Vec<String>>,
-        exclude: &Option<Vec<String>>,
-        custom_metadata: &Option<toml::Value>,
-    ) -> WorkspaceRootConfig {
-        WorkspaceRootConfig {
+    pub fn from_members(root_dir: &Path, members: Vec<String>) -> WorkspaceRootConfig {
+        Self {
             root_dir: root_dir.to_path_buf(),
-            members: members.clone(),
-            default_members: default_members.clone(),
-            exclude: exclude.clone().unwrap_or_default(),
-            custom_metadata: custom_metadata.clone(),
+            members: Some(members),
+            default_members: None,
+            exclude: Vec::new(),
+            custom_metadata: None,
+            dependencies: None,
+            version: None,
+            authors: None,
+            description: None,
+            documentation: None,
+            readme: None,
+            homepage: None,
+            repository: None,
+            license: None,
+            license_file: None,
+            keywords: None,
+            categories: None,
+            publish: None,
+            edition: None,
+            badges: None,
         }
+    }
+    /// Creates a new Intermediate Workspace Root configuration from a toml workspace.
+    pub fn from_toml_workspace(
+        root_dir: &Path,
+        config: &Config,
+        toml_workspace: &TomlWorkspace,
+    ) -> CargoResult<Self> {
+        let dependencies = map_deps(
+            config,
+            toml_workspace.dependencies.as_ref(),
+            |_d: &TomlDependency| true,
+        )?;
+
+        Ok(Self {
+            root_dir: root_dir.to_path_buf(),
+            members: toml_workspace.members.clone(),
+            default_members: toml_workspace.default_members.clone(),
+            exclude: toml_workspace.exclude.clone().unwrap_or_default(),
+            custom_metadata: toml_workspace.metadata.clone(),
+            dependencies,
+            version: toml_workspace.version.clone(),
+            authors: toml_workspace.authors.clone(),
+            description: toml_workspace.description.clone(),
+            documentation: toml_workspace.documentation.clone(),
+            readme: toml_workspace.readme.clone(),
+            homepage: toml_workspace.homepage.clone(),
+            repository: toml_workspace.repository.clone(),
+            license: toml_workspace.license.clone(),
+            license_file: toml_workspace.license_file.clone(),
+            keywords: toml_workspace.keywords.clone(),
+            categories: toml_workspace.categories.clone(),
+            publish: toml_workspace.publish.clone(),
+            edition: toml_workspace.edition.clone(),
+            badges: toml_workspace.badges.clone(),
+        })
     }
 
     /// Checks the path against the `excluded` list.

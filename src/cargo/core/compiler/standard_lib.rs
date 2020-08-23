@@ -60,13 +60,9 @@ pub fn resolve_std<'cfg>(
         String::from("library/alloc"),
         String::from("library/test"),
     ];
-    let ws_config = crate::core::WorkspaceConfig::Root(crate::core::WorkspaceRootConfig::new(
-        &src_path,
-        &Some(members),
-        /*default_members*/ &None,
-        /*exclude*/ &None,
-        /*custom_metadata*/ &None,
-    ));
+    let ws_config = crate::core::WorkspaceConfig::Root(
+        crate::core::WorkspaceRootConfig::from_members(&src_path, members),
+    );
     let virtual_manifest = crate::core::VirtualManifest::new(
         /*replace*/ Vec::new(),
         patch,
