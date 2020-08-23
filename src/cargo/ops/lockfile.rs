@@ -188,20 +188,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
         }
     }
 
-    let mut orig_iter = orig.lines();
-    let mut current_iter = current.lines();
-    loop {
-        match (orig_iter.next(), current_iter.next()) {
-            (Some(o), Some(c)) => {
-                if o != c {
-                    return false;
-                }
-            }
-            (Some(_), None) => return false,
-            (None, Some(_)) => return false,
-            (None, None) => return true,
-        }
-    }
+    orig.lines().eq(current.lines())
 }
 
 fn emit_package(dep: &toml::value::Table, out: &mut String) {
