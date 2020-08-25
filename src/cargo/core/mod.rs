@@ -28,4 +28,4 @@ pub mod resolver;
 pub mod shell;
 pub mod source;
 pub mod summary;
-mod workspace;
+pub mod workspace;

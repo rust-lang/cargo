@@ -21,8 +21,8 @@ use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::toml::{
-    map_deps, read_manifest, StringOrBool, TomlDependency, TomlProfiles, TomlWorkspace,
-    VecStringOrBool,
+    map_deps, parse_manifest, read_manifest, StringOrBool, TomlDependency, TomlProfiles,
+    TomlWorkspace, VecStringOrBool,
 };
 use crate::util::{Config, Filesystem};
 
@@ -123,6 +123,15 @@ pub enum WorkspaceConfig {
     Member { root: Option<String> },
 }
 
+impl WorkspaceConfig {
+    pub fn is_root(&self) -> bool {
+        match self {
+            Self::Root(_) => true,
+            _ => false,
+        }
+    }
+}
+
 /// Intermediate configuration of a workspace root in a manifest.
 ///
 /// Knows the Workspace Root path, as well as `members` and `exclude` lists of path patterns, which
@@ -177,9 +186,10 @@ impl<'cfg> Workspace<'cfg> {
                 manifest_path
             )
         } else {
-            ws.root_manifest = ws.find_root(manifest_path)?;
+            ws.root_manifest = find_workspace_root(manifest_path, config)?;
         }
 
+        ws.load_current()?;
         ws.custom_metadata = ws
             .load_workspace_config()?
             .and_then(|cfg| cfg.custom_metadata);
@@ -265,6 +275,11 @@ impl<'cfg> Workspace<'cfg> {
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());
         Ok(ws)
+    }
+
+    fn load_current(&mut self) -> CargoResult<()> {
+        self.packages.load(&self.current_manifest)?;
+        Ok(())
     }
 
     /// Returns the current package of this workspace.
@@ -433,7 +448,7 @@ impl<'cfg> Workspace<'cfg> {
         // metadata.
         if let Some(root_path) = &self.root_manifest {
             let root_package = self.packages.load(root_path)?;
-            match root_package.workspace_config() {
+            match root_package.workspace_config().as_ref() {
                 WorkspaceConfig::Root(ref root_config) => {
                     return Ok(Some(root_config.clone()));
                 }
@@ -442,79 +457,6 @@ impl<'cfg> Workspace<'cfg> {
                     "root of a workspace inferred but wasn't a root: {}",
                     root_path.display()
                 ),
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Finds the root of a workspace for the crate whose manifest is located
-    /// at `manifest_path`.
-    ///
-    /// This will parse the `Cargo.toml` at `manifest_path` and then interpret
-    /// the workspace configuration, optionally walking up the filesystem
-    /// looking for other workspace roots.
-    ///
-    /// Returns an error if `manifest_path` isn't actually a valid manifest or
-    /// if some other transient error happens.
-    fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
-        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> CargoResult<PathBuf> {
-            let path = member_manifest
-                .parent()
-                .unwrap()
-                .join(root_link)
-                .join("Cargo.toml");
-            debug!("find_root - pointer {}", path.display());
-            Ok(paths::normalize_path(&path))
-        };
-
-        {
-            let current = self.packages.load(manifest_path)?;
-            match *current.workspace_config() {
-                WorkspaceConfig::Root(_) => {
-                    debug!("find_root - is root {}", manifest_path.display());
-                    return Ok(Some(manifest_path.to_path_buf()));
-                }
-                WorkspaceConfig::Member {
-                    root: Some(ref path_to_root),
-                } => return Ok(Some(read_root_pointer(manifest_path, path_to_root)?)),
-                WorkspaceConfig::Member { root: None } => {}
-            }
-        }
-
-        for path in paths::ancestors(manifest_path).skip(2) {
-            if path.ends_with("target/package") {
-                break;
-            }
-
-            let ances_manifest_path = path.join("Cargo.toml");
-            debug!("find_root - trying {}", ances_manifest_path.display());
-            if ances_manifest_path.exists() {
-                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                    WorkspaceConfig::Root(ref ances_root_config) => {
-                        debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(manifest_path) {
-                            debug!("find_root - found!");
-                            return Ok(Some(ances_manifest_path));
-                        }
-                    }
-                    WorkspaceConfig::Member {
-                        root: Some(ref path_to_root),
-                    } => {
-                        debug!("find_root - found pointer");
-                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)?));
-                    }
-                    WorkspaceConfig::Member { .. } => {}
-                }
-            }
-
-            // Don't walk across `CARGO_HOME` when we're looking for the
-            // workspace root. Sometimes a package will be organized with
-            // `CARGO_HOME` pointing inside of the workspace root or in the
-            // current package, but we don't want to mistakenly try to put
-            // crates.io crates into the workspace by accident.
-            if self.config.home() == path {
-                break;
             }
         }
 
@@ -607,7 +549,7 @@ impl<'cfg> Workspace<'cfg> {
         }
         if is_path_dep
             && !manifest_path.parent().unwrap().starts_with(self.root())
-            && self.find_root(&manifest_path)? != self.root_manifest
+            && find_workspace_root(&manifest_path, self.config)? != self.root_manifest
         {
             // If `manifest_path` is a path dependency outside of the workspace,
             // don't add it, or any of its dependencies, as a members.
@@ -711,7 +653,7 @@ impl<'cfg> Workspace<'cfg> {
             .iter()
             .filter(|&member| {
                 let config = self.packages.get(member).workspace_config();
-                matches!(config, WorkspaceConfig::Root(_))
+                matches!(config.as_ref(), WorkspaceConfig::Root(_))
             })
             .map(|member| member.parent().unwrap().to_path_buf())
             .collect();
@@ -740,7 +682,7 @@ impl<'cfg> Workspace<'cfg> {
 
     fn validate_members(&mut self) -> CargoResult<()> {
         for member in self.members.clone() {
-            let root = self.find_root(&member)?;
+            let root = find_workspace_root(&member, self.config)?;
             if root == self.root_manifest {
                 continue;
             }
@@ -1126,11 +1068,11 @@ impl<'cfg> Packages<'cfg> {
     }
 
     fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {
-        let key = manifest_path.parent().unwrap();
-        match self.packages.entry(key.to_path_buf()) {
+        let key = manifest_path.parent().unwrap().to_path_buf();
+        match self.packages.entry(key.clone()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = SourceId::for_path(key)?;
+                let source_id = SourceId::for_path(&key)?;
                 let (manifest, _nested_paths) =
                     read_manifest(manifest_path, source_id, self.config)?;
                 Ok(v.insert(match manifest {
@@ -1165,7 +1107,7 @@ impl<'a, 'cfg> Iterator for Members<'a, 'cfg> {
 }
 
 impl MaybePackage {
-    fn workspace_config(&self) -> &WorkspaceConfig {
+    fn workspace_config(&self) -> Rc<WorkspaceConfig> {
         match *self {
             MaybePackage::Package(ref p) => p.manifest().workspace_config(),
             MaybePackage::Virtual(ref vm) => vm.workspace_config(),
@@ -1299,4 +1241,86 @@ impl WorkspaceRootConfig {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }
+}
+
+/// Finds the root of a workspace for the crate whose manifest is located
+/// at `manifest_path`.
+///
+/// This will parse the `Cargo.toml` at `manifest_path` and then interpret
+/// the workspace configuration, optionally walking up the filesystem
+/// looking for other workspace roots.
+///
+/// Returns an error if `manifest_path` isn't actually a valid manifest or
+/// if some other transient error happens.
+pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
+    fn read_root_pointer(member_manifest: &Path, root_link: &str) -> CargoResult<PathBuf> {
+        let path = member_manifest
+            .parent()
+            .unwrap()
+            .join(root_link)
+            .join("Cargo.toml");
+        debug!("find_workspace_root - pointer {}", path.display());
+        Ok(paths::normalize_path(&path))
+    };
+
+    fn workspace_config(manifest_path: &Path, config: &Config) -> CargoResult<WorkspaceConfig> {
+        let output = parse_manifest(manifest_path, config)?;
+        output
+            .manifest
+            .workspace_config(manifest_path.parent().unwrap(), config)
+    }
+
+    {
+        match workspace_config(manifest_path, config)? {
+            WorkspaceConfig::Root(_) => {
+                debug!("find_workspace_root - is root {}", manifest_path.display());
+                return Ok(Some(manifest_path.to_path_buf()));
+            }
+            WorkspaceConfig::Member {
+                root: Some(ref path_to_root),
+            } => return Ok(Some(read_root_pointer(manifest_path, path_to_root)?)),
+            WorkspaceConfig::Member { root: None } => {}
+        }
+    }
+
+    for path in paths::ancestors(manifest_path).skip(2) {
+        if path.ends_with("target/package") {
+            break;
+        }
+
+        let ances_manifest_path = path.join("Cargo.toml");
+        debug!(
+            "find_workspace_root - trying {}",
+            ances_manifest_path.display()
+        );
+        if ances_manifest_path.exists() {
+            match workspace_config(&ances_manifest_path, config)? {
+                WorkspaceConfig::Root(ref ances_root_config) => {
+                    debug!("find_workspace_root - found a root checking exclusion");
+                    if !ances_root_config.is_excluded(manifest_path) {
+                        debug!("find_workspace_root - found!");
+                        return Ok(Some(ances_manifest_path));
+                    }
+                }
+                WorkspaceConfig::Member {
+                    root: Some(ref path_to_root),
+                } => {
+                    debug!("find_workspace_root - found pointer");
+                    return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)?));
+                }
+                WorkspaceConfig::Member { .. } => {}
+            }
+        }
+
+        // Don't walk across `CARGO_HOME` when we're looking for the
+        // workspace root. Sometimes a package will be organized with
+        // `CARGO_HOME` pointing inside of the workspace root or in the
+        // current package, but we don't want to mistakenly try to put
+        // crates.io crates into the workspace by accident.
+        if config.home() == path {
+            break;
+        }
+    }
+
+    Ok(None)
 }

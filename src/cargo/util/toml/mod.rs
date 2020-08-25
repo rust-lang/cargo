@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -27,6 +27,8 @@ use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
 
 mod targets;
 use self::targets::targets;
+mod manifest_cache;
+pub use manifest_cache::{parse_manifest, ManifestCache, ParseOutput};
 
 pub fn read_manifest(
     path: &Path,
@@ -38,44 +40,31 @@ pub fn read_manifest(
         path.display(),
         source_id
     );
-    let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
 
-    do_read_manifest(&contents, path, source_id, config)
+    let output = parse_manifest(path, config)?;
+
+    do_read_manifest(&output, path, source_id, config)
         .chain_err(|| format!("failed to parse manifest at `{}`", path.display()))
         .map_err(|err| ManifestError::new(err, path.into()))
 }
 
 fn do_read_manifest(
-    contents: &str,
+    output: &ParseOutput,
     manifest_file: &Path,
     source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    let manifest = &output.manifest;
     let package_root = manifest_file.parent().unwrap();
 
-    let toml = {
-        let pretty_filename = manifest_file
-            .strip_prefix(config.cwd())
-            .unwrap_or(manifest_file);
-        parse(contents, pretty_filename, config)?
-    };
-
-    let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
-        let mut key = String::new();
-        stringify(&mut key, &path);
-        unused.insert(key);
-    })?;
     let add_unused = |warnings: &mut Warnings| {
-        for key in unused {
+        for key in &output.unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
             if key == "profiles.debug" {
                 warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
             }
         }
     };
-
-    let manifest = Rc::new(manifest);
 
     if let Some(deps) = manifest
         .workspace
@@ -110,31 +99,6 @@ fn do_read_manifest(
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
-
-    fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
-        use serde_ignored::Path;
-
-        match *path {
-            Path::Root => {}
-            Path::Seq { parent, index } => {
-                stringify(dst, parent);
-                if !dst.is_empty() {
-                    dst.push('.');
-                }
-                dst.push_str(&index.to_string());
-            }
-            Path::Map { parent, ref key } => {
-                stringify(dst, parent);
-                if !dst.is_empty() {
-                    dst.push('.');
-                }
-                dst.push_str(key);
-            }
-            Path::Some { parent }
-            | Path::NewtypeVariant { parent }
-            | Path::NewtypeStruct { parent } => stringify(dst, parent),
-        }
-    }
 }
 
 pub fn parse(toml: &str, file: &Path, config: &Config) -> CargoResult<toml::Value> {
@@ -1260,18 +1224,8 @@ impl TomlManifest {
             links: project.links.clone(),
         };
 
-        let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
-            (Some(toml_workspace), None) => WorkspaceConfig::Root(
-                WorkspaceRootConfig::from_toml_workspace(package_root, &config, toml_workspace)?,
-            ),
-            (None, root) => WorkspaceConfig::Member {
-                root: root.cloned(),
-            },
-            (Some(..), Some(..)) => bail!(
-                "cannot configure both `package.workspace` and \
-                 `[workspace]`, only one can be specified"
-            ),
-        };
+        let workspace_config = me.workspace_config(package_root, &config)?;
+
         let profiles = me.profile.clone();
         if let Some(profiles) = &profiles {
             profiles.validate(&features, &mut warnings)?;
@@ -1329,7 +1283,7 @@ impl TomlManifest {
             publish_lockfile,
             replace,
             patch,
-            workspace_config,
+            Rc::new(workspace_config),
             features,
             edition,
             project.im_a_teapot,
@@ -1441,25 +1395,45 @@ impl TomlManifest {
             .and_then(|ws| ws.resolver.as_deref())
             .map(|r| ResolveBehavior::from_manifest(r))
             .transpose()?;
-        let workspace_config = match me.workspace {
-            Some(ref toml_workspace) => WorkspaceConfig::Root(
-                WorkspaceRootConfig::from_toml_workspace(root, config, toml_workspace)?,
-            ),
-            None => {
-                bail!("virtual manifests must be configured with [workspace]");
-            }
-        };
+
+        let workspace_config = me.workspace_config(root, config)?;
+        if !workspace_config.is_root() {
+            bail!("virtual manifests must be configured with [workspace]");
+        }
+
         Ok((
             VirtualManifest::new(
                 replace,
                 patch,
-                workspace_config,
+                Rc::new(workspace_config),
                 profiles,
                 features,
                 resolve_behavior,
             ),
             nested_paths,
         ))
+    }
+
+    pub fn workspace_config(
+        &self,
+        package_root: &Path,
+        config: &Config,
+    ) -> CargoResult<WorkspaceConfig> {
+        let workspace = self.workspace.as_ref();
+        let project_workspace = self.package().ok().and_then(|p| p.workspace.as_ref());
+
+        Ok(match (workspace, project_workspace) {
+            (Some(toml_workspace), None) => WorkspaceConfig::Root(
+                WorkspaceRootConfig::from_toml_workspace(package_root, &config, toml_workspace)?,
+            ),
+            (None, root) => WorkspaceConfig::Member {
+                root: root.cloned(),
+            },
+            (Some(..), Some(..)) => bail!(
+                "cannot configure both `package.workspace` and \
+                 `[workspace]`, only one can be specified"
+            ),
+        })
     }
 
     fn replace(&self, cx: &mut Context<'_, '_>) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {

@@ -176,6 +176,8 @@ pub struct Config {
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
+    /// Cache parsed manifests to avoid parsing twice.
+    manifest_cache: LazyCell<RefCell<cargo_toml::ManifestCache>>,
 }
 
 impl Config {
@@ -247,6 +249,7 @@ impl Config {
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
+            manifest_cache: LazyCell::new(),
         }
     }
 
@@ -1206,6 +1209,12 @@ impl Config {
         // nothing to query. Plumbing the name into SourceId is quite challenging.
         self.doc_extern_map
             .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
+    }
+
+    pub fn manifest_cache(&self) -> RefMut<'_, cargo_toml::ManifestCache> {
+        self.manifest_cache
+            .borrow_with(|| RefCell::new(cargo_toml::ManifestCache::new()))
+            .borrow_mut()
     }
 
     /// Returns the `[target]` table definition for the given target triple.

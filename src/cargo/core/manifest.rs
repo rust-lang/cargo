@@ -24,6 +24,15 @@ pub enum EitherManifest {
     Virtual(VirtualManifest),
 }
 
+impl EitherManifest {
+    pub fn workspace(&self) -> Rc<WorkspaceConfig> {
+        match self {
+            Self::Real(manifest) => Rc::clone(&manifest.workspace),
+            Self::Virtual(virtual_manifest) => Rc::clone(&virtual_manifest.workspace),
+        }
+    }
+}
+
 /// Contains all the information about a package, as loaded from a `Cargo.toml`.
 #[derive(Clone, Debug)]
 pub struct Manifest {
@@ -40,7 +49,7 @@ pub struct Manifest {
     publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
-    workspace: WorkspaceConfig,
+    workspace: Rc<WorkspaceConfig>,
     original: Rc<TomlManifest>,
     features: Features,
     edition: Edition,
@@ -66,7 +75,7 @@ pub struct Warnings(Vec<DelayedWarning>);
 pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
-    workspace: WorkspaceConfig,
+    workspace: Rc<WorkspaceConfig>,
     profiles: Option<TomlProfiles>,
     warnings: Warnings,
     features: Features,
@@ -370,7 +379,7 @@ impl Manifest {
         publish_lockfile: bool,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
-        workspace: WorkspaceConfig,
+        workspace: Rc<WorkspaceConfig>,
         features: Features,
         edition: Edition,
         im_a_teapot: Option<bool>,
@@ -463,8 +472,8 @@ impl Manifest {
         self.links.as_deref()
     }
 
-    pub fn workspace_config(&self) -> &WorkspaceConfig {
-        &self.workspace
+    pub fn workspace_config(&self) -> Rc<WorkspaceConfig> {
+        Rc::clone(&self.workspace)
     }
 
     pub fn features(&self) -> &Features {
@@ -538,7 +547,7 @@ impl VirtualManifest {
     pub fn new(
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
-        workspace: WorkspaceConfig,
+        workspace: Rc<WorkspaceConfig>,
         profiles: Option<TomlProfiles>,
         features: Features,
         resolve_behavior: Option<ResolveBehavior>,
@@ -562,8 +571,8 @@ impl VirtualManifest {
         &self.patch
     }
 
-    pub fn workspace_config(&self) -> &WorkspaceConfig {
-        &self.workspace
+    pub fn workspace_config(&self) -> Rc<WorkspaceConfig> {
+        Rc::clone(&self.workspace)
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {

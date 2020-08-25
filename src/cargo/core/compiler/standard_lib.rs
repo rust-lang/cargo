@@ -11,6 +11,7 @@ use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 /// Parse the `-Zbuild-std` flag.
 pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
@@ -66,7 +67,7 @@ pub fn resolve_std<'cfg>(
     let virtual_manifest = crate::core::VirtualManifest::new(
         /*replace*/ Vec::new(),
         patch,
-        ws_config,
+        Rc::new(ws_config),
         /*profiles*/ None,
         crate::core::Features::default(),
         None,
