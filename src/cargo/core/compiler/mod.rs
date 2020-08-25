@@ -207,7 +207,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
 
     rustc.args(cx.bcx.rustflags_args(unit));
     if cx.bcx.config.cli_unstable().binary_dep_depinfo {
-        rustc.arg("-Zbinary-dep-depinfo");
+        rustc.arg("-Z").arg("binary-dep-depinfo");
     }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
@@ -533,7 +533,7 @@ fn prepare_rustc(
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
-        base.arg("-Zjobserver-token-requests");
+        base.arg("-Z").arg("jobserver-token-requests");
         assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
     } else {
         base.inherit_jobserver(&cx.jobserver);
@@ -809,10 +809,10 @@ fn build_base_args(
         }
         lto::Lto::ObjectAndBitcode => {} // this is rustc's default
         lto::Lto::OnlyBitcode => {
-            cmd.arg("-Clinker-plugin-lto");
+            cmd.arg("-C").arg("linker-plugin-lto");
         }
         lto::Lto::OnlyObject => {
-            cmd.arg("-Cembed-bitcode=no");
+            cmd.arg("-C").arg("embed-bitcode=no");
         }
     }
 
@@ -862,7 +862,7 @@ fn build_base_args(
         // will simply not be needed when the behavior is stabilized in the Rust
         // compiler itself.
         if *panic == PanicStrategy::Abort {
-            cmd.arg("-Zpanic-abort-tests");
+            cmd.arg("-Z").arg("panic-abort-tests");
         }
     } else if test {
         cmd.arg("--cfg").arg("test");
@@ -922,7 +922,8 @@ fn build_base_args(
         // any non-public crate in the sysroot).
         //
         // RUSTC_BOOTSTRAP allows unstable features on stable.
-        cmd.arg("-Zforce-unstable-if-unmarked")
+        cmd.arg("-Z")
+            .arg("force-unstable-if-unmarked")
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
