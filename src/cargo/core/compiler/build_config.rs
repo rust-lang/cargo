@@ -37,6 +37,7 @@ pub struct BuildConfig {
     // Note that, although the cmd-line flag name is `out-dir`, in code we use
     // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
     pub export_dir: Option<PathBuf>,
+    pub ignore_local_config: bool,
 }
 
 impl BuildConfig {
@@ -80,6 +81,7 @@ impl BuildConfig {
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,
+            ignore_local_config: false,
         })
     }
 

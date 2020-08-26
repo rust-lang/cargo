@@ -1483,3 +1483,49 @@ Caused by:
   unknown variant `invalid`, expected one of `debuginfo`, `none`, `symbols`",
     );
 }
+
+#[cargo_test]
+fn ignore_local_config_gated() {
+    // Requires -Zunstable-options
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build --ignore-local-config")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `--ignore-local-config` flag is unstable, and only available \
+on the nightly channel of Cargo, [..]
+See [..]
+See [..]
+",
+        )
+        .run();
+
+    p.cargo("build --ignore-local-config")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `--ignore-local-config` flag is unstable, pass `-Z unstable-options` to enable it
+See [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn ignore_local_config_basic() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            target = "non-existent"
+        "#,
+        )
+        .build();
+    p.cargo("build -v --ignore-local-config -Z unstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
+}

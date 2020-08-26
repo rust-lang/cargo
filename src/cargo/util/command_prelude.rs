@@ -163,6 +163,13 @@ pub trait AppExt: Sized {
         ))
     }
 
+    fn arg_ignore_local_config(self) -> Self {
+        self._arg(opt(
+            "ignore-local-config",
+            "Ignore local `.cargo/config.toml` files (unstable)",
+        ))
+    }
+
     fn arg_unit_graph(self) -> Self {
         self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
     }
@@ -459,6 +466,7 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
+        build_config.ignore_local_config = self._is_present("ignore-local-config");
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -468,6 +476,11 @@ pub trait ArgMatchesExt {
             config
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
+        }
+        if build_config.ignore_local_config {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--ignore-local-config", 0000)?;
         }
 
         let opts = CompileOptions {
