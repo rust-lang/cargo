@@ -25,7 +25,7 @@ fn with_deps() {
         .file("src/main.rs", "extern crate bar; fn main() {}")
         .build();
     p.cargo("build -v --release")
-        .with_stderr_contains("[..]`rustc[..]--crate-name bar[..]-Clinker-plugin-lto[..]`")
+        .with_stderr_contains("[..]`rustc[..]--crate-name bar[..]-C linker-plugin-lto[..]`")
         .with_stderr_contains("[..]`rustc[..]--crate-name test[..]-C lto[..]`")
         .run();
 }
@@ -83,7 +83,7 @@ fn build_dep_not_ltod() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("build -v --release")
-        .with_stderr_contains("[..]`rustc[..]--crate-name bar[..]-Cembed-bitcode=no[..]`")
+        .with_stderr_contains("[..]`rustc[..]--crate-name bar[..]-C embed-bitcode=no[..]`")
         .with_stderr_contains("[..]`rustc[..]--crate-name test[..]-C lto[..]`")
         .run();
 }
@@ -188,21 +188,23 @@ fn complicated() {
     p.cargo("build -v --release")
         // normal deps and their transitive dependencies do not need object
         // code, so they should have linker-plugin-lto specified
-        .with_stderr_contains("[..]`rustc[..]--crate-name dep_normal2 [..]-Clinker-plugin-lto[..]`")
-        .with_stderr_contains("[..]`rustc[..]--crate-name dep_normal [..]-Clinker-plugin-lto[..]`")
+        .with_stderr_contains(
+            "[..]`rustc[..]--crate-name dep_normal2 [..]-C linker-plugin-lto[..]`",
+        )
+        .with_stderr_contains("[..]`rustc[..]--crate-name dep_normal [..]-C linker-plugin-lto[..]`")
         // build dependencies and their transitive deps don't need any bitcode,
         // so embedding should be turned off
-        .with_stderr_contains("[..]`rustc[..]--crate-name dep_build2 [..]-Cembed-bitcode=no[..]`")
-        .with_stderr_contains("[..]`rustc[..]--crate-name dep_build [..]-Cembed-bitcode=no[..]`")
+        .with_stderr_contains("[..]`rustc[..]--crate-name dep_build2 [..]-C embed-bitcode=no[..]`")
+        .with_stderr_contains("[..]`rustc[..]--crate-name dep_build [..]-C embed-bitcode=no[..]`")
         .with_stderr_contains(
-            "[..]`rustc[..]--crate-name build_script_build [..]-Cembed-bitcode=no[..]`",
+            "[..]`rustc[..]--crate-name build_script_build [..]-C embed-bitcode=no[..]`",
         )
         // proc macro deps are the same as build deps here
         .with_stderr_contains(
-            "[..]`rustc[..]--crate-name dep_proc_macro2 [..]-Cembed-bitcode=no[..]`",
+            "[..]`rustc[..]--crate-name dep_proc_macro2 [..]-C embed-bitcode=no[..]`",
         )
         .with_stderr_contains(
-            "[..]`rustc[..]--crate-name dep_proc_macro [..]-Cembed-bitcode=no[..]`",
+            "[..]`rustc[..]--crate-name dep_proc_macro [..]-C embed-bitcode=no[..]`",
         )
         .with_stderr_contains("[..]`rustc[..]--crate-name test [..]--crate-type bin[..]-C lto[..]`")
         .with_stderr_contains(
@@ -210,8 +212,8 @@ fn complicated() {
         )
         .with_stderr_contains("[..]`rustc[..]--crate-name dep_shared [..]`")
         .with_stderr_does_not_contain("[..]--crate-name dep_shared[..]-C lto[..]")
-        .with_stderr_does_not_contain("[..]--crate-name dep_shared[..]-Clinker-plugin-lto[..]")
-        .with_stderr_does_not_contain("[..]--crate-name dep_shared[..]-Cembed-bitcode[..]")
+        .with_stderr_does_not_contain("[..]--crate-name dep_shared[..]-C linker-plugin-lto[..]")
+        .with_stderr_does_not_contain("[..]--crate-name dep_shared[..]-C embed-bitcode[..]")
         .run();
 }
 
@@ -252,9 +254,9 @@ fn off_in_manifest_works() {
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-Cembed-bitcode=no[..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C embed-bitcode=no[..]
 [COMPILING] test [..]
-[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-Cembed-bitcode=no[..]
+[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name test src/main.rs [..]--crate-type bin [..]-C lto=off[..]
 [FINISHED] [..]
 ",
@@ -283,7 +285,7 @@ fn between_builds() {
         .with_stderr(
             "\
 [COMPILING] test [..]
-[RUNNING] `rustc [..]--crate-type lib[..]-Clinker-plugin-lto[..]
+[RUNNING] `rustc [..]--crate-type lib[..]-C linker-plugin-lto[..]
 [FINISHED] [..]
 ",
         )
@@ -447,9 +449,9 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
         }
     } else if line.contains("-C lto") {
         Lto::Run(None)
-    } else if line.contains("-Clinker-plugin-lto") {
+    } else if line.contains("-C linker-plugin-lto") {
         Lto::OnlyBitcode
-    } else if line.contains("-Cembed-bitcode=no") {
+    } else if line.contains("-C embed-bitcode=no") {
         Lto::OnlyObject
     } else {
         Lto::ObjectAndBitcode
@@ -491,8 +493,8 @@ fn cdylib_and_rlib() {
 [FRESH] registry-shared v0.0.1
 [FRESH] bar v0.0.0 [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]-Cembed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name a [..]-Cembed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name foo [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name a [..]-C embed-bitcode=no --test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -515,8 +517,8 @@ fn cdylib_and_rlib() {
 [FRESH] registry v0.0.1
 [FRESH] registry-shared v0.0.1
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..]-Cembed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name b [..]-Cembed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no --test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -547,8 +549,8 @@ fn dylib() {
 [FRESH] registry-shared v0.0.1
 [FRESH] bar v0.0.0 [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]-Cembed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name a [..]-Cembed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name foo [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name a [..]-C embed-bitcode=no --test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -560,9 +562,9 @@ fn dylib() {
             "\
 [COMPILING] registry-shared v0.0.1
 [FRESH] registry v0.0.1
-[RUNNING] `rustc --crate-name registry_shared [..]-Cembed-bitcode=no[..]
+[RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no[..]
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-Cembed-bitcode=no[..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no[..]
 [FINISHED] [..]
 ",
         )
@@ -573,8 +575,8 @@ fn dylib() {
 [FRESH] registry-shared v0.0.1
 [FRESH] registry v0.0.1
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..]-Cembed-bitcode=no --test[..]
-[RUNNING] `rustc --crate-name b [..]-Cembed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no --test[..]
+[RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no --test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [RUNNING] [..]
@@ -625,7 +627,7 @@ fn test_profile() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -Cembed-bitcode=no[..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
@@ -678,8 +680,8 @@ fn dev_profile() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -Clinker-plugin-lto [..]
-[RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -Cembed-bitcode=no [..]--test[..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto [..]
+[RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C embed-bitcode=no [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [DOCTEST] foo
