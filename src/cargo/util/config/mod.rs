@@ -436,6 +436,14 @@ impl Config {
         Ok(())
     }
 
+    /// Ignores all values specified in config files, leaving only CLI arguments in place.
+    pub fn ignore_config_files(&mut self) -> CargoResult<()> {
+        self.values.replace(HashMap::default());
+        self.merge_cli_args()?;
+        self.load_unstable_flags_from_config()?;
+        Ok(())
+    }
+
     /// The current working directory.
     pub fn cwd(&self) -> &Path {
         &self.cwd

@@ -218,6 +218,10 @@ fn execute_subcommand(
     cmd: &str,
     subcommand_args: &ArgMatches<'_>,
 ) -> CliResult {
+    if subcommand_args.is_present("no-config") {
+        config.ignore_config_files()?;
+    }
+
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
@@ -326,6 +330,11 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("offline", "Run without accessing the network").global(true))
         .arg(
             multi_opt("config", "KEY=VALUE", "Override a configuration value")
+                .global(true)
+                .hidden(true),
+        )
+        .arg(
+            opt("no-config", "Ignore `.cargo/config` files")
                 .global(true)
                 .hidden(true),
         )
