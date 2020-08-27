@@ -149,8 +149,10 @@ pub struct Config {
     offline: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
-    /// Cli flags of the form "-Z something"
+    /// Cli flags of the form "-Z something" merged with config file values
     unstable_flags: CliUnstable,
+    /// Cli flags of the form "-Z something"
+    unstable_flags_cli: Option<Vec<String>>,
     /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
@@ -231,6 +233,7 @@ impl Config {
                 }
             },
             unstable_flags: CliUnstable::default(),
+            unstable_flags_cli: None,
             easy: LazyCell::new(),
             crates_io_source_id: LazyCell::new(),
             cache_rustc_info,
@@ -427,6 +430,7 @@ impl Config {
         let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
         self.merge_cli_args()?;
+        self.load_unstable_flags_from_config()?;
         Ok(())
     }
 
@@ -703,6 +707,11 @@ impl Config {
         cli_config: &[String],
     ) -> CargoResult<()> {
         self.unstable_flags.parse(unstable_flags)?;
+        if !unstable_flags.is_empty() {
+            // store a copy of the cli flags separately for `load_unstable_flags_from_config`
+            // (we might also need it again for `reload_rooted_at`)
+            self.unstable_flags_cli = Some(unstable_flags.to_vec());
+        }
         if !cli_config.is_empty() {
             self.unstable_flags.fail_if_stable_opt("--config", 6699)?;
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
@@ -756,17 +765,25 @@ impl Config {
                 .unwrap_or(false);
         self.target_dir = cli_target_dir;
 
+        self.load_unstable_flags_from_config()?;
+
+        Ok(())
+    }
+
+    fn load_unstable_flags_from_config(&mut self) -> CargoResult<()> {
         // If nightly features are enabled, allow setting Z-flags from config
         // using the `unstable` table. Ignore that block otherwise.
         if nightly_features_allowed() {
-            if let Some(unstable_flags) = self.get::<Option<CliUnstable>>("unstable")? {
-                self.unstable_flags = unstable_flags;
+            self.unstable_flags = self
+                .get::<Option<CliUnstable>>("unstable")?
+                .unwrap_or_default();
+            if let Some(unstable_flags_cli) = &self.unstable_flags_cli {
+                // NB. It's not ideal to parse these twice, but doing it again here
+                //     allows the CLI to override config files for both enabling
+                //     and disabling, and doing it up top allows CLI Zflags to
+                //     control config parsing behavior.
+                self.unstable_flags.parse(unstable_flags_cli)?;
             }
-            // NB. It's not ideal to parse these twice, but doing it again here
-            //     allows the CLI to override config files for both enabling
-            //     and disabling, and doing it up top allows CLI Zflags to
-            //     control config parsing behavior.
-            self.unstable_flags.parse(unstable_flags)?;
         }
 
         Ok(())

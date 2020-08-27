@@ -1434,6 +1434,25 @@ fn install_ignores_local_cargo_config() {
 }
 
 #[cargo_test]
+fn install_ignores_unstable_table_in_local_cargo_config() {
+    pkg("bar", "0.0.1");
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            r#"
+                [unstable]
+                build-std = ["core"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install bar").masquerade_as_nightly_cargo().run();
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test]
 fn install_global_cargo_config() {
     pkg("bar", "0.0.1");
 
