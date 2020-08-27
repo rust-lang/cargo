@@ -299,7 +299,7 @@ impl Profiles {
             let release = matches!(self.requested_profile.as_str(), "release" | "bench");
 
             match mode {
-                CompileMode::Test | CompileMode::Bench => {
+                CompileMode::Test | CompileMode::Bench | CompileMode::Doctest => {
                     if release {
                         (
                             InternedString::new("bench"),
@@ -312,10 +312,7 @@ impl Profiles {
                         )
                     }
                 }
-                CompileMode::Build
-                | CompileMode::Check { .. }
-                | CompileMode::Doctest
-                | CompileMode::RunCustomBuild => {
+                CompileMode::Build | CompileMode::Check { .. } | CompileMode::RunCustomBuild => {
                     // Note: `RunCustomBuild` doesn't normally use this code path.
                     // `build_unit_profiles` normally ensures that it selects the
                     // ancestor's profile. However, `cargo clean -p` can hit this

@@ -797,28 +797,9 @@ fn build_base_args(
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    match cx.lto[unit] {
-        lto::Lto::Run(None) => {
-            cmd.arg("-C").arg("lto");
-        }
-        lto::Lto::Run(Some(s)) => {
-            cmd.arg("-C").arg(format!("lto={}", s));
-        }
-        lto::Lto::Off => {
-            cmd.arg("-C").arg("lto=off");
-        }
-        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
-        lto::Lto::OnlyBitcode => {
-            cmd.arg("-C").arg("linker-plugin-lto");
-        }
-        lto::Lto::OnlyObject => {
-            cmd.arg("-C").arg("embed-bitcode=no");
-        }
-    }
+    cmd.args(&lto_args(cx, unit));
 
     if let Some(n) = codegen_units {
-        // There are some restrictions with LTO and codegen-units, so we
-        // only add codegen units when LTO is not used.
         cmd.arg("-C").arg(&format!("codegen-units={}", n));
     }
 
@@ -944,6 +925,23 @@ fn build_base_args(
         }
     }
     Ok(())
+}
+
+fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut result = Vec::new();
+    let mut push = |arg: &str| {
+        result.push(OsString::from("-C"));
+        result.push(OsString::from(arg));
+    };
+    match cx.lto[unit] {
+        lto::Lto::Run(None) => push("lto"),
+        lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
+        lto::Lto::Off => push("lto=off"),
+        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
+        lto::Lto::OnlyBitcode => push("linker-plugin-lto"),
+        lto::Lto::OnlyObject => push("embed-bitcode=no"),
+    }
+    result
 }
 
 fn build_deps_args(
