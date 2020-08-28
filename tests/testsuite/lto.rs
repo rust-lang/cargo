@@ -1,6 +1,6 @@
 use cargo::core::compiler::Lto;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{project, Project};
+use cargo_test_support::{basic_manifest, project, Project};
 use std::process::Output;
 
 #[cargo_test]
@@ -514,16 +514,19 @@ fn cdylib_and_rlib() {
     p.cargo("test --release -v --manifest-path bar/Cargo.toml")
         .with_stderr_unordered(
             "\
-[FRESH] registry v0.0.1
-[FRESH] registry-shared v0.0.1
+[COMPILING] registry v0.0.1
+[COMPILING] registry-shared v0.0.1
+[RUNNING] `rustc --crate-name registry [..]-C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no[..]
 [COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar [..]--crate-type cdylib --crate-type rlib [..]-C embed-bitcode=no[..]
 [RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no --test[..]
 [RUNNING] `rustc --crate-name b [..]-C embed-bitcode=no --test[..]
 [FINISHED] [..]
-[RUNNING] [..]
-[RUNNING] [..]
+[RUNNING] [..]target/release/deps/bar-[..]
+[RUNNING] [..]target/release/deps/b-[..]
 [DOCTEST] bar
-[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --test [..]
+[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --test [..]-C embed-bitcode=no[..]
 ",
         )
         .run();
@@ -627,7 +630,7 @@ fn test_profile() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto[..]
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
@@ -680,12 +683,66 @@ fn dev_profile() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]crate-type lib[..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto [..]
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no [..]
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C embed-bitcode=no [..]--test[..]
 [FINISHED] [..]
 [RUNNING] [..]
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]
 ")
+        .run();
+}
+
+#[cargo_test]
+fn doctest() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [profile.release]
+                lto = true
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                /// Foo!
+                ///
+                /// ```
+                /// foo::foo();
+                /// ```
+                pub fn foo() { bar::bar(); }
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn bar() { println!("hi!"); }
+            "#,
+        )
+        .build();
+
+    p.cargo("test --doc --release -v")
+        .with_stderr_contains("[..]`rustc --crate-name bar[..]-C embed-bitcode=no[..]")
+        .with_stderr_contains("[..]`rustc --crate-name foo[..]-C embed-bitcode=no[..]")
+        // embed-bitcode should be harmless here
+        .with_stderr_contains("[..]`rustdoc [..]-C embed-bitcode=no[..]")
+        .run();
+
+    // Try with bench profile.
+    p.cargo("test --doc --release -v")
+        .env("CARGO_PROFILE_BENCH_LTO", "true")
+        .with_stderr_contains("[..]`rustc --crate-name bar[..]-C linker-plugin-lto[..]")
+        .with_stderr_contains("[..]`rustc --crate-name foo[..]-C linker-plugin-lto[..]")
+        .with_stderr_contains("[..]`rustdoc [..]-C lto[..]")
         .run();
 }
