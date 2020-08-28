@@ -562,7 +562,19 @@ impl BuildOutput {
                     }
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
-                "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
+                "rustc-env" => {
+                    let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
+                    // See https://github.com/rust-lang/cargo/issues/7088
+                    if key == "RUSTC_BOOTSTRAP" {
+                        anyhow::bail!("Cannot set `RUSTC_BOOTSTRAP` from {}.\n\
+                            note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
+                            help: If you're sure you want to do this in your project, use `RUSTC_BOOTSTRAP=1 cargo build` instead.
+                            help: See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env for details.",
+                            whence
+                        );
+                    }
+                    env.push((key, val));
+                }
                 "warning" => warnings.push(value.to_string()),
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),

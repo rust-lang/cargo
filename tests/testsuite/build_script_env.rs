@@ -106,3 +106,22 @@ fn rerun_if_env_or_file_changes() {
         )
         .run();
 }
+
+#[cargo_test]
+fn rustc_bootstrap_is_disallowed() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rustc-env=RUSTC_BOOTSTRAP=1");
+            }
+        "#,
+        )
+        .build();
+    p.cargo("build")
+        .with_stderr_contains("error: Cannot set `RUSTC_BOOTSTRAP` [..]")
+        .with_status(101)
+        .run();
+}
