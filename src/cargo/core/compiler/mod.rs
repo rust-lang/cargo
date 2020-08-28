@@ -207,7 +207,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
 
     rustc.args(cx.bcx.rustflags_args(unit));
     if cx.bcx.config.cli_unstable().binary_dep_depinfo {
-        rustc.arg("-Zbinary-dep-depinfo");
+        rustc.arg("-Z").arg("binary-dep-depinfo");
     }
     let mut output_options = OutputOptions::new(cx, unit);
     let package_id = unit.pkg.package_id();
@@ -533,7 +533,7 @@ fn prepare_rustc(
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
-        base.arg("-Zjobserver-token-requests");
+        base.arg("-Z").arg("jobserver-token-requests");
         assert!(cx.rustc_clients.insert(unit.clone(), client).is_none());
     } else {
         base.inherit_jobserver(&cx.jobserver);
@@ -797,28 +797,9 @@ fn build_base_args(
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    match cx.lto[unit] {
-        lto::Lto::Run(None) => {
-            cmd.arg("-C").arg("lto");
-        }
-        lto::Lto::Run(Some(s)) => {
-            cmd.arg("-C").arg(format!("lto={}", s));
-        }
-        lto::Lto::Off => {
-            cmd.arg("-C").arg("lto=off");
-        }
-        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
-        lto::Lto::OnlyBitcode => {
-            cmd.arg("-Clinker-plugin-lto");
-        }
-        lto::Lto::OnlyObject => {
-            cmd.arg("-Cembed-bitcode=no");
-        }
-    }
+    cmd.args(&lto_args(cx, unit));
 
     if let Some(n) = codegen_units {
-        // There are some restrictions with LTO and codegen-units, so we
-        // only add codegen units when LTO is not used.
         cmd.arg("-C").arg(&format!("codegen-units={}", n));
     }
 
@@ -862,7 +843,7 @@ fn build_base_args(
         // will simply not be needed when the behavior is stabilized in the Rust
         // compiler itself.
         if *panic == PanicStrategy::Abort {
-            cmd.arg("-Zpanic-abort-tests");
+            cmd.arg("-Z").arg("panic-abort-tests");
         }
     } else if test {
         cmd.arg("--cfg").arg("test");
@@ -922,7 +903,8 @@ fn build_base_args(
         // any non-public crate in the sysroot).
         //
         // RUSTC_BOOTSTRAP allows unstable features on stable.
-        cmd.arg("-Zforce-unstable-if-unmarked")
+        cmd.arg("-Z")
+            .arg("force-unstable-if-unmarked")
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
@@ -943,6 +925,23 @@ fn build_base_args(
         }
     }
     Ok(())
+}
+
+fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut result = Vec::new();
+    let mut push = |arg: &str| {
+        result.push(OsString::from("-C"));
+        result.push(OsString::from(arg));
+    };
+    match cx.lto[unit] {
+        lto::Lto::Run(None) => push("lto"),
+        lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
+        lto::Lto::Off => push("lto=off"),
+        lto::Lto::ObjectAndBitcode => {} // this is rustc's default
+        lto::Lto::OnlyBitcode => push("linker-plugin-lto"),
+        lto::Lto::OnlyObject => push("embed-bitcode=no"),
+    }
+    result
 }
 
 fn build_deps_args(
