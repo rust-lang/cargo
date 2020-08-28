@@ -210,7 +210,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
                 let mut unstable_opts = false;
-                let args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
+                let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
+                args.extend(compiler::lto_args(&self, unit));
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     unit: unit.clone(),
                     args,
