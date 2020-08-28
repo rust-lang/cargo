@@ -2485,10 +2485,6 @@ fn lld_is_fresh() {
 
 #[cargo_test]
 fn env_in_code_causes_rebuild() {
-    // Only nightly 1.46 has support in dep-info files for this
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -2555,10 +2551,6 @@ fn env_in_code_causes_rebuild() {
 
 #[cargo_test]
 fn env_build_script_no_rebuild() {
-    // Only nightly 1.46 has support in dep-info files for this
-    if !cargo_test_support::is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
