@@ -1,9 +1,37 @@
 # Changelog
 
-## Cargo 1.47 (2020-10-08)
-[4f74d9b2...HEAD](https://github.com/rust-lang/cargo/compare/4f74d9b2...HEAD)
+## Cargo 1.48 (2020-11-19)
+[51b66125...HEAD](https://github.com/rust-lang/cargo/compare/51b66125...HEAD)
 
 ### Added
+
+### Changed
+
+### Fixed
+- Fixed LTO with doctests.
+  [#8657](https://github.com/rust-lang/cargo/pull/8657)
+
+### Nightly only
+
+## Cargo 1.47 (2020-10-08)
+[4f74d9b2...rust-1.47.0](https://github.com/rust-lang/cargo/compare/4f74d9b2...rust-1.47.0)
+
+### Added
+- `cargo doc` will now include the package's version in the left sidebar.
+  [#8509](https://github.com/rust-lang/cargo/pull/8509)
+- Added the `test` field to `cargo metadata` targets.
+  [#8478](https://github.com/rust-lang/cargo/pull/8478)
+- Cargo's man pages are now displayed via the `cargo help` command (such as
+  `cargo help build`).
+  [#8456](https://github.com/rust-lang/cargo/pull/8456)
+  [#8577](https://github.com/rust-lang/cargo/pull/8577)
+- Added new documentation chapters on [how dependency resolution
+  works](https://doc.rust-lang.org/nightly/cargo/reference/resolver.html) and
+  [SemVer
+  compatibility](https://doc.rust-lang.org/nightly/cargo/reference/semver.html),
+  along with suggestions on how to version your project and work with
+  dependencies.
+  [#8609](https://github.com/rust-lang/cargo/pull/8609)
 
 ### Changed
 - The comments added to `.gitignore` when it is modified have been tweaked to
@@ -14,12 +42,59 @@
 - By default, build scripts and proc-macros are now built with `opt-level=0`
   and the default codegen units, even in release mode.
   [#8500](https://github.com/rust-lang/cargo/pull/8500)
+- `workspace.default-members` is now filtered by `workspace.exclude`.
+  [#8485](https://github.com/rust-lang/cargo/pull/8485)
+- `workspace.members` globs now ignore non-directory paths.
+  [#8511](https://github.com/rust-lang/cargo/pull/8511)
+- git zlib errors now trigger a retry.
+  [#8520](https://github.com/rust-lang/cargo/pull/8520)
+- "http" class git errors now trigger a retry.
+  [#8553](https://github.com/rust-lang/cargo/pull/8553)
+- git dependencies now override the `core.autocrlf` git configuration value to
+  ensure they behave consistently across platforms, particularly when
+  vendoring git dependencies on Windows.
+  [#8523](https://github.com/rust-lang/cargo/pull/8523)
+- If `Cargo.lock` needs to be updated, then it will be automatically
+  transitioned to the new V2 format. This format removes the `[metadata]`
+  table, and should be easier to merge changes in source control systems. This
+  format was introduced in 1.38, and made the default for new projects in
+  1.41.
+  [#8554](https://github.com/rust-lang/cargo/pull/8554)
+- Added preparation for support of git repositories with a non-"master"
+  default branch. Actual support will arrive in a future version. This
+  introduces some warnings:
+  - Warn if a git dependency does not specify a branch, and the default branch
+    on the repository is not "master". In the future, Cargo will fetch the
+    default branch. In this scenario, the branch should be explicitly
+    specified.
+  - Warn if a workspace has multiple dependencies to the same git repository,
+    one without a `branch` and one with `branch="master"`. Dependencies should
+    all use one form or the other.
+  [#8522](https://github.com/rust-lang/cargo/pull/8522)
+- Warnings are now issued if a `required-features` entry lists a feature that
+  does not exist.
+  [#7950](https://github.com/rust-lang/cargo/pull/7950)
+- Built-in aliases are now included in `cargo --list`.
+  [#8542](https://github.com/rust-lang/cargo/pull/8542)
+- `cargo install` with a specific version that has been yanked will now
+  display an error message that it has been yanked, instead of "could not
+  find".
+  [#8565](https://github.com/rust-lang/cargo/pull/8565)
+- `cargo publish` with a package that has the `publish` field set to a single
+  registry, and no `--registry` flag has been given, will now publish to that
+  registry instead of generating an error.
+  [#8571](https://github.com/rust-lang/cargo/pull/8571)
 
 ### Fixed
 - Fixed issue where if a project directory was moved, and one of the
   build scripts did not use the `rerun-if-changed` directive, then that
   build script was being rebuilt when it shouldn't.
   [#8497](https://github.com/rust-lang/cargo/pull/8497)
+- Console colors should now work on Windows 7 and 8.
+  [#8540](https://github.com/rust-lang/cargo/pull/8540)
+- The `CARGO_TARGET_{triplet}_RUNNER` environment variable will now correctly
+  override the config file instead of trying to merge the commands.
+  [#8629](https://github.com/rust-lang/cargo/pull/8629)
 
 ### Nightly only
 - Added support for `-Z terminal-width` which tells `rustc` the width of the
@@ -30,7 +105,8 @@
   `[unstable]` table.
   [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html)
   [#8393](https://github.com/rust-lang/cargo/pull/8393)
-- Added [`-Z build-std-features`] flag to set features for the standard library.
+- Added `-Z build-std-features` flag to set features for the standard library.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features)
   [#8490](https://github.com/rust-lang/cargo/pull/8490)
 
 ## Cargo 1.46 (2020-08-27)
