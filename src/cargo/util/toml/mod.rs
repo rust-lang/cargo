@@ -17,8 +17,11 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
+use crate::core::{
+    workspace::find_and_parse_workspace_root, Edition, EitherManifest, Feature, Features,
+    VirtualManifest, Workspace,
+};
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
-use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
@@ -55,10 +58,9 @@ fn do_read_manifest(
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let manifest = &output.manifest;
-    let package_root = manifest_file.parent().unwrap();
 
     let add_unused = |warnings: &mut Warnings| {
-        for key in &output.unused {
+        for key in output.unused.iter() {
             warnings.add_warning(format!("unused manifest key: {}", key));
             if key == "profiles.debug" {
                 warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
@@ -83,7 +85,7 @@ fn do_read_manifest(
 
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
-            TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
+            TomlManifest::to_real_manifest(&manifest, source_id, manifest_file, config)?;
         add_unused(manifest.warnings_mut());
         if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
@@ -95,7 +97,7 @@ fn do_read_manifest(
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) =
-            TomlManifest::to_virtual_manifest(&manifest, source_id, package_root, config)?;
+            TomlManifest::to_virtual_manifest(&manifest, source_id, manifest_file, config)?;
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
@@ -795,6 +797,77 @@ fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDepe
     }
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum MaybeWorkspace<T> {
+    #[serde(
+        serialize_with = "serialize_workspace",
+        deserialize_with = "deserialize_workspace"
+    )]
+    Workspace(bool),
+    Defined(T),
+}
+
+impl<T> MaybeWorkspace<T> {
+    fn from_option(value: &Option<T>) -> Option<Self>
+    where
+        T: Clone,
+    {
+        match value {
+            Some(value) => Some(Self::Defined(value.clone())),
+            None => None,
+        }
+    }
+
+    fn defined(&self) -> CargoResult<T>
+    where
+        T: Clone,
+    {
+        if let Self::Defined(v) = self {
+            Ok(v.clone())
+        } else {
+            bail!("defers to the workspace but could not read a value");
+        }
+    }
+
+    fn or(&self, workspace_value: &Option<T>) -> CargoResult<Option<T>>
+    where
+        T: Clone,
+    {
+        match self {
+            Self::Defined(value) => Ok(Some(value.clone())),
+            Self::Workspace(true) => {
+                Ok(Some(workspace_value.clone().ok_or_else(|| {
+                    anyhow!("defers to the workspace but could not read a value")
+                })?))
+            }
+            Self::Workspace(false) => bail!("cannot specify { workspace = false } for field"),
+        }
+    }
+}
+
+fn serialize_workspace<S>(workspace: &bool, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: ser::Serializer,
+{
+    TomlWorkspaceField {
+        workspace: *workspace,
+    }
+    .serialize(serializer)
+}
+
+fn deserialize_workspace<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    Ok(TomlWorkspaceField::deserialize(deserializer)?.workspace)
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct TomlWorkspaceField {
+    workspace: bool,
+}
+
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
 ///
 /// Note that the order of the fields matters, since this is the order they
@@ -803,19 +876,19 @@ fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDepe
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
-    edition: Option<String>,
+    edition: Option<MaybeWorkspace<String>>,
     name: InternedString,
-    version: semver::Version,
-    authors: Option<Vec<String>>,
+    version: MaybeWorkspace<semver::Version>,
+    authors: Option<MaybeWorkspace<Vec<String>>>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
-    publish: Option<VecStringOrBool>,
+    publish: Option<MaybeWorkspace<VecStringOrBool>>,
     #[serde(rename = "publish-lockfile")]
     publish_lockfile: Option<bool>,
-    workspace: Option<String>,
+    pub workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
     autobins: Option<bool>,
@@ -828,18 +901,150 @@ pub struct TomlProject {
     default_run: Option<String>,
 
     // Package metadata.
+    description: Option<MaybeWorkspace<String>>,
+    homepage: Option<MaybeWorkspace<String>>,
+    documentation: Option<MaybeWorkspace<String>>,
+    readme: Option<MaybeWorkspace<StringOrBool>>,
+    keywords: Option<MaybeWorkspace<Vec<String>>>,
+    categories: Option<MaybeWorkspace<Vec<String>>>,
+    license: Option<MaybeWorkspace<String>>,
+    #[serde(rename = "license-file")]
+    license_file: Option<MaybeWorkspace<String>>,
+    repository: Option<MaybeWorkspace<String>>,
+    metadata: Option<toml::Value>,
+    pub resolver: Option<String>,
+}
+
+struct WorkspaceFields {
+    version: semver::Version,
+    authors: Option<Vec<String>>,
     description: Option<String>,
-    homepage: Option<String>,
     documentation: Option<String>,
     readme: Option<StringOrBool>,
+    homepage: Option<String>,
+    repository: Option<String>,
+    license: Option<String>,
+    license_file: Option<String>,
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
-    license: Option<String>,
-    #[serde(rename = "license-file")]
-    license_file: Option<String>,
-    repository: Option<String>,
-    metadata: Option<toml::Value>,
-    resolver: Option<String>,
+    publish: Option<VecStringOrBool>,
+    edition: Option<String>,
+}
+
+impl TomlProject {
+    fn workspace_fields(&self, parse_output: Option<ParseOutput>) -> CargoResult<WorkspaceFields> {
+        if let Some(output) = parse_output {
+            if let Some(workspace) = output.workspace() {
+                let version = self
+                    .version
+                    .or(&workspace.version)?
+                    .ok_or_else(|| anyhow!("no version specified"))?;
+
+                return Ok(WorkspaceFields {
+                    version,
+
+                    authors: if let Some(ref value) = &self.authors {
+                        value.or(&workspace.authors)?
+                    } else {
+                        None
+                    },
+
+                    description: if let Some(ref value) = &self.description {
+                        value.or(&workspace.description)?
+                    } else {
+                        None
+                    },
+
+                    documentation: if let Some(ref value) = &self.documentation {
+                        value.or(&workspace.documentation)?
+                    } else {
+                        None
+                    },
+
+                    readme: if let Some(ref value) = &self.readme {
+                        value.or(&workspace.readme)?
+                    } else {
+                        None
+                    },
+
+                    homepage: if let Some(ref value) = &self.homepage {
+                        value.or(&workspace.homepage)?
+                    } else {
+                        None
+                    },
+
+                    repository: if let Some(ref value) = &self.repository {
+                        value.or(&workspace.repository)?
+                    } else {
+                        None
+                    },
+
+                    license: if let Some(ref value) = &self.license {
+                        value.or(&workspace.license)?
+                    } else {
+                        None
+                    },
+
+                    license_file: if let Some(ref value) = &self.license_file {
+                        value.or(&workspace.license_file)?
+                    } else {
+                        None
+                    },
+
+                    keywords: if let Some(ref value) = &self.keywords {
+                        value.or(&workspace.keywords)?
+                    } else {
+                        None
+                    },
+
+                    categories: if let Some(ref value) = &self.categories {
+                        value.or(&workspace.categories)?
+                    } else {
+                        None
+                    },
+
+                    publish: if let Some(ref value) = &self.publish {
+                        value.or(&workspace.publish)?
+                    } else {
+                        None
+                    },
+
+                    edition: if let Some(ref value) = &self.edition {
+                        value.or(&workspace.edition)?
+                    } else {
+                        None
+                    },
+                });
+            }
+        }
+
+        Ok(WorkspaceFields {
+            version: self
+                .version
+                .defined()
+                .map_err(|_| anyhow!("no version specified"))?,
+            authors: self.authors.as_ref().map(|v| v.defined()).transpose()?,
+            description: self.description.as_ref().map(|v| v.defined()).transpose()?,
+            documentation: self
+                .documentation
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            readme: self.readme.as_ref().map(|v| v.defined()).transpose()?,
+            homepage: self.homepage.as_ref().map(|v| v.defined()).transpose()?,
+            repository: self.repository.as_ref().map(|v| v.defined()).transpose()?,
+            license: self.license.as_ref().map(|v| v.defined()).transpose()?,
+            license_file: self
+                .license_file
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            keywords: self.keywords.as_ref().map(|v| v.defined()).transpose()?,
+            categories: self.categories.as_ref().map(|v| v.defined()).transpose()?,
+            publish: self.publish.as_ref().map(|v| v.defined()).transpose()?,
+            edition: self.edition.as_ref().map(|v| v.defined()).transpose()?,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -870,12 +1075,6 @@ pub struct TomlWorkspace {
     pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
-impl TomlProject {
-    pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
-        PackageId::new(self.name, self.version.clone(), source_id)
-    }
-}
-
 struct Context<'a, 'b> {
     pkgid: Option<PackageId>,
     deps: &'a mut Vec<Dependency>,
@@ -892,15 +1091,28 @@ impl TomlManifest {
     pub fn prepare_for_publish(
         &self,
         ws: &Workspace<'_>,
-        package_root: &Path,
+        manifest_file: &Path,
     ) -> CargoResult<TomlManifest> {
+        let package_root = manifest_file.parent().unwrap();
         let config = ws.config();
-        let mut package = self
-            .package
-            .as_ref()
-            .or_else(|| self.project.as_ref())
-            .unwrap()
-            .clone();
+        let mut package = self.package().unwrap().clone();
+
+        let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
+        let ws_fields = package.workspace_fields(parse_output)?;
+        package.version = MaybeWorkspace::Defined(ws_fields.version.clone());
+        package.authors = MaybeWorkspace::from_option(&ws_fields.authors);
+        package.description = MaybeWorkspace::from_option(&ws_fields.description);
+        package.documentation = MaybeWorkspace::from_option(&ws_fields.documentation);
+        package.readme = MaybeWorkspace::from_option(&ws_fields.readme);
+        package.homepage = MaybeWorkspace::from_option(&ws_fields.homepage);
+        package.repository = MaybeWorkspace::from_option(&ws_fields.repository);
+        package.license = MaybeWorkspace::from_option(&ws_fields.license);
+        package.license_file = MaybeWorkspace::from_option(&ws_fields.license_file);
+        package.keywords = MaybeWorkspace::from_option(&ws_fields.keywords);
+        package.categories = MaybeWorkspace::from_option(&ws_fields.categories);
+        package.publish = MaybeWorkspace::from_option(&ws_fields.publish);
+        package.edition = MaybeWorkspace::from_option(&ws_fields.edition);
+
         package.workspace = None;
         let mut cargo_features = self.cargo_features.clone();
         package.resolver = ws.resolve_behavior().to_manifest();
@@ -915,25 +1127,26 @@ impl TomlManifest {
                 }
             }
         }
-        if let Some(license_file) = &package.license_file {
+
+        if let Some(license_file) = ws_fields.license_file {
             let license_path = Path::new(&license_file);
             let abs_license_path = paths::normalize_path(&package_root.join(license_path));
             if abs_license_path.strip_prefix(package_root).is_err() {
                 // This path points outside of the package root. `cargo package`
                 // will copy it into the root, so adjust the path to this location.
-                package.license_file = Some(
+                package.license_file = Some(MaybeWorkspace::Defined(
                     license_path
                         .file_name()
                         .unwrap()
                         .to_str()
                         .unwrap()
                         .to_string(),
-                );
+                ));
             }
         }
         let all = |_d: &TomlDependency| true;
         return Ok(TomlManifest {
-            package: Some(package),
+            package: Some(Box::new(package)),
             project: None,
             profile: self.profile.clone(),
             lib: self.lib.clone(),
@@ -1003,9 +1216,10 @@ impl TomlManifest {
     pub fn to_real_manifest(
         me: &Rc<TomlManifest>,
         source_id: SourceId,
-        package_root: &Path,
+        manifest_file: &Path,
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
+        let package_root = manifest_file.parent().unwrap();
         let mut nested_paths = vec![];
         let mut warnings = vec![];
         let mut errors = vec![];
@@ -1015,8 +1229,9 @@ impl TomlManifest {
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, &mut warnings)?;
 
-        let project = me.project.as_ref().or_else(|| me.package.as_ref());
-        let project = project.ok_or_else(|| anyhow!("no `package` section found"))?;
+        let project = me.package()?;
+        let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
+        let ws_fields = project.workspace_fields(parse_output)?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
@@ -1025,9 +1240,9 @@ impl TomlManifest {
 
         validate_package_name(package_name, "package name", "")?;
 
-        let pkgid = project.to_package_id(source_id)?;
+        let pkgid = PackageId::new(project.name, ws_fields.version, source_id)?;
 
-        let edition = if let Some(ref edition) = project.edition {
+        let edition = if let Some(ref edition) = ws_fields.edition {
             features
                 .require(Feature::edition())
                 .chain_err(|| "editions are unstable")?;
@@ -1201,6 +1416,7 @@ impl TomlManifest {
                     .collect()
             })
             .unwrap_or_else(BTreeMap::new);
+
         let summary = Summary::new(
             pkgid,
             deps,
@@ -1210,16 +1426,16 @@ impl TomlManifest {
         )?;
 
         let metadata = ManifestMetadata {
-            description: project.description.clone(),
-            homepage: project.homepage.clone(),
-            documentation: project.documentation.clone(),
-            readme: readme_for_project(package_root, project),
-            authors: project.authors.clone().unwrap_or_default(),
-            license: project.license.clone(),
-            license_file: project.license_file.clone(),
-            repository: project.repository.clone(),
-            keywords: project.keywords.clone().unwrap_or_default(),
-            categories: project.categories.clone().unwrap_or_default(),
+            description: ws_fields.description.clone(),
+            homepage: ws_fields.homepage.clone(),
+            documentation: ws_fields.documentation.clone(),
+            readme: readme_for_project(package_root, ws_fields.readme),
+            authors: ws_fields.authors.clone().unwrap_or_default(),
+            license: ws_fields.license.clone(),
+            license_file: ws_fields.license_file.clone(),
+            repository: ws_fields.repository.clone(),
+            keywords: ws_fields.keywords.clone().unwrap_or_default(),
+            categories: ws_fields.categories.clone().unwrap_or_default(),
             badges: me.badges.clone().unwrap_or_default(),
             links: project.links.clone(),
         };
@@ -1230,7 +1446,8 @@ impl TomlManifest {
         if let Some(profiles) = &profiles {
             profiles.validate(&features, &mut warnings)?;
         }
-        let publish = match project.publish {
+
+        let publish = match ws_fields.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
@@ -1314,9 +1531,10 @@ impl TomlManifest {
     fn to_virtual_manifest(
         me: &Rc<TomlManifest>,
         source_id: SourceId,
-        root: &Path,
+        manifest_file: &Path,
         config: &Config,
     ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
+        let root = manifest_file.parent().unwrap();
         if me.project.is_some() {
             bail!("this virtual manifest specifies a [project] section, which is not allowed");
         }
@@ -1412,6 +1630,14 @@ impl TomlManifest {
             ),
             nested_paths,
         ))
+    }
+
+    pub fn package(&self) -> CargoResult<&TomlProject> {
+        Ok(self
+            .project
+            .as_ref()
+            .or_else(|| self.package.as_ref())
+            .ok_or_else(|| anyhow!("no `package` section found"))?)
     }
 
     pub fn workspace_config(
@@ -1529,8 +1755,8 @@ impl TomlManifest {
 }
 
 /// Returns the name of the README file for a `TomlProject`.
-fn readme_for_project(package_root: &Path, project: &TomlProject) -> Option<String> {
-    match &project.readme {
+fn readme_for_project(package_root: &Path, readme: Option<StringOrBool>) -> Option<String> {
+    match readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
             StringOrBool::Bool(false) => None,

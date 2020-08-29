@@ -377,7 +377,10 @@ fn invalid_parent_pointer() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to read `[..]Cargo.toml`
+error: failed to parse manifest at `[..]Cargo.toml`
+
+Caused by:
+  [..]
 
 Caused by:
   [..]

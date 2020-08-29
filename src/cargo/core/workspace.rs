@@ -21,8 +21,8 @@ use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::toml::{
-    map_deps, parse_manifest, read_manifest, StringOrBool, TomlDependency, TomlProfiles,
-    TomlWorkspace, VecStringOrBool,
+    map_deps, parse_manifest, read_manifest, ParseOutput, StringOrBool, TomlDependency,
+    TomlProfiles, TomlWorkspace, VecStringOrBool,
 };
 use crate::util::{Config, Filesystem};
 
@@ -1323,4 +1323,15 @@ pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult
     }
 
     Ok(None)
+}
+
+pub fn find_and_parse_workspace_root(
+    manifest_file: &Path,
+    config: &Config,
+) -> CargoResult<Option<ParseOutput>> {
+    if let Some(root_path) = find_workspace_root(manifest_file, config)? {
+        Ok(Some(parse_manifest(&root_path, config)?))
+    } else {
+        Ok(None)
+    }
 }

@@ -7,25 +7,32 @@ use std::rc::Rc;
 
 use super::{parse, TomlManifest};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::toml::TomlWorkspace;
 use crate::util::{paths, Config};
 
-pub type ManifestCache = HashMap<PathBuf, Rc<ParseOutput>>;
+pub type ManifestCache = HashMap<PathBuf, ParseOutput>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParseOutput {
     pub manifest: Rc<TomlManifest>,
-    pub unused: BTreeSet<String>,
+    pub unused: Rc<BTreeSet<String>>,
+}
+
+impl ParseOutput {
+    pub fn workspace(&self) -> Option<&TomlWorkspace> {
+        self.manifest.workspace.as_ref()
+    }
 }
 
 pub fn parse_manifest<'a>(
     manifest_file: &'_ Path,
     config: &'a Config,
-) -> Result<Rc<ParseOutput>, ManifestError> {
+) -> Result<ParseOutput, ManifestError> {
     let key = manifest_file.parent().unwrap().to_path_buf();
     let mut cache = config.manifest_cache();
 
     match cache.entry(key.clone()) {
-        Entry::Occupied(e) => Ok(Rc::clone(e.get())),
+        Entry::Occupied(e) => Ok(e.get().clone()),
         Entry::Vacant(v) => {
             let contents = paths::read(manifest_file)
                 .map_err(|err| ManifestError::new(err, manifest_file.into()))?;
@@ -34,7 +41,7 @@ pub fn parse_manifest<'a>(
                 .chain_err(|| format!("failed to parse manifest at `{}`", manifest_file.display()))
                 .map_err(|err| ManifestError::new(err, manifest_file.into()))?;
 
-            Ok(Rc::clone(v.insert(Rc::new(output))))
+            Ok(v.insert(output).clone())
         }
     }
 }
@@ -58,7 +65,7 @@ fn deserialize(
 
     Ok(ParseOutput {
         manifest: Rc::new(manifest),
-        unused,
+        unused: Rc::new(unused),
     })
 }
 
