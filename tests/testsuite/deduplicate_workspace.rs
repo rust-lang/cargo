@@ -1,5 +1,5 @@
 //! Tests for deduplicating Cargo.toml fields with { workspace = true }
-use cargo_test_support::project;
+use cargo_test_support::{basic_workspace_manifest, git, paths, project, publish, registry};
 
 #[cargo_test]
 fn permit_additional_workspace_fields() {
@@ -30,16 +30,7 @@ fn permit_additional_workspace_fields() {
             dep1 = "0.1"
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
@@ -47,7 +38,7 @@ fn permit_additional_workspace_fields() {
         // Should not warn about unused fields.
         .with_stderr(
             "\
-[COMPILING] bar v0.2.0 ([CWD]/bar)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -72,16 +63,7 @@ fn deny_optional_dependencies() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
@@ -96,4 +78,94 @@ Caused by:
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn inherit_workspace_fields() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            version = "1.2.3"
+            authors = ["Rustaceans"]
+            description = "This is a crate"
+            documentation = "https://www.rust-lang.org/learn"
+            readme = "README.md"
+            homepage = "https://www.rust-lang.org"
+            repository = "https://github.com/example/example"
+            license = "MIT"
+            license-file = "./LICENSE"
+            keywords = ["cli"]
+            categories = ["development-tools"]
+            publish = true
+            edition = "2018"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = { workspace = true }
+            authors = { workspace = true }
+            description = { workspace = true }
+            documentation = { workspace = true }
+            readme = { workspace = true }
+            homepage = { workspace = true }
+            repository = { workspace = true }
+            license = { workspace = true }
+            license-file = { workspace = true }
+            keywords = { workspace = true }
+            categories = { workspace = true }
+            publish = { workspace = true }
+            edition = { workspace = true }
+        "#,
+        )
+        .file("bar/LICENSE", "license")
+        .file("bar/README.md", "README.md")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --token sekrit").cwd("bar").run();
+    publish::validate_upload(
+        r#"
+        {
+          "authors": ["Rustaceans"],
+          "badges": {},
+          "categories": ["development-tools"],
+          "deps": [],
+          "description": "This is a crate",
+          "documentation": "https://www.rust-lang.org/learn",
+          "features": {},
+          "homepage": "https://www.rust-lang.org",
+          "keywords": ["cli"],
+          "license": "MIT",
+          "license_file": "./LICENSE",
+          "links": null,
+          "name": "bar",
+          "readme": "README.md",
+          "readme_file": "README.md",
+          "repository": "https://github.com/example/example",
+          "vers": "1.2.3"
+          }
+        "#,
+        "bar-1.2.3.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "README.md",
+            "LICENSE",
+            ".cargo_vcs_info.json",
+        ],
+    );
 }

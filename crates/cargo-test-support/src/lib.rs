@@ -1609,6 +1609,19 @@ pub fn basic_lib_manifest(name: &str) -> String {
     )
 }
 
+pub fn basic_workspace_manifest(name: &str, workspace: &str) -> String {
+    format!(
+        r#"
+        [package]
+        name = "{}"
+        version = "0.1.0"
+        authors = []
+        workspace = "{}"
+    "#,
+        name, workspace
+    )
+}
+
 pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
     Url::from_file_path(p).ok().unwrap()
 }

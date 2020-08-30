@@ -1,7 +1,9 @@
 //! Tests for workspaces.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use cargo_test_support::{
+    basic_lib_manifest, basic_manifest, basic_workspace_manifest, git, project, sleep_ms,
+};
 use std::env;
 use std::fs;
 
@@ -21,16 +23,7 @@ fn simple_explicit() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -63,16 +56,7 @@ fn simple_explicit_default_members() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -261,16 +245,7 @@ fn parent_pointer_works() {
         "#,
         )
         .file("foo/src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = "../foo"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", "../foo"))
         .file("bar/src/main.rs", "fn main() {}")
         .file("bar/src/lib.rs", "");
     let p = p.build();
@@ -297,16 +272,7 @@ fn same_names_in_workspace() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("foo", ".."))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -360,16 +326,7 @@ this may be fixable [..]
 #[cargo_test]
 fn invalid_parent_pointer() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            workspace = "foo"
-        "#,
-        )
+        .file("Cargo.toml", &basic_workspace_manifest("foo", "foo"))
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -486,16 +443,7 @@ error: multiple workspace roots found in the same workspace:
 #[cargo_test]
 fn workspace_isnt_root() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            workspace = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_workspace_manifest("foo", "bar"))
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
@@ -523,27 +471,9 @@ fn dangling_member() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = "../baz"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", "../baz"))
         .file("bar/src/main.rs", "fn main() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-            workspace = "../baz"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_workspace_manifest("baz", "../baz"))
         .file("baz/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -562,27 +492,9 @@ actual: [..]
 #[cargo_test]
 fn cycle() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            workspace = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_workspace_manifest("foo", "bar"))
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -1348,16 +1260,7 @@ fn relative_path_for_member_works() {
     "#,
         )
         .file("foo/src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-        [project]
-        name = "bar"
-        version = "0.1.0"
-        authors = []
-        workspace = "../foo"
-    "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", "../foo"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -1459,16 +1362,7 @@ fn test_in_and_out_of_workspace() {
             "foo/src/lib.rs",
             "extern crate bar; pub fn f() { bar::f() }",
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            workspace = "../ws"
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_workspace_manifest("bar", "../ws"))
         .file("bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
@@ -1740,24 +1634,12 @@ fn glob_syntax() {
         .file("src/main.rs", "fn main() {}")
         .file(
             "crates/bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = "../.."
-        "#,
+            &basic_workspace_manifest("bar", "../.."),
         )
         .file("crates/bar/src/main.rs", "fn main() {}")
         .file(
             "crates/baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-            workspace = "../.."
-        "#,
+            &basic_workspace_manifest("baz", "../.."),
         )
         .file("crates/baz/src/main.rs", "fn main() {}")
         .file(
