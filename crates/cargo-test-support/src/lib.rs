@@ -1213,44 +1213,7 @@ impl Execs {
                     Ok(())
                 }
             }
-            MatchKind::Unordered => {
-                let mut a = actual.lines().collect::<Vec<_>>();
-                // match more-constrained lines first, although in theory we'll
-                // need some sort of recursive match here. This handles the case
-                // that you expect "a\n[..]b" and two lines are printed out,
-                // "ab\n"a", where technically we do match unordered but a naive
-                // search fails to find this. This simple sort at least gets the
-                // test suite to pass for now, but we may need to get more fancy
-                // if tests start failing again.
-                a.sort_by_key(|s| s.len());
-                let mut failures = Vec::new();
-
-                for e_line in out.lines() {
-                    match a.iter().position(|a_line| lines_match(e_line, a_line)) {
-                        Some(index) => {
-                            a.remove(index);
-                        }
-                        None => failures.push(e_line),
-                    }
-                }
-                if !failures.is_empty() {
-                    return Err(format!(
-                        "Did not find expected line(s):\n{}\n\
-                         Remaining available output:\n{}\n",
-                        failures.join("\n"),
-                        a.join("\n")
-                    ));
-                }
-                if !a.is_empty() {
-                    Err(format!(
-                        "Output included extra lines:\n\
-                         {}\n",
-                        a.join("\n")
-                    ))
-                } else {
-                    Ok(())
-                }
-            }
+            MatchKind::Unordered => lines_match_unordered(&out, &actual),
         }
     }
 
@@ -1380,6 +1343,45 @@ pub fn lines_match(expected: &str, mut actual: &str) -> bool {
         }
     }
     actual.is_empty() || expected.ends_with("[..]")
+}
+
+pub fn lines_match_unordered(expected: &str, actual: &str) -> Result<(), String> {
+    let mut a = actual.lines().collect::<Vec<_>>();
+    // match more-constrained lines first, although in theory we'll
+    // need some sort of recursive match here. This handles the case
+    // that you expect "a\n[..]b" and two lines are printed out,
+    // "ab\n"a", where technically we do match unordered but a naive
+    // search fails to find this. This simple sort at least gets the
+    // test suite to pass for now, but we may need to get more fancy
+    // if tests start failing again.
+    a.sort_by_key(|s| s.len());
+    let mut failures = Vec::new();
+
+    for e_line in expected.lines() {
+        match a.iter().position(|a_line| lines_match(e_line, a_line)) {
+            Some(index) => {
+                a.remove(index);
+            }
+            None => failures.push(e_line),
+        }
+    }
+    if !failures.is_empty() {
+        return Err(format!(
+            "Did not find expected line(s):\n{}\n\
+                         Remaining available output:\n{}\n",
+            failures.join("\n"),
+            a.join("\n")
+        ));
+    }
+    if !a.is_empty() {
+        Err(format!(
+            "Output included extra lines:\n\
+                         {}\n",
+            a.join("\n")
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 /// Variant of `lines_match` that applies normalization to the strings.
