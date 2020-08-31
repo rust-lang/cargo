@@ -607,6 +607,13 @@ impl BuildOutput {
         let mut iter = value.splitn(2, '=');
         let name = iter.next();
         let val = iter.next();
+        if name.unwrap_or("").eq_ignore_ascii_case("RUSTC_BOOTSTRAP") {
+            if crate::core::features::nightly_features_allowed() {
+                log::warn!("RUSTC_BOOTSTRAP is not supported in build script overrides");
+            } else {
+                anyhow::bail!("RUSTC_BOOTSTRAP is not supported in build script overrides");
+            }
+        }
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
             _ => anyhow::bail!("Variable rustc-env has no value in {}: {}", whence, value),
