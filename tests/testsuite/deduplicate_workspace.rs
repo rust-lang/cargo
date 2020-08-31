@@ -24,7 +24,7 @@ fn permit_additional_workspace_fields() {
             edition = "2018"
 
             [workspace.badges]
-            gitlab = { repository = "https://gitlab.com/rust-lang/rusu", branch = "master" }
+            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
 
             [workspace.dependencies]
             dep1 = "0.1"
@@ -105,12 +105,17 @@ fn inherit_workspace_fields() {
             categories = ["development-tools"]
             publish = true
             edition = "2018"
+
+            [workspace.badges]
+            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
+            badges = { workspace = true }
+
             [package]
             name = "bar"
             workspace = ".."
@@ -139,7 +144,9 @@ fn inherit_workspace_fields() {
         r#"
         {
           "authors": ["Rustaceans"],
-          "badges": {},
+          "badges": {
+            "gitlab": { "branch": "master", "repository": "https://gitlab.com/rust-lang/rust" }
+          },
           "categories": ["development-tools"],
           "deps": [],
           "description": "This is a crate",

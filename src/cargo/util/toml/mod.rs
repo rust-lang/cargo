@@ -249,7 +249,7 @@ pub struct TomlManifest {
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
-    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    badges: Option<MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -929,123 +929,10 @@ struct WorkspaceFields {
     categories: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
     edition: Option<String>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
-impl TomlProject {
-    fn workspace_fields(&self, parse_output: Option<ParseOutput>) -> CargoResult<WorkspaceFields> {
-        if let Some(output) = parse_output {
-            if let Some(workspace) = output.workspace() {
-                let version = self
-                    .version
-                    .or(&workspace.version)?
-                    .ok_or_else(|| anyhow!("no version specified"))?;
-
-                return Ok(WorkspaceFields {
-                    version,
-
-                    authors: if let Some(ref value) = &self.authors {
-                        value.or(&workspace.authors)?
-                    } else {
-                        None
-                    },
-
-                    description: if let Some(ref value) = &self.description {
-                        value.or(&workspace.description)?
-                    } else {
-                        None
-                    },
-
-                    documentation: if let Some(ref value) = &self.documentation {
-                        value.or(&workspace.documentation)?
-                    } else {
-                        None
-                    },
-
-                    readme: if let Some(ref value) = &self.readme {
-                        value.or(&workspace.readme)?
-                    } else {
-                        None
-                    },
-
-                    homepage: if let Some(ref value) = &self.homepage {
-                        value.or(&workspace.homepage)?
-                    } else {
-                        None
-                    },
-
-                    repository: if let Some(ref value) = &self.repository {
-                        value.or(&workspace.repository)?
-                    } else {
-                        None
-                    },
-
-                    license: if let Some(ref value) = &self.license {
-                        value.or(&workspace.license)?
-                    } else {
-                        None
-                    },
-
-                    license_file: if let Some(ref value) = &self.license_file {
-                        value.or(&workspace.license_file)?
-                    } else {
-                        None
-                    },
-
-                    keywords: if let Some(ref value) = &self.keywords {
-                        value.or(&workspace.keywords)?
-                    } else {
-                        None
-                    },
-
-                    categories: if let Some(ref value) = &self.categories {
-                        value.or(&workspace.categories)?
-                    } else {
-                        None
-                    },
-
-                    publish: if let Some(ref value) = &self.publish {
-                        value.or(&workspace.publish)?
-                    } else {
-                        None
-                    },
-
-                    edition: if let Some(ref value) = &self.edition {
-                        value.or(&workspace.edition)?
-                    } else {
-                        None
-                    },
-                });
-            }
-        }
-
-        Ok(WorkspaceFields {
-            version: self
-                .version
-                .defined()
-                .map_err(|_| anyhow!("no version specified"))?,
-            authors: self.authors.as_ref().map(|v| v.defined()).transpose()?,
-            description: self.description.as_ref().map(|v| v.defined()).transpose()?,
-            documentation: self
-                .documentation
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            readme: self.readme.as_ref().map(|v| v.defined()).transpose()?,
-            homepage: self.homepage.as_ref().map(|v| v.defined()).transpose()?,
-            repository: self.repository.as_ref().map(|v| v.defined()).transpose()?,
-            license: self.license.as_ref().map(|v| v.defined()).transpose()?,
-            license_file: self
-                .license_file
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            keywords: self.keywords.as_ref().map(|v| v.defined()).transpose()?,
-            categories: self.categories.as_ref().map(|v| v.defined()).transpose()?,
-            publish: self.publish.as_ref().map(|v| v.defined()).transpose()?,
-            edition: self.edition.as_ref().map(|v| v.defined()).transpose()?,
-        })
-    }
-}
+impl TomlProject {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
@@ -1098,7 +985,7 @@ impl TomlManifest {
         let mut package = self.package().unwrap().clone();
 
         let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
-        let ws_fields = package.workspace_fields(parse_output)?;
+        let ws_fields = self.workspace_fields(parse_output)?;
         package.version = MaybeWorkspace::Defined(ws_fields.version.clone());
         package.authors = MaybeWorkspace::from_option(&ws_fields.authors);
         package.description = MaybeWorkspace::from_option(&ws_fields.description);
@@ -1208,7 +1095,7 @@ impl TomlManifest {
             replace: None,
             patch: None,
             workspace: None,
-            badges: self.badges.clone(),
+            badges: MaybeWorkspace::define(&ws_fields.badges),
             cargo_features,
         });
     }
@@ -1231,7 +1118,7 @@ impl TomlManifest {
 
         let project = me.package()?;
         let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
-        let ws_fields = project.workspace_fields(parse_output)?;
+        let ws_fields = me.workspace_fields(parse_output)?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
@@ -1436,7 +1323,7 @@ impl TomlManifest {
             repository: ws_fields.repository.clone(),
             keywords: ws_fields.keywords.clone().unwrap_or_default(),
             categories: ws_fields.categories.clone().unwrap_or_default(),
-            badges: me.badges.clone().unwrap_or_default(),
+            badges: ws_fields.badges.clone().unwrap_or_default(),
             links: project.links.clone(),
         };
 
@@ -1630,6 +1517,127 @@ impl TomlManifest {
             ),
             nested_paths,
         ))
+    }
+
+    fn workspace_fields(&self, parse_output: Option<ParseOutput>) -> CargoResult<WorkspaceFields> {
+        let package = self.package()?;
+        if let Some(output) = parse_output {
+            if let Some(workspace) = output.workspace() {
+                let version = package
+                    .version
+                    .or(&workspace.version)?
+                    .ok_or_else(|| anyhow!("no version specified"))?;
+
+                return Ok(WorkspaceFields {
+                    version,
+
+                    authors: match &package.authors {
+                        Some(value) => value.or(&workspace.authors)?,
+                        None => None,
+                    },
+
+                    description: match &package.description {
+                        Some(value) => value.or(&workspace.description)?,
+                        None => None,
+                    },
+
+                    documentation: match &package.documentation {
+                        Some(value) => value.or(&workspace.documentation)?,
+                        None => None,
+                    },
+
+                    readme: match &package.readme {
+                        Some(value) => value.or(&workspace.readme)?,
+                        None => None,
+                    },
+
+                    homepage: match &package.homepage {
+                        Some(value) => value.or(&workspace.homepage)?,
+                        None => None,
+                    },
+
+                    repository: match &package.repository {
+                        Some(value) => value.or(&workspace.repository)?,
+                        None => None,
+                    },
+
+                    license: match &package.license {
+                        Some(value) => value.or(&workspace.license)?,
+                        None => None,
+                    },
+
+                    license_file: match &package.license_file {
+                        Some(value) => value.or(&workspace.license_file)?,
+                        None => None,
+                    },
+
+                    keywords: match &package.keywords {
+                        Some(value) => value.or(&workspace.keywords)?,
+                        None => None,
+                    },
+
+                    categories: match &package.categories {
+                        Some(value) => value.or(&workspace.categories)?,
+                        None => None,
+                    },
+
+                    publish: match &package.publish {
+                        Some(value) => value.or(&workspace.publish)?,
+                        None => None,
+                    },
+
+                    edition: match &package.edition {
+                        Some(value) => value.or(&workspace.edition)?,
+                        None => None,
+                    },
+
+                    badges: match &self.badges {
+                        Some(value) => value.or(&workspace.badges)?,
+                        None => None,
+                    },
+                });
+            }
+        }
+
+        Ok(WorkspaceFields {
+            version: package
+                .version
+                .defined()
+                .map_err(|_| anyhow!("no version specified"))?,
+            authors: package.authors.as_ref().map(|v| v.defined()).transpose()?,
+            description: package
+                .description
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            documentation: package
+                .documentation
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            readme: package.readme.as_ref().map(|v| v.defined()).transpose()?,
+            homepage: package.homepage.as_ref().map(|v| v.defined()).transpose()?,
+            repository: package
+                .repository
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            license: package.license.as_ref().map(|v| v.defined()).transpose()?,
+            license_file: package
+                .license_file
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            keywords: package.keywords.as_ref().map(|v| v.defined()).transpose()?,
+            categories: package
+                .categories
+                .as_ref()
+                .map(|v| v.defined())
+                .transpose()?,
+            publish: package.publish.as_ref().map(|v| v.defined()).transpose()?,
+            edition: package.edition.as_ref().map(|v| v.defined()).transpose()?,
+            badges: self.badges.as_ref().map(|v| v.defined()).transpose()?,
+        })
     }
 
     pub fn package(&self) -> CargoResult<&TomlProject> {
