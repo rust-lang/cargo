@@ -10,8 +10,8 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match, main_file,
-    paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match_unordered,
+    main_file, paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
 use std::fs;
@@ -5040,29 +5040,22 @@ fn close_output() {
     };
 
     let stderr = spawn(false);
-    assert!(
-        lines_match(
-            "\
+    lines_match_unordered(
+        "\
 [COMPILING] foo [..]
 hello stderr!
 [ERROR] [..]
 [WARNING] build failed, waiting for other jobs to finish...
-[ERROR] build failed
+[ERROR] [..]
 ",
-            &stderr,
-        ),
-        "lines differ:\n{}",
-        stderr
-    );
+        &stderr,
+    )
+    .unwrap();
 
     // Try again with stderr.
     p.build_dir().rm_rf();
     let stdout = spawn(true);
-    assert!(
-        lines_match("hello stdout!\n", &stdout),
-        "lines differ:\n{}",
-        stdout
-    );
+    lines_match_unordered("hello stdout!\n", &stdout).unwrap();
 }
 
 use cargo_test_support::registry::Dependency;
