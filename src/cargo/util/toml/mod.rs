@@ -808,41 +808,50 @@ pub enum MaybeWorkspace<T> {
     Defined(T),
 }
 
-impl<T> MaybeWorkspace<T> {
-    fn from_option(value: &Option<T>) -> Option<Self>
-    where
-        T: Clone,
-    {
+impl<T> MaybeWorkspace<T>
+where
+    T: std::fmt::Debug + Clone,
+{
+    fn from_option(value: &Option<T>) -> Option<Self> {
         match value {
             Some(value) => Some(Self::Defined(value.clone())),
             None => None,
         }
     }
+}
 
-    fn defined(&self) -> CargoResult<T>
-    where
-        T: Clone,
-    {
-        if let Self::Defined(v) = self {
-            Ok(v.clone())
-        } else {
-            bail!("defers to the workspace but could not read a value");
-        }
-    }
+/// Parses an optional field, defaulting to the workspace's value.
+fn workspace_default<'a, T, F>(
+    value: Option<&'a MaybeWorkspace<T>>,
+    workspace: Option<&'a TomlWorkspace>,
+    f: F,
+    label: &'_ str,
+) -> CargoResult<Option<T>>
+where
+    T: std::fmt::Debug + Clone,
+    F: FnOnce(&'a TomlWorkspace) -> &'a Option<T>,
+{
+    match (value, workspace) {
+        (None, _) => Ok(None),
+        (Some(MaybeWorkspace::Defined(value)), _) => Ok(Some(value.clone())),
+        (Some(MaybeWorkspace::Workspace(false)), _) => Err(anyhow!(
+            "error reading {}: cannot specify {{ workspace = false }}",
+            label
+        )),
+        (Some(MaybeWorkspace::Workspace(true)), Some(ws)) => f(ws)
+            .clone()
+            .ok_or_else(|| {
+                anyhow!(
+                    "error reading {0}: workspace root does not define [workspace.{0}]",
+                    label
+                )
+            })
+            .map(|value| Some(value)),
 
-    fn or(&self, workspace_value: &Option<T>) -> CargoResult<Option<T>>
-    where
-        T: Clone,
-    {
-        match self {
-            Self::Defined(value) => Ok(Some(value.clone())),
-            Self::Workspace(true) => {
-                Ok(Some(workspace_value.clone().ok_or_else(|| {
-                    anyhow!("defers to the workspace but could not read a value")
-                })?))
-            }
-            Self::Workspace(false) => bail!("cannot specify { workspace = false } for field"),
-        }
+        (Some(MaybeWorkspace::Workspace(true)), None) => Err(anyhow!(
+            "error reading {}: could not read workspace root",
+            label
+        )),
     }
 }
 
@@ -985,7 +994,7 @@ impl TomlManifest {
         let mut package = self.package().unwrap().clone();
 
         let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
-        let ws_fields = self.workspace_fields(parse_output)?;
+        let ws_fields = self.workspace_fields(&parse_output)?;
         package.version = MaybeWorkspace::Defined(ws_fields.version.clone());
         package.authors = MaybeWorkspace::from_option(&ws_fields.authors);
         package.description = MaybeWorkspace::from_option(&ws_fields.description);
@@ -1095,7 +1104,7 @@ impl TomlManifest {
             replace: None,
             patch: None,
             workspace: None,
-            badges: MaybeWorkspace::define(&ws_fields.badges),
+            badges: MaybeWorkspace::from_option(&ws_fields.badges),
             cargo_features,
         });
     }
@@ -1118,7 +1127,7 @@ impl TomlManifest {
 
         let project = me.package()?;
         let parse_output = find_and_parse_workspace_root(manifest_file, &config)?;
-        let ws_fields = me.workspace_fields(parse_output)?;
+        let ws_fields = me.workspace_fields(&parse_output)?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
@@ -1519,124 +1528,91 @@ impl TomlManifest {
         ))
     }
 
-    fn workspace_fields(&self, parse_output: Option<ParseOutput>) -> CargoResult<WorkspaceFields> {
+    fn workspace_fields(&self, parse_output: &Option<ParseOutput>) -> CargoResult<WorkspaceFields> {
         let package = self.package()?;
-        if let Some(output) = parse_output {
-            if let Some(workspace) = output.workspace() {
-                let version = package
-                    .version
-                    .or(&workspace.version)?
-                    .ok_or_else(|| anyhow!("no version specified"))?;
-
-                return Ok(WorkspaceFields {
-                    version,
-
-                    authors: match &package.authors {
-                        Some(value) => value.or(&workspace.authors)?,
-                        None => None,
-                    },
-
-                    description: match &package.description {
-                        Some(value) => value.or(&workspace.description)?,
-                        None => None,
-                    },
-
-                    documentation: match &package.documentation {
-                        Some(value) => value.or(&workspace.documentation)?,
-                        None => None,
-                    },
-
-                    readme: match &package.readme {
-                        Some(value) => value.or(&workspace.readme)?,
-                        None => None,
-                    },
-
-                    homepage: match &package.homepage {
-                        Some(value) => value.or(&workspace.homepage)?,
-                        None => None,
-                    },
-
-                    repository: match &package.repository {
-                        Some(value) => value.or(&workspace.repository)?,
-                        None => None,
-                    },
-
-                    license: match &package.license {
-                        Some(value) => value.or(&workspace.license)?,
-                        None => None,
-                    },
-
-                    license_file: match &package.license_file {
-                        Some(value) => value.or(&workspace.license_file)?,
-                        None => None,
-                    },
-
-                    keywords: match &package.keywords {
-                        Some(value) => value.or(&workspace.keywords)?,
-                        None => None,
-                    },
-
-                    categories: match &package.categories {
-                        Some(value) => value.or(&workspace.categories)?,
-                        None => None,
-                    },
-
-                    publish: match &package.publish {
-                        Some(value) => value.or(&workspace.publish)?,
-                        None => None,
-                    },
-
-                    edition: match &package.edition {
-                        Some(value) => value.or(&workspace.edition)?,
-                        None => None,
-                    },
-
-                    badges: match &self.badges {
-                        Some(value) => value.or(&workspace.badges)?,
-                        None => None,
-                    },
-                });
-            }
-        }
+        let workspace = parse_output.as_ref().and_then(|output| output.workspace());
 
         Ok(WorkspaceFields {
-            version: package
-                .version
-                .defined()
-                .map_err(|_| anyhow!("no version specified"))?,
-            authors: package.authors.as_ref().map(|v| v.defined()).transpose()?,
-            description: package
-                .description
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            documentation: package
-                .documentation
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            readme: package.readme.as_ref().map(|v| v.defined()).transpose()?,
-            homepage: package.homepage.as_ref().map(|v| v.defined()).transpose()?,
-            repository: package
-                .repository
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            license: package.license.as_ref().map(|v| v.defined()).transpose()?,
-            license_file: package
-                .license_file
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            keywords: package.keywords.as_ref().map(|v| v.defined()).transpose()?,
-            categories: package
-                .categories
-                .as_ref()
-                .map(|v| v.defined())
-                .transpose()?,
-            publish: package.publish.as_ref().map(|v| v.defined()).transpose()?,
-            edition: package.edition.as_ref().map(|v| v.defined()).transpose()?,
-            badges: self.badges.as_ref().map(|v| v.defined()).transpose()?,
+            version: workspace_default(
+                Some(&package.version),
+                workspace,
+                |ws| &ws.version,
+                "version",
+            )?
+            .ok_or_else(|| anyhow!("no version specified"))?,
+            authors: workspace_default(
+                package.authors.as_ref(),
+                workspace,
+                |ws| &ws.authors,
+                "authors",
+            )?,
+            description: workspace_default(
+                package.description.as_ref(),
+                workspace,
+                |ws| &ws.description,
+                "description",
+            )?,
+            documentation: workspace_default(
+                package.documentation.as_ref(),
+                workspace,
+                |ws| &ws.documentation,
+                "documentation",
+            )?,
+            readme: workspace_default(
+                package.readme.as_ref(),
+                workspace,
+                |ws| &ws.readme,
+                "readme",
+            )?,
+            homepage: workspace_default(
+                package.homepage.as_ref(),
+                workspace,
+                |ws| &ws.homepage,
+                "homepage",
+            )?,
+            repository: workspace_default(
+                package.repository.as_ref(),
+                workspace,
+                |ws| &ws.repository,
+                "repository",
+            )?,
+            license: workspace_default(
+                package.license.as_ref(),
+                workspace,
+                |ws| &ws.license,
+                "license",
+            )?,
+            license_file: workspace_default(
+                package.license_file.as_ref(),
+                workspace,
+                |ws| &ws.license_file,
+                "license_file",
+            )?,
+            keywords: workspace_default(
+                package.keywords.as_ref(),
+                workspace,
+                |ws| &ws.keywords,
+                "keywords",
+            )?,
+            categories: workspace_default(
+                package.categories.as_ref(),
+                workspace,
+                |ws| &ws.categories,
+                "categories",
+            )?,
+            publish: workspace_default(
+                package.publish.as_ref(),
+                workspace,
+                |ws| &ws.publish,
+                "publish",
+            )?,
+            edition: workspace_default(
+                package.edition.as_ref(),
+                workspace,
+                |ws| &ws.edition,
+                "edition",
+            )?,
+            badges: workspace_default(self.badges.as_ref(), workspace, |ws| &ws.badges, "badges")?,
         })
     }
 
