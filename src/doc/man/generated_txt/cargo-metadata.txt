@@ -1,7 +1,5 @@
 CARGO-METADATA(1)
 
-:source-highlighter: highlightjs
-
 NAME
        cargo-metadata - Machine-readable metadata about the current package
 

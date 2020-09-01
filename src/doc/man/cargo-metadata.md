@@ -1,5 +1,4 @@
 # cargo-metadata(1)
-:source-highlighter: highlightjs
 
 ## NAME
 
