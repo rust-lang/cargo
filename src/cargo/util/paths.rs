@@ -515,7 +515,8 @@ fn exclude_from_backups(path: &Path) {
         path.join("CACHEDIR.TAG"),
         "Signature: 8a477f597d28d172789f06886806bc55
 # This file is a cache directory tag created by cargo.
-# For information about cache directory tags see https://bford.info/cachedir/",
+# For information about cache directory tags see https://bford.info/cachedir/
+",
     );
     // Similarly to exclude_from_time_machine() we ignore errors here as it's an optional feature.
 }
