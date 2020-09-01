@@ -921,7 +921,7 @@ pub struct TomlProject {
     license_file: Option<MaybeWorkspace<String>>,
     repository: Option<MaybeWorkspace<String>>,
     metadata: Option<toml::Value>,
-    pub resolver: Option<String>,
+    resolver: Option<String>,
 }
 
 struct WorkspaceFields {
@@ -1042,7 +1042,7 @@ impl TomlManifest {
         }
         let all = |_d: &TomlDependency| true;
         return Ok(TomlManifest {
-            package: Some(Box::new(package)),
+            package: Some(package),
             project: None,
             profile: self.profile.clone(),
             lib: self.lib.clone(),
@@ -1616,7 +1616,7 @@ impl TomlManifest {
         })
     }
 
-    pub fn package(&self) -> CargoResult<&TomlProject> {
+    pub fn package(&self) -> CargoResult<&Box<TomlProject>> {
         Ok(self
             .project
             .as_ref()
