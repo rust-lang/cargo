@@ -348,7 +348,7 @@ fn error_workspace_false() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading description: cannot specify { workspace = false }
+  workspace cannot be false for key `package.description`
 ",
         )
         .run();
@@ -384,6 +384,41 @@ fn error_no_root_workspace() {
 
 Caused by:
   error reading description: could not read workspace root
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_badges_wrapping() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "1.2.3"
+            authors = ["rustaceans"]
+
+            [badges]
+            gitlab = "1.2.3"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  expected a table of badges or { workspace = true } for key `badges`
 ",
         )
         .run();

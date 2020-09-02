@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
@@ -8,7 +9,7 @@ use anyhow::{anyhow, bail};
 use cargo_platform::Platform;
 use log::{debug, trace};
 use semver::{self, VersionReq};
-use serde::de;
+use serde::de::{self, IntoDeserializer};
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -249,6 +250,7 @@ pub struct TomlManifest {
     replace: Option<BTreeMap<String, TomlDependency>>,
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
+    #[serde(deserialize_with = "deserialize_workspace_badges", default)]
     badges: Option<MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>>>,
 }
 
@@ -797,15 +799,132 @@ fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDepe
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum MaybeWorkspace<T> {
-    #[serde(
-        serialize_with = "serialize_workspace",
-        deserialize_with = "deserialize_workspace"
-    )]
     Workspace(bool),
     Defined(T),
+}
+
+impl<'de, T> de::Deserialize<'de> for MaybeWorkspace<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct MaybeWorkspaceVisitor<T> {
+            marker: PhantomData<fn() -> MaybeWorkspace<T>>,
+        }
+
+        impl<'de, T> de::Visitor<'de> for MaybeWorkspaceVisitor<T>
+        where
+            T: de::Deserialize<'de>,
+        {
+            type Value = MaybeWorkspace<T>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("{ workspace: true } or a valid value")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                T::deserialize(v.into_deserializer()).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                T::deserialize(s.into_deserializer()).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_i64<E>(self, numeric: i64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                T::deserialize(numeric.into_deserializer()).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_f64<E>(self, numeric: f64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                T::deserialize(numeric.into_deserializer()).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_u64<E>(self, numeric: u64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                T::deserialize(numeric.into_deserializer()).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_seq<V>(self, seq: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::SeqAccess<'de>,
+            {
+                let svd = de::value::SeqAccessDeserializer::new(seq);
+                T::deserialize(svd).map(MaybeWorkspace::Defined)
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                TomlWorkspaceField::deserialize(mvd).and_then(|t| {
+                    if t.workspace {
+                        Ok(MaybeWorkspace::Workspace(true))
+                    } else {
+                        Err(de::Error::custom("workspace cannot be false"))
+                    }
+                })
+            }
+        }
+
+        deserializer.deserialize_any(MaybeWorkspaceVisitor {
+            marker: PhantomData,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum MaybeWorkspaceBadge {
+    Workspace(TomlWorkspaceField),
+    Defined(BTreeMap<String, BTreeMap<String, String>>),
+}
+
+/// This exists only to provide a nicer error message.
+fn deserialize_workspace_badges<'de, D>(
+    deserializer: D,
+) -> Result<Option<MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>>>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    match Option::deserialize(deserializer) {
+        Ok(None) => Ok(None),
+        Ok(Some(MaybeWorkspaceBadge::Defined(badges))) => Ok(Some(MaybeWorkspace::Defined(badges))),
+        Ok(Some(MaybeWorkspaceBadge::Workspace(ws))) if ws.workspace => {
+            Ok(Some(MaybeWorkspace::Workspace(true)))
+        }
+        Ok(Some(MaybeWorkspaceBadge::Workspace(_))) => {
+            Err(de::Error::custom("workspace cannot be false"))
+        }
+
+        Err(_) => Err(de::Error::custom(
+            "expected a table of badges or { workspace = true }",
+        )),
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct TomlWorkspaceField {
+    workspace: bool,
 }
 
 impl<T> MaybeWorkspace<T>
@@ -853,28 +972,6 @@ where
             label
         )),
     }
-}
-
-fn serialize_workspace<S>(workspace: &bool, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: ser::Serializer,
-{
-    TomlWorkspaceField {
-        workspace: *workspace,
-    }
-    .serialize(serializer)
-}
-
-fn deserialize_workspace<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    Ok(TomlWorkspaceField::deserialize(deserializer)?.workspace)
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct TomlWorkspaceField {
-    workspace: bool,
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.

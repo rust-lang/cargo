@@ -268,7 +268,7 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  data did not match any variant of untagged enum MaybeWorkspace for key `package.version`
+  Expected dot for key `package.version`
 ",
         )
         .run();
