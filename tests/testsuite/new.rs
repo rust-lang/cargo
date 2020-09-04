@@ -116,7 +116,11 @@ fn existing() {
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
-        .with_stderr("[ERROR] invalid character `.` in crate name: `foo.rs`, [..]")
+        .with_stderr(
+            "\
+[ERROR] invalid character `.` in crate name: `foo.rs`, [..]
+use --name to override crate name",
+        )
         .run();
 }
 
@@ -124,7 +128,11 @@ fn invalid_characters() {
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
-        .with_stderr("[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]")
+        .with_stderr(
+            "\
+[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]
+use --name to override crate name",
+        )
         .run();
 }
 
@@ -133,7 +141,9 @@ fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
         .with_stderr(
-            "[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]",
+            "\
+[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]
+use --name to override crate name",
         )
         .run();
 
@@ -153,7 +163,11 @@ it conflicts with cargo's build directory names
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
-        .with_stderr("[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword")
+        .with_stderr(
+            "\
+[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword
+use --name to override crate name",
+        )
         .run();
 }
 
@@ -559,8 +573,10 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
-            the first character must be a Unicode XID start character (most letters or `_`)",
+            "\
+[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
+the first character must be a Unicode XID start character (most letters or `_`)
+use --name to override crate name",
         )
         .run();
 
@@ -568,8 +584,10 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `¼` in crate name: `a¼`, \
-            characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)",
+            "\
+[ERROR] invalid character `¼` in crate name: `a¼`, \
+characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+use --name to override crate name",
         )
         .run();
 }
