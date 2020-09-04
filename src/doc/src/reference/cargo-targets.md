@@ -334,7 +334,7 @@ situations. For example, if you have a library where you want a *module* named
 compile anything in the `bin` directory as an executable. Here is a sample
 layout of this scenario:
 
-```
+```text
 ├── Cargo.toml
 └── src
     ├── lib.rs
