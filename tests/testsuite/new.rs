@@ -536,7 +536,11 @@ fn restricted_windows_name() {
         cargo_process("new nul")
             .env("USER", "foo")
             .with_status(101)
-            .with_stderr("[ERROR] cannot use name `nul`, it is a reserved Windows filename")
+            .with_stderr(
+                "\
+[ERROR] cannot use name `nul`, it is a reserved Windows filename
+use --name to override crate name",
+            )
             .run();
     } else {
         cargo_process("new nul")
