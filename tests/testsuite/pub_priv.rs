@@ -39,8 +39,8 @@ fn exported_priv_warning() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "\
-src/lib.rs:3:13: warning: type `priv_dep::FromPriv` from private dependency 'priv_dep' in public interface
-"
+src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep' in public interface
+",
         )
         .run()
 }
