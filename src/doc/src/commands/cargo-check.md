@@ -15,7 +15,8 @@ Check a local package and all of its dependencies for errors. This will
 essentially compile the packages without performing the final step of code
 generation, which is faster than running `cargo build`. The compiler will save
 metadata files to disk so that future runs will reuse them if the source has
-not been modified.
+not been modified. Some diagnostics and errors are only emitted during code
+generation, so they inherently won't be reported with `cargo check`.
 
 ## OPTIONS
 
