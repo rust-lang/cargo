@@ -350,7 +350,7 @@ pub type FileSize = u64;
 
 #[derive(Clone)]
 pub struct FileHash {
-    kind: SourceFileHashAlgorithm,
+    kind: FileHashAlgorithm,
     hash: String,
 }
 
@@ -763,7 +763,7 @@ impl LocalFingerprint {
                             pkg_root.join(p),
                             0u64,
                             FileHash {
-                                kind: SourceFileHashAlgorithm::Md5,
+                                kind: FileHashAlgorithm::Md5,
                                 hash: String::new(),
                             },
                         )
@@ -1800,7 +1800,7 @@ fn find_stale_file(
                 let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
 
                 let hash = match reference_hash.kind {
-                    SourceFileHashAlgorithm::Md5 => {
+                    FileHashAlgorithm::Md5 => {
                         let mut hasher = Md5::new();
                         let mut buffer = [0; 1024];
                         loop {
@@ -1812,7 +1812,7 @@ fn find_stale_file(
                         }
                         format!("{:?}", hasher.result())
                     }
-                    SourceFileHashAlgorithm::Sha1 => {
+                    FileHashAlgorithm::Sha1 => {
                         let mut hasher = Sha1::new();
                         let mut buffer = [0; 1024];
                         loop {
@@ -1823,6 +1823,9 @@ fn find_stale_file(
                             hasher.input(&buffer[..count]);
                         }
                         format!("{:?}", hasher.result())
+                    }
+                    FileHashAlgorithm::Filename => {
+                        "0".to_string()
                     }
                 };
                 let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
@@ -1854,18 +1857,22 @@ fn find_stale_file(
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub enum SourceFileHashAlgorithm {
+pub enum FileHashAlgorithm {
     Md5,
     Sha1,
+    /// If the hash is in the filename then as long as the file exists we can
+    /// assume it is up to date.
+    Filename,
 }
 
-impl FromStr for SourceFileHashAlgorithm {
+impl FromStr for FileHashAlgorithm {
     type Err = ();
 
-    fn from_str(s: &str) -> Result<SourceFileHashAlgorithm, ()> {
+    fn from_str(s: &str) -> Result<FileHashAlgorithm, ()> {
         match s {
-            "md5" => Ok(SourceFileHashAlgorithm::Md5),
-            "sha1" => Ok(SourceFileHashAlgorithm::Sha1),
+            "md5" => Ok(FileHashAlgorithm::Md5),
+            "sha1" => Ok(FileHashAlgorithm::Sha1),
+            "hash_in_filename" => Ok(FileHashAlgorithm::Filename),
             _ => Err(()),
         }
     }
@@ -2015,8 +2022,9 @@ impl EncodedDepInfo {
 
             //debug!("read hash as {}", hash);
             let kind = match read_u8(bytes)? {
-                0 => SourceFileHashAlgorithm::Md5,
-                1 => SourceFileHashAlgorithm::Sha1,
+                0 => FileHashAlgorithm::Md5,
+                1 => FileHashAlgorithm::Sha1,
+                2 => FileHashAlgorithm::Filename,
                 _ => return None,
             };
             let ty = match read_u8(bytes)? {
@@ -2097,8 +2105,9 @@ impl EncodedDepInfo {
             write_bytes(dst, hash.hash.as_bytes());
             //write(dst, hash.hash);
             match hash.kind {
-                SourceFileHashAlgorithm::Md5 => dst.push(0),
-                SourceFileHashAlgorithm::Sha1 => dst.push(1),
+                FileHashAlgorithm::Md5 => dst.push(0),
+                FileHashAlgorithm::Sha1 => dst.push(1),
+                FileHashAlgorithm::Filename => dst.push(2),
             }
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
@@ -2179,7 +2188,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                         let kind_hash: Vec<_> = parts[1].split(":").collect();
                         let hash = kind_hash[1];
                         ret.files[i].2 = FileHash {
-                            kind: SourceFileHashAlgorithm::from_str(kind_hash[0])
+                            kind: FileHashAlgorithm::from_str(kind_hash[0])
                                 .expect("unknown hashing algo"),
                             hash: hash.to_string(),
                         };
@@ -2208,7 +2217,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                     file.into(),
                     0,
                     FileHash {
-                        kind: SourceFileHashAlgorithm::Md5,
+                        kind: FileHashAlgorithm::Md5,
                         hash: String::new(),
                     },
                 ));
