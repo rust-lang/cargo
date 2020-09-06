@@ -39,6 +39,7 @@ mod dependency_queue;
 pub mod diagnostic_server;
 pub mod errors;
 mod flock;
+pub mod format;
 pub mod graph;
 mod hasher;
 pub mod hex;

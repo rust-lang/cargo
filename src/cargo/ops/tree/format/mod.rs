@@ -1,9 +1,7 @@
-use self::parse::{Parser, RawChunk};
 use super::{Graph, Node};
+use crate::util::format::{Parser, RawChunk};
 use anyhow::{bail, Error};
 use std::fmt;
-
-mod parse;
 
 enum Chunk {
     Raw(String),
