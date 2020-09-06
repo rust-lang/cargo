@@ -14,3 +14,34 @@ fn simple() {
         ))
         .run();
 }
+
+#[cargo_test]
+fn format() {
+    let p = project().build();
+    let root_manifest_path = p.root().join("Cargo.toml");
+    let root_str = root_manifest_path.to_str().unwrap();
+
+    p.cargo("locate-project --format {root}")
+        .with_stdout(root_str)
+        .run();
+
+    p.cargo("locate-project -f{root}")
+        .with_stdout(root_str)
+        .run();
+
+    p.cargo("locate-project --format root={root}")
+        .with_stdout(format!("root={}", root_str))
+        .run();
+
+    p.cargo("locate-project --format {toor}")
+        .with_stderr(
+            "\
+[ERROR] locate-project format `{toor}` not valid
+
+Caused by:
+  unsupported pattern `toor`
+",
+        )
+        .with_status(101)
+        .run();
+}
