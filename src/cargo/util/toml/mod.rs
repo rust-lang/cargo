@@ -310,8 +310,11 @@ impl DefinedTomlManifest {
         manifest_file: &Path,
         config: &Config,
     ) -> CargoResult<Self> {
-        let output = find_workspace_root(manifest_file, config)?
-            .map(|root_path| parse_manifest(&root_path, config))
+        let package_root = manifest_file.parent().unwrap();
+        let root_path = find_workspace_root(manifest_file, config)?;
+        let output = root_path
+            .as_ref()
+            .map(|root_path| parse_manifest(root_path, config))
             .transpose()?;
 
         let workspace = output.as_ref().and_then(|output| output.workspace());
@@ -320,7 +323,7 @@ impl DefinedTomlManifest {
             .package
             .or(manifest.project)
             .map(|p| *p)
-            .map(|p| DefinedTomlPackage::from_toml_project(p, workspace))
+            .map(|p| DefinedTomlPackage::from_toml_project(p, workspace, root_path, package_root))
             .transpose()?;
 
         let badges = ws_default(manifest.badges, workspace, |ws| &ws.badges, "badges")?;
@@ -776,6 +779,16 @@ pub enum StringOrBool {
     Bool(bool),
 }
 
+impl StringOrBool {
+    fn string_or_default(&self, default_value: &str) -> Option<String> {
+        match self {
+            Self::String(value) => Some(String::from(value)),
+            Self::Bool(true) => Some(String::from(default_value)),
+            Self::Bool(false) => None,
+        }
+    }
+}
+
 impl<'de> de::Deserialize<'de> for StringOrBool {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1138,7 +1151,7 @@ struct DefinedTomlPackage {
     description: Option<String>,
     homepage: Option<String>,
     documentation: Option<String>,
-    readme: Option<StringOrBool>,
+    readme: Option<String>,
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
@@ -1149,7 +1162,12 @@ struct DefinedTomlPackage {
 }
 
 impl DefinedTomlPackage {
-    fn from_toml_project(project: TomlProject, ws: Option<&TomlWorkspace>) -> CargoResult<Self> {
+    fn from_toml_project(
+        project: TomlProject,
+        ws: Option<&TomlWorkspace>,
+        root_path: Option<PathBuf>,
+        package_root: &Path,
+    ) -> CargoResult<Self> {
         let version = ws_default(Some(project.version), ws, |ws| &ws.version, "version")?
             .ok_or_else(|| anyhow!("no version specified"))?;
         let edition = ws_default(project.edition, ws, |ws| &ws.edition, "edition")?;
@@ -1163,16 +1181,55 @@ impl DefinedTomlPackage {
             |ws| &ws.documentation,
             "documentation",
         )?;
-        let readme = ws_default(project.readme, ws, |ws| &ws.readme, "readme")?;
+
+        let readme = match (project.readme, ws.and_then(|ws| ws.readme.as_ref())) {
+            (None, _) => default_readme_from_package_root(package_root),
+            (Some(MaybeWorkspace::Defined(defined)), _) => defined.string_or_default("README.md"),
+            (Some(MaybeWorkspace::Workspace), None) => {
+                bail!("error reading readme: workspace root does not defined [workspace.readme]")
+            }
+            (Some(MaybeWorkspace::Workspace), Some(defined)) => {
+                match defined.string_or_default("README.md") {
+                    Some(ws_readme) => Some(
+                        root_path
+                            .clone()
+                            .unwrap()
+                            .parent()
+                            .unwrap()
+                            .join(ws_readme)
+                            .into_os_string()
+                            .into_string()
+                            .map_err(|_| anyhow!("could not convert readme path into String"))?,
+                    ),
+                    None => None,
+                }
+            }
+        };
+
+        let license_file = match (
+            project.license_file,
+            ws.and_then(|ws| ws.license_file.as_ref()),
+        ) {
+            (None, _) => None,
+            (Some(MaybeWorkspace::Defined(defined)), _) => Some(defined),
+            (Some(MaybeWorkspace::Workspace), None) => {
+                bail!("error reading license-file: workspace root does not defined [workspace.license-file]");
+            }
+            (Some(MaybeWorkspace::Workspace), Some(ws_license_file)) => Some(
+                root_path
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .join(ws_license_file)
+                    .into_os_string()
+                    .into_string()
+                    .map_err(|_| anyhow!("could not convert license-file path into `String`"))?,
+            ),
+        };
+
         let keywords = ws_default(project.keywords, ws, |ws| &ws.keywords, "keywords")?;
         let categories = ws_default(project.categories, ws, |ws| &ws.categories, "categories")?;
         let license = ws_default(project.license, ws, |ws| &ws.license, "license")?;
-        let license_file = ws_default(
-            project.license_file,
-            ws,
-            |ws| &ws.license_file,
-            "license_file",
-        )?;
         let repository = ws_default(project.repository, ws, |ws| &ws.repository, "repository")?;
 
         Ok(Self {
@@ -1561,7 +1618,7 @@ impl DefinedTomlManifest {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
-            readme: readme_for_project(package_root, &project),
+            readme: project.readme.clone(),
             authors: project.authors.clone().unwrap_or_default(),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
@@ -1790,7 +1847,7 @@ impl DefinedTomlManifest {
                 description: MaybeWorkspace::from_option(&project.description),
                 homepage: MaybeWorkspace::from_option(&project.homepage),
                 documentation: MaybeWorkspace::from_option(&project.documentation),
-                readme: MaybeWorkspace::from_option(&project.readme),
+                readme: MaybeWorkspace::from_option(&project.readme.map(StringOrBool::String)),
                 keywords: MaybeWorkspace::from_option(&project.keywords),
                 categories: MaybeWorkspace::from_option(&project.categories),
                 license: MaybeWorkspace::from_option(&project.license),
@@ -1931,18 +1988,6 @@ impl DefinedTomlManifest {
 
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
-    }
-}
-
-/// Returns the name of the README file for a `TomlProject`.
-fn readme_for_project(package_root: &Path, project: &DefinedTomlPackage) -> Option<String> {
-    match &project.readme {
-        None => default_readme_from_package_root(package_root),
-        Some(value) => match value {
-            StringOrBool::Bool(false) => None,
-            StringOrBool::Bool(true) => Some("README.md".to_string()),
-            StringOrBool::String(v) => Some(v.clone()),
-        },
     }
 }
 

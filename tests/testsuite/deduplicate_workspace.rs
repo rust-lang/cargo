@@ -134,8 +134,8 @@ fn inherit_workspace_fields() {
             edition = { workspace = true }
         "#,
         )
-        .file("bar/LICENSE", "license")
-        .file("bar/README.md", "README.md")
+        .file("LICENSE", "license")
+        .file("README.md", "README.md")
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
@@ -155,11 +155,11 @@ fn inherit_workspace_fields() {
           "homepage": "https://www.rust-lang.org",
           "keywords": ["cli"],
           "license": "MIT",
-          "license_file": "./LICENSE",
+          "license_file": "../LICENSE",
           "links": null,
           "name": "bar",
           "readme": "README.md",
-          "readme_file": "README.md",
+          "readme_file": "../README.md",
           "repository": "https://github.com/example/example",
           "vers": "1.2.3"
           }
