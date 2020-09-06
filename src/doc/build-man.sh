@@ -12,6 +12,8 @@
 
 set -e
 
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
 OPTIONS="--url https://doc.rust-lang.org/cargo/commands/ \
     --man rustc:1=https://doc.rust-lang.org/rustc/index.html \
     --man rustdoc:1=https://doc.rust-lang.org/rustdoc/index.html"
