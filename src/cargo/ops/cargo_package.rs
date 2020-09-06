@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -18,7 +17,6 @@ use crate::core::{Package, PackageId, PackageSet, Resolve, Source, SourceId};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::toml::TomlManifest;
 use crate::util::{self, restricted_names, Config, FileLock};
 use crate::{drop_println, ops};
 
@@ -271,15 +269,13 @@ fn build_lock(ws: &Workspace<'_>) -> CargoResult<String> {
     // Convert Package -> TomlManifest -> Manifest -> Package
     let orig_pkg = ws.current()?;
     let manifest_path = orig_pkg.manifest_path();
-    let toml_manifest = Rc::new(
-        orig_pkg
-            .manifest()
-            .original()
-            .prepare_for_publish(ws, manifest_path)?,
-    );
+    let toml_manifest = orig_pkg
+        .manifest()
+        .original()
+        .prepare_for_publish(ws, manifest_path)?;
     let source_id = orig_pkg.package_id().source_id();
     let (manifest, _nested_paths) =
-        TomlManifest::to_real_manifest(&toml_manifest, source_id, manifest_path, config)?;
+        toml_manifest.into_real_manifest(source_id, manifest_path, config)?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.

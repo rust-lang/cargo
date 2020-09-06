@@ -16,7 +16,7 @@ use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
-use crate::util::toml::{TomlManifest, TomlProfiles};
+use crate::util::toml::{DefinedTomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
@@ -50,7 +50,7 @@ pub struct Manifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: Rc<WorkspaceConfig>,
-    original: Rc<TomlManifest>,
+    original: Rc<DefinedTomlManifest>,
     features: Features,
     edition: Edition,
     im_a_teapot: Option<bool>,
@@ -384,7 +384,7 @@ impl Manifest {
         edition: Edition,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
-        original: Rc<TomlManifest>,
+        original: Rc<DefinedTomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
     ) -> Manifest {
@@ -462,7 +462,7 @@ impl Manifest {
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
     }
-    pub fn original(&self) -> &TomlManifest {
+    pub fn original(&self) -> &DefinedTomlManifest {
         &self.original
     }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {

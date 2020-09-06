@@ -15,8 +15,8 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use super::{
-    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+    DefinedTomlManifest, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
+    TomlExampleTarget, TomlLibTarget, TomlTarget, TomlTestTarget,
 };
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
@@ -25,7 +25,7 @@ use crate::util::restricted_names;
 
 pub fn targets(
     features: &Features,
-    manifest: &TomlManifest,
+    manifest: &DefinedTomlManifest,
     package_name: &str,
     package_root: &Path,
     edition: Edition,
@@ -55,7 +55,6 @@ pub fn targets(
     let package = manifest
         .package
         .as_ref()
-        .or_else(|| manifest.project.as_ref())
         .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
     targets.extend(clean_bins(

@@ -240,7 +240,9 @@ impl Package {
         let manifest = self
             .manifest()
             .original()
-            .prepare_for_publish(ws, self.manifest_path())?;
+            .prepare_for_publish(ws, self.manifest_path())?
+            .into_toml_manifest();
+
         let toml = toml::to_string(&manifest)?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
