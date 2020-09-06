@@ -160,7 +160,8 @@ _cargo() {
                         ;;
 
                 locate-project)
-                    _arguments -s -S $common $manifest
+                    _arguments -s -S $common $manifest \
+                        '(-f --format)'{-f,--format=}'[format string]:format'
                         ;;
 
                 login)
