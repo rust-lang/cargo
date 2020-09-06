@@ -895,7 +895,7 @@ fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDepe
 #[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum MaybeWorkspace<T> {
-    Workspace(bool),
+    Workspace,
     Defined(T),
 }
 
@@ -973,7 +973,7 @@ where
                 let mvd = de::value::MapAccessDeserializer::new(map);
                 TomlWorkspaceField::deserialize(mvd).and_then(|t| {
                     if t.workspace {
-                        Ok(MaybeWorkspace::Workspace(true))
+                        Ok(MaybeWorkspace::Workspace)
                     } else {
                         Err(de::Error::custom("workspace cannot be false"))
                     }
@@ -1005,7 +1005,7 @@ where
         Ok(None) => Ok(None),
         Ok(Some(MaybeWorkspaceBadge::Defined(badges))) => Ok(Some(MaybeWorkspace::Defined(badges))),
         Ok(Some(MaybeWorkspaceBadge::Workspace(ws))) if ws.workspace => {
-            Ok(Some(MaybeWorkspace::Workspace(true)))
+            Ok(Some(MaybeWorkspace::Workspace))
         }
         Ok(Some(MaybeWorkspaceBadge::Workspace(_))) => {
             Err(de::Error::custom("workspace cannot be false"))
@@ -1048,11 +1048,7 @@ where
     match (value, workspace) {
         (None, _) => Ok(None),
         (Some(MaybeWorkspace::Defined(value)), _) => Ok(Some(value)),
-        (Some(MaybeWorkspace::Workspace(false)), _) => Err(anyhow!(
-            "error reading {}: cannot specify {{ workspace = false }}",
-            label
-        )),
-        (Some(MaybeWorkspace::Workspace(true)), Some(ws)) => f(ws)
+        (Some(MaybeWorkspace::Workspace), Some(ws)) => f(ws)
             .clone()
             .ok_or_else(|| {
                 anyhow!(
@@ -1062,7 +1058,7 @@ where
             })
             .map(|value| Some(value)),
 
-        (Some(MaybeWorkspace::Workspace(true)), None) => Err(anyhow!(
+        (Some(MaybeWorkspace::Workspace), None) => Err(anyhow!(
             "error reading {}: could not read workspace root",
             label
         )),
