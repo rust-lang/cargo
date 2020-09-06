@@ -14,6 +14,25 @@ This command will print a JSON object to stdout with the full path to the
 See also \fBcargo\-metadata\fR(1) which is capable of returning the path to a
 workspace root.
 .SH "OPTIONS"
+.SS "Formatting Options"
+.sp
+\fB\-f\fR \fIformat\fR, 
+\fB\-\-format\fR \fIformat\fR
+.RS 4
+Set the format string for the output representation. The default is a JSON
+object holding all of the supported information.
+.sp
+This is an arbitrary string which will be used to display the project location.
+The following strings will be replaced with the corresponding value:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fB{root}\fR \[em] The absolute path of the \fBCargo.toml\fR manifest.
+.RE
+.sp
+For example you might use \fB\-\-format '{root}'\fR or more concisely \fB\-f{root}\fR to
+output just the path and nothing else, or \fB\-\-format 'root={root}'\fR to include a
+prefix.
+.RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 

@@ -18,6 +18,26 @@ workspace root.
 
 ## OPTIONS
 
+### Formatting Options
+
+<dl>
+
+<dt class="option-term" id="option-cargo-locate-project--f"><a class="option-anchor" href="#option-cargo-locate-project--f"></a><code>-f</code> <em>format</em></dt>
+<dt class="option-term" id="option-cargo-locate-project---format"><a class="option-anchor" href="#option-cargo-locate-project---format"></a><code>--format</code> <em>format</em></dt>
+<dd class="option-desc">Set the format string for the output representation. The default is a JSON
+object holding all of the supported information.</p>
+<p>This is an arbitrary string which will be used to display the project location.
+The following strings will be replaced with the corresponding value:</p>
+<ul>
+<li><code>{root}</code> — The absolute path of the <code>Cargo.toml</code> manifest.</li>
+</ul>
+<p>For example you might use <code>--format '{root}'</code> or more concisely <code>-f{root}</code> to
+output just the path and nothing else, or <code>--format 'root={root}'</code> to include a
+prefix.</dd>
+
+
+</dl>
+
 ### Display Options
 
 <dl>

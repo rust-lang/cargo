@@ -18,6 +18,26 @@ workspace root.
 
 ## OPTIONS
 
+### Formatting Options
+
+{{#options}}
+
+{{#option "`-f` _format_" "`--format` _format_" }}
+Set the format string for the output representation. The default is a JSON
+object holding all of the supported information.
+
+This is an arbitrary string which will be used to display the project location.
+The following strings will be replaced with the corresponding value:
+
+- `{root}` — The absolute path of the `Cargo.toml` manifest.
+
+For example you might use `--format '{root}'` or more concisely `-f{root}` to
+output just the path and nothing else, or `--format 'root={root}'` to include a
+prefix.
+{{/option}}
+
+{{/options}}
+
 ### Display Options
 
 {{#options}}
