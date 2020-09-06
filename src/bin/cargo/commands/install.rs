@@ -75,13 +75,16 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
+    let workspace;
     if let Some(path) = args.value_of_path("path", config) {
         config.reload_rooted_at(path)?;
+        // Only provide worksapce information for local crate installation
+        workspace = args.workspace(config).ok();
     } else {
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
+        workspace = None;
     }
 
-    let workspace = args.workspace(config).ok();
     let mut compile_opts = args.compile_options(
         config,
         CompileMode::Build,
