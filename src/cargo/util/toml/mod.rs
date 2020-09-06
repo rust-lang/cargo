@@ -157,13 +157,69 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged, try_from = "TomlDependency")]
+pub enum DefinedTomlDependency {
+    Simple(String),
+    Detailed(TomlDependencyDetails),
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
-    Detailed(DetailedTomlDependency),
+    Workspace(WorkspaceDetails),
+    Detailed(TomlDependencyDetails),
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(into = "TomlWorkspaceDetails")]
+pub struct WorkspaceDetails {
+    features: Option<Vec<String>>,
+    optional: Option<bool>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct TomlWorkspaceDetails {
+    workspace: bool,
+    features: Option<Vec<String>>,
+    optional: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum DefinedTomlDependencyWrapper {
+    Simple(String),
+    Workspace(TomlWorkspaceDetails),
+    Detailed(TomlDependencyDetails),
+}
+
+impl From<WorkspaceDetails> for TomlWorkspaceDetails {
+    fn from(workspace_details: WorkspaceDetails) -> Self {
+        Self {
+            workspace: true,
+            features: workspace_details.features,
+            optional: workspace_details.optional,
+        }
+    }
+}
+
+impl std::convert::TryFrom<TomlDependency> for DefinedTomlDependency {
+    type Error = anyhow::Error;
+
+    fn try_from(toml_workspace_dependency: TomlDependency) -> CargoResult<Self> {
+        match toml_workspace_dependency {
+            TomlDependency::Simple(simple) => Ok(Self::Simple(simple)),
+            TomlDependency::Detailed(details) => Ok(Self::Detailed(details)),
+            TomlDependency::Workspace(_) => Err(anyhow!("cannot specify workspace dependency")),
+        }
+    }
+}
+
+// This implementation of `Deserialize`, along with many others in this file, exist entirely to
+// provide error handling. The error message in derived implementations of `Deserialize` are
+// sometimes too opaque to expose to end users. These implementations should otherwise behave
+// exactly like their derived counterparts.
 impl<'de> de::Deserialize<'de> for TomlDependency {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -185,7 +241,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
             where
                 E: de::Error,
             {
-                Ok(TomlDependency::Simple(s.to_owned()))
+                Ok(Self::Value::Simple(s.to_owned()))
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -193,7 +249,25 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                DetailedTomlDependency::deserialize(mvd).map(TomlDependency::Detailed)
+
+                Ok(match DefinedTomlDependencyWrapper::deserialize(mvd) {
+                    Ok(DefinedTomlDependencyWrapper::Simple(version)) => Self::Value::Simple(version),
+                    Ok(DefinedTomlDependencyWrapper::Detailed(details)) => Self::Value::Detailed(details),
+                    Ok(DefinedTomlDependencyWrapper::Workspace(ws)) if ws.workspace => {
+                        Self::Value::Workspace(WorkspaceDetails {
+                            features: ws.features,
+                            optional: ws.optional,
+                        })
+                    }
+
+                    Ok(DefinedTomlDependencyWrapper::Workspace(_)) => {
+                        return Err(de::Error::custom("workspace cannot be false"));
+                    }
+
+                    Err(_) => return Err(de::Error::custom(
+                        "a version string like \"0.9.8\" or a detailed dependency like { version = \"0.9.8\" }",
+                    )),
+                })
             }
         }
 
@@ -203,7 +277,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 #[serde(rename_all = "kebab-case")]
-pub struct DetailedTomlDependency {
+pub struct TomlDependencyDetails {
     version: Option<String>,
     registry: Option<String>,
     /// The URL of the `registry` field.
@@ -248,8 +322,8 @@ pub struct TomlManifest {
     build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
     features: Option<BTreeMap<String, Vec<String>>>,
     target: Option<BTreeMap<String, TomlPlatform>>,
-    replace: Option<BTreeMap<String, TomlDependency>>,
-    patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    replace: Option<BTreeMap<String, DefinedTomlDependency>>,
+    patch: Option<BTreeMap<String, BTreeMap<String, DefinedTomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     #[serde(deserialize_with = "deserialize_workspace_badges", default)]
     badges: Option<MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>>>,
@@ -293,13 +367,13 @@ pub struct DefinedTomlManifest {
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
-    dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
-    build_dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
+    dev_dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
+    build_dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
     features: Option<BTreeMap<String, Vec<String>>>,
-    target: Option<BTreeMap<String, TomlPlatform>>,
-    replace: Option<BTreeMap<String, TomlDependency>>,
-    patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    target: Option<BTreeMap<String, DefinedTomlPlatform>>,
+    replace: Option<BTreeMap<String, DefinedTomlDependency>>,
+    patch: Option<BTreeMap<String, BTreeMap<String, DefinedTomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
@@ -312,8 +386,9 @@ impl DefinedTomlManifest {
     ) -> CargoResult<Self> {
         let package_root = manifest_file.parent().unwrap();
         let root_path = find_workspace_root(manifest_file, config)?;
+        let root_path = root_path.as_deref();
+
         let output = root_path
-            .as_ref()
             .map(|root_path| parse_manifest(root_path, config))
             .transpose()?;
 
@@ -328,6 +403,29 @@ impl DefinedTomlManifest {
 
         let badges = ws_default(manifest.badges, workspace, |ws| &ws.badges, "badges")?;
 
+        let ws_deps = workspace.map(|ws| ws.dependencies.as_ref()).flatten();
+        let dependencies =
+            to_defined_dependencies(manifest.dependencies.as_ref(), ws_deps, root_path)?;
+        let dev_dependencies = to_defined_dependencies(
+            manifest
+                .dev_dependencies
+                .or(manifest.dev_dependencies2)
+                .as_ref(),
+            ws_deps,
+            root_path,
+        )?;
+
+        let build_dependencies = to_defined_dependencies(
+            manifest
+                .build_dependencies
+                .or(manifest.build_dependencies2)
+                .as_ref(),
+            ws_deps,
+            root_path,
+        )?;
+
+        let target = to_defined_platform(manifest.target, ws_deps, root_path)?;
+
         Ok(Self {
             cargo_features: manifest.cargo_features,
             package,
@@ -337,16 +435,120 @@ impl DefinedTomlManifest {
             example: manifest.example,
             test: manifest.test,
             bench: manifest.bench,
-            dependencies: manifest.dependencies,
-            dev_dependencies: manifest.dev_dependencies,
-            build_dependencies: manifest.build_dependencies,
+            dependencies,
+            dev_dependencies,
+            build_dependencies,
             features: manifest.features,
-            target: manifest.target,
+            target,
             replace: manifest.replace,
             patch: manifest.patch,
             workspace: manifest.workspace,
             badges,
         })
+    }
+}
+
+fn to_defined_dependencies(
+    dependencies: Option<&BTreeMap<String, TomlDependency>>,
+    ws_dependencies: Option<&BTreeMap<String, DefinedTomlDependency>>,
+    root_path: Option<&Path>,
+) -> CargoResult<Option<BTreeMap<String, DefinedTomlDependency>>> {
+    let empty = BTreeMap::new();
+    let ws_deps = ws_dependencies.unwrap_or(&empty);
+
+    map_btree(dependencies, |key, dep| {
+        DefinedTomlDependency::from_toml_dependency(dep, &key, &ws_deps, root_path)
+    })
+}
+
+fn to_toml_dependencies(
+    dependencies: Option<&BTreeMap<String, DefinedTomlDependency>>,
+) -> Option<BTreeMap<String, TomlDependency>> {
+    map_btree(dependencies, |_key, dep| {
+        Ok(TomlDependency::from_defined_dependency(dep))
+    })
+    .unwrap()
+}
+
+fn to_defined_platform(
+    toml_platform: Option<BTreeMap<String, TomlPlatform>>,
+    ws_dependencies: Option<&BTreeMap<String, DefinedTomlDependency>>,
+    root_path: Option<&Path>,
+) -> CargoResult<Option<BTreeMap<String, DefinedTomlPlatform>>> {
+    let empty = BTreeMap::new();
+    let ws_deps = ws_dependencies.unwrap_or(&empty);
+    map_btree(toml_platform.as_ref(), |_key, toml_platform| {
+        DefinedTomlPlatform::from_toml_platform(toml_platform, ws_deps, root_path)
+    })
+}
+
+fn to_toml_platform(
+    defined_platform: Option<BTreeMap<String, DefinedTomlPlatform>>,
+) -> Option<BTreeMap<String, TomlPlatform>> {
+    map_btree(defined_platform.as_ref(), |_key, defined_platform| {
+        Ok(TomlPlatform::from_defined_platform(defined_platform))
+    })
+    .unwrap()
+}
+
+pub fn map_deps(
+    config: &Config,
+    deps: Option<&BTreeMap<String, DefinedTomlDependency>>,
+    filter: impl Fn(&DefinedTomlDependency) -> bool,
+) -> CargoResult<Option<BTreeMap<String, DefinedTomlDependency>>> {
+    let deps = match deps {
+        Some(deps) => deps,
+        None => return Ok(None),
+    };
+    let deps = deps
+        .iter()
+        .filter(|(_k, v)| filter(v))
+        .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
+        .collect::<CargoResult<BTreeMap<_, _>>>()?;
+    Ok(Some(deps))
+}
+
+fn map_dependency(
+    config: &Config,
+    dep: &DefinedTomlDependency,
+) -> CargoResult<DefinedTomlDependency> {
+    match dep {
+        DefinedTomlDependency::Detailed(d) => {
+            let mut d = d.clone();
+            // Path dependencies become crates.io deps.
+            d.path.take();
+            // Same with git dependencies.
+            d.git.take();
+            d.branch.take();
+            d.tag.take();
+            d.rev.take();
+            // registry specifications are elaborated to the index URL
+            if let Some(registry) = d.registry.take() {
+                let src = SourceId::alt_registry(config, &registry)?;
+                d.registry_index = Some(src.url().to_string());
+            }
+            Ok(DefinedTomlDependency::Detailed(d))
+        }
+        DefinedTomlDependency::Simple(s) => {
+            Ok(DefinedTomlDependency::Detailed(TomlDependencyDetails {
+                version: Some(s.clone()),
+                ..Default::default()
+            }))
+        }
+    }
+}
+
+fn map_btree<T, R>(
+    tree: Option<&BTreeMap<String, T>>,
+    f: impl Fn(&str, &T) -> CargoResult<R>,
+) -> CargoResult<Option<BTreeMap<String, R>>> {
+    match tree {
+        None => Ok(None),
+        Some(deps) => Ok(Some(
+            deps.iter()
+                .map(|(key, val)| Ok((key.clone(), f(&*key, val)?)))
+                .collect::<CargoResult<BTreeMap<_, _>>>()?,
+        )),
     }
 }
 
@@ -863,48 +1065,6 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
     }
 }
 
-pub fn map_deps(
-    config: &Config,
-    deps: Option<&BTreeMap<String, TomlDependency>>,
-    filter: impl Fn(&TomlDependency) -> bool,
-) -> CargoResult<Option<BTreeMap<String, TomlDependency>>> {
-    let deps = match deps {
-        Some(deps) => deps,
-        None => return Ok(None),
-    };
-    let deps = deps
-        .iter()
-        .filter(|(_k, v)| filter(v))
-        .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
-        .collect::<CargoResult<BTreeMap<_, _>>>()?;
-    Ok(Some(deps))
-}
-
-fn map_dependency(config: &Config, dep: &TomlDependency) -> CargoResult<TomlDependency> {
-    match dep {
-        TomlDependency::Detailed(d) => {
-            let mut d = d.clone();
-            // Path dependencies become crates.io deps.
-            d.path.take();
-            // Same with git dependencies.
-            d.git.take();
-            d.branch.take();
-            d.tag.take();
-            d.rev.take();
-            // registry specifications are elaborated to the index URL
-            if let Some(registry) = d.registry.take() {
-                let src = SourceId::alt_registry(config, &registry)?;
-                d.registry_index = Some(src.url().to_string());
-            }
-            Ok(TomlDependency::Detailed(d))
-        }
-        TomlDependency::Simple(s) => Ok(TomlDependency::Detailed(DetailedTomlDependency {
-            version: Some(s.clone()),
-            ..Default::default()
-        })),
-    }
-}
-
 #[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum MaybeWorkspace<T> {
@@ -1165,7 +1325,7 @@ impl DefinedTomlPackage {
     fn from_toml_project(
         project: TomlProject,
         ws: Option<&TomlWorkspace>,
-        root_path: Option<PathBuf>,
+        root_path: Option<&Path>,
         package_root: &Path,
     ) -> CargoResult<Self> {
         let version = ws_default(Some(project.version), ws, |ws| &ws.version, "version")?
@@ -1190,17 +1350,7 @@ impl DefinedTomlPackage {
             }
             (Some(MaybeWorkspace::Workspace), Some(defined)) => {
                 match defined.string_or_default("README.md") {
-                    Some(ws_readme) => Some(
-                        root_path
-                            .clone()
-                            .unwrap()
-                            .parent()
-                            .unwrap()
-                            .join(ws_readme)
-                            .into_os_string()
-                            .into_string()
-                            .map_err(|_| anyhow!("could not convert readme path into String"))?,
-                    ),
+                    Some(ws_readme) => Some(join_relative_path(root_path, &ws_readme)?),
                     None => None,
                 }
             }
@@ -1215,16 +1365,9 @@ impl DefinedTomlPackage {
             (Some(MaybeWorkspace::Workspace), None) => {
                 bail!("error reading license-file: workspace root does not defined [workspace.license-file]");
             }
-            (Some(MaybeWorkspace::Workspace), Some(ws_license_file)) => Some(
-                root_path
-                    .unwrap()
-                    .parent()
-                    .unwrap()
-                    .join(ws_license_file)
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|_| anyhow!("could not convert license-file path into `String`"))?,
-            ),
+            (Some(MaybeWorkspace::Workspace), Some(ws_license_file)) => {
+                Some(join_relative_path(root_path, ws_license_file)?)
+            }
         };
 
         let keywords = ws_default(project.keywords, ws, |ws| &ws.keywords, "keywords")?;
@@ -1269,6 +1412,17 @@ impl DefinedTomlPackage {
     }
 }
 
+fn join_relative_path(root_path: Option<&Path>, relative_path: &str) -> CargoResult<String> {
+    root_path
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join(relative_path)
+        .into_os_string()
+        .into_string()
+        .map_err(|_| anyhow!("could not convert path into `String`"))
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     pub members: Option<Vec<String>>,
@@ -1279,7 +1433,7 @@ pub struct TomlWorkspace {
     resolver: Option<String>,
 
     // Properties that can be inherited by members.
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
     pub version: Option<semver::Version>,
     pub authors: Option<Vec<String>>,
     pub description: Option<String>,
@@ -1350,7 +1504,7 @@ impl DefinedTomlManifest {
                 );
             }
         }
-        let all = |_d: &TomlDependency| true;
+        let all = |_d: &DefinedTomlDependency| true;
         Ok(DefinedTomlManifest {
             package: Some(package),
             profile: self.profile.clone(),
@@ -1363,7 +1517,7 @@ impl DefinedTomlManifest {
             dev_dependencies: map_deps(
                 config,
                 self.dev_dependencies.as_ref(),
-                TomlDependency::is_version_specified,
+                DefinedTomlDependency::is_version_specified,
             )?,
             build_dependencies: map_deps(config, self.build_dependencies.as_ref(), all)?,
             features: self.features.clone(),
@@ -1373,14 +1527,14 @@ impl DefinedTomlManifest {
                     .map(|(k, v)| {
                         Ok((
                             k.clone(),
-                            TomlPlatform {
+                            DefinedTomlPlatform {
                                 dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
                                 dev_dependencies: map_deps(
                                     config,
                                     v.dev_dependencies
                                         .as_ref()
                                         .or_else(|| v.dev_dependencies2.as_ref()),
-                                    TomlDependency::is_version_specified,
+                                    DefinedTomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
                                 build_dependencies: map_deps(
@@ -1528,7 +1682,7 @@ impl DefinedTomlManifest {
 
             fn process_dependencies(
                 cx: &mut Context<'_, '_>,
-                new_deps: Option<&BTreeMap<String, TomlDependency>>,
+                new_deps: Option<&BTreeMap<String, DefinedTomlDependency>>,
                 kind: Option<DepKind>,
             ) -> CargoResult<()> {
                 let dependencies = match new_deps {
@@ -1863,13 +2017,13 @@ impl DefinedTomlManifest {
             example: self.example,
             test: self.test,
             bench: self.bench,
-            dependencies: self.dependencies,
-            dev_dependencies: self.dev_dependencies,
+            dependencies: to_toml_dependencies(self.dependencies.as_ref()),
+            dev_dependencies: to_toml_dependencies(self.dev_dependencies.as_ref()),
             dev_dependencies2: None,
-            build_dependencies: self.build_dependencies,
+            build_dependencies: to_toml_dependencies(self.build_dependencies.as_ref()),
             build_dependencies2: None,
             features: self.features,
-            target: self.target,
+            target: to_toml_platform(self.target),
             replace: self.replace,
             patch: self.patch,
             workspace: self.workspace,
@@ -2021,6 +2175,89 @@ fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), S
 }
 
 impl TomlDependency {
+    fn from_defined_dependency(dep: &DefinedTomlDependency) -> Self {
+        match dep {
+            DefinedTomlDependency::Simple(s) => Self::Simple(s.clone()),
+            DefinedTomlDependency::Detailed(detailed) => Self::Detailed(detailed.clone()),
+        }
+    }
+}
+
+impl DefinedTomlDependency {
+    fn from_toml_dependency(
+        dep: &TomlDependency,
+        name: &str,
+        ws_deps: &BTreeMap<String, Self>,
+        root_path: Option<&Path>,
+    ) -> CargoResult<Self> {
+        match dep {
+            TomlDependency::Simple(s) => Ok(Self::Simple(s.clone())),
+            TomlDependency::Detailed(detailed) => Ok(Self::Detailed(detailed.clone())),
+            TomlDependency::Workspace(ws) => {
+                let ws_dep = ws_deps.get(name).ok_or_else(|| {
+                    anyhow!(
+                        "could not find entry in [workspace.dependencies] for \"{}\"",
+                        name
+                    )
+                })?;
+
+                Ok(Self::from_workspace_dependency(ws, ws_dep, root_path)?)
+            }
+        }
+    }
+
+    fn from_workspace_dependency(
+        details: &WorkspaceDetails,
+        ws_dep: &Self,
+        root_path: Option<&Path>,
+    ) -> CargoResult<Self> {
+        let details = match ws_dep {
+            Self::Simple(s) => TomlDependencyDetails {
+                version: Some(s.clone()),
+                features: details
+                    .features
+                    .clone()
+                    .or_else(|| ws_dep.features().cloned()),
+                optional: details.optional.or_else(|| Some(ws_dep.is_optional())),
+                ..Default::default()
+            },
+
+            Self::Detailed(d) => TomlDependencyDetails {
+                version: d.version.clone(),
+                registry: d.registry.clone(),
+                registry_index: d.registry_index.clone(),
+                path: d
+                    .path
+                    .clone()
+                    .map(|p| join_relative_path(root_path, &p))
+                    .transpose()?,
+                git: d.git.clone(),
+                branch: d.branch.clone(),
+                tag: d.tag.clone(),
+                rev: d.rev.clone(),
+                features: match (&details.features, &d.features) {
+                    (None, None) => None,
+                    (Some(features), None) | (None, Some(features)) => Some(features.clone()),
+                    (Some(ws_features), Some(features)) => {
+                        let mut result = ws_features.clone();
+                        for f in features {
+                            if !result.contains(&f) {
+                                result.push(f.clone());
+                            }
+                        }
+                        Some(result)
+                    }
+                },
+                optional: details.optional.or_else(|| d.optional.clone()),
+                default_features: d.default_features.clone(),
+                default_features2: d.default_features2.clone(),
+                package: d.package.clone(),
+                public: d.public.clone(),
+            },
+        };
+
+        Ok(Self::Detailed(details))
+    }
     fn to_dependency(
         &self,
         name: &str,
@@ -2028,31 +2265,38 @@ impl TomlDependency {
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         match *self {
-            TomlDependency::Simple(ref version) => DetailedTomlDependency {
+            DefinedTomlDependency::Simple(ref version) => TomlDependencyDetails {
                 version: Some(version.clone()),
                 ..Default::default()
             }
             .to_dependency(name, cx, kind),
-            TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
+            DefinedTomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
     }
 
     fn is_version_specified(&self) -> bool {
         match self {
-            TomlDependency::Detailed(d) => d.version.is_some(),
-            TomlDependency::Simple(..) => true,
+            DefinedTomlDependency::Detailed(d) => d.version.is_some(),
+            DefinedTomlDependency::Simple(..) => true,
         }
     }
 
     fn is_optional(&self) -> bool {
         match self {
-            TomlDependency::Detailed(d) => d.optional.unwrap_or(false),
-            TomlDependency::Simple(..) => false,
+            DefinedTomlDependency::Detailed(d) => d.optional.unwrap_or(false),
+            DefinedTomlDependency::Simple(..) => false,
+        }
+    }
+
+    fn features(&self) -> Option<&Vec<String>> {
+        match self {
+            DefinedTomlDependency::Detailed(d) => d.features.as_ref(),
+            DefinedTomlDependency::Simple(..) => None,
         }
     }
 }
 
-impl DetailedTomlDependency {
+impl TomlDependencyDetails {
     fn to_dependency(
         &self,
         name_in_toml: &str,
@@ -2288,6 +2532,19 @@ impl ser::Serialize for PathValue {
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Clone, Serialize, Deserialize, Debug)]
+struct DefinedTomlPlatform {
+    dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
+    #[serde(rename = "build-dependencies")]
+    build_dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
+    #[serde(rename = "build_dependencies")]
+    build_dependencies2: Option<BTreeMap<String, DefinedTomlDependency>>,
+    #[serde(rename = "dev-dependencies")]
+    dev_dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
+    #[serde(rename = "dev_dependencies")]
+    dev_dependencies2: Option<BTreeMap<String, DefinedTomlDependency>>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
 struct TomlPlatform {
     dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
@@ -2298,6 +2555,52 @@ struct TomlPlatform {
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+}
+
+impl TomlPlatform {
+    fn from_defined_platform(defined_platform: &DefinedTomlPlatform) -> Self {
+        Self {
+            dependencies: to_toml_dependencies(defined_platform.dependencies.as_ref()),
+            build_dependencies: to_toml_dependencies(defined_platform.build_dependencies.as_ref()),
+            build_dependencies2: None,
+            dev_dependencies: to_toml_dependencies(defined_platform.dev_dependencies.as_ref()),
+            dev_dependencies2: None,
+        }
+    }
+}
+
+impl DefinedTomlPlatform {
+    fn from_toml_platform(
+        toml_platform: &TomlPlatform,
+        ws_deps: &BTreeMap<String, DefinedTomlDependency>,
+        root_path: Option<&Path>,
+    ) -> CargoResult<Self> {
+        let build_dependencies = toml_platform
+            .build_dependencies
+            .as_ref()
+            .or(toml_platform.build_dependencies2.as_ref());
+
+        let dev_dependencies = toml_platform
+            .dev_dependencies
+            .as_ref()
+            .or(toml_platform.dev_dependencies2.as_ref());
+
+        Ok(Self {
+            dependencies: to_defined_dependencies(
+                toml_platform.dependencies.as_ref(),
+                Some(ws_deps),
+                root_path,
+            )?,
+            build_dependencies: to_defined_dependencies(
+                build_dependencies,
+                Some(ws_deps),
+                root_path,
+            )?,
+            build_dependencies2: None,
+            dev_dependencies: to_defined_dependencies(dev_dependencies, Some(ws_deps), root_path)?,
+            dev_dependencies2: None,
+        })
+    }
 }
 
 impl TomlTarget {

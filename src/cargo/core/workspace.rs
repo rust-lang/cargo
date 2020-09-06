@@ -21,7 +21,7 @@ use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::toml::{
-    map_deps, parse_manifest, read_manifest, ParseOutput, StringOrBool, TomlDependency,
+    map_deps, parse_manifest, read_manifest, DefinedTomlDependency, ParseOutput, StringOrBool,
     TomlProfiles, TomlWorkspace, VecStringOrBool,
 };
 use crate::util::{Config, Filesystem};
@@ -145,7 +145,7 @@ pub struct WorkspaceRootConfig {
     custom_metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
-    dependencies: Option<BTreeMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, DefinedTomlDependency>>,
     version: Option<semver::Version>,
     authors: Option<Vec<String>>,
     description: Option<String>,
@@ -1149,7 +1149,7 @@ impl WorkspaceRootConfig {
         let dependencies = map_deps(
             config,
             toml_workspace.dependencies.as_ref(),
-            |_d: &TomlDependency| true,
+            |_d: &DefinedTomlDependency| true,
         )?;
 
         Ok(Self {
