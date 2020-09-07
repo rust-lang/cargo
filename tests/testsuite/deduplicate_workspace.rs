@@ -1,5 +1,9 @@
 //! Tests for deduplicating Cargo.toml fields with { workspace = true }
-use cargo_test_support::{basic_workspace_manifest, git, paths, project, publish, registry};
+use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::{
+    basic_lib_manifest, basic_manifest, basic_workspace_manifest, git, path2url, paths, project,
+    publish, registry,
+};
 
 #[cargo_test]
 fn permit_additional_workspace_fields() {
@@ -27,7 +31,7 @@ fn permit_additional_workspace_fields() {
             gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
 
             [workspace.dependencies]
-            dep1 = "0.1"
+            dep = "0.1"
         "#,
         )
         .file("bar/Cargo.toml", &basic_workspace_manifest("bar", ".."))
@@ -46,7 +50,7 @@ fn permit_additional_workspace_fields() {
 
     p.cargo("check").run();
     let lockfile = p.read_lockfile();
-    assert!(!lockfile.contains("dep1"));
+    assert!(!lockfile.contains("dep"));
 }
 
 #[cargo_test]
@@ -269,6 +273,336 @@ fn inherit_own_workspace_fields() {
 }
 
 #[cargo_test]
+fn inherit_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = "0.1"
+            dep-build = "0.8"
+            dep-dev = "0.5.2"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { workspace = true }
+
+            [build-dependencies]
+            dep-build = { workspace = true }
+
+            [dev-dependencies]
+            dep-dev = { workspace = true }
+
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("dep", "0.1.2").publish();
+    Package::new("dep-build", "0.8.2").publish();
+    Package::new("dep-dev", "0.5.2").publish();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep-build v0.8.2 ([..])
+[DOWNLOADED] dep v0.1.2 ([..])
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("check").run();
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+    assert!(lockfile.contains("dep-dev"));
+    assert!(lockfile.contains("dep-build"));
+}
+
+#[cargo_test]
+fn inherite_detailed_dependencies() {
+    let git_project = git::new("detailed", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("detailed"))
+            .file(
+                "src/detailed.rs",
+                r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#,
+            )
+    });
+
+    // Make a new branch based on the current HEAD commit
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let head = repo.head().unwrap().target().unwrap();
+    let head = repo.find_commit(head).unwrap();
+    repo.branch("branchy", &head, true).unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            detailed = {{ git = '{}', branch = "branchy" }}
+        "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            detailed = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    let git_root = git_project.root();
+
+    p.cargo("build")
+        .with_stderr(&format!(
+            "\
+[UPDATING] git repository `{}`\n\
+[COMPILING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
+[COMPILING] bar v0.2.0 ([CWD]/bar)\n\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+            path2url(&git_root),
+            path2url(&git_root),
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn inherit_path_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = { path = "dep" }
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.9.0"))
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] dep v0.9.0 ([CWD]/dep)
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+}
+
+#[cargo_test]
+fn inherit_target_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = "0.1"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [target.'cfg(unix)'.dependencies]
+            dep = { workspace = true }
+
+            [target.'cfg(windows)'.dependencies]
+            dep = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("dep", "0.1.2").publish();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.2 ([..])
+[COMPILING] dep v0.1.2
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+}
+
+#[cargo_test]
+fn inherited_dependencies_union_features() {
+    Package::new("dep", "0.1.0")
+        .feature("fancy", &["fancy_dep"])
+        .feature("dancy", &["dancy_dep"])
+        .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
+        .add_dep(Dependency::new("dancy_dep", "0.6").optional(true))
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("fancy_dep", "0.2.4").publish();
+    Package::new("dancy_dep", "0.6.8").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = { version = "0.1", features = ["fancy"] }
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { workspace = true, features = ["dancy"] }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] fancy_dep v0.2.4 ([..])
+[DOWNLOADED] dep v0.1.0 ([..])
+[DOWNLOADED] dancy_dep v0.6.8 ([..])
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] dep v0.1.0
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("dep"));
+    assert!(lockfile.contains("fancy_dep"));
+    assert!(lockfile.contains("dancy_dep"));
+}
+
+#[cargo_test]
+fn inherited_dependency_override_optional() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [workspace.dependencies]
+            dep = "0.1.0"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            workspace = ".."
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            dep = { workspace = true, optional = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[COMPILING] bar v0.2.0 ([CWD]/bar)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn error_inherit_from_undefined_field() {
     registry::init();
 
@@ -419,6 +753,49 @@ fn error_badges_wrapping() {
 
 Caused by:
   expected a table of badges or { workspace = true } for key `badges`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_inherit_unspecified_dependency() {
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = "1.2.3"
+            authors = ["rustaceans"]
+
+            [dependencies]
+            foo = { workspace = true }
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  could not find entry in [workspace.dependencies] for \"foo\"
 ",
         )
         .run();
