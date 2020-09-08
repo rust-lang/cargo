@@ -378,6 +378,11 @@ pub struct DefinedTomlManifest {
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
+struct WorkspaceContext<'a> {
+    dependencies: &'a BTreeMap<String, DefinedTomlDependency>,
+    root_path: Option<&'a Path>,
+}
+
 impl DefinedTomlManifest {
     fn from_toml_manifest(
         manifest: TomlManifest,
@@ -394,6 +399,15 @@ impl DefinedTomlManifest {
 
         let workspace = output.as_ref().and_then(|output| output.workspace());
 
+        let empty = BTreeMap::new();
+        let ctx = WorkspaceContext {
+            dependencies: workspace
+                .map(|ws| ws.dependencies.as_ref())
+                .flatten()
+                .unwrap_or(&empty),
+            root_path,
+        };
+
         let package = manifest
             .package
             .or(manifest.project)
@@ -403,16 +417,13 @@ impl DefinedTomlManifest {
 
         let badges = ws_default(manifest.badges, workspace, |ws| &ws.badges, "badges")?;
 
-        let ws_deps = workspace.map(|ws| ws.dependencies.as_ref()).flatten();
-        let dependencies =
-            to_defined_dependencies(manifest.dependencies.as_ref(), ws_deps, root_path)?;
+        let dependencies = to_defined_dependencies(manifest.dependencies.as_ref(), &ctx)?;
         let dev_dependencies = to_defined_dependencies(
             manifest
                 .dev_dependencies
                 .or(manifest.dev_dependencies2)
                 .as_ref(),
-            ws_deps,
-            root_path,
+            &ctx,
         )?;
 
         let build_dependencies = to_defined_dependencies(
@@ -420,11 +431,10 @@ impl DefinedTomlManifest {
                 .build_dependencies
                 .or(manifest.build_dependencies2)
                 .as_ref(),
-            ws_deps,
-            root_path,
+            &ctx,
         )?;
 
-        let target = to_defined_platform(manifest.target, ws_deps, root_path)?;
+        let target = to_defined_platform(manifest.target, &ctx)?;
 
         Ok(Self {
             cargo_features: manifest.cargo_features,
@@ -450,14 +460,10 @@ impl DefinedTomlManifest {
 
 fn to_defined_dependencies(
     dependencies: Option<&BTreeMap<String, TomlDependency>>,
-    ws_dependencies: Option<&BTreeMap<String, DefinedTomlDependency>>,
-    root_path: Option<&Path>,
+    ctx: &WorkspaceContext<'_>,
 ) -> CargoResult<Option<BTreeMap<String, DefinedTomlDependency>>> {
-    let empty = BTreeMap::new();
-    let ws_deps = ws_dependencies.unwrap_or(&empty);
-
     map_btree(dependencies, |key, dep| {
-        DefinedTomlDependency::from_toml_dependency(dep, &key, &ws_deps, root_path)
+        DefinedTomlDependency::from_toml_dependency(dep, &key, ctx)
     })
 }
 
@@ -472,13 +478,10 @@ fn to_toml_dependencies(
 
 fn to_defined_platform(
     toml_platform: Option<BTreeMap<String, TomlPlatform>>,
-    ws_dependencies: Option<&BTreeMap<String, DefinedTomlDependency>>,
-    root_path: Option<&Path>,
+    ctx: &WorkspaceContext<'_>,
 ) -> CargoResult<Option<BTreeMap<String, DefinedTomlPlatform>>> {
-    let empty = BTreeMap::new();
-    let ws_deps = ws_dependencies.unwrap_or(&empty);
     map_btree(toml_platform.as_ref(), |_key, toml_platform| {
-        DefinedTomlPlatform::from_toml_platform(toml_platform, ws_deps, root_path)
+        DefinedTomlPlatform::from_toml_platform(toml_platform, ctx)
     })
 }
 
@@ -2187,21 +2190,20 @@ impl DefinedTomlDependency {
     fn from_toml_dependency(
         dep: &TomlDependency,
         name: &str,
-        ws_deps: &BTreeMap<String, Self>,
-        root_path: Option<&Path>,
+        ctx: &WorkspaceContext<'_>,
     ) -> CargoResult<Self> {
         match dep {
             TomlDependency::Simple(s) => Ok(Self::Simple(s.clone())),
             TomlDependency::Detailed(detailed) => Ok(Self::Detailed(detailed.clone())),
             TomlDependency::Workspace(ws) => {
-                let ws_dep = ws_deps.get(name).ok_or_else(|| {
+                let ws_dep = ctx.dependencies.get(name).ok_or_else(|| {
                     anyhow!(
                         "could not find entry in [workspace.dependencies] for \"{}\"",
                         name
                     )
                 })?;
 
-                Ok(Self::from_workspace_dependency(ws, ws_dep, root_path)?)
+                Ok(Self::from_workspace_dependency(ws, ws_dep, ctx)?)
             }
         }
     }
@@ -2209,7 +2211,7 @@ impl DefinedTomlDependency {
     fn from_workspace_dependency(
         details: &WorkspaceDetails,
         ws_dep: &Self,
-        root_path: Option<&Path>,
+        ctx: &WorkspaceContext<'_>,
     ) -> CargoResult<Self> {
         let details = match ws_dep {
             Self::Simple(s) => TomlDependencyDetails {
@@ -2229,7 +2231,7 @@ impl DefinedTomlDependency {
                 path: d
                     .path
                     .clone()
-                    .map(|p| join_relative_path(root_path, &p))
+                    .map(|p| join_relative_path(ctx.root_path, &p))
                     .transpose()?,
                 git: d.git.clone(),
                 branch: d.branch.clone(),
@@ -2572,8 +2574,7 @@ impl TomlPlatform {
 impl DefinedTomlPlatform {
     fn from_toml_platform(
         toml_platform: &TomlPlatform,
-        ws_deps: &BTreeMap<String, DefinedTomlDependency>,
-        root_path: Option<&Path>,
+        ctx: &WorkspaceContext<'_>,
     ) -> CargoResult<Self> {
         let build_dependencies = toml_platform
             .build_dependencies
@@ -2586,18 +2587,10 @@ impl DefinedTomlPlatform {
             .or(toml_platform.dev_dependencies2.as_ref());
 
         Ok(Self {
-            dependencies: to_defined_dependencies(
-                toml_platform.dependencies.as_ref(),
-                Some(ws_deps),
-                root_path,
-            )?,
-            build_dependencies: to_defined_dependencies(
-                build_dependencies,
-                Some(ws_deps),
-                root_path,
-            )?,
+            dependencies: to_defined_dependencies(toml_platform.dependencies.as_ref(), ctx)?,
+            build_dependencies: to_defined_dependencies(build_dependencies, ctx)?,
             build_dependencies2: None,
-            dev_dependencies: to_defined_dependencies(dev_dependencies, Some(ws_deps), root_path)?,
+            dev_dependencies: to_defined_dependencies(dev_dependencies, ctx)?,
             dev_dependencies2: None,
         })
     }
