@@ -134,7 +134,7 @@ fn verify_dependencies(
     registry_src: SourceId,
 ) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
-        if dep.source_id().is_path() || dep.source_id().is_git() {
+        if dep.source_id().is_git() {
             if !dep.specified_req() {
                 if !dep.is_transitive() {
                     // dev-dependencies will be stripped in TomlManifest::prepare_for_publish
@@ -161,7 +161,7 @@ fn verify_dependencies(
             }
         // TomlManifest::prepare_for_publish will rewrite the dependency
         // to be just the `version` field.
-        } else if dep.source_id() != registry_src {
+        } else if !dep.source_id().is_path() && dep.source_id() != registry_src {
             if !dep.source_id().is_registry() {
                 // Consider making SourceId::kind a public type that we can
                 // exhaustively match on. Using match can help ensure that

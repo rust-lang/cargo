@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use super::{parse, TomlManifest};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
-use crate::util::toml::TomlWorkspace;
+use crate::util::toml::{TomlProject, TomlWorkspace};
 use crate::util::{paths, Config};
 
 pub type ManifestCache = HashMap<PathBuf, ParseOutput>;
@@ -21,6 +21,13 @@ pub struct ParseOutput {
 impl ParseOutput {
     pub fn workspace(&self) -> Option<&TomlWorkspace> {
         self.manifest.workspace.as_ref()
+    }
+
+    pub fn package(&self) -> Option<&TomlProject> {
+        self.manifest
+            .package
+            .as_deref()
+            .or(self.manifest.project.as_deref())
     }
 }
 

@@ -105,8 +105,6 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         return Ok(None);
     }
 
-    verify_dependencies(pkg)?;
-
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
     let dir = ws.target_dir().join("package");
     let mut dst = {
@@ -328,21 +326,6 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         ))?
     }
 
-    Ok(())
-}
-
-// Checks that the package dependencies are safe to deploy.
-fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
-    for dep in pkg.dependencies() {
-        if dep.source_id().is_path() && !dep.specified_req() && dep.is_transitive() {
-            anyhow::bail!(
-                "all path dependencies must have a version specified \
-                 when packaging.\ndependency `{}` does not specify \
-                 a version.",
-                dep.name_in_toml()
-            )
-        }
-    }
     Ok(())
 }
 

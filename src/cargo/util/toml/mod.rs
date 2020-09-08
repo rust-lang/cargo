@@ -379,7 +379,9 @@ pub struct DefinedTomlManifest {
 }
 
 struct WorkspaceContext<'a> {
+    config: &'a Config,
     dependencies: &'a BTreeMap<String, DefinedTomlDependency>,
+    package_root: &'a Path,
     root_path: Option<&'a Path>,
 }
 
@@ -401,10 +403,12 @@ impl DefinedTomlManifest {
 
         let empty = BTreeMap::new();
         let ctx = WorkspaceContext {
+            config,
             dependencies: workspace
                 .map(|ws| ws.dependencies.as_ref())
                 .flatten()
                 .unwrap_or(&empty),
+            package_root,
             root_path,
         };
 
@@ -494,7 +498,7 @@ fn to_toml_platform(
     .unwrap()
 }
 
-pub fn map_deps(
+pub fn prepare_deps(
     config: &Config,
     deps: Option<&BTreeMap<String, DefinedTomlDependency>>,
     filter: impl Fn(&DefinedTomlDependency) -> bool,
@@ -506,15 +510,12 @@ pub fn map_deps(
     let deps = deps
         .iter()
         .filter(|(_k, v)| filter(v))
-        .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
+        .map(|(k, v)| Ok((k.clone(), prepare_dep(config, v)?)))
         .collect::<CargoResult<BTreeMap<_, _>>>()?;
     Ok(Some(deps))
 }
 
-fn map_dependency(
-    config: &Config,
-    dep: &DefinedTomlDependency,
-) -> CargoResult<DefinedTomlDependency> {
+fn prepare_dep(config: &Config, dep: &DefinedTomlDependency) -> CargoResult<DefinedTomlDependency> {
     match dep {
         DefinedTomlDependency::Detailed(d) => {
             let mut d = d.clone();
@@ -525,6 +526,7 @@ fn map_dependency(
             d.branch.take();
             d.tag.take();
             d.rev.take();
+
             // registry specifications are elaborated to the index URL
             if let Some(registry) = d.registry.take() {
                 let src = SourceId::alt_registry(config, &registry)?;
@@ -1516,13 +1518,13 @@ impl DefinedTomlManifest {
             example: self.example.clone(),
             test: self.test.clone(),
             bench: self.bench.clone(),
-            dependencies: map_deps(config, self.dependencies.as_ref(), all)?,
-            dev_dependencies: map_deps(
+            dependencies: prepare_deps(config, self.dependencies.as_ref(), all)?,
+            dev_dependencies: prepare_deps(
                 config,
                 self.dev_dependencies.as_ref(),
                 DefinedTomlDependency::is_version_specified,
             )?,
-            build_dependencies: map_deps(config, self.build_dependencies.as_ref(), all)?,
+            build_dependencies: prepare_deps(config, self.build_dependencies.as_ref(), all)?,
             features: self.features.clone(),
             target: match self.target.as_ref().map(|target_map| {
                 target_map
@@ -1531,8 +1533,8 @@ impl DefinedTomlManifest {
                         Ok((
                             k.clone(),
                             DefinedTomlPlatform {
-                                dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
-                                dev_dependencies: map_deps(
+                                dependencies: prepare_deps(config, v.dependencies.as_ref(), all)?,
+                                dev_dependencies: prepare_deps(
                                     config,
                                     v.dev_dependencies
                                         .as_ref()
@@ -1540,7 +1542,7 @@ impl DefinedTomlManifest {
                                     DefinedTomlDependency::is_version_specified,
                                 )?,
                                 dev_dependencies2: None,
-                                build_dependencies: map_deps(
+                                build_dependencies: prepare_deps(
                                     config,
                                     v.build_dependencies
                                         .as_ref()
@@ -2194,7 +2196,11 @@ impl DefinedTomlDependency {
     ) -> CargoResult<Self> {
         match dep {
             TomlDependency::Simple(s) => Ok(Self::Simple(s.clone())),
-            TomlDependency::Detailed(detailed) => Ok(Self::Detailed(detailed.clone())),
+            TomlDependency::Detailed(details) => {
+                let mut details = details.clone();
+                details.infer_path_version(ctx)?;
+                Ok(Self::Detailed(details))
+            }
             TomlDependency::Workspace(ws) => {
                 let ws_dep = ctx.dependencies.get(name).ok_or_else(|| {
                     anyhow!(
@@ -2203,7 +2209,7 @@ impl DefinedTomlDependency {
                     )
                 })?;
 
-                Ok(Self::from_workspace_dependency(ws, ws_dep, ctx)?)
+                Self::from_workspace_dependency(ws, ws_dep, ctx)
             }
         }
     }
@@ -2213,7 +2219,7 @@ impl DefinedTomlDependency {
         ws_dep: &Self,
         ctx: &WorkspaceContext<'_>,
     ) -> CargoResult<Self> {
-        let details = match ws_dep {
+        let mut details = match ws_dep {
             Self::Simple(s) => TomlDependencyDetails {
                 version: Some(s.clone()),
                 features: details
@@ -2258,8 +2264,10 @@ impl DefinedTomlDependency {
             },
         };
 
+        details.infer_path_version(ctx)?;
         Ok(Self::Detailed(details))
     }
+
     fn to_dependency(
         &self,
         name: &str,
@@ -2481,6 +2489,41 @@ impl TomlDependencyDetails {
             dep.set_public(p);
         }
         Ok(dep)
+    }
+
+    fn infer_path_version(&mut self, ctx: &WorkspaceContext<'_>) -> CargoResult<()> {
+        if let (None, Some(p)) = (&self.version, &self.path) {
+            let path_dep_manifest = ctx.package_root.join(p).join("Cargo.toml");
+            let manifest = parse_manifest(&path_dep_manifest, ctx.config)?.manifest;
+            let root_path = find_workspace_root(&path_dep_manifest, ctx.config)?;
+            let package = manifest.package.as_deref().or(manifest.project.as_deref());
+            let output = root_path
+                .map(|root_path| parse_manifest(&root_path, ctx.config))
+                .transpose()?;
+            let workspace = output.as_ref().and_then(|output| output.workspace());
+
+            let version = ws_default(
+                package.map(|p| p.version.clone()),
+                workspace,
+                |ws| &ws.version,
+                "version",
+            )?;
+
+            let publish = ws_default(
+                package.and_then(|p| p.publish.clone()),
+                workspace,
+                |ws| &ws.publish,
+                "publish",
+            )?;
+
+            self.version = match (version, publish) {
+                (None, _) => bail!("path dependency does not specify version"),
+                (_, Some(VecStringOrBool::Bool(false))) => None,
+                (Some(v), _) => Some(v.to_string()),
+            }
+        }
+
+        Ok(())
     }
 }
 

@@ -21,7 +21,7 @@ use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::toml::{
-    map_deps, parse_manifest, read_manifest, DefinedTomlDependency, ParseOutput, StringOrBool,
+    parse_manifest, prepare_deps, read_manifest, DefinedTomlDependency, ParseOutput, StringOrBool,
     TomlProfiles, TomlWorkspace, VecStringOrBool,
 };
 use crate::util::{Config, Filesystem};
@@ -1146,7 +1146,7 @@ impl WorkspaceRootConfig {
         config: &Config,
         toml_workspace: &TomlWorkspace,
     ) -> CargoResult<Self> {
-        let dependencies = map_deps(
+        let dependencies = prepare_deps(
             config,
             toml_workspace.dependencies.as_ref(),
             |_d: &DefinedTomlDependency| true,
