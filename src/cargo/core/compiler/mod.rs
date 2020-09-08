@@ -291,7 +291,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
             )
             .map_err(verbose_if_simple_exit_code)
-            .chain_err(|| format!("could not compile `{}`.", name))?;
+            .chain_err(|| format!("could not compile `{}`", name))?;
         }
 
         if rustc_dep_info_loc.exists() {
@@ -614,7 +614,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 &mut |line| on_stderr_line(state, line, package_id, &target, &mut output_options),
                 false,
             )
-            .chain_err(|| format!("Could not document `{}`.", name))?;
+            .chain_err(|| format!("could not document `{}`", name))?;
         Ok(())
     }))
 }

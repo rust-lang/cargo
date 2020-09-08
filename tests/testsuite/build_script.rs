@@ -1069,7 +1069,7 @@ fn build_deps_not_for_normal() {
         .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
         .with_stderr_contains(
             "\
-[ERROR] could not compile `foo`.
+[ERROR] could not compile `foo`
 
 Caused by:
   process didn't exit successfully: [..]
