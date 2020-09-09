@@ -259,37 +259,50 @@ in package source
 
 #[cargo_test]
 fn path_dependency_no_version() {
+    Package::new("bar", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+             [project]
+             name = "foo"
+             version = "0.0.1"
+             authors = []
+             license = "MIT"
+             description = "foo"
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+             [dependencies.bar]
+             path = "bar"
+         "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("package")
-        .with_status(101)
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
-",
-        )
-        .run();
+    p.cargo("package --no-verify").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+description = "foo"
+license = "MIT"
+[dependencies.bar]
+version = "0.1.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE,
+    );
+
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
+    );
 }
 
 #[cargo_test]
@@ -1813,15 +1826,21 @@ fn list_with_path_and_lock() {
             version = "0.1.0"
             license = "MIT"
             description = "foo"
-            homepage = "foo"
-
-            [dependencies]
-            bar = {path="bar"}
             "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("bar/src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            use std::fs;
+
+            fn main() {
+                fs::write("src/generated.txt",
+                    "Hello, world of generated files."
+                ).expect("failed to create file");
+            }
+        "#,
+        )
         .build();
 
     p.cargo("package --list")
@@ -1830,6 +1849,7 @@ fn list_with_path_and_lock() {
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
+build.rs
 src/main.rs
 ",
         )
@@ -1837,11 +1857,16 @@ src/main.rs
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
-error: all path dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version.
-",
+error: failed to verify package tarball
+
+Caused by:
+  Source directory was modified by build.rs during cargo publish. \
+  Build scripts should not modify anything outside of OUT_DIR.
+  Added: [CWD]/target/package/foo-0.1.0/src/generated.txt
+
+  To proceed despite this, pass the `--no-verify` flag.",
         )
         .run();
 }

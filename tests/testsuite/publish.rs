@@ -301,7 +301,7 @@ fn path_dependency_no_version() {
             r#"
             [project]
             name = "foo"
-            version = "0.0.1"
+            version = "0.8.9"
             authors = []
             license = "MIT"
             description = "foo"
@@ -315,18 +315,45 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --token sekrit")
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[ERROR] all dependencies must have a version specified when publishing.
-dependency `bar` does not specify a version
-Note: The published dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
-",
-        )
-        .run();
+    Package::new("bar", "0.0.1").publish();
+    p.cargo("publish --no-verify --token sekrit").run();
+
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "bar",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.0.1"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.8.9"
+          }
+        "#,
+        "foo-0.8.9.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[cargo_test]
@@ -1277,7 +1304,18 @@ fn publish_dev_dep_no_version() {
           "authors": [],
           "badges": {},
           "categories": [],
-          "deps": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "dev",
+              "name": "bar",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^0.0.1"
+            }
+          ],
           "description": "foo",
           "documentation": "foo",
           "features": {},
@@ -1307,8 +1345,8 @@ homepage = "foo"
 documentation = "foo"
 license = "MIT"
 repository = "foo"
-
-[dev-dependencies]
+[dev-dependencies.bar]
+version = "0.0.1"
 "#,
         )],
     );

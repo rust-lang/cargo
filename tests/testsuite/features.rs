@@ -54,6 +54,8 @@ fn invalid2() {
         "#,
         )
         .file("src/main.rs", "")
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.2"))
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -88,6 +90,8 @@ fn invalid3() {
         "#,
         )
         .file("src/main.rs", "")
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.2"))
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -131,7 +135,7 @@ fn invalid4() {
             "\
 error: failed to select a version for `bar`.
     ... required by package `foo v0.0.1 ([..])`
-versions that meet the requirements `*` are: 0.0.1
+versions that meet the requirements `^0.0.1` are: 0.0.1
 
 the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
 
@@ -165,6 +169,8 @@ fn invalid5() {
         "#,
         )
         .file("src/main.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -335,7 +341,7 @@ fn invalid10() {
     p.cargo("build").with_stderr("\
 error: failed to select a version for `bar`.
     ... required by package `foo v0.0.1 ([..])`
-versions that meet the requirements `*` are: 0.0.1
+versions that meet the requirements `^0.0.1` are: 0.0.1
 
 the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
  It has a required dependency with that name, but only optional dependencies can be used as features.

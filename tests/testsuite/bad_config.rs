@@ -1103,6 +1103,8 @@ fn both_git_and_path_specified() {
     "#,
         )
         .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/lib.rs", "")
         .build();
 
     foo.cargo("build -v")
@@ -1173,6 +1175,8 @@ fn ignored_git_revision() {
     "#,
         )
         .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/lib.rs", "")
         .build();
 
     foo.cargo("build -v")
