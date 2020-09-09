@@ -1630,9 +1630,7 @@ fn install_cargo_package_in_a_patched_workspace() {
 package:   [..]/foo/baz/Cargo.toml
 workspace: [..]/foo/Cargo.toml
 ";
-    p.cargo("check")
-        .with_stderr_contains(&stderr)
-        .run();
+    p.cargo("check").with_stderr_contains(&stderr).run();
 
     // A crate installation must not emit any message from a workspace under
     // current working directory.
