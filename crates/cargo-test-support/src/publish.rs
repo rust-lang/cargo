@@ -75,8 +75,10 @@ fn _validate_upload(
     f.read_exact(&mut json_bytes).expect("read JSON data");
     let actual_json = serde_json::from_slice(&json_bytes).expect("uploaded JSON should be valid");
     let expected_json = serde_json::from_str(expected_json).expect("expected JSON does not parse");
-    find_json_mismatch(&expected_json, &actual_json)
-        .expect("uploaded JSON did not match expected JSON");
+
+    if let Err(e) = find_json_mismatch(&expected_json, &actual_json) {
+        panic!("{}", e);
+    }
 
     // 32-bit little-endian integer of length of crate file.
     let crate_sz = read_le_u32(&mut f).expect("read crate length");
