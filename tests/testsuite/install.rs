@@ -1636,6 +1636,19 @@ workspace: [..]/foo/Cargo.toml
     // current working directory.
     // See https://github.com/rust-lang/cargo/issues/8619
     p.cargo("install foo")
-        .with_stderr_does_not_contain(&stderr)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 (registry [..])
+[INSTALLING] foo v0.1.0
+[COMPILING] foo v0.1.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [..]foo[EXE]
+[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
         .run();
+    assert_has_installed_exe(cargo_home(), "foo");
 }
