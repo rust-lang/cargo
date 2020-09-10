@@ -116,7 +116,12 @@ fn existing() {
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
-        .with_stderr("[ERROR] invalid character `.` in crate name: `foo.rs`, [..]")
+        .with_stderr(
+            "\
+[ERROR] invalid character `.` in crate name: `foo.rs`, [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -124,7 +129,12 @@ fn invalid_characters() {
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
-        .with_stderr("[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]")
+        .with_stderr(
+            "\
+[ERROR] the name `test` cannot be used as a crate name, it conflicts [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -133,7 +143,10 @@ fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
         .with_stderr(
-            "[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]",
+            "\
+[ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -153,7 +166,12 @@ it conflicts with cargo's build directory names
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
-        .with_stderr("[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword")
+        .with_stderr(
+            "\
+[ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+        )
         .run();
 }
 
@@ -522,7 +540,12 @@ fn restricted_windows_name() {
         cargo_process("new nul")
             .env("USER", "foo")
             .with_status(101)
-            .with_stderr("[ERROR] cannot use name `nul`, it is a reserved Windows filename")
+            .with_stderr(
+                "\
+[ERROR] cannot use name `nul`, it is a reserved Windows filename
+If you need a crate name to not match the directory name, consider using --name flag.
+",
+            )
             .run();
     } else {
         cargo_process("new nul")
@@ -559,8 +582,11 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
-            the first character must be a Unicode XID start character (most letters or `_`)",
+            "\
+[ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
+the first character must be a Unicode XID start character (most letters or `_`)
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -568,8 +594,11 @@ fn non_ascii_name_invalid() {
         .env("USER", "foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] invalid character `¼` in crate name: `a¼`, \
-            characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)",
+            "\
+[ERROR] invalid character `¼` in crate name: `a¼`, \
+characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 }

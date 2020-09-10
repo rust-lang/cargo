@@ -154,7 +154,19 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
-fn check_name(name: &str, name_help: &str, has_bin: bool, shell: &mut Shell) -> CargoResult<()> {
+fn check_name(
+    name: &str,
+    show_name_help: bool,
+    has_bin: bool,
+    shell: &mut Shell,
+) -> CargoResult<()> {
+    // If --name is already used to override, no point in suggesting it
+    // again as a fix.
+    let name_help = if show_name_help {
+        "\nIf you need a crate name to not match the directory name, consider using --name flag."
+    } else {
+        ""
+    };
     restricted_names::validate_package_name(name, "crate name", name_help)?;
 
     if restricted_names::is_keyword(name) {
@@ -363,7 +375,12 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(path, opts)?;
-    check_name(name, "", opts.kind.is_bin(), &mut config.shell())?;
+    check_name(
+        name,
+        opts.name.is_none(),
+        opts.kind.is_bin(),
+        &mut config.shell(),
+    )?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -411,13 +428,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         // user may mean "initialize for library, but also add binary target"
     }
     let has_bin = src_paths_types.iter().any(|x| x.bin);
-    // If --name is already used to override, no point in suggesting it
-    // again as a fix.
-    let name_help = match opts.name {
-        Some(_) => "",
-        None => "\nuse --name to override crate name",
-    };
-    check_name(name, name_help, has_bin, &mut config.shell())?;
+    check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
 
     let mut version_control = opts.version_control;
 
