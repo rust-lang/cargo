@@ -543,8 +543,7 @@ fn restricted_windows_name() {
             .with_stderr(
                 "\
 [ERROR] cannot use name `nul`, it is a reserved Windows filename
-If you need a crate name to not match the directory name, consider using --name fla
-g.
+If you need a crate name to not match the directory name, consider using --name flag.
 ",
             )
             .run();
