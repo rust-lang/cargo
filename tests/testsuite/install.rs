@@ -1587,3 +1587,68 @@ fn install_yanked_cargo_package() {
         )
         .run();
 }
+
+#[cargo_test]
+fn install_cargo_package_in_a_patched_workspace() {
+    pkg("foo", "0.1.0");
+    pkg("fizz", "1.0.0");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["baz"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [package]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            fizz = "1"
+
+            [patch.crates-io]
+            fizz = { version = "=1.0.0" }
+        "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+[WARNING] patch for the non root package will be ignored, specify patch at the workspace root:
+package:   [..]/foo/baz/Cargo.toml
+workspace: [..]/foo/Cargo.toml
+";
+    p.cargo("check").with_stderr_contains(&stderr).run();
+
+    // A crate installation must not emit any message from a workspace under
+    // current working directory.
+    // See https://github.com/rust-lang/cargo/issues/8619
+    p.cargo("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 (registry [..])
+[INSTALLING] foo v0.1.0
+[COMPILING] foo v0.1.0
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [..]foo[EXE]
+[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}

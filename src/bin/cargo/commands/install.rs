@@ -81,17 +81,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config.reload_rooted_at(config.home().clone().into_path_unlocked())?;
     }
 
-    let workspace = args.workspace(config).ok();
-    let mut compile_opts = args.compile_options(
-        config,
-        CompileMode::Build,
-        workspace.as_ref(),
-        ProfileChecking::Checked,
-    )?;
-
-    compile_opts.build_config.requested_profile =
-        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
-
     let krates = args
         .values_of("crate")
         .unwrap_or_default()
@@ -126,6 +115,26 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let version = args.value_of("version");
     let root = args.value_of("root");
+
+    // We only provide worksapce information for local crate installation from
+    // one of the following sources:
+    // - From current working directory (only work for edition 2015).
+    // - From a specific local file path.
+    let workspace = if from_cwd || args.is_present("path") {
+        args.workspace(config).ok()
+    } else {
+        None
+    };
+
+    let mut compile_opts = args.compile_options(
+        config,
+        CompileMode::Build,
+        workspace.as_ref(),
+        ProfileChecking::Checked,
+    )?;
+
+    compile_opts.build_config.requested_profile =
+        args.get_profile_name(config, "release", ProfileChecking::Checked)?;
 
     if args.is_present("list") {
         ops::install_list(root, config)?;
