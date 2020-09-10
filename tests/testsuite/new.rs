@@ -119,7 +119,8 @@ fn invalid_characters() {
         .with_stderr(
             "\
 [ERROR] invalid character `.` in crate name: `foo.rs`, [..]
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 }
@@ -131,7 +132,8 @@ fn reserved_name() {
         .with_stderr(
             "\
 [ERROR] the name `test` cannot be used as a crate name, it conflicts [..]
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 }
@@ -143,7 +145,8 @@ fn reserved_binary_name() {
         .with_stderr(
             "\
 [ERROR] the name `incremental` cannot be used as a crate name, it conflicts [..]
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -166,7 +169,8 @@ fn keyword_name() {
         .with_stderr(
             "\
 [ERROR] the name `pub` cannot be used as a crate name, it is a Rust keyword
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 }
@@ -539,7 +543,9 @@ fn restricted_windows_name() {
             .with_stderr(
                 "\
 [ERROR] cannot use name `nul`, it is a reserved Windows filename
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name fla
+g.
+",
             )
             .run();
     } else {
@@ -580,7 +586,8 @@ fn non_ascii_name_invalid() {
             "\
 [ERROR] invalid character `Ⓐ` in crate name: `ⒶⒷⒸ`, \
 the first character must be a Unicode XID start character (most letters or `_`)
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 
@@ -591,7 +598,8 @@ use --name to override crate name",
             "\
 [ERROR] invalid character `¼` in crate name: `a¼`, \
 characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
-use --name to override crate name",
+If you need a crate name to not match the directory name, consider using --name flag.
+",
         )
         .run();
 }

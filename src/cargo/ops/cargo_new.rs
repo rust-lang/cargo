@@ -163,7 +163,7 @@ fn check_name(
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = if show_name_help {
-        "\nuse --name to override crate name"
+        "\nIf you need a crate name to not match the directory name, consider using --name flag."
     } else {
         ""
     };
