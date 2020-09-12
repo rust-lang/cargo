@@ -16,7 +16,7 @@ pub struct UnitDep {
     /// The dependency unit.
     pub unit: Unit,
     /// The purpose of this dependency (a dependency for a test, or a build
-    /// script, etc.).
+    /// script, etc.). Do not use this after the unit graph has been built.
     pub unit_for: UnitFor,
     /// The name the parent uses to refer to this dependency.
     pub extern_crate_name: InternedString,

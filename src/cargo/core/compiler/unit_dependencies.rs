@@ -612,7 +612,7 @@ fn new_unit_dep_with_profile(
     let features = state.activated_features(pkg.package_id(), features_for);
     let unit = state
         .interner
-        .intern(pkg, target, profile, kind, mode, features, state.is_std);
+        .intern(pkg, target, profile, kind, mode, features, state.is_std, 0);
     Ok(UnitDep {
         unit,
         unit_for,

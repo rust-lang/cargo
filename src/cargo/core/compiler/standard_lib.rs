@@ -179,6 +179,7 @@ pub fn generate_std_roots(
                 mode,
                 features.clone(),
                 /*is_std*/ true,
+                /*dep_hash*/ 0,
             ));
         }
     }
