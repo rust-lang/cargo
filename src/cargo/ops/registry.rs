@@ -801,7 +801,7 @@ pub fn yank(
     };
     let version = match version {
         Some(v) => v,
-        None => bail!("a version must be specified to yank (use --vers <VERSION>)"),
+        None => bail!("a version must be specified to yank"),
     };
 
     let (mut registry, _) = registry(config, token, index, reg, true, true)?;
