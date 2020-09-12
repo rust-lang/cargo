@@ -468,6 +468,7 @@ fn to_defined_dependencies(
 ) -> CargoResult<Option<BTreeMap<String, DefinedTomlDependency>>> {
     map_btree(dependencies, |key, dep| {
         DefinedTomlDependency::from_toml_dependency(dep, &key, ctx)
+            .chain_err(|| format!("failed to get dependency `{}`", key))
     })
 }
 
@@ -1230,14 +1231,14 @@ where
             .clone()
             .ok_or_else(|| {
                 anyhow!(
-                    "error reading {0}: workspace root does not define [workspace.{0}]",
+                    "error reading `{0}` from workspace root manifest's `[workspace.{0}]`",
                     label
                 )
             })
             .map(|value| Some(value)),
 
         (Some(MaybeWorkspace::Workspace), None) => Err(anyhow!(
-            "error reading {}: could not read workspace root",
+            "error reading {}: could not find workspace root",
             label
         )),
     }
@@ -1418,11 +1419,7 @@ impl DefinedTomlPackage {
 }
 
 fn join_relative_path(root_path: Option<&Path>, relative_path: &str) -> CargoResult<String> {
-    root_path
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join(relative_path)
+    paths::normalize_path(&root_path.unwrap().parent().unwrap().join(relative_path))
         .into_os_string()
         .into_string()
         .map_err(|_| anyhow!("could not convert path into `String`"))

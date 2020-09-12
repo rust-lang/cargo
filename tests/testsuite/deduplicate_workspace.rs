@@ -607,6 +607,109 @@ fn inherited_dependency_override_optional() {
 }
 
 #[cargo_test]
+fn path_dependency_has_workspace_version() {
+    let p = project()
+        .file(
+            "foo_root/Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo_member"]
+            version = "0.4.5"
+        "#,
+        )
+        .file(
+            "foo_member/Cargo.toml",
+            r#"
+            [project]
+            workspace = "../foo_root"
+            name = "foo_member"
+            version = { workspace = true }
+            authors = []
+        "#,
+        )
+        .file("foo_member/src/main.rs", "fn main() {}")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.2"
+
+            [dependencies]
+            foo_member = { path = "./foo_member" }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("foo_member", "0.4.5").publish();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] [..]
+[..]
+[PACKAGING] baz [..]
+[UPDATING] `[..]` index
+[VERIFYING] baz [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo_member v0.4.5 [..]
+[COMPILING] foo_member v0.4.5
+[COMPILING] baz v0.1.2 [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn error_malformed_workspace_root() {
+    registry::init();
+
+    let p = project().build();
+
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = [invalid toml
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            workspace = ".."
+            version = "1.2.3"
+            authors = ["rustaceans"]
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/bar/Cargo.toml`
+
+Caused by:
+  failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  [..]
+
+Caused by:
+  [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn error_inherit_from_undefined_field() {
     registry::init();
 
@@ -643,7 +746,7 @@ fn error_inherit_from_undefined_field() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading description: workspace root does not define [workspace.description]
+  error reading `description` from workspace root manifest's `[workspace.description]`
 ",
         )
         .run();
@@ -721,7 +824,7 @@ fn error_no_root_workspace() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  error reading description: could not read workspace root
+  error reading description: could not find workspace root
 ",
         )
         .run();
@@ -797,6 +900,9 @@ fn error_inherit_unspecified_dependency() {
         .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  failed to get dependency `foo`
 
 Caused by:
   could not find entry in [workspace.dependencies] for \"foo\"

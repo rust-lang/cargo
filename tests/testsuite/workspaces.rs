@@ -2172,8 +2172,6 @@ fn ws_warn_path() {
 }
 
 #[cargo_test]
-// TODO Nicer `parse_manifest()` errors
-#[ignore]
 fn invalid_missing() {
     // Make sure errors are not suppressed with -q.
     let p = project()
@@ -2195,13 +2193,10 @@ fn invalid_missing() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `x` as a dependency of package `foo v0.1.0 [..]`
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  failed to load source for dependency `x`
-
-Caused by:
-  Unable to update [..]/foo/x
+  failed to get dependency `x`
 
 Caused by:
   failed to read `[..]foo/x/Cargo.toml`
