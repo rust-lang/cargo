@@ -40,13 +40,12 @@ macro_rules! deserialize_method {
     };
 }
 
-impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
-    type Error = ConfigError;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'de>,
-    {
+impl<'config> Deserializer<'config> {
+    /// This is a helper for getting a CV from a file or env var.
+    ///
+    /// If this returns CV::List, then don't look at the value. Handling lists
+    /// is deferred to ConfigSeqAccess.
+    fn get_cv_with_env(&self) -> Result<Option<CV>, ConfigError> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
         let cv = self.config.get_cv(&self.key)?;
@@ -58,36 +57,53 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             _ => false,
         };
 
-        if use_env {
-            // Future note: If you ever need to deserialize a non-self describing
-            // map type, this should implement a starts_with check (similar to how
-            // ConfigMapAccess does).
-            let env = env.unwrap();
-            let res: Result<V::Value, ConfigError> = if env == "true" || env == "false" {
-                visitor.visit_bool(env.parse().unwrap())
-            } else if let Ok(env) = env.parse::<i64>() {
-                visitor.visit_i64(env)
-            } else if self.config.cli_unstable().advanced_env
-                && env.starts_with('[')
-                && env.ends_with(']')
-            {
-                visitor.visit_seq(ConfigSeqAccess::new(self.clone())?)
-            } else {
-                // Try to merge if possible.
-                match cv {
-                    Some(CV::List(_cv_list, _cv_def)) => {
-                        visitor.visit_seq(ConfigSeqAccess::new(self.clone())?)
-                    }
-                    _ => {
-                        // Note: CV::Table merging is not implemented, as env
-                        // vars do not support table values.
-                        visitor.visit_str(env)
-                    }
-                }
-            };
-            return res.map_err(|e| e.with_key_context(&self.key, env_def));
+        if !use_env {
+            return Ok(cv);
         }
 
+        // Future note: If you ever need to deserialize a non-self describing
+        // map type, this should implement a starts_with check (similar to how
+        // ConfigMapAccess does).
+        let env = env.unwrap();
+        if env == "true" {
+            Ok(Some(CV::Boolean(true, env_def)))
+        } else if env == "false" {
+            Ok(Some(CV::Boolean(false, env_def)))
+        } else if let Ok(i) = env.parse::<i64>() {
+            Ok(Some(CV::Integer(i, env_def)))
+        } else if self.config.cli_unstable().advanced_env
+            && env.starts_with('[')
+            && env.ends_with(']')
+        {
+            // Parsing is deferred to ConfigSeqAccess.
+            Ok(Some(CV::List(Vec::new(), env_def)))
+        } else {
+            // Try to merge if possible.
+            match cv {
+                Some(CV::List(cv_list, _cv_def)) => {
+                    // Merging is deferred to ConfigSeqAccess.
+                    Ok(Some(CV::List(cv_list, env_def)))
+                }
+                _ => {
+                    // Note: CV::Table merging is not implemented, as env
+                    // vars do not support table values. In the future, we
+                    // could check for `{}`, and interpret it as TOML if
+                    // that seems useful.
+                    Ok(Some(CV::String(env.to_string(), env_def)))
+                }
+            }
+        }
+    }
+}
+
+impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
+    type Error = ConfigError;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        let cv = self.get_cv_with_env()?;
         if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),

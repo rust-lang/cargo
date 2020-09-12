@@ -289,6 +289,7 @@ pub fn create_bcx<'a, 'cfg>(
     } = *options;
     let config = ws.config();
 
+    // Perform some pre-flight validation.
     match build_config.mode {
         CompileMode::Test
         | CompileMode::Build
@@ -309,6 +310,7 @@ pub fn create_bcx<'a, 'cfg>(
             }
         }
     }
+    config.validate_term_config()?;
 
     let target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 

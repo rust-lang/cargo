@@ -147,6 +147,8 @@ metadata_key2 = "value"
 [term]
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
+progress.when = 'auto' # whether cargo shows progress bar
+progress.width = 80    # width of progress bar
 ```
 
 ### Environment variables
@@ -903,6 +905,23 @@ Controls whether or not colored output is used in the terminal. Possible values:
 
 Can be overridden with the `--color` command-line option.
 
+##### `term.progress.when`
+* Type: string
+* Default: "auto"
+* Environment: `CARGO_TERM_PROGRESS_WHEN`
+
+Controls whether or not progress bar is shown in the terminal. Possible values:
+
+* `auto` (default): Intelligently guess whether to show progress bar.
+* `always`: Always show progress bar.
+* `never`: Never show progress bar.
+
+##### `term.progress.width`
+* Type: integer
+* Default: none
+* Environment: `CARGO_TERM_PROGRESS_WIDTH`
+
+Sets the width for progress bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md

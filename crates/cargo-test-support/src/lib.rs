@@ -1645,6 +1645,7 @@ fn substitute_macros(input: &str) -> String {
         ("[IGNORED]", "     Ignored"),
         ("[INSTALLED]", "   Installed"),
         ("[REPLACED]", "    Replaced"),
+        ("[BUILDING]", "    Building"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

@@ -103,6 +103,8 @@ supported environment variables are:
 * `CARGO_TARGET_<triple>_RUSTFLAGS` — Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
 * `CARGO_TERM_VERBOSE` — The default terminal verbosity, see [`term.verbose`].
 * `CARGO_TERM_COLOR` — The default color mode, see [`term.color`].
+* `CARGO_TERM_PROGRESS_WHEN` — The default progress bar showing mode, see [`term.progress.when`].
+* `CARGO_TERM_PROGRESS_WIDTH` — The default progress bar width, see [`term.progress.width`].
 
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo install`]: ../commands/cargo-install.md
@@ -158,6 +160,8 @@ supported environment variables are:
 [`target.<triple>.rustflags`]: config.md#targettriplerustflags
 [`term.verbose`]: config.md#termverbose
 [`term.color`]: config.md#termcolor
+[`term.progress.when`]: config.md#termprogresswhen
+[`term.progress.width`]: config.md#termprogresswidth
 
 ### Environment variables Cargo sets for crates
 
