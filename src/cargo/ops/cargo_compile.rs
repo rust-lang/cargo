@@ -23,13 +23,15 @@
 //!       repeats until the queue is empty.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::sync::Arc;
 
+use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
-use crate::core::compiler::{standard_lib, unit_graph};
+use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
-use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
@@ -39,7 +41,7 @@ use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
-use crate::util::{closest_msg, profile, CargoResult};
+use crate::util::{closest_msg, profile, CargoResult, StableHasher};
 
 /// Contains information about how a package should be compiled.
 ///
@@ -410,11 +412,24 @@ pub fn create_bcx<'a, 'cfg>(
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
 
-    let units = generate_targets(
+    // If `--target` has not been specified, then the unit graph is built
+    // assuming `--target $HOST` was specified. See
+    // `rebuild_unit_graph_shared` for more on why this is done.
+    let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
+    let explicit_host_kinds: Vec<_> = build_config
+        .requested_kinds
+        .iter()
+        .map(|kind| match kind {
+            CompileKind::Host => explicit_host_kind,
+            CompileKind::Target(t) => CompileKind::Target(*t),
+        })
+        .collect();
+
+    let mut units = generate_targets(
         ws,
         &to_builds,
         filter,
-        &build_config.requested_kinds,
+        &explicit_host_kinds,
         build_config.mode,
         &resolve,
         &workspace_resolve,
@@ -442,7 +457,7 @@ pub fn create_bcx<'a, 'cfg>(
             &crates,
             std_resolve,
             std_features,
-            &build_config.requested_kinds,
+            &explicit_host_kinds,
             &pkg_set,
             interner,
             &profiles,
@@ -450,6 +465,34 @@ pub fn create_bcx<'a, 'cfg>(
     } else {
         Default::default()
     };
+
+    let mut unit_graph = build_unit_dependencies(
+        ws,
+        &pkg_set,
+        &resolve,
+        &resolved_features,
+        std_resolve_features.as_ref(),
+        &units,
+        &std_roots,
+        build_config.mode,
+        &target_data,
+        &profiles,
+        interner,
+    )?;
+
+    if build_config
+        .requested_kinds
+        .iter()
+        .any(CompileKind::is_host)
+    {
+        // Rebuild the unit graph, replacing the explicit host targets with
+        // CompileKind::Host, merging any dependencies shared with build
+        // dependencies.
+        let new_graph = rebuild_unit_graph_shared(interner, unit_graph, &units, explicit_host_kind);
+        // This would be nicer with destructuring assignment.
+        units = new_graph.0;
+        unit_graph = new_graph.1;
+    }
 
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
@@ -484,20 +527,6 @@ pub fn create_bcx<'a, 'cfg>(
             }
         }
     }
-
-    let unit_graph = build_unit_dependencies(
-        ws,
-        &pkg_set,
-        &resolve,
-        &resolved_features,
-        std_resolve_features.as_ref(),
-        &units,
-        &std_roots,
-        build_config.mode,
-        &target_data,
-        &profiles,
-        interner,
-    )?;
 
     let bcx = BuildContext::new(
         ws,
@@ -789,6 +818,7 @@ fn generate_targets(
                     target_mode,
                     features.clone(),
                     /*is_std*/ false,
+                    /*dep_hash*/ 0,
                 );
                 units.insert(unit);
             }
@@ -1168,4 +1198,94 @@ fn filter_targets<'a>(
         }
     }
     proposals
+}
+
+/// This is used to rebuild the unit graph, sharing host dependencies if possible.
+///
+/// This will translate any unit's `CompileKind::Target(host)` to
+/// `CompileKind::Host` if the kind is equal to `to_host`. This also handles
+/// generating the unit `dep_hash`, and merging shared units if possible.
+///
+/// This is necessary because if normal dependencies used `CompileKind::Host`,
+/// there would be no way to distinguish those units from build-dependency
+/// units. This can cause a problem if a shared normal/build dependency needs
+/// to link to another dependency whose features differ based on whether or
+/// not it is a normal or build dependency. If both units used
+/// `CompileKind::Host`, then they would end up being identical, causing a
+/// collision in the `UnitGraph`, and Cargo would end up randomly choosing one
+/// value or the other.
+///
+/// The solution is to keep normal and build dependencies separate when
+/// building the unit graph, and then run this second pass which will try to
+/// combine shared dependencies safely. By adding a hash of the dependencies
+/// to the `Unit`, this allows the `CompileKind` to be changed back to `Host`
+/// without fear of an unwanted collision.
+fn rebuild_unit_graph_shared(
+    interner: &UnitInterner,
+    unit_graph: UnitGraph,
+    roots: &[Unit],
+    to_host: CompileKind,
+) -> (Vec<Unit>, UnitGraph) {
+    let mut result = UnitGraph::new();
+    // Map of the old unit to the new unit, used to avoid recursing into units
+    // that have already been computed to improve performance.
+    let mut memo = HashMap::new();
+    let new_roots = roots
+        .iter()
+        .map(|root| {
+            traverse_and_share(interner, &mut memo, &mut result, &unit_graph, root, to_host)
+        })
+        .collect();
+    (new_roots, result)
+}
+
+/// Recursive function for rebuilding the graph.
+///
+/// This walks `unit_graph`, starting at the given `unit`. It inserts the new
+/// units into `new_graph`, and returns a new updated version of the given
+/// unit (`dep_hash` is filled in, and `kind` switched if necessary).
+fn traverse_and_share(
+    interner: &UnitInterner,
+    memo: &mut HashMap<Unit, Unit>,
+    new_graph: &mut UnitGraph,
+    unit_graph: &UnitGraph,
+    unit: &Unit,
+    to_host: CompileKind,
+) -> Unit {
+    if let Some(new_unit) = memo.get(unit) {
+        // Already computed, no need to recompute.
+        return new_unit.clone();
+    }
+    let mut dep_hash = StableHasher::new();
+    let new_deps: Vec<_> = unit_graph[unit]
+        .iter()
+        .map(|dep| {
+            let new_dep_unit =
+                traverse_and_share(interner, memo, new_graph, unit_graph, &dep.unit, to_host);
+            new_dep_unit.hash(&mut dep_hash);
+            UnitDep {
+                unit: new_dep_unit,
+                ..dep.clone()
+            }
+        })
+        .collect();
+    let new_dep_hash = dep_hash.finish();
+    let new_kind = if unit.kind == to_host {
+        CompileKind::Host
+    } else {
+        unit.kind
+    };
+    let new_unit = interner.intern(
+        &unit.pkg,
+        &unit.target,
+        unit.profile,
+        new_kind,
+        unit.mode,
+        unit.features.clone(),
+        unit.is_std,
+        new_dep_hash,
+    );
+    assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
+    new_graph.entry(new_unit.clone()).or_insert(new_deps);
+    new_unit
 }

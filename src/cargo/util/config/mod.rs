@@ -1788,7 +1788,7 @@ pub struct CargoBuildConfig {
 /// a = 'a b c'
 /// b = ['a', 'b', 'c']
 /// ```
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct StringList(Vec<String>);
 
 impl StringList {

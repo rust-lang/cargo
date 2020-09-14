@@ -57,6 +57,18 @@ pub struct UnitInner {
     pub features: Vec<InternedString>,
     /// Whether this is a standard library unit.
     pub is_std: bool,
+    /// A hash of all dependencies of this unit.
+    ///
+    /// This is used to keep the `Unit` unique in the situation where two
+    /// otherwise identical units need to link to different dependencies. This
+    /// can happen, for example, when there are shared dependencies that need
+    /// to be built with different features between normal and build
+    /// dependencies. See `rebuild_unit_graph_shared` for more on why this is
+    /// done.
+    ///
+    /// This value initially starts as 0, and then is filled in via a
+    /// second-pass after all the unit dependencies have been computed.
+    pub dep_hash: u64,
 }
 
 impl UnitInner {
@@ -123,6 +135,8 @@ impl fmt::Debug for Unit {
             .field("kind", &self.kind)
             .field("mode", &self.mode)
             .field("features", &self.features)
+            .field("is_std", &self.is_std)
+            .field("dep_hash", &self.dep_hash)
             .finish()
     }
 }
@@ -164,6 +178,7 @@ impl UnitInterner {
         mode: CompileMode,
         features: Vec<InternedString>,
         is_std: bool,
+        dep_hash: u64,
     ) -> Unit {
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
@@ -194,6 +209,7 @@ impl UnitInterner {
             mode,
             features,
             is_std,
+            dep_hash,
         });
         Unit { inner }
     }

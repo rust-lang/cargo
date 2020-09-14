@@ -20,7 +20,7 @@ pub struct TargetCfgConfig {
 }
 
 /// Config definition of a `[target]` table.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TargetConfig {
     /// Process to run as a wrapper for `cargo run`, `test`, and `bench` commands.
     pub runner: OptValue<PathAndArgs>,

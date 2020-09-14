@@ -683,6 +683,17 @@ impl RustcTargetData {
             }
         }
 
+        // This is a hack. The unit_dependency graph builder "pretends" that
+        // `CompileKind::Host` is `CompileKind::Target(host)` if the
+        // `--target` flag is not specified. Since the unit_dependency code
+        // needs access to the target config data, create a copy so that it
+        // can be found. See `rebuild_unit_graph_shared` for why this is done.
+        if requested_kinds.iter().any(CompileKind::is_host) {
+            let ct = CompileTarget::new(&rustc.host)?;
+            target_info.insert(ct, host_info.clone());
+            target_config.insert(ct, host_config.clone());
+        }
+
         Ok(RustcTargetData {
             rustc,
             target_config,
