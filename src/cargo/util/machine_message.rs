@@ -94,6 +94,7 @@ impl<'a> Message for TimingInfo<'a> {
 #[derive(Serialize)]
 pub struct BuildFinished {
     pub success: bool,
+    pub duration: f64,
 }
 
 impl Message for BuildFinished {

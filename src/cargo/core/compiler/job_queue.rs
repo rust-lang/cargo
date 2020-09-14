@@ -696,7 +696,8 @@ impl<'cfg> DrainState<'cfg> {
             opt_type += " + debuginfo";
         }
 
-        let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
+        let build_duration = cx.bcx.config.creation_time().elapsed();
+        let time_elapsed = util::elapsed(build_duration);
         if let Err(e) = self.timings.finished(cx.bcx, &error) {
             if error.is_some() {
                 crate::display_error(&e, &mut cx.bcx.config.shell());
@@ -707,6 +708,7 @@ impl<'cfg> DrainState<'cfg> {
         if cx.bcx.build_config.emit_json() {
             let msg = machine_message::BuildFinished {
                 success: error.is_none(),
+                duration: build_duration.as_secs_f64(),
             }
             .to_json_string();
             if let Err(e) = writeln!(cx.bcx.config.shell().out(), "{}", msg) {
