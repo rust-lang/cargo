@@ -97,3 +97,27 @@ fn rustdocflags_misspelled() {
         .with_stderr_contains("[WARNING] Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?")
         .run();
 }
+
+#[cargo_test]
+fn whitespace() {
+    // Checks behavior of different whitespace characters.
+    let p = project().file("src/lib.rs", "").build();
+
+    // "too many operands"
+    p.cargo("doc")
+        .env("RUSTDOCFLAGS", "--crate-version this has spaces")
+        .with_stderr_contains("[ERROR] could not document `foo`")
+        .with_status(101)
+        .run();
+
+    const SPACED_VERSION: &str = "a\nb\tc\u{00a0}d";
+    p.cargo("doc")
+        .env(
+            "RUSTDOCFLAGS",
+            format!("--crate-version {}", SPACED_VERSION),
+        )
+        .run();
+
+    let contents = p.read_file("target/doc/foo/index.html");
+    assert!(contents.contains(SPACED_VERSION));
+}
