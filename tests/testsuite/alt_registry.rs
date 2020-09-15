@@ -637,7 +637,7 @@ Caused by:
         "owner",
         "publish",
         "search",
-        "yank",
+        "yank --vers 0.0.1",
     ] {
         p.cargo(cmd)
             .arg("--registry")
