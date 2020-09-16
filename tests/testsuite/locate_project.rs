@@ -14,3 +14,23 @@ fn simple() {
         ))
         .run();
 }
+
+#[cargo_test]
+fn message_format() {
+    let p = project().build();
+    let root_manifest_path = p.root().join("Cargo.toml");
+    let root_str = root_manifest_path.to_str().unwrap();
+
+    p.cargo("locate-project --message-format plain")
+        .with_stdout(root_str)
+        .run();
+
+    p.cargo("locate-project --message-format json")
+        .with_stdout(format!(r#"{{"root":"{}"}}"#, root_str))
+        .run();
+
+    p.cargo("locate-project --message-format cryptic")
+        .with_stderr("error: invalid message format specifier: `cryptic`")
+        .with_status(101)
+        .run();
+}

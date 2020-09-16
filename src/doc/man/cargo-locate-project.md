@@ -21,6 +21,14 @@ workspace root.
 ### Display Options
 
 {{#options}}
+
+{{#option "`--message-format` _fmt_" }}
+The representation in which to print the project location. Valid values:
+
+- `json` (default): JSON object with the path under the key "root".
+- `plain`: Just the path.
+{{/option}}
+
 {{> options-display }}
 {{/options}}
 

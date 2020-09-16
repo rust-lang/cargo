@@ -16,6 +16,14 @@ DESCRIPTION
 
 OPTIONS
    Display Options
+       --message-format fmt
+           The representation in which to print the project location. Valid
+           values:
+
+           o  json (default): JSON object with the path under the key "root".
+
+           o  plain: Just the path.
+
        -v, --verbose
            Use verbose output. May be specified twice for "very verbose" output
            which includes extra output such as dependency warnings and build

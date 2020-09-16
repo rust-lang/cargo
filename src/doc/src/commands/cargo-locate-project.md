@@ -21,6 +21,15 @@ workspace root.
 ### Display Options
 
 <dl>
+
+<dt class="option-term" id="option-cargo-locate-project---message-format"><a class="option-anchor" href="#option-cargo-locate-project---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dd class="option-desc">The representation in which to print the project location. Valid values:</p>
+<ul>
+<li><code>json</code> (default): JSON object with the path under the key &quot;root&quot;.</li>
+<li><code>plain</code>: Just the path.</li>
+</ul></dd>
+
+
 <dt class="option-term" id="option-cargo-locate-project--v"><a class="option-anchor" href="#option-cargo-locate-project--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-locate-project---verbose"><a class="option-anchor" href="#option-cargo-locate-project---verbose"></a><code>--verbose</code></dt>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which

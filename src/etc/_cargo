@@ -160,7 +160,8 @@ _cargo() {
                         ;;
 
                 locate-project)
-                    _arguments -s -S $common $manifest
+                    _arguments -s -S $common $manifest \
+                        '--message-format=[specify output representation]:output representation [json]:(json plain)'
                         ;;
 
                 login)
@@ -367,8 +368,7 @@ _cargo_package_names() {
 # Extracts the values of "name" from the array given in $1 and shows them as
 # command line options for completion
 _cargo_names_from_array() {
-    # strip json from the path
-    local manifest=${${${"$(cargo locate-project)"}%\"\}}##*\"}
+    local manifest=$(cargo locate-project --message-format plain)
     if [[ -z $manifest ]]; then
         return 0
     fi
