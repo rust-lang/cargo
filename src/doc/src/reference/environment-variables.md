@@ -275,6 +275,12 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `OUT_DIR` — the folder in which all output should be placed. This folder is
               inside the build directory for the package being built, and it is
               unique for the package in question.
+* `CARGO_TARGET_DIR` — Directory where Cargo is placing all generated artifacts.
+                       Erased by `cargo clean`. *Warning: The directory
+                       structure inside is owned by Cargo and private, so any
+                       build script reliant on poking around in the target
+                       directory may be incompatible with a future Cargo
+                       version.*
 * `TARGET` — the target triple that is being compiled for. Native code should be
              compiled for this triple. See the [Target Triple] description
              for more information.

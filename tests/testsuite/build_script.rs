@@ -99,8 +99,12 @@ fn custom_build_env_vars() {
                 let debug = env::var("DEBUG").unwrap();
                 assert_eq!(debug, "true");
 
+                let target_dir = env::var("CARGO_TARGET_DIR").unwrap();
+                assert_eq!(target_dir, "{target_dir}");
+                assert!(Path::new(&target_dir).is_dir());
+
                 let out = env::var("OUT_DIR").unwrap();
-                assert!(out.starts_with(r"{0}"));
+                assert!(out.starts_with(r"{out_dir_prefix}"));
                 assert!(Path::new(&out).is_dir());
 
                 let _host = env::var("HOST").unwrap();
@@ -118,11 +122,13 @@ fn custom_build_env_vars() {
                 assert!(env::var("RUSTC_LINKER").is_err());
             }}
         "#,
-        p.root()
+        target_dir = p.root().join("target").display(),
+        out_dir_prefix = p
+            .root()
             .join("target")
             .join("debug")
             .join("build")
-            .display()
+            .display(),
     );
 
     let p = p.file("bar/build.rs", &file_content).build();
