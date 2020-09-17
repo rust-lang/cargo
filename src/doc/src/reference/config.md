@@ -52,7 +52,10 @@ t = "test"
 r = "run"
 rr = "run --release"
 space_example = ["run", "--release", "--", "\"command list\""]
+```
 
+You can specify `[build]` and/or `[test]` configurations.
+```toml
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"           # the rust compiler tool
@@ -78,7 +81,11 @@ rustdocflags = ["…", "…"] # custom flags to pass to rustdoc
 incremental = true        # whether or not to enable incremental compilation
 dep-info-basedir = "…"    # path for the base directory for targets in depfiles
 pipelining = true         # rustc pipelining
+```
+> **Note:** If `cargo test` is invoked, and no `[test]` configuration is specified, 
+> the `[build]` configuation will be used if specified.
 
+```toml
 [cargo-new]
 name = "Your Name"        # name to use in `authors` field
 email = "you@example.com" # email address to use in `authors` field
