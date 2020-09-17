@@ -11,28 +11,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
-
 lazy_static! {
-    static ref GLOBAL_ROOT: PathBuf = {
-        let mut path = t!(env::current_exe());
-        path.pop(); // chop off exe name
-        path.pop(); // chop off 'debug'
-
-        // If `cargo test` is run manually then our path looks like
-        // `target/debug/foo`, in which case our `path` is already pointing at
-        // `target`. If, however, `cargo test --target $target` is used then the
-        // output is `target/$target/debug/foo`, so our path is pointing at
-        // `target/$target`. Here we conditionally pop the `$target` name.
-        if path.file_name().and_then(|s| s.to_str()) != Some("target") {
-            path.pop();
-        }
-
-        path.push(CARGO_INTEGRATION_TEST_DIR);
-        path.mkdir_p();
-        path
-    };
-
     static ref TEST_ROOTS: Mutex<HashMap<String, PathBuf>> = Default::default();
 }
 
@@ -80,7 +59,7 @@ pub fn root() -> PathBuf {
              order to be able to use the crate root.",
         )
     });
-    GLOBAL_ROOT.join(&format!("t{}", id))
+    Path::new(env!("GLOBAL_ROOT")).join(format!("t{}", id))
 }
 
 pub fn home() -> PathBuf {
