@@ -1,6 +1,6 @@
 //! Tests for the `cargo tree` command.
 
-use cargo_test_support::cross_compile::alternate;
+use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
 
@@ -324,6 +324,9 @@ a v0.1.0 ([..]/foo)
 #[cargo_test]
 fn filters_target() {
     // --target flag
+    if cross_compile::disabled() {
+        return;
+    }
     Package::new("targetdep", "1.0.0").publish();
     Package::new("hostdep", "1.0.0").publish();
     Package::new("devdep", "1.0.0").publish();
