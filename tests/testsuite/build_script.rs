@@ -100,7 +100,7 @@ fn custom_build_env_vars() {
                 assert_eq!(debug, "true");
 
                 let target_dir = env::var("CARGO_TARGET_DIR").unwrap();
-                assert_eq!(target_dir, "{target_dir}");
+                assert_eq!(target_dir, r"{target_dir}");
                 assert!(Path::new(&target_dir).is_dir());
 
                 let out = env::var("OUT_DIR").unwrap();
@@ -147,11 +147,11 @@ fn custom_build_target_dir() {
 
             fn main() {{
                 let target_dir = env::var("CARGO_TARGET_DIR").unwrap();
-                assert_eq!(target_dir, "{target_dir}");
+                assert_eq!(target_dir, r"{target_dir}");
                 assert!(Path::new(&target_dir).is_dir());
             }}
         "#,
-        target_dir = p.root().join("custom").join("target").display(),
+        target_dir = p.root().join("custom/target").display(),
     );
 
     p.file("src/main.rs", "fn main() {}")
