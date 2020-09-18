@@ -137,6 +137,31 @@ fn custom_build_env_vars() {
 }
 
 #[cargo_test]
+fn custom_build_target_dir() {
+    let p = project();
+
+    let build_rs = format!(
+        r#"
+            use std::env;
+            use std::path::Path;
+
+            fn main() {{
+                let target_dir = env::var("CARGO_TARGET_DIR").unwrap();
+                assert_eq!(target_dir, "{target_dir}");
+                assert!(Path::new(&target_dir).is_dir());
+            }}
+        "#,
+        target_dir = p.root().join("custom").join("target").display(),
+    );
+
+    p.file("src/main.rs", "fn main() {}")
+        .file("build.rs", &build_rs)
+        .build()
+        .cargo("build --target-dir custom/target")
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() {
         return;
