@@ -66,8 +66,10 @@ Please report all issues on the GitHub [issue tracker][issues].
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). You may also find the architecture
-documentation useful ([ARCHITECTURE.md](ARCHITECTURE.md)).
+See the **[Cargo Contributor Guide]** for a complete introduction
+to contributing to Cargo.
+
+[Cargo Contributor Guide]: https://rust-lang.github.io/cargo/contrib/
 
 ## License
 
