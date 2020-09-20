@@ -5,6 +5,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 use cargo_test_support::{is_nightly, rustc_host};
 use std::fs;
+use std::io::Read;
 use std::str;
 
 #[cargo_test]
@@ -1550,4 +1551,107 @@ fn crate_versions_flag_is_overridden() {
         .masquerade_as_nightly_cargo()
         .run();
     asserts(output_documentation());
+}
+
+#[cargo_test]
+fn doc_versioning_works() {
+    // Test that using different Rustc versions forces a
+    // doc re-compilation producing new html, css & js files.
+
+    // Create separate rustc binaries to emulate running different toolchains.
+    let nightly1 = format!(
+        "\
+rustc 1.44.0-nightly (38114ff16 2020-03-21)
+binary: rustc
+commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
+commit-date: 2020-03-21
+host: {}
+release: 1.44.0-nightly
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let nightly2 = format!(
+        "\
+rustc 1.44.0-nightly (a5b09d354 2020-03-31)
+binary: rustc
+commit-hash: a5b09d35473615e7142f5570f5c5fad0caf68bd2
+commit-date: 2020-03-31
+host: {}
+release: 1.44.0-nightly
+LLVM version: 9.0
+",
+        rustc_host()
+    );
+
+    let compiler = project()
+        .at("compiler")
+        .file("Cargo.toml", &basic_manifest("compiler", "0.1.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                if std::env::args_os().any(|a| a == "-vV") {
+                    print!("{}", env!("FUNKY_VERSION_TEST"));
+                    return;
+                }
+                let mut cmd = std::process::Command::new("rustc");
+                cmd.args(std::env::args_os().skip(1));
+                assert!(cmd.status().unwrap().success());
+            }
+            "#,
+        )
+        .build();
+
+    let makeit = |version, vv| {
+        // Force a rebuild.
+        compiler.target_debug_dir().join("deps").rm_rf();
+        compiler.cargo("build").env("FUNKY_VERSION_TEST", vv).run();
+        fs::rename(compiler.bin("compiler"), compiler.bin(version)).unwrap();
+    };
+    makeit("nightly1", nightly1);
+
+    let get_fingerprint_v = |target_path: &std::path::Path| -> String {
+        let mut contents = Vec::new();
+        let mut fingerp_file = std::fs::File::open(target_path).unwrap();
+        fingerp_file.read(&mut contents).unwrap();
+        String::from_utf8(contents).unwrap()
+    };
+
+    // Create the dummy project and compile it in "nightly1"
+    let dummy_project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "1.2.4"
+        authors = []
+    "#,
+        )
+        .file("src/lib.rs", "//! These are the docs!")
+        .build();
+
+    // Build should have created the `.rustdoc_fingerprint.json` under `target/`
+    assert!(fs::File::open(dummy_project.build_dir().join(".rustdoc_fingerprint.json")).is_ok());
+    // The file should contain the `nightly1` version of Rustc
+    assert_eq!(get_fingerprint_v(&dummy_project.build_dir()), "nightly1");
+    // Compiling the project with "nightly2" should remove the /doc folder and re-build
+    // the docs. Therefore, we place a bogus file to check that this happens.
+    makeit("nightly2", nightly2);
+    // Add a bogus_file to check that indeed the /doc folder will be removed due to
+    // the change of toolchain version.
+    fs::File::create(dummy_project.build_dir().join("doc/bogus_file.json")).unwrap();
+    // Re-document the crate
+    dummy_project
+        .cargo("doc --no-deps")
+        .exec_with_output()
+        .unwrap();
+    // Build should have removed /doc and therefore bogus_file.json
+    assert!(fs::File::open(dummy_project.target_debug_dir().join("doc/bogus_file.json")).is_err());
+    // Build should have created the `.rustdoc_fingerprint.json` under `target/`
+    assert!(fs::File::open(dummy_project.build_dir().join(".rustdoc_fingerprint.json")).is_ok());
+    // The file should contain the `nightly2` version of Rustc
+    assert_eq!(get_fingerprint_v(&dummy_project.build_dir()), "nightly2");
 }
