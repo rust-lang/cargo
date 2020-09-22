@@ -5,6 +5,7 @@ pub use self::cargo_compile::{
 pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_fetch::{fetch, FetchOptions};
+pub use self::cargo_sync_lockfile::{sync_lockfile, SyncLockfileOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
@@ -33,6 +34,7 @@ mod cargo_clean;
 mod cargo_compile;
 mod cargo_doc;
 mod cargo_fetch;
+mod cargo_sync_lockfile;
 mod cargo_generate_lockfile;
 mod cargo_install;
 mod cargo_new;
