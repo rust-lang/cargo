@@ -176,6 +176,7 @@ pub struct Config {
     build_config: LazyCell<CargoBuildConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
+    progress_config: ProgressConfig,
 }
 
 impl Config {
@@ -247,6 +248,7 @@ impl Config {
             build_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
+            progress_config: ProgressConfig::default(),
         }
     }
 
@@ -459,8 +461,8 @@ impl Config {
 
     /// Get a configuration value by key.
     ///
-    /// This does NOT look at environment variables, the caller is responsible
-    /// for that.
+    /// This does NOT look at environment variables. See `get_cv_with_env` for
+    /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
         log::trace!("get cv {:?}", key);
         let vals = self.values()?;
@@ -720,13 +722,9 @@ impl Config {
         let extra_verbose = verbose >= 2;
         let verbose = verbose != 0;
 
-        #[derive(Deserialize, Default)]
-        struct TermConfig {
-            verbose: Option<bool>,
-            color: Option<String>,
-        }
-
-        // Ignore errors in the configuration files.
+        // Ignore errors in the configuration files. We don't want basic
+        // commands like `cargo version` to error out due to config file
+        // problems.
         let term = self.get::<TermConfig>("term").unwrap_or_default();
 
         let color = color.or_else(|| term.color.as_deref());
@@ -754,6 +752,7 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;
+        self.progress_config = term.progress.unwrap_or_default();
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
@@ -1190,6 +1189,20 @@ impl Config {
     pub fn build_config(&self) -> CargoResult<&CargoBuildConfig> {
         self.build_config
             .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
+    }
+
+    pub fn progress_config(&self) -> &ProgressConfig {
+        &self.progress_config
+    }
+
+    /// This is used to validate the `term` table has valid syntax.
+    ///
+    /// This is necessary because loading the term settings happens very
+    /// early, and in some situations (like `cargo version`) we don't want to
+    /// fail if there are problems with the config file.
+    pub fn validate_term_config(&self) -> CargoResult<()> {
+        drop(self.get::<TermConfig>("term")?);
+        Ok(())
     }
 
     /// Returns a list of [target.'cfg()'] tables.
@@ -1776,6 +1789,94 @@ pub struct CargoBuildConfig {
     pub rustc: Option<PathBuf>,
     pub rustdoc: Option<PathBuf>,
     pub out_dir: Option<ConfigRelativePath>,
+}
+
+#[derive(Deserialize, Default)]
+struct TermConfig {
+    verbose: Option<bool>,
+    color: Option<String>,
+    #[serde(default)]
+    #[serde(deserialize_with = "progress_or_string")]
+    progress: Option<ProgressConfig>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ProgressConfig {
+    pub when: ProgressWhen,
+    pub width: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProgressWhen {
+    Auto,
+    Never,
+    Always,
+}
+
+impl Default for ProgressWhen {
+    fn default() -> ProgressWhen {
+        ProgressWhen::Auto
+    }
+}
+
+fn progress_or_string<'de, D>(deserializer: D) -> Result<Option<ProgressConfig>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    struct ProgressVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for ProgressVisitor {
+        type Value = Option<ProgressConfig>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a string (\"auto\" or \"never\") or a table")
+        }
+
+        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match s {
+                "auto" => Ok(Some(ProgressConfig {
+                    when: ProgressWhen::Auto,
+                    width: None,
+                })),
+                "never" => Ok(Some(ProgressConfig {
+                    when: ProgressWhen::Never,
+                    width: None,
+                })),
+                "always" => Err(E::custom("\"always\" progress requires a `width` key")),
+                _ => Err(E::unknown_variant(s, &["auto", "never"])),
+            }
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            let pc = ProgressConfig::deserialize(deserializer)?;
+            if let ProgressConfig {
+                when: ProgressWhen::Always,
+                width: None,
+            } = pc
+            {
+                return Err(serde::de::Error::custom(
+                    "\"always\" progress requires a `width` key",
+                ));
+            }
+            Ok(Some(pc))
+        }
+    }
+
+    deserializer.deserialize_option(ProgressVisitor)
 }
 
 /// A type to deserialize a list of strings from a toml file.
