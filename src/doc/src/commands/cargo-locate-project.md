@@ -13,10 +13,16 @@ cargo-locate-project - Print a JSON representation of a Cargo.toml file's locati
 This command will print a JSON object to stdout with the full path to the
 `Cargo.toml` manifest.
 
-See also [cargo-metadata(1)](cargo-metadata.md) which is capable of returning the path to a
-workspace root.
-
 ## OPTIONS
+
+<dl>
+
+<dt class="option-term" id="option-cargo-locate-project---workspace"><a class="option-anchor" href="#option-cargo-locate-project---workspace"></a><code>--workspace</code></dt>
+<dd class="option-desc">Locate the <code>Cargo.toml</code> at the root of the workspace, as opposed to the current
+workspace member.</dd>
+
+
+</dl>
 
 ### Display Options
 

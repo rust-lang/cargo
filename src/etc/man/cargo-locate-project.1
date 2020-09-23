@@ -10,10 +10,13 @@ cargo\-locate\-project \- Print a JSON representation of a Cargo.toml file's loc
 .SH "DESCRIPTION"
 This command will print a JSON object to stdout with the full path to the
 \fBCargo.toml\fR manifest.
-.sp
-See also \fBcargo\-metadata\fR(1) which is capable of returning the path to a
-workspace root.
 .SH "OPTIONS"
+.sp
+\fB\-\-workspace\fR
+.RS 4
+Locate the \fBCargo.toml\fR at the root of the workspace, as opposed to the current
+workspace member.
+.RE
 .SS "Display Options"
 .sp
 \fB\-\-message\-format\fR \fIfmt\fR

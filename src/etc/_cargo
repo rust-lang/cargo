@@ -162,6 +162,7 @@ _cargo() {
                 locate-project)
                     _arguments -s -S $common $manifest \
                         '--message-format=[specify output representation]:output representation [json]:(json plain)'
+                        '--workspace[locate Cargo.toml of the workspace root]'
                         ;;
 
                 login)

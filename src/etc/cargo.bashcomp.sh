@@ -59,7 +59,7 @@ _cargo()
 	local opt__help="$opt_help"
 	local opt__init="$opt_common $opt_lock --bin --lib --name --vcs --edition --registry"
 	local opt__install="$opt_common $opt_feat $opt_jobs $opt_lock $opt_force --bin --bins --branch --debug --example --examples --git --list --path --rev --root --tag --version --registry --target --profile --no-track"
-	local opt__locate_project="$opt_common $opt_mani $opt_lock --message-format"
+	local opt__locate_project="$opt_common $opt_mani $opt_lock --message-format --workspace"
 	local opt__login="$opt_common $opt_lock --registry"
 	local opt__metadata="$opt_common $opt_feat $opt_mani $opt_lock --format-version=1 --no-deps --filter-platform"
 	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name --edition --registry"

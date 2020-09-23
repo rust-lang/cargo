@@ -315,21 +315,20 @@ impl<'cfg> Workspace<'cfg> {
     /// That is, this returns the path of the directory containing the
     /// `Cargo.toml` which is the root of this workspace.
     pub fn root(&self) -> &Path {
-        match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        }
-        .parent()
-        .unwrap()
+        self.root_manifest().parent().unwrap()
+    }
+
+    /// Returns the path of the `Cargo.toml` which is the root of this
+    /// workspace.
+    pub fn root_manifest(&self) -> &Path {
+        self.root_manifest
+            .as_ref()
+            .unwrap_or(&self.current_manifest)
     }
 
     /// Returns the root Package or VirtualManifest.
     fn root_maybe(&self) -> &MaybePackage {
-        let root = self
-            .root_manifest
-            .as_ref()
-            .unwrap_or(&self.current_manifest);
-        self.packages.get(root)
+        self.packages.get(self.root_manifest())
     }
 
     pub fn target_dir(&self) -> Filesystem {
