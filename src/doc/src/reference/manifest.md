@@ -41,7 +41,7 @@ file consists of the following sections:
   * [`[dev-dependencies]`](specifying-dependencies.md#development-dependencies) — Dependencies for examples, tests, and benchmarks.
   * [`[build-dependencies]`](specifying-dependencies.md#build-dependencies) — Dependencies for build scripts.
   * [`[target]`](specifying-dependencies.md#platform-specific-dependencies) — Platform-specific dependencies.
-* [`[badges]`](#the-badges-section) — Badges to display on [crates.io].
+* [`[badges]`](#the-badges-section) — Badges to display on a registry.
 * [`[features]`](features.md) — Conditional compilation features.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) — Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) — Override dependencies (deprecated).
@@ -459,66 +459,22 @@ default-run = "a"
 
 ### The `[badges]` section
 
-[crates.io] can display various badges for build status, test coverage, etc. for
-each crate. All badges are optional.
+The `[badges]` section is for specifying status badges that can be displayed
+on a registry website when the package is published.
 
-- The badges pertaining to build status that are currently available are
-  Appveyor, CircleCI, Cirrus CI, GitLab, Azure DevOps, Travis CI and Bitbucket
-  Pipelines.
-- Available badges pertaining to code test coverage are Codecov and Coveralls.
-- There are also maintenance-related badges based on isitmaintained.com
-  which state the issue resolution time, percent of open issues, and future
-  maintenance intentions.
-
-Most badge specifications require a `repository` key. It is expected to be in
-`user/repo` format.
+> Note: [crates.io] previously displayed badges next to a crate on its
+> website, but that functionality has been removed. Packages should place
+> badges in its README file which will be displayed on [crates.io] (see [the
+> `readme` field](#the-readme-field)).
 
 ```toml
 [badges]
-
-# Appveyor: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`; `id` is optional; you can specify the appveyor project id if you
-# want to use that instead. `project_name` is optional; use when the repository
-# name differs from the appveyor project name.
-appveyor = { repository = "...", branch = "master", service = "github" }
-
-# Circle CI: `repository` is required. `branch` is optional; default is `master`
-circle-ci = { repository = "...", branch = "master" }
-
-# Cirrus CI: `repository` is required. `branch` is optional; default is `master`
-cirrus-ci = { repository = "...", branch = "master" }
-
-# GitLab: `repository` is required. `branch` is optional; default is `master`
-gitlab = { repository = "...", branch = "master" }
-
-# Azure DevOps: `project` is required. `pipeline` is required. `build` is optional; default is `1`
-# Note: project = `organization/project`, pipeline = `name_of_pipeline`, build = `definitionId`
-azure-devops = { project = "...", pipeline = "...", build="2" }
-
-# Travis CI: `repository` in format "<user>/<project>" is required.
-# `branch` is optional; default is `master`
-travis-ci = { repository = "...", branch = "master" }
-
-# Bitbucket Pipelines: `repository` is required. `branch` is required
-bitbucket-pipelines = { repository = "...", branch = "master" }
-
-# Codecov: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`.
-codecov = { repository = "...", branch = "master", service = "github" }
-
-# Coveralls: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default) and `bitbucket`.
-coveralls = { repository = "...", branch = "master", service = "github" }
-
-# Is it maintained resolution time: `repository` is required.
-is-it-maintained-issue-resolution = { repository = "..." }
-
-# Is it maintained percentage of open issues: `repository` is required.
-is-it-maintained-open-issues = { repository = "..." }
-
-# Maintenance: `status` is required. Available options are:
+# The `maintenance` table indicates the status of the maintenance of
+# the crate. This may be used by a registry, but is currently not
+# used by crates.io. See https://github.com/rust-lang/crates.io/issues/2437
+# and https://github.com/rust-lang/crates.io/issues/2438 for more details.
+#
+# The `status` field is required. Available options are:
 # - `actively-developed`: New features are being added and bugs are being fixed.
 # - `passively-maintained`: There are no plans for new features, but the maintainer intends to
 #   respond to issues that get filed.
