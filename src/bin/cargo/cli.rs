@@ -290,6 +290,8 @@ Some common cargo commands are (see all commands with --list):
     check, c    Analyze the current package and report errors, but don't build object files
     clean       Remove the target directory
     doc         Build this package's and its dependencies' documentation
+    fmt         Format every crate in this workspace
+    clippy      Run a code linter to catch common bugs or Rust idioms
     new         Create a new cargo package
     init        Create a new cargo package in an existing directory
     run, r      Run a binary or example of the local package
