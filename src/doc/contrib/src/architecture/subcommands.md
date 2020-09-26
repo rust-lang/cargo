@@ -7,10 +7,10 @@ subcommands live in [`src/bin/cargo/commands`] directory.
 Each subcommand, such as [`src/bin/cargo/commands/build.rs`], usually performs
 the following:
 
-* Parse the CLI flags. See the [`command_prelude`] module for some helpers to make this easier.
-* Load the config files.
-* Discover and load the workspace.
-* Calls the actual implementation of the subcommand which resides in [`src/cargo/ops`].
+1. Parse the CLI flags. See the [`command_prelude`] module for some helpers to make this easier.
+2. Load the config files.
+3. Discover and load the workspace.
+4. Calls the actual implementation of the subcommand which resides in [`src/cargo/ops`].
 
 If the subcommand is not found in the built-in list, then Cargo will
 automatically search for a subcommand named `cargo-{NAME}` in the users `PATH`
