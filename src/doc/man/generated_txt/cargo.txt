@@ -183,8 +183,8 @@ OPTIONS
            If Cargo has been installed with rustup, and the first argument to
            cargo begins with +, it will be interpreted as a rustup toolchain
            name (such as +stable or +nightly). See the rustup documentation
-           <https://github.com/rust-lang/rustup/> for more information about
-           how toolchain overrides work.
+           <https://rust-lang.github.io/rustup/overrides.html> for more
+           information about how toolchain overrides work.
 
        -h, --help
            Prints help information.
@@ -211,7 +211,8 @@ FILES
 
        $CARGO_HOME/bin/
            Binaries installed by cargo-install(1) will be located here. If
-       using rustup, executables distributed with Rust are also located here.
+       using rustup <https://rust-lang.github.io/rustup/>, executables
+       distributed with Rust are also located here.
 
        $CARGO_HOME/config.toml
            The global configuration file. See the reference
