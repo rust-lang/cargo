@@ -11,8 +11,8 @@ cargo-update - Update dependencies as recorded in the local lock file
 ## DESCRIPTION
 
 This command will update dependencies in the `Cargo.lock` file to the latest
-version. It requires that the `Cargo.lock` file already exists as generated
-by commands such as [cargo-build(1)](cargo-build.md) or [cargo-generate-lockfile(1)](cargo-generate-lockfile.md).
+version. If the `Cargo.lock` file does not exist, it will be created with the
+latest available versions.
 
 ## OPTIONS
 

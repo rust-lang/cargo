@@ -9,8 +9,8 @@ cargo\-generate\-lockfile \- Generate the lockfile for a package
 \fBcargo generate\-lockfile\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
 This command will create the \fBCargo.lock\fR lockfile for the current package or
-workspace. If the lockfile already exists, it will be rebuilt if there are any
-manifest changes or dependency updates.
+workspace. If the lockfile already exists, it will be rebuilt with the latest
+available version of every package.
 .sp
 See also \fBcargo\-update\fR(1) which is also capable of creating a \fBCargo.lock\fR
 lockfile and has more options for controlling update behavior.
