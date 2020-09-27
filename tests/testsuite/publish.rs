@@ -78,13 +78,13 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -115,13 +115,13 @@ fn old_token_location() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -169,13 +169,13 @@ fn simple_with_host() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -216,13 +216,13 @@ fn simple_with_index_and_host() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -263,16 +263,16 @@ fn git_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [dependencies.foo]
-            git = "git://path/to/nowhere"
-        "#,
+                [dependencies.foo]
+                git = "git://path/to/nowhere"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -299,16 +299,16 @@ fn path_dependency_no_version() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -337,14 +337,14 @@ fn unpublishable_crate() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = false
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                publish = false
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -370,16 +370,16 @@ fn dont_publish_dirty() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -410,16 +410,16 @@ fn publish_clean() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -439,16 +439,16 @@ fn publish_in_sub_repo() {
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -468,16 +468,16 @@ fn publish_when_ignored() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(".gitignore", "baz")
@@ -510,16 +510,16 @@ fn ignore_when_crate_ignored() {
         .nocommit_file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .nocommit_file("bar/src/main.rs", "fn main() {}");
     p.cargo("publish --token sekrit").cwd("bar").run();
@@ -547,16 +547,16 @@ fn new_crate_rejected() {
         .nocommit_file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+            "#,
         )
         .nocommit_file("src/main.rs", "fn main() {}");
     p.cargo("publish --token sekrit")
@@ -576,13 +576,13 @@ fn dry_run() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -617,16 +617,16 @@ fn registry_not_in_publish_list() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = [
-                "test"
-            ]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                publish = [
+                    "test"
+                ]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -652,14 +652,14 @@ fn publish_empty_list() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = []
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                publish = []
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -685,17 +685,17 @@ fn publish_allowed_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            publish = ["alternative"]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["alternative"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -725,17 +725,17 @@ fn publish_implicitly_to_only_allowed_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            publish = ["alternative"]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["alternative"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -765,17 +765,17 @@ fn publish_fail_with_no_registry_specified() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            publish = ["alternative", "test"]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["alternative", "test"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -799,14 +799,14 @@ fn block_publish_no_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = []
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                publish = []
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -831,14 +831,14 @@ fn publish_with_crates_io_explicit() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = ["crates-io"]
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                publish = ["crates-io"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -864,17 +864,17 @@ fn publish_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            required = []
-            optional = []
-        "#,
+                [features]
+                required = []
+                optional = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -897,17 +897,17 @@ fn publish_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            required = []
-            optional = []
-        "#,
+                [features]
+                required = []
+                optional = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -930,17 +930,17 @@ fn publish_with_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
 
-            [features]
-            default = ["required"]
-            required = []
-        "#,
+                [features]
+                default = ["required"]
+                required = []
+            "#,
         )
         .file(
             "src/main.rs",
@@ -964,17 +964,17 @@ fn publish_with_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            [dependencies]
-            bar = "1.0"
-            [patch.crates-io]
-            bar = { path = "bar" }
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                [dependencies]
+                bar = "1.0"
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/main.rs",
@@ -1050,13 +1050,13 @@ fn publish_checks_for_token_before_verify() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1325,13 +1325,13 @@ fn credentials_ambiguous_filename() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1391,13 +1391,13 @@ fn registry_token_with_source_replacement() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

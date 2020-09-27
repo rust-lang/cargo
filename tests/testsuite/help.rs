@@ -33,7 +33,8 @@ fn help_external_subcommand() {
                 if ::std::env::args().nth(2) == Some(String::from("--help")) {
                     println!("fancy help output");
                 }
-            }"#,
+            }
+            "#,
         )
         .publish();
     cargo_process("install cargo-fake-help").run();

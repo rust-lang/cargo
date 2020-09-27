@@ -335,14 +335,16 @@ fn change_features_rebuilds() {
     Package::new("foo", "1.0.0")
         .file(
             "src/main.rs",
-            r#"fn main() {
-            if cfg!(feature = "f1") {
-                println!("f1");
+            r#"
+            fn main() {
+                if cfg!(feature = "f1") {
+                    println!("f1");
+                }
+                if cfg!(feature = "f2") {
+                    println!("f2");
+                }
             }
-            if cfg!(feature = "f2") {
-                println!("f2");
-            }
-        }"#,
+            "#,
         )
         .file(
             "Cargo.toml",

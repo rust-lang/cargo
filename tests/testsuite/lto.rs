@@ -390,17 +390,17 @@ fn project_with_dep(crate_types: &str) -> Project {
             "bar/Cargo.toml",
             &format!(
                 r#"
-                [package]
-                name = "bar"
-                version = "0.0.0"
+                    [package]
+                    name = "bar"
+                    version = "0.0.0"
 
-                [dependencies]
-                registry = "*"
-                registry-shared = "*"
+                    [dependencies]
+                    registry = "*"
+                    registry-shared = "*"
 
-                [lib]
-                crate-type = [{}]
-            "#,
+                    [lib]
+                    crate-type = [{}]
+                "#,
                 crate_types
             ),
         )

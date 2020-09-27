@@ -21,18 +21,18 @@ fn replace() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-            baz = "0.1.0"
+                [dependencies]
+                bar = "0.1.0"
+                baz = "0.1.0"
 
-            [patch.crates-io]
-            bar = { path = "bar" }
-        "#,
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -74,17 +74,17 @@ fn nonexistent() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
+                [dependencies]
+                bar = "0.1.0"
 
-            [patch.crates-io]
-            bar = { path = "bar" }
-        "#,
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -119,17 +119,17 @@ fn patch_git() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            bar = {{ git = '{}' }}
+                    [dependencies]
+                    bar = {{ git = '{}' }}
 
-            [patch.'{0}']
-            bar = {{ path = "bar" }}
-        "#,
+                    [patch.'{0}']
+                    bar = {{ path = "bar" }}
+                "#,
                 bar.url()
             ),
         )
@@ -168,17 +168,17 @@ fn patch_to_git() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            bar = "0.1"
+                    [dependencies]
+                    bar = "0.1"
 
-            [patch.crates-io]
-            bar = {{ git = '{}' }}
-        "#,
+                    [patch.crates-io]
+                    bar = {{ git = '{}' }}
+                "#,
                 bar.url()
             ),
         )
@@ -210,17 +210,17 @@ fn unused() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
+                [dependencies]
+                bar = "0.1.0"
 
-            [patch.crates-io]
-            bar = { path = "bar" }
-        "#,
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
@@ -282,17 +282,17 @@ fn unused_git() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            bar = "0.1"
+                    [dependencies]
+                    bar = "0.1"
 
-            [patch.crates-io]
-            bar = {{ git = '{}' }}
-        "#,
+                    [patch.crates-io]
+                    bar = {{ git = '{}' }}
+                "#,
                 foo.url()
             ),
         )
@@ -339,14 +339,14 @@ fn add_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -403,14 +403,14 @@ fn add_ignored_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
@@ -492,24 +492,24 @@ fn no_warn_ws_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["a", "b", "c"]
+                [workspace]
+                members = ["a", "b", "c"]
 
-            [patch.crates-io]
-            c = { path = "c" }
-        "#,
+                [patch.crates-io]
+                c = { path = "c" }
+            "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.1.0"
-            [dependencies]
-            c = "0.1.0"
-        "#,
+                [package]
+                name = "b"
+                version = "0.1.0"
+                [dependencies]
+                c = "0.1.0"
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file("c/Cargo.toml", &basic_manifest("c", "0.1.0"))
@@ -534,17 +534,17 @@ fn new_minor() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
+                [dependencies]
+                bar = "0.1.0"
 
-            [patch.crates-io]
-            bar = { path = 'bar' }
-        "#,
+                [patch.crates-io]
+                bar = { path = 'bar' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
@@ -571,30 +571,30 @@ fn transitive_new_minor() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = 'bar' }
+                [dependencies]
+                bar = { path = 'bar' }
 
-            [patch.crates-io]
-            baz = { path = 'baz' }
-        "#,
+                [patch.crates-io]
+                baz = { path = 'baz' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            baz = '0.1.0'
-        "#,
+                [dependencies]
+                baz = '0.1.0'
+            "#,
         )
         .file("bar/src/lib.rs", r#""#)
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.1"))
@@ -622,17 +622,17 @@ fn new_major() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.2.0"
+                [dependencies]
+                bar = "0.2.0"
 
-            [patch.crates-io]
-            bar = { path = 'bar' }
-        "#,
+                [patch.crates-io]
+                bar = { path = 'bar' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
@@ -690,30 +690,30 @@ fn transitive_new_major() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = 'bar' }
+                [dependencies]
+                bar = { path = 'bar' }
 
-            [patch.crates-io]
-            baz = { path = 'baz' }
-        "#,
+                [patch.crates-io]
+                baz = { path = 'baz' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            baz = '0.2.0'
-        "#,
+                [dependencies]
+                baz = '0.2.0'
+            "#,
         )
         .file("bar/src/lib.rs", r#""#)
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.2.0"))
@@ -799,18 +799,18 @@ fn remove_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1"
+                [dependencies]
+                bar = "0.1"
 
-            [patch.crates-io]
-            foo = { path = 'foo' }
-            bar = { path = 'bar' }
-        "#,
+                [patch.crates-io]
+                foo = { path = 'foo' }
+                bar = { path = 'bar' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -860,14 +860,14 @@ fn non_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [patch.some-other-source]
-            bar = { path = 'bar' }
-        "#,
+                [patch.some-other-source]
+                bar = { path = 'bar' }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -898,14 +898,14 @@ fn replace_with_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [patch.crates-io]
-            bar = "0.1"
-        "#,
+                [patch.crates-io]
+                bar = "0.1"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -935,26 +935,26 @@ fn patch_in_virtual() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["foo"]
+                [workspace]
+                members = ["foo"]
 
-            [patch.crates-io]
-            bar = { path = "bar" }
-        "#,
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
         .file(
             "foo/Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1"
-        "#,
+                [dependencies]
+                bar = "0.1"
+            "#,
         )
         .file("foo/src/lib.rs", r#""#)
         .build();
@@ -978,19 +978,19 @@ fn patch_depends_on_another_patch() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.1.0"
 
-            [dependencies]
-            bar = "0.1"
-            baz = "0.1"
+                [dependencies]
+                bar = "0.1"
+                baz = "0.1"
 
-            [patch.crates-io]
-            bar = { path = "bar" }
-            baz = { path = "baz" }
-        "#,
+                [patch.crates-io]
+                bar = { path = "bar" }
+                baz = { path = "baz" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
@@ -998,14 +998,14 @@ fn patch_depends_on_another_patch() {
         .file(
             "baz/Cargo.toml",
             r#"
-            [package]
-            name = "baz"
-            version = "0.1.1"
-            authors = []
+                [package]
+                name = "baz"
+                version = "0.1.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1"
-        "#,
+                [dependencies]
+                bar = "0.1"
+            "#,
         )
         .file("baz/src/lib.rs", r#""#)
         .build();
@@ -1023,24 +1023,24 @@ fn replace_prerelease() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar"]
+                [workspace]
+                members = ["bar"]
 
-            [patch.crates-io]
-            baz = { path = "./baz" }
-        "#,
+                [patch.crates-io]
+                baz = { path = "./baz" }
+            "#,
         )
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.5.0"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.5.0"
+                authors = []
 
-            [dependencies]
-            baz = "1.1.0-pre.1"
-        "#,
+                [dependencies]
+                baz = "1.1.0-pre.1"
+            "#,
         )
         .file(
             "bar/src/main.rs",
@@ -1049,12 +1049,12 @@ fn replace_prerelease() {
         .file(
             "baz/Cargo.toml",
             r#"
-            [project]
-            name = "baz"
-            version = "1.1.0-pre.1"
-            authors = []
-            [workspace]
-        "#,
+                [project]
+                name = "baz"
+                version = "1.1.0-pre.1"
+                authors = []
+                [workspace]
+            "#,
         )
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
@@ -1236,15 +1236,15 @@ fn patch_same_version() {
             "Cargo.toml",
             &format!(
                 r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                [dependencies]
-                bar = "0.1"
-                [patch.crates-io]
-                bar = {{ path = "bar" }}
-                bar2 = {{ git = '{}', package = 'bar' }}
-            "#,
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    [dependencies]
+                    bar = "0.1"
+                    [patch.crates-io]
+                    bar = {{ path = "bar" }}
+                    bar2 = {{ git = '{}', package = 'bar' }}
+                "#,
                 bar.url(),
             ),
         )
@@ -1285,15 +1285,15 @@ fn two_semver_compatible() {
             "Cargo.toml",
             &format!(
                 r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                [dependencies]
-                bar = "0.1"
-                [patch.crates-io]
-                bar = {{ path = "bar" }}
-                bar2 = {{ git = '{}', package = 'bar' }}
-            "#,
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    [dependencies]
+                    bar = "0.1"
+                    [patch.crates-io]
+                    bar = {{ path = "bar" }}
+                    bar2 = {{ git = '{}', package = 'bar' }}
+                "#,
                 bar.url(),
             ),
         )
@@ -1340,15 +1340,15 @@ fn multipatch_select_big() {
             "Cargo.toml",
             &format!(
                 r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                [dependencies]
-                bar = "*"
-                [patch.crates-io]
-                bar = {{ path = "bar" }}
-                bar2 = {{ git = '{}', package = 'bar' }}
-            "#,
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    [dependencies]
+                    bar = "*"
+                    [patch.crates-io]
+                    bar = {{ path = "bar" }}
+                    bar2 = {{ git = '{}', package = 'bar' }}
+                "#,
                 bar.url(),
             ),
         )
@@ -1593,16 +1593,16 @@ fn no_matches() {
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
 
-                [dependencies]
-                bar = "0.1"
+                 [dependencies]
+                 bar = "0.1"
 
-                [patch.crates-io]
-                bar = { path = "bar" }
-           "#,
+                 [patch.crates-io]
+                 bar = { path = "bar" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("abc", "0.1.0"))
@@ -1632,16 +1632,16 @@ fn mismatched_version() {
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
 
-                [dependencies]
-                bar = "0.1.1"
+                 [dependencies]
+                 bar = "0.1.1"
 
-                [patch.crates-io]
-                bar = { path = "bar", version = "0.1.1" }
-           "#,
+                 [patch.crates-io]
+                 bar = { path = "bar", version = "0.1.1" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))

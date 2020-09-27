@@ -88,14 +88,14 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -126,14 +126,14 @@ fn simple_install() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = "0.0.1"
-        "#,
+                [dependencies]
+                foo = "0.0.1"
+            "#,
         )
         .file(
             "src/main.rs",
@@ -168,15 +168,15 @@ fn simple_install_fail() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = "0.1.0"
-            baz = "9.8.7"
-        "#,
+                [dependencies]
+                foo = "0.1.0"
+                baz = "9.8.7"
+            "#,
         )
         .file(
             "src/main.rs",
@@ -212,18 +212,18 @@ fn install_without_feature_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = "0.0.1"
-            baz = { version = "9.8.7", optional = true }
+                [dependencies]
+                foo = "0.0.1"
+                baz = { version = "9.8.7", optional = true }
 
-            [features]
-            wantbaz = ["baz"]
-        "#,
+                [features]
+                wantbaz = ["baz"]
+            "#,
         )
         .file(
             "src/main.rs",
@@ -256,14 +256,14 @@ fn not_there() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -303,14 +303,14 @@ fn multiple() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -335,14 +335,14 @@ fn crates_io_then_directory() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -392,14 +392,14 @@ fn crates_io_then_bad_checksum() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -451,14 +451,14 @@ fn bad_file_checksum() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -496,14 +496,14 @@ fn only_dot_files_ok() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -529,14 +529,14 @@ fn random_files_ok() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -562,14 +562,14 @@ fn git_lock_file_doesnt_change() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            git = {{ git = '{0}' }}
-        "#,
+                    [dependencies]
+                    git = {{ git = '{0}' }}
+                "#,
                 git.url()
             ),
         )
@@ -623,14 +623,14 @@ fn git_override_requires_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            git = { git = 'https://example.com/' }
-        "#,
+                [dependencies]
+                git = { git = 'https://example.com/' }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

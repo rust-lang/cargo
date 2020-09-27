@@ -16,15 +16,15 @@ fn exported_priv_warning() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            priv_dep = "0.1.0"
-        "#,
+                [dependencies]
+                priv_dep = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -58,15 +58,15 @@ fn exported_pub_dep() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            pub_dep = {version = "0.1.0", public = true}
-        "#,
+                [dependencies]
+                pub_dep = {version = "0.1.0", public = true}
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -98,8 +98,8 @@ pub fn requires_nightly_cargo() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
-        "#,
+                cargo-features = ["public-dependency"]
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -129,13 +129,13 @@ fn requires_feature() {
             "Cargo.toml",
             r#"
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            pub_dep = { version = "0.1.0", public = true }
-        "#,
+                [dependencies]
+                pub_dep = { version = "0.1.0", public = true }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -166,15 +166,15 @@ fn pub_dev_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["public-dependency"]
+                cargo-features = ["public-dependency"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dev-dependencies]
-            pub_dep = {version = "0.1.0", public = true}
-        "#,
+                [dev-dependencies]
+                pub_dep = {version = "0.1.0", public = true}
+            "#,
         )
         .file(
             "src/lib.rs",

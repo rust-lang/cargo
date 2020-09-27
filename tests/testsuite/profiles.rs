@@ -10,17 +10,17 @@ fn profile_overrides() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
+                [package]
 
-            name = "test"
-            version = "0.0.0"
-            authors = []
+                name = "test"
+                version = "0.0.0"
+                authors = []
 
-            [profile.dev]
-            opt-level = 1
-            debug = false
-            rpath = true
-        "#,
+                [profile.dev]
+                opt-level = 1
+                debug = false
+                rpath = true
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -48,15 +48,15 @@ fn opt_level_override_0() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
+                [package]
 
-            name = "test"
-            version = "0.0.0"
-            authors = []
+                name = "test"
+                version = "0.0.0"
+                authors = []
 
-            [profile.dev]
-            opt-level = 0
-        "#,
+                [profile.dev]
+                opt-level = 0
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -82,14 +82,14 @@ fn debug_override_1() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "test"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "test"
+                version = "0.0.0"
+                authors = []
 
-            [profile.dev]
-            debug = 1
-        "#,
+                [profile.dev]
+                debug = 1
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -115,15 +115,15 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
+                    [package]
 
-            name = "test"
-            version = "0.0.0"
-            authors = []
+                    name = "test"
+                    version = "0.0.0"
+                    authors = []
 
-            [profile.dev]
-            opt-level = {level}
-        "#,
+                    [profile.dev]
+                    opt-level = {level}
+                "#,
                 level = profile_level
             ),
         )
@@ -167,38 +167,38 @@ fn top_level_overrides_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
+                [package]
 
-            name = "test"
-            version = "0.0.0"
-            authors = []
+                name = "test"
+                version = "0.0.0"
+                authors = []
 
-            [profile.release]
-            opt-level = 1
-            debug = true
+                [profile.release]
+                opt-level = 1
+                debug = true
 
-            [dependencies.foo]
-            path = "foo"
-        "#,
+                [dependencies.foo]
+                path = "foo"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
-            [package]
+                [package]
 
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [profile.release]
-            opt-level = 0
-            debug = false
+                [profile.release]
+                opt-level = 0
+                debug = false
 
-            [lib]
-            name = "foo"
-            crate_type = ["dylib", "rlib"]
-        "#,
+                [lib]
+                name = "foo"
+                crate_type = ["dylib", "rlib"]
+            "#,
         )
         .file("foo/src/lib.rs", "")
         .build();
@@ -240,31 +240,31 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [workspace]
-            members = ["bar"]
+                [workspace]
+                members = ["bar"]
 
-            [profile.dev]
-            debug = false
-        "#,
+                [profile.dev]
+                debug = false
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
 
-            [profile.dev]
-            opt-level = 1
-        "#,
+                [profile.dev]
+                opt-level = 1
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -289,24 +289,24 @@ fn profile_in_virtual_manifest_works() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar"]
+                [workspace]
+                members = ["bar"]
 
-            [profile.dev]
-            opt-level = 1
-            debug = false
-        "#,
+                [profile.dev]
+                opt-level = 1
+                debug = false
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            workspace = ".."
-        "#,
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -328,16 +328,16 @@ fn profile_panic_test_bench() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [profile.test]
-            panic = "abort"
+                [profile.test]
+                panic = "abort"
 
-            [profile.bench]
-            panic = "abort"
-        "#,
+                [profile.bench]
+                panic = "abort"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -358,13 +358,13 @@ fn profile_doc_deprecated() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [profile.doc]
-            opt-level = 0
-        "#,
+                [profile.doc]
+                opt-level = 0
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -446,14 +446,14 @@ fn thin_lto_works() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "top"
-            version = "0.5.0"
-            authors = []
+                [project]
+                name = "top"
+                version = "0.5.0"
+                authors = []
 
-            [profile.release]
-            lto = 'thin'
-        "#,
+                [profile.release]
+                lto = 'thin'
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -481,15 +481,15 @@ fn strip_works() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["strip"]
+                cargo-features = ["strip"]
 
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [profile.release]
-            strip = 'symbols'
-        "#,
+                [profile.release]
+                strip = 'symbols'
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -516,13 +516,13 @@ fn strip_requires_cargo_feature() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [profile.release]
-            strip = 'symbols'
-        "#,
+                [profile.release]
+                strip = 'symbols'
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -552,15 +552,15 @@ fn strip_rejects_invalid_option() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["strip"]
+                cargo-features = ["strip"]
 
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [profile.release]
-            strip = 'wrong'
-        "#,
+                [profile.release]
+                strip = 'wrong'
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

@@ -12,15 +12,15 @@ fn depend_on_alt_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -61,15 +61,15 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -103,15 +103,15 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -145,15 +145,15 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -191,15 +191,15 @@ fn registry_and_path_dep_works() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -225,15 +225,15 @@ fn registry_incompatible_with_git() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            git = ""
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                git = ""
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -255,23 +255,23 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             &format!(
                 r#"
-            [registries.fakeio]
-            index = "{}"
-        "#,
+                    [registries.fakeio]
+                    index = "{}"
+                "#,
                 fakeio_url
             ),
         )
@@ -285,8 +285,8 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .file(
             "config.json",
             r#"
-            {"dl": "https://crates.io/api/v1/crates", "api": "https://crates.io"}
-        "#,
+                {"dl": "https://crates.io/api/v1/crates", "api": "https://crates.io"}
+            "#,
         )
         .build();
 
@@ -311,15 +311,15 @@ fn publish_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -372,18 +372,18 @@ fn alt_registry_and_crates_io_deps() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            crates_io_dep = "0.0.1"
+                [dependencies]
+                crates_io_dep = "0.0.1"
 
-            [dependencies.alt_reg_dep]
-            version = "0.1.0"
-            registry = "alternative"
-        "#,
+                [dependencies.alt_reg_dep]
+                version = "0.1.0"
+                registry = "alternative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -472,16 +472,16 @@ fn publish_with_crates_io_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = ["me"]
-            license = "MIT"
-            description = "foo"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = ["me"]
+                license = "MIT"
+                description = "foo"
 
-            [dependencies.bar]
-            version = "0.0.1"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -566,16 +566,16 @@ fn patch_alt_reg() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { version = "0.1.0", registry = "alternative" }
+                [dependencies]
+                bar = { version = "0.1.0", registry = "alternative" }
 
-            [patch.alternative]
-            bar = { path = "bar" }
-        "#,
+                [patch.alternative]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -606,15 +606,15 @@ fn bad_registry_name() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "bad name"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "bad name"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -667,14 +667,14 @@ fn no_api() {
         .file(
             "Cargo.toml",
             r#"
-             [package]
-             name = "foo"
-             version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-             [dependencies.bar]
-             version = "0.0.1"
-             registry = "alternative"
-         "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -737,14 +737,14 @@ fn alt_reg_metadata() {
         .file(
             "Cargo.toml",
             r#"
-             [package]
-             name = "foo"
-             version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-             [dependencies]
-             altdep = { version = "0.0.1", registry = "alternative" }
-             iodep = { version = "0.0.1" }
-         "#,
+                [dependencies]
+                altdep = { version = "0.0.1", registry = "alternative" }
+                iodep = { version = "0.0.1" }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1019,14 +1019,14 @@ fn unknown_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1181,15 +1181,15 @@ fn registries_index_relative_url() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "relative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "relative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1230,15 +1230,15 @@ fn registries_index_relative_path_not_allowed() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "relative"
-        "#,
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "relative"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

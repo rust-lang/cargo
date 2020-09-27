@@ -34,9 +34,9 @@ fn version_works_with_bad_target_dir() {
         .file(
             ".cargo/config",
             r#"
-            [build]
-            target-dir = 4
-        "#,
+                [build]
+                target-dir = 4
+            "#,
         )
         .build();
     p.cargo("version").run();

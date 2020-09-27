@@ -12,41 +12,41 @@ fn jobserver_exists() {
         .file(
             "build.rs",
             r#"
-            use std::env;
+                use std::env;
 
-            fn main() {
-                let var = env::var("CARGO_MAKEFLAGS").unwrap();
-                let arg = var.split(' ')
-                             .find(|p| p.starts_with("--jobserver"))
-                             .unwrap();
-                let val = &arg[arg.find('=').unwrap() + 1..];
-                validate(val);
-            }
-
-            #[cfg(unix)]
-            fn validate(s: &str) {
-                use std::fs::File;
-                use std::io::*;
-                use std::os::unix::prelude::*;
-
-                let fds = s.split(',').collect::<Vec<_>>();
-                println!("{}", s);
-                assert_eq!(fds.len(), 2);
-                unsafe {
-                    let mut read = File::from_raw_fd(fds[0].parse().unwrap());
-                    let mut write = File::from_raw_fd(fds[1].parse().unwrap());
-
-                    let mut buf = [0];
-                    assert_eq!(read.read(&mut buf).unwrap(), 1);
-                    assert_eq!(write.write(&buf).unwrap(), 1);
+                fn main() {
+                    let var = env::var("CARGO_MAKEFLAGS").unwrap();
+                    let arg = var.split(' ')
+                                 .find(|p| p.starts_with("--jobserver"))
+                                 .unwrap();
+                    let val = &arg[arg.find('=').unwrap() + 1..];
+                    validate(val);
                 }
-            }
 
-            #[cfg(windows)]
-            fn validate(_: &str) {
-                // a little too complicated for a test...
-            }
-        "#,
+                #[cfg(unix)]
+                fn validate(s: &str) {
+                    use std::fs::File;
+                    use std::io::*;
+                    use std::os::unix::prelude::*;
+
+                    let fds = s.split(',').collect::<Vec<_>>();
+                    println!("{}", s);
+                    assert_eq!(fds.len(), 2);
+                    unsafe {
+                        let mut read = File::from_raw_fd(fds[0].parse().unwrap());
+                        let mut write = File::from_raw_fd(fds[1].parse().unwrap());
+
+                        let mut buf = [0];
+                        assert_eq!(read.read(&mut buf).unwrap(), 1);
+                        assert_eq!(write.write(&buf).unwrap(), 1);
+                    }
+                }
+
+                #[cfg(windows)]
+                fn validate(_: &str) {
+                    // a little too complicated for a test...
+                }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -72,65 +72,65 @@ fn makes_jobserver_used() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            d1 = { path = "d1" }
-            d2 = { path = "d2" }
-            d3 = { path = "d3" }
-        "#,
+                [dependencies]
+                d1 = { path = "d1" }
+                d2 = { path = "d2" }
+                d3 = { path = "d3" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "d1/Cargo.toml",
             r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
-            build = "../dbuild.rs"
-        "#,
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                authors = []
+                build = "../dbuild.rs"
+            "#,
         )
         .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
             r#"
-            [package]
-            name = "d2"
-            version = "0.0.1"
-            authors = []
-            build = "../dbuild.rs"
-        "#,
+                [package]
+                name = "d2"
+                version = "0.0.1"
+                authors = []
+                build = "../dbuild.rs"
+            "#,
         )
         .file("d2/src/lib.rs", "")
         .file(
             "d3/Cargo.toml",
             r#"
-            [package]
-            name = "d3"
-            version = "0.0.1"
-            authors = []
-            build = "../dbuild.rs"
-        "#,
+                [package]
+                name = "d3"
+                version = "0.0.1"
+                authors = []
+                build = "../dbuild.rs"
+            "#,
         )
         .file("d3/src/lib.rs", "")
         .file(
             "dbuild.rs",
             r#"
-            use std::net::TcpStream;
-            use std::env;
-            use std::io::Read;
+                use std::net::TcpStream;
+                use std::env;
+                use std::io::Read;
 
-            fn main() {
-                let addr = env::var("ADDR").unwrap();
-                let mut stream = TcpStream::connect(addr).unwrap();
-                let mut v = Vec::new();
-                stream.read_to_end(&mut v).unwrap();
-            }
-        "#,
+                fn main() {
+                    let addr = env::var("ADDR").unwrap();
+                    let mut stream = TcpStream::connect(addr).unwrap();
+                    let mut v = Vec::new();
+                    stream.read_to_end(&mut v).unwrap();
+                }
+            "#,
         )
         .file(
             "Makefile",

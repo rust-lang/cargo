@@ -9,20 +9,20 @@ fn profile_override_basic() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = {path = "bar"}
+                [dependencies]
+                bar = {path = "bar"}
 
-            [profile.dev]
-            opt-level = 1
+                [profile.dev]
+                opt-level = 1
 
-            [profile.dev.package.bar]
-            opt-level = 3
-        "#,
+                [profile.dev.package.bar]
+                opt-level = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -46,22 +46,22 @@ fn profile_override_warnings() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = {path = "bar"}
+                [dependencies]
+                bar = {path = "bar"}
 
-            [profile.dev.package.bart]
-            opt-level = 3
+                [profile.dev.package.bart]
+                opt-level = 3
 
-            [profile.dev.package.no-suggestion]
-            opt-level = 3
+                [profile.dev.package.no-suggestion]
+                opt-level = 3
 
-            [profile.dev.package."bar:1.2.3"]
-            opt-level = 3
-        "#,
+                [profile.dev.package."bar:1.2.3"]
+                opt-level = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
@@ -107,16 +107,16 @@ fn profile_override_bad_settings() {
                 "Cargo.toml",
                 &format!(
                     r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
+                        [package]
+                        name = "foo"
+                        version = "0.0.1"
 
-                [dependencies]
-                bar = {{path = "bar"}}
+                        [dependencies]
+                        bar = {{path = "bar"}}
 
-                [profile.dev.package.bar]
-                {}
-            "#,
+                        [profile.dev.package.bar]
+                        {}
+                    "#,
                     snippet
                 ),
             )

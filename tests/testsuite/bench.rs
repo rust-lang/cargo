@@ -30,7 +30,8 @@ fn cargo_bench_simple() {
             #[bench]
             fn bench_hello(_b: &mut test::Bencher) {
                 assert_eq!(hello(), "hello")
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -64,21 +65,24 @@ fn bench_bench_implicit() {
             #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
-            fn main() { println!("Hello main!"); }"#,
+            fn main() { println!("Hello main!"); }
+            "#,
         )
         .file(
             "tests/other.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run3(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             "benches/mybench.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run2(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -109,21 +113,24 @@ fn bench_bin_implicit() {
             #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
-            fn main() { println!("Hello main!"); }"#,
+            fn main() { println!("Hello main!"); }
+            "#,
         )
         .file(
             "tests/other.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run3(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             "benches/mybench.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run2(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -151,14 +158,16 @@ fn bench_tarname() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             "benches/bin2.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run2(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -186,21 +195,24 @@ fn bench_multiple_targets() {
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             "benches/bin2.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run2(_ben: &mut test::Bencher) { }
+            "#,
         )
         .file(
             "benches/bin3.rs",
             r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
+            #[bench] fn run3(_ben: &mut test::Bencher) { }
+            "#,
         )
         .build();
 
@@ -222,12 +234,12 @@ fn cargo_bench_verbose() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
-            fn main() {}
-            #[bench] fn bench_hello(_b: &mut test::Bencher) {}
-        "#,
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+                fn main() {}
+                #[bench] fn bench_hello(_b: &mut test::Bencher) {}
+            "#,
         )
         .build();
 
@@ -275,11 +287,11 @@ fn many_similar_names() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
-            extern crate foo;
-            extern crate test;
-            #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
-        "#,
+                #![feature(test)]
+                extern crate foo;
+                extern crate test;
+                #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
+            "#,
         )
         .build();
 
@@ -315,7 +327,8 @@ fn cargo_bench_failing_test() {
             #[bench]
             fn bench_hello(_b: &mut test::Bencher) {
                 assert_eq!(hello(), "nope")
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -353,33 +366,33 @@ fn bench_with_lib_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [[bin]]
-            name = "baz"
-            path = "src/main.rs"
-        "#,
+                [[bin]]
+                name = "baz"
+                path = "src/main.rs"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
-            ///
-            /// ```rust
-            /// extern crate foo;
-            /// fn main() {
-            ///     println!("{}", foo::foo());
-            /// }
-            /// ```
-            ///
-            pub fn foo(){}
-            #[bench] fn lib_bench(_b: &mut test::Bencher) {}
-        "#,
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+                ///
+                /// ```rust
+                /// extern crate foo;
+                /// fn main() {
+                ///     println!("{}", foo::foo());
+                /// }
+                /// ```
+                ///
+                pub fn foo(){}
+                #[bench] fn lib_bench(_b: &mut test::Bencher) {}
+            "#,
         )
         .file(
             "src/main.rs",
@@ -422,14 +435,14 @@ fn bench_with_deep_lib_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.foo]
-            path = "../foo"
-        "#,
+                [dependencies.foo]
+                path = "../foo"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -484,39 +497,39 @@ fn external_bench_explicit() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [[bench]]
-            name = "bench"
-            path = "src/bench.rs"
-        "#,
+                [[bench]]
+                name = "bench"
+                path = "src/bench.rs"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
-            pub fn get_hello() -> &'static str { "Hello" }
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+                pub fn get_hello() -> &'static str { "Hello" }
 
-            #[bench]
-            fn internal_bench(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn internal_bench(_b: &mut test::Bencher) {}
+            "#,
         )
         .file(
             "src/bench.rs",
             r#"
-            #![feature(test)]
-            #[allow(unused_extern_crates)]
-            extern crate foo;
-            extern crate test;
+                #![feature(test)]
+                #[allow(unused_extern_crates)]
+                extern crate foo;
+                extern crate test;
 
-            #[bench]
-            fn external_bench(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn external_bench(_b: &mut test::Bencher) {}
+            "#,
         )
         .build();
 
@@ -543,27 +556,27 @@ fn external_bench_implicit() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
 
-            pub fn get_hello() -> &'static str { "Hello" }
+                pub fn get_hello() -> &'static str { "Hello" }
 
-            #[bench]
-            fn internal_bench(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn internal_bench(_b: &mut test::Bencher) {}
+            "#,
         )
         .file(
             "benches/external.rs",
             r#"
-            #![feature(test)]
-            #[allow(unused_extern_crates)]
-            extern crate foo;
-            extern crate test;
+                #![feature(test)]
+                #[allow(unused_extern_crates)]
+                extern crate foo;
+                extern crate test;
 
-            #[bench]
-            fn external_bench(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn external_bench(_b: &mut test::Bencher) {}
+            "#,
         )
         .build();
 
@@ -664,7 +677,7 @@ fn dont_run_examples() {
     }
 
     let p = project()
-        .file("src/lib.rs", r"")
+        .file("src/lib.rs", "")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
             r#"fn main() { panic!("Examples should not be run by 'cargo test'"); }"#,
@@ -751,16 +764,16 @@ fn lib_bin_same_name() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            name = "foo"
-            [[bin]]
-            name = "foo"
-        "#,
+                [lib]
+                name = "foo"
+                [[bin]]
+                name = "foo"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -858,16 +871,16 @@ fn lib_with_standard_name2() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "syntax"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "syntax"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            name = "syntax"
-            bench = false
-            doctest = false
-        "#,
+                [lib]
+                name = "syntax"
+                bench = false
+                doctest = false
+            "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .file(
@@ -908,56 +921,56 @@ fn bench_dylib() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            name = "foo"
-            crate_type = ["dylib"]
+                [lib]
+                name = "foo"
+                crate_type = ["dylib"]
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #![feature(test)]
-            extern crate bar as the_bar;
-            #[cfg(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate bar as the_bar;
+                #[cfg(test)]
+                extern crate test;
 
-            pub fn bar() { the_bar::baz(); }
+                pub fn bar() { the_bar::baz(); }
 
-            #[bench]
-            fn foo(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn foo(_b: &mut test::Bencher) {}
+            "#,
         )
         .file(
             "benches/bench.rs",
             r#"
-            #![feature(test)]
-            extern crate foo as the_foo;
-            extern crate test;
+                #![feature(test)]
+                extern crate foo as the_foo;
+                extern crate test;
 
-            #[bench]
-            fn foo(_b: &mut test::Bencher) { the_foo::bar(); }
-        "#,
+                #[bench]
+                fn foo(_b: &mut test::Bencher) { the_foo::bar(); }
+            "#,
         )
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            name = "bar"
-            crate_type = ["dylib"]
-        "#,
+                [lib]
+                name = "bar"
+                crate_type = ["dylib"]
+            "#,
         )
         .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
@@ -1002,12 +1015,12 @@ fn bench_twice_with_build_cmd() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
         )
         .file("build.rs", "fn main() {}")
         .file(
@@ -1051,38 +1064,38 @@ fn bench_with_examples() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "6.6.6"
-            authors = []
+                [package]
+                name = "foo"
+                version = "6.6.6"
+                authors = []
 
-            [[example]]
-            name = "teste1"
+                [[example]]
+                name = "teste1"
 
-            [[bench]]
-            name = "testb1"
-        "#,
+                [[bench]]
+                name = "testb1"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
-            #[cfg(test)]
-            use test::Bencher;
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+                #[cfg(test)]
+                use test::Bencher;
 
-            pub fn f1() {
-                println!("f1");
-            }
+                pub fn f1() {
+                    println!("f1");
+                }
 
-            pub fn f2() {}
+                pub fn f2() {}
 
-            #[bench]
-            fn bench_bench1(_b: &mut Bencher) {
-                f2();
-            }
-        "#,
+                #[bench]
+                fn bench_bench1(_b: &mut Bencher) {
+                    f2();
+                }
+            "#,
         )
         .file(
             "benches/testb1.rs",
@@ -1102,13 +1115,13 @@ fn bench_with_examples() {
         .file(
             "examples/teste1.rs",
             r#"
-            extern crate foo;
+                extern crate foo;
 
-            fn main() {
-                println!("example1");
-                foo::f1();
-            }
-        "#,
+                fn main() {
+                    println!("example1");
+                    foo::f1();
+                }
+            "#,
         )
         .build();
 
@@ -1138,20 +1151,20 @@ fn test_a_bench() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                authors = []
+                version = "0.1.0"
 
-            [lib]
-            name = "foo"
-            test = false
-            doctest = false
+                [lib]
+                name = "foo"
+                test = false
+                doctest = false
 
-            [[bench]]
-            name = "b"
-            test = true
-        "#,
+                [[bench]]
+                name = "b"
+                test = true
+            "#,
         )
         .file("src/lib.rs", "")
         .file("benches/b.rs", "#[test] fn foo() {}")
@@ -1179,15 +1192,15 @@ fn test_bench_no_run() {
         .file(
             "benches/bbaz.rs",
             r#"
-            #![feature(test)]
+                #![feature(test)]
 
-            extern crate test;
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_baz(_: &mut Bencher) {}
-        "#,
+                #[bench]
+                fn bench_baz(_: &mut Bencher) {}
+            "#,
         )
         .build();
 
@@ -1231,7 +1244,8 @@ fn test_bench_no_fail_fast() {
             #[bench]
             fn bench_nope(_b: &mut test::Bencher) {
                 assert_eq!("nope", hello())
-            }"#,
+            }
+            "#,
         )
         .build();
 
@@ -1255,17 +1269,17 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                authors = []
+                version = "0.1.0"
 
-            [dependencies.bar]
-            path = "../bar"
+                [dependencies.bar]
+                path = "../bar"
 
-            [dependencies.baz]
-            path = "../baz"
-        "#,
+                [dependencies.baz]
+                path = "../baz"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1275,28 +1289,28 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            authors = []
-            version = "0.1.0"
+                [project]
+                name = "bar"
+                authors = []
+                version = "0.1.0"
 
-            [[bench]]
-            name = "bbar"
-            test = true
-        "#,
+                [[bench]]
+                name = "bbar"
+                test = true
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "benches/bbar.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_bar(_b: &mut Bencher) {}
-        "#,
+                #[bench]
+                fn bench_bar(_b: &mut Bencher) {}
+            "#,
         )
         .build();
 
@@ -1305,28 +1319,28 @@ fn test_bench_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "baz"
-            authors = []
-            version = "0.1.0"
+                [project]
+                name = "baz"
+                authors = []
+                version = "0.1.0"
 
-            [[bench]]
-            name = "bbaz"
-            test = true
-        "#,
+                [[bench]]
+                name = "bbaz"
+                test = true
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "benches/bbaz.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_baz(_b: &mut Bencher) {}
-        "#,
+                #[bench]
+                fn bench_baz(_b: &mut Bencher) {}
+            "#,
         )
         .build();
 
@@ -1348,42 +1362,42 @@ fn bench_all_workspace() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [workspace]
-        "#,
+                [workspace]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_foo(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_foo(_: &mut Bencher) -> () { () }
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_bar(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_bar(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
@@ -1405,28 +1419,28 @@ fn bench_all_exclude() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                version = "0.1.0"
 
-            [workspace]
-            members = ["bar", "baz"]
-        "#,
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
 
-            #[bench]
-            pub fn bar(b: &mut test::Bencher) {
-                b.iter(|| {});
-            }
-        "#,
+                #[bench]
+                pub fn bar(b: &mut test::Bencher) {
+                    b.iter(|| {});
+                }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
@@ -1454,37 +1468,37 @@ fn bench_all_virtual_manifest() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar", "baz"]
-        "#,
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_bar(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_bar(_: &mut Bencher) -> () { () }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_baz(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_baz(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
@@ -1508,26 +1522,26 @@ fn legacy_bench_name() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                version = "0.1.0"
 
-            [[bench]]
-            name = "bench"
-        "#,
+                [[bench]]
+                name = "bench"
+            "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/bench.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_foo(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_foo(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
@@ -1550,33 +1564,33 @@ fn bench_virtual_manifest_all_implied() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar", "baz"]
-        "#,
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn foo() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
-            use test::Bencher;
-            #[bench]
-            fn bench_bar(_: &mut Bencher) -> () { () }
-        "#,
+                #![feature(test)]
+                extern crate test;
+                use test::Bencher;
+                #[bench]
+                fn bench_bar(_: &mut Bencher) -> () { () }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
-            use test::Bencher;
-            #[bench]
-            fn bench_baz(_: &mut Bencher) -> () { () }
-        "#,
+                #![feature(test)]
+                extern crate test;
+                use test::Bencher;
+                #[bench]
+                fn bench_baz(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
@@ -1600,41 +1614,41 @@ fn json_artifact_includes_executable_for_benchmark() {
         .file(
             "benches/benchmark.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_foo(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_foo(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
     p.cargo("bench --no-run --message-format=json")
         .with_json(
             r#"
-            {
-                "executable": "[..]/foo/target/release/deps/benchmark-[..][EXE]",
-                "features": [],
-                "filenames": "{...}",
-                "fresh": false,
-                "package_id": "foo 0.0.1 ([..])",
-                "profile": "{...}",
-                "reason": "compiler-artifact",
-                "target": {
-                    "crate_types": [ "bin" ],
-                    "kind": [ "bench" ],
-                    "doctest": false,
-                    "edition": "2015",
-                    "name": "benchmark",
-                    "src_path": "[..]/foo/benches/benchmark.rs",
-                    "test": false
+                {
+                    "executable": "[..]/foo/target/release/deps/benchmark-[..][EXE]",
+                    "features": [],
+                    "filenames": "{...}",
+                    "fresh": false,
+                    "package_id": "foo 0.0.1 ([..])",
+                    "profile": "{...}",
+                    "reason": "compiler-artifact",
+                    "target": {
+                        "crate_types": [ "bin" ],
+                        "kind": [ "bench" ],
+                        "doctest": false,
+                        "edition": "2015",
+                        "name": "benchmark",
+                        "src_path": "[..]/foo/benches/benchmark.rs",
+                        "test": false
+                    }
                 }
-            }
 
-            {"reason": "build-finished", "success": true}
-        "#,
+                {"reason": "build-finished", "success": true}
+            "#,
         )
         .run();
 }

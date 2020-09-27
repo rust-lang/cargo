@@ -14,19 +14,19 @@ fn bad_file_member_exclusion() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = [ "crates/*" ]
-        "#,
+                [workspace]
+                members = [ "crates/*" ]
+            "#,
         )
         .file("crates/.DS_Store", "PLACEHOLDER")
         .file(
             "crates/bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+            "#,
         )
         .file("crates/bar/src/main.rs", "fn main() {}")
         .build();

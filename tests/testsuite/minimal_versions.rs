@@ -16,14 +16,14 @@ fn minimal_version_cli() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [dependencies]
-            dep = "1.0"
-        "#,
+                [dependencies]
+                dep = "1.0"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

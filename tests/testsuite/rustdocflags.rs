@@ -19,9 +19,9 @@ fn parses_config() {
         .file(
             ".cargo/config",
             r#"
-            [build]
-            rustdocflags = ["--cfg", "foo"]
-        "#,
+                [build]
+                rustdocflags = ["--cfg", "foo"]
+            "#,
         )
         .build();
 
@@ -67,10 +67,10 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
         .file(
             "src/lib.rs",
             r#"
-            //! ```
-            //! assert!(cfg!(do_not_choke));
-            //! ```
-        "#,
+                //! ```
+                //! assert!(cfg!(do_not_choke));
+                //! ```
+            "#,
         )
         .build();
 

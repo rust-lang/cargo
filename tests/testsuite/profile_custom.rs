@@ -8,16 +8,16 @@ fn inherits_on_release() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.release]
-            inherits = "dev"
-        "#,
+                [profile.release]
+                inherits = "dev"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -39,16 +39,16 @@ fn missing_inherits() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.release-lto]
-            codegen-units = 7
-        "#,
+                [profile.release-lto]
+                codegen-units = 7
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -71,17 +71,17 @@ fn invalid_profile_name() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.'.release-lto']
-            inherits = "release"
-            codegen-units = 7
-        "#,
+                [profile.'.release-lto']
+                inherits = "release"
+                codegen-units = 7
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -105,18 +105,18 @@ fn invalid_dir_name() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.'release-lto']
-            inherits = "release"
-            dir-name = ".subdir"
-            codegen-units = 7
-        "#,
+                [profile.'release-lto']
+                inherits = "release"
+                dir-name = ".subdir"
+                codegen-units = 7
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -140,17 +140,17 @@ fn invalid_inherits() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.'release-lto']
-            inherits = ".release"
-            codegen-units = 7
-        "#,
+                [profile.'release-lto']
+                inherits = ".release"
+                codegen-units = 7
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -174,17 +174,17 @@ fn non_existent_inherits() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.release-lto]
-            codegen-units = 7
-            inherits = "non-existent"
-        "#,
+                [profile.release-lto]
+                codegen-units = 7
+                inherits = "non-existent"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -206,17 +206,17 @@ fn self_inherits() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.release-lto]
-            codegen-units = 7
-            inherits = "release-lto"
-        "#,
+                [profile.release-lto]
+                codegen-units = 7
+                inherits = "release-lto"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -238,21 +238,21 @@ fn inherits_loop() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.release-lto]
-            codegen-units = 7
-            inherits = "release-lto2"
+                [profile.release-lto]
+                codegen-units = 7
+                inherits = "release-lto2"
 
-            [profile.release-lto2]
-            codegen-units = 7
-            inherits = "release-lto"
-        "#,
+                [profile.release-lto2]
+                codegen-units = 7
+                inherits = "release-lto"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -274,32 +274,32 @@ fn overrides_with_custom() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            xxx = {path = "xxx"}
-            yyy = {path = "yyy"}
+                [dependencies]
+                xxx = {path = "xxx"}
+                yyy = {path = "yyy"}
 
-            [profile.dev]
-            codegen-units = 7
+                [profile.dev]
+                codegen-units = 7
 
-            [profile.dev.package.xxx]
-            codegen-units = 5
-            [profile.dev.package.yyy]
-            codegen-units = 3
+                [profile.dev.package.xxx]
+                codegen-units = 5
+                [profile.dev.package.yyy]
+                codegen-units = 3
 
-            [profile.other]
-            inherits = "dev"
-            codegen-units = 2
+                [profile.other]
+                inherits = "dev"
+                codegen-units = 2
 
-            [profile.other.package.yyy]
-            codegen-units = 6
-        "#,
+                [profile.other.package.yyy]
+                codegen-units = 6
+            "#,
         )
         .file("src/lib.rs", "")
         .file("xxx/Cargo.toml", &basic_lib_manifest("xxx"))
@@ -348,11 +348,11 @@ fn conflicting_usage() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -376,16 +376,16 @@ fn clean_custom_dirname() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["named-profiles"]
+                cargo-features = ["named-profiles"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [profile.other]
-            inherits = "release"
-        "#,
+                [profile.other]
+                inherits = "release"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

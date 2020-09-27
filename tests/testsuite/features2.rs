@@ -1262,17 +1262,17 @@ fn build_dep_activated() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            # This should never be selected.
-            [target.'{}'.build-dependencies]
-            targetdep = "1.0"
+                # This should never be selected.
+                [target.'{}'.build-dependencies]
+                targetdep = "1.0"
 
-            [target.'{}'.build-dependencies]
-            hostdep = {{version="1.0", features=["feat1"]}}
-            "#,
+                [target.'{}'.build-dependencies]
+                hostdep = {{version="1.0", features=["feat1"]}}
+                "#,
                 alternate(),
                 rustc_host()
             ),

@@ -17,29 +17,29 @@ fn toml_deserialize_manifest_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [workspace]
-        "#,
+                [workspace]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foobar == "0.55"
-        "#,
+                [dependencies]
+                foobar == "0.55"
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -66,29 +66,29 @@ fn member_manifest_path_io_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [workspace]
-        "#,
+                [workspace]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foobar = { path = "nosuch" }
-        "#,
+                [dependencies]
+                foobar = { path = "nosuch" }
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -116,29 +116,29 @@ fn member_manifest_version_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
+                [dependencies]
+                bar = { path = "bar" }
 
-            [workspace]
-        "#,
+                [workspace]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            i-dont-exist = "0.55"
-        "#,
+                [dependencies]
+                i-dont-exist = "0.55"
+            "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
         .build();

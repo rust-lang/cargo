@@ -10,10 +10,10 @@ fn rerun_if_env_changes() {
         .file(
             "build.rs",
             r#"
-            fn main() {
-                println!("cargo:rerun-if-env-changed=FOO");
-            }
-        "#,
+                fn main() {
+                    println!("cargo:rerun-if-env-changed=FOO");
+                }
+            "#,
         )
         .build();
 
@@ -64,11 +64,11 @@ fn rerun_if_env_or_file_changes() {
         .file(
             "build.rs",
             r#"
-            fn main() {
-                println!("cargo:rerun-if-env-changed=FOO");
-                println!("cargo:rerun-if-changed=foo");
-            }
-        "#,
+                fn main() {
+                    println!("cargo:rerun-if-env-changed=FOO");
+                    println!("cargo:rerun-if-changed=foo");
+                }
+            "#,
         )
         .file("foo", "")
         .build();

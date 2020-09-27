@@ -78,11 +78,11 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                println!("username=foo");
-                println!("password=bar");
-            }
-        "#,
+                fn main() {
+                    println!("username=foo");
+                    println!("password=bar");
+                }
+            "#,
         )
         .build();
 
@@ -110,14 +110,14 @@ fn http_auth_offered() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies.bar]
-            git = "http://127.0.0.1:{}/foo/bar"
-        "#,
+                    [dependencies.bar]
+                    git = "http://127.0.0.1:{}/foo/bar"
+                "#,
                 addr.port()
             ),
         )
@@ -183,14 +183,14 @@ fn https_something_happens() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies.bar]
-            git = "https://127.0.0.1:{}/foo/bar"
-        "#,
+                    [dependencies.bar]
+                    git = "https://127.0.0.1:{}/foo/bar"
+                "#,
                 addr.port()
             ),
         )
@@ -244,14 +244,14 @@ fn ssh_something_happens() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies.bar]
-            git = "ssh://127.0.0.1:{}/foo/bar"
-        "#,
+                    [dependencies.bar]
+                    git = "ssh://127.0.0.1:{}/foo/bar"
+                "#,
                 addr.port()
             ),
         )
@@ -280,14 +280,14 @@ fn net_err_suggests_fetch_with_cli() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            foo = { git = "ssh://needs-proxy.invalid/git" }
-        "#,
+                [dependencies]
+                foo = { git = "ssh://needs-proxy.invalid/git" }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

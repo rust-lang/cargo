@@ -64,14 +64,14 @@ fn no_index_update() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.1"
 
-            [dependencies]
-            serde = "1.0"
-        "#,
+                [dependencies]
+                serde = "1.0"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

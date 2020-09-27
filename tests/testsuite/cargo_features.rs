@@ -8,12 +8,12 @@ fn feature_required() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            im-a-teapot = true
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -61,13 +61,13 @@ fn unknown_feature() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["foo"]
+                cargo-features = ["foo"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -90,13 +90,13 @@ fn stable_feature_warns() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-stable"]
+                cargo-features = ["test-dummy-stable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -118,14 +118,14 @@ fn nightly_feature_requires_nightly() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            im-a-teapot = true
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -160,27 +160,27 @@ fn nightly_feature_requires_nightly_in_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "b"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            im-a-teapot = true
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
         )
         .file("a/src/lib.rs", "")
         .build();
@@ -225,14 +225,14 @@ fn cant_publish() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            im-a-teapot = true
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -267,14 +267,14 @@ fn z_flags_rejected() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-            im-a-teapot = true
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+                im-a-teapot = true
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -313,13 +313,13 @@ fn publish_allowed() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["test-dummy-unstable"]
+                cargo-features = ["test-dummy-unstable"]
 
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

@@ -76,7 +76,7 @@ fn broken_fixes_backed_out() {
         )
         .file(
             "foo/src/main.rs",
-            r##"
+            r#"
                 use std::env;
                 use std::fs;
                 use std::io::Write;
@@ -106,7 +106,7 @@ fn broken_fixes_backed_out() {
                         .expect("failed to run rustc");
                     process::exit(status.code().unwrap_or(2));
                 }
-            "##,
+            "#,
         )
         .file(
             "bar/Cargo.toml",
@@ -664,9 +664,9 @@ fn fix_features() {
         .file(
             "src/lib.rs",
             r#"
-            #[cfg(feature = "bar")]
-            pub fn foo() -> u32 { let mut x = 3; x }
-        "#,
+                #[cfg(feature = "bar")]
+                pub fn foo() -> u32 { let mut x = 3; x }
+            "#,
         )
         .build();
 
@@ -1184,7 +1184,7 @@ fn fix_to_broken_code() {
         )
         .file(
             "foo/src/main.rs",
-            r##"
+            r#"
                 use std::env;
                 use std::fs;
                 use std::io::Write;
@@ -1211,7 +1211,7 @@ fn fix_to_broken_code() {
                         .expect("failed to run rustc");
                     process::exit(status.code().unwrap_or(2));
                 }
-            "##,
+            "#,
         )
         .file(
             "bar/Cargo.toml",

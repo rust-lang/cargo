@@ -121,13 +121,13 @@ fn set_cargo_config() {
         &config,
         format!(
             r#"
-[source.crates-io]
-registry = 'https://wut'
-replace-with = 'dummy-registry'
+            [source.crates-io]
+            registry = 'https://wut'
+            replace-with = 'dummy-registry'
 
-[source.dummy-registry]
-registry = '{reg}'
-"#,
+            [source.dummy-registry]
+            registry = '{reg}'
+            "#,
             reg = registry_url(),
         ),
     )

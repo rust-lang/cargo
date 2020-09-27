@@ -109,15 +109,15 @@ fn build_dep_info_lib() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [[example]]
-            name = "ex"
-            crate-type = ["lib"]
-        "#,
+                [[example]]
+                name = "ex"
+                crate-type = ["lib"]
+            "#,
         )
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
@@ -134,15 +134,15 @@ fn build_dep_info_rlib() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [[example]]
-            name = "ex"
-            crate-type = ["rlib"]
-        "#,
+                [[example]]
+                name = "ex"
+                crate-type = ["rlib"]
+            "#,
         )
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
@@ -158,15 +158,15 @@ fn build_dep_info_dylib() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [[example]]
-            name = "ex"
-            crate-type = ["dylib"]
-        "#,
+                [[example]]
+                name = "ex"
+                crate-type = ["dylib"]
+            "#,
         )
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")

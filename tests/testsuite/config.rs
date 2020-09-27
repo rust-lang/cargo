@@ -110,22 +110,22 @@ fn read_env_vars_for_config() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.0"
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
-            use std::env;
-            fn main() {
-                assert_eq!(env::var("NUM_JOBS").unwrap(), "100");
-            }
-        "#,
+                use std::env;
+                fn main() {
+                    assert_eq!(env::var("NUM_JOBS").unwrap(), "100");
+                }
+            "#,
         )
         .build();
 

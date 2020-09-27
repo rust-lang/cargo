@@ -14,15 +14,15 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { version = "0.1.0" }
-            baz = { version = "0.2.0", package = "bar" }
-        "#,
+                [dependencies]
+                bar = { version = "0.1.0" }
+                baz = { version = "0.2.0", package = "bar" }
+            "#,
         )
         .file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
@@ -36,27 +36,27 @@ fn rename_with_different_names() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            baz = { path = "bar", package = "bar" }
-        "#,
+                [dependencies]
+                baz = { path = "bar", package = "bar" }
+            "#,
         )
         .file("src/lib.rs", "extern crate baz;")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [lib]
-            name = "random_name"
-        "#,
+                [lib]
+                name = "random_name"
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
@@ -87,18 +87,18 @@ fn lots_of_names() {
             "Cargo.toml",
             &format!(
                 r#"
-                [package]
-                name = "test"
-                version = "0.1.0"
-                authors = []
+                    [package]
+                    name = "test"
+                    version = "0.1.0"
+                    authors = []
 
-                [dependencies]
-                foo = "0.2"
-                foo1 = {{ version = "0.1", package = "foo" }}
-                foo2 = {{ version = "0.1", registry = "alternative", package = "foo" }}
-                foo3 = {{ git = '{}', package = "foo" }}
-                foo4 = {{ path = "foo", package = "foo" }}
-            "#,
+                    [dependencies]
+                    foo = "0.2"
+                    foo1 = {{ version = "0.1", package = "foo" }}
+                    foo2 = {{ version = "0.1", registry = "alternative", package = "foo" }}
+                    foo3 = {{ git = '{}', package = "foo" }}
+                    foo4 = {{ path = "foo", package = "foo" }}
+                "#,
                 g.url()
             ),
         )
@@ -243,14 +243,14 @@ fn can_run_doc_tests() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
+                [project]
+                name = "foo"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { version = "0.1.0" }
-            baz = { version = "0.2.0", package = "bar" }
-        "#,
+                [dependencies]
+                bar = { version = "0.1.0" }
+                baz = { version = "0.2.0", package = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",

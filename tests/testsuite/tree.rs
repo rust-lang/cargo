@@ -230,15 +230,15 @@ fn source_kinds() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            regdep = "1.0"
-            pathdep = {{ path = "pathdep" }}
-            gitdep = {{ git = "{}" }}
-            "#,
+                [dependencies]
+                regdep = "1.0"
+                pathdep = {{ path = "pathdep" }}
+                gitdep = {{ git = "{}" }}
+                "#,
                 git_project.url()
             ),
         )
@@ -345,27 +345,27 @@ fn filters_target() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [target.'{alt}'.dependencies]
-            targetdep = "1.0"
-            pm_target = "1.0"
+                [target.'{alt}'.dependencies]
+                targetdep = "1.0"
+                pm_target = "1.0"
 
-            [target.'{host}'.dependencies]
-            hostdep = "1.0"
-            pm_host = "1.0"
+                [target.'{host}'.dependencies]
+                hostdep = "1.0"
+                pm_host = "1.0"
 
-            [target.'{alt}'.dev-dependencies]
-            devdep = "1.0"
+                [target.'{alt}'.dev-dependencies]
+                devdep = "1.0"
 
-            [target.'{alt}'.build-dependencies]
-            build_target_dep = "1.0"
+                [target.'{alt}'.build-dependencies]
+                build_target_dep = "1.0"
 
-            [target.'{host}'.build-dependencies]
-            build_host_dep = "1.0"
-            "#,
+                [target.'{host}'.build-dependencies]
+                build_host_dep = "1.0"
+                "#,
                 alt = alternate(),
                 host = rustc_host()
             ),

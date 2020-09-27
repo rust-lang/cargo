@@ -10,9 +10,9 @@ fn bad1() {
         .file(
             ".cargo/config",
             r#"
-              [target]
-              nonexistent-target = "foo"
-        "#,
+                  [target]
+                  nonexistent-target = "foo"
+            "#,
         )
         .build();
     p.cargo("build -v --target=nonexistent-target")
@@ -33,9 +33,9 @@ fn bad2() {
         .file(
             ".cargo/config",
             r#"
-              [http]
-                proxy = 3.0
-        "#,
+                  [http]
+                    proxy = 3.0
+            "#,
         )
         .build();
     p.cargo("publish -v")
@@ -67,9 +67,9 @@ fn bad3() {
         .file(
             ".cargo/config",
             r#"
-            [http]
-              proxy = true
-        "#,
+                [http]
+                  proxy = true
+            "#,
         )
         .build();
     Package::new("foo", "1.0.0").publish();
@@ -93,9 +93,9 @@ fn bad4() {
         .file(
             ".cargo/config",
             r#"
-            [cargo-new]
-              name = false
-        "#,
+                [cargo-new]
+                  name = false
+            "#,
         )
         .build();
     p.cargo("new -v foo")
@@ -118,9 +118,9 @@ fn bad6() {
         .file(
             ".cargo/config",
             r#"
-            [http]
-              user-agent = true
-        "#,
+                [http]
+                  user-agent = true
+            "#,
         )
         .build();
     Package::new("foo", "1.0.0").publish();
@@ -145,9 +145,9 @@ fn bad_cargo_config_jobs() {
         .file(
             ".cargo/config",
             r#"
-            [build]
-            jobs = -1
-        "#,
+                [build]
+                jobs = -1
+            "#,
         )
         .build();
     p.cargo("build -v")
@@ -170,14 +170,14 @@ fn invalid_global_config() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            foo = "0.1.0"
-        "#,
+                [dependencies]
+                foo = "0.1.0"
+            "#,
         )
         .file(".cargo/config", "4")
         .file("src/lib.rs", "")
@@ -230,36 +230,36 @@ fn duplicate_packages_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
-            [[package]]
-            name = "foo"
-            version = "0.0.1"
-            dependencies = [
-             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-            ]
+                [[package]]
+                name = "foo"
+                version = "0.0.1"
+                dependencies = [
+                 "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+                ]
 
-            [[package]]
-            name = "bar"
-            version = "0.1.0"
-            source = "registry+https://github.com/rust-lang/crates.io-index"
+                [[package]]
+                name = "bar"
+                version = "0.1.0"
+                source = "registry+https://github.com/rust-lang/crates.io-index"
 
-            [[package]]
-            name = "bar"
-            version = "0.1.0"
-            source = "registry+https://github.com/rust-lang/crates.io-index"
-        "#,
+                [[package]]
+                name = "bar"
+                version = "0.1.0"
+                source = "registry+https://github.com/rust-lang/crates.io-index"
+            "#,
         )
         .build();
 
@@ -284,31 +284,31 @@ fn bad_source_in_cargo_lock() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
-            [[package]]
-            name = "foo"
-            version = "0.0.1"
-            dependencies = [
-             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-            ]
+                [[package]]
+                name = "foo"
+                version = "0.0.1"
+                dependencies = [
+                 "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+                ]
 
-            [[package]]
-            name = "bar"
-            version = "0.1.0"
-            source = "You shall not parse"
-        "#,
+                [[package]]
+                name = "bar"
+                version = "0.1.0"
+                source = "You shall not parse"
+            "#,
         )
         .build();
 
@@ -332,13 +332,13 @@ fn bad_dependency_in_lockfile() {
         .file(
             "Cargo.lock",
             r#"
-            [[package]]
-            name = "foo"
-            version = "0.0.1"
-            dependencies = [
-             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-            ]
-        "#,
+                [[package]]
+                name = "foo"
+                version = "0.0.1"
+                dependencies = [
+                 "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+                ]
+            "#,
         )
         .build();
 
@@ -351,14 +351,14 @@ fn bad_git_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            foo = { git = "file:.." }
-        "#,
+                [dependencies]
+                foo = { git = "file:.." }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -392,14 +392,14 @@ fn bad_crate_type() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [lib]
-            crate-type = ["bad_type", "rlib"]
-        "#,
+                [lib]
+                crate-type = ["bad_type", "rlib"]
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -418,16 +418,16 @@ fn malformed_override() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [target.x86_64-apple-darwin.freetype]
-            native = {
-              foo: "bar"
-            }
-        "#,
+                [target.x86_64-apple-darwin.freetype]
+                native = {
+                  foo: "bar"
+                }
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -442,7 +442,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected a table key, found a newline at line 8 column 23
+  expected a table key, found a newline at line 8 column 27
 ",
         )
         .run();
@@ -454,19 +454,19 @@ fn duplicate_binary_names() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "qqq"
-           version = "0.1.0"
-           authors = ["A <a@a.a>"]
+               [package]
+               name = "qqq"
+               version = "0.1.0"
+               authors = ["A <a@a.a>"]
 
-           [[bin]]
-           name = "e"
-           path = "a.rs"
+               [[bin]]
+               name = "e"
+               path = "a.rs"
 
-           [[bin]]
-           name = "e"
-           path = "b.rs"
-        "#,
+               [[bin]]
+               name = "e"
+               path = "b.rs"
+            "#,
         )
         .file("a.rs", r#"fn main() -> () {}"#)
         .file("b.rs", r#"fn main() -> () {}"#)
@@ -491,19 +491,19 @@ fn duplicate_example_names() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "qqq"
-           version = "0.1.0"
-           authors = ["A <a@a.a>"]
+               [package]
+               name = "qqq"
+               version = "0.1.0"
+               authors = ["A <a@a.a>"]
 
-           [[example]]
-           name = "ex"
-           path = "examples/ex.rs"
+               [[example]]
+               name = "ex"
+               path = "examples/ex.rs"
 
-           [[example]]
-           name = "ex"
-           path = "examples/ex2.rs"
-        "#,
+               [[example]]
+               name = "ex"
+               path = "examples/ex2.rs"
+            "#,
         )
         .file("examples/ex.rs", r#"fn main () -> () {}"#)
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
@@ -528,19 +528,19 @@ fn duplicate_bench_names() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "qqq"
-           version = "0.1.0"
-           authors = ["A <a@a.a>"]
+               [package]
+               name = "qqq"
+               version = "0.1.0"
+               authors = ["A <a@a.a>"]
 
-           [[bench]]
-           name = "ex"
-           path = "benches/ex.rs"
+               [[bench]]
+               name = "ex"
+               path = "benches/ex.rs"
 
-           [[bench]]
-           name = "ex"
-           path = "benches/ex2.rs"
-        "#,
+               [[bench]]
+               name = "ex"
+               path = "benches/ex2.rs"
+            "#,
         )
         .file("benches/ex.rs", r#"fn main () {}"#)
         .file("benches/ex2.rs", r#"fn main () {}"#)
@@ -569,17 +569,17 @@ fn duplicate_deps() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "qqq"
-           version = "0.0.1"
-           authors = []
+               [package]
+               name = "qqq"
+               version = "0.0.1"
+               authors = []
 
-           [dependencies]
-           bar = { path = "shim-bar" }
+               [dependencies]
+               bar = { path = "shim-bar" }
 
-           [target.x86_64-unknown-linux-gnu.dependencies]
-           bar = { path = "linux-bar" }
-        "#,
+               [target.x86_64-unknown-linux-gnu.dependencies]
+               bar = { path = "linux-bar" }
+            "#,
         )
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
@@ -608,17 +608,17 @@ fn duplicate_deps_diff_sources() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "qqq"
-           version = "0.0.1"
-           authors = []
+               [package]
+               name = "qqq"
+               version = "0.0.1"
+               authors = []
 
-           [target.i686-unknown-linux-gnu.dependencies]
-           bar = { path = "shim-bar" }
+               [target.i686-unknown-linux-gnu.dependencies]
+               bar = { path = "shim-bar" }
 
-           [target.x86_64-unknown-linux-gnu.dependencies]
-           bar = { path = "linux-bar" }
-        "#,
+               [target.x86_64-unknown-linux-gnu.dependencies]
+               bar = { path = "linux-bar" }
+            "#,
         )
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
@@ -643,14 +643,14 @@ fn unused_keys() {
         .file(
             "Cargo.toml",
             r#"
-           [package]
-           name = "foo"
-           version = "0.1.0"
-           authors = []
+               [package]
+               name = "foo"
+               version = "0.1.0"
+               authors = []
 
-           [target.foo]
-           bar = "3"
-        "#,
+               [target.foo]
+               bar = "3"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -669,17 +669,17 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
-           cargo-features = ["named-profiles"]
+               cargo-features = ["named-profiles"]
 
-           [package]
-           name = "foo"
-           version = "0.1.0"
-           authors = []
+               [package]
+               name = "foo"
+               version = "0.1.0"
+               authors = []
 
-           [profile.debug]
-           debug = 1
-           inherits = "dev"
-        "#,
+               [profile.debug]
+               debug = 1
+               inherits = "dev"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -702,13 +702,13 @@ warning: use `[profile.dev]` to configure debug builds
         .file(
             "Cargo.toml",
             r#"
-            [project]
+                [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            bulid = "foo"
-        "#,
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                bulid = "foo"
+            "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
@@ -727,15 +727,15 @@ warning: unused manifest key: project.bulid
         .file(
             "Cargo.toml",
             r#"
-            [project]
+                [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
 
-            [lib]
-            build = "foo"
-        "#,
+                [lib]
+                build = "foo"
+            "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
@@ -756,13 +756,13 @@ fn unused_keys_in_virtual_manifest() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar"]
-            bulid = "foo"
-        "#,
+                [workspace]
+                members = ["bar"]
+                bulid = "foo"
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file("bar/src/lib.rs", r"")
+        .file("bar/src/lib.rs", "")
         .build();
     p.cargo("build --workspace")
         .with_stderr(
@@ -781,14 +781,14 @@ fn empty_dependencies() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = {}
-        "#,
+                [dependencies]
+                bar = {}
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -835,16 +835,16 @@ fn ambiguous_git_reference() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies.bar]
-            git = "http://127.0.0.1"
-            branch = "master"
-            tag = "some-tag"
-        "#,
+                [dependencies.bar]
+                git = "http://127.0.0.1"
+                branch = "master"
+                tag = "some-tag"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -867,14 +867,14 @@ fn fragment_in_git_url() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies.bar]
-            git = "http://127.0.0.1#foo"
-        "#,
+                [dependencies.bar]
+                git = "http://127.0.0.1#foo"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -910,23 +910,23 @@ fn bad_source_config2() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            registry = 'http://example.com'
-            replace-with = 'bar'
-        "#,
+                [source.crates-io]
+                registry = 'http://example.com'
+                replace-with = 'bar'
+            "#,
         )
         .build();
 
@@ -956,23 +956,23 @@ fn bad_source_config3() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            registry = 'https://example.com'
-            replace-with = 'crates-io'
-        "#,
+                [source.crates-io]
+                registry = 'https://example.com'
+                replace-with = 'crates-io'
+            "#,
         )
         .build();
 
@@ -1001,26 +1001,26 @@ fn bad_source_config4() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            replace-with = 'bar'
+                [source.crates-io]
+                replace-with = 'bar'
 
-            [source.bar]
-            registry = 'https://example.com'
-            replace-with = 'crates-io'
-        "#,
+                [source.bar]
+                registry = 'https://example.com'
+                replace-with = 'crates-io'
+            "#,
         )
         .build();
 
@@ -1050,26 +1050,26 @@ fn bad_source_config5() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            registry = 'https://example.com'
-            replace-with = 'bar'
+                [source.crates-io]
+                registry = 'https://example.com'
+                replace-with = 'bar'
 
-            [source.bar]
-            registry = 'not a url'
-        "#,
+                [source.bar]
+                registry = 'not a url'
+            "#,
         )
         .build();
 
@@ -1092,15 +1092,15 @@ fn both_git_and_path_specified() {
         .file(
             "Cargo.toml",
             r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-        [dependencies.bar]
-        git = "http://127.0.0.1"
-        path = "bar"
-    "#,
+                [dependencies.bar]
+                git = "http://127.0.0.1"
+                path = "bar"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1123,23 +1123,23 @@ fn bad_source_config6() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            registry = 'https://example.com'
-            replace-with = ['not', 'a', 'string']
-        "#,
+                [source.crates-io]
+                registry = 'https://example.com'
+                replace-with = ['not', 'a', 'string']
+            "#,
         )
         .build();
 
@@ -1162,15 +1162,15 @@ fn ignored_git_revision() {
         .file(
             "Cargo.toml",
             r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-        [dependencies.bar]
-        path = "bar"
-        branch = "spam"
-    "#,
+                [dependencies.bar]
+                path = "bar"
+                branch = "spam"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1190,23 +1190,23 @@ fn bad_source_config7() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.foo]
-            registry = 'https://example.com'
-            local-registry = 'file:///another/file'
-        "#,
+                [source.foo]
+                registry = 'https://example.com'
+                local-registry = 'file:///another/file'
+            "#,
         )
         .build();
 
@@ -1224,22 +1224,22 @@ fn bad_source_config8() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.foo]
-            branch = "somebranch"
-        "#,
+                [source.foo]
+                branch = "somebranch"
+            "#,
         )
         .build();
 
@@ -1258,14 +1258,14 @@ fn bad_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [dependencies]
-            bar = 3
-        "#,
+                [dependencies]
+                bar = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1289,14 +1289,14 @@ fn bad_debuginfo() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
 
-            [profile.dev]
-            debug = 'a'
-        "#,
+                [profile.dev]
+                debug = 'a'
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -1320,12 +1320,12 @@ fn bad_opt_level() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-            build = 3
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                build = 3
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

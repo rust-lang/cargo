@@ -10,14 +10,14 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2018"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
