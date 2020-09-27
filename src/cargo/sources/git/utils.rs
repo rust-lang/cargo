@@ -953,7 +953,8 @@ pub fn fetch(
             };
             debug!("fetch failed: {}", err);
 
-            if !repo_reinitialized && err.class() == git2::ErrorClass::Reference {
+            if !repo_reinitialized && matches!(err.class(), ErrorClass::Reference | ErrorClass::Odb)
+            {
                 repo_reinitialized = true;
                 debug!(
                     "looks like this is a corrupt repository, reinitializing \
