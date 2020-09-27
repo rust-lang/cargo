@@ -215,7 +215,7 @@ offline.</p>
 <dd class="option-desc">If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
-See the <a href="https://github.com/rust-lang/rustup/">rustup documentation</a>
+See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
 for more information about how toolchain overrides work.</dd>
 
 
@@ -252,7 +252,7 @@ environment variable.
 
 `$CARGO_HOME/bin/`\
 &nbsp;&nbsp;&nbsp;&nbsp;Binaries installed by [cargo-install(1)](cargo-install.md) will be located here. If using
-rustup, executables distributed with Rust are also located here.
+[rustup], executables distributed with Rust are also located here.
 
 `$CARGO_HOME/config.toml`\
 &nbsp;&nbsp;&nbsp;&nbsp;The global configuration file. See [the reference](../reference/config.html)
@@ -275,6 +275,8 @@ downloaded dependencies.
 
 Please note that the internal structure of the `$CARGO_HOME` directory is not
 stable yet and may be subject to change.
+
+[rustup]: https://rust-lang.github.io/rustup/
 
 ## EXAMPLES
 

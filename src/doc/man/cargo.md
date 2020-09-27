@@ -174,7 +174,7 @@ environment variable.
 
 `$CARGO_HOME/bin/`\
 &nbsp;&nbsp;&nbsp;&nbsp;Binaries installed by {{man "cargo-install" 1}} will be located here. If using
-rustup, executables distributed with Rust are also located here.
+[rustup], executables distributed with Rust are also located here.
 
 `$CARGO_HOME/config.toml`\
 &nbsp;&nbsp;&nbsp;&nbsp;The global configuration file. See [the reference](../reference/config.html)
@@ -197,6 +197,8 @@ downloaded dependencies.
 
 Please note that the internal structure of the `$CARGO_HOME` directory is not
 stable yet and may be subject to change.
+
+[rustup]: https://rust-lang.github.io/rustup/
 
 ## EXAMPLES
 

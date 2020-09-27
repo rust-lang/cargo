@@ -24,7 +24,7 @@ The Cargo home consists of following components:
 ## Directories:
 
 * `bin`
-The bin directory contains executables of crates that were installed via [`cargo install`] or [`rustup`](https://github.com/rust-lang/rustup.rs).
+The bin directory contains executables of crates that were installed via [`cargo install`] or [`rustup`](https://rust-lang.github.io/rustup/).
 To be able to make these binaries accessible, add the path of the directory to your `$PATH` environment variable.
 
  *  `git`

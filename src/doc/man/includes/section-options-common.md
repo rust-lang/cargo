@@ -6,7 +6,7 @@
 If Cargo has been installed with rustup, and the first argument to `cargo`
 begins with `+`, it will be interpreted as a rustup toolchain name (such
 as `+stable` or `+nightly`).
-See the [rustup documentation](https://github.com/rust-lang/rustup/)
+See the [rustup documentation](https://rust-lang.github.io/rustup/overrides.html)
 for more information about how toolchain overrides work.
 {{/option}}
 
