@@ -1,0 +1,33 @@
+name: Contrib Deploy
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install mdbook
+      run: |
+        mkdir mdbook
+        curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.3/mdbook-v0.4.3-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
+        echo ::add-path::`pwd`/mdbook
+    - name: Deploy docs
+      run: |
+        cd src/doc/contrib
+        mdbook build
+        git worktree add gh-pages gh-pages
+        git config user.name "Deploy from CI"
+        git config user.email ""
+        cd gh-pages
+        # Delete the ref to avoid keeping history.
+        git update-ref -d refs/heads/gh-pages
+        rm -rf contrib
+        mv ../book contrib
+        git add contrib
+        git commit -m "Deploy $GITHUB_SHA to gh-pages"
+        git push --force
