@@ -13,38 +13,38 @@ fn custom_target_minimal() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(no_core)]
-            #![feature(lang_items)]
-            #![no_core]
+                #![feature(no_core)]
+                #![feature(lang_items)]
+                #![no_core]
 
-            pub fn foo() -> u32 {
-                42
-            }
+                pub fn foo() -> u32 {
+                    42
+                }
 
-            #[lang = "sized"]
-            pub trait Sized {
-                // Empty.
-            }
-            #[lang = "copy"]
-            pub trait Copy {
-                // Empty.
-            }
-        "#,
+                #[lang = "sized"]
+                pub trait Sized {
+                    // Empty.
+                }
+                #[lang = "copy"]
+                pub trait Copy {
+                    // Empty.
+                }
+            "#,
         )
         .file(
             "custom-target.json",
             r#"
-            {
-                "llvm-target": "x86_64-unknown-none-gnu",
-                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-                "arch": "x86_64",
-                "target-endian": "little",
-                "target-pointer-width": "64",
-                "target-c-int-width": "32",
-                "os": "none",
-                "linker-flavor": "ld.lld"
-            }
-        "#,
+                {
+                    "llvm-target": "x86_64-unknown-none-gnu",
+                    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                    "arch": "x86_64",
+                    "target-endian": "little",
+                    "target-pointer-width": "64",
+                    "target-c-int-width": "32",
+                    "os": "none",
+                    "linker-flavor": "ld.lld"
+                }
+            "#,
         )
         .build();
 
@@ -69,70 +69,70 @@ fn custom_target_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
+                [package]
 
-            name = "foo"
-            version = "0.0.1"
-            authors = ["author@example.com"]
+                name = "foo"
+                version = "0.0.1"
+                authors = ["author@example.com"]
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            #![feature(no_core)]
-            #![feature(lang_items)]
-            #![feature(optin_builtin_traits)]
-            #![no_core]
+                #![feature(no_core)]
+                #![feature(lang_items)]
+                #![feature(optin_builtin_traits)]
+                #![no_core]
 
-            extern crate bar;
+                extern crate bar;
 
-            pub fn foo() -> u32 {
-                bar::bar()
-            }
+                pub fn foo() -> u32 {
+                    bar::bar()
+                }
 
-            #[lang = "freeze"]
-            unsafe auto trait Freeze {}
-        "#,
+                #[lang = "freeze"]
+                unsafe auto trait Freeze {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
-            #![feature(no_core)]
-            #![feature(lang_items)]
-            #![no_core]
+                #![feature(no_core)]
+                #![feature(lang_items)]
+                #![no_core]
 
-            pub fn bar() -> u32 {
-                42
-            }
+                pub fn bar() -> u32 {
+                    42
+                }
 
-            #[lang = "sized"]
-            pub trait Sized {
-                // Empty.
-            }
-            #[lang = "copy"]
-            pub trait Copy {
-                // Empty.
-            }
-        "#,
+                #[lang = "sized"]
+                pub trait Sized {
+                    // Empty.
+                }
+                #[lang = "copy"]
+                pub trait Copy {
+                    // Empty.
+                }
+            "#,
         )
         .file(
             "custom-target.json",
             r#"
-            {
-                "llvm-target": "x86_64-unknown-none-gnu",
-                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-                "arch": "x86_64",
-                "target-endian": "little",
-                "target-pointer-width": "64",
-                "target-c-int-width": "32",
-                "os": "none",
-                "linker-flavor": "ld.lld"
-            }
-        "#,
+                {
+                    "llvm-target": "x86_64-unknown-none-gnu",
+                    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                    "arch": "x86_64",
+                    "target-endian": "little",
+                    "target-pointer-width": "64",
+                    "target-c-int-width": "32",
+                    "os": "none",
+                    "linker-flavor": "ld.lld"
+                }
+            "#,
         )
         .build();
 
@@ -149,37 +149,37 @@ fn custom_bin_target() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(no_core)]
-            #![feature(lang_items)]
-            #![no_core]
-            #![no_main]
+                #![feature(no_core)]
+                #![feature(lang_items)]
+                #![no_core]
+                #![no_main]
 
-            #[lang = "sized"]
-            pub trait Sized {
-                // Empty.
-            }
-            #[lang = "copy"]
-            pub trait Copy {
-                // Empty.
-            }
-        "#,
+                #[lang = "sized"]
+                pub trait Sized {
+                    // Empty.
+                }
+                #[lang = "copy"]
+                pub trait Copy {
+                    // Empty.
+                }
+            "#,
         )
         .file(
             "custom-bin-target.json",
             r#"
-            {
-                "llvm-target": "x86_64-unknown-none-gnu",
-                "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-                "arch": "x86_64",
-                "target-endian": "little",
-                "target-pointer-width": "64",
-                "target-c-int-width": "32",
-                "os": "none",
-                "linker-flavor": "ld.lld",
-                "linker": "rust-lld",
-                "executables": true
-            }
-        "#,
+                {
+                    "llvm-target": "x86_64-unknown-none-gnu",
+                    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+                    "arch": "x86_64",
+                    "target-endian": "little",
+                    "target-pointer-width": "64",
+                    "target-c-int-width": "32",
+                    "os": "none",
+                    "linker-flavor": "ld.lld",
+                    "linker": "rust-lld",
+                    "executables": true
+                }
+            "#,
         )
         .build();
 

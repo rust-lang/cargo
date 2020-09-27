@@ -21,14 +21,14 @@ fn deleting_database_files() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
 
-            [dependencies]
-            bar = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
                 git_project.url()
             ),
         )
@@ -79,14 +79,14 @@ fn deleting_checkout_files() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
 
-            [dependencies]
-            bar = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
                 git_project.url()
             ),
         )

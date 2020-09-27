@@ -12,33 +12,33 @@ fn all_target_project() -> Project {
             "Cargo.toml",
             &format!(
                 r#"
-            cargo-features = [{named_profiles}]
+                    cargo-features = [{named_profiles}]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
 
-            [dependencies]
-            bar = {{ path = "bar" }}
+                    [dependencies]
+                    bar = {{ path = "bar" }}
 
-            [build-dependencies]
-            bdep = {{ path = "bdep" }}
+                    [build-dependencies]
+                    bdep = {{ path = "bdep" }}
 
-            [profile.dev]
-            codegen-units = 1
-            panic = "abort"
-            [profile.release]
-            codegen-units = 2
-            panic = "abort"
-            [profile.test]
-            codegen-units = 3
-            [profile.bench]
-            codegen-units = 4
-            [profile.dev.build-override]
-            codegen-units = 5
-            [profile.release.build-override]
-            codegen-units = 6
-        "#,
+                    [profile.dev]
+                    codegen-units = 1
+                    panic = "abort"
+                    [profile.release]
+                    codegen-units = 2
+                    panic = "abort"
+                    [profile.test]
+                    codegen-units = 3
+                    [profile.bench]
+                    codegen-units = 4
+                    [profile.dev.build-override]
+                    codegen-units = 5
+                    [profile.release.build-override]
+                    codegen-units = 6
+                "#,
                 named_profiles = if is_nightly() {
                     "\"named-profiles\", "
                 } else {
@@ -54,15 +54,15 @@ fn all_target_project() -> Project {
         .file(
             "build.rs",
             r#"
-            extern crate bdep;
-            fn main() {
-                eprintln!("foo custom build PROFILE={} DEBUG={} OPT_LEVEL={}",
-                    std::env::var("PROFILE").unwrap(),
-                    std::env::var("DEBUG").unwrap(),
-                    std::env::var("OPT_LEVEL").unwrap(),
-                );
-            }
-        "#,
+                extern crate bdep;
+                fn main() {
+                    eprintln!("foo custom build PROFILE={} DEBUG={} OPT_LEVEL={}",
+                        std::env::var("PROFILE").unwrap(),
+                        std::env::var("DEBUG").unwrap(),
+                        std::env::var("OPT_LEVEL").unwrap(),
+                    );
+                }
+            "#,
         )
         // `bar` package.
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -71,13 +71,13 @@ fn all_target_project() -> Project {
         .file(
             "bdep/Cargo.toml",
             r#"
-            [package]
-            name = "bdep"
-            version = "0.0.1"
+                [package]
+                name = "bdep"
+                version = "0.0.1"
 
-            [dependencies]
-            bar = { path = "../bar" }
-        "#,
+                [dependencies]
+                bar = { path = "../bar" }
+            "#,
         )
         .file("bdep/src/lib.rs", "extern crate bar;")
         .build()

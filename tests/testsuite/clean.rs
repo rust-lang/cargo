@@ -41,19 +41,19 @@ fn clean_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.d1]
-                path = "d1"
-            [dependencies.d2]
-                path = "d2"
-
-            [[bin]]
+                [package]
                 name = "foo"
-        "#,
+                version = "0.0.1"
+                authors = []
+
+                [dependencies.d1]
+                    path = "d1"
+                [dependencies.d2]
+                    path = "d2"
+
+                [[bin]]
+                    name = "foo"
+            "#,
         )
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .file("d1/Cargo.toml", &basic_bin_manifest("d1"))
@@ -92,14 +92,14 @@ fn clean_release() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
@@ -135,14 +135,14 @@ fn clean_doc() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
@@ -167,29 +167,29 @@ fn build_script() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
-            use std::path::PathBuf;
-            use std::env;
+                use std::path::PathBuf;
+                use std::env;
 
-            fn main() {
-                let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-                if env::var("FIRST").is_ok() {
-                    std::fs::File::create(out.join("out")).unwrap();
-                } else {
-                    assert!(!out.join("out").exists());
+                fn main() {
+                    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+                    if env::var("FIRST").is_ok() {
+                        std::fs::File::create(out.join("out")).unwrap();
+                    } else {
+                        assert!(!out.join("out").exists());
+                    }
                 }
-            }
-        "#,
+            "#,
         )
         .file("a/src/lib.rs", "")
         .build();
@@ -222,14 +222,14 @@ fn clean_git() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            dep = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    dep = {{ git = '{}' }}
+                "#,
                 git.url()
             ),
         )
@@ -247,14 +247,14 @@ fn registry() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1"
-        "#,
+                [dependencies]
+                bar = "0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -272,13 +272,13 @@ fn clean_verbose() {
         .file(
             "Cargo.toml",
             r#"
-        [package]
-        name = "foo"
-        version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-        [dependencies]
-        bar = "0.1"
-    "#,
+                [dependencies]
+                bar = "0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();

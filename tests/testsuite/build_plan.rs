@@ -14,28 +14,28 @@ fn cargo_build_plan_simple() {
         .masquerade_as_nightly_cargo()
         .with_json(
             r#"
-    {
-        "inputs": [
-            "[..]/foo/Cargo.toml"
-        ],
-        "invocations": [
             {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": "{...}",
-                "package_name": "foo",
-                "package_version": "0.5.0",
-                "program": "rustc",
-                "target_kind": ["bin"],
-                "compile_mode": "build"
+                "inputs": [
+                    "[..]/foo/Cargo.toml"
+                ],
+                "invocations": [
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": "{...}",
+                        "package_name": "foo",
+                        "package_version": "0.5.0",
+                        "program": "rustc",
+                        "target_kind": ["bin"],
+                        "compile_mode": "build"
+                    }
+                ]
             }
-        ]
-    }
-    "#,
+            "#,
         )
         .run();
     assert!(!p.bin("foo").is_file());
@@ -47,24 +47,24 @@ fn cargo_build_plan_single_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.5.0"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.5.0"
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate bar;
-            pub fn foo() { bar::bar(); }
+                extern crate bar;
+                pub fn foo() { bar::bar(); }
 
-            #[test]
-            fn test() { foo(); }
-        "#,
+                #[test]
+                fn test() { foo(); }
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -73,49 +73,49 @@ fn cargo_build_plan_single_dep() {
         .masquerade_as_nightly_cargo()
         .with_json(
             r#"
-    {
-        "inputs": [
-            "[..]/foo/Cargo.toml",
-            "[..]/foo/bar/Cargo.toml"
-        ],
-        "invocations": [
             {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": [
-                    "[..]/foo/target/debug/deps/libbar-[..].rlib",
-                    "[..]/foo/target/debug/deps/libbar-[..].rmeta"
+                "inputs": [
+                    "[..]/foo/Cargo.toml",
+                    "[..]/foo/bar/Cargo.toml"
                 ],
-                "package_name": "bar",
-                "package_version": "0.0.1",
-                "program": "rustc",
-                "target_kind": ["lib"],
-                "compile_mode": "build"
-            },
-            {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [0],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": [
-                    "[..]/foo/target/debug/deps/libfoo-[..].rlib",
-                    "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
-                ],
-                "package_name": "foo",
-                "package_version": "0.5.0",
-                "program": "rustc",
-                "target_kind": ["lib"],
-                "compile_mode": "build"
+                "invocations": [
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": [
+                            "[..]/foo/target/debug/deps/libbar-[..].rlib",
+                            "[..]/foo/target/debug/deps/libbar-[..].rmeta"
+                        ],
+                        "package_name": "bar",
+                        "package_version": "0.0.1",
+                        "program": "rustc",
+                        "target_kind": ["lib"],
+                        "compile_mode": "build"
+                    },
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [0],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": [
+                            "[..]/foo/target/debug/deps/libfoo-[..].rlib",
+                            "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
+                        ],
+                        "package_name": "foo",
+                        "package_version": "0.5.0",
+                        "program": "rustc",
+                        "target_kind": ["lib"],
+                        "compile_mode": "build"
+                    }
+                ]
             }
-        ]
-    }
-    "#,
+            "#,
         )
         .run();
 }
@@ -126,13 +126,13 @@ fn cargo_build_plan_build_script() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
+                [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            build = "build.rs"
-        "#,
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                build = "build.rs"
+            "#,
         )
         .file("src/main.rs", r#"fn main() {}"#)
         .file("build.rs", r#"fn main() {}"#)
@@ -142,56 +142,56 @@ fn cargo_build_plan_build_script() {
         .masquerade_as_nightly_cargo()
         .with_json(
             r#"
-    {
-        "inputs": [
-            "[..]/foo/Cargo.toml"
-        ],
-        "invocations": [
             {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": "{...}",
-                "package_name": "foo",
-                "package_version": "0.5.0",
-                "program": "rustc",
-                "target_kind": ["custom-build"],
-                "compile_mode": "build"
-            },
-            {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [0],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": [],
-                "package_name": "foo",
-                "package_version": "0.5.0",
-                "program": "[..]/build-script-build",
-                "target_kind": ["custom-build"],
-                "compile_mode": "run-custom-build"
-            },
-            {
-                "args": "{...}",
-                "cwd": "[..]/cit/[..]/foo",
-                "deps": [1],
-                "env": "{...}",
-                "kind": null,
-                "links": "{...}",
-                "outputs": "{...}",
-                "package_name": "foo",
-                "package_version": "0.5.0",
-                "program": "rustc",
-                "target_kind": ["bin"],
-                "compile_mode": "build"
+                "inputs": [
+                    "[..]/foo/Cargo.toml"
+                ],
+                "invocations": [
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": "{...}",
+                        "package_name": "foo",
+                        "package_version": "0.5.0",
+                        "program": "rustc",
+                        "target_kind": ["custom-build"],
+                        "compile_mode": "build"
+                    },
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [0],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": [],
+                        "package_name": "foo",
+                        "package_version": "0.5.0",
+                        "program": "[..]/build-script-build",
+                        "target_kind": ["custom-build"],
+                        "compile_mode": "run-custom-build"
+                    },
+                    {
+                        "args": "{...}",
+                        "cwd": "[..]/cit/[..]/foo",
+                        "deps": [1],
+                        "env": "{...}",
+                        "kind": null,
+                        "links": "{...}",
+                        "outputs": "{...}",
+                        "package_name": "foo",
+                        "package_version": "0.5.0",
+                        "program": "rustc",
+                        "target_kind": ["bin"],
+                        "compile_mode": "build"
+                    }
+                ]
             }
-        ]
-    }
-    "#,
+            "#,
         )
         .run();
 }

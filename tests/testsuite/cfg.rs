@@ -10,16 +10,16 @@ fn cfg_easy() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [target.'cfg(unix)'.dependencies]
-            b = { path = 'b' }
-            [target."cfg(windows)".dependencies]
-            b = { path = 'b' }
-        "#,
+                [target.'cfg(unix)'.dependencies]
+                b = { path = 'b' }
+                [target."cfg(windows)".dependencies]
+                b = { path = 'b' }
+            "#,
         )
         .file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
@@ -36,14 +36,14 @@ fn dont_include() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "a"
+                    version = "0.0.1"
+                    authors = []
 
-            [target.'cfg({})'.dependencies]
-            b = {{ path = 'b' }}
-        "#,
+                    [target.'cfg({})'.dependencies]
+                    b = {{ path = 'b' }}
+                "#,
                 other_family
             ),
         )
@@ -73,14 +73,14 @@ fn works_through_the_registry() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -116,17 +116,17 @@ fn ignore_version_from_other_platform() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [target.'cfg({})'.dependencies]
-            bar = "0.1.0"
+                    [target.'cfg({})'.dependencies]
+                    bar = "0.1.0"
 
-            [target.'cfg({})'.dependencies]
-            bar = "0.2.0"
-        "#,
+                    [target.'cfg({})'.dependencies]
+                    bar = "0.2.0"
+                "#,
                 this_family, other_family
             ),
         )
@@ -156,14 +156,14 @@ fn bad_target_spec() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [target.'cfg(4)'.dependencies]
-            bar = "0.1.0"
-        "#,
+                [target.'cfg(4)'.dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -187,14 +187,14 @@ fn bad_target_spec2() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [target.'cfg(bar =)'.dependencies]
-            baz = "0.1.0"
-        "#,
+                [target.'cfg(bar =)'.dependencies]
+                baz = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -219,25 +219,25 @@ fn multiple_match_ok() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                    [package]
+                    name = "a"
+                    version = "0.0.1"
+                    authors = []
 
-            [target.'cfg(unix)'.dependencies]
-            b = {{ path = 'b' }}
-            [target.'cfg(target_family = "unix")'.dependencies]
-            b = {{ path = 'b' }}
-            [target."cfg(windows)".dependencies]
-            b = {{ path = 'b' }}
-            [target.'cfg(target_family = "windows")'.dependencies]
-            b = {{ path = 'b' }}
-            [target."cfg(any(windows, unix))".dependencies]
-            b = {{ path = 'b' }}
+                    [target.'cfg(unix)'.dependencies]
+                    b = {{ path = 'b' }}
+                    [target.'cfg(target_family = "unix")'.dependencies]
+                    b = {{ path = 'b' }}
+                    [target."cfg(windows)".dependencies]
+                    b = {{ path = 'b' }}
+                    [target.'cfg(target_family = "windows")'.dependencies]
+                    b = {{ path = 'b' }}
+                    [target."cfg(any(windows, unix))".dependencies]
+                    b = {{ path = 'b' }}
 
-            [target.{}.dependencies]
-            b = {{ path = 'b' }}
-        "#,
+                    [target.{}.dependencies]
+                    b = {{ path = 'b' }}
+                "#,
                 rustc_host()
             ),
         )
@@ -254,14 +254,14 @@ fn any_ok() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [target."cfg(any(windows, unix))".dependencies]
-            b = { path = 'b' }
-        "#,
+                [target."cfg(any(windows, unix))".dependencies]
+                b = { path = 'b' }
+            "#,
         )
         .file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
@@ -278,23 +278,23 @@ fn cfg_looks_at_rustflags_for_target() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [target.'cfg(with_b)'.dependencies]
-            b = { path = 'b' }
-        "#,
+                [target.'cfg(with_b)'.dependencies]
+                b = { path = 'b' }
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[cfg(with_b)]
-            extern crate b;
+                #[cfg(with_b)]
+                extern crate b;
 
-            fn main() { b::foo(); }
-        "#,
+                fn main() { b::foo(); }
+            "#,
         )
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "pub fn foo() {}")
@@ -317,51 +317,51 @@ fn bad_cfg_discovery() {
         .file(
             "src/main.rs",
             r#"
-fn run_rustc() -> String {
-    let mut cmd = std::process::Command::new("rustc");
-    for arg in std::env::args_os().skip(1) {
-        cmd.arg(arg);
-    }
-    String::from_utf8(cmd.output().unwrap().stdout).unwrap()
-}
+            fn run_rustc() -> String {
+                let mut cmd = std::process::Command::new("rustc");
+                for arg in std::env::args_os().skip(1) {
+                    cmd.arg(arg);
+                }
+                String::from_utf8(cmd.output().unwrap().stdout).unwrap()
+            }
 
-fn main() {
-    let mode = std::env::var("FUNKY_MODE").unwrap();
-    if mode == "bad-version" {
-        println!("foo");
-        return;
-    }
-    if std::env::args_os().any(|a| a == "-vV") {
-        print!("{}", run_rustc());
-        return;
-    }
-    if mode == "no-crate-types" {
-        return;
-    }
-    if mode == "bad-crate-type" {
-        println!("foo");
-        return;
-    }
-    let output = run_rustc();
-    let mut lines = output.lines();
-    let sysroot = loop {
-        let line = lines.next().unwrap();
-        if line.contains("___") {
-            println!("{}", line);
-        } else {
-            break line;
-        }
-    };
-    if mode == "no-sysroot" {
-        return;
-    }
-    println!("{}", sysroot);
-    if mode != "bad-cfg" {
-        panic!("unexpected");
-    }
-    println!("123");
-}
-"#,
+            fn main() {
+                let mode = std::env::var("FUNKY_MODE").unwrap();
+                if mode == "bad-version" {
+                    println!("foo");
+                    return;
+                }
+                if std::env::args_os().any(|a| a == "-vV") {
+                    print!("{}", run_rustc());
+                    return;
+                }
+                if mode == "no-crate-types" {
+                    return;
+                }
+                if mode == "bad-crate-type" {
+                    println!("foo");
+                    return;
+                }
+                let output = run_rustc();
+                let mut lines = output.lines();
+                let sysroot = loop {
+                    let line = lines.next().unwrap();
+                    if line.contains("___") {
+                        println!("{}", line);
+                    } else {
+                        break line;
+                    }
+                };
+                if mode == "no-sysroot" {
+                    return;
+                }
+                println!("{}", sysroot);
+                if mode != "bad-cfg" {
+                    panic!("unexpected");
+                }
+                println!("123");
+            }
+            "#,
         )
         .build();
     p.cargo("build").run();

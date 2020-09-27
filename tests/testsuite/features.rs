@@ -10,14 +10,14 @@ fn invalid1() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            bar = ["baz"]
-        "#,
+                [features]
+                bar = ["baz"]
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -41,17 +41,17 @@ fn invalid2() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            bar = ["baz"]
+                [features]
+                bar = ["baz"]
 
-            [dependencies.bar]
-            path = "foo"
-        "#,
+                [dependencies.bar]
+                path = "foo"
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -75,17 +75,17 @@ fn invalid3() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            bar = ["baz"]
+                [features]
+                bar = ["baz"]
 
-            [dependencies.baz]
-            path = "foo"
-        "#,
+                [dependencies.baz]
+                path = "foo"
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -110,15 +110,15 @@ fn invalid4() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            features = ["bar"]
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                features = ["bar"]
+            "#,
         )
         .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -154,15 +154,15 @@ fn invalid5() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dev-dependencies.bar]
-            path = "bar"
-            optional = true
-        "#,
+                [dev-dependencies.bar]
+                path = "bar"
+                optional = true
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -186,14 +186,14 @@ fn invalid6() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            foo = ["bar/baz"]
-        "#,
+                [features]
+                foo = ["bar/baz"]
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -217,15 +217,15 @@ fn invalid7() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            foo = ["bar/baz"]
-            bar = []
-        "#,
+                [features]
+                foo = ["bar/baz"]
+                bar = []
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -249,15 +249,15 @@ fn invalid8() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            features = ["foo/bar"]
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                features = ["foo/bar"]
+            "#,
         )
         .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -276,14 +276,14 @@ fn invalid9() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -304,28 +304,28 @@ fn invalid10() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            features = ["baz"]
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                features = ["baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.baz]
-            path = "baz"
-        "#,
+                [dependencies.baz]
+                path = "baz"
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
@@ -352,56 +352,56 @@ fn no_transitive_dep_feature_requirement() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.derived]
-            path = "derived"
+                [dependencies.derived]
+                path = "derived"
 
-            [features]
-            default = ["derived/bar/qux"]
-        "#,
+                [features]
+                default = ["derived/bar/qux"]
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            extern crate derived;
-            fn main() { derived::test(); }
-        "#,
+                extern crate derived;
+                fn main() { derived::test(); }
+            "#,
         )
         .file(
             "derived/Cargo.toml",
             r#"
-            [package]
-            name = "derived"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "derived"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            qux = []
-        "#,
+                [features]
+                qux = []
+            "#,
         )
         .file(
             "bar/src/lib.rs",
             r#"
-            #[cfg(feature = "qux")]
-            pub fn test() { print!("test"); }
-        "#,
+                #[cfg(feature = "qux")]
+                pub fn test() { print!("test"); }
+            "#,
         )
         .build();
     p.cargo("build")
@@ -416,26 +416,26 @@ fn no_feature_doesnt_build() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[cfg(feature = "bar")]
-            extern crate bar;
-            #[cfg(feature = "bar")]
-            fn main() { bar::bar(); println!("bar") }
-            #[cfg(not(feature = "bar"))]
-            fn main() {}
-        "#,
+                #[cfg(feature = "bar")]
+                extern crate bar;
+                #[cfg(feature = "bar")]
+                fn main() { bar::bar(); println!("bar") }
+                #[cfg(not(feature = "bar"))]
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -469,29 +469,29 @@ fn default_feature_pulled_in() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["bar"]
+                [features]
+                default = ["bar"]
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
-        "#,
+                [dependencies.bar]
+                path = "bar"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[cfg(feature = "bar")]
-            extern crate bar;
-            #[cfg(feature = "bar")]
-            fn main() { bar::bar(); println!("bar") }
-            #[cfg(not(feature = "bar"))]
-            fn main() {}
-        "#,
+                #[cfg(feature = "bar")]
+                extern crate bar;
+                #[cfg(feature = "bar")]
+                fn main() { bar::bar(); println!("bar") }
+                #[cfg(not(feature = "bar"))]
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -525,14 +525,14 @@ fn cyclic_feature() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["default"]
-        "#,
+                [features]
+                default = ["default"]
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -549,15 +549,15 @@ fn cyclic_feature2() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            foo = ["bar"]
-            bar = ["foo"]
-        "#,
+                [features]
+                foo = ["bar"]
+                bar = ["foo"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -571,39 +571,39 @@ fn groups_on_groups_on_groups() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            default = ["f1"]
-            f1 = ["f2", "bar"]
-            f2 = ["f3", "f4"]
-            f3 = ["f5", "f6", "baz"]
-            f4 = ["f5", "f7"]
-            f5 = ["f6"]
-            f6 = ["f7"]
-            f7 = ["bar"]
+                [features]
+                default = ["f1"]
+                f1 = ["f2", "bar"]
+                f2 = ["f3", "f4"]
+                f3 = ["f5", "f6", "baz"]
+                f4 = ["f5", "f7"]
+                f5 = ["f6"]
+                f6 = ["f7"]
+                f7 = ["bar"]
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
+                [dependencies.bar]
+                path = "bar"
+                optional = true
 
-            [dependencies.baz]
-            path = "baz"
-            optional = true
-        "#,
+                [dependencies.baz]
+                path = "baz"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate bar;
-            #[allow(unused_extern_crates)]
-            extern crate baz;
-            fn main() {}
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate bar;
+                #[allow(unused_extern_crates)]
+                extern crate baz;
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -629,29 +629,29 @@ fn many_cli_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
+                [dependencies.bar]
+                path = "bar"
+                optional = true
 
-            [dependencies.baz]
-            path = "baz"
-            optional = true
-        "#,
+                [dependencies.baz]
+                path = "baz"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate bar;
-            #[allow(unused_extern_crates)]
-            extern crate baz;
-            fn main() {}
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate bar;
+                #[allow(unused_extern_crates)]
+                extern crate baz;
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -678,68 +678,68 @@ fn union_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.d1]
-            path = "d1"
-            features = ["f1"]
-            [dependencies.d2]
-            path = "d2"
-            features = ["f2"]
-        "#,
+                [dependencies.d1]
+                path = "d1"
+                features = ["f1"]
+                [dependencies.d2]
+                path = "d2"
+                features = ["f2"]
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate d1;
-            extern crate d2;
-            fn main() {
-                d2::f1();
-                d2::f2();
-            }
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate d1;
+                extern crate d2;
+                fn main() {
+                    d2::f1();
+                    d2::f2();
+                }
+            "#,
         )
         .file(
             "d1/Cargo.toml",
             r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            f1 = ["d2"]
+                [features]
+                f1 = ["d2"]
 
-            [dependencies.d2]
-            path = "../d2"
-            features = ["f1"]
-            optional = true
-        "#,
+                [dependencies.d2]
+                path = "../d2"
+                features = ["f1"]
+                optional = true
+            "#,
         )
         .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
             r#"
-            [package]
-            name = "d2"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "d2"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            f1 = []
-            f2 = []
-        "#,
+                [features]
+                f1 = []
+                f2 = []
+            "#,
         )
         .file(
             "d2/src/lib.rs",
             r#"
-            #[cfg(feature = "f1")] pub fn f1() {}
-            #[cfg(feature = "f2")] pub fn f2() {}
-        "#,
+                #[cfg(feature = "f1")] pub fn f1() {}
+                #[cfg(feature = "f2")] pub fn f2() {}
+            "#,
         )
         .build();
 
@@ -761,30 +761,30 @@ fn many_features_no_rebuilds() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name    = "b"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name    = "b"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies.a]
-            path = "a"
-            features = ["fall"]
-        "#,
+                [dependencies.a]
+                path = "a"
+                features = ["fall"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name    = "a"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name    = "a"
+                version = "0.1.0"
+                authors = []
 
-            [features]
-            ftest  = []
-            ftest2 = []
-            fall   = ["ftest", "ftest2"]
-        "#,
+                [features]
+                ftest  = []
+                ftest2 = []
+                fall   = ["ftest", "ftest2"]
+            "#,
         )
         .file("a/src/lib.rs", "")
         .build();
@@ -826,30 +826,30 @@ fn transitive_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            foo = ["bar/baz"]
+                [features]
+                foo = ["bar/baz"]
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
+                [dependencies.bar]
+                path = "bar"
+            "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() { bar::baz(); }")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            baz = []
-        "#,
+                [features]
+                baz = []
+            "#,
         )
         .file(
             "bar/src/lib.rs",
@@ -866,37 +866,37 @@ fn everything_in_the_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            f1 = ["d1/f1"]
-            f2 = ["d2"]
+                [features]
+                f1 = ["d1/f1"]
+                f2 = ["d2"]
 
-            [dependencies.d1]
-            path = "d1"
-            [dependencies.d2]
-            path = "d2"
-            optional = true
-            [dependencies.d3]
-            path = "d3"
-            optional = true
-        "#,
+                [dependencies.d1]
+                path = "d1"
+                [dependencies.d2]
+                path = "d2"
+                optional = true
+                [dependencies.d3]
+                path = "d3"
+                optional = true
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "d1/Cargo.toml",
             r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "d1"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            f1 = []
-        "#,
+                [features]
+                f1 = []
+            "#,
         )
         .file("d1/src/lib.rs", "")
         .file("d2/Cargo.toml", &basic_manifest("d2", "0.0.2"))
@@ -904,14 +904,14 @@ fn everything_in_the_lockfile() {
         .file(
             "d3/Cargo.toml",
             r#"
-            [package]
-            name = "d3"
-            version = "0.0.3"
-            authors = []
+                [package]
+                name = "d3"
+                version = "0.0.3"
+                authors = []
 
-            [features]
-            f3 = []
-        "#,
+                [features]
+                f3 = []
+            "#,
         )
         .file("d3/src/lib.rs", "")
         .build();
@@ -941,42 +941,42 @@ fn no_rebuild_when_frobbing_default_feature() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-            b = { path = "b" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+                b = { path = "b" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "b"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            a = { path = "../a", features = ["f1"], default-features = false }
-        "#,
+                [dependencies]
+                a = { path = "../a", features = ["f1"], default-features = false }
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.1.0"
+                authors = []
 
-            [features]
-            default = ["f1"]
-            f1 = []
-        "#,
+                [features]
+                default = ["f1"]
+                f1 = []
+            "#,
         )
         .file("a/src/lib.rs", "")
         .build();
@@ -992,42 +992,42 @@ fn unions_work_with_no_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-            b = { path = "b" }
-        "#,
+                [dependencies]
+                a = { path = "a" }
+                b = { path = "b" }
+            "#,
         )
         .file("src/lib.rs", "extern crate a; pub fn foo() { a::a(); }")
         .file(
             "b/Cargo.toml",
             r#"
-            [package]
-            name = "b"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "b"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            a = { path = "../a", features = [], default-features = false }
-        "#,
+                [dependencies]
+                a = { path = "../a", features = [], default-features = false }
+            "#,
         )
         .file("b/src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.1.0"
+                authors = []
 
-            [features]
-            default = ["f1"]
-            f1 = []
-        "#,
+                [features]
+                default = ["f1"]
+                f1 = []
+            "#,
         )
         .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
         .build();
@@ -1043,16 +1043,16 @@ fn optional_and_dev_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name    = "test"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name    = "test"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = { path = "foo", optional = true }
-            [dev-dependencies]
-            foo = { path = "foo" }
-        "#,
+                [dependencies]
+                foo = { path = "foo", optional = true }
+                [dev-dependencies]
+                foo = { path = "foo" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
@@ -1075,17 +1075,17 @@ fn activating_feature_activates_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name    = "test"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name    = "test"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = { path = "foo", optional = true }
+                [dependencies]
+                foo = { path = "foo", optional = true }
 
-            [features]
-            a = ["foo/a"]
-        "#,
+                [features]
+                a = ["foo/a"]
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -1094,14 +1094,14 @@ fn activating_feature_activates_dep() {
         .file(
             "foo/Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [features]
-            a = []
-        "#,
+                [features]
+                a = []
+            "#,
         )
         .file("foo/src/lib.rs", r#"#[cfg(feature = "a")] pub fn bar() {}"#)
         .build();
@@ -1115,57 +1115,57 @@ fn dep_feature_in_cmd_line() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.derived]
-            path = "derived"
-        "#,
+                [dependencies.derived]
+                path = "derived"
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            extern crate derived;
-            fn main() { derived::test(); }
-        "#,
+                extern crate derived;
+                fn main() { derived::test(); }
+            "#,
         )
         .file(
             "derived/Cargo.toml",
             r#"
-            [package]
-            name = "derived"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "derived"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "../bar"
+                [dependencies.bar]
+                path = "../bar"
 
-            [features]
-            default = []
-            derived-feat = ["bar/some-feat"]
-        "#,
+                [features]
+                default = []
+                derived-feat = ["bar/some-feat"]
+            "#,
         )
         .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            some-feat = []
-        "#,
+                [features]
+                some-feat = []
+            "#,
         )
         .file(
             "bar/src/lib.rs",
             r#"
-            #[cfg(feature = "some-feat")]
-            pub fn test() { print!("test"); }
-        "#,
+                #[cfg(feature = "some-feat")]
+                pub fn test() { print!("test"); }
+            "#,
         )
         .build();
 
@@ -1199,37 +1199,37 @@ fn all_features_flag_enables_all_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [features]
-            foo = []
-            bar = []
+                [features]
+                foo = []
+                bar = []
 
-            [dependencies.baz]
-            path = "baz"
-            optional = true
-        "#,
+                [dependencies.baz]
+                path = "baz"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[cfg(feature = "foo")]
-            pub fn foo() {}
+                #[cfg(feature = "foo")]
+                pub fn foo() {}
 
-            #[cfg(feature = "bar")]
-            pub fn bar() {
-                extern crate baz;
-                baz::baz();
-            }
+                #[cfg(feature = "bar")]
+                pub fn bar() {
+                    extern crate baz;
+                    baz::baz();
+                }
 
-            fn main() {
-                foo();
-                bar();
-            }
-        "#,
+                fn main() {
+                    foo();
+                    bar();
+                }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -1244,29 +1244,29 @@ fn many_cli_features_comma_delimited() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
+                [dependencies.bar]
+                path = "bar"
+                optional = true
 
-            [dependencies.baz]
-            path = "baz"
-            optional = true
-        "#,
+                [dependencies.baz]
+                path = "baz"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate bar;
-            #[allow(unused_extern_crates)]
-            extern crate baz;
-            fn main() {}
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate bar;
+                #[allow(unused_extern_crates)]
+                extern crate baz;
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -1292,41 +1292,41 @@ fn many_cli_features_comma_and_space_delimited() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
+                [dependencies.bar]
+                path = "bar"
+                optional = true
 
-            [dependencies.baz]
-            path = "baz"
-            optional = true
+                [dependencies.baz]
+                path = "baz"
+                optional = true
 
-            [dependencies.bam]
-            path = "bam"
-            optional = true
+                [dependencies.bam]
+                path = "bam"
+                optional = true
 
-            [dependencies.bap]
-            path = "bap"
-            optional = true
-        "#,
+                [dependencies.bap]
+                path = "bap"
+                optional = true
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[allow(unused_extern_crates)]
-            extern crate bar;
-            #[allow(unused_extern_crates)]
-            extern crate baz;
-            #[allow(unused_extern_crates)]
-            extern crate bam;
-            #[allow(unused_extern_crates)]
-            extern crate bap;
-            fn main() {}
-        "#,
+                #[allow(unused_extern_crates)]
+                extern crate bar;
+                #[allow(unused_extern_crates)]
+                extern crate baz;
+                #[allow(unused_extern_crates)]
+                extern crate bam;
+                #[allow(unused_extern_crates)]
+                extern crate bap;
+                fn main() {}
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
@@ -1359,17 +1359,17 @@ fn namespaced_invalid_feature() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            bar = ["baz"]
-        "#,
+                [features]
+                bar = ["baz"]
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -1394,17 +1394,17 @@ fn namespaced_invalid_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            bar = ["crate:baz"]
-        "#,
+                [features]
+                bar = ["crate:baz"]
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -1429,20 +1429,20 @@ fn namespaced_non_optional_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            bar = ["crate:baz"]
+                [features]
+                bar = ["crate:baz"]
 
-            [dependencies]
-            baz = "0.1"
-        "#,
+                [dependencies]
+                baz = "0.1"
+            "#,
         )
         .file("src/main.rs", "")
         .build();
@@ -1468,20 +1468,20 @@ fn namespaced_implicit_feature() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            bar = ["baz"]
+                [features]
+                bar = ["baz"]
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1495,20 +1495,20 @@ fn namespaced_shadowed_dep() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            baz = []
+                [features]
+                baz = []
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1531,20 +1531,20 @@ fn namespaced_shadowed_non_optional() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            baz = []
+                [features]
+                baz = []
 
-            [dependencies]
-            baz = "0.1"
-        "#,
+                [dependencies]
+                baz = "0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1568,20 +1568,20 @@ fn namespaced_implicit_non_optional() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            bar = ["baz"]
+                [features]
+                bar = ["baz"]
 
-            [dependencies]
-            baz = "0.1"
-        "#,
+                [dependencies]
+                baz = "0.1"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1603,20 +1603,20 @@ fn namespaced_same_name() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["namespaced-features"]
+                cargo-features = ["namespaced-features"]
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            namespaced-features = true
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                namespaced-features = true
 
-            [features]
-            baz = ["crate:baz"]
+                [features]
+                baz = ["crate:baz"]
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1695,52 +1695,52 @@ fn feature_off_dylib() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar"]
+                [workspace]
+                members = ["bar"]
 
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            crate-type = ["dylib"]
+                [lib]
+                crate-type = ["dylib"]
 
-            [features]
-            f1 = []
-        "#,
+                [features]
+                f1 = []
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            pub fn hello() -> &'static str {
-                if cfg!(feature = "f1") {
-                    "f1"
-                } else {
-                    "no f1"
+                pub fn hello() -> &'static str {
+                    if cfg!(feature = "f1") {
+                        "f1"
+                    } else {
+                        "no f1"
+                    }
                 }
-            }
-        "#,
+            "#,
         )
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
+                [package]
+                name = "bar"
+                version = "0.0.1"
 
-            [dependencies]
-            foo = { path = ".." }
-        "#,
+                [dependencies]
+                foo = { path = ".." }
+            "#,
         )
         .file(
             "bar/src/main.rs",
             r#"
-            extern crate foo;
+                extern crate foo;
 
-            fn main() {
-                assert_eq!(foo::hello(), "no f1");
-            }
-        "#,
+                fn main() {
+                    assert_eq!(foo::hello(), "no f1");
+                }
+            "#,
         )
         .build();
 
@@ -1756,18 +1756,18 @@ fn warn_if_default_features() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+               [project]
+               name = "foo"
+               version = "0.0.1"
+               authors = []
 
-            [dependencies.bar]
-            path = "bar"
-            optional = true
+               [dependencies.bar]
+               path = "bar"
+               optional = true
 
-            [features]
-            default-features = ["bar"]
-         "#,
+               [features]
+               default-features = ["bar"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1797,7 +1797,7 @@ fn no_feature_for_non_optional_dep() {
 
                 [dependencies]
                 bar = { path = "bar" }
-             "#,
+            "#,
         )
         .file(
             "src/main.rs",
@@ -1817,7 +1817,7 @@ fn no_feature_for_non_optional_dep() {
 
                 [features]
                 a = []
-             "#,
+            "#,
         )
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
@@ -1839,7 +1839,7 @@ fn features_option_given_twice() {
                 [features]
                 a = []
                 b = []
-             "#,
+            "#,
         )
         .file(
             "src/main.rs",
@@ -2219,7 +2219,8 @@ fn nonexistent_required_features() {
                                  "required_dependency/not_existing",
                                  "required_dependency/simple",
                                  "optional_dependency/optional",
-                                 "not_specified_dependency/some_feature"]"#,
+                                 "not_specified_dependency/some_feature"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("examples/ololo.rs", "fn main() {}")
@@ -2227,9 +2228,10 @@ fn nonexistent_required_features() {
 
     p.cargo("build --examples")
         .with_stderr_contains(
-            r#"warning: feature `not_present` is not present in [features] section.
-warning: feature `not_existing` does not exist in package `required_dependency v0.1.0`.
-warning: dependency `not_specified_dependency` specified in required-features as `not_specified_dependency/some_feature` does not exist."#,
+"[WARNING] feature `not_present` is not present in [features] section.
+[WARNING] feature `not_existing` does not exist in package `required_dependency v0.1.0`.
+[WARNING] dependency `not_specified_dependency` specified in required-features as `not_specified_dependency/some_feature` does not exist.
+",
         )
         .run();
 }

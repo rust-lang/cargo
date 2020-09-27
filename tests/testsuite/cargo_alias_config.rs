@@ -10,9 +10,9 @@ fn alias_incorrect_config_type() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b-cargo-test = 5
-        "#,
+                [alias]
+                b-cargo-test = 5
+            "#,
         )
         .build();
 
@@ -34,9 +34,9 @@ fn alias_config() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b-cargo-test = "build"
-        "#,
+                [alias]
+                b-cargo-test = "build"
+            "#,
         )
         .build();
 
@@ -53,14 +53,14 @@ fn alias_config() {
 fn recursive_alias() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", r"fn main() {}")
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b-cargo-test = "build"
-            a-cargo-test = ["b-cargo-test", "-v"]
-        "#,
+                [alias]
+                b-cargo-test = "build"
+                a-cargo-test = ["b-cargo-test", "-v"]
+            "#,
         )
         .build();
 
@@ -81,9 +81,9 @@ fn alias_list_test() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b-cargo-test = ["build", "--release"]
-         "#,
+               [alias]
+               b-cargo-test = ["build", "--release"]
+            "#,
         )
         .build();
 
@@ -101,9 +101,9 @@ fn alias_with_flags_config() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b-cargo-test = "build --release"
-         "#,
+               [alias]
+               b-cargo-test = "build --release"
+            "#,
         )
         .build();
 
@@ -121,9 +121,9 @@ fn alias_cannot_shadow_builtin_command() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            build = "fetch"
-         "#,
+               [alias]
+               build = "fetch"
+            "#,
         )
         .build();
 
@@ -146,9 +146,9 @@ fn alias_override_builtin_alias() {
         .file(
             ".cargo/config",
             r#"
-            [alias]
-            b = "run"
-         "#,
+               [alias]
+               b = "run"
+            "#,
         )
         .build();
 

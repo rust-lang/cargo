@@ -97,13 +97,13 @@ fn always_shows_progress() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            {}
-            "#,
+                [dependencies]
+                {}
+                "#,
                 deps
             ),
         )
@@ -138,13 +138,13 @@ fn never_progress() {
             "Cargo.toml",
             &format!(
                 r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
+                [package]
+                name = "foo"
+                version = "0.1.0"
 
-            [dependencies]
-            {}
-            "#,
+                [dependencies]
+                {}
+                "#,
                 deps
             ),
         )

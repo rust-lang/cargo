@@ -17,27 +17,27 @@ fn ctrl_c_kills_everyone() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            build = "build.rs"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                build = "build.rs"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "build.rs",
             &format!(
                 r#"
-            use std::net::TcpStream;
-            use std::io::Read;
+                    use std::net::TcpStream;
+                    use std::io::Read;
 
-            fn main() {{
-                let mut socket = TcpStream::connect("{}").unwrap();
-                let _ = socket.read(&mut [0; 10]);
-                panic!("that read should never return");
-            }}
-        "#,
+                    fn main() {{
+                        let mut socket = TcpStream::connect("{}").unwrap();
+                        let _ = socket.read(&mut [0; 10]);
+                        panic!("that read should never return");
+                    }}
+                "#,
                 addr
             ),
         )

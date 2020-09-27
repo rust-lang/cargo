@@ -162,10 +162,10 @@ error: no such subcommand: `biuld`
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                println!("Similar, but not identical to, build");
-            }
-        "#,
+                fn main() {
+                    println!("Similar, but not identical to, build");
+                }
+            "#,
         )
         .publish();
 
@@ -314,11 +314,11 @@ fn cargo_subcommand_args() {
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                let args: Vec<_> = ::std::env::args().collect();
-                println!("{:?}", args);
-            }
-        "#,
+                fn main() {
+                    let args: Vec<_> = ::std::env::args().collect();
+                    println!("{:?}", args);
+                }
+            "#,
         )
         .build();
 

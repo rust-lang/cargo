@@ -519,7 +519,7 @@ fn offline_resolve_optional_fail() {
 
             [dependencies]
             dep = { version = "2.0", optional = true }
-            "#,
+        "#,
     );
 
     p.cargo("build --offline")

@@ -57,14 +57,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile)
@@ -103,14 +103,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", &old_lockfile)
@@ -194,14 +194,14 @@ fn wrong_checksum_is_an_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
@@ -257,14 +257,14 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
@@ -323,14 +323,14 @@ fn listed_checksum_bad_if_we_cannot_compute() {
             "Cargo.toml",
             &format!(
                 r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
 
-            [dependencies]
-            bar = {{ git = '{}' }}
-        "#,
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
                 git.url()
             ),
         )
@@ -389,14 +389,14 @@ fn current_lockfile_format() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "");
     let p = p.build();
@@ -447,14 +447,14 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
@@ -492,14 +492,14 @@ fn locked_correct_error() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "");
     let p = p.build();
@@ -543,14 +543,14 @@ dependencies = [
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file("Cargo.lock", &lockfile)

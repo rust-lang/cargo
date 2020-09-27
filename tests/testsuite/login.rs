@@ -152,9 +152,9 @@ fn registry_credentials() {
     t!(f.write_all(
         format!(
             r#"
-        [registries.alternative2]
-        index = '{}'
-    "#,
+                [registries.alternative2]
+                index = '{}'
+            "#,
             registry::generate_url("alternative2-registry")
         )
         .as_bytes(),

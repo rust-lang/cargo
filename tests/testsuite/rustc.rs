@@ -164,14 +164,14 @@ fn build_foo_with_bar_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
         .build();
@@ -200,14 +200,14 @@ fn build_only_bar_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-            path = "../bar"
-        "#,
+                [dependencies.bar]
+                path = "../bar"
+            "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
         .build();
@@ -273,17 +273,17 @@ fn fail_with_multiple_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies.bar]
-                path = "../bar"
+                [dependencies.bar]
+                    path = "../bar"
 
-            [dependencies.baz]
-                path = "../baz"
-        "#,
+                [dependencies.baz]
+                    path = "../baz"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -294,10 +294,10 @@ fn fail_with_multiple_packages() {
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                if cfg!(flag = "1") { println!("Yeah from bar!"); }
-            }
-        "#,
+                fn main() {
+                    if cfg!(flag = "1") { println!("Yeah from bar!"); }
+                }
+            "#,
         )
         .build();
 
@@ -307,10 +307,10 @@ fn fail_with_multiple_packages() {
         .file(
             "src/main.rs",
             r#"
-            fn main() {
-                if cfg!(flag = "1") { println!("Yeah from baz!"); }
-            }
-        "#,
+                fn main() {
+                    if cfg!(flag = "1") { println!("Yeah from baz!"); }
+                }
+            "#,
         )
         .build();
 
@@ -331,23 +331,23 @@ fn rustc_with_other_profile() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dev-dependencies]
-            a = { path = "a" }
-        "#,
+                [dev-dependencies]
+                a = { path = "a" }
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-            #[cfg(test)] extern crate a;
+                #[cfg(test)] extern crate a;
 
-            #[test]
-            fn foo() {}
-        "#,
+                #[test]
+                fn foo() {}
+            "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "")
@@ -411,16 +411,17 @@ fn rustc_test_with_implicit_bin() {
         .file(
             "src/main.rs",
             r#"
-            #[cfg(foo)]
-            fn f() { compile_fail!("Foo shouldn't be set."); }
-            fn main() {}
-        "#,
+                #[cfg(foo)]
+                fn f() { compile_fail!("Foo shouldn't be set."); }
+                fn main() {}
+            "#,
         )
         .file(
             "tests/test1.rs",
             r#"
-            #[cfg(not(foo))]
-            fn f() { compile_fail!("Foo should be set."); } "#,
+                #[cfg(not(foo))]
+                fn f() { compile_fail!("Foo should be set."); }
+            "#,
         )
         .build();
 

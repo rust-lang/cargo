@@ -13,9 +13,9 @@ fn pathless_tools() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{}]
-            linker = "nonexistent-linker"
-        "#,
+                    [target.{}]
+                    linker = "nonexistent-linker"
+                "#,
                 target
             ),
         )
@@ -50,9 +50,9 @@ fn absolute_tools() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{target}]
-            linker = "{linker}"
-        "#,
+                    [target.{target}]
+                    linker = "{linker}"
+                "#,
                 target = target,
                 linker = linker
             ),
@@ -91,9 +91,9 @@ fn relative_tools() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{target}]
-            linker = "{linker}"
-        "#,
+                    [target.{target}]
+                    linker = "{linker}"
+                "#,
                 target = target,
                 linker = linker
             ),
@@ -127,9 +127,9 @@ fn custom_runner() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.{}]
-            runner = "nonexistent-runner -r"
-        "#,
+                    [target.{}]
+                    runner = "nonexistent-runner -r"
+                "#,
                 target
             ),
         )
@@ -209,12 +209,12 @@ fn custom_runner_cfg_precedence() {
             ".cargo/config",
             &format!(
                 r#"
-            [target.'cfg(not(target_os = "none"))']
-            runner = "ignored-runner"
+                    [target.'cfg(not(target_os = "none"))']
+                    runner = "ignored-runner"
 
-            [target.{}]
-            runner = "nonexistent-runner -r"
-        "#,
+                    [target.{}]
+                    runner = "nonexistent-runner -r"
+                "#,
                 target
             ),
         )
@@ -297,9 +297,9 @@ fn custom_runner_env_overrides_config() {
             ".cargo/config.toml",
             &format!(
                 r#"
-        [target.{}]
-        runner = "should-not-run -r"
-    "#,
+                    [target.{}]
+                    runner = "should-not-run -r"
+                "#,
                 target
             ),
         )

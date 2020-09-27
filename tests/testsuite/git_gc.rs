@@ -24,14 +24,14 @@ fn run_test(path_env: Option<&OsStr>) {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();

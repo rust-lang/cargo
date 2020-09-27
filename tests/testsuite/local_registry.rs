@@ -33,14 +33,14 @@ fn simple() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.0.1"
-        "#,
+                [dependencies]
+                bar = "0.0.1"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -71,14 +71,14 @@ fn depend_on_yanked() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.0.1"
-        "#,
+                [dependencies]
+                bar = "0.0.1"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -114,14 +114,14 @@ fn multiple_versions() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file(
             "src/lib.rs",
@@ -166,26 +166,26 @@ fn multiple_names() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-            baz = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+                baz = "*"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate bar;
-            extern crate baz;
-            pub fn foo() {
-                bar::bar();
-                baz::baz();
-            }
-        "#,
+                extern crate bar;
+                extern crate baz;
+                pub fn foo() {
+                    bar::bar();
+                    baz::baz();
+                }
+            "#,
         )
         .build();
 
@@ -220,26 +220,26 @@ fn interdependent() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-            baz = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+                baz = "*"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate bar;
-            extern crate baz;
-            pub fn foo() {
-                bar::bar();
-                baz::baz();
-            }
-        "#,
+                extern crate bar;
+                extern crate baz;
+                pub fn foo() {
+                    bar::bar();
+                    baz::baz();
+                }
+            "#,
         )
         .build();
 
@@ -288,26 +288,26 @@ fn path_dep_rewritten() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-            baz = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+                baz = "*"
+            "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate bar;
-            extern crate baz;
-            pub fn foo() {
-                bar::bar();
-                baz::baz();
-            }
-        "#,
+                extern crate bar;
+                extern crate baz;
+                pub fn foo() {
+                    bar::bar();
+                    baz::baz();
+                }
+            "#,
         )
         .build();
 
@@ -332,26 +332,26 @@ fn invalid_dir_bad() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
-            [source.crates-io]
-            registry = 'https://wut'
-            replace-with = 'my-awesome-local-directory'
+                [source.crates-io]
+                registry = 'https://wut'
+                replace-with = 'my-awesome-local-directory'
 
-            [source.my-awesome-local-directory]
-            local-registry = '/path/to/nowhere'
-        "#,
+                [source.my-awesome-local-directory]
+                local-registry = '/path/to/nowhere'
+            "#,
         )
         .build();
 
@@ -391,14 +391,14 @@ fn different_directory_replacing_the_registry_is_bad() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "*"
-        "#,
+                [dependencies]
+                bar = "*"
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -460,14 +460,14 @@ fn crates_io_registry_url_is_optional() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.0.1"
-        "#,
+                [dependencies]
+                bar = "0.0.1"
+            "#,
         )
         .file(
             "src/lib.rs",

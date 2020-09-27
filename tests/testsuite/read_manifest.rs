@@ -48,17 +48,17 @@ fn manifest_output_no_readme() -> String {
 pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {
     format!(
         r#"
-        [package]
+            [package]
 
-        name = "{}"
-        version = "0.5.0"
-        authors = ["wycats@example.com"]
-        readme = {}
+            name = "{}"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            readme = {}
 
-        [[bin]]
+            [[bin]]
 
-        name = "{}"
-    "#,
+            name = "{}"
+        "#,
         name, readme_filename, name
     )
 }

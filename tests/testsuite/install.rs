@@ -413,14 +413,14 @@ fn multiple_crates_auto_binaries() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -437,14 +437,14 @@ fn multiple_crates_auto_examples() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "extern crate bar;")
         .file(
@@ -472,14 +472,14 @@ fn no_binaries_or_examples() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "a" }
-        "#,
+                [dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -834,12 +834,12 @@ fn installs_from_cwd_with_2018_warnings() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            edition = "2018"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                edition = "2018"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -953,14 +953,14 @@ fn git_with_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -968,15 +968,15 @@ fn git_with_lockfile() {
         .file(
             "Cargo.lock",
             r#"
-            [[package]]
-            name = "foo"
-            version = "0.1.0"
-            dependencies = [ "bar 0.1.0" ]
+                [[package]]
+                name = "foo"
+                version = "0.1.0"
+                dependencies = [ "bar 0.1.0" ]
 
-            [[package]]
-            name = "bar"
-            version = "0.1.0"
-        "#,
+                [[package]]
+                name = "bar"
+                version = "0.1.0"
+            "#,
         )
         .build();
 
@@ -1017,27 +1017,27 @@ fn use_path_workspace() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [workspace]
-            members = ["baz"]
-        "#,
+                [workspace]
+                members = ["baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            foo = "1"
-        "#,
+                [dependencies]
+                foo = "1"
+            "#,
         )
         .file("baz/src/lib.rs", "")
         .build();
@@ -1056,14 +1056,14 @@ fn dev_dependencies_no_check() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dev-dependencies]
-            baz = "1.0.0"
-        "#,
+                [dev-dependencies]
+                baz = "1.0.0"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -1082,14 +1082,14 @@ fn dev_dependencies_lock_file_untouched() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
 
-            [dev-dependencies]
-            bar = { path = "a" }
-        "#,
+                [dev-dependencies]
+                bar = { path = "a" }
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -1321,17 +1321,17 @@ fn lock_file_path_deps_ok() {
         .file(
             "Cargo.lock",
             r#"
-[[package]]
-name = "bar"
-version = "0.1.0"
+            [[package]]
+            name = "bar"
+            version = "0.1.0"
 
-[[package]]
-name = "foo"
-version = "0.1.0"
-dependencies = [
- "bar 0.1.0",
-]
-"#,
+            [[package]]
+            name = "foo"
+            version = "0.1.0"
+            dependencies = [
+             "bar 0.1.0",
+            ]
+            "#,
         )
         .publish();
 
@@ -1461,9 +1461,9 @@ fn install_global_cargo_config() {
 
     toml.push_str(
         r#"
-        [build]
-        target = 'nonexistent'
-    "#,
+            [build]
+            target = 'nonexistent'
+        "#,
     );
     fs::write(&config, toml).unwrap();
 
@@ -1597,30 +1597,30 @@ fn install_cargo_package_in_a_patched_workspace() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [workspace]
-            members = ["baz"]
-        "#,
+                [workspace]
+                members = ["baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            fizz = "1"
+                [dependencies]
+                fizz = "1"
 
-            [patch.crates-io]
-            fizz = { version = "=1.0.0" }
-        "#,
+                [patch.crates-io]
+                fizz = { version = "=1.0.0" }
+            "#,
         )
         .file("baz/src/lib.rs", "")
         .build();

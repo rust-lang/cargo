@@ -12,40 +12,40 @@ fn broken_path_override_warns() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a1" }
-        "#,
+                [dependencies]
+                a = { path = "a1" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "a1/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1"
-        "#,
+                [dependencies]
+                bar = "0.1"
+            "#,
         )
         .file("a1/src/lib.rs", "")
         .file(
             "a2/Cargo.toml",
             r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.2"
-        "#,
+                [dependencies]
+                bar = "0.2"
+            "#,
         )
         .file("a2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["a2"]"#)
@@ -90,27 +90,27 @@ fn override_to_path_dep() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = "0.1.0"
-        "#,
+                [dependencies]
+                bar = "0.1.0"
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            baz = { path = "baz" }
-        "#,
+                [dependencies]
+                baz = { path = "baz" }
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
@@ -129,40 +129,40 @@ fn paths_ok_with_optional() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .file(
             "bar2/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
@@ -187,14 +187,14 @@ fn paths_add_optional_bad() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            bar = { path = "bar" }
-        "#,
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -202,14 +202,14 @@ fn paths_add_optional_bad() {
         .file(
             "bar2/Cargo.toml",
             r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
 
-            [dependencies]
-            baz = { version = "0.1", optional = true }
-        "#,
+                [dependencies]
+                baz = { version = "0.1", optional = true }
+            "#,
         )
         .file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
