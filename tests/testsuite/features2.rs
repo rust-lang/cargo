@@ -1864,3 +1864,85 @@ warning: feat: enabled
         )
         .run();
 }
+
+#[cargo_test]
+fn test_proc_macro() {
+    // Running `cargo test` on a proc-macro, with a shared dependency that has
+    // different features.
+    //
+    // There was a bug where `shared` was built twice (once with feature "B"
+    // and once without), and both copies linked into the unit test. This
+    // would cause a type failure when used in an intermediate dependency
+    // (the-macro-support).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "runtime"
+                version = "0.1.0"
+                [dependencies]
+                the-macro = { path = "the-macro", features = ['a'] }
+                [build-dependencies]
+                shared = { path = "shared", features = ['b'] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "the-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "the-macro"
+                version = "0.1.0"
+                [lib]
+                proc-macro = true
+                test = false
+                [dependencies]
+                the-macro-support = { path = "../the-macro-support" }
+                shared = { path = "../shared" }
+                [dev-dependencies]
+                runtime = { path = ".." }
+                [features]
+                a = []
+            "#,
+        )
+        .file(
+            "the-macro/src/lib.rs",
+            "
+                fn _test() {
+                    the_macro_support::foo(shared::Foo);
+                }
+            ",
+        )
+        .file(
+            "the-macro-support/Cargo.toml",
+            r#"
+                [package]
+                name = "the-macro-support"
+                version = "0.1.0"
+                [dependencies]
+                shared = { path = "../shared" }
+            "#,
+        )
+        .file(
+            "the-macro-support/src/lib.rs",
+            "
+                pub fn foo(_: shared::Foo) {}
+            ",
+        )
+        .file(
+            "shared/Cargo.toml",
+            r#"
+                [package]
+                name = "shared"
+                version = "0.1.0"
+                [features]
+                b = []
+            "#,
+        )
+        .file("shared/src/lib.rs", "pub struct Foo;")
+        .build();
+    p.cargo("test -Zfeatures=all --manifest-path the-macro/Cargo.toml")
+        .masquerade_as_nightly_cargo()
+        .run();
+}

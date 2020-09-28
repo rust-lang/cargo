@@ -967,6 +967,16 @@ impl UnitFor {
         }
     }
 
+    /// This is a special case for unit tests of a proc-macro.
+    ///
+    /// Proc-macro unit tests are forced to be run on the host.
+    pub fn new_host_test(config: &Config) -> UnitFor {
+        let mut unit_for = UnitFor::new_test(config);
+        unit_for.host = true;
+        unit_for.host_features = true;
+        unit_for
+    }
+
     /// Returns a new copy based on `for_host` setting.
     ///
     /// When `for_host` is true, this clears `panic_abort_ok` in a sticky
