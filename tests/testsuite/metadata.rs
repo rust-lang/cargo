@@ -1179,6 +1179,8 @@ fn package_metadata() {
                 keywords = ["database"]
                 readme = "README.md"
                 repository = "https://github.com/rust-lang/cargo"
+                homepage = "https://rust-lang.org"
+                documentation = "https://doc.rust-lang.org/stable/std/"
 
                 [package.metadata.bar]
                 baz = "quux"
@@ -1199,8 +1201,8 @@ fn package_metadata() {
                 "name": "foo",
                 "readme": "README.md",
                 "repository": "https://github.com/rust-lang/cargo",
-                "homepage": null,
-                "documentation": null,
+                "homepage": "https://rust-lang.org",
+                "documentation": "https://doc.rust-lang.org/stable/std/",
                 "version": "0.1.0",
                 "id": "foo[..]",
                 "keywords": ["database"],
