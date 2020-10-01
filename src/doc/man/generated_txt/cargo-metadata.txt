@@ -177,6 +177,10 @@ OUTPUT FORMAT
                        "readme": "README.md",
                        /* The repository value from the manifest or null if not specified. */
                        "repository": "https://github.com/rust-lang/cargo",
+                       /* The homepage value from the manifest or null if not specified. */
+                       "homepage": "https://rust-lang.org",
+                       /* The documentation value from the manifest or null if not specified. */
+                       "documentation": "https://doc.rust-lang.org/stable/std",
                        /* The default edition of the package.
                           Note that individual targets may have different editions.
                        */
