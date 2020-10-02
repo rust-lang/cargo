@@ -1642,9 +1642,23 @@ impl DetailedTomlDependency {
             }
         }
 
+        // Ignore paths that don't exist so as to fallback onto some other
+        // source in that circumstance. This allows specifying dependencies
+        // from crates.io or git as well as a local path for development and
+        // having everything just work.
+        let path = if let Some(path) = &self.path {
+            if Path::new(&path).join("Cargo.toml").exists() {
+                self.path.as_ref()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let new_source_id = match (
             self.git.as_ref(),
-            self.path.as_ref(),
+            path,
             self.registry.as_ref(),
             self.registry_index.as_ref(),
         ) {
