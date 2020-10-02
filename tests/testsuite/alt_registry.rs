@@ -359,6 +359,8 @@ fn publish_with_registry_dependency() {
             "readme": null,
             "readme_file": null,
             "repository": null,
+            "homepage": null,
+            "documentation": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -459,6 +461,8 @@ fn publish_to_alt_registry() {
             "readme": null,
             "readme_file": null,
             "repository": null,
+            "homepage": null,
+            "documentation": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -522,6 +526,8 @@ fn publish_with_crates_io_dep() {
             "readme": null,
             "readme_file": null,
             "repository": null,
+            "homepage": null,
+            "documentation": null,
             "vers": "0.0.1"
         }"#,
         "foo-0.0.1.crate",
@@ -814,6 +820,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     }
@@ -868,6 +876,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     },
@@ -890,6 +900,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     },
@@ -912,6 +924,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     },
@@ -959,6 +973,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     },
@@ -994,6 +1010,8 @@ fn alt_reg_metadata() {
                         "keywords": [],
                         "readme": null,
                         "repository": null,
+                        "homepage": null,
+                        "documentation": null,
                         "edition": "2015",
                         "links": null
                     }
@@ -1087,6 +1105,8 @@ fn unknown_registry() {
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "homepage": null,
+                  "documentation": null,
                   "edition": "2015",
                   "links": null
                 },
@@ -1109,6 +1129,8 @@ fn unknown_registry() {
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "homepage": null,
+                  "documentation": null,
                   "edition": "2015",
                   "links": null
                 },
@@ -1144,6 +1166,8 @@ fn unknown_registry() {
                   "keywords": [],
                   "readme": null,
                   "repository": null,
+                  "homepage": null,
+                  "documentation": null,
                   "edition": "2015",
                   "links": null
                 }

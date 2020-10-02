@@ -12,6 +12,8 @@ fn manifest_output(readme_value: &str) -> String {
     "categories": [],
     "name":"foo",
     "readme": {},
+    "homepage": null,
+    "documentation": null,
     "repository": null,
     "version":"0.5.0",
     "id":"foo[..]0.5.0[..](path+file://[..]/foo)",

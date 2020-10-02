@@ -96,6 +96,8 @@ struct SerializedPackage<'a> {
     keywords: &'a [String],
     readme: Option<&'a str>,
     repository: Option<&'a str>,
+    homepage: Option<&'a str>,
+    documentation: Option<&'a str>,
     edition: &'a str,
     links: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -118,6 +120,8 @@ impl ser::Serialize for Package {
         let keywords = manmeta.keywords.as_ref();
         let readme = manmeta.readme.as_deref();
         let repository = manmeta.repository.as_deref();
+        let homepage = manmeta.homepage.as_ref().map(String::as_ref);
+        let documentation = manmeta.documentation.as_ref().map(String::as_ref);
         // Filter out metabuild targets. They are an internal implementation
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
@@ -146,6 +150,8 @@ impl ser::Serialize for Package {
             keywords,
             readme,
             repository,
+            homepage,
+            documentation,
             edition: &self.manifest().edition().to_string(),
             links: self.manifest().links(),
             metabuild: self.manifest().metabuild(),
