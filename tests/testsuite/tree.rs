@@ -78,16 +78,16 @@ fn virtual_workspace() {
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["a", "b", "c"]
+            members = ["a", "baz", "c"]
             "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "1.0.0"))
         .file("a/src/lib.rs", "")
         .file(
-            "b/Cargo.toml",
+            "baz/Cargo.toml",
             r#"
             [package]
-            name = "b"
+            name = "baz"
             version = "0.1.0"
 
             [dependencies]
@@ -95,7 +95,7 @@ fn virtual_workspace() {
             somedep = "1.0"
             "#,
         )
-        .file("b/src/lib.rs", "")
+        .file("baz/src/lib.rs", "")
         .file("c/Cargo.toml", &basic_manifest("c", "1.0.0"))
         .file("c/src/lib.rs", "")
         .build();
@@ -105,7 +105,7 @@ fn virtual_workspace() {
             "\
 a v1.0.0 ([..]/foo/a)
 
-b v0.1.0 ([..]/foo/b)
+baz v0.1.0 ([..]/foo/baz)
 ├── c v1.0.0 ([..]/foo/c)
 └── somedep v1.0.0
 
@@ -117,10 +117,43 @@ c v1.0.0 ([..]/foo/c)
     p.cargo("tree -p a").with_stdout("a v1.0.0 [..]").run();
 
     p.cargo("tree")
-        .cwd("b")
+        .cwd("baz")
         .with_stdout(
             "\
-b v0.1.0 ([..]/foo/b)
+baz v0.1.0 ([..]/foo/baz)
+├── c v1.0.0 ([..]/foo/c)
+└── somedep v1.0.0
+",
+        )
+        .run();
+
+    // exclude baz
+    p.cargo("tree --workspace --exclude baz")
+        .with_stdout(
+            "\
+a v1.0.0 ([..]/foo/a)
+
+c v1.0.0 ([..]/foo/c)
+",
+        )
+        .run();
+
+    // exclude glob '*z'
+    p.cargo("tree --workspace --exclude '*z'")
+        .with_stdout(
+            "\
+a v1.0.0 ([..]/foo/a)
+
+c v1.0.0 ([..]/foo/c)
+",
+        )
+        .run();
+
+    // include glob '*z'
+    p.cargo("tree -p '*z'")
+        .with_stdout(
+            "\
+baz v0.1.0 ([..]/foo/baz)
 ├── c v1.0.0 ([..]/foo/c)
 └── somedep v1.0.0
 ",
