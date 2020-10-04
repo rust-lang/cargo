@@ -1637,8 +1637,12 @@ impl ChannelChanger for cargo::util::ProcessBuilder {
 }
 
 fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
-    for arg in s.split_whitespace() {
-        if arg.contains('"') || arg.contains('\'') {
+    for mut arg in s.split_whitespace() {
+        if (arg.starts_with('"') && arg.ends_with('"'))
+            || (arg.starts_with('\'') && arg.ends_with('\''))
+        {
+            arg = &arg[1..(arg.len() - 1).max(1)];
+        } else if arg.contains(&['"', '\''][..]) {
             panic!("shell-style argument parsing is not supported")
         }
         p.arg(arg);
