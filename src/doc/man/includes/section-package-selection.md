@@ -15,7 +15,10 @@ virtual workspace will include all workspace members (equivalent to passing
 
 {{#option "`-p` _spec_..." "`--package` _spec_..."}}
 {{actionverb}} only the specified packages. See {{man "cargo-pkgid" 1}} for the
-SPEC format. This flag may be specified multiple times.
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like `*`, `?` and `[]`. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.
 {{/option}}
 
 {{#option "`--workspace`" }}
@@ -30,7 +33,10 @@ Deprecated alias for `--workspace`.
 
 {{#option "`--exclude` _SPEC_..." }}
 Exclude the specified packages. Must be used in conjunction with the
-`--workspace` flag. This flag may be specified multiple times.
+`--workspace` flag. This flag may be specified multiple times and supports
+common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.
 {{/option}}
 
 {{/options}}
