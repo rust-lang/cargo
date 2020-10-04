@@ -4583,6 +4583,16 @@ fn target_filters_workspace() {
         )
         .run();
 
+    ws.cargo("build -v --example 'ex??'")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no example target matches pattern `ex??`
+
+<tab>Did you mean `ex1`?",
+        )
+        .run();
+
     ws.cargo("build -v --lib")
         .with_stderr_contains("[RUNNING] `rustc [..]a/src/lib.rs[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]b/src/lib.rs[..]")
