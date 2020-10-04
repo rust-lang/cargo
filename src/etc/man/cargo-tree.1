@@ -204,7 +204,10 @@ virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-package\fR \fIspec\fR\&...
 .RS 4
 Display only the specified packages. See \fBcargo\-pkgid\fR(1) for the
-SPEC format. This flag may be specified multiple times.
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.
 .RE
 .sp
 \fB\-\-workspace\fR
@@ -215,7 +218,10 @@ Display all members in the workspace.
 \fB\-\-exclude\fR \fISPEC\fR\&...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-workspace\fR flag. This flag may be specified multiple times.
+\fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
+common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.
 .RE
 .SS "Manifest Options"
 .sp

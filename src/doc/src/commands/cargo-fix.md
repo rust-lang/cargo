@@ -98,7 +98,10 @@ virtual workspace will include all workspace members (equivalent to passing
 <dt class="option-term" id="option-cargo-fix--p"><a class="option-anchor" href="#option-cargo-fix--p"></a><code>-p</code> <em>spec</em>...</dt>
 <dt class="option-term" id="option-cargo-fix---package"><a class="option-anchor" href="#option-cargo-fix---package"></a><code>--package</code> <em>spec</em>...</dt>
 <dd class="option-desc">Fix only the specified packages. See <a href="https://doc.rust-lang.org/cargo/commands/cargo-pkgid.md">cargo-pkgid(1)</a> for the
-SPEC format. This flag may be specified multiple times.</dd>
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---workspace"><a class="option-anchor" href="#option-cargo-fix---workspace"></a><code>--workspace</code></dt>
@@ -113,7 +116,10 @@ SPEC format. This flag may be specified multiple times.</dd>
 
 <dt class="option-term" id="option-cargo-fix---exclude"><a class="option-anchor" href="#option-cargo-fix---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
-<code>--workspace</code> flag. This flag may be specified multiple times.</dd>
+<code>--workspace</code> flag. This flag may be specified multiple times and supports
+common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
@@ -126,7 +132,12 @@ When no target selection options are given, `cargo fix` will fix all targets
 `required-features` that are missing.
 
 Passing target selection flags will fix only the specified
-targets.
+targets. 
+
+Note that `--bin`, `--example`, `--test` and `--bench` flags also 
+support common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 
 <dl>
 
@@ -135,7 +146,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-fix---bin"><a class="option-anchor" href="#option-cargo-fix---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Fix the specified binary. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Fix the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---bins"><a class="option-anchor" href="#option-cargo-fix---bins"></a><code>--bins</code></dt>
@@ -144,7 +156,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-fix---example"><a class="option-anchor" href="#option-cargo-fix---example"></a><code>--example</code> <em>name</em>...</dt>
-<dd class="option-desc">Fix the specified example. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Fix the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---examples"><a class="option-anchor" href="#option-cargo-fix---examples"></a><code>--examples</code></dt>
@@ -153,7 +166,7 @@ targets.
 
 <dt class="option-term" id="option-cargo-fix---test"><a class="option-anchor" href="#option-cargo-fix---test"></a><code>--test</code> <em>name</em>...</dt>
 <dd class="option-desc">Fix the specified integration test. This flag may be specified
-multiple times.</dd>
+multiple times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---tests"><a class="option-anchor" href="#option-cargo-fix---tests"></a><code>--tests</code></dt>
@@ -167,7 +180,8 @@ manifest settings for the target.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---bench"><a class="option-anchor" href="#option-cargo-fix---bench"></a><code>--bench</code> <em>name</em>...</dt>
-<dd class="option-desc">Fix the specified benchmark. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Fix the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---benches"><a class="option-anchor" href="#option-cargo-fix---benches"></a><code>--benches</code></dt>

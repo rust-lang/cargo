@@ -54,7 +54,12 @@ When no target selection options are given, `cargo rustc` will build all
 binary and library targets of the selected package.
 
 Passing target selection flags will build only the specified
-targets.
+targets. 
+
+Note that `--bin`, `--example`, `--test` and `--bench` flags also 
+support common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 
 <dl>
 
@@ -63,7 +68,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-rustc---bin"><a class="option-anchor" href="#option-cargo-rustc---bin"></a><code>--bin</code> <em>name</em>...</dt>
-<dd class="option-desc">Build the specified binary. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Build the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---bins"><a class="option-anchor" href="#option-cargo-rustc---bins"></a><code>--bins</code></dt>
@@ -72,7 +78,8 @@ targets.
 
 
 <dt class="option-term" id="option-cargo-rustc---example"><a class="option-anchor" href="#option-cargo-rustc---example"></a><code>--example</code> <em>name</em>...</dt>
-<dd class="option-desc">Build the specified example. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Build the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---examples"><a class="option-anchor" href="#option-cargo-rustc---examples"></a><code>--examples</code></dt>
@@ -81,7 +88,7 @@ targets.
 
 <dt class="option-term" id="option-cargo-rustc---test"><a class="option-anchor" href="#option-cargo-rustc---test"></a><code>--test</code> <em>name</em>...</dt>
 <dd class="option-desc">Build the specified integration test. This flag may be specified
-multiple times.</dd>
+multiple times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---tests"><a class="option-anchor" href="#option-cargo-rustc---tests"></a><code>--tests</code></dt>
@@ -95,7 +102,8 @@ manifest settings for the target.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---bench"><a class="option-anchor" href="#option-cargo-rustc---bench"></a><code>--bench</code> <em>name</em>...</dt>
-<dd class="option-desc">Build the specified benchmark. This flag may be specified multiple times.</dd>
+<dd class="option-desc">Build the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc---benches"><a class="option-anchor" href="#option-cargo-rustc---benches"></a><code>--benches</code></dt>

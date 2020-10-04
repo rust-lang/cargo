@@ -39,7 +39,11 @@ OPTIONS
 
        -p spec..., --package spec...
            Document only the specified packages. See cargo-pkgid(1) for the
-           SPEC format. This flag may be specified multiple times.
+           SPEC format. This flag may be specified multiple times and supports
+           common Unix glob patterns like *, ? and []. However, to avoid your
+           shell accidentally expanding glob patterns before Cargo handles
+           them, you must use single quotes or double quotes around each
+           pattern.
 
        --workspace
            Document all members in the workspace.
@@ -49,7 +53,11 @@ OPTIONS
 
        --exclude SPEC...
            Exclude the specified packages. Must be used in conjunction with the
-           --workspace flag. This flag may be specified multiple times.
+           --workspace flag. This flag may be specified multiple times and
+           supports common Unix glob patterns like *, ? and []. However, to
+           avoid your shell accidentally expanding glob patterns before Cargo
+           handles them, you must use single quotes or double quotes around
+           each pattern.
 
    Target Selection
        When no target selection options are given, cargo doc will document all
@@ -66,7 +74,7 @@ OPTIONS
 
        --bin name...
            Document the specified binary. This flag may be specified multiple
-           times.
+           times and supports common Unix glob patterns.
 
        --bins
            Document all binary targets.

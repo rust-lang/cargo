@@ -51,7 +51,12 @@ if its name is the same as the lib target. Binaries are skipped if they have
 \fBrequired\-features\fR that are missing.
 .sp
 Passing target selection flags will document only the specified
-targets.
+targets. 
+.sp
+Note that \fB\-\-bin\fR, \fB\-\-example\fR, \fB\-\-test\fR and \fB\-\-bench\fR flags also 
+support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
@@ -60,7 +65,8 @@ Document the package's library.
 .sp
 \fB\-\-bin\fR \fIname\fR\&...
 .RS 4
-Document the specified binary. This flag may be specified multiple times.
+Document the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-bins\fR
@@ -70,7 +76,8 @@ Document all binary targets.
 .sp
 \fB\-\-example\fR \fIname\fR\&...
 .RS 4
-Document the specified example. This flag may be specified multiple times.
+Document the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-examples\fR
@@ -81,7 +88,7 @@ Document all example targets.
 \fB\-\-test\fR \fIname\fR\&...
 .RS 4
 Document the specified integration test. This flag may be specified
-multiple times.
+multiple times and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-tests\fR
@@ -97,7 +104,8 @@ manifest settings for the target.
 .sp
 \fB\-\-bench\fR \fIname\fR\&...
 .RS 4
-Document the specified benchmark. This flag may be specified multiple times.
+Document the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-benches\fR

@@ -166,7 +166,10 @@ virtual workspace will include all workspace members (equivalent to passing
 <dt class="option-term" id="option-cargo-tree--p"><a class="option-anchor" href="#option-cargo-tree--p"></a><code>-p</code> <em>spec</em>...</dt>
 <dt class="option-term" id="option-cargo-tree---package"><a class="option-anchor" href="#option-cargo-tree---package"></a><code>--package</code> <em>spec</em>...</dt>
 <dd class="option-desc">Display only the specified packages. See <a href="https://doc.rust-lang.org/cargo/commands/cargo-pkgid.md">cargo-pkgid(1)</a> for the
-SPEC format. This flag may be specified multiple times.</dd>
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree---workspace"><a class="option-anchor" href="#option-cargo-tree---workspace"></a><code>--workspace</code></dt>
@@ -177,7 +180,10 @@ SPEC format. This flag may be specified multiple times.</dd>
 
 <dt class="option-term" id="option-cargo-tree---exclude"><a class="option-anchor" href="#option-cargo-tree---exclude"></a><code>--exclude</code> <em>SPEC</em>...</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
-<code>--workspace</code> flag. This flag may be specified multiple times.</dd>
+<code>--workspace</code> flag. This flag may be specified multiple times and supports
+common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
