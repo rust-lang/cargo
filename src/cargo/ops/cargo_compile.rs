@@ -41,7 +41,10 @@ use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::config::Config;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, profile, CargoResult, StableHasher};
+
+use anyhow::Context as _;
 
 /// Contains information about how a package should be compiled.
 ///
@@ -577,6 +580,13 @@ impl FilterRule {
             FilterRule::Just(ref targets) => Some(targets.clone()),
         }
     }
+
+    pub(crate) fn contains_glob_patterns(&self) -> bool {
+        match self {
+            FilterRule::All => false,
+            FilterRule::Just(targets) => targets.iter().any(is_glob_pattern),
+        }
+    }
 }
 
 impl CompileFilter {
@@ -704,6 +714,24 @@ impl CompileFilter {
         match *self {
             CompileFilter::Default { .. } => false,
             CompileFilter::Only { .. } => true,
+        }
+    }
+
+    pub(crate) fn contains_glob_patterns(&self) -> bool {
+        match self {
+            CompileFilter::Default { .. } => false,
+            CompileFilter::Only {
+                bins,
+                examples,
+                tests,
+                benches,
+                ..
+            } => {
+                bins.contains_glob_patterns()
+                    || examples.contains_glob_patterns()
+                    || tests.contains_glob_patterns()
+                    || benches.contains_glob_patterns()
+            }
         }
     }
 }
@@ -1163,8 +1191,16 @@ fn find_named_targets<'a>(
     is_expected_kind: fn(&Target) -> bool,
     mode: CompileMode,
 ) -> CargoResult<Vec<Proposal<'a>>> {
-    let filter = |t: &Target| t.name() == target_name && is_expected_kind(t);
-    let proposals = filter_targets(packages, filter, true, mode);
+    let is_glob = is_glob_pattern(target_name);
+    let proposals = if is_glob {
+        let pattern = build_glob(target_name)?;
+        let filter = |t: &Target| is_expected_kind(t) && pattern.matches(t.name());
+        filter_targets(packages, filter, true, mode)
+    } else {
+        let filter = |t: &Target| t.name() == target_name && is_expected_kind(t);
+        filter_targets(packages, filter, true, mode)
+    };
+
     if proposals.is_empty() {
         let targets = packages.iter().flat_map(|pkg| {
             pkg.targets()
@@ -1173,8 +1209,9 @@ fn find_named_targets<'a>(
         });
         let suggestion = closest_msg(target_name, targets, |t| t.name());
         anyhow::bail!(
-            "no {} target named `{}`{}",
+            "no {} target {} `{}`{}",
             target_desc,
+            if is_glob { "matches pattern" } else { "named" },
             target_name,
             suggestion
         );
@@ -1290,4 +1327,9 @@ fn traverse_and_share(
     assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
     new_unit
+}
+
+/// TODO: @weihanglo
+fn build_glob(pat: &str) -> CargoResult<glob::Pattern> {
+    glob::Pattern::new(pat).with_context(|| format!("Cannot build glob pattern from `{}`", pat))
 }
