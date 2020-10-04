@@ -415,6 +415,60 @@ fn check_all() {
 }
 
 #[cargo_test]
+fn check_all_exclude() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("check --workspace --exclude baz")
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn check_all_exclude_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("check --workspace --exclude '*z'")
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn check_virtual_all_implied() {
     let p = project()
         .file(
@@ -433,6 +487,60 @@ fn check_virtual_all_implied() {
     p.cargo("check -v")
         .with_stderr_contains("[..] --crate-name bar bar/src/lib.rs [..]")
         .with_stderr_contains("[..] --crate-name baz baz/src/lib.rs [..]")
+        .run();
+}
+
+#[cargo_test]
+fn check_virtual_manifest_one_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("check -p bar")
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[CHECKING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn check_virtual_manifest_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {  break_the_build(); }")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("check -p '*z'")
+        .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 [..]")
+        .with_stderr(
+            "\
+[CHECKING] baz v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
         .run();
 }
 
