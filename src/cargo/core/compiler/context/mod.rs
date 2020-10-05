@@ -126,10 +126,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
         let build_plan = self.bcx.build_config.build_plan;
+        self.lto = super::lto::generate(&self.bcx)?;
         self.prepare_units()?;
         self.prepare()?;
         custom_build::build_map(&mut self)?;
-        super::lto::generate(&mut self)?;
         self.check_collistions()?;
 
         for unit in &self.bcx.roots {
