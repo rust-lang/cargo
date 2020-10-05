@@ -73,16 +73,16 @@ fn needs_object(crate_types: &[CrateType]) -> bool {
 
 /// Lto setting to use when this unit needs object code.
 fn lto_when_needs_object(crate_types: &[CrateType]) -> Lto {
-    if crate_types.iter().any(CrateType::can_lto) {
-        // A mixed rlib/cdylib whose parent is running LTO. This
-        // needs both, for bitcode in the rlib (for LTO) and the
-        // cdylib requires object code.
-        Lto::ObjectAndBitcode
-    } else {
+    if crate_types.iter().all(|ct| *ct == CrateType::Dylib) {
         // A dylib whose parent is running LTO. rustc currently
         // doesn't support LTO with dylibs, so bitcode is not
         // needed.
         Lto::OnlyObject
+    } else {
+        // Mixed rlib with a dylib or cdylib whose parent is running LTO. This
+        // needs both: bitcode for the rlib (for LTO) and object code for the
+        // dylib.
+        Lto::ObjectAndBitcode
     }
 }
 
