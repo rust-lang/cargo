@@ -519,6 +519,7 @@ fn compute_metadata(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
+    cx.lto[unit].hash(&mut hasher);
 
     // Artifacts compiled for the host should have a different metadata
     // piece than those compiled for the target, so make sure we throw in

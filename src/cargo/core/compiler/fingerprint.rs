@@ -72,7 +72,7 @@
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
-//! LTO flags                                  | ✓           |
+//! LTO flags                                  | ✓           | ✓
 //! config settings[^5]                        | ✓           |
 //! is_std                                     |             | ✓
 //!

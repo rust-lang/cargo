@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileMode, Context, CrateType, Unit};
+use crate::core::compiler::{BuildContext, CompileMode, CrateType, Unit};
 use crate::core::profiles;
 use crate::util::interning::InternedString;
 
@@ -40,9 +40,9 @@ pub enum Lto {
     OnlyObject,
 }
 
-pub fn generate(cx: &mut Context<'_, '_>) -> CargoResult<()> {
+pub fn generate(bcx: &BuildContext<'_, '_>) -> CargoResult<HashMap<Unit, Lto>> {
     let mut map = HashMap::new();
-    for unit in cx.bcx.roots.iter() {
+    for unit in bcx.roots.iter() {
         let root_lto = match unit.profile.lto {
             // LTO not requested, no need for bitcode.
             profiles::Lto::Bool(false) | profiles::Lto::Off => Lto::OnlyObject,
@@ -60,10 +60,9 @@ pub fn generate(cx: &mut Context<'_, '_>) -> CargoResult<()> {
                 }
             }
         };
-        calculate(cx, &mut map, unit, root_lto)?;
+        calculate(bcx, &mut map, unit, root_lto)?;
     }
-    cx.lto = map;
-    Ok(())
+    Ok(map)
 }
 
 /// Whether or not any of these crate types need object code.
@@ -87,7 +86,7 @@ fn lto_when_needs_object(crate_types: &[CrateType]) -> Lto {
 }
 
 fn calculate(
-    cx: &Context<'_, '_>,
+    bcx: &BuildContext<'_, '_>,
     map: &mut HashMap<Unit, Lto>,
     unit: &Unit,
     parent_lto: Lto,
@@ -185,8 +184,8 @@ fn calculate(
         }
     };
 
-    for dep in cx.unit_deps(unit) {
-        calculate(cx, map, &dep.unit, merged_lto)?;
+    for dep in &bcx.unit_graph[unit] {
+        calculate(bcx, map, &dep.unit, merged_lto)?;
     }
     Ok(())
 }
