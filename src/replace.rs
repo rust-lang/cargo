@@ -14,11 +14,7 @@ enum State {
 
 impl State {
     fn is_inserted(&self) -> bool {
-        if let State::Inserted(..) = *self {
-            true
-        } else {
-            false
-        }
+        matches!(*self, State::Inserted(..))
     }
 }
 

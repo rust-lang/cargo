@@ -5,7 +5,6 @@ extern crate log;
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
-use serde_json;
 
 use std::collections::HashSet;
 use std::ops::Range;
