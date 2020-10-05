@@ -746,3 +746,35 @@ fn doctest() {
         .with_stderr_contains("[..]`rustdoc [..]-C lto[..]")
         .run();
 }
+
+#[cargo_test]
+fn dylib_rlib_bin() {
+    // dylib+rlib linked with a binary
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [lib]
+                crate-type = ["dylib", "rlib"]
+
+                [profile.release]
+                lto = true
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() { println!(\"hi!\"); }")
+        .file("src/main.rs", "fn main() { foo::foo(); }")
+        .build();
+
+    let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    verify_lto(
+        &output,
+        "foo",
+        "--crate-type dylib --crate-type rlib",
+        Lto::ObjectAndBitcode,
+    );
+    verify_lto(&output, "foo", "--crate-type bin", Lto::Run(None));
+}
