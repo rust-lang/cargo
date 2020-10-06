@@ -1,3 +1,13 @@
 target
 Cargo.lock
 tests/crates/**/output.txt
+
+# Editor and IDE-specific ignores
+## VSCode
+.vscode
+
+## Eclipse
+.project
+
+## All JetBrains IDE's
+*.iml
