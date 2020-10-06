@@ -1,6 +1,7 @@
 use cargo::core::features;
 use cargo::{self, drop_print, drop_println, CliResult, Config};
 use clap::{AppSettings, Arg, ArgMatches};
+use std::env;
 
 use super::commands;
 use super::list_commands;
@@ -218,7 +219,11 @@ fn execute_subcommand(
     cmd: &str,
     subcommand_args: &ArgMatches<'_>,
 ) -> CliResult {
-    if subcommand_args.is_present("no-config") {
+    if subcommand_args.is_present("no-config")
+        || env::var_os("CARGO_NO_CONFIG_UNSTABLE")
+            .map(|v| v == "1")
+            .unwrap_or(false)
+    {
         config.ignore_config_files()?;
     }
 

@@ -1514,7 +1514,7 @@ See [..]
 }
 
 #[cargo_test]
-fn no_config_basic() {
+fn no_config_cli() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -1526,6 +1526,24 @@ fn no_config_basic() {
         )
         .build();
     p.cargo("build -v --no-config -Z unstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[cargo_test]
+fn no_config_env() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            target = "non-existent"
+        "#,
+        )
+        .build();
+    p.cargo("build -v")
+        .env("CARGO_NO_CONFIG_UNSTABLE", "1")
         .masquerade_as_nightly_cargo()
         .run();
 }
