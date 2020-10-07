@@ -101,7 +101,7 @@
 use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
 use crate::util::paths;
-use crate::util::{CargoResult, FileLock};
+use crate::util::{CargoResult, CargoResultExt, FileLock};
 use std::path::{Path, PathBuf};
 
 /// Contains the paths of all target output locations.
@@ -125,6 +125,8 @@ pub struct Layout {
     examples: PathBuf,
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
+    /// Root in system's temporary directory
+    temp_root: Option<PathBuf>,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
     _lock: FileLock,
@@ -170,6 +172,7 @@ impl Layout {
             fingerprint: dest.join(".fingerprint"),
             examples: dest.join("examples"),
             doc: root.join("doc"),
+            temp_root: Self::temp_root_path(&root),
             root,
             dest,
             _lock: lock,
@@ -178,13 +181,85 @@ impl Layout {
 
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> CargoResult<()> {
-        paths::create_dir_all(&self.deps)?;
-        paths::create_dir_all(&self.incremental)?;
-        paths::create_dir_all(&self.fingerprint)?;
+        let temp_root = self.temp_root.as_deref();
+        if let Some(temp_root) = temp_root {
+            paths::create_dir_all(temp_root)?;
+        }
+        Self::create_dir_or_symlink_to_temp(temp_root, &self.deps)?;
+        Self::create_dir_or_symlink_to_temp(temp_root, &self.incremental)?;
+        Self::create_dir_or_symlink_to_temp(temp_root, &self.fingerprint)?;
+        Self::create_dir_or_symlink_to_temp(temp_root, &self.build)?;
         paths::create_dir_all(&self.examples)?;
-        paths::create_dir_all(&self.build)?;
 
         Ok(())
+    }
+
+    /// Create a path for a subdirectory in system's temporary directory
+    /// that is specifically for the root path.
+    #[cfg(unix)]
+    fn temp_root_path(target_root: &Path) -> Option<PathBuf> {
+        let temp_root = paths::persistent_temp_path()?;
+
+        // Each target dir gets its own temp subdir based on a hash of the path
+        // with some printable chars for friendlier paths
+        let root_bytes = paths::path2bytes(target_root).ok()?;
+        let mut dir_name = String::with_capacity(64 + 17);
+        for ch in root_bytes[root_bytes.len().saturating_sub(64)..]
+            .iter()
+            .skip(1) // initial slash
+            .copied()
+        {
+            dir_name.push(if ch.is_ascii_alphanumeric() {
+                ch as char
+            } else {
+                '-'
+            });
+        }
+        dir_name.push('-');
+        dir_name.push_str(&crate::util::short_hash(&root_bytes));
+
+        Some(temp_root.join(dir_name))
+    }
+
+    /// On non-Unix it's not safe to assume that symlinks are reliable and efficient,
+    /// so symlinking to temp won't be used.
+    #[cfg(not(unix))]
+    fn temp_root_path(_root: &Path) -> Option<PathBuf> {
+        None
+    }
+
+    /// Symlink `path` to inside of `temp_root`, or create the `path` as dir as a fallback
+    #[cfg(unix)]
+    fn create_dir_or_symlink_to_temp(temp_root: Option<&Path>, path: &Path) -> CargoResult<()> {
+        // Don't change existing target subdirectories (this also verifies that the symlink is valid)
+        if path.exists() {
+            return Ok(());
+        }
+        // Clean up broken symlinks (OK to ignore failures, subsequent operations will report a failure)
+        let _ = std::fs::remove_file(path);
+
+        if let Some(temp_root) = temp_root {
+            let file_name = path.file_name().expect("/ isn't allowed");
+            let temp_dest = temp_root.join(file_name);
+            paths::create_dir_all(&temp_dest)?;
+            std::os::unix::fs::symlink(&temp_dest, path).chain_err(|| {
+                format!(
+                    "failed to symlink `{}` to `{}`",
+                    path.display(),
+                    temp_dest.display()
+                )
+            })?;
+            Ok(())
+        } else {
+            paths::create_dir_all(path)
+        }
+    }
+
+    /// On non-Unix it's not safe to assume that symlinks are reliable and efficient,
+    /// so symlinking to temp won't be used.
+    #[cfg(not(unix))]
+    fn create_dir_or_symlink_to_temp(_temp_root: &Path, path: &Path) -> CargoResult<()> {
+        paths::create_dir_all(path)
     }
 
     /// Fetch the destination path for final artifacts  (`/…/target/debug`).
