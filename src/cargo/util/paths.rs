@@ -547,3 +547,36 @@ fn exclude_from_time_machine(path: &Path) {
     // Errors are ignored, since it's an optional feature and failure
     // doesn't prevent Cargo from working
 }
+
+/// Absolute path to an on-disk temporary directory.
+/// It may be system-wide or user-specific depending on system conventions.
+/// Used in layout.rs, only needed on Unix systems.
+#[cfg(unix)]
+pub fn persistent_temp_path() -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        // "Library/Caches" should be obtained via NSFileManager's
+        // URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask
+        // However, cocoa-foundation doesn't have bindings for it yet.
+        // This path has remained stable for two decades,
+        // so hardcode it for simplicity (dirs crate does the same).
+        Some(home::home_dir()?.join("Library/Caches/Cargo"))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // XDG standard
+        if let Some(path) = env::var_os("XDG_CACHE_HOME") {
+            let path = PathBuf::from(path);
+            if path.is_absolute() {
+                return Some(path.join("cargo"));
+            }
+        }
+        // FHS standard
+        // This is not using /tmp, because /tmp could be using ramfs.
+        let path = Path::new("/var/tmp");
+        if path.exists() {
+            return Some(path.join("cargo"));
+        }
+        None
+    }
+}
