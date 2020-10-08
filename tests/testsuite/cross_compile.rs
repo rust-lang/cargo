@@ -170,7 +170,7 @@ fn simple_cross_test_config() {
         .build();
 
     let target = cross_compile::alternate();
-    p.cargo("build -v").run();
+    p.cargo("build --tests -v").run();
     assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile::can_run_on_host() {

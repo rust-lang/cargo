@@ -52,6 +52,8 @@ impl CompileKind {
         targets: &[String],
         compile_mode: Option<CompileMode>,
     ) -> CargoResult<Vec<CompileKind>> {
+        println!("compile_mode: {:?}", compile_mode);
+        println!("config: {:?}", config);
         if targets.len() > 1 && !config.cli_unstable().multitarget {
             bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
         }
