@@ -141,43 +141,36 @@ fn simple_cross_test_config() {
             name = "foo"
             version = "0.0.0"
             authors = []
-            build = "build.rs"
         "#,
-        )
-        .file(
-            "build.rs",
-            &format!(
-                r#"
-            fn main() {{
-                assert_eq!(std::env::var("TARGET").unwrap(), "{}");
-            }}
-        "#,
-                cross_compile::alternate()
-            ),
         )
         .file(
             "src/main.rs",
             &format!(
                 r#"
             use std::env;
+
             fn main() {{
-                assert_eq!(env::consts::ARCH, "{}");
+                assert_ne!(env::consts::ARCH, "{}");
+            }}
+
+            #[cfg(test)]
+            mod tests {{
+                use super::*;
+                fn test_on_non_host_target() {{
+                    assert_eq!(env::consts::ARCH, "{}");
+                }}
             }}
         "#,
+                cross_compile::alternate_arch(),
                 cross_compile::alternate_arch()
             ),
         )
         .build();
 
-    let target = cross_compile::alternate();
-    p.cargo("build --tests -v").run();
-    assert!(p.target_bin(target, "foo").is_file());
+    p.cargo("build -v").run();
 
-    if cross_compile::can_run_on_host() {
-        p.process(&p.target_bin(target, "foo")).run();
-    }
+    p.cargo("test").run();
 }
-
 
 #[cargo_test]
 fn simple_deps() {

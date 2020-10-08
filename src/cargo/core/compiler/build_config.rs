@@ -56,7 +56,8 @@ impl BuildConfig {
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
         let cfg = config.build_config()?;
-        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets, Some(mode))?;
+        let requested_kinds =
+            CompileKind::from_requested_targets(config, requested_targets, Some(mode))?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
         }

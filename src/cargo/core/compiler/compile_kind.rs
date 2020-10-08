@@ -1,5 +1,5 @@
-use crate::core::Target;
 use crate::core::compiler::CompileMode;
+use crate::core::Target;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::Config;
@@ -52,8 +52,6 @@ impl CompileKind {
         targets: &[String],
         compile_mode: Option<CompileMode>,
     ) -> CargoResult<Vec<CompileKind>> {
-        println!("compile_mode: {:?}", compile_mode);
-        println!("config: {:?}", config);
         if targets.len() > 1 && !config.cli_unstable().multitarget {
             bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
         }
@@ -68,15 +66,17 @@ impl CompileKind {
                 .into_iter()
                 .collect());
         }
-        
+
         let build_configs = config.build_config()?;
         let target = match compile_mode {
-            Some(CompileMode::Test) => if build_configs.test_target.is_some() {
-                &build_configs.test_target
-            } else {
-                &build_configs.target
-            },
-            _ => &build_configs.target
+            Some(CompileMode::Test) => {
+                if build_configs.test_target.is_some() {
+                    &build_configs.test_target
+                } else {
+                    &build_configs.target
+                }
+            }
+            _ => &build_configs.target,
         };
 
         let kind = match &target {
