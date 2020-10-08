@@ -54,7 +54,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     // Clean specific packages.
-    let requested_kinds = CompileKind::from_requested_targets(config, &opts.targets)?;
+    let requested_kinds = CompileKind::from_requested_targets(config, &opts.targets, None)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let (pkg_set, resolve) = ops::resolve_ws(ws)?;
     let prof_dir_name = profiles.get_dir_name();

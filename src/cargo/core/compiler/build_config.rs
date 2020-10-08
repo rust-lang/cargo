@@ -45,6 +45,7 @@ impl BuildConfig {
     ///
     /// * `build.jobs`
     /// * `build.target`
+    /// * `build.test-target`
     /// * `target.$target.ar`
     /// * `target.$target.linker`
     /// * `target.$target.libfoo.metadata`
@@ -54,11 +55,8 @@ impl BuildConfig {
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
-        println!("requested_targets: {:?}", requested_targets);
-        println!("mode: {:?}", mode);
         let cfg = config.build_config()?;
-        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
-        println!("request_kinds: {:?}", requested_kinds);
+        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets, Some(mode))?;
         if jobs == Some(0) {
             anyhow::bail!("jobs must be at least 1")
         }
@@ -71,7 +69,7 @@ impl BuildConfig {
         }
         let jobs = jobs.or(cfg.jobs).unwrap_or(::num_cpus::get() as u32);
 
-        let build_config = Ok(BuildConfig {
+        Ok(BuildConfig {
             requested_kinds,
             jobs,
             requested_profile: InternedString::new("dev"),
@@ -83,11 +81,7 @@ impl BuildConfig {
             primary_unit_rustc: None,
             rustfix_diagnostic_server: RefCell::new(None),
             export_dir: None,
-        });
-
-        println!("build_config: {:?}", build_config);
-
-        build_config
+        })
     }
 
     /// Whether or not the *user* wants JSON output. Whether or not rustc

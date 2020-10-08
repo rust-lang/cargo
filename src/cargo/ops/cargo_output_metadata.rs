@@ -109,7 +109,7 @@ fn build_resolve_graph(
     // TODO: Without --filter-platform, features are being resolved for `host` only.
     // How should this work?
     let requested_kinds =
-        CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms)?;
+        CompileKind::from_requested_targets(ws.config(), &metadata_opts.filter_platforms, None)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All.to_package_id_specs(ws)?;

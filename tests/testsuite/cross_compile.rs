@@ -118,6 +118,68 @@ fn simple_cross_config() {
 }
 
 #[cargo_test]
+fn simple_cross_test_config() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+            [build]
+            test-target = "{}"
+        "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+        "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+            fn main() {{
+                assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+            }}
+        "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+            use std::env;
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#,
+                cross_compile::alternate_arch()
+            ),
+        )
+        .build();
+
+    let target = cross_compile::alternate();
+    p.cargo("build -v").run();
+    assert!(p.target_bin(target, "foo").is_file());
+
+    if cross_compile::can_run_on_host() {
+        p.process(&p.target_bin(target, "foo")).run();
+    }
+}
+
+
+#[cargo_test]
 fn simple_deps() {
     if cross_compile::disabled() {
         return;

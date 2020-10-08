@@ -1768,6 +1768,7 @@ pub struct CargoBuildConfig {
     pub target_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<ConfigRelativePath>,
+    pub test_target: Option<ConfigRelativePath>,
     pub jobs: Option<u32>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,

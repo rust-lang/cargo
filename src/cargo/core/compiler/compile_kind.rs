@@ -1,4 +1,5 @@
 use crate::core::Target;
+use crate::core::compiler::CompileMode;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::Config;
@@ -49,8 +50,8 @@ impl CompileKind {
     pub fn from_requested_targets(
         config: &Config,
         targets: &[String],
+        compile_mode: Option<CompileMode>,
     ) -> CargoResult<Vec<CompileKind>> {
-        println!("targets: {:?}", targets);
         if targets.len() > 1 && !config.cli_unstable().multitarget {
             bail!("specifying multiple `--target` flags requires `-Zmultitarget`")
         }
@@ -65,7 +66,18 @@ impl CompileKind {
                 .into_iter()
                 .collect());
         }
-        let kind = match &config.build_config()?.target {
+        
+        let build_configs = config.build_config()?;
+        let target = match compile_mode {
+            Some(CompileMode::Test) => if build_configs.test_target.is_some() {
+                &build_configs.test_target
+            } else {
+                &build_configs.target
+            },
+            _ => &build_configs.target
+        };
+
+        let kind = match &target {
             Some(val) => {
                 let value = if val.raw_value().ends_with(".json") {
                     let path = val.clone().resolve_path(config);
