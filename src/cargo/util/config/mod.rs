@@ -174,7 +174,6 @@ pub struct Config {
     http_config: LazyCell<CargoHttpConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
-    test_config: LazyCell<CargoTestConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
 }
@@ -246,7 +245,6 @@ impl Config {
             http_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
-            test_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
         }
@@ -1194,11 +1192,6 @@ impl Config {
             .try_borrow_with(|| Ok(self.get::<CargoBuildConfig>("build")?))
     }
 
-    pub fn test_config(&self) -> CargoResult<&CargoTestConfig> {
-        self.test_config
-            .try_borrow_with(|| Ok(self.get::<CargoTestConfig>("test")?))
-    }
-
     /// Returns a list of [target.'cfg()'] tables.
     ///
     /// The list is sorted by the table name.
@@ -1784,8 +1777,6 @@ pub struct CargoBuildConfig {
     pub rustdoc: Option<PathBuf>,
     pub out_dir: Option<ConfigRelativePath>,
 }
-
-type CargoTestConfig = CargoBuildConfig;
 
 /// A type to deserialize a list of strings from a toml file.
 ///
