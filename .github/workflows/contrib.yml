@@ -15,7 +15,7 @@ jobs:
       run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.4.3/mdbook-v0.4.3-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
-        echo ::add-path::`pwd`/mdbook
+        echo `pwd`/mdbook >> $GITHUB_PATH
     - name: Deploy docs
       run: |
         cd src/doc/contrib
