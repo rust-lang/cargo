@@ -168,7 +168,7 @@ fn simple_cross_test_config() {
         .build();
 
     p.cargo("build -v").run();
-    
+
     if cross_compile::can_run_on_host() {
         p.cargo("test").run();
     }
