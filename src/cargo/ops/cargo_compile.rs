@@ -1347,7 +1347,7 @@ fn traverse_and_share(
 
 /// Build `glob::Pattern` with informative context.
 fn build_glob(pat: &str) -> CargoResult<glob::Pattern> {
-    glob::Pattern::new(pat).with_context(|| format!("Cannot build glob pattern from `{}`", pat))
+    glob::Pattern::new(pat).with_context(|| format!("cannot build glob pattern from `{}`", pat))
 }
 
 /// Emits "package not found" error.
@@ -1361,11 +1361,10 @@ fn emit_package_not_found(
 ) -> CargoResult<()> {
     if !opt_names.is_empty() {
         anyhow::bail!(
-            "{}package(s) {} not found in workspace `{}`",
+            "{}package(s) `{}` not found in workspace `{}`",
             if opt_out { "excluded " } else { "" },
             opt_names
-                .iter()
-                .map(|x| x.as_ref())
+                .into_iter()
                 .collect::<Vec<_>>()
                 .join(", "),
             ws.root().display(),
@@ -1390,7 +1389,7 @@ fn emit_pattern_not_found(
         .collect::<Vec<_>>();
     if !not_matched.is_empty() {
         anyhow::bail!(
-            "{}package pattern(s) {} not found in workspace `{}`",
+            "{}package pattern(s) `{}` not found in workspace `{}`",
             if opt_out { "excluded " } else { "" },
             not_matched.join(", "),
             ws.root().display(),

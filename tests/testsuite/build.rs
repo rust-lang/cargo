@@ -3519,7 +3519,7 @@ fn build_all_exclude_not_found() {
         .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
         .with_stderr(
             "\
-[WARNING] excluded package(s) baz not found in workspace [..]
+[WARNING] excluded package(s) `baz` not found in workspace [..]
 [COMPILING] [..] v0.1.0 ([..])
 [COMPILING] [..] v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -3586,7 +3586,7 @@ fn build_all_exclude_glob_not_found() {
         .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
         .with_stderr(
             "\
-[WARNING] excluded package pattern(s) *z not found in workspace [..]
+[WARNING] excluded package pattern(s) `*z` not found in workspace [..]
 [COMPILING] [..] v0.1.0 ([..])
 [COMPILING] [..] v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -3601,7 +3601,7 @@ fn build_all_exclude_broken_glob() {
 
     p.cargo("build --workspace --exclude '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Cannot build glob pattern from `[*z`")
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 
@@ -3778,7 +3778,7 @@ fn build_virtual_manifest_glob_not_found() {
     p.cargo("build -p bar -p '*z'")
         .with_stderr(
             "\
-[WARNING] package pattern(s) *z not found in workspace [..]
+[WARNING] package pattern(s) `*z` not found in workspace [..]
 [COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -3802,7 +3802,7 @@ fn build_virtual_manifest_broken_glob() {
 
     p.cargo("build -p '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Cannot build glob pattern from `[*z`")
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 

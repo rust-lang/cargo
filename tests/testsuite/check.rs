@@ -551,7 +551,7 @@ fn exclude_warns_on_non_existing_package() {
         .with_stdout("")
         .with_stderr(
             "\
-[WARNING] excluded package(s) bar not found in workspace `[CWD]`
+[WARNING] excluded package(s) `bar` not found in workspace `[CWD]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

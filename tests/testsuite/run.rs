@@ -996,7 +996,7 @@ fn run_multiple_packages() {
         .arg("-p")
         .arg("d3")
         .with_status(101)
-        .with_stderr_contains("[ERROR] package(s) d3 not found in workspace [..]")
+        .with_stderr_contains("[ERROR] package(s) `d3` not found in workspace [..]")
         .run();
 
     cargo()

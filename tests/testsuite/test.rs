@@ -2853,7 +2853,7 @@ fn test_all_exclude_not_found() {
         .build();
 
     p.cargo("test --workspace --exclude baz")
-        .with_stderr_contains("[WARNING] excluded package(s) baz not found in workspace [..]")
+        .with_stderr_contains("[WARNING] excluded package(s) `baz` not found in workspace [..]")
         .with_stdout_contains(
             "running 1 test
 test bar ... ok",
@@ -2911,7 +2911,7 @@ fn test_all_exclude_glob_not_found() {
 
     p.cargo("test --workspace --exclude '*z'")
         .with_stderr_contains(
-            "[WARNING] excluded package pattern(s) *z not found in workspace [..]",
+            "[WARNING] excluded package pattern(s) `*z` not found in workspace [..]",
         )
         .with_stdout_contains(
             "running 1 test
@@ -2926,7 +2926,7 @@ fn test_all_exclude_broken_glob() {
 
     p.cargo("test --workspace --exclude '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Cannot build glob pattern from `[*z`")
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 
@@ -3033,7 +3033,7 @@ fn test_virtual_manifest_glob_not_found() {
         .build();
 
     p.cargo("test -p bar -p '*z'")
-        .with_stderr_contains("[WARNING] package pattern(s) *z not found in workspace [..]")
+        .with_stderr_contains("[WARNING] package pattern(s) `*z` not found in workspace [..]")
         .with_stdout_contains("running 1 test\ntest bar ... ok")
         .with_stdout_does_not_contain("running 1 test\ntest baz ... ok")
         .run();
@@ -3055,7 +3055,7 @@ fn test_virtual_manifest_broken_glob() {
 
     p.cargo("test -p '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] Cannot build glob pattern from `[*z`")
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 
