@@ -1,17 +1,66 @@
 # Changelog
 
-## Cargo 1.48 (2020-11-19)
-[51b66125...HEAD](https://github.com/rust-lang/cargo/compare/51b66125...HEAD)
+## Cargo 1.49 (2020-12-31)
+[75615f8e...HEAD](https://github.com/rust-lang/cargo/compare/75615f8e...HEAD)
 
 ### Added
+- Added `homepage` and `documentation` fields to `cargo metadata`.
+  [#8744](https://github.com/rust-lang/cargo/pull/8744)
+
+### Changed
+- Computed LTO flags are now included in the filename metadata hash so that
+  changes in LTO settings will independently cache build artifacts instead of
+  overwriting previous ones. This prevents rebuilds in some situations such as
+  switching between `cargo build` and `cargo test` in some circumstances.
+  [#8755](https://github.com/rust-lang/cargo/pull/8755)
+
+### Fixed
+- Fixed building a library with both "dylib" and "rlib" crate types with LTO enabled.
+  [#8754](https://github.com/rust-lang/cargo/pull/8754)
+
+### Nightly only
+
+
+## Cargo 1.48 (2020-11-19)
+[51b66125...rust-1.48.0](https://github.com/rust-lang/cargo/compare/51b66125...rust-1.48.0)
+
+### Added
+- Added `term.progress` configuration option to control when and how the
+  progress bar is displayed.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#termprogresswhen)
+  [#8165](https://github.com/rust-lang/cargo/pull/8165)
+- Added `--message-format plain` option to `cargo locate-project` to display
+  the project location without JSON to make it easier to use in a script.
+  [#8707](https://github.com/rust-lang/cargo/pull/8707)
+- Added `--workspace` option to `cargo locate-project` to display the path to
+  the workspace manifest.
+  [#8712](https://github.com/rust-lang/cargo/pull/8712)
+- A new contributor guide has been added for contributing to Cargo itself.
+  This is published at <https://rust-lang.github.io/cargo/contrib/>.
+  [#8715](https://github.com/rust-lang/cargo/pull/8715)
+- Zsh `--target` completion will now complete with the built-in rustc targets.
+  [#8740](https://github.com/rust-lang/cargo/pull/8740)
 
 ### Changed
 
 ### Fixed
-- Fixed LTO with doctests.
-  [#8657](https://github.com/rust-lang/cargo/pull/8657)
+- Fixed `cargo new` creating a fossil repository to properly ignore the `target` directory.
+  [#8671](https://github.com/rust-lang/cargo/pull/8671)
+- Don't show warnings about the workspace in the current directory when using `cargo install`
+  of a remote package.
+  [#8681](https://github.com/rust-lang/cargo/pull/8681)
+- Automatically reinitialize the index when an "Object not found" error is
+  encountered in the git repository.
+  [#8735](https://github.com/rust-lang/cargo/pull/8735)
 
 ### Nightly only
+- Fixed `cargo install` so that it will ignore the `[unstable]` table in local config files.
+  [#8656](https://github.com/rust-lang/cargo/pull/8656)
+- Fixed nondeterministic behavior of the new feature resolver.
+  [#8701](https://github.com/rust-lang/cargo/pull/8701)
+- Fixed running `cargo test` on a proc-macro with the new feature resolver
+  under a specific combination of circumstances.
+  [#8742](https://github.com/rust-lang/cargo/pull/8742)
 
 ## Cargo 1.47 (2020-10-08)
 [4f74d9b2...rust-1.47.0](https://github.com/rust-lang/cargo/compare/4f74d9b2...rust-1.47.0)
@@ -95,6 +144,9 @@
 - The `CARGO_TARGET_{triplet}_RUNNER` environment variable will now correctly
   override the config file instead of trying to merge the commands.
   [#8629](https://github.com/rust-lang/cargo/pull/8629)
+- Fixed LTO with doctests.
+  [#8657](https://github.com/rust-lang/cargo/pull/8657)
+  [#8658](https://github.com/rust-lang/cargo/pull/8658)
 
 ### Nightly only
 - Added support for `-Z terminal-width` which tells `rustc` the width of the
