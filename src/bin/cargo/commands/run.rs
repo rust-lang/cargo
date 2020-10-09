@@ -40,17 +40,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     )?;
 
     // Disallow `spec` to be an glob pattern
-    match &compile_opts.spec {
-        Packages::Packages(opt_in) => {
-            if let Some(pattern) = opt_in.iter().find(|s| is_glob_pattern(s)) {
-                return Err(anyhow::anyhow!(
-                    "`cargo run` does not support glob pattern `{}` on package selection",
-                    pattern,
-                )
-                .into());
-            }
+    if let Packages::Packages(opt_in) = &compile_opts.spec {
+        if let Some(pattern) = opt_in.iter().find(|s| is_glob_pattern(s)) {
+            return Err(anyhow::anyhow!(
+                "`cargo run` does not support glob pattern `{}` on package selection",
+                pattern,
+            )
+            .into());
         }
-        _ => (),
     }
 
     if !args.is_present("example") && !args.is_present("bin") {
