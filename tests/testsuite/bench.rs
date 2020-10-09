@@ -1468,28 +1468,28 @@ fn bench_all_exclude_glob() {
         .file(
             "Cargo.toml",
             r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
+                [project]
+                name = "foo"
+                version = "0.1.0"
 
-            [workspace]
-            members = ["bar", "baz"]
-        "#,
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
 
-            #[bench]
-            pub fn bar(b: &mut test::Bencher) {
-                b.iter(|| {});
-            }
-        "#,
+                #[bench]
+                pub fn bar(b: &mut test::Bencher) {
+                    b.iter(|| {});
+                }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
@@ -1570,37 +1570,37 @@ fn bench_virtual_manifest_glob() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["bar", "baz"]
-        "#,
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() { break_the_build(); }")
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_bar(_: &mut Bencher) -> () { break_the_build(); }
-        "#,
+                #[bench]
+                fn bench_bar(_: &mut Bencher) -> () { break_the_build(); }
+            "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"
-            #![feature(test)]
-            extern crate test;
+                #![feature(test)]
+                extern crate test;
 
-            use test::Bencher;
+                use test::Bencher;
 
-            #[bench]
-            fn bench_baz(_: &mut Bencher) -> () { () }
-        "#,
+                #[bench]
+                fn bench_baz(_: &mut Bencher) -> () { () }
+            "#,
         )
         .build();
 
