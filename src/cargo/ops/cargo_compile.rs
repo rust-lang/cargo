@@ -1362,10 +1362,7 @@ fn emit_package_not_found(
         anyhow::bail!(
             "{}package(s) `{}` not found in workspace `{}`",
             if opt_out { "excluded " } else { "" },
-            opt_names
-                .into_iter()
-                .collect::<Vec<_>>()
-                .join(", "),
+            opt_names.into_iter().collect::<Vec<_>>().join(", "),
             ws.root().display(),
         )
     }
