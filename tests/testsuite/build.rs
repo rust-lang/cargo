@@ -3481,13 +3481,11 @@ fn build_all_exclude() {
         .build();
 
     p.cargo("build --workspace --exclude baz")
-        .with_stderr_contains("[COMPILING] foo v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
         .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
-[COMPILING] [..] v0.1.0 ([..])
-[COMPILING] [..] v0.1.0 ([..])
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -3515,13 +3513,11 @@ fn build_all_exclude_not_found() {
 
     p.cargo("build --workspace --exclude baz")
         .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] foo v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [WARNING] excluded package(s) `baz` not found in workspace [..]
-[COMPILING] [..] v0.1.0 ([..])
-[COMPILING] [..] v0.1.0 ([..])
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -3551,12 +3547,10 @@ fn build_all_exclude_glob() {
 
     p.cargo("build --workspace --exclude '*z'")
         .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] foo v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
-[COMPILING] [..] v0.1.0 ([..])
-[COMPILING] [..] v0.1.0 ([..])
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -3669,12 +3663,12 @@ fn build_all_virtual_manifest() {
 
     // The order in which bar and baz are built is not guaranteed
     p.cargo("build --workspace")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 }
@@ -3697,12 +3691,12 @@ fn build_virtual_manifest_all_implied() {
 
     // The order in which `bar` and `baz` are built is not guaranteed.
     p.cargo("build")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 }
@@ -3832,12 +3826,12 @@ fn build_all_virtual_manifest_implicit_examples() {
 
     // The order in which bar and baz are built is not guaranteed
     p.cargo("build --workspace --examples")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
     assert!(!p.bin("a").is_file());
