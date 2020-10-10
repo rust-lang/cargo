@@ -158,8 +158,7 @@ impl Packages {
                         .map(PackageIdSpec::from_package_id);
                     specs.extend(matched_pkgs);
                 }
-                emit_pattern_not_found(ws, patterns, false)
-                    .or_else(|e| ws.config().shell().warn(e))?;
+                emit_pattern_not_found(ws, patterns, false)?;
                 specs
             }
             Packages::Default => ws

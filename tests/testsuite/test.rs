@@ -3033,9 +3033,8 @@ fn test_virtual_manifest_glob_not_found() {
         .build();
 
     p.cargo("test -p bar -p '*z'")
-        .with_stderr_contains("[WARNING] package pattern(s) `*z` not found in workspace [..]")
-        .with_stdout_contains("running 1 test\ntest bar ... ok")
-        .with_stdout_does_not_contain("running 1 test\ntest baz ... ok")
+        .with_status(101)
+        .with_stderr("[ERROR] package pattern(s) `*z` not found in workspace [..]")
         .run();
 }
 

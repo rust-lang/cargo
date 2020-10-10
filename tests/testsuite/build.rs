@@ -3770,13 +3770,8 @@ fn build_virtual_manifest_glob_not_found() {
         .build();
 
     p.cargo("build -p bar -p '*z'")
-        .with_stderr(
-            "\
-[WARNING] package pattern(s) `*z` not found in workspace [..]
-[COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_status(101)
+        .with_stderr("[ERROR] package pattern(s) `*z` not found in workspace [..]")
         .run();
 }
 
