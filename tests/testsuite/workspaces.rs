@@ -2319,3 +2319,92 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn simple_primary_package_env_var() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -vv")
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .run();
+
+    // Again, this time selecting a specific crate
+    p.cargo("clean").run();
+    p.cargo("build -vv -p bar")
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .run();
+
+    // Again, this time selecting all crates
+    p.cargo("clean").run();
+    p.cargo("build -vv --all")
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn virtual_primary_package_env_var() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -vv")
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .run();
+
+    // Again, this time selecting a specific crate
+    p.cargo("clean").run();
+    p.cargo("build -vv -p foo")
+        .with_stderr_contains(
+            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
+        )
+        .run();
+}
