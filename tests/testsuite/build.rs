@@ -10,7 +10,7 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match_unordered,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, is_nightly, lines_match_unordered,
     main_file, paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
@@ -5177,5 +5177,85 @@ fn build_script_o0_default_even_with_release() {
 
     p.cargo("build -v --release")
         .with_stderr_does_not_contain("[..]build_script_build[..]opt-level[..]")
+        .run();
+}
+
+#[cargo_test]
+fn primary_package_env_var() {
+    // "foo" depends on "bar" (local) which depends on "baz" (git) which depends on "qux" (registry)
+    // Test that CARGO_PRIMARY_PACKAGE is enabled only for "foo".
+
+    Package::new("qux", "1.0.0")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let baz = git::new("baz", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+        [package]
+        name = "baz"
+        version = "1.0.0"
+
+        [dependencies]
+        qux = "1.0"
+    "#,
+            )
+            .file("src/lib.rs", "extern crate qux;")
+    });
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [dependencies]
+        bar = {path = "bar"}
+"#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+        [package]
+        name = "bar"
+        version = "1.0.0"
+
+        [dependencies]
+        baz = {{ git = '{}' }}
+    "#,
+                baz.url()
+            ),
+        )
+        .file("bar/src/lib.rs", "extern crate baz;")
+        .build();
+
+    foo.cargo("build -vv")
+        .with_stderr_contains("[COMPILING] qux[..]")
+        .with_stderr_line_without(
+            &["[RUNNING]", "CARGO_CRATE_NAME=qux"],
+            &["CARGO_PRIMARY_PACKAGE=1"],
+        )
+        .with_stderr_contains("[COMPILING] baz[..]")
+        .with_stderr_line_without(
+            &["[RUNNING]", "CARGO_CRATE_NAME=baz"],
+            &["CARGO_PRIMARY_PACKAGE=1"],
+        )
+        .with_stderr_contains("[COMPILING] bar[..]")
+        .with_stderr_line_without(
+            &["[RUNNING]", "CARGO_CRATE_NAME=bar"],
+            &["CARGO_PRIMARY_PACKAGE=1"],
+        )
+        .with_stderr_contains(
+            "\
+[COMPILING] foo[..]
+[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
         .run();
 }
