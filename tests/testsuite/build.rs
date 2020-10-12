@@ -196,7 +196,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 3 column 23
+  invalid TOML value, did you mean to use a quoted string? at line 3 column 23
 ",
         )
         .run();
@@ -216,7 +216,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  invalid number at line 1 column 5
+  invalid TOML value, did you mean to use a quoted string? at line 1 column 5
 ",
         )
         .run();
