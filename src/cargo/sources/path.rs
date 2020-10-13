@@ -191,12 +191,25 @@ impl<'cfg> PathSource<'cfg> {
         let index = repo
             .index()
             .chain_err(|| format!("failed to open git index at {}", repo.path().display()))?;
-        let repo_root = repo.workdir().ok_or_else(|| {
-            anyhow::format_err!(
+        let repo_root = if let Some(root) = repo.workdir() {
+            root
+        } else if !repo.is_bare() {
+            // Sparse-checkouts (and possibly other git
+            // configurations) make libgit2 confused but there's still
+            // an actual non-bare repo here.
+            if let Some(r) = repo.path().parent() {
+                r
+            } else {
+                return Err(anyhow::format_err!(
+                    "repo path missing .git subfolder even when non-bare",
+                ));
+            }
+        } else {
+            return Err(anyhow::format_err!(
                 "did not expect repo at {} to be bare",
                 repo.path().display()
-            )
-        })?;
+            ));
+        };
         let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
             Ok(p) => p,
             Err(e) => {
@@ -225,9 +238,21 @@ impl<'cfg> PathSource<'cfg> {
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
-        let root = repo
-            .workdir()
-            .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
+        let root = if let Some(root) = repo.workdir() {
+            root
+        } else if !repo.is_bare() {
+            // Sparse-checkouts (and possibly other git
+            // configurations) make libgit2 confused but there's still
+            // an actual non-bare repo here.
+            if let Some(r) = repo.path().parent() {
+                r
+            } else {
+                return Err(anyhow::format_err!("malformed non-bare repository root",));
+            }
+        } else {
+            return Err(anyhow::format_err!("can't list files on a bare repository",));
+        };
+
         let pkg_path = pkg.root();
 
         let mut ret = Vec::<PathBuf>::new();
