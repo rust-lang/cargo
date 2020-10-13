@@ -49,6 +49,9 @@ system:
 * `TERM` — If this is set to `dumb`, it disables the progress bar.
 * `BROWSER` — The web browser to execute to open documentation with [`cargo
   doc`]'s' `--open` flag.
+* `RUSTFMT` — Instead of running `rustfmt`, 
+  [`cargo fmt`](https://github.com/rust-lang/rustfmt) will execute this specified
+  `rustfmt` instance instead.
 
 #### Configuration environment variables
 
