@@ -1946,3 +1946,52 @@ fn test_proc_macro() {
         .masquerade_as_nightly_cargo()
         .run();
 }
+
+#[cargo_test]
+fn doc_optional() {
+    // Checks for a bug where `cargo doc` was failing with an inactive target
+    // that enables a shared optional dependency.
+    Package::new("spin", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("spin", "1.0").optional(true))
+        .publish();
+    // The enabler package enables the `spin` feature, which we don't want.
+    Package::new("enabler", "1.0.0")
+        .feature_dep("bar", "1.0", &["spin"])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [target.'cfg(whatever)'.dependencies]
+                enabler = "1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zfeatures=itarget")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] spin v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] enabler v1.0.0 [..]
+[DOCUMENTING] bar v1.0.0
+[CHECKING] bar v1.0.0
+[DOCUMENTING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}

@@ -22,7 +22,7 @@ use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
-use crate::core::{Package, PackageId, PackageSet, Target, Workspace};
+use crate::core::{Dependency, Package, PackageId, PackageSet, Target, Workspace};
 use crate::ops::resolve_all_features;
 use crate::util::interning::InternedString;
 use crate::util::Config;
@@ -223,50 +223,33 @@ fn compute_deps(
     }
 
     let id = unit.pkg.package_id();
-    let filtered_deps = state.resolve().deps(id).filter(|&(_id, deps)| {
-        assert!(!deps.is_empty());
-        deps.iter().any(|dep| {
-            // If this target is a build command, then we only want build
-            // dependencies, otherwise we want everything *other than* build
-            // dependencies.
-            if unit.target.is_custom_build() != dep.is_build() {
-                return false;
-            }
-
-            // If this dependency is **not** a transitive dependency, then it
-            // only applies to test/example targets.
-            if !dep.is_transitive()
-                && !unit.target.is_test()
-                && !unit.target.is_example()
-                && !unit.mode.is_any_test()
-            {
-                return false;
-            }
-
-            // If this dependency is only available for certain platforms,
-            // make sure we're only enabling it for that platform.
-            if !state.target_data.dep_platform_activated(dep, unit.kind) {
-                return false;
-            }
-
-            // If this is an optional dependency, and the new feature resolver
-            // did not enable it, don't include it.
-            if dep.is_optional() {
-                let features_for = unit_for.map_to_features_for();
-
-                let feats = state.activated_features(id, features_for);
-                if !feats.contains(&dep.name_in_toml()) {
+    let filtered_deps = state
+        .deps(unit, unit_for)
+        .into_iter()
+        .filter(|&(_id, deps)| {
+            deps.iter().any(|dep| {
+                // If this target is a build command, then we only want build
+                // dependencies, otherwise we want everything *other than* build
+                // dependencies.
+                if unit.target.is_custom_build() != dep.is_build() {
                     return false;
                 }
-            }
 
-            // If we've gotten past all that, then this dependency is
-            // actually used!
-            true
-        })
-    });
-    // Separate line to avoid rustfmt indentation. Must collect due to `state` capture.
-    let filtered_deps: Vec<_> = filtered_deps.collect();
+                // If this dependency is **not** a transitive dependency, then it
+                // only applies to test/example targets.
+                if !dep.is_transitive()
+                    && !unit.target.is_test()
+                    && !unit.target.is_example()
+                    && !unit.mode.is_any_test()
+                {
+                    return false;
+                }
+
+                // If we've gotten past all that, then this dependency is
+                // actually used!
+                true
+            })
+        });
 
     let mut ret = Vec::new();
     for (id, _) in filtered_deps {
@@ -410,16 +393,10 @@ fn compute_deps_custom_build(
 
 /// Returns the dependencies necessary to document a package.
 fn compute_deps_doc(unit: &Unit, state: &mut State<'_, '_>) -> CargoResult<Vec<UnitDep>> {
-    let target_data = state.target_data;
     let deps = state
-        .resolve()
-        .deps(unit.pkg.package_id())
-        .filter(|&(_id, deps)| {
-            deps.iter().any(|dep| match dep.kind() {
-                DepKind::Normal => target_data.dep_platform_activated(dep, unit.kind),
-                _ => false,
-            })
-        });
+        .deps(unit, UnitFor::new_normal())
+        .into_iter()
+        .filter(|&(_id, deps)| deps.iter().any(|dep| dep.kind() == DepKind::Normal));
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
@@ -740,5 +717,37 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         self.package_set
             .get_one(id)
             .unwrap_or_else(|_| panic!("expected {} to be downloaded", id))
+    }
+
+    /// Returns a filtered set of dependencies for the given unit.
+    fn deps(&self, unit: &Unit, unit_for: UnitFor) -> Vec<(PackageId, &HashSet<Dependency>)> {
+        let pkg_id = unit.pkg.package_id();
+        let kind = unit.kind;
+        self.resolve()
+            .deps(pkg_id)
+            .filter(|&(_id, deps)| {
+                assert!(!deps.is_empty());
+                deps.iter().any(|dep| {
+                    // If this dependency is only available for certain platforms,
+                    // make sure we're only enabling it for that platform.
+                    if !self.target_data.dep_platform_activated(dep, kind) {
+                        return false;
+                    }
+
+                    // If this is an optional dependency, and the new feature resolver
+                    // did not enable it, don't include it.
+                    if dep.is_optional() {
+                        let features_for = unit_for.map_to_features_for();
+
+                        let feats = self.activated_features(pkg_id, features_for);
+                        if !feats.contains(&dep.name_in_toml()) {
+                            return false;
+                        }
+                    }
+
+                    true
+                })
+            })
+            .collect()
     }
 }
