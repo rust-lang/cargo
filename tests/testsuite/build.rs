@@ -10,7 +10,7 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, lines_match_unordered,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, is_nightly, lines_match_unordered,
     main_file, paths, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use std::env;
@@ -5178,4 +5178,69 @@ fn build_script_o0_default_even_with_release() {
     p.cargo("build -v --release")
         .with_stderr_does_not_contain("[..]build_script_build[..]opt-level[..]")
         .run();
+}
+
+#[cargo_test]
+fn primary_package_env_var() {
+    // Test that CARGO_PRIMARY_PACKAGE is enabled only for "foo" and not for any dependency.
+
+    let is_primary_package = r#"
+        pub fn is_primary_package() -> bool {{
+            option_env!("CARGO_PRIMARY_PACKAGE").is_some()
+        }}
+    "#;
+
+    Package::new("qux", "0.1.0")
+        .file("src/lib.rs", is_primary_package)
+        .publish();
+
+    let baz = git::new("baz", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
+            .file("src/lib.rs", is_primary_package)
+    });
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ path = "bar" }}
+                    baz = {{ git = '{}' }}
+                    qux = "0.1"
+                "#,
+                baz.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            &format!(
+                r#"
+                    extern crate bar;
+                    extern crate baz;
+                    extern crate qux;
+
+                    {}
+
+                    #[test]
+                    fn verify_primary_package() {{
+                        assert!(!bar::is_primary_package());
+                        assert!(!baz::is_primary_package());
+                        assert!(!qux::is_primary_package());
+                        assert!(is_primary_package());
+                    }}
+                "#,
+                is_primary_package
+            ),
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", is_primary_package)
+        .build();
+
+    foo.cargo("test").run();
 }
