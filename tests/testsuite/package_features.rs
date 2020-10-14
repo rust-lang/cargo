@@ -57,6 +57,7 @@ fn virtual_no_default_features() {
             "\
 [ERROR] --no-default-features is not allowed in the root of a virtual workspace
 [NOTE] while this was previously accepted, it didn't actually do anything
+[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
 ",
         )
         .run();
@@ -125,6 +126,7 @@ fn virtual_features() {
             "\
 [ERROR] --features is not allowed in the root of a virtual workspace
 [NOTE] while this was previously accepted, it didn't actually do anything
+[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
 ",
         )
         .run();
@@ -202,6 +204,7 @@ fn virtual_with_specific() {
             "\
 [ERROR] --features is not allowed in the root of a virtual workspace
 [NOTE] while this was previously accepted, it didn't actually do anything
+[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
 ",
         )
         .run();
@@ -371,6 +374,7 @@ fn virtual_member_slash() {
             "\
 [ERROR] --features is not allowed in the root of a virtual workspace
 [NOTE] while this was previously accepted, it didn't actually do anything
+[HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package
 ",
         )
         .run();

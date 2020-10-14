@@ -1939,7 +1939,8 @@ fn virtual_ws_flags() {
     p.cargo("build --features=f1")
         .with_stderr(
             "[ERROR] --features is not allowed in the root of a virtual workspace\n\
-             note: while this was previously accepted, it didn't actually do anything",
+             [NOTE] while this was previously accepted, it didn't actually do anything\n\
+             [HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
         )
         .with_status(101)
         .run();
@@ -1947,7 +1948,8 @@ fn virtual_ws_flags() {
     p.cargo("build --no-default-features")
         .with_stderr(
             "[ERROR] --no-default-features is not allowed in the root of a virtual workspace\n\
-             note: while this was previously accepted, it didn't actually do anything",
+             [NOTE] while this was previously accepted, it didn't actually do anything\n\
+             [HELP] change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
         )
         .with_status(101)
         .run();
