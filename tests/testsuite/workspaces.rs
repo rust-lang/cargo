@@ -2322,6 +2322,13 @@ Caused by:
 
 #[cargo_test]
 fn simple_primary_package_env_var() {
+    let is_primary_package = r#"
+        #[test]
+        fn verify_primary_package() {{
+            assert!(option_env!("CARGO_PRIMARY_PACKAGE").is_some());
+        }}
+    "#;
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -2335,7 +2342,7 @@ fn simple_primary_package_env_var() {
                 members = ["bar"]
             "#,
         )
-        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", is_primary_package)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -2346,37 +2353,29 @@ fn simple_primary_package_env_var() {
                 workspace = ".."
             "#,
         )
-        .file("bar/src/main.rs", "fn main() {}");
+        .file("bar/src/lib.rs", is_primary_package);
     let p = p.build();
 
-    p.cargo("build -vv")
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .run();
+    p.cargo("test").run();
 
     // Again, this time selecting a specific crate
     p.cargo("clean").run();
-    p.cargo("build -vv -p bar")
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .run();
+    p.cargo("test -p bar").run();
 
     // Again, this time selecting all crates
     p.cargo("clean").run();
-    p.cargo("build -vv --all")
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .run();
+    p.cargo("test --all").run();
 }
 
 #[cargo_test]
 fn virtual_primary_package_env_var() {
+    let is_primary_package = r#"
+        #[test]
+        fn verify_primary_package() {{
+            assert!(option_env!("CARGO_PRIMARY_PACKAGE").is_some());
+        }}
+    "#;
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -2386,25 +2385,14 @@ fn virtual_primary_package_env_var() {
             "#,
         )
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("foo/src/main.rs", "fn main() {}")
+        .file("foo/src/lib.rs", is_primary_package)
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("bar/src/main.rs", "fn main() {}");
+        .file("bar/src/lib.rs", is_primary_package);
     let p = p.build();
 
-    p.cargo("build -vv")
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=bar [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .run();
+    p.cargo("test").run();
 
     // Again, this time selecting a specific crate
     p.cargo("clean").run();
-    p.cargo("build -vv -p foo")
-        .with_stderr_contains(
-            "[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]",
-        )
-        .run();
+    p.cargo("test -p foo").run();
 }

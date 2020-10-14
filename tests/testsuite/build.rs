@@ -5182,80 +5182,65 @@ fn build_script_o0_default_even_with_release() {
 
 #[cargo_test]
 fn primary_package_env_var() {
-    // "foo" depends on "bar" (local) which depends on "baz" (git) which depends on "qux" (registry)
-    // Test that CARGO_PRIMARY_PACKAGE is enabled only for "foo".
+    // Test that CARGO_PRIMARY_PACKAGE is enabled only for "foo" and not for any dependency.
 
-    Package::new("qux", "1.0.0")
-        .file("src/lib.rs", "")
+    let is_primary_package = r#"
+        pub fn is_primary_package() -> bool {{
+            option_env!("CARGO_PRIMARY_PACKAGE").is_some()
+        }}
+    "#;
+
+    Package::new("qux", "0.1.0")
+        .file("src/lib.rs", is_primary_package)
         .publish();
 
     let baz = git::new("baz", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-        [package]
-        name = "baz"
-        version = "1.0.0"
-
-        [dependencies]
-        qux = "1.0"
-    "#,
-            )
-            .file("src/lib.rs", "extern crate qux;")
+            .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
+            .file("src/lib.rs", is_primary_package)
     });
 
     let foo = project()
         .file(
             "Cargo.toml",
-            r#"
-        [package]
-        name = "foo"
-        version = "1.0.0"
-
-        [dependencies]
-        bar = {path = "bar"}
-"#,
-        )
-        .file("src/lib.rs", "extern crate bar;")
-        .file(
-            "bar/Cargo.toml",
             &format!(
                 r#"
-        [package]
-        name = "bar"
-        version = "1.0.0"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
 
-        [dependencies]
-        baz = {{ git = '{}' }}
-    "#,
+                    [dependencies]
+                    bar = {{ path = "bar" }}
+                    baz = {{ git = '{}' }}
+                    qux = "0.1"
+                "#,
                 baz.url()
             ),
         )
-        .file("bar/src/lib.rs", "extern crate baz;")
+        .file(
+            "src/lib.rs",
+            &format!(
+                r#"
+                    extern crate bar;
+                    extern crate baz;
+                    extern crate qux;
+
+                    {}
+
+                    #[test]
+                    fn verify_primary_package() {{
+                        assert!(!bar::is_primary_package());
+                        assert!(!baz::is_primary_package());
+                        assert!(!qux::is_primary_package());
+                        assert!(is_primary_package());
+                    }}
+                "#,
+                is_primary_package
+            ),
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", is_primary_package)
         .build();
 
-    foo.cargo("build -vv")
-        .with_stderr_contains("[COMPILING] qux[..]")
-        .with_stderr_line_without(
-            &["[RUNNING]", "CARGO_CRATE_NAME=qux"],
-            &["CARGO_PRIMARY_PACKAGE=1"],
-        )
-        .with_stderr_contains("[COMPILING] baz[..]")
-        .with_stderr_line_without(
-            &["[RUNNING]", "CARGO_CRATE_NAME=baz"],
-            &["CARGO_PRIMARY_PACKAGE=1"],
-        )
-        .with_stderr_contains("[COMPILING] bar[..]")
-        .with_stderr_line_without(
-            &["[RUNNING]", "CARGO_CRATE_NAME=bar"],
-            &["CARGO_PRIMARY_PACKAGE=1"],
-        )
-        .with_stderr_contains(
-            "\
-[COMPILING] foo[..]
-[RUNNING] [..] CARGO_CRATE_NAME=foo [..] CARGO_PRIMARY_PACKAGE=1 [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
-        .run();
+    foo.cargo("test").run();
 }
