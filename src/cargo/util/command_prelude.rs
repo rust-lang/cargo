@@ -309,7 +309,7 @@ pub trait ArgMatchesExt {
                     bail!(
                         "--{} is not allowed in the root of a virtual workspace\n\
                          note: while this was previously accepted, it didn't actually do anything\n\
-                         help: try cd into the package and run cargo command",
+                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
                         flag
                     );
                 }
