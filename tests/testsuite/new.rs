@@ -602,3 +602,26 @@ If you need a crate name to not match the directory name, consider using --name 
         )
         .run();
 }
+
+#[cargo_test]
+fn git_default_branch() {
+    // Check for init.defaultBranch support.
+    create_empty_gitconfig();
+    cargo_process("new foo").env("USER", "foo").run();
+    let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
+    let head = repo.find_reference("HEAD").unwrap();
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/master");
+
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+        [init]
+            defaultBranch = hello
+        "#,
+    )
+    .unwrap();
+    cargo_process("new bar").env("USER", "foo").run();
+    let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
+    let head = repo.find_reference("HEAD").unwrap();
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");
+}

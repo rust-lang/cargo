@@ -794,7 +794,7 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config",
     assert_error(
         config.get::<L>("bad-env").unwrap_err(),
         "error in environment variable `CARGO_BAD_ENV`: \
-         could not parse TOML list: invalid number at line 1 column 8",
+         could not parse TOML list: invalid TOML value, did you mean to use a quoted string? at line 1 column 8",
     );
 
     // Try some other sequence-like types.
