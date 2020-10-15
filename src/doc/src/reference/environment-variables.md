@@ -113,6 +113,7 @@ supported environment variables are:
 [`cargo install`]: ../commands/cargo-install.md
 [`cargo new`]: ../commands/cargo-new.md
 [`cargo rustc`]: ../commands/cargo-rustc.md
+[`cargo rustdoc`]: ../commands/cargo-rustdoc.md
 [config-env]: config.md#environment-variables
 [crates.io]: https://crates.io/
 [incremental compilation]: profiles.md#incremental
