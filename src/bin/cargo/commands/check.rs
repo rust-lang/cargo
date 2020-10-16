@@ -32,6 +32,7 @@ pub fn cli() -> App {
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_crate_type()
         .arg_message_format()
         .arg_unit_graph()
         .after_help("Run `cargo help check` for more detailed information.\n")

@@ -1,5 +1,5 @@
-use crate::core::compiler::{BuildConfig, MessageFormat};
-use crate::core::Workspace;
+use crate::core::compiler::{BuildConfig, CrateType, MessageFormat};
+use crate::core::{TargetKind, Workspace};
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -150,6 +150,12 @@ pub trait AppExt: Sized {
 
     fn arg_manifest_path(self) -> Self {
         self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
+    }
+
+    fn arg_crate_type(self) -> Self {
+        self._arg(
+            opt("crate-type", "Override crate type for all libraries").value_name("CRATE-TYPE"),
+        )
     }
 
     fn arg_message_format(self) -> Self {
@@ -312,6 +318,16 @@ pub trait ArgMatchesExt {
                          help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
                         flag
                     );
+                }
+            }
+        }
+        if let Some(crate_type) = self._value_of("crate-type") {
+            if let Ok(current) = ws.current_mut() {
+                for target in current.manifest_mut().targets_mut() {
+                    if let TargetKind::Lib(_) = target.kind() {
+                        let crate_type = CrateType::from(&crate_type.to_owned());
+                        target.set_kind(TargetKind::Lib(vec![crate_type]));
+                    }
                 }
             }
         }
