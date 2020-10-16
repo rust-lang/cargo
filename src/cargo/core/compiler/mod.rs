@@ -63,6 +63,9 @@ const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 pub enum LinkType {
     Cdylib,
     Bin,
+    Test,
+    Bench,
+    Example,
 }
 
 impl From<&super::Target> for Option<LinkType> {
@@ -71,6 +74,12 @@ impl From<&super::Target> for Option<LinkType> {
             Some(LinkType::Cdylib)
         } else if value.is_bin() {
             Some(LinkType::Bin)
+        } else if value.is_test() {
+            Some(LinkType::Test)
+        } else if value.is_bench() {
+            Some(LinkType::Bench)
+        } else if value.is_exe_example() {
+            Some(LinkType::Example)
         } else {
             None
         }
