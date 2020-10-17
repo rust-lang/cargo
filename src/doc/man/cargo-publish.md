@@ -57,7 +57,7 @@ config files](../reference/config.html). If not specified, and there is a
 [`package.publish`](../reference/manifest.html#the-publish-field) field in
 `Cargo.toml` with a single registry, then it will publish to that registry.
 Otherwise it will use the default registry, which is defined by the
-[`registry.default`](../reference/config.html#registry-default) config key
+[`registry.default`](../reference/config.html#registrydefault) config key
 which defaults to `crates-io`.
 {{/option}}
 

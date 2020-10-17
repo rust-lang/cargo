@@ -21,105 +21,105 @@ available at <https://rust-lang.org>.
 
 ### Build Commands
 
-[cargo-bench(1)](cargo-bench.md)\
+[cargo-bench(1)](cargo-bench.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Execute benchmarks of a package.
 
-[cargo-build(1)](cargo-build.md)\
+[cargo-build(1)](cargo-build.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Compile a package.
 
-[cargo-check(1)](cargo-check.md)\
+[cargo-check(1)](cargo-check.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Check a local package and all of its dependencies for errors.
 
-[cargo-clean(1)](cargo-clean.md)\
+[cargo-clean(1)](cargo-clean.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Remove artifacts that Cargo has generated in the past.
 
-[cargo-doc(1)](cargo-doc.md)\
+[cargo-doc(1)](cargo-doc.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Build a package's documentation.
 
-[cargo-fetch(1)](cargo-fetch.md)\
+[cargo-fetch(1)](cargo-fetch.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Fetch dependencies of a package from the network.
 
-[cargo-fix(1)](cargo-fix.md)\
+[cargo-fix(1)](cargo-fix.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Automatically fix lint warnings reported by rustc.
 
-[cargo-run(1)](cargo-run.md)\
+[cargo-run(1)](cargo-run.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Run a binary or example of the local package.
 
-[cargo-rustc(1)](cargo-rustc.md)\
+[cargo-rustc(1)](cargo-rustc.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Compile a package, and pass extra options to the compiler.
 
-[cargo-rustdoc(1)](cargo-rustdoc.md)\
+[cargo-rustdoc(1)](cargo-rustdoc.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Build a package's documentation, using specified custom flags.
 
-[cargo-test(1)](cargo-test.md)\
+[cargo-test(1)](cargo-test.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Execute unit and integration tests of a package.
 
 ### Manifest Commands
 
-[cargo-generate-lockfile(1)](cargo-generate-lockfile.md)\
+[cargo-generate-lockfile(1)](cargo-generate-lockfile.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Generate `Cargo.lock` for a project.
 
-[cargo-locate-project(1)](cargo-locate-project.md)\
+[cargo-locate-project(1)](cargo-locate-project.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Print a JSON representation of a `Cargo.toml` file's location.
 
-[cargo-metadata(1)](cargo-metadata.md)\
+[cargo-metadata(1)](cargo-metadata.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Output the resolved dependencies of a package in machine-readable format.
 
-[cargo-pkgid(1)](cargo-pkgid.md)\
+[cargo-pkgid(1)](cargo-pkgid.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Print a fully qualified package specification.
 
-[cargo-tree(1)](cargo-tree.md)\
+[cargo-tree(1)](cargo-tree.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Display a tree visualization of a dependency graph.
 
-[cargo-update(1)](cargo-update.md)\
+[cargo-update(1)](cargo-update.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Update dependencies as recorded in the local lock file.
 
-[cargo-vendor(1)](cargo-vendor.md)\
+[cargo-vendor(1)](cargo-vendor.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Vendor all dependencies locally.
 
-[cargo-verify-project(1)](cargo-verify-project.md)\
+[cargo-verify-project(1)](cargo-verify-project.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Check correctness of crate manifest.
 
 ### Package Commands
 
-[cargo-init(1)](cargo-init.md)\
+[cargo-init(1)](cargo-init.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Create a new Cargo package in an existing directory.
 
-[cargo-install(1)](cargo-install.md)\
+[cargo-install(1)](cargo-install.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Build and install a Rust binary.
 
-[cargo-new(1)](cargo-new.md)\
+[cargo-new(1)](cargo-new.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Create a new Cargo package.
 
-[cargo-search(1)](cargo-search.md)\
+[cargo-search(1)](cargo-search.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Search packages in crates.io.
 
-[cargo-uninstall(1)](cargo-uninstall.md)\
+[cargo-uninstall(1)](cargo-uninstall.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Remove a Rust binary.
 
 ### Publishing Commands
 
-[cargo-login(1)](cargo-login.md)\
+[cargo-login(1)](cargo-login.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Save an API token from the registry locally.
 
-[cargo-owner(1)](cargo-owner.md)\
+[cargo-owner(1)](cargo-owner.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Manage the owners of a crate on the registry.
 
-[cargo-package(1)](cargo-package.md)\
+[cargo-package(1)](cargo-package.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Assemble the local package into a distributable tarball.
 
-[cargo-publish(1)](cargo-publish.md)\
+[cargo-publish(1)](cargo-publish.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Upload a package to the registry.
 
-[cargo-yank(1)](cargo-yank.md)\
+[cargo-yank(1)](cargo-yank.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Remove a pushed crate from the index.
 
 ### General Commands
 
-[cargo-help(1)](cargo-help.md)\
+[cargo-help(1)](cargo-help.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Display help information about Cargo.
 
-[cargo-version(1)](cargo-version.md)\
+[cargo-version(1)](cargo-version.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Show version information.
 
 ## OPTIONS
@@ -155,7 +155,7 @@ error message (for example, <code>E0004</code>).</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo--q"><a class="option-anchor" href="#option-cargo--q"></a><code>-q</code></dt>
@@ -172,7 +172,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 
@@ -200,9 +200,9 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.md">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -251,7 +251,7 @@ stores various files. The location can be changed with the `CARGO_HOME`
 environment variable.
 
 `$CARGO_HOME/bin/`\
-&nbsp;&nbsp;&nbsp;&nbsp;Binaries installed by [cargo-install(1)](cargo-install.md) will be located here. If using
+&nbsp;&nbsp;&nbsp;&nbsp;Binaries installed by [cargo-install(1)](cargo-install.html) will be located here. If using
 [rustup], executables distributed with Rust are also located here.
 
 `$CARGO_HOME/config.toml`\
