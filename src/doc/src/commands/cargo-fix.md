@@ -18,7 +18,7 @@ The `cargo fix` subcommand is also being developed for the Rust 2018 edition
 to provide code the ability to easily opt-in to the new edition without having
 to worry about any breakage.
 
-Executing `cargo fix` will under the hood execute [cargo-check(1)](cargo-check.md). Any warnings
+Executing `cargo fix` will under the hood execute [cargo-check(1)](cargo-check.html). Any warnings
 applicable to your crate will be automatically fixed (if possible) and all
 remaining warnings will be displayed when the check process is finished. For
 example if you'd like to prepare for the 2018 edition, you can do so by
@@ -97,7 +97,7 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dt class="option-term" id="option-cargo-fix--p"><a class="option-anchor" href="#option-cargo-fix--p"></a><code>-p</code> <em>spec</em>...</dt>
 <dt class="option-term" id="option-cargo-fix---package"><a class="option-anchor" href="#option-cargo-fix---package"></a><code>--package</code> <em>spec</em>...</dt>
-<dd class="option-desc">Fix only the specified packages. See <a href="https://doc.rust-lang.org/cargo/commands/cargo-pkgid.md">cargo-pkgid(1)</a> for the
+<dd class="option-desc">Fix only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times.</dd>
 
 
@@ -228,10 +228,10 @@ architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="https://doc.rust-lang.org/cargo/guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 
@@ -259,7 +259,7 @@ used.</dd>
 <dt class="option-term" id="option-cargo-fix---target-dir"><a class="option-anchor" href="#option-cargo-fix---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</dd>
 
 
@@ -273,7 +273,7 @@ to <code>target</code> in the root of the workspace.</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix--q"><a class="option-anchor" href="#option-cargo-fix--q"></a><code>-q</code></dt>
@@ -290,7 +290,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 
@@ -301,7 +301,7 @@ and consists of comma-separated values. Valid values:</p>
 <li><code>human</code> (default): Display in a human-readable text format.</li>
 <li><code>short</code>: Emit shorter, human-readable text messages.</li>
 <li><code>json</code>: Emit JSON messages to stdout. See
-<a href="https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages">the reference</a>
+<a href="../reference/external-tools.html#json-messages">the reference</a>
 for more details.</li>
 <li><code>json-diagnostic-short</code>: Ensure the <code>rendered</code> field of JSON messages contains
 the &quot;short&quot; rendering from rustc.</li>
@@ -345,9 +345,9 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.md">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -382,7 +382,7 @@ for more information about how toolchain overrides work.</dd>
 <dt class="option-term" id="option-cargo-fix--j"><a class="option-anchor" href="#option-cargo-fix--j"></a><code>-j</code> <em>N</em></dt>
 <dt class="option-term" id="option-cargo-fix---jobs"><a class="option-anchor" href="#option-cargo-fix---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</dd>
 
 
@@ -433,4 +433,4 @@ details on environment variables that Cargo reads.
        cargo fix --edition-idioms
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-check(1)](cargo-check.md)
+[cargo(1)](cargo.html), [cargo-check(1)](cargo-check.html)

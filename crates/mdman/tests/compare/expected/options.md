@@ -74,4 +74,4 @@ A description of the command.
        my-command --xyz
 
 ## SEE ALSO
-[other-command(1)](other-command.md) [abc(7)](abc.md)
+[other-command(1)](other-command.html) [abc(7)](abc.html)

@@ -4,22 +4,20 @@ use crate::util::unwrap;
 use crate::ManMap;
 use anyhow::{bail, format_err, Error};
 use std::fmt::Write;
-use url::Url;
 
 pub struct MdFormatter {
-    url: Option<Url>,
     man_map: ManMap,
 }
 
 impl MdFormatter {
-    pub fn new(url: Option<Url>, man_map: ManMap) -> MdFormatter {
-        MdFormatter { url, man_map }
+    pub fn new(man_map: ManMap) -> MdFormatter {
+        MdFormatter { man_map }
     }
 }
 
 impl MdFormatter {
     fn render_html(&self, input: &str) -> Result<String, Error> {
-        let parser = crate::md_parser(input, self.url.clone());
+        let parser = crate::md_parser(input, None);
         let mut html_output: String = String::with_capacity(input.len() * 3 / 2);
         pulldown_cmark::html::push_html(&mut html_output, parser.map(|(e, _r)| e));
         Ok(html_output)
@@ -78,7 +76,7 @@ impl super::Formatter for MdFormatter {
     fn linkify_man_to_md(&self, name: &str, section: u8) -> Result<String, Error> {
         let s = match self.man_map.get(&(name.to_string(), section)) {
             Some(link) => format!("[{}({})]({})", name, section, link),
-            None => format!("[{}({})]({}.md)", name, section, name),
+            None => format!("[{}({})]({}.html)", name, section, name),
         };
         Ok(s)
     }

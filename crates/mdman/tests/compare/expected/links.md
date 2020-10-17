@@ -28,7 +28,28 @@ Shortcut unknown: [shortcut unknown]
 
 [other-cmd(1)](https://example.org/commands/other-cmd.html)
 
-[local-cmd(1)](local-cmd.md)
+[local-cmd(1)](local-cmd.html)
+
+[Some link](foo.html)
+
+<dl>
+<dt class="option-term" id="option-links---include"><a class="option-anchor" href="#option-links---include"></a><code>--include</code></dt>
+<dd class="option-desc">Testing an <a href="included_link.html">included link</a>.</dd>
+
+</dl>
+
+
+## OPTIONS
+
+<dl>
+
+<dt class="option-term" id="option-links---foo-bar"><a class="option-anchor" href="#option-links---foo-bar"></a><code>--foo-bar</code></dt>
+<dd class="option-desc">Example <a href="bar.html">link</a>.
+See <a href="https://example.org/commands/other-cmd.html">other-cmd(1)</a>, <a href="local-cmd.html">local-cmd(1)</a></dd>
+
+
+</dl>
+
 
 [bar]: https://example.com/bar
 [collapsed]: https://example.com/collapsed

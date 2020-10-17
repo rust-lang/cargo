@@ -41,7 +41,7 @@ See [the reference](../reference/config.html) for more information about
 configuration files.
 
 
-See [cargo-init(1)](cargo-init.md) for a similar command which will create a new manifest
+See [cargo-init(1)](cargo-init.html) for a similar command which will create a new manifest
 in an existing directory.
 
 ## OPTIONS
@@ -78,7 +78,7 @@ hg, pijul, or fossil) or do not initialize any version control at all
 <dt class="option-term" id="option-cargo-new---registry"><a class="option-anchor" href="#option-cargo-new---registry"></a><code>--registry</code> <em>registry</em></dt>
 <dd class="option-desc">This sets the <code>publish</code> field in <code>Cargo.toml</code> to the given registry name
 which will restrict publishing only to that registry.</p>
-<p>Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config files</a>.
+<p>Registry names are defined in <a href="../reference/config.html">Cargo config files</a>.
 If not specified, the default registry defined by the <code>registry.default</code>
 config key is used. If the default registry is not set and <code>--registry</code> is not
 used, the <code>publish</code> field will not be set which means that publishing will not
@@ -96,7 +96,7 @@ be restricted.</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-new--q"><a class="option-anchor" href="#option-cargo-new--q"></a><code>-q</code></dt>
@@ -113,7 +113,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -161,4 +161,4 @@ details on environment variables that Cargo reads.
        cargo new foo
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-init(1)](cargo-init.md)
+[cargo(1)](cargo.html), [cargo-init(1)](cargo-init.html)

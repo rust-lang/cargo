@@ -11,7 +11,7 @@ cargo-login - Save an API token from the registry locally
 ## DESCRIPTION
 
 This command will save the API token to disk so that commands that require
-authentication, such as [cargo-publish(1)](cargo-publish.md), will be automatically
+authentication, such as [cargo-publish(1)](cargo-publish.html), will be automatically
 authenticated. The token is saved in `$CARGO_HOME/credentials.toml`. `CARGO_HOME`
 defaults to `.cargo` in your home directory.
 
@@ -27,7 +27,7 @@ Take care to keep the token secret, it should not be shared with anyone else.
 
 <dl>
 <dt class="option-term" id="option-cargo-login---registry"><a class="option-anchor" href="#option-cargo-login---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config
+<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
 <code>crates-io</code>.</dd>
@@ -43,7 +43,7 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-login--q"><a class="option-anchor" href="#option-cargo-login--q"></a><code>-q</code></dt>
@@ -60,7 +60,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -108,4 +108,4 @@ details on environment variables that Cargo reads.
        cargo login
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-publish(1)](cargo-publish.md)
+[cargo(1)](cargo.html), [cargo-publish(1)](cargo-publish.html)
