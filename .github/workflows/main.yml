@@ -97,7 +97,7 @@ jobs:
     - run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
-        echo ::add-path::`pwd`/mdbook
+        echo `pwd`/mdbook >> $GITHUB_PATH
     - run: cargo doc --no-deps
     - run: cd src/doc && mdbook build --dest-dir ../../target/doc
     - run: |

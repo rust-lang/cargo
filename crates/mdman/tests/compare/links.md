@@ -30,6 +30,20 @@ Shortcut unknown: [shortcut unknown]
 
 {{man "local-cmd" 1}}
 
+{{> links-include}}
+
+## OPTIONS
+
+{{#options}}
+
+{{#option "`--foo-bar`"}}
+Example [link](bar.html).
+See {{man "other-cmd" 1}}, {{man "local-cmd" 1}}
+{{/option}}
+
+{{/options}}
+
+
 [bar]: https://example.com/bar
 [collapsed]: https://example.com/collapsed
 [shortcut]: https://example.com/shortcut

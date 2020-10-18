@@ -66,7 +66,18 @@ impl<'a> fmt::Display for Display<'a> {
                     match chunk {
                         Chunk::Raw(s) => fmt.write_str(s)?,
                         Chunk::Package => {
-                            write!(fmt, "{} v{}", package.name(), package.version())?;
+                            let proc_macro_suffix = if package.proc_macro() {
+                                " (proc-macro)"
+                            } else {
+                                ""
+                            };
+                            write!(
+                                fmt,
+                                "{} v{}{}",
+                                package.name(),
+                                package.version(),
+                                proc_macro_suffix
+                            )?;
 
                             let source_id = package.package_id().source_id();
                             if !source_id.is_default_registry() {

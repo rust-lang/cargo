@@ -1521,6 +1521,7 @@ fn substitute_macros(input: &str) -> String {
         ("[ERROR]", "error:"),
         ("[WARNING]", "warning:"),
         ("[NOTE]", "note:"),
+        ("[HELP]", "help:"),
         ("[DOCUMENTING]", " Documenting"),
         ("[FRESH]", "       Fresh"),
         ("[UPDATING]", "    Updating"),

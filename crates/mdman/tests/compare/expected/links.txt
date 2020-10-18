@@ -28,3 +28,13 @@ DESCRIPTION
 
        local-cmd(1)
 
+       Some link <https://example.org/foo.html>
+
+       --include
+           Testing an included link <https://example.org/included_link.html>.
+
+OPTIONS
+       --foo-bar
+           Example link <https://example.org/bar.html>. See other-cmd(1),
+           local-cmd(1)
+

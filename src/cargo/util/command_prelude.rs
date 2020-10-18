@@ -309,7 +309,8 @@ pub trait ArgMatchesExt {
                 if self._is_present(flag) {
                     bail!(
                         "--{} is not allowed in the root of a virtual workspace\n\
-                         note: while this was previously accepted, it didn't actually do anything",
+                         note: while this was previously accepted, it didn't actually do anything\n\
+                         help: change the current directory to the package directory, or use the --manifest-path flag to the path of the package",
                         flag
                     );
                 }

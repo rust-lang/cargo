@@ -50,7 +50,7 @@ pub fn convert(
 ) -> Result<String, Error> {
     let formatter: Box<dyn Formatter + Send + Sync> = match format {
         Format::Man => Box::new(format::man::ManFormatter::new(url)),
-        Format::Md => Box::new(format::md::MdFormatter::new(url, man_map)),
+        Format::Md => Box::new(format::md::MdFormatter::new(man_map)),
         Format::Text => Box::new(format::text::TextFormatter::new(url)),
     };
     let expanded = hbs::expand(file, &*formatter)?;

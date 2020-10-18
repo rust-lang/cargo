@@ -412,7 +412,7 @@ fn filters_target() {
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-└── pm_host v1.0.0
+└── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
@@ -425,7 +425,7 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm_target v1.0.0
+├── pm_target v1.0.0 (proc-macro)
 └── targetdep v1.0.0
 [build-dependencies]
 └── build_host_dep v1.0.0
@@ -442,7 +442,7 @@ foo v0.1.0 ([..]/foo)
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-└── pm_host v1.0.0
+└── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
@@ -455,8 +455,8 @@ foo v0.1.0 ([..]/foo)
             "\
 foo v0.1.0 ([..]/foo)
 ├── hostdep v1.0.0
-├── pm_host v1.0.0
-├── pm_target v1.0.0
+├── pm_host v1.0.0 (proc-macro)
+├── pm_target v1.0.0 (proc-macro)
 └── targetdep v1.0.0
 [build-dependencies]
 ├── build_host_dep v1.0.0
@@ -1244,7 +1244,7 @@ fn proc_macro_features() {
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm v1.0.0
+├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0 (*)
@@ -1258,7 +1258,7 @@ foo v0.1.0 ([..]/foo)
         .with_stdout(
             "\
 foo v0.1.0 ([..]/foo)
-├── pm v1.0.0
+├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0
@@ -1294,7 +1294,7 @@ somedep v1.0.0
             "\
 somedep v1.0.0
 ├── foo v0.1.0 ([..]/foo)
-└── pm v1.0.0
+└── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
 ",
         )
@@ -1308,7 +1308,7 @@ somedep v1.0.0
 └── foo v0.1.0 ([..]/foo)
 
 somedep v1.0.0
-└── pm v1.0.0
+└── pm v1.0.0 (proc-macro)
     └── foo v0.1.0 ([..]/foo)
 ",
         )

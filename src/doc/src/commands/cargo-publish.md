@@ -19,12 +19,12 @@ following steps:
 1. Performs a few checks, including:
    - Checks the `package.publish` key in the manifest for restrictions on
      which registries you are allowed to publish to.
-2. Create a `.crate` file by following the steps in [cargo-package(1)](cargo-package.md).
+2. Create a `.crate` file by following the steps in [cargo-package(1)](cargo-package.html).
 3. Upload the crate to the registry. Note that the server will perform
    additional checks on the crate.
 
 This command requires you to be authenticated with either the `--token` option
-or using [cargo-login(1)](cargo-login.md).
+or using [cargo-login(1)](cargo-login.html).
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
@@ -41,8 +41,8 @@ packaging and publishing.
 
 <dt class="option-term" id="option-cargo-publish---token"><a class="option-anchor" href="#option-cargo-publish---token"></a><code>--token</code> <em>token</em></dt>
 <dd class="option-desc">API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by <a href="https://doc.rust-lang.org/cargo/commands/cargo-login.md">cargo-login(1)</a>).</p>
-<p><a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo config</a> environment variables can be
+the credentials file (which is created by <a href="cargo-login.html">cargo-login(1)</a>).</p>
+<p><a href="../reference/config.html">Cargo config</a> environment variables can be
 used to override the tokens stored in the credentials file. The token for
 crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
 variable. Tokens for other registries may be specified with environment
@@ -65,12 +65,12 @@ of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---registry"><a class="option-anchor" href="#option-cargo-publish---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to publish to. Registry names are defined in <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo
+<dd class="option-desc">Name of the registry to publish to. Registry names are defined in <a href="../reference/config.html">Cargo
 config files</a>. If not specified, and there is a
-<a href="https://doc.rust-lang.org/cargo/reference/manifest.html#the-publish-field"><code>package.publish</code></a> field in
+<a href="../reference/manifest.html#the-publish-field"><code>package.publish</code></a> field in
 <code>Cargo.toml</code> with a single registry, then it will publish to that registry.
 Otherwise it will use the default registry, which is defined by the
-<a href="https://doc.rust-lang.org/cargo/reference/config.html#registry-default"><code>registry.default</code></a> config key
+<a href="../reference/config.html#registrydefault"><code>registry.default</code></a> config key
 which defaults to <code>crates-io</code>.</dd>
 
 
@@ -86,17 +86,17 @@ architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
 list of supported targets.</p>
 <p>This may also be specified with the <code>build.target</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</p>
+<a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="https://doc.rust-lang.org/cargo/guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 
 <dt class="option-term" id="option-cargo-publish---target-dir"><a class="option-anchor" href="#option-cargo-publish---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults
+<code>build.target-dir</code> <a href="../reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</dd>
 
 
@@ -163,9 +163,9 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.md">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
 
@@ -177,7 +177,7 @@ offline.</p>
 <dt class="option-term" id="option-cargo-publish--j"><a class="option-anchor" href="#option-cargo-publish--j"></a><code>-j</code> <em>N</em></dt>
 <dt class="option-term" id="option-cargo-publish---jobs"><a class="option-anchor" href="#option-cargo-publish---jobs"></a><code>--jobs</code> <em>N</em></dt>
 <dd class="option-desc">Number of parallel jobs to run. May also be specified with the
-<code>build.jobs</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>. Defaults to
+<code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of CPUs.</dd>
 
 
@@ -191,7 +191,7 @@ the number of CPUs.</dd>
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish--q"><a class="option-anchor" href="#option-cargo-publish--q"></a><code>-q</code></dt>
@@ -208,7 +208,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -256,4 +256,4 @@ details on environment variables that Cargo reads.
        cargo publish
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-package(1)](cargo-package.md), [cargo-login(1)](cargo-login.md)
+[cargo(1)](cargo.html), [cargo-package(1)](cargo-package.html), [cargo-login(1)](cargo-login.html)

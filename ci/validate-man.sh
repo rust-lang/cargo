@@ -5,7 +5,7 @@ set -e
 
 cd src/doc
 
-changes=$(git status --porcelain .)
+changes=$(git status --porcelain)
 if [ -n "$changes" ]
 then
     echo "git directory must be clean before running this script."
@@ -14,7 +14,7 @@ fi
 
 ./build-man.sh
 
-changes=$(git status --porcelain .)
+changes=$(git status --porcelain)
 if [ -n "$changes" ]
 then
     echo "Detected changes in man pages:"

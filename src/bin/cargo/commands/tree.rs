@@ -26,7 +26,8 @@ pub fn cli() -> App {
         )
         .arg_features()
         .arg_target_triple(
-            "Filter dependencies matching the given target-triple (default host platform)",
+            "Filter dependencies matching the given target-triple (default host platform). \
+            Pass `all` to include all targets.",
         )
         .arg(
             Arg::with_name("no-dev-dependencies")

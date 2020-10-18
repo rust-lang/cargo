@@ -23,4 +23,4 @@ Prints a help message for the given command.
        cargo build --help
 
 ## SEE ALSO
-[cargo(1)](cargo.md)
+[cargo(1)](cargo.html)

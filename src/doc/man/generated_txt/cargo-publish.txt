@@ -64,7 +64,7 @@ OPTIONS
            field in Cargo.toml with a single registry, then it will publish to
            that registry. Otherwise it will use the default registry, which is
            defined by the registry.default
-           <https://doc.rust-lang.org/cargo/reference/config.html#registry-default>
+           <https://doc.rust-lang.org/cargo/reference/config.html#registrydefault>
            config key which defaults to crates-io.
 
    Compilation Options

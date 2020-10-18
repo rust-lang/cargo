@@ -14,7 +14,7 @@ This command will create the `Cargo.lock` lockfile for the current package or
 workspace. If the lockfile already exists, it will be rebuilt with the latest
 available version of every package.
 
-See also [cargo-update(1)](cargo-update.md) which is also capable of creating a `Cargo.lock`
+See also [cargo-update(1)](cargo-update.html) which is also capable of creating a `Cargo.lock`
 lockfile and has more options for controlling update behavior.
 
 ## OPTIONS
@@ -27,7 +27,7 @@ lockfile and has more options for controlling update behavior.
 <dd class="option-desc">Use verbose output. May be specified twice for &quot;very verbose&quot; output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 <dt class="option-term" id="option-cargo-generate-lockfile--q"><a class="option-anchor" href="#option-cargo-generate-lockfile--q"></a><code>-q</code></dt>
@@ -44,7 +44,7 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -77,9 +77,9 @@ proceed without the network if possible.</p>
 <p>Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
-See the <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.md">cargo-fetch(1)</a> command to download dependencies before going
+See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="https://doc.rust-lang.org/cargo/reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
 </dl>
@@ -127,4 +127,4 @@ details on environment variables that Cargo reads.
        cargo generate-lockfile
 
 ## SEE ALSO
-[cargo(1)](cargo.md), [cargo-update(1)](cargo-update.md)
+[cargo(1)](cargo.html), [cargo-update(1)](cargo-update.html)

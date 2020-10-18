@@ -530,6 +530,11 @@ fn prepare_rustc(
     let mut base = cx
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
+
+    if is_primary {
+        base.env("CARGO_PRIMARY_PACKAGE", "1");
+    }
+
     if cx.bcx.config.cli_unstable().jobserver_per_rustc {
         let client = cx.new_jobserver()?;
         base.inherit_jobserver(&client);
