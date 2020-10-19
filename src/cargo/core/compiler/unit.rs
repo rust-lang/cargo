@@ -100,6 +100,10 @@ impl Unit {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
     }
+
+    pub fn kind(&self) -> CompileKind {
+        self.inner.kind
+    }
 }
 
 // Just hash the pointer for fast hashing

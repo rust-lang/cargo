@@ -1116,3 +1116,41 @@ fn doctest_xcompile_linker() {
         ))
         .run();
 }
+
+#[cargo_test]
+fn cross_compile_workspace_member() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "bar",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_bin_manifest("foo"))
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                    [member.bar]
+                    target = "{}"
+                "#,
+                cross_compile::alternate()
+            ),
+        )
+        .build();
+
+    p.cargo("build -v -Zmember-configs")
+        .masquerade_as_nightly_cargo()
+        .run();
+}

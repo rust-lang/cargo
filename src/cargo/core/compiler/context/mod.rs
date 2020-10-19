@@ -287,7 +287,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let mut targets = HashMap::new();
+        let mut kinds = HashSet::new();
         for kind in self.bcx.build_config.requested_kinds.iter() {
+            kinds.insert(*kind);
+        }
+        for root in self.bcx.roots.iter() {
+            kinds.insert(root.kind());
+        }
+        for kind in kinds.iter() {
             if let CompileKind::Target(target) = *kind {
                 let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
                 targets.insert(target, layout);

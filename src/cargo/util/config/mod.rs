@@ -177,6 +177,7 @@ pub struct Config {
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
+    member_cfgs: LazyCell<HashMap<String, CargoMemberConfig>>,
 }
 
 impl Config {
@@ -249,6 +250,7 @@ impl Config {
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
+            member_cfgs: LazyCell::new(),
         }
     }
 
@@ -1226,6 +1228,17 @@ impl Config {
         target::load_target_triple(self, target)
     }
 
+    /// Returns a map of [member.'crate'] tables.
+    pub fn member_cfgs(&self) -> CargoResult<&HashMap<String, CargoMemberConfig>> {
+        self.member_cfgs
+            .try_borrow_with(|| Ok(self.get::<HashMap<String, CargoMemberConfig>>("member")?))
+    }
+
+    /// Returns the member config of the given name.
+    pub fn member_config(&self, member_name: &str) -> CargoResult<Option<&CargoMemberConfig>> {
+        self.member_cfgs().map(|map| map.get(member_name))
+    }
+
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
     where
         F: FnMut() -> CargoResult<SourceId>,
@@ -1877,6 +1890,12 @@ where
     }
 
     deserializer.deserialize_option(ProgressVisitor)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoMemberConfig {
+    pub target: Option<ConfigRelativePath>,
 }
 
 /// A type to deserialize a list of strings from a toml file.

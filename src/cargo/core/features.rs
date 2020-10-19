@@ -360,6 +360,7 @@ pub struct CliUnstable {
     pub multitarget: bool,
     pub rustdoc_map: bool,
     pub terminal_width: Option<Option<usize>>,
+    pub member_configs: bool,
 }
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -465,6 +466,7 @@ impl CliUnstable {
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
+            "member-configs" => self.member_configs = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
