@@ -45,6 +45,7 @@ mod edition;
 mod error;
 mod features;
 mod features2;
+mod features_namespaced;
 mod fetch;
 mod fix;
 mod freshness;
