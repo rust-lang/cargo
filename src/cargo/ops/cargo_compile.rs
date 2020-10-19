@@ -424,7 +424,7 @@ pub fn create_bcx<'a, 'cfg>(
         ws.profiles(),
         config,
         build_config.requested_profile,
-        ws.features(),
+        ws.unstable_features(),
     )?;
     profiles.validate_packages(
         ws.profiles(),

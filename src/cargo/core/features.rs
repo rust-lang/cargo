@@ -25,7 +25,7 @@
 //! use core::{Feature, Features};
 //!
 //! let feature = Feature::launch_into_space();
-//! package.manifest().features().require(feature).chain_err(|| {
+//! package.manifest().unstable_features().require(feature).chain_err(|| {
 //!     "launching Cargo into space right now is unstable and may result in \
 //!      unintended damage to your codebase, use with caution"
 //! })?;

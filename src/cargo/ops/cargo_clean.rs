@@ -34,7 +34,12 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
-    let profiles = Profiles::new(ws.profiles(), config, opts.requested_profile, ws.features())?;
+    let profiles = Profiles::new(
+        ws.profiles(),
+        config,
+        opts.requested_profile,
+        ws.unstable_features(),
+    )?;
 
     if opts.profile_specified {
         // After parsing profiles we know the dir-name of the profile, if a profile

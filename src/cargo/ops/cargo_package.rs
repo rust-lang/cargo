@@ -681,7 +681,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
 
     let rustc_args = if pkg
         .manifest()
-        .features()
+        .unstable_features()
         .require(Feature::public_dependency())
         .is_ok()
     {

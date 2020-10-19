@@ -625,10 +625,11 @@ impl<'cfg> Workspace<'cfg> {
         Ok(())
     }
 
-    pub fn features(&self) -> &Features {
+    /// Returns the unstable nightly-only features enabled via `cargo-features` in the manifest.
+    pub fn unstable_features(&self) -> &Features {
         match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().features(),
-            MaybePackage::Virtual(vm) => vm.features(),
+            MaybePackage::Package(p) => p.manifest().unstable_features(),
+            MaybePackage::Virtual(vm) => vm.unstable_features(),
         }
     }
 

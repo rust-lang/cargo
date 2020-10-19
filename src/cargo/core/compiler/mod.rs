@@ -1034,7 +1034,7 @@ pub fn extern_args(
             if unit
                 .pkg
                 .manifest()
-                .features()
+                .unstable_features()
                 .require(Feature::public_dependency())
                 .is_ok()
                 && !dep.public
