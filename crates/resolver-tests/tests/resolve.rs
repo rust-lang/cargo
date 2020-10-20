@@ -228,6 +228,7 @@ proptest! {
 }
 
 #[test]
+#[should_panic(expected = "pub dep")] // The error handling is not yet implemented.
 fn pub_fail() {
     let input = vec![
         pkg!(("a", "0.0.4")),

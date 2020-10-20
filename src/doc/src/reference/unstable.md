@@ -191,29 +191,62 @@ lto = true
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
 * Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)
 
-Currently, it is not possible to have a feature and a dependency with the same
-name in the manifest. If you set `namespaced-features` to `true`, the namespaces
-for features and dependencies are separated. The effect of this is that, in the
-feature requirements, dependencies have to be prefixed with `crate:`. Like this:
+The `namespaced-features` option makes two changes to how features can be
+specified:
+
+* Features may now be defined with the same name as a dependency.
+* Optional dependencies can be explicitly enabled in the `[features]` table
+  with the `crate:` prefix, which enables the dependency without enabling a
+  feature of the same name.
+
+By default, an optional dependency `foo` will define a feature `foo =
+["crate:foo"]` *unless* `crate:foo` is mentioned in any other feature, or the
+`foo` feature is already defined. This helps prevent unnecessary boilerplate
+of listing every optional dependency, but still allows you to override the
+implicit feature.
+
+This allows two use cases that were previously not possible:
+
+* You can "hide" an optional dependency, so that external users cannot
+  explicitly enable that optional dependency.
+* There is no longer a need to create "funky" feature names to work around the
+  restriction that features cannot shadow dependency names.
+
+To enable namespaced-features, use the `-Z namespaced-features` command-line
+flag.
+
+An example of hiding an optional dependency:
 
 ```toml
-[package]
-namespaced-features = true
+[dependencies]
+regex = { version = "1.4.1", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
 
 [features]
-bar = ["crate:baz", "foo"]
-foo = []
-
-[dependencies]
-baz = { version = "0.1", optional = true }
+regex = ["crate:regex", "crate:lazy_static"]
 ```
 
-To prevent unnecessary boilerplate from having to explicitly declare features
-for each optional dependency, implicit features get created for any optional
-dependencies where a feature of the same name is not defined. However, if
-a feature of the same name as a dependency is defined, that feature must
-include the dependency as a requirement, as `foo = ["crate:foo"]`.
+In this example, the "regex" feature enables both `regex` and `lazy_static`.
+The `lazy_static` feature does not exist, and a user cannot explicitly enable
+it. This helps hide internal details of how your package is implemented.
 
+An example of avoiding "funky" names:
+
+```toml
+[dependencies]
+bigdecimal = "0.1"
+chrono = "0.4"
+num-bigint = "0.2"
+serde = {version = "1.0", optional = true }
+
+[features]
+serde = ["crate:serde", "bigdecimal/serde", "chrono/serde", "num-bigint/serde"]
+```
+
+In this case, `serde` is a natural name to use for a feature, because it is
+relevant to your exported API. However, previously you would need to use a
+name like `serde1` to work around the naming limitation if you wanted to also
+enable other features.
 
 ### Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)

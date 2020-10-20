@@ -96,6 +96,7 @@ fn inactive_target_optional() {
 
             [features]
             foo1 = ["dep1/f2"]
+            foo2 = ["dep2"]
             "#,
         )
         .file(
@@ -103,6 +104,7 @@ fn inactive_target_optional() {
             r#"
             fn main() {
                 if cfg!(feature="foo1") { println!("foo1"); }
+                if cfg!(feature="foo2") { println!("foo2"); }
                 if cfg!(feature="dep1") { println!("dep1"); }
                 if cfg!(feature="dep2") { println!("dep2"); }
                 if cfg!(feature="common") { println!("common"); }
@@ -149,7 +151,7 @@ fn inactive_target_optional() {
         .build();
 
     p.cargo("run --all-features")
-        .with_stdout("foo1\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
+        .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
         .run();
     p.cargo("run --features dep1")
         .with_stdout("dep1\nf1\n")
@@ -166,7 +168,7 @@ fn inactive_target_optional() {
 
     p.cargo("run -Zfeatures=itarget --all-features")
         .masquerade_as_nightly_cargo()
-        .with_stdout("foo1\n")
+        .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon")
         .run();
     p.cargo("run -Zfeatures=itarget --features dep1")
         .masquerade_as_nightly_cargo()

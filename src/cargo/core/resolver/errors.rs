@@ -142,7 +142,7 @@ pub(super) fn activation_error(
                     msg.push_str("` does not have these features.\n");
                     // p == parent so the full path is redundant.
                 }
-                ConflictReason::RequiredDependencyAsFeatures(features) => {
+                ConflictReason::RequiredDependencyAsFeature(features) => {
                     msg.push_str("\n\nthe package `");
                     msg.push_str(&*p.name());
                     msg.push_str("` depends on `");
@@ -155,6 +155,24 @@ pub(super) fn activation_error(
                     msg.push_str(
                         " It has a required dependency with that name, \
                          but only optional dependencies can be used as features.\n",
+                    );
+                    // p == parent so the full path is redundant.
+                }
+                ConflictReason::NonImplicitDependencyAsFeature(features) => {
+                    msg.push_str("\n\nthe package `");
+                    msg.push_str(&*p.name());
+                    msg.push_str("` depends on `");
+                    msg.push_str(&*dep.package_name());
+                    msg.push_str("`, with features: `");
+                    msg.push_str(features);
+                    msg.push_str("` but `");
+                    msg.push_str(&*dep.package_name());
+                    msg.push_str("` does not have these features.\n");
+                    msg.push_str(
+                        " It has an optional dependency with that name, \
+                         but but that dependency uses the \"crate:\" \
+                         syntax in the features table, so it does not have an \
+                         implicit feature with that name.\n",
                     );
                     // p == parent so the full path is redundant.
                 }

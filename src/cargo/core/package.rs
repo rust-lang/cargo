@@ -1,6 +1,6 @@
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::hash;
 use std::mem;
@@ -23,7 +23,7 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
-use crate::core::{FeatureMap, SourceMap, Summary, Workspace};
+use crate::core::{SourceMap, Summary, Workspace};
 use crate::ops;
 use crate::util::config::PackageCacheLock;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
@@ -87,7 +87,7 @@ struct SerializedPackage<'a> {
     source: SourceId,
     dependencies: &'a [Dependency],
     targets: Vec<&'a Target>,
-    features: &'a FeatureMap,
+    features: &'a BTreeMap<InternedString, Vec<InternedString>>,
     manifest_path: &'a Path,
     metadata: Option<&'a toml::Value>,
     publish: Option<&'a Vec<String>>,
@@ -131,6 +131,12 @@ impl ser::Serialize for Package {
             .iter()
             .filter(|t| t.src_path().is_path())
             .collect();
+        let empty_feats = BTreeMap::new();
+        let features = self
+            .manifest()
+            .original()
+            .features()
+            .unwrap_or(&empty_feats);
 
         SerializedPackage {
             name: &*package_id.name(),
@@ -142,7 +148,7 @@ impl ser::Serialize for Package {
             source: summary.source_id(),
             dependencies: summary.dependencies(),
             targets,
-            features: summary.features(),
+            features,
             manifest_path: self.manifest_path(),
             metadata: self.manifest().custom_metadata(),
             authors,

@@ -197,9 +197,6 @@ features! {
         // Overriding profiles for dependencies.
         [stable] profile_overrides: bool,
 
-        // Separating the namespaces for features and dependencies
-        [unstable] namespaced_features: bool,
-
         // "default-run" manifest option,
         [stable] default_run: bool,
 
@@ -360,6 +357,7 @@ pub struct CliUnstable {
     pub multitarget: bool,
     pub rustdoc_map: bool,
     pub terminal_width: Option<Option<usize>>,
+    pub namespaced_features: bool,
 }
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -465,6 +463,7 @@ impl CliUnstable {
             "multitarget" => self.multitarget = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
+            "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

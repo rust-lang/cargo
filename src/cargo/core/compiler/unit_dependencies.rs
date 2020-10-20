@@ -713,6 +713,16 @@ impl<'a, 'cfg> State<'a, 'cfg> {
         features.activated_features(pkg_id, features_for)
     }
 
+    fn is_dep_activated(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+        dep_name: InternedString,
+    ) -> bool {
+        self.features()
+            .is_dep_activated(pkg_id, features_for, dep_name)
+    }
+
     fn get(&self, id: PackageId) -> &'a Package {
         self.package_set
             .get_one(id)
@@ -738,9 +748,7 @@ impl<'a, 'cfg> State<'a, 'cfg> {
                     // did not enable it, don't include it.
                     if dep.is_optional() {
                         let features_for = unit_for.map_to_features_for();
-
-                        let feats = self.activated_features(pkg_id, features_for);
-                        if !feats.contains(&dep.name_in_toml()) {
+                        if !self.is_dep_activated(pkg_id, features_for, dep.name_in_toml()) {
                             return false;
                         }
                     }
