@@ -51,26 +51,31 @@ OPTIONS
 
        Passing target selection flags will document only the specified targets.
 
+       Note that --bin, --example, --test and --bench flags also support common
+       Unix glob patterns like *, ? and []. However, to avoid your shell
+       accidentally expanding glob patterns before Cargo handles them, you must
+       use single quotes or double quotes around each glob pattern.
+
        --lib
            Document the package's library.
 
        --bin name...
            Document the specified binary. This flag may be specified multiple
-           times.
+           times and supports common Unix glob patterns.
 
        --bins
            Document all binary targets.
 
        --example name...
            Document the specified example. This flag may be specified multiple
-           times.
+           times and supports common Unix glob patterns.
 
        --examples
            Document all example targets.
 
        --test name...
            Document the specified integration test. This flag may be specified
-           multiple times.
+           multiple times and supports common Unix glob patterns.
 
        --tests
            Document all targets in test mode that have the test = true manifest
@@ -83,7 +88,7 @@ OPTIONS
 
        --bench name...
            Document the specified benchmark. This flag may be specified
-           multiple times.
+           multiple times and supports common Unix glob patterns.
 
        --benches
            Document all targets in benchmark mode that have the bench = true

@@ -3450,9 +3450,11 @@ fn build_all_workspace() {
 
     p.cargo("build --workspace")
         .with_stderr(
-            "[..] Compiling bar v0.1.0 ([..])\n\
-             [..] Compiling foo v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+            "\
+[COMPILING] bar v0.1.0 ([..])
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 }
@@ -3479,9 +3481,121 @@ fn build_all_exclude() {
         .build();
 
     p.cargo("build --workspace --exclude baz")
-        .with_stderr_contains("[..]Compiling foo v0.1.0 [..]")
-        .with_stderr_contains("[..]Compiling bar v0.1.0 [..]")
-        .with_stderr_does_not_contain("[..]Compiling baz v0.1.0 [..]")
+        .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_all_exclude_not_found() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build --workspace --exclude baz")
+        .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
+        .with_stderr_unordered(
+            "\
+[WARNING] excluded package(s) `baz` not found in workspace [..]
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_all_exclude_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("build --workspace --exclude '*z'")
+        .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_all_exclude_glob_not_found() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build --workspace --exclude '*z'")
+        .with_stderr_does_not_contain("[COMPILING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[WARNING] excluded package pattern(s) `*z` not found in workspace [..]
+[COMPILING] [..] v0.1.0 ([..])
+[COMPILING] [..] v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_all_exclude_broken_glob() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("build --workspace --exclude '[*z'")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 
@@ -3549,12 +3663,12 @@ fn build_all_virtual_manifest() {
 
     // The order in which bar and baz are built is not guaranteed
     p.cargo("build --workspace")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 }
@@ -3577,12 +3691,12 @@ fn build_virtual_manifest_all_implied() {
 
     // The order in which `bar` and `baz` are built is not guaranteed.
     p.cargo("build")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 }
@@ -3600,16 +3714,84 @@ fn build_virtual_manifest_one_project() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
         .build();
 
     p.cargo("build -p bar")
         .with_stderr_does_not_contain("[..]baz[..]")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
         .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+            "\
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
+        .run();
+}
+
+#[cargo_test]
+fn build_virtual_manifest_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() { break_the_build(); }")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build -p '*z'")
+        .with_stderr_does_not_contain("[..]bar[..]")
+        .with_stderr(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_virtual_manifest_glob_not_found() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build -p bar -p '*z'")
+        .with_status(101)
+        .with_stderr("[ERROR] package pattern(s) `*z` not found in workspace [..]")
+        .run();
+}
+
+#[cargo_test]
+fn build_virtual_manifest_broken_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build -p '[*z'")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
         .run();
 }
 
@@ -3639,12 +3821,12 @@ fn build_all_virtual_manifest_implicit_examples() {
 
     // The order in which bar and baz are built is not guaranteed
     p.cargo("build --workspace --examples")
-        .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
-        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-        .with_stderr(
-            "[..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Compiling [..] v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        .with_stderr_unordered(
+            "\
+[COMPILING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
     assert!(!p.bin("a").is_file());
@@ -4578,6 +4760,16 @@ fn target_filters_workspace() {
         .with_stderr(
             "\
 [ERROR] no example target named `ex`
+
+<tab>Did you mean `ex1`?",
+        )
+        .run();
+
+    ws.cargo("build -v --example 'ex??'")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] no example target matches pattern `ex??`
 
 <tab>Did you mean `ex1`?",
         )

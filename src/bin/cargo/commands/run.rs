@@ -1,7 +1,8 @@
 use crate::command_prelude::*;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::ProcessError;
 use cargo::core::Verbosity;
-use cargo::ops::{self, CompileFilter};
+use cargo::ops::{self, CompileFilter, Packages};
 
 pub fn cli() -> App {
     subcommand("run")
@@ -37,6 +38,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         Some(&ws),
         ProfileChecking::Checked,
     )?;
+
+    // Disallow `spec` to be an glob pattern
+    if let Packages::Packages(opt_in) = &compile_opts.spec {
+        if let Some(pattern) = opt_in.iter().find(|s| is_glob_pattern(s)) {
+            return Err(anyhow::anyhow!(
+                "`cargo run` does not support glob pattern `{}` on package selection",
+                pattern,
+            )
+            .into());
+        }
+    }
 
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts

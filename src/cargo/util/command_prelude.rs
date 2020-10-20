@@ -4,6 +4,7 @@ use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionCon
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
@@ -510,7 +511,11 @@ pub trait ArgMatchesExt {
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
         let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        let spec = self._values_of("package");
+        if spec.iter().any(is_glob_pattern) {
+            anyhow::bail!("Glob patterns on package selection are not supported.")
+        }
+        compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
     }
 

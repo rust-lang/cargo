@@ -104,7 +104,10 @@ virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-package\fR \fIspec\fR\&...
 .RS 4
 Fix only the specified packages. See \fBcargo\-pkgid\fR(1) for the
-SPEC format. This flag may be specified multiple times.
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally 
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.
 .RE
 .sp
 \fB\-\-workspace\fR
@@ -120,7 +123,10 @@ Deprecated alias for \fB\-\-workspace\fR\&.
 \fB\-\-exclude\fR \fISPEC\fR\&...
 .RS 4
 Exclude the specified packages. Must be used in conjunction with the
-\fB\-\-workspace\fR flag. This flag may be specified multiple times.
+\fB\-\-workspace\fR flag. This flag may be specified multiple times and supports
+common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.
 .RE
 .SS "Target Selection"
 When no target selection options are given, \fBcargo fix\fR will fix all targets
@@ -128,7 +134,12 @@ When no target selection options are given, \fBcargo fix\fR will fix all targets
 \fBrequired\-features\fR that are missing.
 .sp
 Passing target selection flags will fix only the specified
-targets.
+targets. 
+.sp
+Note that \fB\-\-bin\fR, \fB\-\-example\fR, \fB\-\-test\fR and \fB\-\-bench\fR flags also 
+support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your 
+shell accidentally expanding glob patterns before Cargo handles them, you must 
+use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
 .RS 4
@@ -137,7 +148,8 @@ Fix the package's library.
 .sp
 \fB\-\-bin\fR \fIname\fR\&...
 .RS 4
-Fix the specified binary. This flag may be specified multiple times.
+Fix the specified binary. This flag may be specified multiple times
+and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-bins\fR
@@ -147,7 +159,8 @@ Fix all binary targets.
 .sp
 \fB\-\-example\fR \fIname\fR\&...
 .RS 4
-Fix the specified example. This flag may be specified multiple times.
+Fix the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-examples\fR
@@ -158,7 +171,7 @@ Fix all example targets.
 \fB\-\-test\fR \fIname\fR\&...
 .RS 4
 Fix the specified integration test. This flag may be specified
-multiple times.
+multiple times and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-tests\fR
@@ -174,7 +187,8 @@ manifest settings for the target.
 .sp
 \fB\-\-bench\fR \fIname\fR\&...
 .RS 4
-Fix the specified benchmark. This flag may be specified multiple times.
+Fix the specified benchmark. This flag may be specified multiple
+times and supports common Unix glob patterns.
 .RE
 .sp
 \fB\-\-benches\fR

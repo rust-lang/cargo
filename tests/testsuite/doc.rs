@@ -541,6 +541,60 @@ fn doc_dash_p() {
 }
 
 #[cargo_test]
+fn doc_all_exclude() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("doc --workspace --exclude baz")
+        .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[DOCUMENTING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_all_exclude_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("doc --workspace --exclude '*z'")
+        .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[DOCUMENTING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn doc_same_name() {
     let p = project()
         .file("src/lib.rs", "")
@@ -952,6 +1006,60 @@ fn doc_virtual_manifest_all_implied() {
     p.cargo("doc")
         .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .run();
+}
+
+#[cargo_test]
+fn doc_virtual_manifest_one_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
+        .build();
+
+    p.cargo("doc -p bar")
+        .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
+        .with_stderr(
+            "\
+[DOCUMENTING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn doc_virtual_manifest_glob() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {  break_the_build(); }")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("doc -p '*z'")
+        .with_stderr_does_not_contain("[DOCUMENTING] bar v0.1.0 [..]")
+        .with_stderr(
+            "\
+[DOCUMENTING] baz v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
         .run();
 }
 

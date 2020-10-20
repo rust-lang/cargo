@@ -13,6 +13,10 @@ pub fn run(
 ) -> CargoResult<()> {
     let config = ws.config();
 
+    if options.filter.contains_glob_patterns() {
+        anyhow::bail!("`cargo run` does not support glob patterns on target selection")
+    }
+
     // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
     let packages = options.spec.get_packages(ws)?;
