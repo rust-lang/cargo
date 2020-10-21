@@ -937,7 +937,7 @@ Sets the width for progress bar.
 [build scripts]: build-scripts.md
 [`-C linker`]: ../../rustc/codegen-options/index.md#linker
 [override a build script]: build-scripts.md#overriding-build-scripts
-[toml]: https://github.com/toml-lang/toml
+[toml]: https://toml.io/
 [incremental compilation]: profiles.md#incremental
 [profile]: profiles.md
 [libcurl format]: https://ec.haxx.se/usingcurl-proxies.html

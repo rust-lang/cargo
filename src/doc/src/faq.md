@@ -147,7 +147,7 @@ similar configuration files in directory listings. Sorting files often puts
 capital letters before lowercase letters, ensuring files like `Makefile` and
 `Cargo.toml` are placed together. The trailing `.toml` was chosen to emphasize
 the fact that the file is in the [TOML configuration
-format](https://github.com/toml-lang/toml).
+format](https://toml.io/).
 
 Cargo does not allow other names such as `cargo.toml` or `Cargofile` to
 emphasize the ease of how a Cargo repository can be identified. An option of
