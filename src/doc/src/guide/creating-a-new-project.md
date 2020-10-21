@@ -37,7 +37,8 @@ edition = "2018"
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your package.
+needs to compile your package. This file is written in the [TOML] format
+(pronounced /tɑməl/).
 
 Here’s what’s in `src/main.rs`:
 
@@ -89,3 +90,5 @@ $ cargo build --release
 Compiling in debug mode is the default for development. Compilation time is
 shorter since the compiler doesn't do optimizations, but the code will run
 slower. Release mode takes longer to compile, but the code will run faster.
+
+[TOML]: https://toml.io/

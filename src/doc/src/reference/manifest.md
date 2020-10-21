@@ -1,7 +1,7 @@
 ## The Manifest Format
 
-The `Cargo.toml` file for each package is called its *manifest*. Every manifest
-file consists of the following sections:
+The `Cargo.toml` file for each package is called its *manifest*. It is written
+in the [TOML] format. Every manifest file consists of the following sections:
 
 * [`cargo-features`](unstable.md) — Unstable, nightly-only features.
 * [`[package]`](#the-package-section) — Defines a package.
@@ -516,6 +516,7 @@ more detail.
 [spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
 [spdx-license-list-3.6]: https://github.com/spdx/license-list-data/tree/v3.6
 [SPDX site]: https://spdx.org/license-list
+[TOML]: https://toml.io/
 
 <script>
 (function() {
