@@ -472,6 +472,13 @@ fn check_repo_state(
     }
 }
 
+fn timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
 fn tar(
     ws: &Workspace<'_>,
     ar_files: Vec<ArchiveFile>,
@@ -491,6 +498,7 @@ fn tar(
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
     let base_path = Path::new(&base_name);
+    let time = timestamp();
     for ar_file in ar_files {
         let ArchiveFile {
             rel_path,
@@ -525,12 +533,7 @@ fn tar(
                 };
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);
-                header.set_mtime(
-                    SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                );
+                header.set_mtime(time);
                 header.set_size(contents.len() as u64);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
