@@ -305,7 +305,7 @@ fn add_pkg(
     };
     let node = Node::Package {
         package_id,
-        features: node_features.clone(),
+        features: node_features,
         kind: node_kind,
     };
     if let Some(idx) = graph.index.get(&node) {

@@ -124,9 +124,9 @@ pub(super) fn activation_error(
                     msg.push_str("\n\nthe package `");
                     msg.push_str(&*dep.package_name());
                     msg.push_str("` links to the native library `");
-                    msg.push_str(&link);
+                    msg.push_str(link);
                     msg.push_str("`, but it conflicts with a previous package which links to `");
-                    msg.push_str(&link);
+                    msg.push_str(link);
                     msg.push_str("` as well:\n");
                     msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
                 }
