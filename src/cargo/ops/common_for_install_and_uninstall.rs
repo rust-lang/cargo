@@ -230,7 +230,7 @@ impl InstallTracker {
                 if let Some(p) = p.as_ref() {
                     msg.push_str(&format!(" as part of `{}`\n", p));
                 } else {
-                    msg.push_str("\n");
+                    msg.push('\n');
                 }
             }
             msg.push_str("Add --force to overwrite");

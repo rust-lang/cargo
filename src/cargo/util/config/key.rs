@@ -66,7 +66,7 @@ impl ConfigKey {
 
     fn _push(&mut self, env: &str, config: &str) {
         self.parts.push((config.to_string(), self.env.len()));
-        self.env.push_str("_");
+        self.env.push('_');
         self.env.push_str(env);
     }
 

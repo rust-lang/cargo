@@ -349,8 +349,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         let output = cmd
             .exec_with_streaming(
                 &mut |stdout| {
-                    if stdout.starts_with(CARGO_WARNING) {
-                        warnings_in_case_of_panic.push(stdout[CARGO_WARNING.len()..].to_owned());
+                    if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
+                        warnings_in_case_of_panic.push(warning.to_owned());
                     }
                     if extra_verbose {
                         state.stdout(format!("{}{}", prefix, stdout));
