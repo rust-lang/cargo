@@ -1,5 +1,6 @@
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
+use crate::core::package::SerializedPackage;
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveOpts};
 use crate::core::{Dependency, Package, PackageId, Workspace};
 use crate::ops::{self, Packages};
@@ -32,8 +33,9 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
             VERSION
         );
     }
+    let config = ws.config();
     let (packages, resolve) = if opt.no_deps {
-        let packages = ws.members().cloned().collect();
+        let packages = ws.members().map(|pkg| pkg.serialized(config)).collect();
         (packages, None)
     } else {
         let (packages, resolve) = build_resolve_graph(ws, opt)?;
@@ -56,7 +58,7 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
 /// See cargo-metadata.adoc for detailed documentation of the format.
 #[derive(Serialize)]
 pub struct ExportInfo {
-    packages: Vec<Package>,
+    packages: Vec<SerializedPackage>,
     workspace_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
     target_directory: PathBuf,
@@ -105,7 +107,7 @@ impl From<&Dependency> for DepKindInfo {
 fn build_resolve_graph(
     ws: &Workspace<'_>,
     metadata_opts: &OutputMetadataOptions,
-) -> CargoResult<(Vec<Package>, MetadataResolve)> {
+) -> CargoResult<(Vec<SerializedPackage>, MetadataResolve)> {
     // TODO: Without --filter-platform, features are being resolved for `host` only.
     // How should this work?
     let requested_kinds =
@@ -153,9 +155,11 @@ fn build_resolve_graph(
         );
     }
     // Get a Vec of Packages.
+    let config = ws.config();
     let actual_packages = package_map
         .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
+        .map(|pkg| pkg.serialized(config))
         .collect();
 
     let mr = MetadataResolve {

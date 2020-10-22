@@ -708,8 +708,8 @@ explicit `crate:` feature values are not allowed in required-features
 }
 
 #[cargo_test]
-fn json_not_exposed() {
-    // Checks that crate: is not exposed in JSON.
+fn json_exposed() {
+    // Checks that the implicit crate: values are exposed in JSON.
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -726,51 +726,48 @@ fn json_not_exposed() {
         .file("src/lib.rs", "")
         .build();
 
-    // Check that "features" is empty (doesn't include the implicit features).
-    let json = r#"
-        {
-          "packages": [
-            {
-              "name": "foo",
-              "version": "0.1.0",
-              "id": "foo 0.1.0 [..]",
-              "license": null,
-              "license_file": null,
-              "description": null,
-              "homepage": null,
-              "documentation": null,
-              "source": null,
-              "dependencies": "{...}",
-              "targets": "{...}",
-              "features": {},
-              "manifest_path": "[..]foo/Cargo.toml",
-              "metadata": null,
-              "publish": null,
-              "authors": [],
-              "categories": [],
-              "keywords": [],
-              "readme": null,
-              "repository": null,
-              "edition": "2015",
-              "links": null
-            }
-          ],
-          "workspace_members": "{...}",
-          "resolve": null,
-          "target_directory": "[..]foo/target",
-          "version": 1,
-          "workspace_root": "[..]foo",
-          "metadata": null
-        }
-    "#;
-
-    p.cargo("metadata --no-deps").with_json(json).run();
-
-    // And namespaced-features shouldn't be any different.
-    // NOTE: I don't actually know if this is ideal behavior.
     p.cargo("metadata -Z namespaced-features --no-deps")
         .masquerade_as_nightly_cargo()
-        .with_json(json)
+        .with_json(
+            r#"
+                {
+                  "packages": [
+                    {
+                      "name": "foo",
+                      "version": "0.1.0",
+                      "id": "foo 0.1.0 [..]",
+                      "license": null,
+                      "license_file": null,
+                      "description": null,
+                      "homepage": null,
+                      "documentation": null,
+                      "source": null,
+                      "dependencies": "{...}",
+                      "targets": "{...}",
+                      "features": {
+                        "bar": ["crate:bar"]
+                      },
+                      "manifest_path": "[..]foo/Cargo.toml",
+                      "metadata": null,
+                      "publish": null,
+                      "authors": [],
+                      "categories": [],
+                      "keywords": [],
+                      "readme": null,
+                      "repository": null,
+                      "edition": "2015",
+                      "links": null
+                    }
+                  ],
+                  "workspace_members": "{...}",
+                  "resolve": null,
+                  "target_directory": "[..]foo/target",
+                  "version": 1,
+                  "workspace_root": "[..]foo",
+                  "metadata": null
+                }
+            "#,
+        )
         .run();
 }
 
