@@ -701,7 +701,7 @@ fn crate_required_features() {
             "\
 [UPDATING] [..]
 [ERROR] invalid feature `crate:bar` in required-features of target `foo`: \
-explicit `crate:` feature values are not allowed in required-features
+`crate:` prefixed feature values are not allowed in required-features
 ",
         )
         .run();

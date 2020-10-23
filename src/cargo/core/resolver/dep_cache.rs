@@ -374,7 +374,7 @@ fn build_requirements<'a, 'b: 'a>(
     } else {
         for &f in opts.features.features.iter() {
             let fv = FeatureValue::new(f);
-            if fv.is_explicit_crate() {
+            if fv.has_crate_prefix() {
                 return Err(ActivateError::Fatal(anyhow::format_err!(
                     "feature value `{}` is not allowed to use explicit `crate:` syntax",
                     fv
@@ -442,12 +442,12 @@ impl Requirements<'_> {
         &mut self,
         package: InternedString,
         feat: InternedString,
-        explicit: bool,
+        crate_prefix: bool,
     ) -> Result<(), RequirementError> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if !explicit
+        if !crate_prefix
             && self
                 .summary
                 .dependencies()
@@ -493,8 +493,8 @@ impl Requirements<'_> {
             FeatureValue::CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit,
-            } => self.require_crate_feature(*dep_name, *dep_feature, *explicit)?,
+                crate_prefix,
+            } => self.require_crate_feature(*dep_name, *dep_feature, *crate_prefix)?,
         };
         Ok(())
     }

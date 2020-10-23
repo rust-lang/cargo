@@ -183,7 +183,7 @@ fn build_feature_map(
             (*feature, fvs)
         })
         .collect();
-    let has_namespaced_features = map.values().flatten().any(|fv| fv.is_explicit_crate());
+    let has_namespaced_features = map.values().flatten().any(|fv| fv.has_crate_prefix());
 
     // Add implicit features for optional dependencies if they weren't
     // explicitly listed anywhere.
@@ -194,7 +194,7 @@ fn build_feature_map(
             Crate { dep_name }
             | CrateFeature {
                 dep_name,
-                explicit: true,
+                crate_prefix: true,
                 ..
             } => Some(*dep_name),
             _ => None,
@@ -340,7 +340,7 @@ pub enum FeatureValue {
         dep_feature: InternedString,
         /// If this is true, then the feature used the `crate:` prefix, which
         /// prevents enabling the feature named `dep_name`.
-        explicit: bool,
+        crate_prefix: bool,
     },
 }
 
@@ -350,7 +350,7 @@ impl FeatureValue {
             Some(pos) => {
                 let (dep, dep_feat) = feature.split_at(pos);
                 let dep_feat = &dep_feat[1..];
-                let (dep, explicit) = if let Some(dep) = dep.strip_prefix("crate:") {
+                let (dep, crate_prefix) = if let Some(dep) = dep.strip_prefix("crate:") {
                     (dep, true)
                 } else {
                     (dep, false)
@@ -358,7 +358,7 @@ impl FeatureValue {
                 FeatureValue::CrateFeature {
                     dep_name: InternedString::new(dep),
                     dep_feature: InternedString::new(dep_feat),
-                    explicit,
+                    crate_prefix,
                 }
             }
             None if feature.starts_with("crate:") => FeatureValue::Crate {
@@ -369,8 +369,8 @@ impl FeatureValue {
     }
 
     /// Returns `true` if this feature explicitly used `crate:` syntax.
-    pub fn is_explicit_crate(&self) -> bool {
-        matches!(self, FeatureValue::Crate{..} | FeatureValue::CrateFeature{explicit:true, ..})
+    pub fn has_crate_prefix(&self) -> bool {
+        matches!(self, FeatureValue::Crate{..} | FeatureValue::CrateFeature{crate_prefix:true, ..})
     }
 }
 
@@ -383,12 +383,12 @@ impl fmt::Display for FeatureValue {
             CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit: true,
+                crate_prefix: true,
             } => write!(f, "crate:{}/{}", dep_name, dep_feature),
             CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit: false,
+                crate_prefix: false,
             } => write!(f, "{}/{}", dep_name, dep_feature),
         }
     }

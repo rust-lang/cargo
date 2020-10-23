@@ -1071,10 +1071,13 @@ fn validate_required_features(
                     ))?;
                 }
             }
-            FeatureValue::Crate { .. } | FeatureValue::CrateFeature { explicit: true, .. } => {
+            FeatureValue::Crate { .. }
+            | FeatureValue::CrateFeature {
+                crate_prefix: true, ..
+            } => {
                 anyhow::bail!(
                     "invalid feature `{}` in required-features of target `{}`: \
-                    explicit `crate:` feature values are not allowed in required-features",
+                    `crate:` prefixed feature values are not allowed in required-features",
                     fv,
                     target_name
                 );
@@ -1083,7 +1086,7 @@ fn validate_required_features(
             FeatureValue::CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit: false,
+                crate_prefix: false,
             } => {
                 match resolve
                     .deps(summary.package_id())

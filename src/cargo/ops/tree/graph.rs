@@ -567,7 +567,7 @@ fn add_feature_rec(
             FeatureValue::CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit,
+                crate_prefix,
             } => {
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),
@@ -585,7 +585,7 @@ fn add_feature_rec(
                 };
                 for (dep_index, is_optional) in dep_indexes {
                     let dep_pkg_id = graph.package_id_for_index(dep_index);
-                    if is_optional && !explicit {
+                    if is_optional && !crate_prefix {
                         // Activate the optional dep on self.
                         add_feature(
                             graph,

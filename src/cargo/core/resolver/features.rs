@@ -463,7 +463,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::CrateFeature {
                 dep_name,
                 dep_feature,
-                explicit,
+                crate_prefix,
             } => {
                 // Activate a feature within a dependency.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
@@ -477,7 +477,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                                 dep_name: *dep_name,
                             };
                             self.activate_fv(pkg_id, &fv, for_host)?;
-                            if !explicit {
+                            if !crate_prefix {
                                 // To retain compatibility with old behavior,
                                 // this also enables a feature of the same
                                 // name.
