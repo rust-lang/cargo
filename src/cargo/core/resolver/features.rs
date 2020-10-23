@@ -475,7 +475,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             // Activate the crate on self.
                             let fv = FeatureValue::Crate {
                                 dep_name: *dep_name,
-                                // explicit: *explicit,
                             };
                             self.activate_fv(pkg_id, &fv, for_host)?;
                             if !explicit {

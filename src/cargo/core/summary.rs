@@ -350,8 +350,8 @@ impl FeatureValue {
             Some(pos) => {
                 let (dep, dep_feat) = feature.split_at(pos);
                 let dep_feat = &dep_feat[1..];
-                let (dep, explicit) = if dep.starts_with("crate:") {
-                    (&dep[6..], true)
+                let (dep, explicit) = if let Some(dep) = dep.strip_prefix("crate:") {
+                    (dep, true)
                 } else {
                     (dep, false)
                 };
