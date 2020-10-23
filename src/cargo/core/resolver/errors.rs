@@ -302,7 +302,7 @@ pub(super) fn activation_error(
                     ));
                 }
 
-                msg.push_str("\n");
+                msg.push('\n');
             }
             msg.push_str("required by ");
             msg.push_str(&describe_path(

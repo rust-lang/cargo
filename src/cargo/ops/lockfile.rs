@@ -151,7 +151,7 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
         for entry in list {
             out.push_str("[[patch.unused]]\n");
             emit_package(entry.as_table().unwrap(), &mut out);
-            out.push_str("\n");
+            out.push('\n');
         }
     }
 
@@ -214,7 +214,7 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
 
             out.push_str("]\n");
         }
-        out.push_str("\n");
+        out.push('\n');
     } else if dep.contains_key("replace") {
         out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
     }

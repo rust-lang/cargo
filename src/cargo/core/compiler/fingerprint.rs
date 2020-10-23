@@ -1975,9 +1975,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
     let mut found_deps = false;
 
     for line in contents.lines() {
-        let env_dep_prefix = "# env-dep:";
-        if line.starts_with(env_dep_prefix) {
-            let rest = &line[env_dep_prefix.len()..];
+        if let Some(rest) = line.strip_prefix("# env-dep:") {
             let mut parts = rest.splitn(2, '=');
             let env_var = match parts.next() {
                 Some(s) => s,

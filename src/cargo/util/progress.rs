@@ -266,20 +266,20 @@ impl Format {
         // Draw the `===>`
         if hashes > 0 {
             for _ in 0..hashes - 1 {
-                string.push_str("=");
+                string.push('=');
             }
             if cur == max {
-                string.push_str("=");
+                string.push('=');
             } else {
-                string.push_str(">");
+                string.push('>');
             }
         }
 
         // Draw the empty space we have left to do
         for _ in 0..(display_width - hashes) {
-            string.push_str(" ");
+            string.push(' ');
         }
-        string.push_str("]");
+        string.push(']');
         string.push_str(&stats);
 
         Some(string)
