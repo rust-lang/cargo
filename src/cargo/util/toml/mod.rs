@@ -1191,6 +1191,7 @@ impl TomlManifest {
         let empty_features = BTreeMap::new();
 
         let summary = Summary::new(
+            config,
             pkgid,
             deps,
             me.features.as_ref().unwrap_or(&empty_features),

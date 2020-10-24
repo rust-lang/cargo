@@ -1,6 +1,6 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
-use crate::util::CargoResult;
+use crate::util::{CargoResult, Config};
 use anyhow::bail;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -31,6 +31,7 @@ struct Inner {
 
 impl Summary {
     pub fn new(
+        config: &Config,
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: &BTreeMap<InternedString, Vec<InternedString>>,
@@ -49,7 +50,8 @@ impl Summary {
                 )
             }
         }
-        let (feature_map, has_namespaced_features) = build_feature_map(features, &dependencies)?;
+        let (feature_map, has_namespaced_features) =
+            build_feature_map(config, pkg_id, features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -161,6 +163,8 @@ impl Hash for Summary {
 /// included a `dep:` prefixed namespaced feature (used for gating on
 /// nightly).
 fn build_feature_map(
+    config: &Config,
+    pkg_id: PackageId,
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
 ) -> CargoResult<(FeatureMap, bool)> {
@@ -223,6 +227,7 @@ fn build_feature_map(
                 feature
             );
         }
+        validate_feature_name(config, pkg_id, feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
@@ -400,3 +405,34 @@ impl fmt::Display for FeatureValue {
 }
 
 pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
+
+fn validate_feature_name(config: &Config, pkg_id: PackageId, name: &str) -> CargoResult<()> {
+    let mut chars = name.chars();
+    const FUTURE: &str = "This was previously accepted but is being phased out; \
+        it will become a hard error in a future release.\n\
+        For more information, see issue #8813 <https://github.com/rust-lang/cargo/issues/8813>, \
+        and please leave a comment if this will be a problem for your project.";
+    if let Some(ch) = chars.next() {
+        if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
+            config.shell().warn(&format!(
+                "invalid character `{}` in feature `{}` in package {}, \
+                the first character must be a Unicode XID start character or digit \
+                (most letters or `_` or `0` to `9`)\n\
+                {}",
+                ch, name, pkg_id, FUTURE
+            ))?;
+        }
+    }
+    for ch in chars {
+        if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+') {
+            config.shell().warn(&format!(
+                "invalid character `{}` in feature `{}` in package {}, \
+                characters must be Unicode XID characters or `+` \
+                (numbers, `+`, `-`, `_`, or most letters)\n\
+                {}",
+                ch, name, pkg_id, FUTURE
+            ))?;
+        }
+    }
+    Ok(())
+}
