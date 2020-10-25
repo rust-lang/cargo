@@ -28,7 +28,7 @@ pub use self::to_semver::ToSemver;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
     print_available_benches, print_available_binaries, print_available_examples,
-    print_available_tests,
+    print_available_packages, print_available_tests,
 };
 
 mod canonical_url;
