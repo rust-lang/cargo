@@ -568,6 +568,11 @@ fn add_feature_rec(
                 dep_name,
                 dep_feature,
                 dep_prefix,
+                // `weak` is ignored, because it will be skipped if the
+                // corresponding dependency is not found in the map, which
+                // means it wasn't activated. Skipping is handled by
+                // `is_dep_activated` when the graph was built.
+                weak: _,
             } => {
                 let dep_indexes = match graph.dep_name_map[&package_index].get(dep_name) {
                     Some(indexes) => indexes.clone(),

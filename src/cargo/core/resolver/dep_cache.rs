@@ -494,6 +494,10 @@ impl Requirements<'_> {
                 dep_name,
                 dep_feature,
                 dep_prefix,
+                // Weak features are always activated in the dependency
+                // resolver. They will be narrowed inside the new feature
+                // resolver.
+                weak: _,
             } => self.require_dep_feature(*dep_name, *dep_feature, *dep_prefix)?,
         };
         Ok(())

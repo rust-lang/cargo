@@ -358,6 +358,7 @@ pub struct CliUnstable {
     pub rustdoc_map: bool,
     pub terminal_width: Option<Option<usize>>,
     pub namespaced_features: bool,
+    pub weak_dep_features: bool,
 }
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -464,6 +465,7 @@ impl CliUnstable {
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "terminal-width" => self.terminal_width = Some(parse_usize_opt(v)?),
             "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
+            "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
