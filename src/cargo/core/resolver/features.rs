@@ -378,7 +378,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         for (member, requested_features) in &member_features {
             let fvs = self.fvs_from_requested(member.package_id(), requested_features);
             let for_host = self.track_for_host && self.is_proc_macro(member.package_id());
-            self.activate_pkg(member.package_id(), &fvs, for_host)?;
+            self.activate_pkg(member.package_id(), for_host, &fvs)?;
             if for_host {
                 // Also activate without for_host. This is needed if the
                 // proc-macro includes other targets (like binaries or tests),
@@ -387,7 +387,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 // `--workspace`), this forces feature unification with normal
                 // dependencies. This is part of the bigger problem where
                 // features depend on which packages are built.
-                self.activate_pkg(member.package_id(), &fvs, false)?;
+                self.activate_pkg(member.package_id(), false, &fvs)?;
             }
         }
         Ok(())
@@ -396,8 +396,8 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn activate_pkg(
         &mut self,
         pkg_id: PackageId,
-        fvs: &[FeatureValue],
         for_host: bool,
+        fvs: &[FeatureValue],
     ) -> CargoResult<()> {
         // Add an empty entry to ensure everything is covered. This is intended for
         // finding bugs where the resolver missed something it should have visited.
@@ -406,7 +406,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             .entry((pkg_id, self.opts.decouple_host_deps && for_host))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
-            self.activate_fv(pkg_id, fv, for_host)?;
+            self.activate_fv(pkg_id, for_host, fv)?;
         }
         if !self.processed_deps.insert((pkg_id, for_host)) {
             // Already processed dependencies. There's no need to process them
@@ -433,7 +433,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 }
                 // Recurse into the dependency.
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_pkg(dep_pkg_id, &fvs, dep_for_host)?;
+                self.activate_pkg(dep_pkg_id, dep_for_host, &fvs)?;
             }
         }
         Ok(())
@@ -443,12 +443,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn activate_fv(
         &mut self,
         pkg_id: PackageId,
-        fv: &FeatureValue,
         for_host: bool,
+        fv: &FeatureValue,
     ) -> CargoResult<()> {
         match fv {
             FeatureValue::Feature(f) => {
-                self.activate_rec(pkg_id, *f, for_host)?;
+                self.activate_rec(pkg_id, for_host, *f)?;
             }
             FeatureValue::Dep { dep_name } => {
                 // Mark this dependency as activated.
@@ -463,7 +463,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             continue;
                         }
                         let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                        self.activate_pkg(dep_pkg_id, &fvs, dep_for_host)?;
+                        self.activate_pkg(dep_pkg_id, dep_for_host, &fvs)?;
                     }
                 }
             }
@@ -483,17 +483,17 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             let fv = FeatureValue::Dep {
                                 dep_name: *dep_name,
                             };
-                            self.activate_fv(pkg_id, &fv, for_host)?;
+                            self.activate_fv(pkg_id, for_host, &fv)?;
                             if !dep_prefix {
                                 // To retain compatibility with old behavior,
                                 // this also enables a feature of the same
                                 // name.
-                                self.activate_rec(pkg_id, *dep_name, for_host)?;
+                                self.activate_rec(pkg_id, for_host, *dep_name)?;
                             }
                         }
                         // Activate the feature on the dependency.
                         let fv = FeatureValue::new(*dep_feature);
-                        self.activate_fv(dep_pkg_id, &fv, dep_for_host)?;
+                        self.activate_fv(dep_pkg_id, dep_for_host, &fv)?;
                     }
                 }
             }
@@ -506,8 +506,8 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
     fn activate_rec(
         &mut self,
         pkg_id: PackageId,
-        feature_to_enable: InternedString,
         for_host: bool,
+        feature_to_enable: InternedString,
     ) -> CargoResult<()> {
         let enabled = self
             .activated_features
@@ -534,7 +534,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             }
         };
         for fv in fvs {
-            self.activate_fv(pkg_id, fv, for_host)?;
+            self.activate_fv(pkg_id, for_host, fv)?;
         }
         Ok(())
     }
