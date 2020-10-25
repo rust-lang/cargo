@@ -412,7 +412,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // For example, consider we've already processed our dependencies,
             // and another package comes along and enables one of our optional
             // dependencies, it will do so immediately in the
-            // `FeatureValue::CrateFeature` branch, and then immediately
+            // `FeatureValue::DepFeature` branch, and then immediately
             // recurse into that optional dependency. This also holds true for
             // features that enable other features.
             return Ok(());
@@ -443,7 +443,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::Feature(f) => {
                 self.activate_rec(pkg_id, *f, for_host)?;
             }
-            FeatureValue::Crate { dep_name } => {
+            FeatureValue::Dep { dep_name } => {
                 // Mark this dependency as activated.
                 self.activated_dependencies
                     .entry((pkg_id, self.opts.decouple_host_deps && for_host))
@@ -460,10 +460,10 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     }
                 }
             }
-            FeatureValue::CrateFeature {
+            FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                crate_prefix,
+                dep_prefix,
             } => {
                 // Activate a feature within a dependency.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
@@ -472,12 +472,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             continue;
                         }
                         if dep.is_optional() {
-                            // Activate the crate on self.
-                            let fv = FeatureValue::Crate {
+                            // Activate the dependency on self.
+                            let fv = FeatureValue::Dep {
                                 dep_name: *dep_name,
                             };
                             self.activate_fv(pkg_id, &fv, for_host)?;
-                            if !crate_prefix {
+                            if !dep_prefix {
                                 // To retain compatibility with old behavior,
                                 // this also enables a feature of the same
                                 // name.

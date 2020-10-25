@@ -342,7 +342,7 @@ pub fn resolve_features<'b>(
     }
 
     // This is a special case for command-line `--features
-    // crate_name/feat_name` where `crate_name` does not exist. All other
+    // dep_name/feat_name` where `dep_name` does not exist. All other
     // validation is done either in `build_requirements` or
     // `build_feature_map`.
     for dep_name in reqs.deps.keys() {
@@ -374,9 +374,9 @@ fn build_requirements<'a, 'b: 'a>(
     } else {
         for &f in opts.features.features.iter() {
             let fv = FeatureValue::new(f);
-            if fv.has_crate_prefix() {
+            if fv.has_dep_prefix() {
                 return Err(ActivateError::Fatal(anyhow::format_err!(
-                    "feature value `{}` is not allowed to use explicit `crate:` syntax",
+                    "feature value `{}` is not allowed to use explicit `dep:` syntax",
                     fv
                 )));
             }
@@ -438,16 +438,16 @@ impl Requirements<'_> {
         self.features
     }
 
-    fn require_crate_feature(
+    fn require_dep_feature(
         &mut self,
         package: InternedString,
         feat: InternedString,
-        crate_prefix: bool,
+        dep_prefix: bool,
     ) -> Result<(), RequirementError> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if !crate_prefix
+        if !dep_prefix
             && self
                 .summary
                 .dependencies()
@@ -489,12 +489,12 @@ impl Requirements<'_> {
     fn require_value(&mut self, fv: &FeatureValue) -> Result<(), RequirementError> {
         match fv {
             FeatureValue::Feature(feat) => self.require_feature(*feat)?,
-            FeatureValue::Crate { dep_name } => self.require_dependency(*dep_name),
-            FeatureValue::CrateFeature {
+            FeatureValue::Dep { dep_name } => self.require_dependency(*dep_name),
+            FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                crate_prefix,
-            } => self.require_crate_feature(*dep_name, *dep_feature, *crate_prefix)?,
+                dep_prefix,
+            } => self.require_dep_feature(*dep_name, *dep_feature, *dep_prefix)?,
         };
         Ok(())
     }
@@ -526,7 +526,7 @@ impl RequirementError {
                     match parent {
                         None => ActivateError::Fatal(anyhow::format_err!(
                             "Package `{}` does not have feature `{}`. It has an optional dependency \
-                             with that name, but that dependency uses the \"crate:\" \
+                             with that name, but that dependency uses the \"dep:\" \
                              syntax in the features table, so it does not have an implicit feature with that name.",
                             summary.package_id(),
                             feat
@@ -559,7 +559,7 @@ impl RequirementError {
                         dep_name
                     )),
                     // This code path currently isn't used, since `foo/bar`
-                    // and `crate:` syntax is not allowed in a dependency.
+                    // and `dep:` syntax is not allowed in a dependency.
                     Some(p) => ActivateError::Conflict(
                         p,
                         ConflictReason::MissingFeatures(dep_name.to_string()),

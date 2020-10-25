@@ -88,7 +88,7 @@ impl Summary {
         if !namespaced_features {
             if self.inner.has_namespaced_features {
                 bail!(
-                    "namespaced features with the `crate:` prefix are only allowed on \
+                    "namespaced features with the `dep:` prefix are only allowed on \
                      the nightly channel and requires the `-Z namespaced-features` flag on the command-line"
                 );
             }
@@ -158,7 +158,7 @@ impl Hash for Summary {
 /// and creates FeatureValues for each feature.
 ///
 /// The returned `bool` indicates whether or not the `[features]` table
-/// included a `crate:` prefixed namespaced feature (used for gating on
+/// included a `dep:` prefixed namespaced feature (used for gating on
 /// nightly).
 fn build_feature_map(
     features: &BTreeMap<InternedString, Vec<InternedString>>,
@@ -183,7 +183,7 @@ fn build_feature_map(
             (*feature, fvs)
         })
         .collect();
-    let has_namespaced_features = map.values().flatten().any(|fv| fv.has_crate_prefix());
+    let has_namespaced_features = map.values().flatten().any(|fv| fv.has_dep_prefix());
 
     // Add implicit features for optional dependencies if they weren't
     // explicitly listed anywhere.
@@ -191,10 +191,10 @@ fn build_feature_map(
         .values()
         .flatten()
         .filter_map(|fv| match fv {
-            Crate { dep_name }
-            | CrateFeature {
+            Dep { dep_name }
+            | DepFeature {
                 dep_name,
-                crate_prefix: true,
+                dep_prefix: true,
                 ..
             } => Some(*dep_name),
             _ => None,
@@ -209,7 +209,7 @@ fn build_feature_map(
         {
             continue;
         }
-        let fv = Crate {
+        let fv = Dep {
             dep_name: dep_name_in_toml,
         };
         map.insert(dep_name_in_toml, vec![fv]);
@@ -217,9 +217,9 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        if feature.starts_with("crate:") {
+        if feature.starts_with("dep:") {
             bail!(
-                "feature named `{}` is not allowed to start with `crate:`",
+                "feature named `{}` is not allowed to start with `dep:`",
                 feature
             );
         }
@@ -227,7 +227,7 @@ fn build_feature_map(
             // Find data for the referenced dependency...
             let dep_data = {
                 match fv {
-                    Feature(dep_name) | Crate { dep_name, .. } | CrateFeature { dep_name, .. } => {
+                    Feature(dep_name) | Dep { dep_name, .. } | DepFeature { dep_name, .. } => {
                         dep_map.get(dep_name)
                     }
                 }
@@ -253,7 +253,7 @@ fn build_feature_map(
                                 bail!(
                                     "feature `{}` includes `{}`, but `{}` is an \
                                      optional dependency without an implicit feature\n\
-                                     Use `crate:{}` to enable the dependency.",
+                                     Use `dep:{}` to enable the dependency.",
                                     feature,
                                     fv,
                                     f,
@@ -268,7 +268,7 @@ fn build_feature_map(
                         }
                     }
                 }
-                Crate { dep_name } => {
+                Dep { dep_name } => {
                     if !is_any_dep {
                         bail!(
                             "feature `{}` includes `{}`, but `{}` is not listed as a dependency",
@@ -288,7 +288,7 @@ fn build_feature_map(
                         );
                     }
                 }
-                CrateFeature { dep_name, .. } => {
+                DepFeature { dep_name, .. } => {
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
                         bail!(
@@ -308,7 +308,7 @@ fn build_feature_map(
         .values()
         .flatten()
         .filter_map(|fv| match fv {
-            Crate { dep_name } | CrateFeature { dep_name, .. } => Some(dep_name),
+            Dep { dep_name } | DepFeature { dep_name, .. } => Some(dep_name),
             _ => None,
         })
         .collect();
@@ -318,7 +318,7 @@ fn build_feature_map(
     {
         bail!(
             "optional dependency `{}` is not included in any feature\n\
-            Make sure that `crate:{}` is included in one of features in the [features] table.",
+            Make sure that `dep:{}` is included in one of features in the [features] table.",
             dep.name_in_toml(),
             dep.name_in_toml(),
         );
@@ -332,15 +332,15 @@ fn build_feature_map(
 pub enum FeatureValue {
     /// A feature enabling another feature.
     Feature(InternedString),
-    /// A feature enabling a dependency with `crate:dep_name` syntax.
-    Crate { dep_name: InternedString },
+    /// A feature enabling a dependency with `dep:dep_name` syntax.
+    Dep { dep_name: InternedString },
     /// A feature enabling a feature on a dependency with `crate_name/feat_name` syntax.
-    CrateFeature {
+    DepFeature {
         dep_name: InternedString,
         dep_feature: InternedString,
-        /// If this is true, then the feature used the `crate:` prefix, which
+        /// If this is true, then the feature used the `dep:` prefix, which
         /// prevents enabling the feature named `dep_name`.
-        crate_prefix: bool,
+        dep_prefix: bool,
     },
 }
 
@@ -350,27 +350,32 @@ impl FeatureValue {
             Some(pos) => {
                 let (dep, dep_feat) = feature.split_at(pos);
                 let dep_feat = &dep_feat[1..];
-                let (dep, crate_prefix) = if let Some(dep) = dep.strip_prefix("crate:") {
+                let (dep, dep_prefix) = if let Some(dep) = dep.strip_prefix("dep:") {
                     (dep, true)
                 } else {
                     (dep, false)
                 };
-                FeatureValue::CrateFeature {
+                FeatureValue::DepFeature {
                     dep_name: InternedString::new(dep),
                     dep_feature: InternedString::new(dep_feat),
-                    crate_prefix,
+                    dep_prefix,
                 }
             }
-            None if feature.starts_with("crate:") => FeatureValue::Crate {
-                dep_name: InternedString::new(&feature[6..]),
-            },
-            None => FeatureValue::Feature(feature),
+            None => {
+                if let Some(dep_name) = feature.strip_prefix("dep:") {
+                    FeatureValue::Dep {
+                        dep_name: InternedString::new(dep_name),
+                    }
+                } else {
+                    FeatureValue::Feature(feature)
+                }
+            }
         }
     }
 
-    /// Returns `true` if this feature explicitly used `crate:` syntax.
-    pub fn has_crate_prefix(&self) -> bool {
-        matches!(self, FeatureValue::Crate{..} | FeatureValue::CrateFeature{crate_prefix:true, ..})
+    /// Returns `true` if this feature explicitly used `dep:` syntax.
+    pub fn has_dep_prefix(&self) -> bool {
+        matches!(self, FeatureValue::Dep{..} | FeatureValue::DepFeature{dep_prefix:true, ..})
     }
 }
 
@@ -379,16 +384,16 @@ impl fmt::Display for FeatureValue {
         use self::FeatureValue::*;
         match self {
             Feature(feat) => write!(f, "{}", feat),
-            Crate { dep_name } => write!(f, "crate:{}", dep_name),
-            CrateFeature {
+            Dep { dep_name } => write!(f, "dep:{}", dep_name),
+            DepFeature {
                 dep_name,
                 dep_feature,
-                crate_prefix: true,
-            } => write!(f, "crate:{}/{}", dep_name, dep_feature),
-            CrateFeature {
+                dep_prefix: true,
+            } => write!(f, "dep:{}/{}", dep_name, dep_feature),
+            DepFeature {
                 dep_name,
                 dep_feature,
-                crate_prefix: false,
+                dep_prefix: false,
             } => write!(f, "{}/{}", dep_name, dep_feature),
         }
     }

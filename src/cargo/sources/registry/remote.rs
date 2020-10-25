@@ -20,7 +20,7 @@ use std::mem;
 use std::path::Path;
 use std::str;
 
-fn make_crate_prefix(name: &str) -> String {
+fn make_dep_prefix(name: &str) -> String {
     match name.len() {
         1 => String::from("1"),
         2 => String::from("2"),
@@ -274,7 +274,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
-        let prefix = make_crate_prefix(&*pkg.name());
+        let prefix = make_dep_prefix(&*pkg.name());
         let url = url
             .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
@@ -341,15 +341,15 @@ impl<'cfg> Drop for RemoteRegistry<'cfg> {
 
 #[cfg(test)]
 mod tests {
-    use super::make_crate_prefix;
+    use super::make_dep_prefix;
 
     #[test]
-    fn crate_prefix() {
-        assert_eq!(make_crate_prefix("a"), "1");
-        assert_eq!(make_crate_prefix("ab"), "2");
-        assert_eq!(make_crate_prefix("abc"), "3/a");
-        assert_eq!(make_crate_prefix("Abc"), "3/A");
-        assert_eq!(make_crate_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_crate_prefix("aBcDe"), "aB/cD");
+    fn dep_prefix() {
+        assert_eq!(make_dep_prefix("a"), "1");
+        assert_eq!(make_dep_prefix("ab"), "2");
+        assert_eq!(make_dep_prefix("abc"), "3/a");
+        assert_eq!(make_dep_prefix("Abc"), "3/A");
+        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
+        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

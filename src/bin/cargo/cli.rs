@@ -42,7 +42,7 @@ Available unstable (nightly-only) flags:
     -Z timings             -- Display concurrency information
     -Z doctest-xcompile    -- Compile and run doctests for non-host target using runner config
     -Z terminal-width      -- Provide a terminal width to rustc for error truncation
-    -Z namespaced-features -- Allow features with `crate:` prefix
+    -Z namespaced-features -- Allow features with `dep:` prefix
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );

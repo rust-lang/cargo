@@ -297,7 +297,7 @@ pub enum ConflictReason {
     RequiredDependencyAsFeature(InternedString),
 
     /// A dependency listed a feature for an optional dependency, but that
-    /// optional dependency is "hidden" using namespaced `crate:` syntax.
+    /// optional dependency is "hidden" using namespaced `dep:` syntax.
     NonImplicitDependencyAsFeature(InternedString),
 
     // TODO: needs more info for `activation_error`

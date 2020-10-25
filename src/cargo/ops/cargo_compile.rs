@@ -1071,22 +1071,22 @@ fn validate_required_features(
                     ))?;
                 }
             }
-            FeatureValue::Crate { .. }
-            | FeatureValue::CrateFeature {
-                crate_prefix: true, ..
+            FeatureValue::Dep { .. }
+            | FeatureValue::DepFeature {
+                dep_prefix: true, ..
             } => {
                 anyhow::bail!(
                     "invalid feature `{}` in required-features of target `{}`: \
-                    `crate:` prefixed feature values are not allowed in required-features",
+                    `dep:` prefixed feature values are not allowed in required-features",
                     fv,
                     target_name
                 );
             }
             // Handling of dependent_crate/dependent_crate_feature syntax
-            FeatureValue::CrateFeature {
+            FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                crate_prefix: false,
+                dep_prefix: false,
             } => {
                 match resolve
                     .deps(summary.package_id())

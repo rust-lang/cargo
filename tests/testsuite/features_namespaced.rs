@@ -5,7 +5,7 @@ use cargo_test_support::registry::{Dependency, Package};
 
 #[cargo_test]
 fn gated() {
-    // Need namespaced-features to use `crate:` syntax.
+    // Need namespaced-features to use `dep:` syntax.
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -19,7 +19,7 @@ fn gated() {
                 bar = { version = "1.0", optional = true }
 
                 [features]
-                foo = ["crate:bar"]
+                foo = ["dep:bar"]
             "#,
         )
         .file("src/lib.rs", "")
@@ -32,7 +32,7 @@ fn gated() {
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  namespaced features with the `crate:` prefix are only allowed on the nightly channel \
+  namespaced features with the `dep:` prefix are only allowed on the nightly channel \
   and requires the `-Z namespaced-features` flag on the command-line
 ",
         )
@@ -41,11 +41,11 @@ Caused by:
 
 #[cargo_test]
 fn dependency_gate_ignored() {
-    // Dependencies with `crate:` features are ignored in the registry if not on nightly.
+    // Dependencies with `dep:` features are ignored in the registry if not on nightly.
     Package::new("baz", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["crate:baz"])
+        .feature("feat", &["dep:baz"])
         .publish();
     let p = project()
         .file(
@@ -98,11 +98,11 @@ required by package `foo v0.1.0 ([..]/foo)`
 
 #[cargo_test]
 fn dependency_with_crate_syntax() {
-    // Registry dependency uses crate: syntax.
+    // Registry dependency uses dep: syntax.
     Package::new("baz", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat", &["crate:baz"])
+        .feature("feat", &["dep:baz"])
         .publish();
     let p = project()
         .file(
@@ -171,7 +171,7 @@ Caused by:
 
 #[cargo_test]
 fn namespaced_invalid_dependency() {
-    // Specifies a crate:name that doesn't exist.
+    // Specifies a dep:name that doesn't exist.
     let p = project()
         .file(
             "Cargo.toml",
@@ -181,7 +181,7 @@ fn namespaced_invalid_dependency() {
                 version = "0.0.1"
 
                 [features]
-                bar = ["crate:baz"]
+                bar = ["dep:baz"]
             "#,
         )
         .file("src/main.rs", "")
@@ -195,7 +195,7 @@ fn namespaced_invalid_dependency() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  feature `bar` includes `crate:baz`, but `baz` is not listed as a dependency
+  feature `bar` includes `dep:baz`, but `baz` is not listed as a dependency
 ",
         )
         .run();
@@ -203,7 +203,7 @@ Caused by:
 
 #[cargo_test]
 fn namespaced_non_optional_dependency() {
-    // Specifies a crate:name for a dependency that is not optional.
+    // Specifies a dep:name for a dependency that is not optional.
     let p = project()
         .file(
             "Cargo.toml",
@@ -213,7 +213,7 @@ fn namespaced_non_optional_dependency() {
                 version = "0.0.1"
 
                 [features]
-                bar = ["crate:baz"]
+                bar = ["dep:baz"]
 
                 [dependencies]
                 baz = "0.1"
@@ -230,7 +230,7 @@ fn namespaced_non_optional_dependency() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  feature `bar` includes `crate:baz`, but `baz` is not an optional dependency
+  feature `bar` includes `dep:baz`, but `baz` is not an optional dependency
   A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
 ",
         )
@@ -315,7 +315,7 @@ fn namespaced_shadowed_dep() {
 
 Caused by:
   optional dependency `baz` is not included in any feature
-  Make sure that `crate:baz` is included in one of features in the [features] table.
+  Make sure that `dep:baz` is included in one of features in the [features] table.
 ",
         )
         .run();
@@ -394,7 +394,7 @@ fn namespaced_same_name() {
                 version = "0.0.1"
 
                 [features]
-                baz = ["crate:baz"]
+                baz = ["dep:baz"]
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
@@ -441,7 +441,7 @@ fn namespaced_same_name() {
 
 #[cargo_test]
 fn no_implicit_feature() {
-    // Using `crate:` will not create an implicit feature.
+    // Using `dep:` will not create an implicit feature.
     Package::new("regex", "1.0.0").publish();
     Package::new("lazy_static", "1.0.0").publish();
 
@@ -458,7 +458,7 @@ fn no_implicit_feature() {
                 lazy_static = { version = "1.0", optional = true }
 
                 [features]
-                regex = ["crate:regex", "crate:lazy_static"]
+                regex = ["dep:regex", "dep:lazy_static"]
             "#,
         )
         .file(
@@ -507,7 +507,7 @@ fn no_implicit_feature() {
         .with_stderr(
             "\
 [ERROR] Package `foo v0.1.0 [..]` does not have feature `lazy_static`. \
-It has an optional dependency with that name, but that dependency uses the \"crate:\" \
+It has an optional dependency with that name, but that dependency uses the \"dep:\" \
 syntax in the features table, so it does not have an implicit feature with that name.
 ",
         )
@@ -517,7 +517,7 @@ syntax in the features table, so it does not have an implicit feature with that 
 
 #[cargo_test]
 fn crate_feature_explicit() {
-    // crate:name/feature syntax shouldn't set implicit feature.
+    // dep:name/feature syntax shouldn't set implicit feature.
     Package::new("bar", "1.0.0")
         .file(
             "src/lib.rs",
@@ -540,7 +540,7 @@ fn crate_feature_explicit() {
                 bar = {version = "1.0", optional=true}
 
                 [features]
-                f1 = ["crate:bar/feat"]
+                f1 = ["dep:bar/feat"]
             "#,
         )
         .file(
@@ -572,7 +572,7 @@ fn crate_feature_explicit() {
 
 #[cargo_test]
 fn crate_syntax_bad_name() {
-    // "crate:bar" = []
+    // "dep:bar" = []
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -586,13 +586,13 @@ fn crate_syntax_bad_name() {
                 bar = { version="1.0", optional=true }
 
                 [features]
-                "crate:bar" = []
+                "dep:bar" = []
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features --features crate:bar")
+    p.cargo("check -Z namespaced-features --features dep:bar")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
@@ -600,7 +600,7 @@ fn crate_syntax_bad_name() {
 [ERROR] failed to parse manifest at [..]/foo/Cargo.toml`
 
 Caused by:
-  feature named `crate:bar` is not allowed to start with `crate:`
+  feature named `dep:bar` is not allowed to start with `dep:`
 ",
         )
         .run();
@@ -608,7 +608,7 @@ Caused by:
 
 #[cargo_test]
 fn crate_syntax_in_dep() {
-    // features = ["crate:baz"]
+    // features = ["dep:baz"]
     Package::new("baz", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("baz", "1.0").optional(true))
@@ -622,7 +622,7 @@ fn crate_syntax_in_dep() {
                 version = "0.1.0"
 
                 [dependencies]
-                bar = { version = "1.0", features = ["crate:baz"] }
+                bar = { version = "1.0", features = ["dep:baz"] }
             "#,
         )
         .file("src/lib.rs", "")
@@ -634,7 +634,7 @@ fn crate_syntax_in_dep() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] feature value `crate:baz` is not allowed to use explicit `crate:` syntax
+[ERROR] feature value `dep:baz` is not allowed to use explicit `dep:` syntax
 ",
         )
         .run();
@@ -642,7 +642,7 @@ fn crate_syntax_in_dep() {
 
 #[cargo_test]
 fn crate_syntax_cli() {
-    // --features crate:bar
+    // --features dep:bar
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -659,13 +659,13 @@ fn crate_syntax_cli() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Z namespaced-features --features crate:bar")
+    p.cargo("check -Z namespaced-features --features dep:bar")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] feature value `crate:bar` is not allowed to use explicit `crate:` syntax
+[ERROR] feature value `dep:bar` is not allowed to use explicit `dep:` syntax
 ",
         )
         .run();
@@ -673,7 +673,7 @@ fn crate_syntax_cli() {
 
 #[cargo_test]
 fn crate_required_features() {
-    // required-features = ["crate:bar"]
+    // required-features = ["dep:bar"]
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -688,7 +688,7 @@ fn crate_required_features() {
 
                 [[bin]]
                 name = "foo"
-                required-features = ["crate:bar"]
+                required-features = ["dep:bar"]
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -700,8 +700,8 @@ fn crate_required_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[ERROR] invalid feature `crate:bar` in required-features of target `foo`: \
-`crate:` prefixed feature values are not allowed in required-features
+[ERROR] invalid feature `dep:bar` in required-features of target `foo`: \
+`dep:` prefixed feature values are not allowed in required-features
 ",
         )
         .run();
@@ -709,7 +709,7 @@ fn crate_required_features() {
 
 #[cargo_test]
 fn json_exposed() {
-    // Checks that the implicit crate: values are exposed in JSON.
+    // Checks that the implicit dep: values are exposed in JSON.
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -745,7 +745,7 @@ fn json_exposed() {
                       "dependencies": "{...}",
                       "targets": "{...}",
                       "features": {
-                        "bar": ["crate:bar"]
+                        "bar": ["dep:bar"]
                       },
                       "manifest_path": "[..]foo/Cargo.toml",
                       "metadata": null,
@@ -798,7 +798,7 @@ fn crate_feature_with_explicit() {
 
                 [features]
                 f1 = ["bar/bar_feat"]
-                bar = ["crate:bar", "f2"]
+                bar = ["dep:bar", "f2"]
                 f2 = []
             "#,
         )
@@ -846,7 +846,7 @@ fn optional_explicit_without_crate() {
                 bar = { version = "1.0", optional = true }
 
                 [features]
-                feat1 = ["crate:bar"]
+                feat1 = ["dep:bar"]
                 feat2 = ["bar"]
             "#,
         )
@@ -862,7 +862,7 @@ fn optional_explicit_without_crate() {
 
 Caused by:
   feature `feat2` includes `bar`, but `bar` is an optional dependency without an implicit feature
-  Use `crate:bar` to enable the dependency.
+  Use `dep:bar` to enable the dependency.
 ",
         )
         .run();
@@ -873,7 +873,7 @@ fn tree() {
     Package::new("baz", "1.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("baz", "1.0").optional(true))
-        .feature("feat1", &["crate:baz"])
+        .feature("feat1", &["dep:baz"])
         .feature("feat2", &[])
         .publish();
     let p = project()
@@ -889,8 +889,8 @@ fn tree() {
 
                 [features]
                 a = ["bar/feat2"]
-                b = ["crate:bar/feat2"]
-                bar = ["crate:bar"]
+                b = ["dep:bar/feat2"]
+                bar = ["dep:bar"]
             "#,
         )
         .file("src/lib.rs", "")

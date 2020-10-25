@@ -170,7 +170,7 @@ pub(super) fn activation_error(
                     msg.push_str("` does not have these features.\n");
                     msg.push_str(
                         " It has an optional dependency with that name, \
-                         but but that dependency uses the \"crate:\" \
+                         but but that dependency uses the \"dep:\" \
                          syntax in the features table, so it does not have an \
                          implicit feature with that name.\n",
                     );

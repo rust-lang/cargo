@@ -196,11 +196,11 @@ specified:
 
 * Features may now be defined with the same name as a dependency.
 * Optional dependencies can be explicitly enabled in the `[features]` table
-  with the `crate:` prefix, which enables the dependency without enabling a
+  with the `dep:` prefix, which enables the dependency without enabling a
   feature of the same name.
 
 By default, an optional dependency `foo` will define a feature `foo =
-["crate:foo"]` *unless* `crate:foo` is mentioned in any other feature, or the
+["dep:foo"]` *unless* `dep:foo` is mentioned in any other feature, or the
 `foo` feature is already defined. This helps prevent unnecessary boilerplate
 of listing every optional dependency, but still allows you to override the
 implicit feature.
@@ -223,7 +223,7 @@ regex = { version = "1.4.1", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 
 [features]
-regex = ["crate:regex", "crate:lazy_static"]
+regex = ["dep:regex", "dep:lazy_static"]
 ```
 
 In this example, the "regex" feature enables both `regex` and `lazy_static`.
@@ -240,7 +240,7 @@ num-bigint = "0.2"
 serde = {version = "1.0", optional = true }
 
 [features]
-serde = ["crate:serde", "bigdecimal/serde", "chrono/serde", "num-bigint/serde"]
+serde = ["dep:serde", "bigdecimal/serde", "chrono/serde", "num-bigint/serde"]
 ```
 
 In this case, `serde` is a natural name to use for a feature, because it is
