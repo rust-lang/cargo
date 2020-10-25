@@ -65,8 +65,6 @@ pub struct ResolvedFeatures {
 /// Options for how the feature resolver works.
 #[derive(Default)]
 struct FeatureOpts {
-    /// -Zpackage-features, changes behavior of feature flags in a workspace.
-    package_features: bool,
     /// -Zfeatures is enabled, use new resolver.
     new_resolver: bool,
     /// Build deps and proc-macros will not share share features with other dep kinds.
@@ -125,7 +123,6 @@ impl FeatureOpts {
     ) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
         let unstable_flags = ws.config().cli_unstable();
-        opts.package_features = unstable_flags.package_features;
         let mut enable = |feat_opts: &Vec<String>| {
             opts.new_resolver = true;
             for opt in feat_opts {
