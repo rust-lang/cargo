@@ -346,6 +346,19 @@ manifest:
 cc = "1.0.3"
 ```
 
+
+You can also have target-specific build dependencies by using
+`build-dependencies` in the target section header instead of `dependencies`. For
+example:
+
+```toml
+[target.'cfg(unix)'.build-dependencies]
+cc = "1.0.3"
+```
+
+In this case, the dependency will only be built when the host platform matches the
+specified target.
+
 The build script **does not** have access to the dependencies listed
 in the `dependencies` or `dev-dependencies` section. Build
 dependencies will likewise not be available to the package itself
