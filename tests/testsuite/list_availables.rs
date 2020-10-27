@@ -18,6 +18,7 @@ fn list_availables_test(command: &str, targets: u8) {
         .file("tests/test1.rs", "")
         .file("tests/test2.rs", "")
         .file("src/main.rs", "fn main() { }")
+        .file("Cargo.lock", "") // for `cargo pkgid`
         .build();
 
     if targets & EXAMPLE != 0 {
@@ -182,7 +183,7 @@ fn fix_list_availables() {
 
 #[cargo_test]
 fn run_list_availables() {
-    list_availables_test("run", EXAMPLE | BIN);
+    list_availables_test("run", EXAMPLE | BIN | PACKAGE);
 }
 
 #[cargo_test]
@@ -202,10 +203,15 @@ fn install_list_availables() {
 
 #[cargo_test]
 fn rustdoc_list_availables() {
-    list_availables_test("rustdoc", EXAMPLE | BIN | TEST | BENCH);
+    list_availables_test("rustdoc", EXAMPLE | BIN | TEST | BENCH | PACKAGE);
 }
 
 #[cargo_test]
 fn rustc_list_availables() {
-    list_availables_test("rustc", EXAMPLE | BIN | TEST | BENCH);
+    list_availables_test("rustc", EXAMPLE | BIN | TEST | BENCH | PACKAGE);
+}
+
+#[cargo_test]
+fn pkgid_list_availables() {
+    list_availables_test("pkgid", PACKAGE);
 }
