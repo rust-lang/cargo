@@ -352,7 +352,9 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &try_to_use,
         Some(ws.config()),
-        ws.features().require(Feature::public_dependency()).is_ok(),
+        ws.unstable_features()
+            .require(Feature::public_dependency())
+            .is_ok(),
     )?;
     resolved.register_used_patches(&registry.patches());
     if register_patches {

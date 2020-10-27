@@ -57,8 +57,18 @@ type ActivateMap = HashMap<(PackageId, bool), BTreeSet<InternedString>>;
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
     activated_features: ActivateMap,
+    /// Optional dependencies that should be built.
+    ///
+    /// The value is the `name_in_toml` of the dependencies.
+    activated_dependencies: ActivateMap,
     /// This is only here for legacy support when `-Zfeatures` is not enabled.
-    legacy: Option<HashMap<PackageId, Vec<InternedString>>>,
+    ///
+    /// This is the set of features enabled for each package.
+    legacy_features: Option<HashMap<PackageId, Vec<InternedString>>>,
+    /// This is only here for legacy support when `-Zfeatures` is not enabled.
+    ///
+    /// This is the set of optional dependencies enabled for each package.
+    legacy_dependencies: Option<HashMap<PackageId, HashSet<InternedString>>>,
     opts: FeatureOpts,
 }
 
@@ -224,6 +234,30 @@ impl ResolvedFeatures {
             .expect("activated_features for invalid package")
     }
 
+    /// Returns if the given dependency should be included.
+    ///
+    /// This handles dependencies disabled via `cfg` expressions and optional
+    /// dependencies which are not enabled.
+    pub fn is_dep_activated(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+        dep_name: InternedString,
+    ) -> bool {
+        if let Some(legacy) = &self.legacy_dependencies {
+            legacy
+                .get(&pkg_id)
+                .map(|deps| deps.contains(&dep_name))
+                .unwrap_or(false)
+        } else {
+            let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
+            self.activated_dependencies
+                .get(&(pkg_id, is_build))
+                .map(|deps| deps.contains(&dep_name))
+                .unwrap_or(false)
+        }
+    }
+
     /// Variant of `activated_features` that returns `None` if this is
     /// not a valid pkg_id/is_build combination. Used in places which do
     /// not know which packages are activated (like `cargo clean`).
@@ -240,7 +274,7 @@ impl ResolvedFeatures {
         pkg_id: PackageId,
         features_for: FeaturesFor,
     ) -> CargoResult<Vec<InternedString>> {
-        if let Some(legacy) = &self.legacy {
+        if let Some(legacy) = &self.legacy_features {
             Ok(legacy.get(&pkg_id).map_or_else(Vec::new, |v| v.clone()))
         } else {
             let is_build = self.opts.decouple_host_deps && features_for == FeaturesFor::HostDep;
@@ -264,6 +298,8 @@ pub struct FeatureResolver<'a, 'cfg> {
     opts: FeatureOpts,
     /// Map of features activated for each package.
     activated_features: ActivateMap,
+    /// Map of optional dependencies activated for each package.
+    activated_dependencies: ActivateMap,
     /// Keeps track of which packages have had its dependencies processed.
     /// Used to avoid cycles, and to speed up processing.
     processed_deps: HashSet<(PackageId, bool)>,
@@ -291,7 +327,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // Legacy mode.
             return Ok(ResolvedFeatures {
                 activated_features: HashMap::new(),
-                legacy: Some(resolve.features_clone()),
+                activated_dependencies: HashMap::new(),
+                legacy_features: Some(resolve.features_clone()),
+                legacy_dependencies: Some(compute_legacy_deps(resolve)),
                 opts,
             });
         }
@@ -303,6 +341,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             package_set,
             opts,
             activated_features: HashMap::new(),
+            activated_dependencies: HashMap::new(),
             processed_deps: HashSet::new(),
         };
         r.do_resolve(specs, requested_features)?;
@@ -312,7 +351,9 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         }
         Ok(ResolvedFeatures {
             activated_features: r.activated_features,
-            legacy: None,
+            activated_dependencies: r.activated_dependencies,
+            legacy_features: None,
+            legacy_dependencies: None,
             opts: r.opts,
         })
     }
@@ -368,7 +409,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             // For example, consider we've already processed our dependencies,
             // and another package comes along and enables one of our optional
             // dependencies, it will do so immediately in the
-            // `FeatureValue::CrateFeature` branch, and then immediately
+            // `FeatureValue::DepFeature` branch, and then immediately
             // recurse into that optional dependency. This also holds true for
             // features that enable other features.
             return Ok(());
@@ -399,9 +440,12 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             FeatureValue::Feature(f) => {
                 self.activate_rec(pkg_id, *f, for_host)?;
             }
-            FeatureValue::Crate(dep_name) => {
-                // Activate the feature name on self.
-                self.activate_rec(pkg_id, *dep_name, for_host)?;
+            FeatureValue::Dep { dep_name } => {
+                // Mark this dependency as activated.
+                self.activated_dependencies
+                    .entry((pkg_id, self.opts.decouple_host_deps && for_host))
+                    .or_default()
+                    .insert(*dep_name);
                 // Activate the optional dep.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
                     for (dep, dep_for_host) in deps {
@@ -413,7 +457,11 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                     }
                 }
             }
-            FeatureValue::CrateFeature(dep_name, dep_feature) => {
+            FeatureValue::DepFeature {
+                dep_name,
+                dep_feature,
+                dep_prefix,
+            } => {
                 // Activate a feature within a dependency.
                 for (dep_pkg_id, deps) in self.deps(pkg_id, for_host) {
                     for (dep, dep_for_host) in deps {
@@ -421,13 +469,20 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                             continue;
                         }
                         if dep.is_optional() {
-                            // Activate the crate on self.
-                            let fv = FeatureValue::Crate(*dep_name);
+                            // Activate the dependency on self.
+                            let fv = FeatureValue::Dep {
+                                dep_name: *dep_name,
+                            };
                             self.activate_fv(pkg_id, &fv, for_host)?;
+                            if !dep_prefix {
+                                // To retain compatibility with old behavior,
+                                // this also enables a feature of the same
+                                // name.
+                                self.activate_rec(pkg_id, *dep_name, for_host)?;
+                            }
                         }
                         // Activate the feature on the dependency.
-                        let summary = self.resolve.summary(dep_pkg_id);
-                        let fv = FeatureValue::new(*dep_feature, summary);
+                        let fv = FeatureValue::new(*dep_feature);
                         self.activate_fv(dep_pkg_id, &fv, dep_for_host)?;
                     }
                 }
@@ -481,7 +536,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let mut result: Vec<FeatureValue> = dep
             .features()
             .iter()
-            .map(|f| FeatureValue::new(*f, summary))
+            .map(|f| FeatureValue::new(*f))
             .collect();
         let default = InternedString::new("default");
         if dep.uses_default_features() && feature_map.contains_key(&default) {
@@ -499,28 +554,16 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
         if requested_features.all_features {
-            let mut fvs: Vec<FeatureValue> = feature_map
+            feature_map
                 .keys()
                 .map(|k| FeatureValue::Feature(*k))
-                .collect();
-            // Add optional deps.
-            // Top-level requested features can never apply to
-            // build-dependencies, so for_host is `false` here.
-            for (_dep_pkg_id, deps) in self.deps(pkg_id, false) {
-                for (dep, _dep_for_host) in deps {
-                    if dep.is_optional() {
-                        // This may result in duplicates, but that should be ok.
-                        fvs.push(FeatureValue::Crate(dep.name_in_toml()));
-                    }
-                }
-            }
-            fvs
+                .collect()
         } else {
             let mut result: Vec<FeatureValue> = requested_features
                 .features
                 .as_ref()
                 .iter()
-                .map(|f| FeatureValue::new(*f, summary))
+                .map(|f| FeatureValue::new(*f))
                 .collect();
             let default = InternedString::new("default");
             if requested_features.uses_default_features && feature_map.contains_key(&default) {
@@ -608,4 +651,20 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             .expect("packages downloaded")
             .proc_macro()
     }
+}
+
+/// Computes a map of PackageId to the set of optional dependencies that are
+/// enabled for that dep (when the new resolver is not enabled).
+fn compute_legacy_deps(resolve: &Resolve) -> HashMap<PackageId, HashSet<InternedString>> {
+    let mut result: HashMap<PackageId, HashSet<InternedString>> = HashMap::new();
+    for pkg_id in resolve.iter() {
+        for (_dep_id, deps) in resolve.deps(pkg_id) {
+            for dep in deps {
+                if dep.is_optional() {
+                    result.entry(pkg_id).or_default().insert(dep.name_in_toml());
+                }
+            }
+        }
+    }
+    result
 }

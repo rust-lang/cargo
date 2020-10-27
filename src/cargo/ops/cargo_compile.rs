@@ -424,7 +424,7 @@ pub fn create_bcx<'a, 'cfg>(
         ws.profiles(),
         config,
         build_config.requested_profile,
-        ws.features(),
+        ws.unstable_features(),
     )?;
     profiles.validate_packages(
         ws.profiles(),
@@ -1006,8 +1006,9 @@ fn generate_targets(
     {
         let unavailable_features = match target.required_features() {
             Some(rf) => {
-                warn_on_missing_features(
+                validate_required_features(
                     workspace_resolve,
+                    target.name(),
                     rf,
                     pkg.summary(),
                     &mut config.shell(),
@@ -1042,8 +1043,13 @@ fn generate_targets(
     Ok(units.into_iter().collect())
 }
 
-fn warn_on_missing_features(
+/// Warns if a target's required-features references a feature that doesn't exist.
+///
+/// This is a warning because historically this was not validated, and it
+/// would cause too much breakage to make it an error.
+fn validate_required_features(
     resolve: &Option<Resolve>,
+    target_name: &str,
     required_features: &[String],
     summary: &Summary,
     shell: &mut Shell,
@@ -1054,47 +1060,58 @@ fn warn_on_missing_features(
     };
 
     for feature in required_features {
-        match FeatureValue::new(feature.into(), summary) {
-            // No need to do anything here, since the feature must exist to be parsed as such
-            FeatureValue::Feature(_) => {}
-            // Possibly mislabeled feature that was not found
-            FeatureValue::Crate(krate) => {
-                if !summary
-                    .dependencies()
-                    .iter()
-                    .any(|dep| dep.name_in_toml() == krate && dep.is_optional())
-                {
+        let fv = FeatureValue::new(feature.into());
+        match &fv {
+            FeatureValue::Feature(f) => {
+                if !summary.features().contains_key(f) {
                     shell.warn(format!(
-                        "feature `{}` is not present in [features] section.",
-                        krate
+                        "invalid feature `{}` in required-features of target `{}`: \
+                        `{}` is not present in [features] section",
+                        fv, target_name, fv
                     ))?;
                 }
             }
+            FeatureValue::Dep { .. }
+            | FeatureValue::DepFeature {
+                dep_prefix: true, ..
+            } => {
+                anyhow::bail!(
+                    "invalid feature `{}` in required-features of target `{}`: \
+                    `dep:` prefixed feature values are not allowed in required-features",
+                    fv,
+                    target_name
+                );
+            }
             // Handling of dependent_crate/dependent_crate_feature syntax
-            FeatureValue::CrateFeature(krate, feature) => {
+            FeatureValue::DepFeature {
+                dep_name,
+                dep_feature,
+                dep_prefix: false,
+            } => {
                 match resolve
                     .deps(summary.package_id())
-                    .find(|(_dep_id, deps)| deps.iter().any(|dep| dep.name_in_toml() == krate))
+                    .find(|(_dep_id, deps)| deps.iter().any(|dep| dep.name_in_toml() == *dep_name))
                 {
                     Some((dep_id, _deps)) => {
                         let dep_summary = resolve.summary(dep_id);
-                        if !dep_summary.features().contains_key(&feature)
+                        if !dep_summary.features().contains_key(dep_feature)
                             && !dep_summary
                                 .dependencies()
                                 .iter()
-                                .any(|dep| dep.name_in_toml() == feature && dep.is_optional())
+                                .any(|dep| dep.name_in_toml() == *dep_feature && dep.is_optional())
                         {
                             shell.warn(format!(
-                                "feature `{}` does not exist in package `{}`.",
-                                feature, dep_id
+                                "invalid feature `{}` in required-features of target `{}`: \
+                                feature `{}` does not exist in package `{}`",
+                                fv, target_name, dep_feature, dep_id
                             ))?;
                         }
                     }
                     None => {
                         shell.warn(format!(
-                            "dependency `{}` specified in required-features as `{}/{}` \
-                             does not exist.",
-                            krate, krate, feature
+                            "invalid feature `{}` in required-features of target `{}`: \
+                            dependency `{}` does not exist",
+                            fv, target_name, dep_name
                         ))?;
                     }
                 }

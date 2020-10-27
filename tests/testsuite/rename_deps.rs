@@ -361,7 +361,7 @@ fn features_not_working() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `default` includes `p1` which is neither a dependency nor another feature
+  feature `default` includes `p1` which is neither a dependency nor another feature
 ",
         )
         .run();

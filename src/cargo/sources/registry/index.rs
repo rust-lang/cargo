@@ -270,6 +270,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         'a: 'b,
     {
         let source_id = self.source_id;
+        let namespaced_features = self.config.cli_unstable().namespaced_features;
 
         // First up actually parse what summaries we have available. If Cargo
         // has run previously this will parse a Cargo-specific cache file rather
@@ -294,7 +295,8 @@ impl<'cfg> RegistryIndex<'cfg> {
                     info!("failed to parse `{}` registry package: {}", name, e);
                     None
                 }
-            }))
+            })
+            .filter(move |is| is.summary.unstable_gate(namespaced_features).is_ok()))
     }
 
     fn load_summaries(
@@ -723,8 +725,7 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let namespaced_features = false;
-        let mut summary = Summary::new(pkgid, deps, &features, links, namespaced_features)?;
+        let mut summary = Summary::new(pkgid, deps, &features, links)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,

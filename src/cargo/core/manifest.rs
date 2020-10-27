@@ -42,7 +42,7 @@ pub struct Manifest {
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
-    features: Features,
+    unstable_features: Features,
     edition: Edition,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
@@ -371,7 +371,7 @@ impl Manifest {
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
-        features: Features,
+        unstable_features: Features,
         edition: Edition,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
@@ -393,7 +393,7 @@ impl Manifest {
             replace,
             patch,
             workspace,
-            features,
+            unstable_features,
             edition,
             original,
             im_a_teapot,
@@ -467,8 +467,9 @@ impl Manifest {
         &self.workspace
     }
 
-    pub fn features(&self) -> &Features {
-        &self.features
+    /// Unstable, nightly features that are enabled in this manifest.
+    pub fn unstable_features(&self) -> &Features {
+        &self.unstable_features
     }
 
     /// The style of resolver behavior to use, declared with the `resolver` field.
@@ -487,7 +488,7 @@ impl Manifest {
 
     pub fn feature_gate(&self) -> CargoResult<()> {
         if self.im_a_teapot.is_some() {
-            self.features
+            self.unstable_features
                 .require(Feature::test_dummy_unstable())
                 .chain_err(|| {
                     anyhow::format_err!(
@@ -578,7 +579,7 @@ impl VirtualManifest {
         &self.warnings
     }
 
-    pub fn features(&self) -> &Features {
+    pub fn unstable_features(&self) -> &Features {
         &self.features
     }
 

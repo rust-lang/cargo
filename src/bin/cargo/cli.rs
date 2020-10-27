@@ -35,13 +35,14 @@ pub fn main(config: &mut Config) -> CliResult {
             "
 Available unstable (nightly-only) flags:
 
-    -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
-    -Z minimal-versions -- Install minimal dependency versions instead of maximum
-    -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
-    -Z unstable-options -- Allow the usage of unstable options
-    -Z timings          -- Display concurrency information
-    -Z doctest-xcompile -- Compile and run doctests for non-host target using runner config
-    -Z terminal-width   -- Provide a terminal width to rustc for error truncation
+    -Z avoid-dev-deps      -- Avoid installing dev-dependencies if possible
+    -Z minimal-versions    -- Install minimal dependency versions instead of maximum
+    -Z no-index-update     -- Do not update the registry, avoids a network request for benchmarking
+    -Z unstable-options    -- Allow the usage of unstable options
+    -Z timings             -- Display concurrency information
+    -Z doctest-xcompile    -- Compile and run doctests for non-host target using runner config
+    -Z terminal-width      -- Provide a terminal width to rustc for error truncation
+    -Z namespaced-features -- Allow features with `dep:` prefix
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );

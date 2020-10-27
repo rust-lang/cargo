@@ -290,7 +290,7 @@ fn other_member_from_current() {
 
     p.cargo("run -p bar --features f1,f2")
         .with_status(101)
-        .with_stderr("[ERROR] Package `foo[..]` does not have these features: `f2`")
+        .with_stderr("[ERROR] Package `foo[..]` does not have the feature `f2`")
         .run();
 
     p.cargo("run -p bar --features f1,f2 -Zpackage-features")
