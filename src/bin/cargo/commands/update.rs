@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops::{self, UpdateOptions};
+use cargo::util::print_available_packages;
 
 pub fn cli() -> App {
     subcommand("update")
@@ -19,6 +20,10 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
+
+    if args.is_present_with_zero_values("package") {
+        print_available_packages(&ws)?;
+    }
 
     let update_opts = UpdateOptions {
         aggressive: args.is_present("aggressive"),
