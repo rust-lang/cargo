@@ -215,3 +215,18 @@ fn rustc_list_availables() {
 fn pkgid_list_availables() {
     list_availables_test("pkgid", PACKAGE);
 }
+
+#[cargo_test]
+fn tree_list_availables() {
+    list_availables_test("tree", PACKAGE);
+}
+
+#[cargo_test]
+fn clean_list_availables() {
+    list_availables_test("clean", PACKAGE);
+}
+
+#[cargo_test]
+fn update_list_availables() {
+    list_availables_test("update", PACKAGE);
+}
