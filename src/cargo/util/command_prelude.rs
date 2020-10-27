@@ -56,7 +56,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_package(self, package: &'static str) -> Self {
-        self._arg(opt("package", package).short("p").value_name("SPEC"))
+        self._arg(optinal_opt("package", package).short("p").value_name("SPEC"))
     }
 
     fn arg_jobs(self) -> Self {
@@ -218,6 +218,10 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optinal_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
+    opt(name, help).min_values(0)
 }
 
 pub fn optional_multi_opt(
@@ -502,7 +506,7 @@ pub trait ArgMatchesExt {
             // As for cargo 0.50.0, this won't occur but if someone sneaks in
             // we can still provide this informative message for them.
             anyhow::bail!(
-                "\"--package <SPEC>\" requires a SPEC format value, \n\
+                "\"--package <SPEC>\" requires a SPEC format value, \
                 which can be any package ID specifier in the dependency graph.\n\
                 Run `cargo help pkgid` for more information about SPEC format."
             )
