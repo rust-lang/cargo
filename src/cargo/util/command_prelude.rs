@@ -502,8 +502,9 @@ pub trait ArgMatchesExt {
             // As for cargo 0.50.0, this won't occur but if someone sneaks in
             // we can still provide this informative message for them.
             anyhow::bail!(
-                "\"--package <SPEC>\" requires a SPEC format value.\n\
-                Run `cargo help pkgid` for more infomation about SPEC format."
+                "\"--package <SPEC>\" requires a SPEC format value, \n\
+                which can be any package ID specifier in the dependency graph.\n\
+                Run `cargo help pkgid` for more information about SPEC format."
             )
         }
 

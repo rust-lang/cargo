@@ -88,9 +88,11 @@ Available tests:
             .cargo(&format!("{} -p", command))
             .with_stderr(
                 "\
-[ERROR] \"--package <SPEC>\" requires a SPEC format value.
-Run `cargo help pkgid` for more infomation about SPEC format.
-Available packages:
+[ERROR] \"--package <SPEC>\" requires a SPEC format value, \
+which can be any package ID specifier in the dependency graph.
+Run `cargo help pkgid` for more information about SPEC format.
+
+Possible packages/workspace members:
     foo
 
 ",

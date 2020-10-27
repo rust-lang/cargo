@@ -39,17 +39,12 @@ fn print_available_targets(
     let mut output = String::new();
     writeln!(output, "\"{}\" takes one argument.", option_name)?;
 
-    print_availables(output, &targets, plural_name)
-}
-
-fn print_availables(output: String, availables: &[&str], plural_name: &str) -> CargoResult<()> {
-    let mut output = output;
-    if availables.is_empty() {
+    if targets.is_empty() {
         writeln!(output, "No {} available.", plural_name)?;
     } else {
         writeln!(output, "Available {}:", plural_name)?;
-        for available in availables {
-            writeln!(output, "    {}", available)?;
+        for target in targets {
+            writeln!(output, "    {}", target)?;
         }
     }
     bail!("{}", output)
@@ -61,15 +56,24 @@ pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
         .map(|pkg| pkg.name().as_str())
         .collect::<Vec<_>>();
 
-    let mut output = String::new();
-    writeln!(
-        output,
-        "\"--package <SPEC>\" requires a SPEC format value.\n\
-        Run `cargo help pkgid` for more infomation about SPEC format."
-    )?;
+    let mut output = "\"--package <SPEC>\" requires a SPEC format value, \
+        which can be any package ID specifier in the dependency graph.\n\
+        Run `cargo help pkgid` for more information about SPEC format.\n\n"
+        .to_string();
 
-    print_availables(output, &packages, "packages")
+    if packages.is_empty() {
+        // This would never happen.
+        // Just in case something regresses we covers it here.
+        writeln!(output, "No packages available.")?;
+    } else {
+        writeln!(output, "Possible packages/workspace members:")?;
+        for package in packages  {
+            writeln!(output, "    {}", package)?;
+        }
+    }
+    bail!("{}", output)
 }
+
 
 pub fn print_available_examples(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available_targets(Target::is_example, ws, options, "--example", "examples")
