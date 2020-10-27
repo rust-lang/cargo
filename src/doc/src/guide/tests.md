@@ -31,7 +31,7 @@ $ cargo test foo
 
 This will run any test with `foo` in its name.
 
-`cargo test` runs additional checks as well. For example, it will compile any
+`cargo test` runs additional checks as well.  It will compile any
 examples you’ve included and will also test the examples in your
 documentation. Please see the [testing guide][testing] in the Rust
 documentation for more details.
