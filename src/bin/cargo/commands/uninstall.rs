@@ -20,7 +20,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         return Err(anyhow::anyhow!(
             "\"--package <SPEC>\" requires a SPEC format value.\n\
             Run `cargo help pkgid` for more information about SPEC format."
-        ).into())
+        )
+        .into());
     }
 
     let specs = args

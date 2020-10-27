@@ -56,7 +56,11 @@ pub trait AppExt: Sized {
     }
 
     fn arg_package(self, package: &'static str) -> Self {
-        self._arg(optinal_opt("package", package).short("p").value_name("SPEC"))
+        self._arg(
+            optinal_opt("package", package)
+                .short("p")
+                .value_name("SPEC"),
+        )
     }
 
     fn arg_jobs(self) -> Self {

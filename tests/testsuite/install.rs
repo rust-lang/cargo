@@ -1185,7 +1185,8 @@ fn uninstall_multiple_and_specifying_bin() {
 fn uninstall_with_empty_pakcage_option() {
     cargo_process("uninstall -p")
         .with_status(101)
-        .with_stderr("\
+        .with_stderr(
+            "\
 [ERROR] \"--package <SPEC>\" requires a SPEC format value.
 Run `cargo help pkgid` for more information about SPEC format.
 ",

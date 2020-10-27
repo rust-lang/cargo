@@ -67,13 +67,12 @@ pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
         writeln!(output, "No packages available.")?;
     } else {
         writeln!(output, "Possible packages/workspace members:")?;
-        for package in packages  {
+        for package in packages {
             writeln!(output, "    {}", package)?;
         }
     }
     bail!("{}", output)
 }
-
 
 pub fn print_available_examples(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
     print_available_targets(Target::is_example, ws, options, "--example", "examples")
