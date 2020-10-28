@@ -200,12 +200,14 @@ fn dep_path_inside_target_has_correct_path() {
     let depinfo = p.read_file(depinfo_path.to_str().unwrap());
 
     let bin_path = p.bin("a");
+    let target_debug_blah = Path::new("target").join("debug").join("blah");
     if !depinfo.lines().any(|line| {
-        line.starts_with(&format!("{}:", bin_path.display())) && line.contains("target/debug/blah")
+        line.starts_with(&format!("{}:", bin_path.display()))
+            && line.contains(target_debug_blah.to_str().unwrap())
     }) {
         panic!(
-            "Could not find {:?}: target/debug/blah in {:?}",
-            bin_path, depinfo_path
+            "Could not find {:?}: {:?} in {:?}",
+            bin_path, target_debug_blah, depinfo_path
         );
     }
 }
