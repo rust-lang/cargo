@@ -15,7 +15,7 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    if !args.is_present("spec") && args.is_present_with_zero_values("package") {
+    if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?
     }
     let spec = args.value_of("spec").or_else(|| args.value_of("package"));
