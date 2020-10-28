@@ -177,6 +177,40 @@ fn build_dep_info_dylib() {
 }
 
 #[cargo_test]
+fn dep_path_inside_target_has_correct_path() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("a"))
+        .file("target/debug/blah", "")
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let x = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/debug/blah"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+
+    let depinfo_path = &p.bin("a").with_extension("d");
+
+    assert!(depinfo_path.is_file(), "{:?}", depinfo_path);
+
+    let depinfo = p.read_file(depinfo_path.to_str().unwrap());
+
+    let bin_path = p.bin("a");
+    if !depinfo.lines().any(|line| {
+        line.starts_with(&format!("{}:", bin_path.display())) && line.contains("target/debug/blah")
+    }) {
+        panic!(
+            "Could not find {:?}: target/debug/blah in {:?}",
+            bin_path, depinfo_path
+        );
+    }
+}
+
+#[cargo_test]
 fn no_rewrite_if_no_change() {
     let p = project().file("src/lib.rs", "").build();
 
