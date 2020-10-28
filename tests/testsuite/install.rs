@@ -1182,6 +1182,19 @@ fn uninstall_multiple_and_specifying_bin() {
 }
 
 #[cargo_test]
+fn uninstall_with_empty_pakcage_option() {
+    cargo_process("uninstall -p")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] \"--package <SPEC>\" requires a SPEC format value.
+Run `cargo help pkgid` for more information about SPEC format.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn uninstall_multiple_and_some_pkg_does_not_exist() {
     pkg("foo", "0.0.1");
 

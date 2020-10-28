@@ -4,6 +4,7 @@ use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
 use cargo::ops::tree::{self, EdgeKind};
 use cargo::ops::Packages;
+use cargo::util::print_available_packages;
 use cargo::util::CargoResult;
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -176,6 +177,11 @@ subtree of the package given to -p.\n\
     }
 
     let ws = args.workspace(config)?;
+
+    if args.is_present_with_zero_values("package") {
+        print_available_packages(&ws)?;
+    }
+
     let charset = tree::Charset::from_str(args.value_of("charset").unwrap())
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let opts = tree::TreeOptions {

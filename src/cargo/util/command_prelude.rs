@@ -8,7 +8,7 @@ use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{paths, toml::TomlProfile, validate_package_name};
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
-    print_available_tests,
+    print_available_packages, print_available_tests,
 };
 use crate::CargoResult;
 use anyhow::bail;
@@ -52,11 +52,15 @@ pub trait AppExt: Sized {
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
-        self._arg(multi_opt("package", "SPEC", package).short("p"))
+        self._arg(optional_multi_opt("package", "SPEC", package).short("p"))
     }
 
     fn arg_package(self, package: &'static str) -> Self {
-        self._arg(opt("package", package).short("p").value_name("SPEC"))
+        self._arg(
+            optinal_opt("package", package)
+                .short("p")
+                .value_name("SPEC"),
+        )
     }
 
     fn arg_jobs(self) -> Self {
@@ -218,6 +222,10 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optinal_opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
+    opt(name, help).min_values(0)
 }
 
 pub fn optional_multi_opt(
@@ -498,6 +506,14 @@ pub trait ArgMatchesExt {
 
         if let Some(ws) = workspace {
             self.check_optional_opts(ws, &opts)?;
+        } else if self.is_present_with_zero_values("package") {
+            // As for cargo 0.50.0, this won't occur but if someone sneaks in
+            // we can still provide this informative message for them.
+            anyhow::bail!(
+                "\"--package <SPEC>\" requires a SPEC format value, \
+                which can be any package ID specifier in the dependency graph.\n\
+                Run `cargo help pkgid` for more information about SPEC format."
+            )
         }
 
         Ok(opts)
@@ -588,6 +604,10 @@ about this warning.";
         workspace: &Workspace<'_>,
         compile_opts: &CompileOptions,
     ) -> CargoResult<()> {
+        if self.is_present_with_zero_values("package") {
+            print_available_packages(workspace)?
+        }
+
         if self.is_present_with_zero_values("example") {
             print_available_examples(workspace, compile_opts)?;
         }
