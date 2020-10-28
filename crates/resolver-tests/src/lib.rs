@@ -24,7 +24,7 @@ use proptest::string::string_regex;
 use varisat::{self, ExtendFormula};
 
 pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
-    resolve_with_config(deps, registry, None)
+    resolve_with_config(deps, registry, &Config::default().unwrap())
 }
 
 pub fn resolve_and_validated(
@@ -32,7 +32,7 @@ pub fn resolve_and_validated(
     registry: &[Summary],
     sat_resolve: Option<SatResolve>,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(deps.clone(), registry, None);
+    let resolve = resolve_with_config_raw(deps.clone(), registry, &Config::default().unwrap());
 
     match resolve {
         Err(e) => {
@@ -109,7 +109,7 @@ pub fn resolve_and_validated(
 pub fn resolve_with_config(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    config: Option<&Config>,
+    config: &Config,
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(deps, registry, config)?;
     Ok(resolve.sort())
@@ -118,7 +118,7 @@ pub fn resolve_with_config(
 pub fn resolve_with_config_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    config: Option<&Config>,
+    config: &Config,
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
@@ -170,7 +170,14 @@ pub fn resolve_with_config_raw(
         list: registry,
         used: HashSet::new(),
     };
-    let summary = Summary::new(pkg_id("root"), deps, &BTreeMap::new(), None::<&String>).unwrap();
+    let summary = Summary::new(
+        config,
+        pkg_id("root"),
+        deps,
+        &BTreeMap::new(),
+        None::<&String>,
+    )
+    .unwrap();
     let opts = ResolveOpts::everything();
     let start = Instant::now();
     let resolve = resolver::resolve(
@@ -178,7 +185,7 @@ pub fn resolve_with_config_raw(
         &[],
         &mut registry,
         &HashSet::new(),
-        config,
+        Some(config),
         true,
     );
 
@@ -564,7 +571,14 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
     } else {
         None
     };
-    Summary::new(name.to_pkgid(), dep, &BTreeMap::new(), link).unwrap()
+    Summary::new(
+        &Config::default().unwrap(),
+        name.to_pkgid(),
+        dep,
+        &BTreeMap::new(),
+        link,
+    )
+    .unwrap()
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
@@ -585,7 +599,14 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
     } else {
         None
     };
-    Summary::new(pkg_id_loc(name, loc), Vec::new(), &BTreeMap::new(), link).unwrap()
+    Summary::new(
+        &Config::default().unwrap(),
+        pkg_id_loc(name, loc),
+        Vec::new(),
+        &BTreeMap::new(),
+        link,
+    )
+    .unwrap()
 }
 
 pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
@@ -593,6 +614,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
     Summary::new(
+        &Config::default().unwrap(),
         sum.package_id(),
         deps,
         &BTreeMap::new(),

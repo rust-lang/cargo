@@ -87,7 +87,7 @@ proptest! {
             let mres = resolve_with_config(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
-                Some(&config),
+                &config,
             );
 
             prop_assert_eq!(
@@ -584,7 +584,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
     let res = resolve_with_config(
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
-        Some(&config),
+        &config,
     )
     .unwrap();
 

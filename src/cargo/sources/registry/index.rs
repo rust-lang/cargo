@@ -270,6 +270,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         'a: 'b,
     {
         let source_id = self.source_id;
+        let config = self.config;
         let namespaced_features = self.config.cli_unstable().namespaced_features;
 
         // First up actually parse what summaries we have available. If Cargo
@@ -289,13 +290,15 @@ impl<'cfg> RegistryIndex<'cfg> {
             .versions
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
-            .filter_map(move |maybe| match maybe.parse(raw_data, source_id) {
-                Ok(summary) => Some(summary),
-                Err(e) => {
-                    info!("failed to parse `{}` registry package: {}", name, e);
-                    None
-                }
-            })
+            .filter_map(
+                move |maybe| match maybe.parse(config, raw_data, source_id) {
+                    Ok(summary) => Some(summary),
+                    Err(e) => {
+                        info!("failed to parse `{}` registry package: {}", name, e);
+                        None
+                    }
+                },
+            )
             .filter(move |is| is.summary.unstable_gate(namespaced_features).is_ok()))
     }
 
@@ -521,7 +524,7 @@ impl Summaries {
                 // allow future cargo implementations to break the
                 // interpretation of each line here and older cargo will simply
                 // ignore the new lines.
-                let summary = match IndexSummary::parse(line, source_id) {
+                let summary = match IndexSummary::parse(config, line, source_id) {
                     Ok(summary) => summary,
                     Err(e) => {
                         log::info!("failed to parse {:?} registry package: {}", relative, e);
@@ -684,12 +687,17 @@ impl MaybeIndexSummary {
     /// Does nothing if this is already `Parsed`, and otherwise the `raw_data`
     /// passed in is sliced with the bounds in `Unparsed` and then actually
     /// parsed.
-    fn parse(&mut self, raw_data: &[u8], source_id: SourceId) -> CargoResult<&IndexSummary> {
+    fn parse(
+        &mut self,
+        config: &Config,
+        raw_data: &[u8],
+        source_id: SourceId,
+    ) -> CargoResult<&IndexSummary> {
         let (start, end) = match self {
             MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id)?;
+        let summary = IndexSummary::parse(config, &raw_data[start..end], source_id)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
@@ -709,7 +717,7 @@ impl IndexSummary {
     /// a package.
     ///
     /// The `line` provided is expected to be valid JSON.
-    fn parse(line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
+    fn parse(config: &Config, line: &[u8], source_id: SourceId) -> CargoResult<IndexSummary> {
         let RegistryPackage {
             name,
             vers,
@@ -725,7 +733,7 @@ impl IndexSummary {
             .into_iter()
             .map(|dep| dep.into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let mut summary = Summary::new(pkgid, deps, &features, links)?;
+        let mut summary = Summary::new(config, pkgid, deps, &features, links)?;
         summary.set_checksum(cksum);
         Ok(IndexSummary {
             summary,
