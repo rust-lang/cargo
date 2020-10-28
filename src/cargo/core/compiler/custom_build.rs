@@ -272,7 +272,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let output_file = script_run_dir.join("output");
     let err_file = script_run_dir.join("stderr");
     let root_output_file = script_run_dir.join("root-output");
-    let host_target_root = cx.files().host_root().to_path_buf();
+    let host_target_root = cx.files().host_dest().to_path_buf();
     let all = (
         id,
         pkg_name.clone(),

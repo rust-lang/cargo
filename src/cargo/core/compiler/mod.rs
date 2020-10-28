@@ -217,7 +217,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     exec.init(cx, unit);
     let exec = exec.clone();
 
-    let root_output = cx.files().host_root().to_path_buf();
+    let root_output = cx.files().host_dest().to_path_buf();
     let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
