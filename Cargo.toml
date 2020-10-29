@@ -77,6 +77,11 @@ im-rc = "15.0.0"
 # for more information.
 rustc-workspace-hack = "1.0.0"
 
+[dependencies.object]
+version = "0.20.0"
+default-features = false
+features = ['read_core', 'elf', 'macho', 'pe', 'unaligned']
+
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }
 

@@ -860,6 +860,7 @@ fn build_base_args(
 
     match cx.files().metadata(unit) {
         Some(m) => {
+            println!("extra filename called {}", m);
             cmd.arg("-C").arg(&format!("metadata={}", m));
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }

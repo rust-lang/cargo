@@ -1824,6 +1824,16 @@ fn find_stale_file(
                         }
                         format!("{:?}", hasher.result())
                     }
+                    FileHashAlgorithm::SvhInBin => {
+                        debug!("found! got here");
+                        use object::Object;
+                        let v : Vec<u8> = vec![];
+                        let obj = object::read::File::parse(&v).unwrap();
+                        for sym in obj.symbols() {
+                            println!("{:#?}", sym);
+                        }
+                        "todo!".to_string()
+                    }
                     FileHashAlgorithm::Filename => {
                         "0".to_string()
                     }
@@ -1859,6 +1869,7 @@ fn find_stale_file(
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FileHashAlgorithm {
     Md5,
+    SvhInBin,
     Sha1,
     /// If the hash is in the filename then as long as the file exists we can
     /// assume it is up to date.
@@ -1871,6 +1882,7 @@ impl FromStr for FileHashAlgorithm {
     fn from_str(s: &str) -> Result<FileHashAlgorithm, ()> {
         match s {
             "md5" => Ok(FileHashAlgorithm::Md5),
+            "svh_in_bin" => Ok(FileHashAlgorithm::SvhInBin),
             "sha1" => Ok(FileHashAlgorithm::Sha1),
             "hash_in_filename" => Ok(FileHashAlgorithm::Filename),
             _ => Err(()),
@@ -2025,6 +2037,7 @@ impl EncodedDepInfo {
                 0 => FileHashAlgorithm::Md5,
                 1 => FileHashAlgorithm::Sha1,
                 2 => FileHashAlgorithm::Filename,
+                3 => FileHashAlgorithm::SvhInBin,
                 _ => return None,
             };
             let ty = match read_u8(bytes)? {
@@ -2108,6 +2121,7 @@ impl EncodedDepInfo {
                 FileHashAlgorithm::Md5 => dst.push(0),
                 FileHashAlgorithm::Sha1 => dst.push(1),
                 FileHashAlgorithm::Filename => dst.push(2),
+                FileHashAlgorithm::SvhInBin => dst.push(3),
             }
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
