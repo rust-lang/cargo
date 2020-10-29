@@ -52,6 +52,7 @@ mod features_namespaced;
 mod fetch;
 mod fix;
 mod freshness;
+mod future_incompat_report;
 mod generate_lockfile;
 mod git;
 mod git_auth;

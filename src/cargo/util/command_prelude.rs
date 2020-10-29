@@ -219,6 +219,13 @@ pub trait AppExt: Sized {
             "Ignore `rust-version` specification in packages (unstable)",
         ))
     }
+
+    fn arg_future_incompat_report(self) -> Self {
+        self._arg(opt(
+            "future-incompat-report",
+            "Ouputs a future incompatibility report at the end of the build (unstable)",
+        ))
+    }
 }
 
 impl AppExt for App {
@@ -462,6 +469,7 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
+        build_config.future_incompat_report = self._is_present("future-incompat-report");
         if build_config.build_plan {
             config
                 .cli_unstable()
@@ -472,6 +480,19 @@ pub trait ArgMatchesExt {
                 .cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
+        if build_config.future_incompat_report {
+            config
+                .cli_unstable()
+                // TODO: Tracking issue
+                .fail_if_stable_opt("--future-incompat-report", 0)?;
+
+            if !config.cli_unstable().enable_future_incompat_feature {
+                anyhow::bail!(
+                    "Usage of `--future-incompat-report` requires `-Z future-incompat-report`"
+                )
+            }
+        }
+
         let opts = CompileOptions {
             build_config,
             features: self._values_of("features"),

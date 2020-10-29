@@ -73,6 +73,7 @@ im-rc = "15.0.0"
 # See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
 # for more information.
 rustc-workspace-hack = "1.0.0"
+rand = "0.8.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }

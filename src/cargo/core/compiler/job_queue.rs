@@ -60,6 +60,8 @@ use anyhow::format_err;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, Client, HelperThread};
 use log::{debug, info, trace};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 
 use super::context::OutputFile;
 use super::job::{
@@ -68,7 +70,11 @@ use super::job::{
 };
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use crate::core::compiler::future_incompat::{
+    FutureBreakageItem, OnDiskReport, FUTURE_INCOMPAT_FILE,
+};
 use crate::core::{PackageId, Shell, TargetKind};
+use crate::drop_eprint;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal, profile};
@@ -151,6 +157,8 @@ struct DrainState<'cfg> {
 
     /// How many jobs we've finished
     finished: usize,
+    show_future_incompat_report: bool,
+    per_crate_future_incompat_reports: Vec<FutureIncompatReportCrate>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -160,6 +168,11 @@ impl std::fmt::Display for JobId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+struct FutureIncompatReportCrate {
+    package_id: PackageId,
+    report: Vec<FutureBreakageItem>,
 }
 
 /// A `JobState` is constructed by `JobQueue::run` and passed to `Job::run`. It includes everything
@@ -228,6 +241,7 @@ enum Message {
     FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
     Finish(JobId, Artifact, CargoResult<()>),
+    FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
 
     // This client should get release_raw called on it with one of our tokens
     NeedsToken(JobId),
@@ -280,6 +294,11 @@ impl<'a> JobState<'a> {
         self.rmeta_required.set(false);
         self.messages
             .push(Message::Finish(self.id, Artifact::Metadata, Ok(())));
+    }
+
+    pub fn future_incompat_report(&self, report: Vec<FutureBreakageItem>) {
+        self.messages
+            .push(Message::FutureIncompatReport(self.id, report));
     }
 
     /// The rustc underlying this Job is about to acquire a jobserver token (i.e., block)
@@ -410,6 +429,8 @@ impl<'cfg> JobQueue<'cfg> {
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(cx.bcx.config),
             finished: 0,
+            show_future_incompat_report: cx.bcx.build_config.future_incompat_report,
+            per_crate_future_incompat_reports: Vec::new(),
         };
 
         // Create a helper thread for acquiring jobserver tokens
@@ -591,6 +612,14 @@ impl<'cfg> DrainState<'cfg> {
                     }
                 }
             }
+            Message::FutureIncompatReport(id, report) => {
+                let unit = self.active[&id].clone();
+                self.per_crate_future_incompat_reports
+                    .push(FutureIncompatReportCrate {
+                        package_id: unit.pkg.package_id(),
+                        report,
+                    });
+            }
             Message::Token(acquired_token) => {
                 let token = acquired_token.chain_err(|| "failed to acquire jobserver token")?;
                 self.tokens.push(token);
@@ -771,11 +800,90 @@ impl<'cfg> DrainState<'cfg> {
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 drop(cx.bcx.config.shell().status("Finished", message));
+                self.emit_future_incompat(cx);
             }
+
             None
         } else {
             debug!("queue: {:#?}", self.queue);
             Some(internal("finished with jobs still left in the queue"))
+        }
+    }
+
+    fn emit_future_incompat(&mut self, cx: &mut Context<'_, '_>) {
+        if cx.bcx.config.cli_unstable().enable_future_incompat_feature
+            && !self.per_crate_future_incompat_reports.is_empty()
+        {
+            self.per_crate_future_incompat_reports
+                .sort_by_key(|r| r.package_id);
+
+            let crates_and_versions = self
+                .per_crate_future_incompat_reports
+                .iter()
+                .map(|r| format!("{}", r.package_id))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            drop(cx.bcx.config.shell().warn(&format!("the following crates contain code that will be rejected by a future version of Rust: {}",
+                                                     crates_and_versions)));
+
+            let mut full_report = String::new();
+            let mut rng = thread_rng();
+
+            // Generate a short ID to allow detecting if a report gets overwritten
+            let id: String = std::iter::repeat(())
+                .map(|()| char::from(rng.sample(Alphanumeric)))
+                .take(4)
+                .collect();
+
+            for report in std::mem::take(&mut self.per_crate_future_incompat_reports) {
+                full_report.push_str(&format!("The crate `{}` currently triggers the following future incompatibility lints:\n", report.package_id));
+                for item in report.report {
+                    let rendered = if cx.bcx.config.shell().err_supports_color() {
+                        item.diagnostic.rendered
+                    } else {
+                        strip_ansi_escapes::strip(&item.diagnostic.rendered)
+                            .map(|v| String::from_utf8(v).expect("utf8"))
+                            .expect("strip should never fail")
+                    };
+
+                    for line in rendered.lines() {
+                        full_report.push_str(&format!("> {}\n", line));
+                    }
+                }
+            }
+
+            let report_file = cx.bcx.ws.target_dir().open_rw(
+                FUTURE_INCOMPAT_FILE,
+                cx.bcx.config,
+                "Future incompatibility report",
+            );
+            let err = report_file
+                .and_then(|report_file| {
+                    let on_disk_report = OnDiskReport {
+                        id: id.clone(),
+                        report: full_report.clone(),
+                    };
+                    serde_json::to_writer(report_file, &on_disk_report).map_err(|e| e.into())
+                })
+                .err();
+            if let Some(e) = err {
+                drop(cx.bcx.config.shell().warn(&format!(
+                    "Failed to open on-disk future incompat report: {:?}",
+                    e
+                )));
+            }
+
+            if self.show_future_incompat_report {
+                drop_eprint!(cx.bcx.config, "{}", full_report);
+                drop(cx.bcx.config.shell().note(
+                    &format!("this report can be shown with `cargo describe-future-incompatibilities -Z future-incompat-report --id {}`", id)
+                ));
+            } else {
+                drop(cx.bcx.config.shell().note(
+                    &format!("to see what the problems were, use the option `--future-incompat-report`, or run `cargo describe-future-incompatibilities --id {}`", id)
+                ));
+            }
         }
     }
 

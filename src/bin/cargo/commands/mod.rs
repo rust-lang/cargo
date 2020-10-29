@@ -6,6 +6,7 @@ pub fn builtin() -> Vec<App> {
         build::cli(),
         check::cli(),
         clean::cli(),
+        describe_future_incompatibilities::cli(),
         doc::cli(),
         fetch::cli(),
         fix::cli(),
@@ -44,6 +45,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "build" => build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
+        "describe-future-incompatibilities" => describe_future_incompatibilities::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
         "fix" => fix::exec,
@@ -82,6 +84,7 @@ pub mod bench;
 pub mod build;
 pub mod check;
 pub mod clean;
+pub mod describe_future_incompatibilities;
 pub mod doc;
 pub mod fetch;
 pub mod fix;
