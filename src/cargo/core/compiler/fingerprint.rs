@@ -1792,12 +1792,13 @@ fn find_stale_file(
         if config.cli_unstable().hash_tracking && !reference_hash.hash.is_empty() {
             let hash = if let Some(path_hash) = path_hash {
                 //FIXME use unwrap_or
-                path_hash.hash
+                Some(path_hash.hash.clone())
             } else {
                 // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
                 // but not sure it's worth the additional complexity.
                 //FIXME put the result in the mtime_cache rather than hashing each time!
-                let mut reader = io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
+                let mut reader: io::BufReader<fs::File> =
+                    io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
 
                 let hash = match reference_hash.kind {
                     FileHashAlgorithm::Md5 => {
@@ -1810,7 +1811,7 @@ fn find_stale_file(
                             }
                             hasher.input(&buffer[..count]);
                         }
-                        format!("{:?}", hasher.result())
+                        Some(format!("{:?}", hasher.result()))
                     }
                     FileHashAlgorithm::Sha1 => {
                         let mut hasher = Sha1::new();
@@ -1822,32 +1823,32 @@ fn find_stale_file(
                             }
                             hasher.input(&buffer[..count]);
                         }
-                        format!("{:?}", hasher.result())
+                        Some(format!("{:?}", hasher.result()))
                     }
                     FileHashAlgorithm::SvhInBin => {
                         debug!("found! got here");
-                        use object::Object;
-                        let v : Vec<u8> = vec![];
-                        let obj = object::read::File::parse(&v).unwrap();
-                        for sym in obj.symbols() {
-                            println!("{:#?}", sym);
+                        if path.ends_with(".rmeta") {
+                            get_svh_from_ar(reader)
+                        } else {
+                            get_svh_from_object_file(reader)
                         }
-                        "todo!".to_string()
                     }
-                    FileHashAlgorithm::Filename => {
-                        "0".to_string()
-                    }
+                    FileHashAlgorithm::Filename => Some("0".to_string()),
                 };
-                let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
-                cached.2 = Some(FileHash {
-                    kind: reference_hash.kind,
-                    hash: hash.clone(),
-                });
+                if let Some(ref hash) = hash {
+                    let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
+                    cached.2 = Some(FileHash {
+                        kind: reference_hash.kind,
+                        hash: hash.clone(),
+                    });
+                }
                 hash
             };
 
-            if hash == reference_hash.hash {
-                continue;
+            if let Some(hash) = hash {
+                if reference_hash.hash == hash {
+                    continue;
+                }
             }
         }
 
@@ -1866,10 +1867,53 @@ fn find_stale_file(
     None
 }
 
+type Svh = String;
+fn get_svh_from_ar<R: Read>(reader: R) -> Option<Svh> {
+    //    use std::fs::File;
+    //    let file = File::open(path).ok()?;
+
+    let mut ar = ar::Archive::new(reader);
+    while let Some(file) = ar.next_entry() {
+        if let Ok(file) = file {
+            let s = String::from_utf8_lossy(&file.header().identifier());
+            if s.ends_with(".rmeta") {
+                if let Some(index) = s.rfind('-') {
+                    return Some(s[index + 1..(s.len() - ".rmeta".len())].to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
+    use object::Object;
+    //    use std::fs::File;
+    //   use std::io::Read;
+
+    //let mut file = File::open(path).ok()?;
+    let mut data = vec![];
+    reader.read_to_end(&mut data).ok()?; //TODO: looks expensive!
+    let obj = object::read::File::parse(&data).ok()?;
+
+    for (_idx, sym) in obj.symbols() {
+        //TODO: symbol is at the end typically.
+        if let Some(name) = sym.name() {
+            if name.starts_with("_rust_svh_") {
+                if let Some(index) = name.rfind('_') {
+                    return Some(name[index + 1..].to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FileHashAlgorithm {
-    Md5,
+    /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename.
     SvhInBin,
+    Md5,
     Sha1,
     /// If the hash is in the filename then as long as the file exists we can
     /// assume it is up to date.
