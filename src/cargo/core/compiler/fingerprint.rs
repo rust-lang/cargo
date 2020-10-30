@@ -1825,7 +1825,7 @@ fn find_stale_file(
                         }
                         Some(format!("{:?}", hasher.result()))
                     }
-                    FileHashAlgorithm::SvhInBin => {
+                    FileHashAlgorithm::Svh => {
                         debug!("found! got here");
                         if path.ends_with(".rmeta") {
                             get_svh_from_ar(reader)
@@ -1833,7 +1833,6 @@ fn find_stale_file(
                             get_svh_from_object_file(reader)
                         }
                     }
-                    FileHashAlgorithm::Filename => Some("0".to_string()),
                 };
                 if let Some(ref hash) = hash {
                     let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
@@ -1912,12 +1911,9 @@ fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FileHashAlgorithm {
     /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename.
-    SvhInBin,
+    Svh,
     Md5,
     Sha1,
-    /// If the hash is in the filename then as long as the file exists we can
-    /// assume it is up to date.
-    Filename,
 }
 
 impl FromStr for FileHashAlgorithm {
@@ -1926,9 +1922,8 @@ impl FromStr for FileHashAlgorithm {
     fn from_str(s: &str) -> Result<FileHashAlgorithm, ()> {
         match s {
             "md5" => Ok(FileHashAlgorithm::Md5),
-            "svh_in_bin" => Ok(FileHashAlgorithm::SvhInBin),
+            "svh" => Ok(FileHashAlgorithm::Svh),
             "sha1" => Ok(FileHashAlgorithm::Sha1),
-            "hash_in_filename" => Ok(FileHashAlgorithm::Filename),
             _ => Err(()),
         }
     }
@@ -2080,8 +2075,7 @@ impl EncodedDepInfo {
             let kind = match read_u8(bytes)? {
                 0 => FileHashAlgorithm::Md5,
                 1 => FileHashAlgorithm::Sha1,
-                2 => FileHashAlgorithm::Filename,
-                3 => FileHashAlgorithm::SvhInBin,
+                2 => FileHashAlgorithm::Svh,
                 _ => return None,
             };
             let ty = match read_u8(bytes)? {
@@ -2164,8 +2158,7 @@ impl EncodedDepInfo {
             match hash.kind {
                 FileHashAlgorithm::Md5 => dst.push(0),
                 FileHashAlgorithm::Sha1 => dst.push(1),
-                FileHashAlgorithm::Filename => dst.push(2),
-                FileHashAlgorithm::SvhInBin => dst.push(3),
+                FileHashAlgorithm::Svh => dst.push(2),
             }
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
