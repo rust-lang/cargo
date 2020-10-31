@@ -30,7 +30,7 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
             //FIXME rather than discarding these we could check them?
             let eight_bytes: &[u8; 8] = (dep_info[0..8]).try_into().unwrap();
             let _size = u64::from_le_bytes(*eight_bytes);
-            *bytes = &bytes[8..];
+            *dep_info = &dep_info[8..];
 
             str::from_utf8(read_bytes(dep_info)).unwrap(); //hash
             read_u8(dep_info); //hashkind

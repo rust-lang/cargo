@@ -1069,9 +1069,11 @@ impl Fingerprint {
             // recompiled previously. We transitively become stale ourselves in
             // that case, so bail out.
             //
-            // Note that this comparison should probably be `>=`, not `>`, but
+            // Note that this comparison should probably be `>=`, not `>`,   but
             // for a discussion of why it's `>` see the discussion about #5918
             // below in `find_stale`.
+
+            //todo: need to do raw .rmeta files
             if dep_mtime > max_mtime {
                 info!(
                     "dependency on `{}` is newer than we are {} > {} {:?}",
@@ -1829,7 +1831,7 @@ fn find_stale_file(
                     }
                     FileHashAlgorithm::Svh => {
                         debug!("found! got here");
-                        if path.ends_with(".rmeta") {
+                        if path.ends_with(".rlib") {
                             get_svh_from_ar(reader)
                         } else {
                             get_svh_from_object_file(reader)
@@ -1848,15 +1850,19 @@ fn find_stale_file(
 
             if let Some(new_hash) = new_hash {
                 if reference_hash.hash == new_hash {
+                    debug!(
+                        "HASH: Hash hit: mtime mismatch but contents match for {:?}",
+                        &path
+                    );
                     continue;
                 }
                 debug!(
-                    "Hash check failed for {:?}: {} (ref) != {}",
+                    "HASH: Hash miss for {:?}: {} (ref) != {}",
                     &path, reference_hash.hash, new_hash
                 );
             } else {
                 debug!(
-                    "Hash unavalable for {:?} to compare with ref {}",
+                    "HASH: Hash miss (unavalable) for {:?} to compare with ref {}",
                     &path, reference_hash.hash
                 );
             }
