@@ -326,6 +326,7 @@ use anyhow::{bail, format_err};
 use filetime::FileTime;
 use log::{debug, info};
 use md5::{Digest, Md5};
+use object::Object;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -348,7 +349,7 @@ use super::{BuildContext, Context, FileFlavor, Unit};
 // While source files can't currently be > 4Gb, bin files could be.
 pub type FileSize = u64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FileHash {
     kind: FileHashAlgorithm,
     hash: String,
@@ -1790,7 +1791,7 @@ fn find_stale_file(
         // Same size but mtime is different. Probably there's no change...
         // compute hash and compare to prevent change cascade...
         if config.cli_unstable().hash_tracking && !reference_hash.hash.is_empty() {
-            let hash = if let Some(path_hash) = path_hash {
+            let new_hash = if let Some(path_hash) = path_hash {
                 //FIXME use unwrap_or
                 Some(path_hash.hash.clone())
             } else {
@@ -1800,7 +1801,7 @@ fn find_stale_file(
                 let mut reader: io::BufReader<fs::File> =
                     io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
 
-                let hash = match reference_hash.kind {
+                let new_hash = match reference_hash.kind {
                     FileHashAlgorithm::Md5 => {
                         let mut hasher = Md5::new();
                         let mut buffer = [0; 1024];
@@ -1811,7 +1812,7 @@ fn find_stale_file(
                             }
                             hasher.input(&buffer[..count]);
                         }
-                        Some(format!("{:?}", hasher.result()))
+                        Some(to_hex(&hasher.result()))
                     }
                     FileHashAlgorithm::Sha1 => {
                         let mut hasher = Sha1::new();
@@ -1823,7 +1824,7 @@ fn find_stale_file(
                             }
                             hasher.input(&buffer[..count]);
                         }
-                        Some(format!("{:?}", hasher.result()))
+                        Some(to_hex(&hasher.result()))
                     }
                     FileHashAlgorithm::Svh => {
                         debug!("found! got here");
@@ -1834,20 +1835,29 @@ fn find_stale_file(
                         }
                     }
                 };
-                if let Some(ref hash) = hash {
+                if let Some(ref hash) = new_hash {
                     let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
                     cached.2 = Some(FileHash {
                         kind: reference_hash.kind,
                         hash: hash.clone(),
                     });
                 }
-                hash
+                new_hash
             };
 
-            if let Some(hash) = hash {
-                if reference_hash.hash == hash {
+            if let Some(new_hash) = new_hash {
+                if reference_hash.hash == new_hash {
                     continue;
                 }
+                debug!(
+                    "Hash check failed for {:?}: {} (ref) != {}",
+                    &path, reference_hash.hash, new_hash
+                );
+            } else {
+                debug!(
+                    "Hash unavalable for {:?} to compare with ref {}",
+                    &path, reference_hash.hash
+                );
             }
         }
 
@@ -1866,11 +1876,16 @@ fn find_stale_file(
     None
 }
 
+fn to_hex(bytes: &[u8]) -> String {
+    let mut result = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        result.push_str(&format!("{:x}", byte));
+    }
+    result
+}
+
 type Svh = String;
 fn get_svh_from_ar<R: Read>(reader: R) -> Option<Svh> {
-    //    use std::fs::File;
-    //    let file = File::open(path).ok()?;
-
     let mut ar = ar::Archive::new(reader);
     while let Some(file) = ar.next_entry() {
         if let Ok(file) = file {
@@ -1886,11 +1901,6 @@ fn get_svh_from_ar<R: Read>(reader: R) -> Option<Svh> {
 }
 
 fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
-    use object::Object;
-    //    use std::fs::File;
-    //   use std::io::Read;
-
-    //let mut file = File::open(path).ok()?;
     let mut data = vec![];
     reader.read_to_end(&mut data).ok()?; //TODO: looks expensive!
     let obj = object::read::File::parse(&data).ok()?;
@@ -1908,7 +1918,7 @@ fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
     None
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum FileHashAlgorithm {
     /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename.
     Svh,
@@ -2234,9 +2244,9 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 let file = &prev[0..prev.len() - 1];
                 for i in 0..ret.files.len() {
                     if ret.files[i].0.to_string_lossy() == file {
-                        let parts: Vec<_> = line["# size:".len()..].split(" ").collect();
-                        ret.files[i].1 = parts[0].trim().parse()?; //FIXME do we need trims?
-                        let kind_hash: Vec<_> = parts[1].split(":").collect();
+                        let size_and_hash: Vec<_> = line["# size:".len()..].split(' ').collect();
+                        ret.files[i].1 = size_and_hash[0].parse()?;
+                        let kind_hash: Vec<_> = size_and_hash[1].split(":").collect();
                         let hash = kind_hash[1];
                         ret.files[i].2 = FileHash {
                             kind: FileHashAlgorithm::from_str(kind_hash[0])
