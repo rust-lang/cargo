@@ -7,6 +7,7 @@ use cargo_test_support::{
     basic_bin_manifest, basic_manifest, is_nightly, main_file, project, rustc_host, Project,
 };
 use filetime::FileTime;
+use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 use std::str;
@@ -27,7 +28,10 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
     let deps = (0..read_usize(dep_info))
         .map(|_| {
             //FIXME rather than discarding these we could check them?
-            read_u64(dep_info); //filesize
+            let eight_bytes: &[u8; 8] = (dep_info[0..8]).try_into().unwrap();
+            let _size = u64::from_le_bytes(*eight_bytes);
+            *bytes = &bytes[8..];
+
             str::from_utf8(read_bytes(dep_info)).unwrap(); //hash
             read_u8(dep_info); //hashkind
             (
@@ -51,21 +55,6 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
         let ret = bytes[0];
         *bytes = &bytes[1..];
         ret
-    }
-
-    fn read_u64(bytes: &mut &[u8]) -> Option<u64> {
-        let ret = bytes.get(..8)?;
-        *bytes = &bytes[8..];
-        Some(
-            ((ret[0] as u64) << 0)
-                | ((ret[1] as u64) << 8)
-                | ((ret[2] as u64) << 16)
-                | ((ret[3] as u64) << 24)
-                | ((ret[4] as u64) << 32)
-                | ((ret[5] as u64) << 40)
-                | ((ret[6] as u64) << 48)
-                | ((ret[7] as u64) << 56),
-        )
     }
 
     fn read_bytes<'a>(bytes: &mut &'a [u8]) -> &'a [u8] {

@@ -313,6 +313,7 @@
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
 use std::collections::hash_map::{Entry, HashMap};
+use std::convert::TryInto;
 use std::env;
 use std::fs;
 use std::hash::{self, Hasher};
@@ -2075,7 +2076,10 @@ impl EncodedDepInfo {
         let mut files = Vec::with_capacity(nfiles as usize);
         for _ in 0..nfiles {
             //FIXME: backward compatibility!!!
-            let size = read_u64(bytes)? as FileSize;
+            let eight_bytes: &[u8; 8] = (bytes[0..8]).try_into().ok()?;
+            let size = u64::from_le_bytes(*eight_bytes) as FileSize;
+            *bytes = &bytes[8..];
+
             //debug!("read size as {}", size);
             let hash_buf = read_bytes(bytes)?;
 
@@ -2123,21 +2127,6 @@ impl EncodedDepInfo {
                     | ((ret[1] as usize) << 8)
                     | ((ret[2] as usize) << 16)
                     | ((ret[3] as usize) << 24),
-            )
-        }
-
-        fn read_u64(bytes: &mut &[u8]) -> Option<u64> {
-            let ret = bytes.get(..8)?;
-            *bytes = &bytes[8..];
-            Some(
-                ((ret[0] as u64) << 0)
-                    | ((ret[1] as u64) << 8)
-                    | ((ret[2] as u64) << 16)
-                    | ((ret[3] as u64) << 24)
-                    | ((ret[4] as u64) << 32)
-                    | ((ret[5] as u64) << 40)
-                    | ((ret[6] as u64) << 48)
-                    | ((ret[7] as u64) << 56),
             )
         }
 
