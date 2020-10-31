@@ -1,6 +1,7 @@
 //! Tests for the new feature resolver.
 
 use cargo_test_support::cross_compile::{self, alternate};
+use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
@@ -1987,8 +1988,6 @@ fn doc_optional() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] spin v1.0.0 [..]
 [DOWNLOADED] bar v1.0.0 [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] enabler v1.0.0 [..]
 [DOCUMENTING] bar v1.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 [..]
@@ -1996,4 +1995,247 @@ fn doc_optional() {
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn minimal_download() {
+    // Various checks that it only downloads the minimum set of dependencies
+    // needed in various situations.
+    //
+    // This checks several permutations of the different
+    // host_dep/dev_dep/itarget settings. These 3 are planned to be stabilized
+    // together, so there isn't much need to be concerned about how the behave
+    // independently. However, there are some cases where they do behave
+    // independently. Specifically:
+    //
+    // * `cargo test` forces dev_dep decoupling to be disabled.
+    // * `cargo tree --target=all` forces ignore_inactive_targets off and decouple_dev_deps off.
+    // * `cargo tree --target=all -e normal` forces ignore_inactive_targets off.
+    //
+    // However, `cargo tree` is a little weird because it downloads everything
+    // anyways.
+    //
+    // So to summarize the different permutations:
+    //
+    // dev_dep | host_dep | itarget | Notes
+    // --------|----------|---------|----------------------------
+    //         |          |         | -Zfeatures=compare (new resolver should behave same as old)
+    //         |          |    ✓    | This scenario should not happen.
+    //         |     ✓    |         | `cargo tree --target=all -Zfeatures=all`†
+    //         |     ✓    |    ✓    | `cargo test`
+    //    ✓    |          |         | This scenario should not happen.
+    //    ✓    |          |    ✓    | This scenario should not happen.
+    //    ✓    |     ✓    |         | `cargo tree --target=all -e normal -Z features=all`†
+    //    ✓    |     ✓    |    ✓    | A normal build.
+    //
+    // † — However, `cargo tree` downloads everything.
+    Package::new("normal", "1.0.0").publish();
+    Package::new("normal_pm", "1.0.0").publish();
+    Package::new("normal_opt", "1.0.0").publish();
+    Package::new("dev_dep", "1.0.0").publish();
+    Package::new("dev_dep_pm", "1.0.0").publish();
+    Package::new("build_dep", "1.0.0").publish();
+    Package::new("build_dep_pm", "1.0.0").publish();
+    Package::new("build_dep_opt", "1.0.0").publish();
+
+    Package::new("itarget_normal", "1.0.0").publish();
+    Package::new("itarget_normal_pm", "1.0.0").publish();
+    Package::new("itarget_dev_dep", "1.0.0").publish();
+    Package::new("itarget_dev_dep_pm", "1.0.0").publish();
+    Package::new("itarget_build_dep", "1.0.0").publish();
+    Package::new("itarget_build_dep_pm", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                normal = "1.0"
+                normal_pm = "1.0"
+                normal_opt = { version = "1.0", optional = true }
+
+                [dev-dependencies]
+                dev_dep = "1.0"
+                dev_dep_pm = "1.0"
+
+                [build-dependencies]
+                build_dep = "1.0"
+                build_dep_pm = "1.0"
+                build_dep_opt = { version = "1.0", optional = true }
+
+                [target.'cfg(whatever)'.dependencies]
+                itarget_normal = "1.0"
+                itarget_normal_pm = "1.0"
+
+                [target.'cfg(whatever)'.dev-dependencies]
+                itarget_dev_dep = "1.0"
+                itarget_dev_dep_pm = "1.0"
+
+                [target.'cfg(whatever)'.build-dependencies]
+                itarget_build_dep = "1.0"
+                itarget_build_dep_pm = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    let clear = || {
+        cargo_home().join("registry/cache").rm_rf();
+        cargo_home().join("registry/src").rm_rf();
+        p.build_dir().rm_rf();
+    };
+
+    // none
+    // Should be the same as `-Zfeatures=all`
+    p.cargo("check -Zfeatures=compare")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[UPDATING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[CHECKING] normal_pm v1.0.0
+[CHECKING] normal v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // all
+    p.cargo("check -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[CHECKING] normal v1.0.0
+[CHECKING] normal_pm v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // This disables decouple_dev_deps.
+    p.cargo("test --no-run -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[COMPILING] build_dep v1.0.0
+[COMPILING] build_dep_pm v1.0.0
+[COMPILING] normal_pm v1.0.0
+[COMPILING] normal v1.0.0
+[COMPILING] dev_dep_pm v1.0.0
+[COMPILING] dev_dep v1.0.0
+[COMPILING] foo v0.1.0 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    clear();
+
+    // This disables itarget, but leaves decouple_dev_deps enabled. However,
+    // `cargo tree` downloads everything anyways. Ideally `cargo tree` should
+    // be a little smarter, but that would make it a bit more complicated. The
+    // two "Downloading" lines are because `download_accessible` doesn't
+    // download enough (`cargo tree` really wants everything). Again, that
+    // could be cleaner, but is difficult.
+    p.cargo("tree -e normal --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_normal v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep v1.0.0 [..]
+[DOWNLOADED] itarget_normal_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep_pm v1.0.0 [..]
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+├── itarget_normal v1.0.0
+├── itarget_normal_pm v1.0.0
+├── normal v1.0.0
+└── normal_pm v1.0.0
+",
+        )
+        .run();
+    clear();
+
+    // This disables itarget and decouple_dev_deps.
+    p.cargo("tree --target=all -Zfeatures=all")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] normal_pm v1.0.0 [..]
+[DOWNLOADED] normal v1.0.0 [..]
+[DOWNLOADED] itarget_normal_pm v1.0.0 [..]
+[DOWNLOADED] itarget_normal v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_dev_dep v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep_pm v1.0.0 [..]
+[DOWNLOADED] itarget_build_dep v1.0.0 [..]
+[DOWNLOADED] dev_dep_pm v1.0.0 [..]
+[DOWNLOADED] dev_dep v1.0.0 [..]
+[DOWNLOADED] build_dep_pm v1.0.0 [..]
+[DOWNLOADED] build_dep v1.0.0 [..]
+",
+        )
+        .with_stdout(
+            "\
+foo v0.1.0 ([ROOT]/foo)
+├── itarget_normal v1.0.0
+├── itarget_normal_pm v1.0.0
+├── normal v1.0.0
+└── normal_pm v1.0.0
+[build-dependencies]
+├── build_dep v1.0.0
+├── build_dep_pm v1.0.0
+├── itarget_build_dep v1.0.0
+└── itarget_build_dep_pm v1.0.0
+[dev-dependencies]
+├── dev_dep v1.0.0
+├── dev_dep_pm v1.0.0
+├── itarget_dev_dep v1.0.0
+└── itarget_dev_dep_pm v1.0.0
+",
+        )
+        .run();
+    clear();
 }

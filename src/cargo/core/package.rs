@@ -19,6 +19,7 @@ use serde::Serialize;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
+use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
@@ -488,6 +489,7 @@ impl<'cfg> PackageSet<'cfg> {
         has_dev_units: HasDevUnits,
         requested_kinds: &[CompileKind],
         target_data: &RustcTargetData,
+        force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
             used: &mut BTreeSet<PackageId>,
@@ -496,6 +498,7 @@ impl<'cfg> PackageSet<'cfg> {
             has_dev_units: HasDevUnits,
             requested_kinds: &[CompileKind],
             target_data: &RustcTargetData,
+            force_all_targets: ForceAllTargets,
         ) -> CargoResult<()> {
             if !used.insert(pkg_id) {
                 return Ok(());
@@ -509,12 +512,14 @@ impl<'cfg> PackageSet<'cfg> {
                     // dependencies are used both for target and host. To tighten this
                     // up, this function would need to track "for_host" similar to how
                     // unit dependencies handles it.
-                    let activated = requested_kinds
-                        .iter()
-                        .chain(Some(&CompileKind::Host))
-                        .any(|kind| target_data.dep_platform_activated(dep, *kind));
-                    if !activated {
-                        return false;
+                    if force_all_targets == ForceAllTargets::No {
+                        let activated = requested_kinds
+                            .iter()
+                            .chain(Some(&CompileKind::Host))
+                            .any(|kind| target_data.dep_platform_activated(dep, *kind));
+                        if !activated {
+                            return false;
+                        }
                     }
                     true
                 })
@@ -527,6 +532,7 @@ impl<'cfg> PackageSet<'cfg> {
                     has_dev_units,
                     requested_kinds,
                     target_data,
+                    force_all_targets,
                 )?;
             }
             Ok(())
@@ -545,6 +551,7 @@ impl<'cfg> PackageSet<'cfg> {
                 has_dev_units,
                 requested_kinds,
                 target_data,
+                force_all_targets,
             )?;
         }
         self.get_many(to_download.into_iter())?;

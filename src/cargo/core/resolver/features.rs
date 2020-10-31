@@ -303,6 +303,14 @@ pub struct FeatureResolver<'a, 'cfg> {
     /// Keeps track of which packages have had its dependencies processed.
     /// Used to avoid cycles, and to speed up processing.
     processed_deps: HashSet<(PackageId, bool)>,
+    /// If this is `true`, then `for_host` needs to be tracked while
+    /// traversing the graph.
+    ///
+    /// This is only here to avoid calling `is_proc_macro` when all feature
+    /// options are disabled (because `is_proc_macro` can trigger downloads).
+    /// This has to be separate from `FeatureOpts.decouple_host_deps` because
+    /// `for_host` tracking is also needed for `itarget` to work properly.
+    track_for_host: bool,
 }
 
 impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
@@ -333,6 +341,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                 opts,
             });
         }
+        let track_for_host = opts.decouple_host_deps || opts.ignore_inactive_targets;
         let mut r = FeatureResolver {
             ws,
             target_data,
@@ -343,6 +352,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             activated_features: HashMap::new(),
             activated_dependencies: HashMap::new(),
             processed_deps: HashSet::new(),
+            track_for_host,
         };
         r.do_resolve(specs, requested_features)?;
         log::debug!("features={:#?}", r.activated_features);
@@ -367,7 +377,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         let member_features = self.ws.members_with_features(specs, requested_features)?;
         for (member, requested_features) in &member_features {
             let fvs = self.fvs_from_requested(member.package_id(), requested_features);
-            let for_host = self.is_proc_macro(member.package_id());
+            let for_host = self.track_for_host && self.is_proc_macro(member.package_id());
             self.activate_pkg(member.package_id(), &fvs, for_host)?;
             if for_host {
                 // Also activate without for_host. This is needed if the
@@ -597,7 +607,6 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
-                let is_proc_macro = self.is_proc_macro(dep_id);
                 let deps = deps
                     .iter()
                     .filter(|dep| {
@@ -613,7 +622,8 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
                         true
                     })
                     .map(|dep| {
-                        let dep_for_host = for_host || dep.is_build() || is_proc_macro;
+                        let dep_for_host = self.track_for_host
+                            && (for_host || dep.is_build() || self.is_proc_macro(dep_id));
                         (dep, dep_for_host)
                     })
                     .collect::<Vec<_>>();
