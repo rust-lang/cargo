@@ -33,30 +33,6 @@ fn pathless_tools() {
 }
 
 #[cargo_test]
-fn obj_test() {
-    use object::Object;
-    use object::ObjectSegment;
-    use std::io::Read;
-    use std::fs::File;
-    
-//    let mut file = File::open("/Users/gilescope/projects/tst/target/debug/deps/libmydep2-244330a37db7aca2.rlib").unwrap();
-    let mut file = File::open("/Users/gilescope/projects/tst/target/debug/deps/tst").unwrap();
-
-    let mut data = Vec::new();
-    file.read_to_end(&mut data).unwrap();
-    let obj = object::read::File::parse(&data).unwrap();
-    for sym in obj.symbols() {
-        println!("{:#?}", sym);
-    }
-    for seg in obj.segments() {//will be in __DATA seg for mach-o
-        if let Ok(Some("__DATA")) = seg.name()
-        {
-                println!("{:#?}", seg);
-        }
-    }
-}
-
-#[cargo_test]
 fn absolute_tools() {
     let target = rustc_host();
 

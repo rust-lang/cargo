@@ -1920,7 +1920,7 @@ fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum FileHashAlgorithm {
-    /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename.
+    /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename inside a .rlib.
     Svh,
     Md5,
     Sha1,
