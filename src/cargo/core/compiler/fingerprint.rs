@@ -1832,6 +1832,8 @@ fn find_stale_file(
                     FileHashAlgorithm::Svh => {
                         if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
                             get_svh_from_ar(reader)
+                        } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
+                            get_svh_from_rmeta_file(reader)
                         } else {
                             get_svh_from_object_file(reader)
                         }
@@ -1894,25 +1896,29 @@ type Svh = String;
 fn get_svh_from_ar<R: Read>(reader: R) -> Option<Svh> {
     let mut ar = ar::Archive::new(reader);
     while let Some(file) = ar.next_entry() {
-        if let Ok(file) = file {
-            let s = String::from_utf8_lossy(&file.header().identifier());
-            if s.ends_with(".rmeta") {
-                if let Some(index) = s.rfind('-') {
-                    return Some(s[index + 1..(s.len() - ".rmeta".len())].to_string());
+        match file {
+            Ok(file) => {
+                let s = String::from_utf8_lossy(&file.header().identifier());
+                if s.ends_with(".rmeta") {
+                    if let Some(index) = s.rfind('-') {
+                        return Some(s[index + 1..(s.len() - ".rmeta".len())].to_string());
+                    }
                 }
             }
+            Err(err) => debug!("Error reading ar: {}", err),
         }
     }
     None
 }
 
+// While this looks expensive this is only invoked when dylibs are compiled against
+// and the timestamp is too recent and the file is the expected size.
 fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
     let mut data = vec![];
-    reader.read_to_end(&mut data).ok()?; //TODO: looks expensive!
+    reader.read_to_end(&mut data).ok()?;
     let obj = object::read::File::parse(&data).ok()?;
 
     for (_idx, sym) in obj.symbols() {
-        //TODO: symbol is at the end typically.
         if let Some(name) = sym.name() {
             if name.starts_with("_rust_svh_") {
                 if let Some(index) = name.rfind('_') {
@@ -1922,6 +1928,27 @@ fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<Svh> {
         }
     }
     None
+}
+
+fn get_svh_from_rmeta_file<R: Read>(mut reader: R) -> Option<Svh> {
+    let mut data = Vec::with_capacity(128);
+    data.resize(128, 0);
+    reader.read_exact(&mut data).ok()?;
+    parse_svh(&data)
+}
+
+fn parse_svh(data: &[u8]) -> Option<Svh> {
+    let rust_version_len_pos = 12;
+    let data = &mut &data[rust_version_len_pos..];
+    let rust_version_len = data[0] as usize;
+    let data = &mut &data[1..];
+    //println!("rust version='{}'", String::from_utf8_lossy(&data[..rust_version_len]));
+
+    let data = &data[rust_version_len..];
+    let svh_len = data[0] as usize;
+    let data = &mut &data[1..];
+
+    Some(String::from_utf8_lossy(&data[..svh_len]).to_string())
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -2303,5 +2330,24 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
             }
         }
         Ok(ret)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::parse_svh;
+    #[test]
+    fn test() {
+        let vec: Vec<u8> = vec![
+            114, 117, 115, 116, 0, 0, 0, 5, 0, 13, 201, 29, 16, 114, 117, 115, 116, 99, 32, 49, 46,
+            52, 57, 46, 48, 45, 100, 101, 118, 16, 49, 100, 54, 102, 97, 101, 54, 56, 102, 54, 100,
+            52, 99, 99, 98, 102, 3, 115, 116, 100, 241, 202, 128, 159, 207, 146, 173, 243, 204, 1,
+            0, 2, 17, 45, 48, 55, 56, 97, 54, 56, 51, 101, 99, 57, 57, 55, 50, 48, 53, 50, 4, 99,
+            111, 114, 101, 190, 159, 241, 243, 142, 194, 224, 233, 82, 0, 2, 17, 45, 51, 101, 97,
+            54, 98, 97, 57, 97, 57, 56, 99, 50, 57, 51, 54, 100, 17, 99, 111, 109, 112, 105, 108,
+            101, 114, 95, 98, 117, 105, 108,
+        ];
+        //                      r    u    s    t /    version | base |               r    u   s     t   c   ' ' 1   .   4   9   .   0   -   d    e    v  |size|  svh-->
+        assert!(parse_svh(&vec).is_some());
     }
 }
