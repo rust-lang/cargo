@@ -1830,8 +1830,7 @@ fn find_stale_file(
                         Some(to_hex(&hasher.result()))
                     }
                     FileHashAlgorithm::Svh => {
-                        debug!("found! got here");
-                        if path.ends_with(".rlib") {
+                        if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
                             get_svh_from_ar(reader)
                         } else {
                             get_svh_from_object_file(reader)
