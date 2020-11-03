@@ -350,10 +350,10 @@ use super::{BuildContext, Context, FileFlavor, Unit};
 // While source files can't currently be > 4Gb, bin files could be.
 pub type FileSize = u64;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct FileHash {
-    kind: FileHashAlgorithm,
-    hash: String,
+    pub kind: FileHashAlgorithm,
+    pub hash: String,
 }
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
@@ -761,14 +761,14 @@ impl LocalFingerprint {
                 let c: Vec<_> = paths
                     .iter()
                     .map(|p| {
-                        (
-                            pkg_root.join(p),
-                            0u64,
-                            FileHash {
+                        Fileprint {
+                            path: pkg_root.join(p),
+                            size: 0u64,
+                            hash: FileHash {
                                 kind: FileHashAlgorithm::Md5,
-                                hash: String::new(),
+                                hash: String::new(), // TO DO
                             },
-                        )
+                        }
                     })
                     .collect();
                 Ok(find_stale_file(
@@ -996,6 +996,7 @@ impl Fingerprint {
         mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
         pkg_root: &Path,
         target_root: &Path,
+        dep_info_loc: PathBuf,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
         let mut mtimes = HashMap::new();
@@ -1053,6 +1054,9 @@ impl Fingerprint {
                     })
                     .expect("failed to find rmeta")
             } else {
+                for (dep, _dep2) in dep_mtimes {
+                    debug!("HASH had to look at all the files {:?}", &dep);
+                }
                 match dep_mtimes.iter().max_by_key(|kv| kv.1) {
                     Some(dep_mtime) => dep_mtime,
                     // If our dependencies is up to date and has no filesystem
@@ -1075,11 +1079,79 @@ impl Fingerprint {
 
             //todo: need to do raw .rmeta files
             if dep_mtime > max_mtime {
-                info!(
-                    "dependency on `{}` is newer than we are {} > {} {:?}",
-                    dep.name, dep_mtime, max_mtime, pkg_root
-                );
-                return Ok(());
+                // let (dep_path, dep_mtime) = if dep.only_requires_rmeta {
+                //     dep_mtimes
+                //         .iter()
+                //         .find(|(path, _mtime)| {
+                //             path.extension().and_then(|s| s.to_str()) == Some("rmeta")
+                //         })
+                //         .expect("failed to find rmeta")
+                // } else { @todo here
+                for (dep_in, dep_mtime) in dep_mtimes {
+                    if dep_mtime > max_mtime {
+                        let dep_info = dep_info_loc
+                            .strip_prefix(&target_root)
+                            .unwrap()
+                            .to_path_buf();
+                        let dep_info = target_root.join(dep_info);
+                        println!("HASH dep info file {:?}", &dep_info);
+
+                        let dep_info = parse_dep_info(pkg_root, target_root, &dep_info)?;
+                        let mut stale = false;
+                        if let Some(dep_info) = dep_info {
+                            for file in dep_info.files {
+                                //println!("HASH dep info {:?}", file);
+                                //TODO hideiously inefficient!
+                                if *dep_in == file.path {
+                                    match std::fs::metadata(dep_in) {
+                                        // For file difference checking just check the lower bits of file size
+                                        Ok(metadata) => {
+                                            if file.size != metadata.len() || file.size == 0 {
+                                                stale = true;
+                                                println!("HASH file size discrepency {:?}", file);
+                                                break;
+                                            }
+                                        }
+                                        Err(..) => {
+                                            stale = true;
+                                            println!("HASH couldn't read file {:?}", file);
+                                            break;
+                                        }
+                                    }
+
+                                    if let Some(hash) = get_hash(dep_in, file.hash.kind) {
+                                        println!("HASH got hash file!!!! {:?}", hash);
+                                        if file.hash.hash != hash || hash == "" {
+                                            stale = true;
+                                        } else {
+                                            println!("HASH hit - same hash! {:?}", hash);
+                                        }
+                                    } else {
+                                        stale = true;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            println!("HASH dep info not found!");
+                        }
+                        // if let Some(item) = local.find_stale_item(config, mtime_cache, pkg_root, dep)? {
+
+                        // }
+                        if stale {
+                            info!("HASH dep fingerprint {:#?}", &dep.fingerprint.path);
+                            info!(
+                                "HASH dependency on `{}` is newer than we are {} > {} {:?} {:?}",
+                                dep.name, dep_mtime, max_mtime, pkg_root, dep_path
+                            );
+                            return Ok(());
+                        }
+                    } else {
+                        println!("HASH dep skipped as up to date");
+                    }
+                    //                        debug!("HASH had to look at all the files {:?}", &dep);
+                }
+                // what's our own output's dependency hash - what are we expecting it to be?
             }
         }
 
@@ -1263,11 +1335,13 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx);
+    let dep_info_loc = dep_info_loc(cx, unit);
     fingerprint.check_filesystem(
         &cx.bcx.config,
         &mut cx.mtime_cache,
         unit.pkg.root(),
         &target_root,
+        dep_info_loc,
     )?;
 
     let fingerprint = Arc::new(fingerprint);
@@ -1700,13 +1774,13 @@ pub fn parse_dep_info(
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
-    for (size, hash, ty, path) in info.files {
+    for (fileprint, ty) in info.files {
         let path = match ty {
-            DepInfoPathType::PackageRootRelative => pkg_root.join(path),
+            DepInfoPathType::PackageRootRelative => pkg_root.join(fileprint.path),
             // N.B. path might be absolute here in which case the join will have no effect
-            DepInfoPathType::TargetRootRelative => target_root.join(path),
+            DepInfoPathType::TargetRootRelative => target_root.join(fileprint.path),
         };
-        ret.files.push((path, size, hash));
+        ret.files.push(Fileprint { path, ..fileprint });
     }
     Ok(Some(ret))
 }
@@ -1726,15 +1800,21 @@ fn find_stale_file(
     config: &Config,
     mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
     reference: &Path,
-    paths: &[(PathBuf, FileSize, FileHash)],
+    paths: &[Fileprint],
 ) -> Option<StaleItem> {
     let reference_mtime = match paths::mtime(reference) {
         Ok(mtime) => mtime,
         Err(..) => return Some(StaleItem::MissingFile(reference.to_path_buf())),
     };
 
-    for (path, reference_size, reference_hash) in paths {
+    for Fileprint {
+        path,
+        size: reference_size,
+        hash: reference_hash,
+    } in paths
+    {
         let path = &path;
+
         let (path_mtime, path_size, path_hash) = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => o.get().clone(), //FIXME? do we need to clone here?
             Entry::Vacant(v) => {
@@ -1801,44 +1881,7 @@ fn find_stale_file(
                 // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
                 // but not sure it's worth the additional complexity.
                 //FIXME put the result in the mtime_cache rather than hashing each time!
-                let mut reader: io::BufReader<fs::File> =
-                    io::BufReader::new(fs::File::open(&path).unwrap()); //FIXME
-
-                let new_hash = match reference_hash.kind {
-                    FileHashAlgorithm::Md5 => {
-                        let mut hasher = Md5::new();
-                        let mut buffer = [0; 1024];
-                        loop {
-                            let count = reader.read(&mut buffer).unwrap(); //FIXME
-                            if count == 0 {
-                                break;
-                            }
-                            hasher.input(&buffer[..count]);
-                        }
-                        Some(to_hex(&hasher.result()))
-                    }
-                    FileHashAlgorithm::Sha1 => {
-                        let mut hasher = Sha1::new();
-                        let mut buffer = [0; 1024];
-                        loop {
-                            let count = reader.read(&mut buffer).unwrap(); //FIXME
-                            if count == 0 {
-                                break;
-                            }
-                            hasher.input(&buffer[..count]);
-                        }
-                        Some(to_hex(&hasher.result()))
-                    }
-                    FileHashAlgorithm::Svh => {
-                        if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
-                            get_svh_from_ar(reader)
-                        } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
-                            get_svh_from_rmeta_file(reader)
-                        } else {
-                            get_svh_from_object_file(reader)
-                        }
-                    }
-                };
+                let new_hash = get_hash(&path, reference_hash.kind);
                 if let Some(ref hash) = new_hash {
                     let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
                     cached.2 = Some(FileHash {
@@ -1882,6 +1925,46 @@ fn find_stale_file(
         reference, reference_mtime
     );
     None
+}
+
+fn get_hash(path: &Path, algo: FileHashAlgorithm) -> Option<String> {
+    let mut reader: io::BufReader<fs::File> = io::BufReader::new(fs::File::open(path).ok()?);
+
+    match algo {
+        FileHashAlgorithm::Md5 => {
+            let mut hasher = Md5::new();
+            let mut buffer = [0; 1024];
+            loop {
+                let count = reader.read(&mut buffer).ok()?;
+                if count == 0 {
+                    break;
+                }
+                hasher.input(&buffer[..count]);
+            }
+            Some(to_hex(&hasher.result()))
+        }
+        FileHashAlgorithm::Sha1 => {
+            let mut hasher = Sha1::new();
+            let mut buffer = [0; 1024];
+            loop {
+                let count = reader.read(&mut buffer).ok()?;
+                if count == 0 {
+                    break;
+                }
+                hasher.input(&buffer[..count]);
+            }
+            Some(to_hex(&hasher.result()))
+        }
+        FileHashAlgorithm::Svh => {
+            if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
+                get_svh_from_ar(reader)
+            } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
+                get_svh_from_rmeta_file(reader)
+            } else {
+                get_svh_from_object_file(reader)
+            }
+        }
+    }
 }
 
 fn to_hex(bytes: &[u8]) -> String {
@@ -1951,7 +2034,7 @@ fn parse_svh(data: &[u8]) -> Option<Svh> {
     Some(String::from_utf8_lossy(&data[..svh_len]).to_string())
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub enum FileHashAlgorithm {
     /// Svh is embedded as a symbol or for rmeta is in the .rmeta filename inside a .rlib.
     Svh,
@@ -2047,10 +2130,10 @@ pub fn translate_dep_info(
         .env
         .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key));
 
-    for (file, size, hash) in depinfo.files {
+    for fileprint in depinfo.files {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
-        let abs_file = rustc_cwd.join(file);
+        let abs_file = rustc_cwd.join(fileprint.path);
         // If canonicalization fails, just use the abs path. There is currently
         // a bug where --remap-path-prefix is affecting .d files, causing them
         // to point to non-existent paths.
@@ -2069,7 +2152,13 @@ pub fn translate_dep_info(
             // effect.
             (DepInfoPathType::TargetRootRelative, &*abs_file)
         };
-        on_disk_info.files.push((size, hash, ty, path.to_owned()));
+        on_disk_info.files.push((
+            Fileprint {
+                path: path.to_path_buf(),
+                ..fileprint
+            },
+            ty,
+        ));
     }
     paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
@@ -2079,7 +2168,7 @@ pub fn translate_dep_info(
 pub struct RustcDepInfo {
     /// The list of files that the main target in the dep-info file depends on.
     /// and lower 32bits of size and hash (or 0 if not there).
-    pub files: Vec<(PathBuf, FileSize, FileHash)>, //FIXME use Option<NonZero> instead?
+    pub files: Vec<Fileprint>, //FIXME use Option<NonZero> instead?
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
     ///
@@ -2090,6 +2179,14 @@ pub struct RustcDepInfo {
     pub env: Vec<(String, Option<String>)>,
 }
 
+/// A file location with identifying properties: size and hash.
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+pub struct Fileprint {
+    pub path: PathBuf,
+    pub size: FileSize,
+    pub hash: FileHash,
+}
+
 // Same as `RustcDepInfo` except avoids absolute paths as much as possible to
 // allow moving around the target directory.
 //
@@ -2097,7 +2194,7 @@ pub struct RustcDepInfo {
 // Cargo will read it for crates on all future compilations.
 #[derive(Default)]
 struct EncodedDepInfo {
-    files: Vec<(FileSize, FileHash, DepInfoPathType, PathBuf)>,
+    files: Vec<(Fileprint, DepInfoPathType)>,
     env: Vec<(String, Option<String>)>,
 }
 
@@ -2131,10 +2228,12 @@ impl EncodedDepInfo {
             };
             let bytes = read_bytes(bytes)?;
             files.push((
-                size,
-                FileHash { kind, hash },
+                Fileprint {
+                    path: util::bytes2path(bytes).ok()?,
+                    size,
+                    hash: FileHash { kind, hash },
+                },
                 ty,
-                util::bytes2path(bytes).ok()?,
             ));
         }
 
@@ -2180,7 +2279,7 @@ impl EncodedDepInfo {
         let mut ret = Vec::new();
         let dst = &mut ret;
         write_usize(dst, self.files.len());
-        for (size, hash, ty, file) in self.files.iter() {
+        for (Fileprint { path, size, hash }, ty) in self.files.iter() {
             //debug!("writing depinfo size as {} ", *size as usize);
             write_u64(dst, *size);
             //debug!("writing depinfo hash as {} ", hash.hash.len());
@@ -2195,7 +2294,7 @@ impl EncodedDepInfo {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::TargetRootRelative => dst.push(1),
             }
-            write_bytes(dst, util::path2bytes(file)?);
+            write_bytes(dst, util::path2bytes(path)?);
         }
 
         write_usize(dst, self.env.len());
@@ -2264,12 +2363,12 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
             if let Some(prev) = prev_line {
                 let file = &prev[0..prev.len() - 1];
                 for i in 0..ret.files.len() {
-                    if ret.files[i].0.to_string_lossy() == file {
+                    if ret.files[i].path.to_string_lossy() == file {
                         let size_and_hash: Vec<_> = line["# size:".len()..].split(' ').collect();
-                        ret.files[i].1 = size_and_hash[0].parse()?;
+                        ret.files[i].size = size_and_hash[0].parse()?;
                         let kind_hash: Vec<_> = size_and_hash[1].split(":").collect();
                         let hash = kind_hash[1];
-                        ret.files[i].2 = FileHash {
+                        ret.files[i].hash = FileHash {
                             kind: FileHashAlgorithm::from_str(kind_hash[0])
                                 .expect("unknown hashing algo"),
                             hash: hash.to_string(),
@@ -2295,14 +2394,14 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                         internal("malformed dep-info format, trailing \\".to_string())
                     })?);
                 }
-                ret.files.push((
-                    file.into(),
-                    0,
-                    FileHash {
+                ret.files.push(Fileprint {
+                    path: file.into(),
+                    size: 0,
+                    hash: FileHash {
                         kind: FileHashAlgorithm::Md5,
-                        hash: String::new(),
+                        hash: String::new(), //TO DO
                     },
-                ));
+                });
             }
         } else {
             prev_line = Some(line);
