@@ -312,7 +312,7 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::HashMap;
 use std::convert::TryInto;
 use std::env;
 use std::fs;
@@ -694,6 +694,80 @@ enum LocalFingerprint {
     RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
+/// Cache of file properties that we know to be true.
+/// @todo currentfileprint
+pub struct CurrentFileprint {
+    pub(crate) mtime: FileTime,
+    /// This will be None if not yet looked up.
+    size: Option<FileSize>,
+    /// This will be None if not yet calculated for this file.
+    hash: Option<FileHash>,
+}
+
+impl CurrentFileprint {
+    pub(crate) fn new(mtime: FileTime) -> Self {
+        CurrentFileprint {
+            mtime,
+            size: None,
+            hash: None,
+        }
+    }
+
+    pub(crate) fn size(&mut self, file: &Path) -> Option<&FileSize> {
+        if self.size.is_none() {
+            self.size = std::fs::metadata(file).map(|metadata| metadata.len()).ok();
+        }
+        self.size.as_ref()
+    }
+
+    pub(crate) fn hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
+        if self.hash.is_none() {
+            if let Ok(file) = fs::File::open(path) {
+                let mut reader: io::BufReader<fs::File> = io::BufReader::new(file);
+
+                let hash = match algo {
+                    FileHashAlgorithm::Md5 => {
+                        let mut hasher = Md5::new();
+                        let mut buffer = [0; 1024];
+                        loop {
+                            let count = reader.read(&mut buffer).ok()?;
+                            if count == 0 {
+                                break;
+                            }
+                            hasher.input(&buffer[..count]);
+                        }
+                        Some(to_hex(&hasher.result()))
+                    }
+                    FileHashAlgorithm::Sha1 => {
+                        let mut hasher = Sha1::new();
+                        let mut buffer = [0; 1024];
+                        loop {
+                            let count = reader.read(&mut buffer).ok()?;
+                            if count == 0 {
+                                break;
+                            }
+                            hasher.input(&buffer[..count]);
+                        }
+                        Some(to_hex(&hasher.result()))
+                    }
+                    FileHashAlgorithm::Svh => {
+                        if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
+                            get_svh_from_ar(reader)
+                        } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
+                            get_svh_from_rmeta_file(reader)
+                        } else {
+                            get_svh_from_object_file(reader)
+                        }
+                    }
+                };
+
+                self.hash = hash.map(|hash| FileHash { kind: algo, hash })
+            }
+        }
+        self.hash.as_ref()
+    }
+}
+
 enum StaleItem {
     MissingFile(PathBuf),
     ChangedFile {
@@ -724,7 +798,8 @@ impl LocalFingerprint {
     fn find_stale_item(
         &self,
         config: &Config,
-        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
+        mtime_cache: &mut HashMap<PathBuf, CurrentFileprint>,
+        dep_info_cache: &mut HashMap<PathBuf, RustcDepInfo>,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<Option<StaleItem>> {
@@ -737,7 +812,13 @@ impl LocalFingerprint {
             // rustc.
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                let info = match parse_dep_info(pkg_root, target_root, &dep_info)? {
+                if !dep_info_cache.contains_key(&dep_info) {
+                    if let Some(rustc_dep_info) = parse_dep_info(pkg_root, target_root, &dep_info)?
+                    {
+                        dep_info_cache.insert(dep_info.clone(), rustc_dep_info);
+                    }
+                }
+                let info = match dep_info_cache.get(&dep_info) {
                     Some(info) => info,
                     None => return Ok(Some(StaleItem::MissingFile(dep_info))),
                 };
@@ -993,7 +1074,8 @@ impl Fingerprint {
     fn check_filesystem(
         &mut self,
         config: &Config,
-        mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
+        mtime_cache: &mut HashMap<PathBuf, CurrentFileprint>,
+        dep_info_cache: &mut HashMap<PathBuf, RustcDepInfo>,
         pkg_root: &Path,
         target_root: &Path,
         dep_info_loc: PathBuf,
@@ -1079,75 +1161,85 @@ impl Fingerprint {
 
             //todo: need to do raw .rmeta files
             if dep_mtime > max_mtime {
-                // let (dep_path, dep_mtime) = if dep.only_requires_rmeta {
-                //     dep_mtimes
-                //         .iter()
-                //         .find(|(path, _mtime)| {
-                //             path.extension().and_then(|s| s.to_str()) == Some("rmeta")
-                //         })
-                //         .expect("failed to find rmeta")
                 // } else { @todo here
                 for (dep_in, dep_mtime) in dep_mtimes {
+                    if dep.only_requires_rmeta
+                        && dep_in.extension().and_then(|s| s.to_str()) != Some("rmeta")
+                    {
+                        continue;
+                    }
+
                     if dep_mtime > max_mtime {
                         let dep_info = dep_info_loc
                             .strip_prefix(&target_root)
                             .unwrap()
                             .to_path_buf();
-                        let dep_info = target_root.join(dep_info);
                         println!("HASH dep info file {:?}", &dep_info);
+                        let dep_info_file = target_root.join(dep_info);
 
-                        let dep_info = parse_dep_info(pkg_root, target_root, &dep_info)?;
+                        let rustc_dep_info = dep_info_cache.get(&dep_info_file);
+                        if rustc_dep_info.is_none() {
+                            let dep = parse_dep_info(pkg_root, target_root, &dep_info_file)?;
+                            if let Some(dep) = dep {
+                                dep_info_cache.insert(dep_info_file.clone(), dep);
+                            }
+                        }
+
                         let mut stale = false;
-                        if let Some(dep_info) = dep_info {
-                            for file in dep_info.files {
+                        if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
+                            for reference in &rustc_dep_info.files {
                                 //println!("HASH dep info {:?}", file);
-                                //TODO hideiously inefficient!
-                                if *dep_in == file.path {
-                                    match std::fs::metadata(dep_in) {
-                                        // For file difference checking just check the lower bits of file size
-                                        Ok(metadata) => {
-                                            if file.size != metadata.len() || file.size == 0 {
-                                                stale = true;
-                                                println!("HASH file size discrepency {:?}", file);
-                                                break;
-                                            }
-                                        }
-                                        Err(..) => {
-                                            stale = true;
-                                            println!("HASH couldn't read file {:?}", file);
-                                            break;
-                                        }
+                                if *dep_in == reference.path {
+                                    let mut file_facts = mtime_cache.get_mut(dep_in);
+                                    if file_facts.is_none() {
+                                        mtime_cache.insert(
+                                            dep_in.clone(),
+                                            CurrentFileprint::new(*dep_mtime),
+                                        );
+                                        file_facts = mtime_cache.get_mut(dep_in);
                                     }
+                                    let file_facts = file_facts.unwrap();
 
-                                    if let Some(hash) = get_hash(dep_in, file.hash.kind) {
-                                        println!("HASH got hash file!!!! {:?}", hash);
-                                        if file.hash.hash != hash || hash == "" {
+                                    if let Some(current_size) = file_facts.size(dep_in) {
+                                        if *current_size != reference.size {
                                             stale = true;
-                                        } else {
-                                            println!("HASH hit - same hash! {:?}", hash);
+                                            break;
                                         }
                                     } else {
                                         stale = true;
+                                        break;
                                     }
-                                    break;
+
+                                    let current_hash = file_facts.hash(dep_in, reference.hash.kind);
+
+                                    //println!("HASH got hash file!!!! {:?}", hash);
+                                    if let Some(file_facts_hash) = current_hash {
+                                        if reference.hash == *file_facts_hash {
+                                            println!("HASH hit - same hash! {:?}", file_facts.hash);
+                                        } else {
+                                            // println!("HASH s {:?}", file_facts.hash);
+                                            stale = true;
+                                            break;
+                                        }
+                                    } else {
+                                        stale = true;
+                                        break;
+                                    }
                                 }
                             }
                         } else {
-                            println!("HASH dep info not found!");
+                            stale = true;
                         }
-                        // if let Some(item) = local.find_stale_item(config, mtime_cache, pkg_root, dep)? {
-
-                        // }
                         if stale {
                             info!("HASH dep fingerprint {:#?}", &dep.fingerprint.path);
                             info!(
-                                "HASH dependency on `{}` is newer than we are {} > {} {:?} {:?}",
+                                "HASHMISS dependency on `{}` is newer than we are {} > {} {:?} {:?}",
                                 dep.name, dep_mtime, max_mtime, pkg_root, dep_path
                             );
                             return Ok(());
                         }
                     } else {
-                        println!("HASH dep skipped as up to date");
+                        //   debug!("HASH dep skipped as up to date");
                     }
                     //                        debug!("HASH had to look at all the files {:?}", &dep);
                 }
@@ -1160,7 +1252,9 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(item) = local.find_stale_item(config, mtime_cache, pkg_root, target_root)? {
+            if let Some(item) =
+                local.find_stale_item(config, mtime_cache, dep_info_cache, pkg_root, target_root)?
+            {
                 item.log();
                 return Ok(());
             }
@@ -1339,6 +1433,7 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
     fingerprint.check_filesystem(
         &cx.bcx.config,
         &mut cx.mtime_cache,
+        &mut cx.dep_info_cache,
         unit.pkg.root(),
         &target_root,
         dep_info_loc,
@@ -1798,7 +1893,7 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
 //type It = ;
 fn find_stale_file(
     config: &Config,
-    mtime_cache: &mut HashMap<PathBuf, (FileTime, FileSize, Option<FileHash>)>,
+    mtime_cache: &mut HashMap<PathBuf, CurrentFileprint>,
     reference: &Path,
     paths: &[Fileprint],
 ) -> Option<StaleItem> {
@@ -1813,27 +1908,14 @@ fn find_stale_file(
         hash: reference_hash,
     } in paths
     {
-        let path = &path;
-
-        let (path_mtime, path_size, path_hash) = match mtime_cache.entry(path.to_path_buf()) {
-            Entry::Occupied(o) => o.get().clone(), //FIXME? do we need to clone here?
-            Entry::Vacant(v) => {
-                let mtime = match paths::mtime(path) {
-                    Ok(mtime) => mtime,
-                    Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
-                };
-                let current_size = if config.cli_unstable().hash_tracking {
-                    match std::fs::metadata(path) {
-                        // For file difference checking just check the lower bits of file size
-                        Ok(metadata) => metadata.len(),
-                        Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())), //todo
-                    }
-                } else {
-                    0
-                };
-                v.insert((mtime, current_size, None)).clone() // Hash calculated only if needed later.
-            }
-        };
+        if !mtime_cache.contains_key(path) {
+            let mtime = match paths::mtime(path) {
+                Ok(mtime) => mtime,
+                Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
+            };
+            mtime_cache.insert(path.to_path_buf(), CurrentFileprint::new(mtime));
+        }
+        let current = mtime_cache.get_mut(path).unwrap();
 
         // TODO: fix #5918.
         // Note that equal mtimes should be considered "stale". For filesystems with
@@ -1854,69 +1936,39 @@ fn find_stale_file(
         // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
         // measuring the start time of builds.
 
-        // Has size changed?
-        if config.cli_unstable().hash_tracking
-            && *reference_size > 0
-            && path_size != *reference_size
-        {
-            return Some(StaleItem::ChangedFile {
-                reference: reference.to_path_buf(),
-                reference_mtime,
-                stale: path.to_path_buf(),
-                stale_mtime: path_mtime,
-            });
-        }
-
-        if path_mtime <= reference_mtime {
+        if current.mtime <= reference_mtime {
             continue;
         }
 
-        // Same size but mtime is different. Probably there's no change...
-        // compute hash and compare to prevent change cascade...
-        if config.cli_unstable().hash_tracking && !reference_hash.hash.is_empty() {
-            let new_hash = if let Some(path_hash) = path_hash {
-                //FIXME use unwrap_or
-                Some(path_hash.hash.clone())
-            } else {
-                // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
-                // but not sure it's worth the additional complexity.
-                //FIXME put the result in the mtime_cache rather than hashing each time!
-                let new_hash = get_hash(&path, reference_hash.kind);
-                if let Some(ref hash) = new_hash {
-                    let cached = mtime_cache.get_mut(&path.to_path_buf()).unwrap();
-                    cached.2 = Some(FileHash {
-                        kind: reference_hash.kind,
-                        hash: hash.clone(),
-                    });
+        if config.cli_unstable().hash_tracking {
+            if let Some(current_size) = current.size(path) {
+                if *current_size == *reference_size {
+                    // Same size but mtime is different. Probably there's no change...
+                    // compute hash and compare to prevent change cascade...
+                    if let Some(current_hash) = current.hash(path, reference_hash.kind) {
+                        // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
+                        // but not sure it's worth the additional complexity.
+                        if *reference_hash == *current_hash {
+                            debug!(
+                                "HASH: Hash hit: mtime mismatch but contents match for {:?}",
+                                &path
+                            );
+                            continue;
+                        }
+                        debug!(
+                            "HASH: Hash miss for {:?}: {} (ref) != {}",
+                            &path, reference_hash.hash, current_hash.hash
+                        );
+                    }
                 }
-                new_hash
-            };
-
-            if let Some(new_hash) = new_hash {
-                if reference_hash.hash == new_hash {
-                    debug!(
-                        "HASH: Hash hit: mtime mismatch but contents match for {:?}",
-                        &path
-                    );
-                    continue;
-                }
-                debug!(
-                    "HASH: Hash miss for {:?}: {} (ref) != {}",
-                    &path, reference_hash.hash, new_hash
-                );
-            } else {
-                debug!(
-                    "HASH: Hash miss (unavalable) for {:?} to compare with ref {}",
-                    &path, reference_hash.hash
-                );
             }
-        }
+        };
 
         return Some(StaleItem::ChangedFile {
             reference: reference.to_path_buf(),
             reference_mtime,
             stale: path.to_path_buf(),
-            stale_mtime: path_mtime,
+            stale_mtime: current.mtime,
         });
     }
 
@@ -1925,46 +1977,6 @@ fn find_stale_file(
         reference, reference_mtime
     );
     None
-}
-
-fn get_hash(path: &Path, algo: FileHashAlgorithm) -> Option<String> {
-    let mut reader: io::BufReader<fs::File> = io::BufReader::new(fs::File::open(path).ok()?);
-
-    match algo {
-        FileHashAlgorithm::Md5 => {
-            let mut hasher = Md5::new();
-            let mut buffer = [0; 1024];
-            loop {
-                let count = reader.read(&mut buffer).ok()?;
-                if count == 0 {
-                    break;
-                }
-                hasher.input(&buffer[..count]);
-            }
-            Some(to_hex(&hasher.result()))
-        }
-        FileHashAlgorithm::Sha1 => {
-            let mut hasher = Sha1::new();
-            let mut buffer = [0; 1024];
-            loop {
-                let count = reader.read(&mut buffer).ok()?;
-                if count == 0 {
-                    break;
-                }
-                hasher.input(&buffer[..count]);
-            }
-            Some(to_hex(&hasher.result()))
-        }
-        FileHashAlgorithm::Svh => {
-            if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
-                get_svh_from_ar(reader)
-            } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
-                get_svh_from_rmeta_file(reader)
-            } else {
-                get_svh_from_object_file(reader)
-            }
-        }
-    }
 }
 
 fn to_hex(bytes: &[u8]) -> String {
