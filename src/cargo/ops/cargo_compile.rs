@@ -1082,11 +1082,20 @@ fn validate_required_features(
                     target_name
                 );
             }
+            FeatureValue::DepFeature { weak: true, .. } => {
+                anyhow::bail!(
+                    "invalid feature `{}` in required-features of target `{}`: \
+                    optional dependency with `?` is not allowed in required-features",
+                    fv,
+                    target_name
+                );
+            }
             // Handling of dependent_crate/dependent_crate_feature syntax
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
                 dep_prefix: false,
+                weak: false,
             } => {
                 match resolve
                     .deps(summary.package_id())

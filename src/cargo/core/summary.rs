@@ -86,7 +86,11 @@ impl Summary {
 
     /// Returns an error if this Summary is using an unstable feature that is
     /// not enabled.
-    pub fn unstable_gate(&self, namespaced_features: bool) -> CargoResult<()> {
+    pub fn unstable_gate(
+        &self,
+        namespaced_features: bool,
+        weak_dep_features: bool,
+    ) -> CargoResult<()> {
         if !namespaced_features {
             if self.inner.has_namespaced_features {
                 bail!(
@@ -99,6 +103,22 @@ impl Summary {
                     "features and dependencies cannot have the same name: `{}`",
                     dep_name
                 )
+            }
+        }
+        if !weak_dep_features {
+            for (feat_name, features) in self.features() {
+                for fv in features {
+                    if matches!(fv, FeatureValue::DepFeature{weak: true, ..}) {
+                        bail!(
+                            "optional dependency features with `?` syntax are only \
+                             allowed on the nightly channel and requires the \
+                             `-Z weak-dep-features` flag on the command line\n\
+                             Feature `{}` had feature value `{}`.",
+                            feat_name,
+                            fv
+                        );
+                    }
+                }
             }
         }
         Ok(())
@@ -293,7 +313,7 @@ fn build_feature_map(
                         );
                     }
                 }
-                DepFeature { dep_name, .. } => {
+                DepFeature { dep_name, weak, .. } => {
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
                         bail!(
@@ -302,6 +322,12 @@ fn build_feature_map(
                             fv,
                             dep_name
                         );
+                    }
+                    if *weak && !is_optional_dep {
+                        bail!("feature `{}` includes `{}` with a `?`, but `{}` is not an optional dependency\n\
+                            A non-optional dependency of the same name is defined; \
+                            consider removing the `?` or changing the dependency to be optional",
+                            feature, fv, dep_name);
                     }
                 }
             }
@@ -346,6 +372,10 @@ pub enum FeatureValue {
         /// If this is true, then the feature used the `dep:` prefix, which
         /// prevents enabling the feature named `dep_name`.
         dep_prefix: bool,
+        /// If `true`, indicates the `?` syntax is used, which means this will
+        /// not automatically enable the dependency unless the dependency is
+        /// activated through some other means.
+        weak: bool,
     },
 }
 
@@ -360,10 +390,16 @@ impl FeatureValue {
                 } else {
                     (dep, false)
                 };
+                let (dep, weak) = if let Some(dep) = dep.strip_suffix('?') {
+                    (dep, true)
+                } else {
+                    (dep, false)
+                };
                 FeatureValue::DepFeature {
                     dep_name: InternedString::new(dep),
                     dep_feature: InternedString::new(dep_feat),
                     dep_prefix,
+                    weak,
                 }
             }
             None => {
@@ -393,13 +429,13 @@ impl fmt::Display for FeatureValue {
             DepFeature {
                 dep_name,
                 dep_feature,
-                dep_prefix: true,
-            } => write!(f, "dep:{}/{}", dep_name, dep_feature),
-            DepFeature {
-                dep_name,
-                dep_feature,
-                dep_prefix: false,
-            } => write!(f, "{}/{}", dep_name, dep_feature),
+                dep_prefix,
+                weak,
+            } => {
+                let dep_prefix = if *dep_prefix { "dep:" } else { "" };
+                let weak = if *weak { "?" } else { "" };
+                write!(f, "{}{}{}/{}", dep_prefix, dep_name, weak, dep_feature)
+            }
         }
     }
 }
