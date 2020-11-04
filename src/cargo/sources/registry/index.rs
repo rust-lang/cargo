@@ -747,7 +747,7 @@ impl IndexSummary {
     }
 }
 
-fn split<'a>(haystack: &'a [u8], needle: u8) -> impl Iterator<Item = &'a [u8]> + 'a {
+fn split(haystack: &[u8], needle: u8) -> impl Iterator<Item = &[u8]> + '_ {
     struct Split<'a> {
         haystack: &'a [u8],
         needle: u8,

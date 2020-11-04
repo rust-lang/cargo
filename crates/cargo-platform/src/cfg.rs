@@ -298,11 +298,11 @@ impl<'a> Iterator for Tokenizer<'a> {
 }
 
 fn is_ident_start(ch: char) -> bool {
-    ch == '_' || ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z')
+    ch == '_' || ('a'..='z').contains(&ch) || ('A'..='Z').contains(&ch)
 }
 
 fn is_ident_rest(ch: char) -> bool {
-    is_ident_start(ch) || ('0' <= ch && ch <= '9')
+    is_ident_start(ch) || ('0'..='9').contains(&ch)
 }
 
 impl<'a> Token<'a> {
