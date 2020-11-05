@@ -1,11 +1,11 @@
 //! Tests for normal registry dependencies.
 
-use cargo::util::paths::remove_dir_all;
-use cargo_test_support::cargo_process;
-use cargo_test_support::git;
+use cargo::{core::SourceId, util::paths::remove_dir_all};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{self, registry_path, Dependency, Package};
-use cargo_test_support::{basic_manifest, project, t};
+use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{cargo_process, registry::registry_url};
+use cargo_test_support::{git, install::cargo_home, t};
 use std::fs::{self, File};
 use std::path::Path;
 
@@ -2132,4 +2132,41 @@ Use `[source]` replacement to alter the default index for crates.io.
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn package_lock_inside_package_is_overwritten() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1")
+        .file("src/lib.rs", "")
+        .file(".cargo-ok", "")
+        .publish();
+
+    p.cargo("build").run();
+
+    let id = SourceId::for_registry(&registry_url()).unwrap();
+    let hash = cargo::util::hex::short_hash(&id);
+    let ok = cargo_home()
+        .join("registry")
+        .join("src")
+        .join(format!("-{}", hash))
+        .join("bar-0.0.1")
+        .join(".cargo-ok");
+
+    assert_eq!(ok.metadata().unwrap().len(), 2);
 }
