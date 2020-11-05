@@ -10,6 +10,7 @@ std = { path = "../std" }
 panic_unwind = { path = "../panic_unwind" }
 compiler_builtins = { path = "../compiler_builtins" }
 registry-dep-using-std = { version = "*", features = ['mockbuild'] }
+registry-dep-only-used-by-test = { version = "*" }
 
 [features]
 panic-unwind = []

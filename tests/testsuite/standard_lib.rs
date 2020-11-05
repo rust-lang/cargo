@@ -27,70 +27,17 @@ fn setup() -> Option<Setup> {
         return None;
     }
 
-    // Our mock sysroot requires a few packages from crates.io, so make sure
-    // they're "published" to crates.io. Also edit their code a bit to make sure
-    // that they have access to our custom crates with custom apis.
+    // Register a version of one of the std dependencies that doesn't compile.
+    // This ensures that the mock-std's vendor is actually being used.
     Package::new("registry-dep-using-core", "1.0.0")
         .file(
             "src/lib.rs",
             "
-                #![no_std]
-
-                #[cfg(feature = \"mockbuild\")]
-                pub fn custom_api() {
-                }
-
-                #[cfg(not(feature = \"mockbuild\"))]
-                pub fn non_sysroot_api() {
-                    core::custom_api();
-                }
+               don't compile me bro!!
             ",
         )
         .add_dep(Dependency::new("rustc-std-workspace-core", "*").optional(true))
         .feature("mockbuild", &["rustc-std-workspace-core"])
-        .publish();
-    Package::new("registry-dep-using-alloc", "1.0.0")
-        .file(
-            "src/lib.rs",
-            "
-                #![no_std]
-
-                extern crate alloc;
-
-                #[cfg(feature = \"mockbuild\")]
-                pub fn custom_api() {
-                }
-
-                #[cfg(not(feature = \"mockbuild\"))]
-                pub fn non_sysroot_api() {
-                    core::custom_api();
-                    alloc::custom_api();
-                }
-            ",
-        )
-        .add_dep(Dependency::new("rustc-std-workspace-core", "*").optional(true))
-        .add_dep(Dependency::new("rustc-std-workspace-alloc", "*").optional(true))
-        .feature(
-            "mockbuild",
-            &["rustc-std-workspace-core", "rustc-std-workspace-alloc"],
-        )
-        .publish();
-    Package::new("registry-dep-using-std", "1.0.0")
-        .file(
-            "src/lib.rs",
-            "
-                #[cfg(feature = \"mockbuild\")]
-                pub fn custom_api() {
-                }
-
-                #[cfg(not(feature = \"mockbuild\"))]
-                pub fn non_sysroot_api() {
-                    std::custom_api();
-                }
-            ",
-        )
-        .add_dep(Dependency::new("rustc-std-workspace-std", "*").optional(true))
-        .feature("mockbuild", &["rustc-std-workspace-std"])
         .publish();
 
     let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
@@ -334,6 +281,81 @@ fn depend_same_as_std() {
         Some(s) => s,
         None => return,
     };
+
+    // Our mock sysroot requires a few packages from crates.io, so make sure
+    // they're "published" to crates.io. Also edit their code a bit to make sure
+    // that they have access to our custom crates with custom apis.
+    Package::new("registry-dep-using-core", "1.0.0")
+        .file(
+            "src/lib.rs",
+            "
+                #![no_std]
+
+                #[cfg(feature = \"mockbuild\")]
+                pub fn custom_api() {
+                }
+
+                #[cfg(not(feature = \"mockbuild\"))]
+                pub fn non_sysroot_api() {
+                    core::custom_api();
+                }
+            ",
+        )
+        .add_dep(Dependency::new("rustc-std-workspace-core", "*").optional(true))
+        .feature("mockbuild", &["rustc-std-workspace-core"])
+        .publish();
+    Package::new("registry-dep-using-alloc", "1.0.0")
+        .file(
+            "src/lib.rs",
+            "
+                #![no_std]
+
+                extern crate alloc;
+
+                #[cfg(feature = \"mockbuild\")]
+                pub fn custom_api() {
+                }
+
+                #[cfg(not(feature = \"mockbuild\"))]
+                pub fn non_sysroot_api() {
+                    core::custom_api();
+                    alloc::custom_api();
+                }
+            ",
+        )
+        .add_dep(Dependency::new("rustc-std-workspace-core", "*").optional(true))
+        .add_dep(Dependency::new("rustc-std-workspace-alloc", "*").optional(true))
+        .feature(
+            "mockbuild",
+            &["rustc-std-workspace-core", "rustc-std-workspace-alloc"],
+        )
+        .publish();
+    Package::new("registry-dep-using-std", "1.0.0")
+        .file(
+            "src/lib.rs",
+            "
+                #[cfg(feature = \"mockbuild\")]
+                pub fn custom_api() {
+                }
+
+                #[cfg(not(feature = \"mockbuild\"))]
+                pub fn non_sysroot_api() {
+                    std::custom_api();
+                }
+            ",
+        )
+        .add_dep(Dependency::new("rustc-std-workspace-std", "*").optional(true))
+        .feature("mockbuild", &["rustc-std-workspace-std"])
+        .publish();
+    Package::new("registry-dep-only-used-by-test", "1.0.0")
+        .file(
+            "src/lib.rs",
+            "
+                pub fn wow_testing_is_so_easy() {
+                }
+            ",
+        )
+        .publish();
 
     let p = project()
         .file(
