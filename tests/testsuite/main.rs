@@ -109,7 +109,6 @@ mod rustflags;
 mod search;
 mod shell_quoting;
 mod standard_lib;
-mod sync_lockfile;
 mod test;
 mod timings;
 mod tool_paths;

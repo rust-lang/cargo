@@ -8,7 +8,6 @@ pub fn builtin() -> Vec<App> {
         clean::cli(),
         doc::cli(),
         fetch::cli(),
-        sync_lockfile::cli(),
         fix::cli(),
         generate_lockfile::cli(),
         git_checkout::cli(),
@@ -46,7 +45,6 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "clean" => clean::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
-        "sync-lockfile" => sync_lockfile::exec,
         "fix" => fix::exec,
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
@@ -103,7 +101,6 @@ pub mod run;
 pub mod rustc;
 pub mod rustdoc;
 pub mod search;
-pub mod sync_lockfile;
 pub mod test;
 pub mod tree;
 pub mod uninstall;
