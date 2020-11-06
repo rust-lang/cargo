@@ -37,16 +37,16 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
     if opts.workspace {
-      if opts.aggressive {
-        anyhow::bail!("cannot specify aggressive for workspace updates");
-      }
-      if opts.precise.is_some() {
-        anyhow::bail!("cannot specify precise for workspace updates");
-      }
+        if opts.aggressive {
+            anyhow::bail!("cannot specify aggressive for workspace updates");
+        }
+        if opts.precise.is_some() {
+            anyhow::bail!("cannot specify precise for workspace updates");
+        }
 
-      ws.emit_warnings()?;
-      let (_packages, _resolve) = ops::resolve_ws(ws)?;
-      return Ok(())
+        ws.emit_warnings()?;
+        let (_packages, _resolve) = ops::resolve_ws(ws)?;
+        return Ok(());
     }
 
     if opts.aggressive && opts.precise.is_some() {
