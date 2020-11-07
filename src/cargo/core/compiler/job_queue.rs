@@ -166,6 +166,11 @@ pub struct JobState<'a> {
     /// Channel back to the main thread to coordinate messages and such.
     messages: Arc<Queue<Message>>,
 
+    /// Normally messages are handled in a bounded way. When the job is fresh
+    /// however we need to immediately return to prevent a deadlock as the messages
+    /// are processed on the same thread as they are sent from.
+    messages_bounded: bool,
+
     /// The job id that this state is associated with, used when sending
     /// messages back to the main thread.
     id: JobId,
@@ -232,11 +237,19 @@ impl<'a> JobState<'a> {
     }
 
     pub fn stdout(&self, stdout: String) {
-        self.messages.push_bounded(Message::Stdout(stdout));
+        if self.messages_bounded {
+            self.messages.push_bounded(Message::Stdout(stdout));
+        } else {
+            self.messages.push(Message::Stdout(stdout));
+        }
     }
 
     pub fn stderr(&self, stderr: String) {
-        self.messages.push_bounded(Message::Stderr(stderr));
+        if self.messages_bounded {
+            self.messages.push_bounded(Message::Stderr(stderr));
+        } else {
+            self.messages.push(Message::Stderr(stderr));
+        }
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file
@@ -830,6 +843,7 @@ impl<'cfg> DrainState<'cfg> {
             let state = JobState {
                 id,
                 messages: messages.clone(),
+                messages_bounded: job.freshness() == Freshness::Dirty,
                 rmeta_required: Cell::new(rmeta_required),
                 _marker: marker::PhantomData,
             };
