@@ -53,7 +53,6 @@ use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
-use std::mem;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -838,9 +837,10 @@ impl<'cfg> DrainState<'cfg> {
             let mut sender = FinishOnDrop {
                 messages: &messages,
                 id,
-                result: Err(format_err!("worker panicked")),
+                ok: false,
             };
-            sender.result = job.run(&state);
+            let result = job.run(&state);
+            sender.ok = true;
 
             // If the `rmeta_required` wasn't consumed but it was set
             // previously, then we either have:
@@ -854,9 +854,11 @@ impl<'cfg> DrainState<'cfg> {
             // we'll just naturally abort the compilation operation but for 1
             // we need to make sure that the metadata is flagged as produced so
             // send a synthetic message here.
-            if state.rmeta_required.get() && sender.result.is_ok() {
+            if state.rmeta_required.get() && result.is_ok() {
                 messages.push(Message::Finish(id, Artifact::Metadata, Ok(())));
             }
+
+            messages.push(Message::Finish(id, Artifact::All, result));
 
             // Use a helper struct with a `Drop` implementation to guarantee
             // that a `Finish` message is sent even if our job panics. We
@@ -865,14 +867,18 @@ impl<'cfg> DrainState<'cfg> {
             struct FinishOnDrop<'a> {
                 messages: &'a Queue<Message>,
                 id: JobId,
-                result: CargoResult<()>,
+                ok: bool,
             }
 
             impl Drop for FinishOnDrop<'_> {
                 fn drop(&mut self) {
-                    let msg = mem::replace(&mut self.result, Ok(()));
-                    self.messages
-                        .push(Message::Finish(self.id, Artifact::All, msg));
+                    if !self.ok {
+                        self.messages.push(Message::Finish(
+                            self.id,
+                            Artifact::All,
+                            Err(format_err!("worker panicked")),
+                        ));
+                    }
                 }
             }
         };
