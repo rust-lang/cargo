@@ -880,10 +880,17 @@ impl<'cfg> DrainState<'cfg> {
         };
 
         match fresh {
-            Freshness::Fresh => self.timings.add_fresh(),
-            Freshness::Dirty => self.timings.add_dirty(),
+            Freshness::Fresh => {
+                self.timings.add_fresh();
+                // Running a fresh job on the same thread is often much faster than spawning a new
+                // thread to run the job.
+                doit();
+            }
+            Freshness::Dirty => {
+                self.timings.add_dirty();
+                scope.spawn(move |_| doit());
+            }
         }
-        scope.spawn(move |_| doit());
 
         Ok(())
     }
