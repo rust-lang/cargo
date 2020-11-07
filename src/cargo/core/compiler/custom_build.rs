@@ -432,7 +432,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     });
 
     let mut job = if cx.bcx.build_config.build_plan {
-        Job::new(Work::noop(), Freshness::Dirty)
+        Job::new_dirty(Work::noop())
     } else {
         fingerprint::prepare_target(cx, unit, false)?
     };

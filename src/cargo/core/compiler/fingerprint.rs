@@ -337,10 +337,7 @@ use crate::util::paths;
 use crate::util::{internal, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
-use super::job::{
-    Freshness::{Dirty, Fresh},
-    Job, Work,
-};
+use super::job::{Job, Work};
 use super::{BuildContext, Context, FileFlavor, Unit};
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
@@ -396,7 +393,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     }
 
     if compare.is_ok() && !force {
-        return Ok(Job::new(Work::noop(), Fresh));
+        return Ok(Job::new_fresh());
     }
 
     // Clear out the old fingerprint file if it exists. This protects when
@@ -469,7 +466,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
-    Ok(Job::new(write_fingerprint, Dirty))
+    Ok(Job::new_dirty(write_fingerprint))
 }
 
 /// Dependency edge information for fingerprints. This is generated for each
