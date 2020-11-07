@@ -29,9 +29,10 @@ use std::path::{Path, PathBuf};
 use log::debug;
 
 use super::{fingerprint, Context, FileFlavor, Unit};
-use crate::core::compiler::fingerprint::{FileHash, Fileprint};
+use crate::core::compiler::fingerprint::{CurrentFileprint, Fileprint};
 use crate::util::paths;
 use crate::util::{internal, CargoResult};
+use filetime::FileTime;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
@@ -89,14 +90,15 @@ fn add_deps_for_unit(
             .get(unit.pkg.package_id(), metadata)
         {
             for path in &output.rerun_if_changed {
+                let mut file_print = CurrentFileprint::new(FileTime::zero());
                 deps.insert(Fileprint {
-                    path: path.into(),
-                    size: 0,
-                    hash: FileHash {
-                        kind: fingerprint::FileHashAlgorithm::Md5,
-                        hash: String::new(),
-                    },
-                }); //TODO
+                    path: path.to_path_buf(),
+                    size: *file_print.size(path).unwrap(),
+                    hash: file_print
+                        .hash(path, fingerprint::FileHashAlgorithm::Md5)
+                        .unwrap()
+                        .clone(),
+                });
             }
         }
     }
@@ -167,18 +169,29 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 }
 
                 // Otherwise write it all out
-                debug!("HASH: detected change in dependencies file!!!");
+                debug!(
+                    "HASH: detected change in dependencies file - rewriting: {:?}",
+                    output_path
+                );
                 let mut outfile = BufWriter::new(paths::create(output_path)?);
                 write!(outfile, "{}:", target_fn)?;
-                for Fileprint {
-                    path: dep,
-                    size: _,
-                    hash: _,
-                } in &deps
-                {
-                    write!(outfile, " {}", dep.to_string_lossy())?; //TO DO - should we be writing out hash/filesize here?
+                for Fileprint { path: dep, .. } in &deps {
+                    write!(outfile, " {}", dep.to_string_lossy())?;
                 }
                 writeln!(outfile)?;
+
+                // Emit a fake target for each input file to the compilation. This
+                // prevents `make` from spitting out an error if a file is later
+                // deleted. For more info see #28735
+                for Fileprint {
+                    path: dep,
+                    size,
+                    hash,
+                } in &deps
+                {
+                    writeln!(outfile, "{}:", dep.to_string_lossy())?;
+                    writeln!(outfile, "# size:{} {}:{}", size, hash.kind, hash.hash)?;
+                }
 
             // dep-info generation failed, so delete output file. This will
             // usually cause the build system to always rerun the build
