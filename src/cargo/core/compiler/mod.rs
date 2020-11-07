@@ -448,7 +448,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
                 fresh,
             }
             .to_json_string();
-            state.stdout(msg);
+            state.stdout(msg)?;
         }
         Ok(())
     }))
@@ -1139,7 +1139,7 @@ fn on_stdout_line(
     _package_id: PackageId,
     _target: &Target,
 ) -> CargoResult<()> {
-    state.stdout(line.to_string());
+    state.stdout(line.to_string())?;
     Ok(())
 }
 
@@ -1177,7 +1177,7 @@ fn on_stderr_line_inner(
     // something like that), so skip over everything that doesn't look like a
     // JSON message.
     if !line.starts_with('{') {
-        state.stderr(line.to_string());
+        state.stderr(line.to_string())?;
         return Ok(true);
     }
 
@@ -1189,7 +1189,7 @@ fn on_stderr_line_inner(
         // to stderr.
         Err(e) => {
             debug!("failed to parse json: {:?}", e);
-            state.stderr(line.to_string());
+            state.stderr(line.to_string())?;
             return Ok(true);
         }
     };
@@ -1225,7 +1225,7 @@ fn on_stderr_line_inner(
                         .map(|v| String::from_utf8(v).expect("utf8"))
                         .expect("strip should never fail")
                 };
-                state.stderr(rendered);
+                state.stderr(rendered)?;
                 return Ok(true);
             }
         }
@@ -1316,7 +1316,7 @@ fn on_stderr_line_inner(
     // Switch json lines from rustc/rustdoc that appear on stderr to stdout
     // instead. We want the stdout of Cargo to always be machine parseable as
     // stderr has our colorized human-readable messages.
-    state.stdout(msg);
+    state.stdout(msg)?;
     Ok(true)
 }
 
