@@ -9,9 +9,11 @@ use crate::util::{self, internal, paths, profile};
 use cargo_platform::Cfg;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
+use serde_json::Value;
 
 const CARGO_WARNING: &str = "cargo:warning=";
 
@@ -206,6 +208,23 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
 
     if let Some(links) = unit.pkg.manifest().links() {
         cmd.env("CARGO_MANIFEST_LINKS", links);
+    }
+
+    // Re-export environment variables declared in the project's environment.json
+    let env_path = Path::new(bcx.ws.root()).join("environment.json");
+    // TODO: cache the environment.json state with the Workspace so it doesn't
+    // need to be repeatedly read + parsed for each build script
+    if let Ok(env) = fs::read_to_string(env_path) {
+        let env: Value = serde_json::from_str(&env).expect("Failed to parse environment.json");
+        if let Some(env_map) = env.as_object() {
+            for key in env_map.keys() {
+                if let Some(env_value) = env[key].as_str() {
+                    // Simply re-export as an actual environment variables so build scripts
+                    // may continue to take their configuration from environment variables
+                    cmd.env(key, env_value);
+                }
+            }
+        }
     }
 
     // Be sure to pass along all enabled features for this package, this is the
