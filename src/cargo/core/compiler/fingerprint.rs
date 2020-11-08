@@ -569,7 +569,7 @@ pub struct Fingerprint {
     /// fingerprint is out of date if this is missing, or if previous
     /// fingerprints output files are regenerated and look newer than this one.
     #[serde(skip)]
-    outputs: Vec<PathBuf>,
+    outputs: Vec<(PathBuf, Option<FileSize>, Option<FileHash>)>,
 }
 
 /// Indication of the status on the filesystem for a particular unit.
@@ -721,6 +721,7 @@ impl CurrentFileprint {
         self.size.as_ref()
     }
 
+    //TODO these need to not take self
     pub(crate) fn hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
         if self.hash.is_none() {
             if let Ok(file) = fs::File::open(path) {
@@ -1083,7 +1084,8 @@ impl Fingerprint {
         // afterwards based on the `mtime_on_use` flag. Afterwards we want the
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
-        for output in self.outputs.iter() {
+        for (output, file_size, hash) in self.outputs.iter() {
+            println!("HASH is this too many files? {:?}", &output);
             let mtime = match paths::mtime(output) {
                 Ok(mtime) => mtime,
 
@@ -1172,128 +1174,164 @@ impl Fingerprint {
                             .to_path_buf();
                         println!("HASH dep info file {:?}", &dep_info);
 
-                        let dep_info_file = if dep_info
-                            .to_str()
-                            .unwrap()
-                            .contains("dep-run-build-script-build-script-build")
+                        if dep_path.to_str().unwrap().ends_with("output")
+                            && dep_info
+                                .to_str()
+                                .unwrap()
+                                .contains("dep-run-build-script-build-script-build")
                         {
-                            //     // let dir_hash = dep_path
-                            //     //     .to_str()
-                            //     //     .unwrap()
-                            //     //     .split('-')
-                            //     //     .last()
-                            //     //     .unwrap_or_default();
-                            //     let mut d = dep_path.parent().unwrap().to_path_buf();
-                            //     d = d.join("dep-run-build-script-build-script-build");
-                            //     //                            d.set_extension("d");
-                            //     d
-                            // //join(format!("build_script_build-{}.d", dir_hash))
-                            let mut ddep_info = PathBuf::new();
-                            let x = dep.fingerprint.local.lock().unwrap();
-                            for local_dep in (*x).iter() {
-                                match local_dep {
-                                    LocalFingerprint::CheckDepInfo { dep_info } => {
-                                        ddep_info = dep_info.to_path_buf()
-                                    }
-                                    _ => {}
-                                }
-                                //     println!("{:#?}", local_dep.pa);
-                            }
-                            target_root.join(&ddep_info).to_path_buf()
-                        } else {
-                            target_root.join(&dep_info)
-                        };
+                            println!("HASH output file detected ");
+                            let mut stale = true;
+                            for (path, size, hash) in &dep.fingerprint.outputs {
+                                if path == dep_in {
+                                    println!("HASH oh found it {:?} {:?}, {:?}", path, size, hash);
 
-                        //let dep_info_file = target_root.join(dep_info);
-                        println!("dep info file: {:?}", &dep_info_file);
-
-                        let rustc_dep_info = dep_info_cache.get(&dep_info_file);
-                        if rustc_dep_info.is_none() {
-                            let dep_result = parse_dep_info(pkg_root, target_root, &dep_info_file);
-                            match dep_result {
-                                Ok(dep) => {
-                                    if let Some(dep) = dep {
-                                        println!("HASH dep info file parsed");
-                                        dep_info_cache.insert(dep_info_file.clone(), dep);
-                                    } else {
-                                        println!("HASH dep info file could not be parsed");
-                                    }
-                                }
-                                Err(err) => println!("HASH error loading dep info file {}", err),
-                            }
-                        } else {
-                            println!("HASH CACHE hit on dep info file");
-                        }
-
-                        let mut stale = None;
-                        if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
-                            for reference in &rustc_dep_info.files {
-                                //println!("HASH dep info ref {:?}", &reference);
-                                if *dep_in == reference.path {
-                                    let mut file_facts = mtime_cache.get_mut(dep_in);
-                                    if file_facts.is_none() {
-                                        mtime_cache.insert(
-                                            dep_in.clone(),
-                                            CurrentFileprint::new(*dep_mtime),
-                                        );
-                                        file_facts = mtime_cache.get_mut(dep_in);
-                                    }
-                                    let file_facts = file_facts.unwrap();
-
-                                    if let Some(current_size) = file_facts.size(dep_in) {
-                                        if *current_size != reference.size {
-                                            stale = Some(format!(
-                                                "File sizes don't match {:?} expected: {}",
-                                                current_size, reference.size
-                                            ));
-                                            break;
-                                        }
-                                    } else {
-                                        stale = Some(format!(
-                                            "File sizes was not obtainable expected: {}",
-                                            reference.size
-                                        ));
+                                    let mut f = CurrentFileprint::new(FileTime::zero());
+                                    if size.is_some()
+                                        && hash.is_some()
+                                        && f.size(dep_in) == size.as_ref()
+                                        && f.hash(dep_in, FileHashAlgorithm::Md5) == hash.as_ref()
+                                    {
+                                        println!("HASH oh hit {:?} {:?} {:?}", path, size, hash);
+                                        stale = false;
                                         break;
                                     }
+                                }
+                            }
+                            if stale {
+                                return Ok(());
+                            }
+                        } else {
+                            let dep_info_file = if dep_info
+                                .to_str()
+                                .unwrap()
+                                .contains("dep-run-build-script-build-script-build")
+                            {
+                                //     // let dir_hash = dep_path
+                                //     //     .to_str()
+                                //     //     .unwrap()
+                                //     //     .split('-')
+                                //     //     .last()
+                                //     //     .unwrap_or_default();
+                                //     let mut d = dep_path.parent().unwrap().to_path_buf();
+                                //     d = d.join("dep-run-build-script-build-script-build");
+                                //     //                            d.set_extension("d");
+                                //     d
+                                // //join(format!("build_script_build-{}.d", dir_hash))
+                                let mut ddep_info = PathBuf::new();
+                                let x = dep.fingerprint.local.lock().unwrap();
+                                for local_dep in (*x).iter() {
+                                    match local_dep {
+                                        LocalFingerprint::CheckDepInfo { dep_info } => {
+                                            ddep_info = dep_info.to_path_buf()
+                                        }
+                                        _ => {}
+                                    }
+                                    //     println!("{:#?}", local_dep.pa);
+                                }
+                                target_root.join(&ddep_info).to_path_buf()
+                            } else {
+                                target_root.join(&dep_info)
+                            };
 
-                                    let current_hash = file_facts.hash(dep_in, reference.hash.kind);
+                            //let dep_info_file = target_root.join(dep_info);
+                            println!("dep info file: {:?}", &dep_info_file);
 
-                                    //println!("HASH got hash file!!!! {:?}", hash);
-                                    if let Some(file_facts_hash) = current_hash {
-                                        if reference.hash == *file_facts_hash {
-                                            println!("HASH hit - same hash! {:?}", file_facts.hash);
+                            let rustc_dep_info = dep_info_cache.get(&dep_info_file);
+                            if rustc_dep_info.is_none() {
+                                let dep_result =
+                                    parse_dep_info(pkg_root, target_root, &dep_info_file);
+                                match dep_result {
+                                    Ok(dep) => {
+                                        if let Some(dep) = dep {
+                                            println!("HASH dep info file parsed");
+                                            dep_info_cache.insert(dep_info_file.clone(), dep);
                                         } else {
-                                            // println!("HASH s {:?}", file_facts.hash);
+                                            println!("HASH dep info file could not be parsed");
+                                        }
+                                    }
+                                    Err(err) => {
+                                        println!("HASH error loading dep info file {}", err)
+                                    }
+                                }
+                            } else {
+                                println!("HAS CACHE hit on dep info file");
+                            }
+
+                            let mut stale = None;
+                            if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
+                                for reference in &rustc_dep_info.files {
+                                    //println!("HASH dep info ref {:?}", &reference);
+                                    if *dep_in == reference.path {
+                                        let mut file_facts = mtime_cache.get_mut(dep_in);
+                                        if file_facts.is_none() {
+                                            mtime_cache.insert(
+                                                dep_in.clone(),
+                                                CurrentFileprint::new(*dep_mtime),
+                                            );
+                                            file_facts = mtime_cache.get_mut(dep_in);
+                                        }
+                                        let file_facts = file_facts.unwrap();
+
+                                        if let Some(current_size) = file_facts.size(dep_in) {
+                                            if *current_size != reference.size {
+                                                stale = Some(format!(
+                                                    "File sizes don't match {:?} expected: {}",
+                                                    current_size, reference.size
+                                                ));
+                                                break;
+                                            }
+                                        } else {
                                             stale = Some(format!(
-                                                "Hash {:?} doesn't match expected: {:?}",
-                                                &file_facts_hash, &reference.hash
+                                                "File sizes was not obtainable expected: {}",
+                                                reference.size
                                             ));
                                             break;
                                         }
-                                    } else {
-                                        stale = Some(format!(
-                                            "No hash found in the dep info file to compare to {:?}",
-                                            &reference.hash
-                                        ));
-                                        break;
+
+                                        let current_hash =
+                                            file_facts.hash(dep_in, reference.hash.kind);
+
+                                        //println!("HASH got hash file!!!! {:?}", hash);
+                                        if let Some(file_facts_hash) = current_hash {
+                                            if reference.hash == *file_facts_hash {
+                                                println!(
+                                                    "HAS hit - same hash! {:?}",
+                                                    file_facts.hash
+                                                );
+                                            } else {
+                                                // println!("HASH s {:?}", file_facts.hash);
+                                                stale = Some(format!(
+                                                    "Hash {:?} doesn't match expected: {:?}",
+                                                    &file_facts_hash, &reference.hash
+                                                ));
+                                                break;
+                                            }
+                                        } else {
+                                            stale = Some(format!(
+                                                "No hash found in the dep info file to compare to {:?}",
+                                                &reference.hash
+                                            ));
+                                            break;
+                                        }
                                     }
                                 }
+                            } else {
+                                stale = Some("HASH dep info file could not be found".into());
                             }
-                        } else {
-                            stale = Some("HASH dep info file could not be found".into());
-                        }
-                        if stale.is_some() {
-                            let x = dep.fingerprint.local.lock().unwrap();
-                            for local_dep in (*x).iter() {
-                                println!("{:#?}", local_dep);
+                            if stale.is_some() {
+                                let x = dep.fingerprint.local.lock().unwrap();
+                                for local_dep in (*x).iter() {
+                                    println!("{:#?}", local_dep);
+                                }
+                                info!("HASH dep fingerprint {:#?}", &dep.fingerprint.path,);
+                                info!(
+                                    "HASHMISS dependency on `{}` is newer than we are {} > {} {:?} {:?}",
+                                    dep.name, dep_mtime, max_mtime, pkg_root, dep_path
+                                );
+                                info!("HASHMISS also {:?}", stale);
+                                return Ok(());
                             }
-                            info!("HASH dep fingerprint {:#?}", &dep.fingerprint.path,);
-                            info!(
-                                "HASHMISS dependency on `{}` is newer than we are {} > {} {:?} {:?}",
-                                dep.name, dep_mtime, max_mtime, pkg_root, dep_path
-                            );
-                            info!("HASHMISS also {:?}", stale);
-                            return Ok(());
                         }
                     } else {
                         //   debug!("HASH dep skipped as up to date");
@@ -1544,7 +1582,16 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         .outputs(unit)?
         .iter()
         .filter(|output| !matches!(output.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
-        .map(|output| output.path.clone())
+        .map(|output| {
+            //let mut c = CurrentFileprint::new(FileTime::zero());
+            //TODO is any of this a good idea? here maybe leave blank?
+            (
+                output.path.clone(),
+                None, //c.size(&output.path).map(|c| *c),
+                None, //c.hash(&output.path, FileHashAlgorithm::Md5)
+                      //   .map(|c| c.clone()),
+            )
+        })
         .collect();
 
     // Fill out a bunch more information that we'll be tracking typically
@@ -1634,11 +1681,21 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
             .collect::<CargoResult<Vec<_>>>()?
     };
 
+    let mut output_fileprint = CurrentFileprint::new(FileTime::zero());
+
     Ok(Fingerprint {
         local: Mutex::new(local),
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         deps,
-        outputs: if overridden { Vec::new() } else { vec![output] },
+        outputs: if overridden {
+            Vec::new()
+        } else {
+            let size = output_fileprint.size(&output).map(|c| *c);
+            let hash = output_fileprint
+                .hash(&output, FileHashAlgorithm::Md5)
+                .map(|c| c.clone());
+            vec![(output, size, hash)]
+        },
 
         // Most of the other info is blank here as we don't really include it
         // in the execution of the build script, but... this may be a latent
@@ -1698,6 +1755,7 @@ fn build_script_local_fingerprints(
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(cx, unit) {
+        debug!("HACK  override local fingerprints deps {}", unit.pkg);
         debug!("override local fingerprints deps {}", unit.pkg);
         return (
             Box::new(
@@ -1733,6 +1791,8 @@ fn build_script_local_fingerprints(
                     // (like for a path dependency). Those list of files would
                     // be stored here rather than the the mtime of them.
                     Some(f) => {
+                        println!("HASH HASH OLD MODE DETECTED OLD MODE THIS IS SLOW?");
+
                         let s = f()?;
                         debug!(
                             "old local fingerprints deps {:?} precalculated={:?}",
@@ -1762,6 +1822,7 @@ fn build_script_override_fingerprint(
 ) -> Option<LocalFingerprint> {
     // Build script output is only populated at this stage when it is
     // overridden.
+    println!("HASH build script overriden!!!!!");
     let build_script_outputs = cx.build_script_outputs.lock().unwrap();
     let metadata = cx.get_run_build_script_metadata(unit);
     // Returns None if it is not overridden.
@@ -2024,7 +2085,7 @@ fn find_stale_file(
                         // but not sure it's worth the additional complexity.
                         if *reference_hash == *current_hash {
                             debug!(
-                                "HASH: Hash hit: mtime mismatch but contents match for {:?}",
+                                "HAS: Hash hit: mtime mismatch but contents match for {:?}",
                                 &path
                             );
                             continue;
