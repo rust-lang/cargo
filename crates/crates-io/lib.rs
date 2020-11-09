@@ -172,27 +172,9 @@ impl Registry {
         let stat = tarball.metadata()?;
         let header = {
             let mut w = Vec::new();
-            w.extend(
-                [
-                    (json.len() >> 0) as u8,
-                    (json.len() >> 8) as u8,
-                    (json.len() >> 16) as u8,
-                    (json.len() >> 24) as u8,
-                ]
-                .iter()
-                .cloned(),
-            );
+            w.extend(&(json.len() as u32).to_le_bytes());
             w.extend(json.as_bytes().iter().cloned());
-            w.extend(
-                [
-                    (stat.len() >> 0) as u8,
-                    (stat.len() >> 8) as u8,
-                    (stat.len() >> 16) as u8,
-                    (stat.len() >> 24) as u8,
-                ]
-                .iter()
-                .cloned(),
-            );
+            w.extend(&(stat.len() as u32).to_le_bytes());
             w
         };
         let size = stat.len() as usize + header.len();
