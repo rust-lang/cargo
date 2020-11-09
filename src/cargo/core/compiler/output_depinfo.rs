@@ -32,7 +32,6 @@ use super::{fingerprint, Context, FileFlavor, Unit};
 use crate::core::compiler::fingerprint::{CurrentFileprint, Fileprint};
 use crate::util::paths;
 use crate::util::{internal, CargoResult};
-use filetime::FileTime;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
@@ -90,14 +89,11 @@ fn add_deps_for_unit(
             .get(unit.pkg.package_id(), metadata)
         {
             for path in &output.rerun_if_changed {
-                let mut file_print = CurrentFileprint::new(FileTime::zero());
                 deps.insert(Fileprint {
                     path: path.to_path_buf(),
-                    size: *file_print.size(path).unwrap(),
-                    hash: file_print
-                        .hash(path, fingerprint::FileHashAlgorithm::Md5)
-                        .unwrap()
-                        .clone(),
+                    size: CurrentFileprint::calc_size(path).unwrap(),
+                    hash: CurrentFileprint::calc_hash(path, fingerprint::FileHashAlgorithm::Md5)
+                        .unwrap(),
                 });
             }
         }

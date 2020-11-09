@@ -716,57 +716,66 @@ impl CurrentFileprint {
 
     pub(crate) fn size(&mut self, file: &Path) -> Option<&FileSize> {
         if self.size.is_none() {
-            self.size = std::fs::metadata(file).map(|metadata| metadata.len()).ok();
+            self.size = Self::calc_size(file);
         }
         self.size.as_ref()
     }
 
-    //TODO these need to not take self
+    pub(crate) fn calc_size(file: &Path) -> Option<FileSize> {
+        std::fs::metadata(file).map(|metadata| metadata.len()).ok()
+    }
+
     pub(crate) fn hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
         if self.hash.is_none() {
-            if let Ok(file) = fs::File::open(path) {
-                let mut reader: io::BufReader<fs::File> = io::BufReader::new(file);
-
-                let hash = match algo {
-                    FileHashAlgorithm::Md5 => {
-                        let mut hasher = Md5::new();
-                        let mut buffer = [0; 1024];
-                        loop {
-                            let count = reader.read(&mut buffer).ok()?;
-                            if count == 0 {
-                                break;
-                            }
-                            hasher.input(&buffer[..count]);
-                        }
-                        Some(to_hex(&hasher.result()))
-                    }
-                    FileHashAlgorithm::Sha1 => {
-                        let mut hasher = Sha1::new();
-                        let mut buffer = [0; 1024];
-                        loop {
-                            let count = reader.read(&mut buffer).ok()?;
-                            if count == 0 {
-                                break;
-                            }
-                            hasher.input(&buffer[..count]);
-                        }
-                        Some(to_hex(&hasher.result()))
-                    }
-                    FileHashAlgorithm::Svh => {
-                        if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
-                            get_svh_from_ar(reader)
-                        } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
-                            get_svh_from_rmeta_file(reader)
-                        } else {
-                            get_svh_from_object_file(reader)
-                        }
-                    }
-                };
-
-                self.hash = hash.map(|hash| FileHash { kind: algo, hash })
-            }
+            self.hash = Self::calc_hash(path, algo);
         }
         self.hash.as_ref()
+    }
+
+    // TODO: for direct calls to these can we cache them in the mtimes cache?
+    pub(crate) fn calc_hash(path: &Path, algo: FileHashAlgorithm) -> Option<FileHash> {
+        if let Ok(file) = fs::File::open(path) {
+            let mut reader: io::BufReader<fs::File> = io::BufReader::new(file);
+
+            let hash = match algo {
+                FileHashAlgorithm::Md5 => {
+                    let mut hasher = Md5::new();
+                    let mut buffer = [0; 1024];
+                    loop {
+                        let count = reader.read(&mut buffer).ok()?;
+                        if count == 0 {
+                            break;
+                        }
+                        hasher.input(&buffer[..count]);
+                    }
+                    Some(to_hex(&hasher.result()))
+                }
+                FileHashAlgorithm::Sha1 => {
+                    let mut hasher = Sha1::new();
+                    let mut buffer = [0; 1024];
+                    loop {
+                        let count = reader.read(&mut buffer).ok()?;
+                        if count == 0 {
+                            break;
+                        }
+                        hasher.input(&buffer[..count]);
+                    }
+                    Some(to_hex(&hasher.result()))
+                }
+                FileHashAlgorithm::Svh => {
+                    if path.extension() == Some(std::ffi::OsStr::new("rlib")) {
+                        get_svh_from_ar(reader)
+                    } else if path.extension() == Some(std::ffi::OsStr::new("rmeta")) {
+                        get_svh_from_rmeta_file(reader)
+                    } else {
+                        get_svh_from_object_file(reader)
+                    }
+                }
+            };
+
+            return hash.map(|hash| FileHash { kind: algo, hash });
+        }
+        None
     }
 }
 
@@ -1084,7 +1093,7 @@ impl Fingerprint {
         // afterwards based on the `mtime_on_use` flag. Afterwards we want the
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
-        for (output, file_size, hash) in self.outputs.iter() {
+        for (output, _file_size, _hash) in self.outputs.iter() {
             println!("HASH is this too many files? {:?}", &output);
             let mtime = match paths::mtime(output) {
                 Ok(mtime) => mtime,
@@ -1186,11 +1195,13 @@ impl Fingerprint {
                                 if path == dep_in {
                                     println!("HASH oh found it {:?} {:?}, {:?}", path, size, hash);
 
-                                    let mut f = CurrentFileprint::new(FileTime::zero());
                                     if size.is_some()
                                         && hash.is_some()
-                                        && f.size(dep_in) == size.as_ref()
-                                        && f.hash(dep_in, FileHashAlgorithm::Md5) == hash.as_ref()
+                                        && CurrentFileprint::calc_size(dep_in) == *size
+                                        && CurrentFileprint::calc_hash(
+                                            dep_in,
+                                            FileHashAlgorithm::Md5,
+                                        ) == *hash
                                     {
                                         println!("HASH oh hit {:?} {:?} {:?}", path, size, hash);
                                         stale = false;
@@ -1207,17 +1218,6 @@ impl Fingerprint {
                                 .unwrap()
                                 .contains("dep-run-build-script-build-script-build")
                             {
-                                //     // let dir_hash = dep_path
-                                //     //     .to_str()
-                                //     //     .unwrap()
-                                //     //     .split('-')
-                                //     //     .last()
-                                //     //     .unwrap_or_default();
-                                //     let mut d = dep_path.parent().unwrap().to_path_buf();
-                                //     d = d.join("dep-run-build-script-build-script-build");
-                                //     //                            d.set_extension("d");
-                                //     d
-                                // //join(format!("build_script_build-{}.d", dir_hash))
                                 let mut ddep_info = PathBuf::new();
                                 let x = dep.fingerprint.local.lock().unwrap();
                                 for local_dep in (*x).iter() {
@@ -1231,6 +1231,12 @@ impl Fingerprint {
                                 }
                                 target_root.join(&ddep_info).to_path_buf()
                             } else {
+                                //TODO: depinfo is sometimes package root relative apparently
+                                //let path = match ty {
+                                //     DepInfoPathType::PackageRootRelative => pkg_root.join(fileprint.path),
+                                //     // N.B. path might be absolute here in which case the join will have no effect
+                                //     DepInfoPathType::TargetRootRelative => target_root.join(fileprint.path),
+                                // };
                                 target_root.join(&dep_info)
                             };
 
@@ -1681,8 +1687,6 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
             .collect::<CargoResult<Vec<_>>>()?
     };
 
-    let mut output_fileprint = CurrentFileprint::new(FileTime::zero());
-
     Ok(Fingerprint {
         local: Mutex::new(local),
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
@@ -1690,10 +1694,8 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
         outputs: if overridden {
             Vec::new()
         } else {
-            let size = output_fileprint.size(&output).map(|c| *c);
-            let hash = output_fileprint
-                .hash(&output, FileHashAlgorithm::Md5)
-                .map(|c| c.clone());
+            let size = CurrentFileprint::calc_size(&output);
+            let hash = CurrentFileprint::calc_hash(&output, FileHashAlgorithm::Md5);
             vec![(output, size, hash)]
         },
 
@@ -1858,13 +1860,12 @@ fn local_fingerprints_deps(
             .rerun_if_changed
             .iter()
             .map(|p| {
-                let mut f = CurrentFileprint::new(FileTime::zero());
-                let hash = (*f.hash(p, FileHashAlgorithm::Md5).unwrap_or(&FileHash {
-                    kind: FileHashAlgorithm::Md5,
-                    hash: "".into(),
-                }))
-                .clone();
-                let size = *f.size(p).unwrap_or(&0);
+                let hash =
+                    CurrentFileprint::calc_hash(p, FileHashAlgorithm::Md5).unwrap_or(FileHash {
+                        kind: FileHashAlgorithm::Md5,
+                        hash: "".into(),
+                    });
+                let size = CurrentFileprint::calc_size(p).unwrap_or(0);
                 (
                     p.strip_prefix(pkg_root).unwrap_or(p).to_path_buf(),
                     size,
