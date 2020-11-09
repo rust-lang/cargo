@@ -350,21 +350,10 @@ use super::{BuildContext, Context, FileFlavor, Unit};
 // While source files can't currently be > 4Gb, bin files could be.
 pub type FileSize = u64;
 
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct FileHash {
     pub kind: FileHashAlgorithm,
     pub hash: String,
-}
-
-impl hash::Hash for FileHash {
-    fn hash<H>(&self, hasher: &mut H)
-    where
-        H: hash::Hasher,
-    {
-        for ch in self.hash.as_bytes() {
-            hasher.write_u8(*ch);
-        }
-    }
 }
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
