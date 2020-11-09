@@ -1093,7 +1093,6 @@ impl Fingerprint {
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
         for (output, _file_size, _hash) in self.outputs.iter() {
-            println!("HASH is this too many files? {:?}", &output);
             let mtime = match paths::mtime(output) {
                 Ok(mtime) => mtime,
 
@@ -1142,9 +1141,6 @@ impl Fingerprint {
                     })
                     .expect("failed to find rmeta")
             } else {
-                // for (dep, _dep2) in dep_mtimes {
-                //     debug!("HASH had to look at all the files {:?}", &dep);
-                // }
                 match dep_mtimes.iter().max_by_key(|kv| kv.1) {
                     Some(dep_mtime) => dep_mtime,
                     // If our dependencies is up to date and has no filesystem
@@ -1167,7 +1163,6 @@ impl Fingerprint {
 
             //todo: need to do raw .rmeta files
             if dep_mtime > max_mtime {
-                // } else { @todo here
                 for (dep_in, dep_mtime) in dep_mtimes {
                     if dep.only_requires_rmeta
                         && dep_in.extension().and_then(|s| s.to_str()) != Some("rmeta")
@@ -1188,12 +1183,9 @@ impl Fingerprint {
                                 .unwrap()
                                 .contains("dep-run-build-script-build-script-build")
                         {
-                            println!("HASH output file detected ");
                             let mut stale = true;
                             for (path, size, hash) in &dep.fingerprint.outputs {
                                 if path == dep_in {
-                                    println!("HASH oh found it {:?} {:?}, {:?}", path, size, hash);
-
                                     if size.is_some()
                                         && hash.is_some()
                                         && CurrentFileprint::calc_size(dep_in) == *size
@@ -1202,12 +1194,12 @@ impl Fingerprint {
                                             FileHashAlgorithm::Md5,
                                         ) == *hash
                                     {
-                                        println!("HASH oh hit {:?} {:?} {:?}", path, size, hash);
                                         stale = false;
                                         break;
                                     }
                                 }
                             }
+                            debug!("HASH miss {:?}", dep_in);
                             if stale {
                                 return Ok(());
                             }
@@ -1226,7 +1218,6 @@ impl Fingerprint {
                                         }
                                         _ => {}
                                     }
-                                    //     println!("{:#?}", local_dep.pa);
                                 }
                                 target_root.join(&ddep_info).to_path_buf()
                             } else {
@@ -1239,13 +1230,13 @@ impl Fingerprint {
                                 target_root.join(&dep_info)
                             };
 
-                            //let dep_info_file = target_root.join(dep_info);
                             println!("dep info file: {:?}", &dep_info_file);
 
                             let rustc_dep_info = dep_info_cache.get(&dep_info_file);
                             if rustc_dep_info.is_none() {
                                 let dep_result =
                                     parse_dep_info(pkg_root, target_root, &dep_info_file);
+
                                 match dep_result {
                                     Ok(dep) => {
                                         if let Some(dep) = dep {
@@ -1259,8 +1250,6 @@ impl Fingerprint {
                                         println!("HASH error loading dep info file {}", err)
                                     }
                                 }
-                            } else {
-                                println!("HAS CACHE hit on dep info file");
                             }
 
                             let mut stale = None;
@@ -1297,15 +1286,8 @@ impl Fingerprint {
                                         let current_hash =
                                             file_facts.file_hash(dep_in, reference.hash.kind);
 
-                                        //println!("HASH got hash file!!!! {:?}", hash);
                                         if let Some(file_facts_hash) = current_hash {
-                                            if reference.hash == *file_facts_hash {
-                                                println!(
-                                                    "HAS hit - same hash! {:?}",
-                                                    file_facts.hash
-                                                );
-                                            } else {
-                                                // println!("HASH s {:?}", file_facts.hash);
+                                            if reference.hash != *file_facts_hash {
                                                 stale = Some(format!(
                                                     "Hash {:?} doesn't match expected: {:?}",
                                                     &file_facts_hash, &reference.hash
@@ -1325,11 +1307,6 @@ impl Fingerprint {
                                 stale = Some("HASH dep info file could not be found".into());
                             }
                             if stale.is_some() {
-                                let x = dep.fingerprint.local.lock().unwrap();
-                                for local_dep in (*x).iter() {
-                                    println!("{:#?}", local_dep);
-                                }
-                                info!("HASH dep fingerprint {:#?}", &dep.fingerprint.path,);
                                 info!(
                                     "HASHMISS dependency on `{}` is newer than we are {} > {} {:?} {:?}",
                                     dep.name, dep_mtime, max_mtime, pkg_root, dep_path
@@ -1338,12 +1315,8 @@ impl Fingerprint {
                                 return Ok(());
                             }
                         }
-                    } else {
-                        //   debug!("HASH dep skipped as up to date");
                     }
-                    //                        debug!("HASH had to look at all the files {:?}", &dep);
                 }
-                // what's our own output's dependency hash - what are we expecting it to be?
             }
         }
 
