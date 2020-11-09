@@ -869,16 +869,12 @@ impl<'cfg> DrainState<'cfg> {
 
             impl Drop for FinishOnDrop<'_> {
                 fn drop(&mut self) {
-                    if let Some(result) = self.result.take() {
-                        self.messages
-                            .push(Message::Finish(self.id, Artifact::All, result));
-                    } else {
-                        self.messages.push(Message::Finish(
-                            self.id,
-                            Artifact::All,
-                            Err(format_err!("worker panicked")),
-                        ));
-                    }
+                    let result = self
+                        .result
+                        .take()
+                        .unwrap_or_else(|| Err(format_err!("worker panicked")));
+                    self.messages
+                        .push(Message::Finish(self.id, Artifact::All, result));
                 }
             }
         };
