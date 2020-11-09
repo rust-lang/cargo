@@ -837,10 +837,9 @@ impl<'cfg> DrainState<'cfg> {
             let mut sender = FinishOnDrop {
                 messages: &messages,
                 id,
-                ok: false,
+                result: None,
             };
-            let result = job.run(&state);
-            sender.ok = true;
+            sender.result = Some(job.run(&state));
 
             // If the `rmeta_required` wasn't consumed but it was set
             // previously, then we either have:
@@ -854,11 +853,9 @@ impl<'cfg> DrainState<'cfg> {
             // we'll just naturally abort the compilation operation but for 1
             // we need to make sure that the metadata is flagged as produced so
             // send a synthetic message here.
-            if state.rmeta_required.get() && result.is_ok() {
+            if state.rmeta_required.get() && sender.result.as_ref().unwrap().is_ok() {
                 messages.push(Message::Finish(id, Artifact::Metadata, Ok(())));
             }
-
-            messages.push(Message::Finish(id, Artifact::All, result));
 
             // Use a helper struct with a `Drop` implementation to guarantee
             // that a `Finish` message is sent even if our job panics. We
@@ -867,12 +864,15 @@ impl<'cfg> DrainState<'cfg> {
             struct FinishOnDrop<'a> {
                 messages: &'a Queue<Message>,
                 id: JobId,
-                ok: bool,
+                result: Option<CargoResult<()>>,
             }
 
             impl Drop for FinishOnDrop<'_> {
                 fn drop(&mut self) {
-                    if !self.ok {
+                    if let Some(result) = self.result.take() {
+                        self.messages
+                            .push(Message::Finish(self.id, Artifact::All, result));
+                    } else {
                         self.messages.push(Message::Finish(
                             self.id,
                             Artifact::All,
