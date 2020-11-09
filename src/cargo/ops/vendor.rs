@@ -33,7 +33,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
     if config.shell().verbosity() != Verbosity::Quiet {
         crate::drop_eprint!(
             config,
-            "To use vendored sources, add this to your .cargo/config for this project:\n\n"
+            "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
         );
         crate::drop_print!(config, "{}", &toml::to_string(&vendor_config).unwrap());
     }

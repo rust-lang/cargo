@@ -272,6 +272,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         let source_id = self.source_id;
         let config = self.config;
         let namespaced_features = self.config.cli_unstable().namespaced_features;
+        let weak_dep_features = self.config.cli_unstable().weak_dep_features;
 
         // First up actually parse what summaries we have available. If Cargo
         // has run previously this will parse a Cargo-specific cache file rather
@@ -299,7 +300,11 @@ impl<'cfg> RegistryIndex<'cfg> {
                     }
                 },
             )
-            .filter(move |is| is.summary.unstable_gate(namespaced_features).is_ok()))
+            .filter(move |is| {
+                is.summary
+                    .unstable_gate(namespaced_features, weak_dep_features)
+                    .is_ok()
+            }))
     }
 
     fn load_summaries(

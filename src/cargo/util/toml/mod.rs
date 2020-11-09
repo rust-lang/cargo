@@ -1197,7 +1197,8 @@ impl TomlManifest {
             me.features.as_ref().unwrap_or(&empty_features),
             project.links.as_deref(),
         )?;
-        summary.unstable_gate(config.cli_unstable().namespaced_features)?;
+        let unstable = config.cli_unstable();
+        summary.unstable_gate(unstable.namespaced_features, unstable.weak_dep_features)?;
 
         let metadata = ManifestMetadata {
             description: project.description.clone(),

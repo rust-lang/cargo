@@ -8,7 +8,7 @@ by using `rustup`. Installing Rust using `rustup` will also install `cargo`.
 On Linux and macOS systems, this is done as follows:
 
 ```console
-$ curl https://sh.rustup.rs -sSf | sh
+curl https://sh.rustup.rs -sSf | sh
 ```
 
 It will download a script, and start the installation. If everything goes well,

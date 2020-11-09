@@ -906,3 +906,26 @@ error[E0308]: mismatched types
 
 error: aborting due to previous error
 ```
+
+### Weak dependency features
+* Tracking Issue: [#8832](https://github.com/rust-lang/cargo/issues/8832)
+
+The `-Z weak-dep-features` command-line options enables the ability to use
+`dep_name?/feat_name` syntax in the `[features]` table. The `?` indicates that
+the optional dependency `dep_name` will not be automatically enabled. The
+feature `feat_name` will only be added if something else enables the
+`dep_name` dependency.
+
+Example:
+
+```toml
+[dependencies]
+serde = { version = "1.0.117", optional = true, default-features = false }
+
+[features]
+std = ["serde?/std"]
+```
+
+In this example, the `std` feature enables the `std` feature on the `serde`
+dependency. However, unlike the normal `serde/std` syntax, it will not enable
+the optional dependency `serde` unless something else has included it.
