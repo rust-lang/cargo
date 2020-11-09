@@ -2493,14 +2493,7 @@ impl EncodedDepInfo {
         }
 
         fn write_u64(dst: &mut Vec<u8>, val: u64) {
-            dst.push(val as u8);
-            dst.push((val >> 8) as u8);
-            dst.push((val >> 16) as u8);
-            dst.push((val >> 24) as u8);
-            dst.push((val >> 32) as u8);
-            dst.push((val >> 40) as u8);
-            dst.push((val >> 48) as u8);
-            dst.push((val >> 56) as u8);
+            dst.extend_from_slice(&u64::to_le_bytes(val));
         }
     }
 }
