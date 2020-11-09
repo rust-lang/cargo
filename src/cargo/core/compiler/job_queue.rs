@@ -53,7 +53,6 @@ use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io;
 use std::marker;
-use std::mem;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -838,9 +837,9 @@ impl<'cfg> DrainState<'cfg> {
             let mut sender = FinishOnDrop {
                 messages: &messages,
                 id,
-                result: Err(format_err!("worker panicked")),
+                result: None,
             };
-            sender.result = job.run(&state);
+            sender.result = Some(job.run(&state));
 
             // If the `rmeta_required` wasn't consumed but it was set
             // previously, then we either have:
@@ -854,7 +853,7 @@ impl<'cfg> DrainState<'cfg> {
             // we'll just naturally abort the compilation operation but for 1
             // we need to make sure that the metadata is flagged as produced so
             // send a synthetic message here.
-            if state.rmeta_required.get() && sender.result.is_ok() {
+            if state.rmeta_required.get() && sender.result.as_ref().unwrap().is_ok() {
                 messages.push(Message::Finish(id, Artifact::Metadata, Ok(())));
             }
 
@@ -865,14 +864,17 @@ impl<'cfg> DrainState<'cfg> {
             struct FinishOnDrop<'a> {
                 messages: &'a Queue<Message>,
                 id: JobId,
-                result: CargoResult<()>,
+                result: Option<CargoResult<()>>,
             }
 
             impl Drop for FinishOnDrop<'_> {
                 fn drop(&mut self) {
-                    let msg = mem::replace(&mut self.result, Ok(()));
+                    let result = self
+                        .result
+                        .take()
+                        .unwrap_or_else(|| Err(format_err!("worker panicked")));
                     self.messages
-                        .push(Message::Finish(self.id, Artifact::All, msg));
+                        .push(Message::Finish(self.id, Artifact::All, result));
                 }
             }
         };
