@@ -63,12 +63,21 @@ fn add_deps_for_unit(
     if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
         let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
-        //TODO: can we use the dep info cache here?
-        if let Some(paths) =
-            fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
-        {
-            for path in paths.files {
-                deps.insert(path);
+
+        let mut dep_info = cx.dep_info_cache.get(&dep_info_loc);
+        if dep_info.is_none() {
+            if let Some(parsed_dep_info) =
+                fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
+            {
+                cx.dep_info_cache
+                    .insert(dep_info_loc.clone(), parsed_dep_info);
+                dep_info = cx.dep_info_cache.get(&dep_info_loc);
+            }
+        }
+
+        if let Some(paths) = dep_info {
+            for path in &paths.files {
+                deps.insert(path.clone());
             }
         } else {
             debug!(
