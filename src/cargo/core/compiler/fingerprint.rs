@@ -350,11 +350,21 @@ use super::{BuildContext, Context, FileFlavor, Unit};
 // While source files can't currently be > 4Gb, bin files could be.
 pub type FileSize = u64;
 
-//TODO: implement hash yourself
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FileHash {
     pub kind: FileHashAlgorithm,
     pub hash: String,
+}
+
+impl hash::Hash for FileHash {
+    fn hash<H>(&self, hasher: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        for ch in self.hash.as_bytes() {
+            hasher.write_u8(*ch);
+        }
+    }
 }
 
 /// Determines if a `unit` is up-to-date, and if not prepares necessary work to
@@ -725,7 +735,7 @@ impl CurrentFileprint {
         std::fs::metadata(file).map(|metadata| metadata.len()).ok()
     }
 
-    pub(crate) fn hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
+    pub(crate) fn file_hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
         if self.hash.is_none() {
             self.hash = Self::calc_hash(path, algo);
         }
@@ -1296,7 +1306,7 @@ impl Fingerprint {
                                         }
 
                                         let current_hash =
-                                            file_facts.hash(dep_in, reference.hash.kind);
+                                            file_facts.file_hash(dep_in, reference.hash.kind);
 
                                         //println!("HASH got hash file!!!! {:?}", hash);
                                         if let Some(file_facts_hash) = current_hash {
@@ -2081,7 +2091,7 @@ fn find_stale_file(
                 if *current_size == *reference_size {
                     // Same size but mtime is different. Probably there's no change...
                     // compute hash and compare to prevent change cascade...
-                    if let Some(current_hash) = current.hash(path, reference_hash.kind) {
+                    if let Some(current_hash) = current.file_hash(path, reference_hash.kind) {
                         // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
                         // but not sure it's worth the additional complexity.
                         if *reference_hash == *current_hash {
