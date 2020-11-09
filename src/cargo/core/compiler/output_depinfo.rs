@@ -153,13 +153,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous
-                        .files
-                        .iter()
-                        //  .map(|(path, _size, _hash)| path)
-                        .eq(deps.iter())
-                    //.map(|f| (Path::new(p), size, hash)))
-                    {
+                    if previous.files == deps {
                         continue;
                     }
                 }

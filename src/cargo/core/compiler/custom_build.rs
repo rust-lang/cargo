@@ -344,7 +344,6 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         // And now finally, run the build command itself!
         state.running(&cmd);
         let timestamp = paths::set_invocation_time(&script_run_dir)?;
-        println!("HASH EXEC {:?}", &script_run_dir);
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut warnings_in_case_of_panic = Vec::new();
         let output = cmd
