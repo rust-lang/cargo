@@ -24,7 +24,7 @@
 
 use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use log::debug;
 
@@ -132,12 +132,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
     };
     let deps = deps
         .iter()
-        .map(|f| {
-            render_filename(&f.path, basedir).map(|path| Fileprint {
-                path: PathBuf::from(path),
-                ..(*f).clone()
-            })
-        })
+        .map(|f| render_filename(&f.path, basedir).map(|rendered| (rendered, f)))
         .collect::<CargoResult<Vec<_>>>()?;
 
     for output in cx
@@ -153,33 +148,32 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous.files == deps {
+                    if previous.files.iter().eq(deps.iter().map(|(_, dep)| *dep)) {
                         continue;
                     }
                 }
 
                 // Otherwise write it all out
-                debug!(
-                    "HASH: detected change in dependencies file - rewriting: {:?}",
-                    output_path
-                );
                 let mut outfile = BufWriter::new(paths::create(output_path)?);
                 write!(outfile, "{}:", target_fn)?;
-                for Fileprint { path: dep, .. } in &deps {
-                    write!(outfile, " {}", dep.to_string_lossy())?;
+                for (rendered_dep, _) in &deps {
+                    write!(outfile, " {}", rendered_dep)?;
                 }
                 writeln!(outfile)?;
 
                 // Emit a fake target for each input file to the compilation. This
                 // prevents `make` from spitting out an error if a file is later
                 // deleted. For more info see #28735
-                for Fileprint {
-                    path: dep,
-                    size,
-                    hash,
-                } in &deps
+                for (
+                    rendered_dep,
+                    Fileprint {
+                        path: _dep,
+                        size,
+                        hash,
+                    },
+                ) in &deps
                 {
-                    writeln!(outfile, "{}:", dep.to_string_lossy())?;
+                    writeln!(outfile, "{}:", rendered_dep)?;
                     writeln!(outfile, "# size:{} {}:{}", size, hash.kind, hash.hash)?;
                 }
 
