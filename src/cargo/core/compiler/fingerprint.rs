@@ -779,11 +779,23 @@ impl CurrentFileprint {
 
 enum StaleItem {
     MissingFile(PathBuf),
-    ChangedFile {
+    ChangedFileTime {
         reference: PathBuf,
         reference_mtime: FileTime,
         stale: PathBuf,
         stale_mtime: FileTime,
+    },
+    ChangedFileSize {
+        reference: PathBuf,
+        reference_size: FileSize,
+        stale: PathBuf,
+        stale_size: Option<FileSize>,
+    },
+    ChangedFileHash {
+        reference: PathBuf,
+        reference_hash: FileHash,
+        stale: PathBuf,
+        stale_hash: Option<FileHash>,
     },
     ChangedEnv {
         var: String,
@@ -1232,7 +1244,7 @@ impl Fingerprint {
                                             dep_info_cache.insert(dep_info_file.clone(), dep);
                                         } else {
                                             warn!("Dep info file could not be parsed");
-                                    }
+                                        }
                                     }
                                     Err(err) => warn!("Error parsing dep info file {}", err),
                                 }
@@ -1245,29 +1257,29 @@ impl Fingerprint {
                                     .iter()
                                     .find(|reference| *dep_in == reference.path);
                                 if let Some(reference) = ref_file {
-                                        let mut file_facts = mtime_cache.get_mut(dep_in);
-                                        if file_facts.is_none() {
-                                            mtime_cache.insert(
-                                                dep_in.clone(),
-                                                CurrentFileprint::new(*dep_mtime),
-                                            );
-                                            file_facts = mtime_cache.get_mut(dep_in);
-                                        }
-                                        let file_facts = file_facts.unwrap();
+                                    let mut file_facts = mtime_cache.get_mut(dep_in);
+                                    if file_facts.is_none() {
+                                        mtime_cache.insert(
+                                            dep_in.clone(),
+                                            CurrentFileprint::new(*dep_mtime),
+                                        );
+                                        file_facts = mtime_cache.get_mut(dep_in);
+                                    }
+                                    let file_facts = file_facts.unwrap();
 
-                                        if let Some(current_size) = file_facts.size(dep_in) {
-                                            if *current_size != reference.size {
-                                                stale = Some(format!(
-                                                    "File sizes don't match {:?} expected: {}",
-                                                    current_size, reference.size
-                                                ));
-                                            }
-                                        } else {
+                                    if let Some(current_size) = file_facts.size(dep_in) {
+                                        if *current_size != reference.size {
                                             stale = Some(format!(
-                                                "File sizes was not obtainable expected: {}",
-                                                reference.size
+                                                "File sizes don't match {:?} expected: {}",
+                                                current_size, reference.size
                                             ));
                                         }
+                                    } else {
+                                        stale = Some(format!(
+                                            "File sizes was not obtainable expected: {}",
+                                            reference.size
+                                        ));
+                                    }
 
                                     if stale.is_none() {
                                         let current_hash =
@@ -1282,9 +1294,9 @@ impl Fingerprint {
                                             }
                                         } else {
                                             stale = Some(format!(
-                                                "No hash found in the dep info file to compare to {:?}",
-                                                &reference.hash
-                                            ));
+                                            "No hash found in the dep info file to compare to {:?}",
+                                            &reference.hash
+                                        ));
                                         }
                                     }
                                 }
@@ -1436,15 +1448,35 @@ impl StaleItem {
             StaleItem::MissingFile(path) => {
                 info!("stale: missing {:?}", path);
             }
-            StaleItem::ChangedFile {
+            StaleItem::ChangedFileTime {
                 reference,
                 reference_mtime,
                 stale,
                 stale_mtime,
             } => {
-                info!("stale: changed {:?}", stale);
+                info!("stale: time changed {:?}", stale);
                 info!("          (vs) {:?}", reference);
                 info!("               {:?} != {:?}", reference_mtime, stale_mtime);
+            }
+            StaleItem::ChangedFileSize {
+                reference,
+                reference_size,
+                stale,
+                stale_size,
+            } => {
+                info!("stale: size changed {:?}", stale);
+                info!("          (vs) {:?}", reference);
+                info!("               {:?} != {:?}", reference_size, stale_size);
+            }
+            StaleItem::ChangedFileHash {
+                reference,
+                reference_hash,
+                stale,
+                stale_hash,
+            } => {
+                info!("stale: hash changed {:?}", stale);
+                info!("          (vs) {:?}", reference);
+                info!("               {:?} != {:?}", reference_hash, stale_hash);
             }
             StaleItem::ChangedEnv {
                 var,
@@ -2033,30 +2065,36 @@ fn find_stale_file(
         }
 
         if config.cli_unstable().hash_tracking {
-            if let Some(current_size) = current.size(path) {
-                if *current_size == *reference_size {
-                    // Same size but mtime is different. Probably there's no change...
-                    // compute hash and compare to prevent change cascade...
-                    if let Some(current_hash) = current.file_hash(path, reference_hash.kind) {
-                        // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
-                        // but not sure it's worth the additional complexity.
-                        if *reference_hash == *current_hash {
-                            debug!(
-                                "HAS: Hash hit: mtime mismatch but contents match for {:?}",
-                                &path
-                            );
-                            continue;
-                        }
-                        debug!(
-                            "HASH: Hash miss for {:?}: {} (ref) != {}",
-                            &path, reference_hash.hash, current_hash.hash
-                        );
-                    }
-                }
+            let current_size = current.size(path);
+            if current_size != Some(reference_size) {
+                //if *current_size != *reference_size {
+                return Some(StaleItem::ChangedFileSize {
+                    reference: reference.to_path_buf(),
+                    reference_size: *reference_size,
+                    stale: path.to_path_buf(),
+                    stale_size: current_size.map(|s| *s),
+                });
             }
+
+            // Same size but mtime is different. Probably there's no change...
+            // compute hash and compare to prevent change cascade...
+            let current_hash = current.file_hash(path, reference_hash.kind);
+            if current_hash != Some(reference_hash) {
+                // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
+                // but not sure it's worth the additional complexity.
+                return Some(StaleItem::ChangedFileHash {
+                    reference: reference.to_path_buf(),
+                    reference_hash: reference_hash.clone(),
+                    stale: path.to_path_buf(),
+                    stale_hash: current_hash.map(|h| h.clone()),
+                });
+            }
+
+            // File has expected content
+            continue;
         };
 
-        return Some(StaleItem::ChangedFile {
+        return Some(StaleItem::ChangedFileTime {
             reference: reference.to_path_buf(),
             reference_mtime,
             stale: path.to_path_buf(),
