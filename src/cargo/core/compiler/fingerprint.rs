@@ -312,7 +312,7 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
-use std::collections::hash_map::HashMap;
+use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 use std::env;
 use std::fs;
@@ -2384,12 +2384,7 @@ impl EncodedDepInfo {
         fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
             let ret = bytes.get(..4)?;
             *bytes = &bytes[4..];
-            Some(
-                ((ret[0] as usize) << 0)
-                    | ((ret[1] as usize) << 8)
-                    | ((ret[2] as usize) << 16)
-                    | ((ret[3] as usize) << 24),
-            )
+            Some(u32::from_le_bytes(ret.try_into().unwrap()) as usize)
         }
 
         fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
@@ -2448,10 +2443,7 @@ impl EncodedDepInfo {
         }
 
         fn write_usize(dst: &mut Vec<u8>, val: usize) {
-            dst.push(val as u8);
-            dst.push((val >> 8) as u8);
-            dst.push((val >> 16) as u8);
-            dst.push((val >> 24) as u8);
+            dst.extend(&u32::to_le_bytes(val as u32));
         }
 
         fn write_u64(dst: &mut Vec<u8>, val: u64) {

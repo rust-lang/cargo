@@ -45,10 +45,8 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
     fn read_usize(bytes: &mut &[u8]) -> usize {
         let ret = &bytes[..4];
         *bytes = &bytes[4..];
-        (ret[0] as usize)
-            | ((ret[1] as usize) << 8)
-            | ((ret[2] as usize) << 16)
-            | ((ret[3] as usize) << 24)
+
+        u32::from_le_bytes(ret.try_into().unwrap()) as usize
     }
 
     fn read_u8(bytes: &mut &[u8]) -> u8 {
@@ -58,7 +56,7 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
     }
 
     fn read_bytes<'a>(bytes: &mut &'a [u8]) -> &'a [u8] {
-        let n = read_usize(bytes) as usize;
+        let n = read_usize(bytes);
         let ret = &bytes[..n];
         *bytes = &bytes[n..];
         ret
