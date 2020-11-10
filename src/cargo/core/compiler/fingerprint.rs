@@ -312,7 +312,7 @@
 //! See the `A-rebuild-detection` flag on the issue tracker for more:
 //! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
 
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::HashMap;
 use std::convert::TryInto;
 use std::env;
 use std::fs;
@@ -1192,7 +1192,7 @@ impl Fingerprint {
                                 true
                             };
 
-                            debug!("build.rs output file hash doesn't match {:?}", dep_in);
+                            debug!("build.rs output doesn't match previous hash {:?}", dep_in);
                             if stale {
                                 return Ok(());
                             }
@@ -1203,13 +1203,9 @@ impl Fingerprint {
                                 .contains("dep-run-build-script-build-script-build")
                             {
                                 let mut ddep_info = PathBuf::new();
-                                let x = dep.fingerprint.local.lock().unwrap();
-                                for local_dep in (*x).iter() {
-                                    match local_dep {
-                                        LocalFingerprint::CheckDepInfo { dep_info } => {
-                                            ddep_info = dep_info.to_path_buf()
-                                        }
-                                        _ => {}
+                                for local_dep in (*dep.fingerprint.local.lock().unwrap()).iter() {
+                                    if let LocalFingerprint::CheckDepInfo { dep_info } = local_dep {
+                                        ddep_info = dep_info.to_path_buf();
                                     }
                                 }
                                 target_root.join(&ddep_info).to_path_buf()
