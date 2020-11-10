@@ -1781,8 +1781,6 @@ fn build_script_local_fingerprints(
                     // (like for a path dependency). Those list of files would
                     // be stored here rather than the the mtime of them.
                     Some(f) => {
-                        println!("HASH HASH OLD MODE DETECTED OLD MODE THIS IS SLOW?");
-
                         let s = f()?;
                         debug!(
                             "old local fingerprints deps {:?} precalculated={:?}",
@@ -1812,7 +1810,6 @@ fn build_script_override_fingerprint(
 ) -> Option<LocalFingerprint> {
     // Build script output is only populated at this stage when it is
     // overridden.
-    println!("HASH build script overriden!!!!!");
     let build_script_outputs = cx.build_script_outputs.lock().unwrap();
     let metadata = cx.get_run_build_script_metadata(unit);
     // Returns None if it is not overridden.
@@ -1980,14 +1977,14 @@ pub fn parse_dep_info(
     let data = match paths::read_bytes(dep_info) {
         Ok(data) => data,
         Err(err) => {
-            println!("HASH Couldn't read bytes from dep info file: {}", err);
+            warn!("could not read bytes from dep info file: {}", err);
             return Ok(None);
         }
     };
     let info = match EncodedDepInfo::parse(&data) {
         Some(info) => info,
         None => {
-            println!("HASH failed to parse cargo's dep-info at {:?}", dep_info);
+            warn!("failed to parse dep-info file at {:?}", dep_info);
             return Ok(None);
         }
     };
@@ -2164,14 +2161,13 @@ fn get_svh_from_rmeta_file<R: Read>(mut reader: R) -> Option<Svh> {
 
 fn parse_svh(data: &[u8]) -> Option<Svh> {
     let rust_version_len_pos = 12;
-    let data = &mut &data[rust_version_len_pos..];
+    let data = &data[rust_version_len_pos..];
     let rust_version_len = data[0] as usize;
-    let data = &mut &data[1..];
-    //println!("rust version='{}'", String::from_utf8_lossy(&data[..rust_version_len]));
+    let data = &data[1..];
 
     let data = &data[rust_version_len..];
     let svh_len = data[0] as usize;
-    let data = &mut &data[1..];
+    let data = &data[1..];
 
     Some(String::from_utf8_lossy(&data[..svh_len]).to_string())
 }
