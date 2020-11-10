@@ -695,7 +695,6 @@ enum LocalFingerprint {
 }
 
 /// Cache of file properties that we know to be true.
-/// @todo currentfileprint
 pub struct CurrentFileprint {
     pub(crate) mtime: FileTime,
     /// This will be None if not yet looked up.
@@ -1153,6 +1152,7 @@ impl Fingerprint {
                 pkg_root, dep_path, dep_mtime
             );
 
+            let rmeta_ext = std::ffi::OsStr::new("rmeta");
             // If the dependency is newer than our own output then it was
             // recompiled previously. We transitively become stale ourselves in
             // that case, so bail out.
@@ -1160,13 +1160,9 @@ impl Fingerprint {
             // Note that this comparison should probably be `>=`, not `>`,   but
             // for a discussion of why it's `>` see the discussion about #5918
             // below in `find_stale`.
-
-            //todo: need to do raw .rmeta files
             if dep_mtime > max_mtime {
                 for (dep_in, dep_mtime) in dep_mtimes {
-                    if dep.only_requires_rmeta
-                        && dep_in.extension().and_then(|s| s.to_str()) != Some("rmeta")
-                    {
+                    if dep.only_requires_rmeta && dep_in.extension() != Some(&rmeta_ext) {
                         continue;
                     }
 
@@ -1175,7 +1171,6 @@ impl Fingerprint {
                             .strip_prefix(&target_root)
                             .unwrap()
                             .to_path_buf();
-                        println!("HASH dep info file {:?}", &dep_info);
 
                         if dep_path.to_str().unwrap().ends_with("output")
                             && dep_info
@@ -1183,23 +1178,21 @@ impl Fingerprint {
                                 .unwrap()
                                 .contains("dep-run-build-script-build-script-build")
                         {
-                            let mut stale = true;
-                            for (path, size, hash) in &dep.fingerprint.outputs {
-                                if path == dep_in {
-                                    if size.is_some()
-                                        && hash.is_some()
-                                        && CurrentFileprint::calc_size(dep_in) == *size
-                                        && CurrentFileprint::calc_hash(
-                                            dep_in,
-                                            FileHashAlgorithm::Md5,
-                                        ) == *hash
-                                    {
-                                        stale = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            debug!("HASH miss {:?}", dep_in);
+                            let stale = if let Some((_, Some(size), Some(hash))) = &dep
+                                .fingerprint
+                                .outputs
+                                .iter()
+                                .find(|(path, _, _)| path == dep_in)
+                            {
+                                CurrentFileprint::calc_size(dep_in) != Some(*size)
+                                    || CurrentFileprint::calc_hash(dep_in, FileHashAlgorithm::Md5)
+                                        .as_ref()
+                                        != Some(hash)
+                            } else {
+                                true
+                            };
+
+                            debug!("build.rs output file hash doesn't match {:?}", dep_in);
                             if stale {
                                 return Ok(());
                             }
