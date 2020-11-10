@@ -162,14 +162,28 @@ impl std::fmt::Display for JobId {
     }
 }
 
+/// A `JobState` is constructed by `JobQueue::run` and passed to `Job::run`. It includes everything
+/// necessary to communicate between the main thread and the execution of the job.
+///
+/// The job may execute on either a dedicated thread or the main thread. If the job executes on the
+/// main thread, the `output` field must be set to prevent a deadlock.
 pub struct JobState<'a> {
     /// Channel back to the main thread to coordinate messages and such.
+    ///
+    /// When the `output` field is `Some`, care must be taken to avoid calling `push_bounded` on
+    /// the message queue to prevent a deadlock.
     messages: Arc<Queue<Message>>,
 
     /// Normally output is sent to the job queue with backpressure. When the job is fresh
     /// however we need to immediately display the output to prevent a deadlock as the
     /// output messages are processed on the same thread as they are sent from. `output`
     /// defines where to output in this case.
+    ///
+    /// Currently the `Shell` inside `Config` is wrapped in a `RefCell` and thus can't be passed
+    /// between threads. This means that it isn't possible for multiple output messages to be
+    /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
+    /// interleaving is still prevented as the lock would be held for the whole printing of an
+    /// output message.
     output: Option<&'a Config>,
 
     /// The job id that this state is associated with, used when sending
