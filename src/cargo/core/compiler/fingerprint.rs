@@ -325,7 +325,7 @@ use std::time::SystemTime;
 
 use anyhow::{bail, format_err};
 use filetime::FileTime;
-use log::{debug, info};
+use log::{debug, info, warn};
 use md5::{Digest, Md5};
 use object::Object;
 use serde::de;
@@ -1219,7 +1219,7 @@ impl Fingerprint {
                                 target_root.join(&dep_info)
                             };
 
-                            println!("dep info file: {:?}", &dep_info_file);
+                            debug!("reading dep info file: {:?}", &dep_info_file);
 
                             let rustc_dep_info = dep_info_cache.get(&dep_info_file);
                             if rustc_dep_info.is_none() {
@@ -1229,23 +1229,22 @@ impl Fingerprint {
                                 match dep_result {
                                     Ok(dep) => {
                                         if let Some(dep) = dep {
-                                            println!("HASH dep info file parsed");
                                             dep_info_cache.insert(dep_info_file.clone(), dep);
                                         } else {
-                                            println!("HASH dep info file could not be parsed");
-                                        }
+                                            warn!("Dep info file could not be parsed");
                                     }
-                                    Err(err) => {
-                                        println!("HASH error loading dep info file {}", err)
                                     }
+                                    Err(err) => warn!("Error parsing dep info file {}", err),
                                 }
                             }
 
                             let mut stale = None;
                             if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
-                                for reference in &rustc_dep_info.files {
-                                    //println!("HASH dep info ref {:?}", &reference);
-                                    if *dep_in == reference.path {
+                                let ref_file = &rustc_dep_info
+                                    .files
+                                    .iter()
+                                    .find(|reference| *dep_in == reference.path);
+                                if let Some(reference) = ref_file {
                                         let mut file_facts = mtime_cache.get_mut(dep_in);
                                         if file_facts.is_none() {
                                             mtime_cache.insert(
@@ -1262,16 +1261,15 @@ impl Fingerprint {
                                                     "File sizes don't match {:?} expected: {}",
                                                     current_size, reference.size
                                                 ));
-                                                break;
                                             }
                                         } else {
                                             stale = Some(format!(
                                                 "File sizes was not obtainable expected: {}",
                                                 reference.size
                                             ));
-                                            break;
                                         }
 
+                                    if stale.is_none() {
                                         let current_hash =
                                             file_facts.file_hash(dep_in, reference.hash.kind);
 
@@ -1281,14 +1279,12 @@ impl Fingerprint {
                                                     "Hash {:?} doesn't match expected: {:?}",
                                                     &file_facts_hash, &reference.hash
                                                 ));
-                                                break;
                                             }
                                         } else {
                                             stale = Some(format!(
                                                 "No hash found in the dep info file to compare to {:?}",
                                                 &reference.hash
                                             ));
-                                            break;
                                         }
                                     }
                                 }
@@ -1318,7 +1314,6 @@ impl Fingerprint {
                 local.find_stale_item(config, mtime_cache, dep_info_cache, pkg_root, target_root)?
             {
                 item.log();
-                println!("HASHMISS we are failing here");
                 return Ok(());
             }
         }
