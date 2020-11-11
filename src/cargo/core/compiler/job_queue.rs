@@ -162,9 +162,29 @@ impl std::fmt::Display for JobId {
     }
 }
 
+/// A `JobState` is constructed by `JobQueue::run` and passed to `Job::run`. It includes everything
+/// necessary to communicate between the main thread and the execution of the job.
+///
+/// The job may execute on either a dedicated thread or the main thread. If the job executes on the
+/// main thread, the `output` field must be set to prevent a deadlock.
 pub struct JobState<'a> {
     /// Channel back to the main thread to coordinate messages and such.
+    ///
+    /// When the `output` field is `Some`, care must be taken to avoid calling `push_bounded` on
+    /// the message queue to prevent a deadlock.
     messages: Arc<Queue<Message>>,
+
+    /// Normally output is sent to the job queue with backpressure. When the job is fresh
+    /// however we need to immediately display the output to prevent a deadlock as the
+    /// output messages are processed on the same thread as they are sent from. `output`
+    /// defines where to output in this case.
+    ///
+    /// Currently the `Shell` inside `Config` is wrapped in a `RefCell` and thus can't be passed
+    /// between threads. This means that it isn't possible for multiple output messages to be
+    /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
+    /// interleaving is still prevented as the lock would be held for the whole printing of an
+    /// output message.
+    output: Option<&'a Config>,
 
     /// The job id that this state is associated with, used when sending
     /// messages back to the main thread.
@@ -231,12 +251,24 @@ impl<'a> JobState<'a> {
             .push(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
-    pub fn stdout(&self, stdout: String) {
-        self.messages.push_bounded(Message::Stdout(stdout));
+    pub fn stdout(&self, stdout: String) -> CargoResult<()> {
+        if let Some(config) = self.output {
+            writeln!(config.shell().out(), "{}", stdout)?;
+        } else {
+            self.messages.push_bounded(Message::Stdout(stdout));
+        }
+        Ok(())
     }
 
-    pub fn stderr(&self, stderr: String) {
-        self.messages.push_bounded(Message::Stderr(stderr));
+    pub fn stderr(&self, stderr: String) -> CargoResult<()> {
+        if let Some(config) = self.output {
+            let mut shell = config.shell();
+            shell.print_ansi(stderr.as_bytes())?;
+            shell.err().write_all(b"\n")?;
+        } else {
+            self.messages.push_bounded(Message::Stderr(stderr));
+        }
+        Ok(())
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file
@@ -826,16 +858,9 @@ impl<'cfg> DrainState<'cfg> {
             self.note_working_on(cx.bcx.config, unit, fresh)?;
         }
 
-        let doit = move || {
-            let state = JobState {
-                id,
-                messages: messages.clone(),
-                rmeta_required: Cell::new(rmeta_required),
-                _marker: marker::PhantomData,
-            };
-
+        let doit = move |state: JobState<'_>| {
             let mut sender = FinishOnDrop {
-                messages: &messages,
+                messages: &state.messages,
                 id,
                 result: None,
             };
@@ -854,7 +879,9 @@ impl<'cfg> DrainState<'cfg> {
             // we need to make sure that the metadata is flagged as produced so
             // send a synthetic message here.
             if state.rmeta_required.get() && sender.result.as_ref().unwrap().is_ok() {
-                messages.push(Message::Finish(id, Artifact::Metadata, Ok(())));
+                state
+                    .messages
+                    .push(Message::Finish(state.id, Artifact::Metadata, Ok(())));
             }
 
             // Use a helper struct with a `Drop` implementation to guarantee
@@ -880,10 +907,31 @@ impl<'cfg> DrainState<'cfg> {
         };
 
         match fresh {
-            Freshness::Fresh => self.timings.add_fresh(),
-            Freshness::Dirty => self.timings.add_dirty(),
+            Freshness::Fresh => {
+                self.timings.add_fresh();
+                // Running a fresh job on the same thread is often much faster than spawning a new
+                // thread to run the job.
+                doit(JobState {
+                    id,
+                    messages: messages.clone(),
+                    output: Some(cx.bcx.config),
+                    rmeta_required: Cell::new(rmeta_required),
+                    _marker: marker::PhantomData,
+                });
+            }
+            Freshness::Dirty => {
+                self.timings.add_dirty();
+                scope.spawn(move |_| {
+                    doit(JobState {
+                        id,
+                        messages: messages.clone(),
+                        output: None,
+                        rmeta_required: Cell::new(rmeta_required),
+                        _marker: marker::PhantomData,
+                    })
+                });
+            }
         }
-        scope.spawn(move |_| doit());
 
         Ok(())
     }
