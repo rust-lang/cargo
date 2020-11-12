@@ -267,17 +267,18 @@ fn transmit(
         return Ok(());
     }
 
-    let summary = pkg.summary();
-    let string_features = summary
-        .features()
-        .iter()
-        .map(|(feat, values)| {
-            (
-                feat.to_string(),
-                values.iter().map(|fv| fv.to_string()).collect(),
-            )
-        })
-        .collect::<BTreeMap<String, Vec<String>>>();
+    let string_features = match manifest.original().features() {
+        Some(features) => features
+            .iter()
+            .map(|(feat, values)| {
+                (
+                    feat.to_string(),
+                    values.iter().map(|fv| fv.to_string()).collect(),
+                )
+            })
+            .collect::<BTreeMap<String, Vec<String>>>(),
+        None => BTreeMap::new(),
+    };
 
     let publish = registry.publish(
         &NewCrate {
