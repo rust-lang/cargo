@@ -76,7 +76,7 @@ The usage of features is subject to a few rules:
   individual features.
 * Feature groups are not allowed to cyclically depend on one another.
 * Dev-dependencies cannot be optional.
-* Features groups can only reference optional dependencies.
+* Feature groups can only reference optional dependencies.
 * When a feature is selected, Cargo will call `rustc` with `--cfg
   feature="${feature_name}"`. If a feature group is included, it and all of its
   individual features will be included. This can be tested in code via
