@@ -1096,6 +1096,7 @@ impl Fingerprint {
         dep_info_loc: PathBuf,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
+
         let mut mtimes = HashMap::new();
 
         // Get the `mtime` of all outputs. Optionally update their mtime
@@ -1133,6 +1134,7 @@ impl Fingerprint {
             pkg_root, max_path, max_mtime
         );
 
+        let rmeta_ext = std::ffi::OsStr::new("rmeta");
         for dep in self.deps.iter() {
             let dep_mtimes = match &dep.fingerprint.fs_status {
                 FsStatus::UpToDate { mtimes } => mtimes,
@@ -1163,7 +1165,6 @@ impl Fingerprint {
                 pkg_root, dep_path, dep_mtime
             );
 
-            let rmeta_ext = std::ffi::OsStr::new("rmeta");
             // If the dependency is newer than our own output then it was
             // recompiled previously. We transitively become stale ourselves in
             // that case, so bail out.
@@ -1172,154 +1173,169 @@ impl Fingerprint {
             // for a discussion of why it's `>` see the discussion about #5918
             // below in `find_stale`.
             if dep_mtime > max_mtime {
-                for (dep_in, dep_mtime) in dep_mtimes {
-                    if dep.only_requires_rmeta && dep_in.extension() != Some(&rmeta_ext) {
-                        continue;
-                    }
+                if config.cli_unstable().hash_tracking {
+                    for (dep_in, dep_mtime) in dep_mtimes {
+                        if dep.only_requires_rmeta && dep_in.extension() != Some(&rmeta_ext) {
+                            continue;
+                        }
 
-                    if dep_mtime > max_mtime {
-                        let dep_info = dep_info_loc
-                            .strip_prefix(&target_root)
-                            .unwrap()
-                            .to_path_buf();
-
-                        if dep_path.to_str().unwrap().ends_with("output")
-                            && dep_info
-                                .to_str()
+                        if dep_mtime > max_mtime {
+                            let dep_info = dep_info_loc
+                                .strip_prefix(&target_root)
                                 .unwrap()
-                                .contains("dep-run-build-script-build-script-build")
-                        {
-                            let stale = if let Some(Fileprint {
-                                size: Some(size),
-                                hash: Some(hash),
-                                ..
-                            }) = &dep
-                                .fingerprint
-                                .outputs
-                                .iter()
-                                .find(|Fileprint { path, .. }| path == dep_in)
+                                .to_path_buf();
+
+                            if dep_path.to_str().unwrap().ends_with("output")
+                                && dep_info
+                                    .to_str()
+                                    .unwrap()
+                                    .contains("dep-run-build-script-build-script-build")
                             {
-                                CurrentFileprint::calc_size(dep_in) != Some(*size)
-                                    || CurrentFileprint::calc_hash(dep_in, FileHashAlgorithm::Md5)
-                                        .as_ref()
-                                        != Some(hash)
-                            } else {
-                                true
-                            };
-
-                            debug!("build.rs output doesn't match previous hash {:?}", dep_in);
-                            if stale {
-                                return Ok(());
-                            }
-                        } else {
-                            let dep_info_file = if dep_info
-                                .to_str()
-                                .unwrap()
-                                .contains("dep-run-build-script-build-script-build")
-                            {
-                                let mut ddep_info = PathBuf::new();
-                                for local_dep in (*dep.fingerprint.local.lock().unwrap()).iter() {
-                                    if let LocalFingerprint::CheckDepInfo { dep_info } = local_dep {
-                                        ddep_info = dep_info.to_path_buf();
-                                    }
-                                }
-                                target_root.join(&ddep_info).to_path_buf()
-                            } else {
-                                //TODO: depinfo is sometimes package root relative apparently
-                                //let path = match ty {
-                                //     DepInfoPathType::PackageRootRelative => pkg_root.join(fileprint.path),
-                                //     // N.B. path might be absolute here in which case the join will have no effect
-                                //     DepInfoPathType::TargetRootRelative => target_root.join(fileprint.path),
-                                // };
-                                target_root.join(&dep_info)
-                            };
-
-                            debug!("reading dep info file: {:?}", &dep_info_file);
-
-                            let rustc_dep_info = dep_info_cache.get(&dep_info_file);
-                            if rustc_dep_info.is_none() {
-                                let dep_result =
-                                    parse_dep_info(pkg_root, target_root, &dep_info_file);
-
-                                match dep_result {
-                                    Ok(dep) => {
-                                        if let Some(dep) = dep {
-                                            dep_info_cache.insert(dep_info_file.clone(), dep);
-                                        } else {
-                                            warn!("Dep info file could not be parsed");
-                                        }
-                                    }
-                                    Err(err) => warn!("Error parsing dep info file {}", err),
-                                }
-                            }
-
-                            let mut stale = None;
-                            if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
-                                let ref_file = &rustc_dep_info
-                                    .files
+                                let stale = if let Some(Fileprint {
+                                    size: Some(size),
+                                    hash: Some(hash),
+                                    ..
+                                }) = &dep
+                                    .fingerprint
+                                    .outputs
                                     .iter()
-                                    .find(|reference| *dep_in == reference.path);
-                                if let Some(reference) = ref_file {
-                                    let mut file_facts = mtime_cache.get_mut(dep_in);
-                                    if file_facts.is_none() {
-                                        mtime_cache.insert(
-                                            dep_in.clone(),
-                                            CurrentFileprint::new(*dep_mtime),
-                                        );
-                                        file_facts = mtime_cache.get_mut(dep_in);
-                                    }
-                                    let file_facts = file_facts.unwrap();
+                                    .find(|Fileprint { path, .. }| path == dep_in)
+                                {
+                                    CurrentFileprint::calc_size(dep_in) != Some(*size)
+                                        || CurrentFileprint::calc_hash(
+                                            dep_in,
+                                            FileHashAlgorithm::Md5,
+                                        )
+                                        .as_ref()
+                                            != Some(hash)
+                                } else {
+                                    true
+                                };
 
-                                    if let Some(current_size) = file_facts.size(dep_in) {
-                                        if Some(*current_size) != reference.size {
-                                            stale = Some(format!(
-                                                "File sizes don't match {:?} expected: {:?}",
-                                                current_size, reference.size
-                                            ));
+                                debug!("build.rs output doesn't match previous hash {:?}", dep_in);
+                                if stale {
+                                    return Ok(());
+                                }
+                            } else {
+                                let dep_info_file = if dep_info
+                                    .to_str()
+                                    .unwrap()
+                                    .contains("dep-run-build-script-build-script-build")
+                                {
+                                    let mut ddep_info = PathBuf::new();
+                                    for local_dep in (*dep.fingerprint.local.lock().unwrap()).iter()
+                                    {
+                                        if let LocalFingerprint::CheckDepInfo { dep_info } =
+                                            local_dep
+                                        {
+                                            ddep_info = dep_info.to_path_buf();
                                         }
-                                    } else {
-                                        stale = Some(format!(
-                                            "File sizes was not obtainable expected: {:?}",
-                                            reference.size
-                                        ));
                                     }
+                                    target_root.join(&ddep_info).to_path_buf()
+                                } else {
+                                    //TODO: depinfo is sometimes package root relative apparently
+                                    //let path = match ty {
+                                    //     DepInfoPathType::PackageRootRelative => pkg_root.join(fileprint.path),
+                                    //     // N.B. path might be absolute here in which case the join will have no effect
+                                    //     DepInfoPathType::TargetRootRelative => target_root.join(fileprint.path),
+                                    // };
+                                    target_root.join(&dep_info)
+                                };
 
-                                    if stale.is_none() {
-                                        if let Some(reference_hash) = &reference.hash {
-                                            let current_hash =
-                                                file_facts.file_hash(dep_in, reference_hash.kind);
+                                debug!("reading dep info file: {:?}", &dep_info_file);
 
-                                            if let Some(file_facts_hash) = current_hash {
-                                                if reference_hash != file_facts_hash {
-                                                    stale = Some(format!(
-                                                        "Hash {:?} doesn't match expected: {:?}",
-                                                        &file_facts_hash, &reference_hash
-                                                    ));
-                                                }
+                                let rustc_dep_info = dep_info_cache.get(&dep_info_file);
+                                if rustc_dep_info.is_none() {
+                                    let dep_result =
+                                        parse_dep_info(pkg_root, target_root, &dep_info_file);
+
+                                    match dep_result {
+                                        Ok(dep) => {
+                                            if let Some(dep) = dep {
+                                                dep_info_cache.insert(dep_info_file.clone(), dep);
                                             } else {
+                                                warn!("Dep info file could not be parsed");
+                                            }
+                                        }
+                                        Err(err) => warn!("Error parsing dep info file {}", err),
+                                    }
+                                }
+
+                                let mut stale = None;
+                                if let Some(rustc_dep_info) = dep_info_cache.get(&dep_info_file) {
+                                    let ref_file = &rustc_dep_info
+                                        .files
+                                        .iter()
+                                        .find(|reference| *dep_in == reference.path);
+                                    if let Some(reference) = ref_file {
+                                        let mut file_facts = mtime_cache.get_mut(dep_in);
+                                        if file_facts.is_none() {
+                                            mtime_cache.insert(
+                                                dep_in.clone(),
+                                                CurrentFileprint::new(*dep_mtime),
+                                            );
+                                            file_facts = mtime_cache.get_mut(dep_in);
+                                        }
+                                        let file_facts = file_facts.unwrap();
+
+                                        if let Some(current_size) = file_facts.size(dep_in) {
+                                            if Some(*current_size) != reference.size {
                                                 stale = Some(format!(
-                                                    "No hash found in the dep info file to compare to {:?}",
-                                                    &reference.hash
+                                                    "File sizes don't match {:?} expected: {:?}",
+                                                    current_size, reference.size
                                                 ));
                                             }
                                         } else {
-                                            stale = Some("No reference hash to compare to".into());
+                                            stale = Some(format!(
+                                                "File sizes was not obtainable expected: {:?}",
+                                                reference.size
+                                            ));
+                                        }
+
+                                        if stale.is_none() {
+                                            if let Some(reference_hash) = &reference.hash {
+                                                let current_hash = file_facts
+                                                    .file_hash(dep_in, reference_hash.kind);
+
+                                                if let Some(file_facts_hash) = current_hash {
+                                                    if reference_hash != file_facts_hash {
+                                                        stale = Some(format!(
+                                                        "Hash {:?} doesn't match expected: {:?}",
+                                                        &file_facts_hash, &reference_hash
+                                                    ));
+                                                    }
+                                                } else {
+                                                    stale = Some(format!(
+                                                    "No hash found in the dep info file to compare to {:?}",
+                                                    &reference.hash
+                                                ));
+                                                }
+                                            } else {
+                                                stale =
+                                                    Some("No reference hash to compare to".into());
+                                            }
                                         }
                                     }
+                                } else {
+                                    stale = Some("HASH dep info file could not be found".into());
                                 }
-                            } else {
-                                stale = Some("HASH dep info file could not be found".into());
-                            }
-                            if stale.is_some() {
-                                info!(
-                                    "HASHMISS dependency on `{}` is newer than we are {} > {} {:?} {:?}",
-                                    dep.name, dep_mtime, max_mtime, pkg_root, dep_path
-                                );
-                                info!("HASHMISS also {:?}", stale);
-                                return Ok(());
+                                if stale.is_some() {
+                                    info!(
+                                        "dependency on `{}` is newer than we are {} > {} {:?} {:?}",
+                                        dep.name, dep_mtime, max_mtime, pkg_root, dep_path
+                                    );
+                                    info!("HASHMISS also {:?}", stale);
+                                    return Ok(());
+                                }
                             }
                         }
                     }
+                } else {
+                    info!(
+                        "dependency on `{}` is newer than we are {} > {} {:?}",
+                        dep.name, dep_mtime, max_mtime, pkg_root
+                    );
+                    return Ok(());
                 }
             }
         }
