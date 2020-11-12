@@ -32,8 +32,11 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
             let _size = u64::from_le_bytes(*eight_bytes);
             *dep_info = &dep_info[8..];
 
-            str::from_utf8(read_bytes(dep_info)).unwrap(); //hash
-            read_u8(dep_info); //hashkind
+            let hash_kind = read_u8(dep_info); //hashkind
+
+            if hash_kind != 0 {
+                str::from_utf8(read_bytes(dep_info)).unwrap(); //hash
+            }
             (
                 read_u8(dep_info),
                 str::from_utf8(read_bytes(dep_info)).unwrap(),
