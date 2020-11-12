@@ -1,7 +1,7 @@
 //! Tests for namespaced features.
 
-use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::{project, publish};
 
 #[cargo_test]
 fn gated() {
@@ -996,4 +996,113 @@ bar v1.0.0
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn publish_no_implicit() {
+    // Does not include implicit features or dep: syntax on publish.
+    Package::new("opt-dep1", "1.0.0").publish();
+    Package::new("opt-dep2", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                description = "foo"
+                license = "MIT"
+                homepage = "https://example.com/"
+
+                [dependencies]
+                opt-dep1 = { version = "1.0", optional = true }
+                opt-dep2 = { version = "1.0", optional = true }
+
+                [features]
+                feat = ["opt-dep1"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --token sekrit")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[UPLOADING] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "opt-dep1",
+              "optional": true,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "opt-dep2",
+              "optional": true,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {
+            "feat": ["opt-dep1"]
+          },
+          "homepage": "https://example.com/",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.1.0"
+          }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"[..]
+[package]
+name = "foo"
+version = "0.1.0"
+description = "foo"
+homepage = "https://example.com/"
+license = "MIT"
+[dependencies.opt-dep1]
+version = "1.0"
+optional = true
+
+[dependencies.opt-dep2]
+version = "1.0"
+optional = true
+
+[features]
+feat = ["opt-dep1"]
+"#,
+        )],
+    );
 }
