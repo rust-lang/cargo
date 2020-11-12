@@ -36,19 +36,6 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 }
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
-    if opts.workspace {
-        if opts.aggressive {
-            anyhow::bail!("cannot specify aggressive for workspace updates");
-        }
-        if opts.precise.is_some() {
-            anyhow::bail!("cannot specify precise for workspace updates");
-        }
-
-        ws.emit_warnings()?;
-        let (_packages, _resolve) = ops::resolve_ws(ws)?;
-        return Ok(());
-    }
-
     if opts.aggressive && opts.precise.is_some() {
         anyhow::bail!("cannot specify both aggressive and precise simultaneously")
     }
@@ -92,8 +79,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {
-        to_avoid.extend(previous_resolve.iter());
-        to_avoid.extend(previous_resolve.unused_patches());
+        if !opts.workspace {
+            to_avoid.extend(previous_resolve.iter());
+            to_avoid.extend(previous_resolve.unused_patches());
+        }
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update.iter() {

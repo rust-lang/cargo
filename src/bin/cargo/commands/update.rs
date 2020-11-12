@@ -7,7 +7,7 @@ pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
-        .arg(opt("workspace", "Only update the workspace pakcages").short("w"))
+        .arg(opt("workspace", "Only update the workspace packages").short("w"))
         .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",

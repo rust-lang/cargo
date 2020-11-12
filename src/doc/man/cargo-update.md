@@ -49,7 +49,6 @@ Attempt to update only packages defined in the workspace. Other packages
 are updated only if they don't already exist in the lockfile. This
 option is useful for updating `Cargo.lock` after you've changed version
 numbers in `Cargo.toml`.
-Cannot be used with `--precise` or `--aggressive`.
 {{/option}}
 
 {{#option "`--dry-run`" }}

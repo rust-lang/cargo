@@ -48,8 +48,7 @@ revision (such as a SHA hash or tag).</dd>
 <dd class="option-desc">Attempt to update only packages defined in the workspace. Other packages
 are updated only if they don't already exist in the lockfile. This
 option is useful for updating <code>Cargo.lock</code> after you've changed version
-numbers in <code>Cargo.toml</code>.
-Cannot be used with <code>--precise</code> or <code>--aggressive</code>.</dd>
+numbers in <code>Cargo.toml</code>.</dd>
 
 
 <dt class="option-term" id="option-cargo-update---dry-run"><a class="option-anchor" href="#option-cargo-update---dry-run"></a><code>--dry-run</code></dt>
