@@ -100,9 +100,8 @@ fn add_deps_for_unit(
             for path in &output.rerun_if_changed {
                 deps.insert(Fileprint {
                     path: path.to_path_buf(),
-                    size: CurrentFileprint::calc_size(path).unwrap(),
-                    hash: CurrentFileprint::calc_hash(path, fingerprint::FileHashAlgorithm::Md5)
-                        .unwrap(),
+                    size: CurrentFileprint::calc_size(path),
+                    hash: CurrentFileprint::calc_hash(path, fingerprint::FileHashAlgorithm::Md5),
                 });
             }
         }
@@ -183,7 +182,9 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 ) in &deps
                 {
                     writeln!(outfile, "{}:", rendered_dep)?;
-                    writeln!(outfile, "# size:{} {}:{}", size, hash.kind, hash.hash)?;
+                    if let (Some(size), Some(hash)) = (size, hash) {
+                        writeln!(outfile, "# size:{} {}:{}", size, hash.kind, hash.hash)?;
+                    }
                 }
 
             // dep-info generation failed, so delete output file. This will

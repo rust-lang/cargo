@@ -684,7 +684,7 @@ enum LocalFingerprint {
     /// `output`, otherwise we need to recompile.
     RerunIfChanged {
         output: PathBuf,
-        paths: Vec<(PathBuf, FileSize, FileHash)>,
+        paths: Vec<Fileprint>,
     },
 
     /// This represents a single `rerun-if-env-changed` annotation printed by a
@@ -862,10 +862,10 @@ impl LocalFingerprint {
             LocalFingerprint::RerunIfChanged { output, paths } => {
                 let c: Vec<_> = paths
                     .iter()
-                    .map(|(p, size, hash)| Fileprint {
-                        path: pkg_root.join(p),
-                        size: *size,
-                        hash: hash.clone(),
+                    .map(|f| {
+                        let mut f = f.clone();
+                        f.path = pkg_root.join(f.path);
+                        f
                     })
                     .collect();
                 Ok(find_stale_file(
@@ -1268,35 +1268,39 @@ impl Fingerprint {
                                     let file_facts = file_facts.unwrap();
 
                                     if let Some(current_size) = file_facts.size(dep_in) {
-                                        if *current_size != reference.size {
+                                        if Some(*current_size) != reference.size {
                                             stale = Some(format!(
-                                                "File sizes don't match {:?} expected: {}",
+                                                "File sizes don't match {:?} expected: {:?}",
                                                 current_size, reference.size
                                             ));
                                         }
                                     } else {
                                         stale = Some(format!(
-                                            "File sizes was not obtainable expected: {}",
+                                            "File sizes was not obtainable expected: {:?}",
                                             reference.size
                                         ));
                                     }
 
                                     if stale.is_none() {
-                                        let current_hash =
-                                            file_facts.file_hash(dep_in, reference.hash.kind);
+                                        if let Some(reference_hash) = &reference.hash {
+                                            let current_hash =
+                                                file_facts.file_hash(dep_in, reference_hash.kind);
 
-                                        if let Some(file_facts_hash) = current_hash {
-                                            if reference.hash != *file_facts_hash {
+                                            if let Some(file_facts_hash) = current_hash {
+                                                if reference_hash != file_facts_hash {
+                                                    stale = Some(format!(
+                                                        "Hash {:?} doesn't match expected: {:?}",
+                                                        &file_facts_hash, &reference_hash
+                                                    ));
+                                                }
+                                            } else {
                                                 stale = Some(format!(
-                                                    "Hash {:?} doesn't match expected: {:?}",
-                                                    &file_facts_hash, &reference.hash
+                                                    "No hash found in the dep info file to compare to {:?}",
+                                                    &reference.hash
                                                 ));
                                             }
                                         } else {
-                                            stale = Some(format!(
-                                            "No hash found in the dep info file to compare to {:?}",
-                                            &reference.hash
-                                        ));
+                                            stale = Some("No reference hash to compare to".into());
                                         }
                                     }
                                 }
@@ -1844,18 +1848,10 @@ fn local_fingerprints_deps(
         let paths = deps
             .rerun_if_changed
             .iter()
-            .map(|p| {
-                let hash =
-                    CurrentFileprint::calc_hash(p, FileHashAlgorithm::Md5).unwrap_or(FileHash {
-                        kind: FileHashAlgorithm::Md5,
-                        hash: "".into(),
-                    });
-                let size = CurrentFileprint::calc_size(p).unwrap_or(0);
-                (
-                    p.strip_prefix(pkg_root).unwrap_or(p).to_path_buf(),
-                    size,
-                    hash,
-                )
+            .map(|p| Fileprint {
+                path: p.strip_prefix(pkg_root).unwrap_or(p).to_path_buf(),
+                size: CurrentFileprint::calc_size(p),
+                hash: CurrentFileprint::calc_hash(p, FileHashAlgorithm::Md5),
             })
             .collect();
         local.push(LocalFingerprint::RerunIfChanged { output, paths });
@@ -2062,33 +2058,35 @@ fn find_stale_file(
         }
 
         if config.cli_unstable().hash_tracking {
-            let current_size = current.size(path);
-            if current_size != Some(reference_size) {
-                //if *current_size != *reference_size {
-                return Some(StaleItem::ChangedFileSize {
-                    reference: reference.to_path_buf(),
-                    reference_size: *reference_size,
-                    stale: path.to_path_buf(),
-                    stale_size: current_size.map(|s| *s),
-                });
-            }
-
-            // Same size but mtime is different. Probably there's no change...
-            // compute hash and compare to prevent change cascade...
-            let current_hash = current.file_hash(path, reference_hash.kind);
-            if current_hash != Some(reference_hash) {
-                // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
-                // but not sure it's worth the additional complexity.
-                return Some(StaleItem::ChangedFileHash {
-                    reference: reference.to_path_buf(),
-                    reference_hash: reference_hash.clone(),
-                    stale: path.to_path_buf(),
-                    stale_hash: current_hash.map(|h| h.clone()),
-                });
-            }
-
             // File has expected content
-            continue;
+            if let (Some(reference_size), Some(reference_hash)) = (reference_size, reference_hash) {
+                let current_size = current.size(path);
+                if current_size != Some(reference_size) {
+                    //if *current_size != *reference_size {
+                    return Some(StaleItem::ChangedFileSize {
+                        reference: reference.to_path_buf(),
+                        reference_size: *reference_size,
+                        stale: path.to_path_buf(),
+                        stale_size: current_size.map(|s| *s),
+                    });
+                }
+
+                // Same size but mtime is different. Probably there's no change...
+                // compute hash and compare to prevent change cascade...
+                let current_hash = current.file_hash(path, reference_hash.kind);
+                if current_hash != Some(reference_hash) {
+                    // FIXME? We could fail a little faster by seeing if any size discrepencies on _any_ file before checking hashes.
+                    // but not sure it's worth the additional complexity.
+                    return Some(StaleItem::ChangedFileHash {
+                        reference: reference.to_path_buf(),
+                        reference_hash: reference_hash.clone(),
+                        stale: path.to_path_buf(),
+                        stale_hash: current_hash.map(|h| h.clone()),
+                    });
+                }
+
+                continue;
+            }
         };
 
         return Some(StaleItem::ChangedFileTime {
@@ -2329,11 +2327,11 @@ pub struct RustcDepInfo {
 }
 
 /// A file location with identifying properties: size and hash.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug, Hash, Serialize, Deserialize)]
 pub struct Fileprint {
     pub path: PathBuf, //TODO is this field needed on here?
-    pub size: FileSize,
-    pub hash: FileHash,
+    pub size: Option<FileSize>,
+    pub hash: Option<FileHash>,
 }
 
 // Same as `RustcDepInfo` except avoids absolute paths as much as possible to
@@ -2356,20 +2354,27 @@ impl EncodedDepInfo {
             //FIXME: backward compatibility!!!
             let eight_bytes: &[u8; 8] = (bytes[0..8]).try_into().ok()?;
             let size = u64::from_le_bytes(*eight_bytes) as FileSize;
+            let size = if size == 0 { None } else { Some(size) };
             *bytes = &bytes[8..];
-
-            //debug!("read size as {}", size);
-            let hash_buf = read_bytes(bytes)?;
-
-            let hash = String::from_utf8(hash_buf.to_vec()).unwrap();
 
             //debug!("read hash as {}", hash);
             let kind = match read_u8(bytes)? {
-                0 => FileHashAlgorithm::Md5,
-                1 => FileHashAlgorithm::Sha1,
-                2 => FileHashAlgorithm::Svh,
+                0 => None,
+                1 => Some(FileHashAlgorithm::Md5),
+                2 => Some(FileHashAlgorithm::Sha1),
+                3 => Some(FileHashAlgorithm::Svh),
                 _ => return None,
             };
+
+            //debug!("read size as {}", size);
+            let hash = if let Some(kind) = kind {
+                let hash_buf = read_bytes(bytes)?;
+                let hash = String::from_utf8(hash_buf.to_vec()).unwrap();
+                Some(FileHash { kind, hash })
+            } else {
+                None
+            };
+
             let ty = match read_u8(bytes)? {
                 0 => DepInfoPathType::PackageRootRelative,
                 1 => DepInfoPathType::TargetRootRelative,
@@ -2380,7 +2385,7 @@ impl EncodedDepInfo {
                 Fileprint {
                     path: util::bytes2path(bytes).ok()?,
                     size,
-                    hash: FileHash { kind, hash },
+                    hash,
                 },
                 ty,
             ));
@@ -2425,19 +2430,24 @@ impl EncodedDepInfo {
         write_usize(dst, self.files.len());
         for (Fileprint { path, size, hash }, ty) in self.files.iter() {
             //debug!("writing depinfo size as {} ", *size as usize);
-            write_u64(dst, *size);
-            //debug!("writing depinfo hash as {} ", hash.hash.len());
-            write_bytes(dst, hash.hash.as_bytes());
+            write_u64(dst, size.unwrap_or_default());
             //write(dst, hash.hash);
-            match hash.kind {
-                FileHashAlgorithm::Md5 => dst.push(0),
-                FileHashAlgorithm::Sha1 => dst.push(1),
-                FileHashAlgorithm::Svh => dst.push(2),
+            if let Some(hash) = hash {
+                match hash.kind {
+                    FileHashAlgorithm::Md5 => dst.push(1),
+                    FileHashAlgorithm::Sha1 => dst.push(2),
+                    FileHashAlgorithm::Svh => dst.push(3),
+                }
+                //debug!("writing depinfo hash as {} ", hash.hash.len());
+                write_bytes(dst, hash.hash.as_bytes());
+            } else {
+                dst.push(0); //None
             }
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::TargetRootRelative => dst.push(1),
             }
+
             write_bytes(dst, util::path2bytes(path)?);
         }
 
@@ -2498,15 +2508,15 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 let file = &prev[0..prev.len() - 1];
                 for i in 0..ret.files.len() {
                     if ret.files[i].path.to_string_lossy() == file {
-                        let size_and_hash: Vec<_> = line["# size:".len()..].split(' ').collect();
-                        ret.files[i].size = size_and_hash[0].parse()?;
+                        let size_and_hash: Vec<_> = line["# size:".len()..].split(' ').collect(); //TODO: find/rfind
+                        ret.files[i].size = size_and_hash[0].parse().ok();
                         let kind_hash: Vec<_> = size_and_hash[1].split(":").collect();
                         let hash = kind_hash[1];
-                        ret.files[i].hash = FileHash {
+                        ret.files[i].hash = Some(FileHash {
                             kind: FileHashAlgorithm::from_str(kind_hash[0])
                                 .expect("unknown hashing algo"),
                             hash: hash.to_string(),
-                        };
+                        });
                         break;
                     }
                 }
@@ -2530,11 +2540,8 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 }
                 ret.files.push(Fileprint {
                     path: file.into(),
-                    size: 0,
-                    hash: FileHash {
-                        kind: FileHashAlgorithm::Md5,
-                        hash: String::new(), //TO DO
-                    },
+                    size: None,
+                    hash: None,
                 });
             }
         } else {
