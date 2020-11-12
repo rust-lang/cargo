@@ -7,9 +7,10 @@ use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
-use crate::util::errors::CargoResult;
+use crate::util::errors::{CargoResult, CargoResultExt};
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 
 /// Parse the `-Zbuild-std` flag.
@@ -38,28 +39,48 @@ pub fn resolve_std<'cfg>(
     crates: &[String],
 ) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
     let src_path = detect_sysroot_src_path(target_data)?;
-    let to_patch = [
-        "rustc-std-workspace-core",
-        "rustc-std-workspace-alloc",
-        "rustc-std-workspace-std",
-    ];
-    let patches = to_patch
-        .iter()
-        .map(|&name| {
-            let source_path = SourceId::for_path(&src_path.join("library").join(name))?;
-            let dep = Dependency::parse_no_deprecated(name, None, source_path)?;
+
+    // Special std packages should be pulled from `library/` and should be
+    // prefixed with `rustc-std-workspace-` in certain places.
+    let libs_prefix = "library/";
+    let special_std_prefix = "rustc-std-workspace-";
+    let libs_path = src_path.join(libs_prefix);
+
+    // Crates in rust-src to build. libtest is in some sense the "root" package
+    // of std, as nothing else depends on it, so it must be explicitly added.
+    let mut members = vec![format!("{}test", libs_prefix)];
+
+    // If rust-src contains a "vendor" directory, then patch in all the crates it contains.
+    let vendor_path = src_path.join("vendor");
+    let vendor_dir = fs::read_dir(&vendor_path)
+        .chain_err(|| format!("could not read vendor path {}", vendor_path.display()))?;
+    let patches = vendor_dir
+        .into_iter()
+        .map(|entry| {
+            let entry = entry?;
+            let name = entry
+                .file_name()
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("package name wasn't utf8"))?;
+
+            // Remap the rustc-std-workspace crates to the actual rust-src libraries
+            let path = if let Some(real_name) = name.strip_prefix(special_std_prefix) {
+                // Record this crate as something to build in the workspace
+                members.push(format!("{}{}", libs_prefix, real_name));
+                libs_path.join(&name)
+            } else {
+                entry.path()
+            };
+            let source_path = SourceId::for_path(&path)?;
+            let dep = Dependency::parse_no_deprecated(&name, None, source_path)?;
             Ok(dep)
         })
-        .collect::<CargoResult<Vec<_>>>()?;
+        .collect::<CargoResult<Vec<_>>>()
+        .chain_err(|| "failed to generate vendor patches")?;
+
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
     let mut patch = HashMap::new();
     patch.insert(crates_io_url, patches);
-    let members = vec![
-        String::from("library/std"),
-        String::from("library/core"),
-        String::from("library/alloc"),
-        String::from("library/test"),
-    ];
     let ws_config = crate::core::WorkspaceConfig::Root(crate::core::WorkspaceRootConfig::new(
         &src_path,
         &Some(members),
