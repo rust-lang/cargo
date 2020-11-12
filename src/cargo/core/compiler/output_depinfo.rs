@@ -29,7 +29,7 @@ use std::path::Path;
 use log::debug;
 
 use super::{fingerprint, Context, FileFlavor, Unit};
-use crate::core::compiler::fingerprint::{CurrentFileprint, Fileprint};
+use crate::core::compiler::fingerprint::Fileprint;
 use crate::util::paths;
 use crate::util::{internal, CargoResult};
 
@@ -98,11 +98,7 @@ fn add_deps_for_unit(
             .get(unit.pkg.package_id(), metadata)
         {
             for path in &output.rerun_if_changed {
-                deps.insert(Fileprint {
-                    path: path.to_path_buf(),
-                    size: CurrentFileprint::calc_size(path),
-                    hash: CurrentFileprint::calc_hash(path, fingerprint::FileHashAlgorithm::Md5),
-                });
+                deps.insert(Fileprint::from_md5(path.to_path_buf()));
             }
         }
     }

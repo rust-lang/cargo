@@ -568,7 +568,7 @@ pub struct Fingerprint {
     /// fingerprint is out of date if this is missing, or if previous
     /// fingerprints output files are regenerated and look newer than this one.
     #[serde(skip)]
-    outputs: Vec<(PathBuf, Option<FileSize>, Option<FileHash>)>,
+    outputs: Vec<Fileprint>,
 }
 
 /// Indication of the status on the filesystem for a particular unit.
@@ -730,7 +730,6 @@ impl CurrentFileprint {
         self.hash.as_ref()
     }
 
-    // TODO: for direct calls to these can we cache them in the mtimes cache?
     pub(crate) fn calc_hash(path: &Path, algo: FileHashAlgorithm) -> Option<FileHash> {
         if let Ok(file) = fs::File::open(path) {
             let mut reader: io::BufReader<fs::File> = io::BufReader::new(file);
@@ -1103,18 +1102,18 @@ impl Fingerprint {
         // afterwards based on the `mtime_on_use` flag. Afterwards we want the
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
-        for (output, _file_size, _hash) in self.outputs.iter() {
-            let mtime = match paths::mtime(output) {
+        for Fileprint { path, .. } in self.outputs.iter() {
+            let mtime = match paths::mtime(path) {
                 Ok(mtime) => mtime,
 
                 // This path failed to report its `mtime`. It probably doesn't
                 // exists, so leave ourselves as stale and bail out.
                 Err(e) => {
-                    debug!("failed to get mtime of {:?}: {}", output, e);
+                    debug!("failed to get mtime of {:?}: {}", path, e);
                     return Ok(());
                 }
             };
-            assert!(mtimes.insert(output.clone(), mtime).is_none());
+            assert!(mtimes.insert(path.clone(), mtime).is_none());
         }
 
         let opt_max = mtimes.iter().max_by_key(|kv| kv.1);
@@ -1190,11 +1189,15 @@ impl Fingerprint {
                                 .unwrap()
                                 .contains("dep-run-build-script-build-script-build")
                         {
-                            let stale = if let Some((_, Some(size), Some(hash))) = &dep
+                            let stale = if let Some(Fileprint {
+                                size: Some(size),
+                                hash: Some(hash),
+                                ..
+                            }) = &dep
                                 .fingerprint
                                 .outputs
                                 .iter()
-                                .find(|(path, _, _)| path == dep_in)
+                                .find(|Fileprint { path, .. }| path == dep_in)
                             {
                                 CurrentFileprint::calc_size(dep_in) != Some(*size)
                                     || CurrentFileprint::calc_hash(dep_in, FileHashAlgorithm::Md5)
@@ -1581,14 +1584,13 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         .iter()
         .filter(|output| !matches!(output.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
         .map(|output| {
-            //let mut c = CurrentFileprint::new(FileTime::zero());
-            //TODO is any of this a good idea? here maybe leave blank?
-            (
-                output.path.clone(),
-                None, //c.size(&output.path).map(|c| *c),
-                None, //c.hash(&output.path, FileHashAlgorithm::Md5)
-                      //   .map(|c| c.clone()),
-            )
+            // Deliberately leave these blank as often mtime will be enough, and if not
+            // we can check dep_info and calculate from the path.
+            Fileprint {
+                path: output.path.clone(),
+                size: None,
+                hash: None,
+            }
         })
         .collect();
 
@@ -1686,9 +1688,7 @@ fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoRes
         outputs: if overridden {
             Vec::new()
         } else {
-            let size = CurrentFileprint::calc_size(&output);
-            let hash = CurrentFileprint::calc_hash(&output, FileHashAlgorithm::Md5);
-            vec![(output, size, hash)]
+            vec![Fileprint::from_md5(output)]
         },
 
         // Most of the other info is blank here as we don't really include it
@@ -2332,6 +2332,14 @@ pub struct Fileprint {
     pub path: PathBuf, //TODO is this field needed on here?
     pub size: Option<FileSize>,
     pub hash: Option<FileHash>,
+}
+
+impl Fileprint {
+    pub(crate) fn from_md5(path: PathBuf) -> Self {
+        let size = CurrentFileprint::calc_size(&path);
+        let hash = CurrentFileprint::calc_hash(&path, FileHashAlgorithm::Md5);
+        Self { path, size, hash }
+    }
 }
 
 // Same as `RustcDepInfo` except avoids absolute paths as much as possible to
