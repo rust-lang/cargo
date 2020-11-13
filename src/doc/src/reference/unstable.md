@@ -661,9 +661,9 @@ version = "1.0.0"
 resolver = "2"
 ```
 
-Currently the only allowed value is `"2"`. This declaration enables all of the
-new feature behavior of [`-Zfeatures=all`](#features) and
-[`-Zpackage-features`](#package-features).
+The value `"1"` is the current resolver behavior on the stable channel. A
+value of `"2"` enables all of the new feature behavior of
+[`-Zfeatures=all`](#features) and [`-Zpackage-features`](#package-features).
 
 This flag is global for a workspace. If using a virtual workspace, the root
 definition should be in the `[workspace]` table like this:

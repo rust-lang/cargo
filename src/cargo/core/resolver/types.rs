@@ -110,9 +110,10 @@ pub enum ResolveBehavior {
 impl ResolveBehavior {
     pub fn from_manifest(resolver: &str) -> CargoResult<ResolveBehavior> {
         match resolver {
+            "1" => Ok(ResolveBehavior::V1),
             "2" => Ok(ResolveBehavior::V2),
             s => anyhow::bail!(
-                "`resolver` setting `{}` is not valid, only valid option is \"2\"",
+                "`resolver` setting `{}` is not valid, valid options are \"1\" or \"2\"",
                 s
             ),
         }
