@@ -562,12 +562,14 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
     let doc_dir = cx.files().out_dir(unit);
 
-    // Create the documentation directory ahead of time as rustdoc currently has
-    // a bug where concurrent invocations will race to create this directory if
-    // it doesn't already exist.
-    paths::create_dir_all(&doc_dir)?;
+    if !unit.mode.is_check() {
+        // Create the documentation directory ahead of time as rustdoc currently has
+        // a bug where concurrent invocations will race to create this directory if
+        // it doesn't already exist.
+        paths::create_dir_all(&doc_dir)?;
 
-    rustdoc.arg("-o").arg(doc_dir);
+        rustdoc.arg("-o").arg(doc_dir);
+    }
 
     for feat in &unit.features {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
@@ -595,6 +597,14 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut output_options = OutputOptions::new(cx, unit);
     let pkg_id = unit.pkg.package_id();
     let script_metadata = cx.find_build_script_metadata(unit.clone());
+
+    if unit.mode.is_check() {
+        rustdoc.arg("-Z");
+        rustdoc.arg("unstable-options");
+        rustdoc.arg("--check");
+        // rustdoc.arg("--warn");
+        // rustdoc.arg("rustdoc");
+    }
 
     Ok(Work::new(move |state| {
         if let Some(script_metadata) = script_metadata {

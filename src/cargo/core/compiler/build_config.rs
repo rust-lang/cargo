@@ -132,6 +132,8 @@ pub enum CompileMode {
     /// Building a target with `rustc` to emit `rmeta` metadata only. If
     /// `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
+    ///
+    /// It then runs `rustdoc --check`.
     Check { test: bool },
     /// Used to indicate benchmarks should be built. This is not used in
     /// `Unit`, because it is essentially the same as `Test` (indicating
@@ -143,6 +145,8 @@ pub enum CompileMode {
     Doc { deps: bool },
     /// A target that will be tested with `rustdoc`.
     Doctest,
+    /// Runs `rustdoc --check`.
+    DocCheck,
     /// A marker for Units that represent the execution of a `build.rs` script.
     RunCustomBuild,
 }
@@ -160,6 +164,7 @@ impl ser::Serialize for CompileMode {
             Bench => "bench".serialize(s),
             Doc { .. } => "doc".serialize(s),
             Doctest => "doctest".serialize(s),
+            DocCheck => "doccheck".serialize(s),
             RunCustomBuild => "run-custom-build".serialize(s),
         }
     }
@@ -168,12 +173,12 @@ impl ser::Serialize for CompileMode {
 impl CompileMode {
     /// Returns `true` if the unit is being checked.
     pub fn is_check(self) -> bool {
-        matches!(self, CompileMode::Check { .. })
+        matches!(self, CompileMode::Check { .. } | CompileMode::DocCheck)
     }
 
     /// Returns `true` if this is generating documentation.
     pub fn is_doc(self) -> bool {
-        matches!(self, CompileMode::Doc { .. })
+        matches!(self, CompileMode::Doc { .. } | CompileMode::DocCheck)
     }
 
     /// Returns `true` if this a doc test.

@@ -395,7 +395,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 // outputs.
                 vec![]
             }
-            CompileMode::Doctest => {
+            CompileMode::Doctest | CompileMode::DocCheck => {
                 // Doctests are built in a temporary directory and then
                 // deleted. There is the `--persist-doctests` unstable flag,
                 // but Cargo does not know about that.

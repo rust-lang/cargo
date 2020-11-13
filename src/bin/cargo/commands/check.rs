@@ -1,5 +1,7 @@
 use crate::command_prelude::*;
+use crate::commands::doc;
 
+use cargo::core::features;
 use cargo::ops;
 
 pub fn cli() -> App {
@@ -55,5 +57,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let compile_opts = args.compile_options(config, mode, Some(&ws), ProfileChecking::Unchecked)?;
 
     ops::compile(&ws, &compile_opts)?;
+
+    if features::nightly_features_allowed() {
+        doc::exec_doc(
+            config,
+            args,
+            CompileMode::DocCheck,
+            ProfileChecking::Checked,
+        )?;
+    }
+
     Ok(())
 }

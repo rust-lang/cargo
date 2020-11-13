@@ -1,5 +1,6 @@
 use crate::command_prelude::*;
 
+use cargo::core::features;
 use cargo::ops::{self, DocOptions};
 
 pub fn cli() -> App {
@@ -23,6 +24,7 @@ pub fn cli() -> App {
             "Document only the specified binary",
             "Document all binaries",
         )
+        .arg(opt("check", "Runs `rustdoc --check` (nightly only)"))
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
         .arg_features()
@@ -35,18 +37,54 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    let ws = args.workspace(config)?;
-    let mode = CompileMode::Doc {
-        deps: !args.is_present("no-deps"),
-    };
-    let mut compile_opts =
-        args.compile_options(config, mode, Some(&ws), ProfileChecking::Checked)?;
-    compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    if args.is_present("check") {
+        if !features::nightly_features_allowed() {
+            Err(CliError::new(
+                anyhow::format_err!("This option is only available in nightly"),
+                1,
+            ))?;
+        }
+        exec_doc(
+            config,
+            args,
+            CompileMode::DocCheck,
+            ProfileChecking::Unchecked,
+        )
+    } else {
+        exec_doc(
+            config,
+            args,
+            CompileMode::Doc {
+                deps: !args.is_present("no-deps"),
+            },
+            ProfileChecking::Checked,
+        )
+    }
+}
 
-    let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+pub fn exec_doc(
+    config: &mut Config,
+    args: &ArgMatches<'_>,
+    mode: CompileMode,
+    profile: ProfileChecking,
+) -> CliResult {
+    let ws = args.workspace(config)?;
+
+    let mut compile_opts = args.compile_options(config, mode, Some(&ws), profile)?;
+
+    if !mode.is_check() {
+        compile_opts.rustdoc_document_private_items = args.is_present("document-private-items");
+    }
+
+    let mut doc_opts = DocOptions {
+        open_result: false,
         compile_opts,
     };
+
+    if !mode.is_check() {
+        doc_opts.open_result = args.is_present("open");
+    }
+
     ops::doc(&ws, &doc_opts)?;
     Ok(())
 }

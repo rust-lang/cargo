@@ -436,7 +436,10 @@ impl TargetInfo {
                 }
             }
             CompileMode::Check { .. } => Ok((vec![FileType::new_rmeta()], Vec::new())),
-            CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::RunCustomBuild => {
+            CompileMode::Doc { .. }
+            | CompileMode::Doctest
+            | CompileMode::RunCustomBuild
+            | CompileMode::DocCheck => {
                 panic!("asked for rustc output for non-rustc mode")
             }
         }

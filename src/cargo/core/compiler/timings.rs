@@ -170,7 +170,9 @@ impl<'cfg> Timings<'cfg> {
             CompileMode::Test => target.push_str(" (test)"),
             CompileMode::Build => {}
             CompileMode::Check { test: true } => target.push_str(" (check-test)"),
-            CompileMode::Check { test: false } => target.push_str(" (check)"),
+            CompileMode::Check { test: false } | CompileMode::DocCheck => {
+                target.push_str(" (check)")
+            }
             CompileMode::Bench => target.push_str(" (bench)"),
             CompileMode::Doc { .. } => target.push_str(" (doc)"),
             CompileMode::Doctest => target.push_str(" (doc test)"),
