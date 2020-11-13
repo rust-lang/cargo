@@ -1135,6 +1135,8 @@ impl Fingerprint {
         );
 
         let rmeta_ext = std::ffi::OsStr::new("rmeta");
+        let output_dir = std::ffi::OsStr::new("output");
+
         for dep in self.deps.iter() {
             let dep_mtimes = match &dep.fingerprint.fs_status {
                 FsStatus::UpToDate { mtimes } => mtimes,
@@ -1185,12 +1187,12 @@ impl Fingerprint {
                                 .unwrap()
                                 .to_path_buf();
 
-                            if dep_path.to_str().unwrap().ends_with("output")
-                                && dep_info
-                                    .to_str()
-                                    .unwrap()
-                                    .contains("dep-run-build-script-build-script-build")
-                            {
+                            let is_custom_build = dep_info
+                                .to_str()
+                                .unwrap()
+                                .contains("dep-run-build-script-build-script-build");
+
+                            if dep_path.file_name() == Some(&output_dir) && is_custom_build {
                                 let stale = if let Some(Fileprint {
                                     size: Some(size),
                                     hash: Some(hash),
@@ -1217,11 +1219,7 @@ impl Fingerprint {
                                     return Ok(());
                                 }
                             } else {
-                                let dep_info_file = if dep_info
-                                    .to_str()
-                                    .unwrap()
-                                    .contains("dep-run-build-script-build-script-build")
-                                {
+                                let dep_info_file = if is_custom_build {
                                     let mut ddep_info = PathBuf::new();
                                     for local_dep in (*dep.fingerprint.local.lock().unwrap()).iter()
                                     {
@@ -1233,13 +1231,7 @@ impl Fingerprint {
                                     }
                                     target_root.join(&ddep_info).to_path_buf()
                                 } else {
-                                    //TODO: depinfo is sometimes package root relative apparently
-                                    //let path = match ty {
-                                    //     DepInfoPathType::PackageRootRelative => pkg_root.join(fileprint.path),
-                                    //     // N.B. path might be absolute here in which case the join will have no effect
-                                    //     DepInfoPathType::TargetRootRelative => target_root.join(fileprint.path),
-                                    // };
-                                    target_root.join(&dep_info)
+                                    dep_info_loc.clone()
                                 };
 
                                 debug!("reading dep info file: {:?}", &dep_info_file);
