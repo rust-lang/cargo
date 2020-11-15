@@ -484,6 +484,23 @@ fn timestamp() -> u64 {
         .as_secs()
 }
 
+fn canonicalize_header(header: &mut Header) {
+    // Let's not include information about the user or their system here.
+    header.set_username("root").unwrap();
+    header.set_groupname("root").unwrap();
+    header.set_uid(0);
+    header.set_gid(0);
+    header.set_device_major(0).unwrap();
+    header.set_device_minor(0).unwrap();
+
+    let mode = if header.mode().unwrap() & 0o100 != 0 {
+        0o755
+    } else {
+        0o644
+    };
+    header.set_mode(mode);
+}
+
 fn tar(
     ws: &Workspace<'_>,
     ar_files: Vec<ArchiveFile>,
@@ -524,6 +541,8 @@ fn tar(
                     format!("could not learn metadata for: `{}`", disk_path.display())
                 })?;
                 header.set_metadata(&metadata);
+                header.set_mtime(time);
+                canonicalize_header(&mut header);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, &mut file)
                     .chain_err(|| {
@@ -540,6 +559,7 @@ fn tar(
                 header.set_mode(0o644);
                 header.set_mtime(time);
                 header.set_size(contents.len() as u64);
+                canonicalize_header(&mut header);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
                     .chain_err(|| format!("could not archive source file `{}`", rel_str))?;
