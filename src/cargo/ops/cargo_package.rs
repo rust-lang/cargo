@@ -473,6 +473,11 @@ fn check_repo_state(
 }
 
 fn timestamp() -> u64 {
+    if let Ok(var) = std::env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(stamp) = var.parse() {
+            return stamp;
+        }
+    }
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
