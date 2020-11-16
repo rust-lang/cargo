@@ -30,8 +30,7 @@ use log::debug;
 
 use super::{fingerprint, Context, FileFlavor, Unit};
 use crate::core::compiler::fingerprint::Fileprint;
-use crate::util::paths;
-use crate::util::{internal, CargoResult};
+use crate::util::{internal, paths, CargoResult};
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
@@ -179,7 +178,7 @@ pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> 
                 {
                     writeln!(outfile, "{}:", rendered_dep)?;
                     if let (Some(size), Some(hash)) = (size, hash) {
-                        writeln!(outfile, "# size:{} {}:{}", size, hash.kind, hash.hash)?;
+                        writeln!(outfile, "# size:{} {}", size, hash)?;
                     }
                 }
 
