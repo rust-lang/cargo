@@ -319,11 +319,11 @@ use std::fmt;
 use std::fs;
 use std::hash::{self, Hasher};
 use std::io::{self, Read};
+use std::num::NonZeroU64;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use std::num::NonZeroU64;
 
 use anyhow::{bail, format_err};
 use filetime::FileTime;
@@ -365,14 +365,14 @@ pub struct FileHash {
 impl FileHash {
     pub fn from_hex_rev(kind: FileHashAlgorithm, hash: &str) -> Option<FileHash> {
         let mut decoded = hex::decode(hash).ok()?;
-            decoded.reverse(); // The slice is stored as little endien.
+        decoded.reverse(); // The slice is stored as little endien.
         Some(Self::from_slice(kind, &decoded[..]))
     }
 
-    // pub fn from_hex(kind: FileHashAlgorithm, hash: &str) -> Option<FileHash> {
-    //     let decoded = hex::decode(hash).ok()?;
-    //     Some(Self::from_slice(kind, &decoded[..]))
-    // }
+    pub fn from_hex(kind: FileHashAlgorithm, hash: &str) -> Option<FileHash> {
+        let decoded = hex::decode(hash).ok()?;
+        Some(Self::from_slice(kind, &decoded[..]))
+    }
 
     pub fn from_slice_rev(kind: FileHashAlgorithm, hash: &[u8]) -> FileHash {
         let mut v = hash.to_vec();
@@ -784,7 +784,10 @@ impl CurrentFileprint {
     }
 
     pub(crate) fn calc_size(file: &Path) -> Option<FileSize> {
-        std::fs::metadata(file).map(|metadata| NonZeroU64::new(metadata.len())).ok().flatten()
+        std::fs::metadata(file)
+            .map(|metadata| NonZeroU64::new(metadata.len()))
+            .ok()
+            .flatten()
     }
 
     pub(crate) fn file_hash(&mut self, path: &Path, algo: FileHashAlgorithm) -> Option<&FileHash> {
@@ -2205,10 +2208,7 @@ fn get_svh_from_object_file<R: Read>(mut reader: R) -> Option<FileHash> {
         if let Some(name) = sym.name() {
             if name.starts_with("_rust_svh") {
                 if let Some(index) = name.rfind('_') {
-                    return FileHash::from_hex_rev(
-                        FileHashAlgorithm::Svh,
-                        &name[index + 1..],
-                    );
+                    return FileHash::from_hex_rev(FileHashAlgorithm::Svh, &name[index + 1..]);
                 }
             }
         }
@@ -2225,10 +2225,11 @@ fn get_svh_from_rmeta_file<R: Read>(mut reader: R) -> Option<FileHash> {
 }
 
 fn parse_svh(data: &[u8]) -> Option<FileHash> {
+    debug!("HASHXX {:?}", data);
     const METADATA_VERSION_LOC: usize = 7;
 
     if data[METADATA_VERSION_LOC] < 6 {
-        debug!("HASH svh not available as compiler not recent enough.");
+        debug!("svh not available as compiler not recent enough.");
         return None;
     }
     let rust_svh_len_pos = 12;
@@ -2505,7 +2506,7 @@ impl EncodedDepInfo {
         write_usize(dst, self.files.len());
         for (Fileprint { path, size, hash }, ty) in self.files.iter() {
             //debug!("writing depinfo size as {} ", *size as usize);
-            write_u64(dst, size.map(|s|u64::from(s)).unwrap_or(0) );
+            write_u64(dst, size.map(|s| u64::from(s)).unwrap_or(0));
             //write(dst, hash.hash);
             if let Some(hash) = hash {
                 hash.write_to_vec(&mut dst);
@@ -2657,24 +2658,24 @@ mod test {
         //                      r    u    s    t /   metadata version | base |               r    u   s     t   c   ' ' 1   .   4   9   .   0   -   d    e    v  |size|  svh-->
         assert!(parse_svh(&vec).is_none());
     }
-    #[test]
+
+    #[test] //TODO update the bits so svh is before rust version!
     fn test_svh_in_metadata_version_6() {
         let vec: Vec<u8> = vec![
-            114, 117, 115, 116, 0, 0, 0, 6, 0, 13, 201, 29, 16, 114, 117, 115, 116, 99, 32, 49, 46,
-            52, 57, 46, 48, 45, 100, 101, 118, 16, 49, 100, 54, 102, 97, 101, 54, 56, 102, 54, 100,
-            52, 99, 99, 98, 102, 3, 115, 116, 100, 241, 202, 128, 159, 207, 146, 173, 243, 204, 1,
-            0, 2, 17, 45, 48, 55, 56, 97, 54, 56, 51, 101, 99, 57, 57, 55, 50, 48, 53, 50, 4, 99,
-            111, 114, 101, 190, 159, 241, 243, 142, 194, 224, 233, 82, 0, 2, 17, 45, 51, 101, 97,
-            54, 98, 97, 57, 97, 57, 56, 99, 50, 57, 51, 54, 100, 17, 99, 111, 109, 112, 105, 108,
-            101, 114, 95, 98, 117, 105, 108,
+            114, 117, 115, 116, 0, 0, 0, 6, 0, 17, 73, 215, 64, 29, 94, 138, 62, 252, 69, 252, 224,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16,
+            114, 117, 115, 116, 99, 32, 49, 46, 53, 48, 46, 48, 45, 100, 101, 118, 3, 115, 116,
+            100, 220, 173, 135, 163, 173, 242, 162, 182, 228, 1, 0, 2, 17, 45, 48, 55, 56, 97, 54,
+            56, 51, 101, 99, 57, 57, 55, 50, 48, 53, 50,
         ];
-        //                      r    u    s    t /   metadata version | base |               r    u   s     t   c   ' ' 1   .   4   9   .   0   -   d    e    v  |size|  svh-->
-        assert!(parse_svh(&vec).is_some());
+        //  r    u    s    t /   metadata version | base | size=64 |  svh       | sizee_of_version    |  r    u   s     t   c   ' ' 1   .   4   9   .   0   -   d    e    v  | base_pointer_points_here
+        assert_eq!(parse_svh(&vec), FileHash::from_hex(FileHashAlgorithm::Svh, "1d5e8a3efc45fce0"));
     }
 
     #[test]
     fn file_hash() {
-        let from_str = FileHash::from_str("svh", "0102030405060708");
+        let from_str = FileHash::from_hex(FileHashAlgorithm::Svh, "0102030405060708");
         let from_slice = Some(FileHash::from_slice(
             FileHashAlgorithm::Svh,
             &[1, 2, 3, 4, 5, 6, 7, 8],
