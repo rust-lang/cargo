@@ -29,7 +29,7 @@ use std::path::Path;
 use log::debug;
 
 use super::{fingerprint, Context, FileFlavor, Unit};
-use crate::core::compiler::fingerprint::Fileprint;
+use crate::core::compiler::content_hash::Fileprint;
 use crate::util::{internal, paths, CargoResult};
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {

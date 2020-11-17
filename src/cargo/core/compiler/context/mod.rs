@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use jobserver::Client;
 
-use crate::core::compiler::fingerprint::{CurrentFileprint, RustcDepInfo};
+use crate::core::compiler::content_hash::CurrentFileprint;
+use crate::core::compiler::fingerprint::RustcDepInfo;
 use crate::core::compiler::{self, compilation, Unit};
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};

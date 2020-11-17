@@ -3,6 +3,7 @@ mod build_context;
 mod build_plan;
 mod compilation;
 mod compile_kind;
+mod content_hash;
 mod context;
 mod crate_type;
 mod custom_build;
