@@ -1938,10 +1938,7 @@ fn reproducible_output() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    // Timestamp is arbitrary and is the same used by git format-patch.
-    p.cargo("package")
-        .env("SOURCE_DATE_EPOCH", "1000684800")
-        .run();
+    p.cargo("package").run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -1951,12 +1948,8 @@ fn reproducible_output() {
         let ent = ent.unwrap();
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
-        assert_eq!(header.uid().unwrap(), 0);
-        assert_eq!(header.gid().unwrap(), 0);
-        assert_eq!(header.mtime().unwrap(), 1000684800);
-        assert_eq!(header.username().unwrap().unwrap(), "root");
-        assert_eq!(header.groupname().unwrap().unwrap(), "root");
-        assert_eq!(header.device_major().unwrap().unwrap(), 0);
-        assert_eq!(header.device_minor().unwrap().unwrap(), 0);
+        assert_eq!(header.mtime().unwrap(), 0);
+        assert_eq!(header.username().unwrap().unwrap(), "");
+        assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
 }
