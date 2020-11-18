@@ -5,12 +5,11 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
-use tar::{Archive, Builder, EntryType, Header};
+use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
@@ -510,7 +509,7 @@ fn tar(
                 let metadata = file.metadata().chain_err(|| {
                     format!("could not learn metadata for: `{}`", disk_path.display())
                 })?;
-                header.set_metadata(&metadata);
+                header.set_metadata_in_mode(&metadata, HeaderMode::Deterministic);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, &mut file)
                     .chain_err(|| {
@@ -525,12 +524,6 @@ fn tar(
                 };
                 header.set_entry_type(EntryType::file());
                 header.set_mode(0o644);
-                header.set_mtime(
-                    SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                );
                 header.set_size(contents.len() as u64);
                 header.set_cksum();
                 ar.append_data(&mut header, &ar_path, contents.as_bytes())
