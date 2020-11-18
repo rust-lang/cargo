@@ -20,6 +20,7 @@ mod build;
 mod build_plan;
 mod build_script;
 mod build_script_env;
+mod build_script_extra_link_arg;
 mod cache_messages;
 mod cargo_alias_config;
 mod cargo_command;

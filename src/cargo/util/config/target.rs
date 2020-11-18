@@ -1,5 +1,5 @@
 use super::{Config, ConfigKey, ConfigRelativePath, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::BuildOutput;
+use crate::core::compiler::{BuildOutput, LinkType};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -77,7 +77,7 @@ pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<T
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(&format!("target.{}", triple));
     let links_overrides = match config.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val)?,
+        Some(links) => parse_links_overrides(&target_key, links.val, &config)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {
@@ -91,7 +91,10 @@ pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<T
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
+    config: &Config,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
+    let extra_link_arg = config.cli_unstable().extra_link_arg;
+
     let mut links_overrides = BTreeMap::new();
     for (lib_name, value) in links {
         // Skip these keys, it shares the namespace with `TargetConfig`.
@@ -129,9 +132,34 @@ fn parse_links_overrides(
                         .library_paths
                         .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
-                "rustc-cdylib-link-arg" => {
+                "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     let args = value.list(key)?;
-                    output.linker_args.extend(args.iter().map(|v| v.0.clone()));
+                    let args = args.iter().map(|v| (Some(LinkType::Cdylib), v.0.clone()));
+                    output.linker_args.extend(args);
+                }
+                "rustc-link-arg-bins" => {
+                    if extra_link_arg {
+                        let args = value.list(key)?;
+                        let args = args.iter().map(|v| (Some(LinkType::Bin), v.0.clone()));
+                        output.linker_args.extend(args);
+                    } else {
+                        config.shell().warn(format!(
+                            "target config `{}.{}` requires -Zextra-link-arg flag",
+                            target_key, key
+                        ))?;
+                    }
+                }
+                "rustc-link-arg" => {
+                    if extra_link_arg {
+                        let args = value.list(key)?;
+                        let args = args.iter().map(|v| (None, v.0.clone()));
+                        output.linker_args.extend(args);
+                    } else {
+                        config.shell().warn(format!(
+                            "target config `{}.{}` requires -Zextra-link-arg flag",
+                            target_key, key
+                        ))?;
+                    }
                 }
                 "rustc-cfg" => {
                     let list = value.list(key)?;

@@ -59,6 +59,33 @@ use crate::util::{internal, join_paths, paths, profile};
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
+#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+pub enum LinkType {
+    Cdylib,
+    Bin,
+    Test,
+    Bench,
+    Example,
+}
+
+impl From<&super::Target> for Option<LinkType> {
+    fn from(value: &super::Target) -> Self {
+        if value.is_cdylib() {
+            Some(LinkType::Cdylib)
+        } else if value.is_bin() {
+            Some(LinkType::Bin)
+        } else if value.is_test() {
+            Some(LinkType::Test)
+        } else if value.is_bench() {
+            Some(LinkType::Bench)
+        } else if value.is_exe_example() {
+            Some(LinkType::Example)
+        } else {
+            None
+        }
+    }
+}
+
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an `Executor`, giving clients an opportunity to intercept
 /// the build calls.
@@ -196,7 +223,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let pass_cdylib_link_args = unit.target.is_cdylib();
+    let link_type = (&unit.target).into();
 
     let dep_info_name = match cx.files().metadata(unit) {
         Some(metadata) => format!("{}-{}.d", unit.target.crate_name(), metadata),
@@ -244,7 +271,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     &script_outputs,
                     &build_scripts,
                     pass_l_flag,
-                    pass_cdylib_link_args,
+                    link_type,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
@@ -326,7 +353,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
         build_script_outputs: &BuildScriptOutputs,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        pass_cdylib_link_args: bool,
+        link_type: Option<LinkType>,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -339,6 +366,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
+
             if key.0 == current_id {
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
@@ -348,10 +376,12 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                         rustc.arg("-l").arg(name);
                     }
                 }
-                if pass_cdylib_link_args {
-                    for arg in output.linker_args.iter() {
-                        let link_arg = format!("link-arg={}", arg);
-                        rustc.arg("-C").arg(link_arg);
+            }
+
+            if link_type.is_some() {
+                for (lt, arg) in &output.linker_args {
+                    if lt.is_none() || *lt == link_type {
+                        rustc.arg("-C").arg(format!("link-arg={}", arg));
                     }
                 }
             }

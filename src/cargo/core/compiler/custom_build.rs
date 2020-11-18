@@ -1,5 +1,5 @@
 use super::job::{Freshness, Job, Work};
-use super::{fingerprint, Context, Unit};
+use super::{fingerprint, Context, LinkType, Unit};
 use crate::core::compiler::context::Metadata;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId};
@@ -23,7 +23,7 @@ pub struct BuildOutput {
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
-    pub linker_args: Vec<String>,
+    pub linker_args: Vec<(Option<LinkType>, String)>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Additional environment variables to run the compiler with.
@@ -290,6 +290,8 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
 
+    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
+
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
     //
@@ -393,8 +395,13 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         paths::set_file_time_no_err(output_file, timestamp);
         paths::write(&err_file, &output.stderr)?;
         paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
-        let parsed_output =
-            BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
+        let parsed_output = BuildOutput::parse(
+            &output.stdout,
+            &pkg_name,
+            &script_out_dir,
+            &script_out_dir,
+            extra_link_arg,
+        )?;
 
         if json_messages {
             emit_build_output(state, &parsed_output, script_out_dir.as_path(), id)?;
@@ -418,6 +425,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 &pkg_name,
                 &prev_script_out_dir,
                 &script_out_dir,
+                extra_link_arg,
             )?,
         };
 
@@ -467,6 +475,7 @@ impl BuildOutput {
         pkg_name: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
+        extra_link_arg: bool,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -474,6 +483,7 @@ impl BuildOutput {
             pkg_name,
             script_out_dir_when_generated,
             script_out_dir,
+            extra_link_arg,
         )
     }
 
@@ -484,6 +494,7 @@ impl BuildOutput {
         pkg_name: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
+        extra_link_arg: bool,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -536,7 +547,23 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
-                "rustc-cdylib-link-arg" => linker_args.push(value.to_string()),
+                "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
+                    linker_args.push((Some(LinkType::Cdylib), value))
+                }
+                "rustc-link-arg-bins" => {
+                    if extra_link_arg {
+                        linker_args.push((Some(LinkType::Bin), value));
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
+                "rustc-link-arg" => {
+                    if extra_link_arg {
+                        linker_args.push((None, value));
+                    } else {
+                        warnings.push(format!("cargo:{} requires -Zextra-link-arg flag", key));
+                    }
+                }
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
@@ -785,12 +812,15 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
         .and_then(|bytes| util::bytes2path(&bytes))
         .unwrap_or_else(|_| script_out_dir.clone());
 
+    let extra_link_arg = cx.bcx.config.cli_unstable().extra_link_arg;
+
     (
         BuildOutput::parse_file(
             &output_file,
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
+            extra_link_arg,
         )
         .ok(),
         prev_script_out_dir,
