@@ -63,6 +63,7 @@ fn simple() {
                     "name": "a",
                     "src_path": "[..]/a-1.0.0/src/lib.rs",
                     "edition": "2015",
+                    "doc": true,
                     "doctest": true,
                     "test": true
                   },
@@ -105,6 +106,7 @@ fn simple() {
                     "name": "b",
                     "src_path": "[..]/b-1.0.0/src/lib.rs",
                     "edition": "2015",
+                    "doc": true,
                     "doctest": true,
                     "test": true
                   },
@@ -148,6 +150,7 @@ fn simple() {
                     "src_path": "[..]/c-1.0.0/src/lib.rs",
                     "edition": "2015",
                     "test": true,
+                    "doc": true,
                     "doctest": true
                   },
                   "profile": {
@@ -183,6 +186,7 @@ fn simple() {
                     "src_path": "[..]/foo/src/lib.rs",
                     "edition": "2015",
                     "test": true,
+                    "doc": true,
                     "doctest": true
                   },
                   "profile": {

@@ -45,6 +45,7 @@ fn cargo_metadata_simple() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doc": true,
                         "doctest": false,
                         "test": true,
                         "edition": "2015",
@@ -141,6 +142,7 @@ crate-type = ["lib", "staticlib"]
                             "lib",
                             "staticlib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -225,6 +227,7 @@ optional_feat = []
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -340,6 +343,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -378,6 +382,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -441,6 +446,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "bin"
                         ],
+                        "doc": true,
                         "doctest": false,
                         "test": true,
                         "edition": "2015",
@@ -479,6 +485,7 @@ fn cargo_metadata_with_deps_and_version() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -615,6 +622,7 @@ name = "ex"
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -624,6 +632,7 @@ name = "ex"
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "bin" ],
+                        "doc": false,
                         "doctest": false,
                         "test": false,
                         "edition": "2015",
@@ -706,6 +715,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -715,6 +725,7 @@ crate-type = ["rlib", "dylib"]
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "rlib", "dylib" ],
+                        "doc": false,
                         "doctest": false,
                         "test": false,
                         "edition": "2015",
@@ -804,6 +815,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -840,6 +852,7 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -931,6 +944,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -967,6 +981,7 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": ["lib"],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1028,6 +1043,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "targets":[{
             "kind":["bin"],
             "crate_types":["bin"],
+            "doc": true,
             "doctest": false,
             "test": true,
             "edition": "2015",
@@ -1217,6 +1233,7 @@ fn package_metadata() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1293,6 +1310,7 @@ fn package_publish() {
                     {
                         "kind": [ "lib" ],
                         "crate_types": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1370,6 +1388,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "crate_types": [
                             "lib"
                         ],
+                        "doc": true,
                         "doctest": true,
                         "test": true,
                         "edition": "2015",
@@ -1455,6 +1474,7 @@ fn package_edition_2018() {
                                 "crate_types": [
                                     "lib"
                                 ],
+                                "doc": true,
                                 "doctest": true,
                                 "test": true,
                                 "edition": "2018",
@@ -1544,6 +1564,7 @@ fn target_edition_2018() {
                                 "crate_types": [
                                     "lib"
                                 ],
+                                "doc": true,
                                 "doctest": true,
                                 "test": true,
                                 "edition": "2018",
@@ -1557,6 +1578,7 @@ fn target_edition_2018() {
                                 "crate_types": [
                                     "bin"
                                 ],
+                                "doc": true,
                                 "doctest": false,
                                 "test": true,
                                 "edition": "2015",
@@ -1647,6 +1669,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1685,6 +1708,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1748,6 +1772,7 @@ fn rename_dependency() {
                     "crate_types": [
                         "lib"
                     ],
+                    "doc": true,
                     "doctest": true,
                     "test": true,
                     "edition": "2015",
@@ -1867,6 +1892,7 @@ fn metadata_links() {
                       "crate_types": [
                         "lib"
                       ],
+                      "doc": true,
                       "doctest": true,
                       "test": true,
                       "edition": "2015",
@@ -1880,6 +1906,7 @@ fn metadata_links() {
                       "crate_types": [
                         "bin"
                       ],
+                      "doc": false,
                       "doctest": false,
                       "test": false,
                       "edition": "2015",
@@ -1973,6 +2000,7 @@ fn deps_with_bin_only() {
                       "name": "foo",
                       "src_path": "[..]/foo/src/lib.rs",
                       "edition": "2015",
+                      "doc": true,
                       "doctest": true,
                       "test": true
                     }
@@ -2076,6 +2104,7 @@ fn filter_platform() {
           "src_path": "[..]/alt-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2117,6 +2146,7 @@ fn filter_platform() {
           "src_path": "[..]/cfg-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2158,6 +2188,7 @@ fn filter_platform() {
           "src_path": "[..]/host-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2199,6 +2230,7 @@ fn filter_platform() {
           "src_path": "[..]/normal-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],
@@ -2289,6 +2321,7 @@ fn filter_platform() {
           "src_path": "[..]/foo/src/lib.rs",
           "edition": "2015",
           "test": true,
+          "doc": true,
           "doctest": true
         }
       ],

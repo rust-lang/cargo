@@ -259,6 +259,9 @@ struct SerializedTarget<'a> {
     edition: &'a str,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
+    /// Whether docs should be built for the target via `cargo doc`
+    /// See https://doc.rust-lang.org/cargo/commands/cargo-doc.html#target-selection
+    doc: bool,
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
     test: bool,
@@ -281,6 +284,7 @@ impl ser::Serialize for Target {
             required_features: self
                 .required_features()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
+            doc: self.documented(),
             doctest: self.doctested() && self.doctestable(),
             test: self.tested(),
         }
