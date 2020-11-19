@@ -54,6 +54,10 @@ enum SourceKind {
     LocalRegistry,
     /// A directory-based registry.
     Directory,
+    /// A remote registry accessed over HTTP.
+    ///
+    /// The protocol is specified by [this RFC](https://github.com/rust-lang/rfcs/pull/2789).
+    Http,
 }
 
 /// Information to find a specific commit in a Git repository.
@@ -135,6 +139,10 @@ impl SourceId {
                 Ok(SourceId::new(SourceKind::Registry, url)?
                     .with_precise(Some("locked".to_string())))
             }
+            "rfc" => {
+                let url = url.into_url()?;
+                Ok(SourceId::new(SourceKind::Http, url)?.with_precise(Some("locked".to_string())))
+            }
             "path" => {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url)
@@ -166,6 +174,11 @@ impl SourceId {
     /// Creates a SourceId from a registry URL.
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
         SourceId::new(SourceKind::Registry, url.clone())
+    }
+
+    /// Creates a SourceId from a RFC HTTP URL.
+    pub fn for_http_registry(url: &Url) -> CargoResult<SourceId> {
+        SourceId::new(SourceKind::Http, url.clone())
     }
 
     /// Creates a SourceId from a local registry path.
@@ -241,7 +254,7 @@ impl SourceId {
     pub fn is_registry(self) -> bool {
         matches!(
             self.inner.kind,
-            SourceKind::Registry | SourceKind::LocalRegistry
+            SourceKind::Registry | SourceKind::Http | SourceKind::LocalRegistry
         )
     }
 
@@ -250,7 +263,7 @@ impl SourceId {
     /// "remote" may also mean a file URL to a git index, so it is not
     /// necessarily "remote". This just means it is not `local-registry`.
     pub fn is_remote_registry(self) -> bool {
-        matches!(self.inner.kind, SourceKind::Registry)
+        matches!(self.inner.kind, SourceKind::Registry | SourceKind::Http)
     }
 
     /// Returns `true` if this source from a Git repository.
@@ -274,6 +287,11 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
+            SourceKind::Http => Ok(Box::new(RegistrySource::rfc_http(
+                self,
+                yanked_whitelist,
+                config,
+            ))),
             SourceKind::Registry => Ok(Box::new(RegistrySource::remote(
                 self,
                 yanked_whitelist,
@@ -390,6 +408,10 @@ impl Ord for SourceId {
             (SourceKind::Path, _) => return Ordering::Less,
             (_, SourceKind::Path) => return Ordering::Greater,
 
+            (SourceKind::Http, SourceKind::Http) => {}
+            (SourceKind::Http, _) => return Ordering::Less,
+            (_, SourceKind::Http) => return Ordering::Greater,
+
             (SourceKind::Registry, SourceKind::Registry) => {}
             (SourceKind::Registry, _) => return Ordering::Less,
             (_, SourceKind::Registry) => return Ordering::Greater,
@@ -490,6 +512,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            SourceKind::Http => write!(f, "http registry `{}`", url_display(&self.inner.url)),
             SourceKind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
@@ -536,6 +559,7 @@ impl Hash for SourceId {
             SourceKind::Registry => 2usize.hash(into),
             SourceKind::LocalRegistry => 3usize.hash(into),
             SourceKind::Directory => 4usize.hash(into),
+            SourceKind::Http => 5usize.hash(into),
         }
         match self.inner.kind {
             SourceKind::Git(_) => self.inner.canonical_url.hash(into),
@@ -572,6 +596,11 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 }
                 Ok(())
             }
+            SourceIdInner {
+                kind: SourceKind::Http,
+                ref url,
+                ..
+            } => write!(f, "rfc+{}", url),
             SourceIdInner {
                 kind: SourceKind::Registry,
                 ref url,

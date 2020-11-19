@@ -396,6 +396,7 @@ pub enum MaybeLock {
     Download { url: String, descriptor: String },
 }
 
+mod http_remote;
 mod index;
 mod local;
 mod remote;
@@ -407,6 +408,16 @@ fn short_name(id: SourceId) -> String {
 }
 
 impl<'cfg> RegistrySource<'cfg> {
+    pub fn rfc_http(
+        source_id: SourceId,
+        yanked_whitelist: &HashSet<PackageId>,
+        config: &'cfg Config,
+    ) -> RegistrySource<'cfg> {
+        let name = short_name(source_id);
+        let ops = http_remote::HttpRegistry::new(source_id, config, &name);
+        RegistrySource::new(source_id, config, &name, Box::new(ops), yanked_whitelist)
+    }
+
     pub fn remote(
         source_id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,

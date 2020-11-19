@@ -406,6 +406,7 @@ fn registry(
             sid
         );
     }
+    // TODO: this will probably fail for SourceKind::Http at the moment
     let api_host = {
         let _lock = config.acquire_package_cache_lock()?;
         let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
@@ -837,6 +838,7 @@ fn get_source_id(
 ) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, r),
+        // TODO: this should go through from_url
         (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
