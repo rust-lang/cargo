@@ -1,5 +1,6 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
+use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
     RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
@@ -19,15 +20,6 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
-
-fn make_dep_prefix(name: &str) -> String {
-    match name.len() {
-        1 => String::from("1"),
-        2 => String::from("2"),
-        3 => format!("3/{}", &name[..1]),
-        _ => format!("{}/{}", &name[0..2], &name[2..4]),
-    }
-}
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -336,20 +328,5 @@ impl<'cfg> Drop for RemoteRegistry<'cfg> {
     fn drop(&mut self) {
         // Just be sure to drop this before our other fields
         self.tree.borrow_mut().take();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::make_dep_prefix;
-
-    #[test]
-    fn dep_prefix() {
-        assert_eq!(make_dep_prefix("a"), "1");
-        assert_eq!(make_dep_prefix("ab"), "2");
-        assert_eq!(make_dep_prefix("abc"), "3/a");
-        assert_eq!(make_dep_prefix("Abc"), "3/A");
-        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
-        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
     }
 }

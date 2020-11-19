@@ -663,3 +663,27 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         self.index.is_yanked(pkg, &mut *self.ops)
     }
 }
+
+fn make_dep_prefix(name: &str) -> String {
+    match name.len() {
+        1 => String::from("1"),
+        2 => String::from("2"),
+        3 => format!("3/{}", &name[..1]),
+        _ => format!("{}/{}", &name[0..2], &name[2..4]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::make_dep_prefix;
+
+    #[test]
+    fn dep_prefix() {
+        assert_eq!(make_dep_prefix("a"), "1");
+        assert_eq!(make_dep_prefix("ab"), "2");
+        assert_eq!(make_dep_prefix("abc"), "3/a");
+        assert_eq!(make_dep_prefix("Abc"), "3/A");
+        assert_eq!(make_dep_prefix("AbCd"), "Ab/Cd");
+        assert_eq!(make_dep_prefix("aBcDe"), "aB/cD");
+    }
+}
