@@ -2396,3 +2396,53 @@ fn virtual_primary_package_env_var() {
     p.cargo("clean").run();
     p.cargo("test -p foo").run();
 }
+
+#[cargo_test]
+#[cfg(windows)]
+fn unc_workspace_subfolder() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [workspace]
+    # These paths cannot use globs because the glob crate does not support globs in UNC paths
+    # for unclear reasons
+    members = ["foo", "crates/bar"]
+"#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file("crates/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("crates/bar/src/lib.rs", "");
+    let p = p.build();
+    // Check that this project can be built normally
+    p.cargo("build").run();
+
+    let canon = p
+        .root()
+        .canonicalize()
+        .expect("Build dir cannot be canonicalised");
+
+    // `std` has this method, but it's private
+    // canon.components().prefix_verbatim(),
+    match &canon.components().next() {
+        Some(std::path::Component::Prefix(it)) if it.kind().is_verbatim() => (),
+        // If this is because the std implementation has changed, this test should
+        // be updated to use a different method of getting a UNC path to the build_dir
+        _ => panic!("canonicalize unexpectedly didn't create a UNC path on windows."),
+    };
+    p.cargo("build")
+        .arg("--manifest-path")
+        .arg(canon.join("Cargo.toml"))
+        .run();
+    p.cargo("clean").run();
+    p.cargo("build")
+        .arg("--manifest-path")
+        .arg(canon.join("Cargo.toml"))
+        .run();
+    p.cargo("build")
+        .arg("--manifest-path")
+        // This path using a backslash *is* required, because canon is a UNC path
+        .arg(canon.join("foo\\Cargo.toml"))
+        .run();
+}
