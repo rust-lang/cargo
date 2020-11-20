@@ -11,7 +11,7 @@ use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
 use anyhow::Context;
-use curl::easy::Easy;
+use curl::easy::{Easy, List};
 use log::{debug, trace, warn};
 use std::cell::{Cell, RefCell, RefMut};
 use std::fmt::Write as FmtWrite;
@@ -22,31 +22,68 @@ use std::path::Path;
 use std::str;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct Version {
-    epoch: usize,
-    changelog_offset: usize,
+enum ChangelogState {
+    Unknown,
+    Unsupported,
+    Synchronized {
+        epoch: usize,
+        changelog_offset: usize,
+    },
 }
 
-impl std::str::FromStr for Version {
+impl ChangelogState {
+    fn is_synchronized(&self) -> bool {
+        matches!(self, ChangelogState::Synchronized { .. })
+    }
+    fn is_unknown(&self) -> bool {
+        matches!(self, ChangelogState::Unknown)
+    }
+    fn is_unsupported(&self) -> bool {
+        matches!(self, ChangelogState::Unsupported)
+    }
+}
+
+impl Into<(ChangelogState, InternedString)> for ChangelogState {
+    fn into(self) -> (ChangelogState, InternedString) {
+        let is = InternedString::from(self.to_string());
+        (self, is)
+    }
+}
+
+impl std::str::FromStr for ChangelogState {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "unknown" {
+            return Ok(ChangelogState::Unknown);
+        }
+        if s == "unsupported" {
+            return Ok(ChangelogState::Unsupported);
+        }
+
         let mut parts = s.split('.');
         let epoch = parts.next().expect("split always yields one item");
         let epoch = usize::from_str_radix(epoch, 10).map_err(|_| "invalid epoch")?;
         let changelog_offset = parts.next().ok_or("no changelog offset")?;
         let changelog_offset =
             usize::from_str_radix(changelog_offset, 10).map_err(|_| "invalid changelog offset")?;
-        Ok(Version {
+        Ok(ChangelogState::Synchronized {
             epoch,
             changelog_offset,
         })
     }
 }
 
-impl ToString for Version {
+impl ToString for ChangelogState {
     fn to_string(&self) -> String {
-        format!("{}.{}", self.epoch, self.changelog_offset)
+        match *self {
+            ChangelogState::Unknown => String::from("unknown"),
+            ChangelogState::Unsupported => String::from("unsupported"),
+            ChangelogState::Synchronized {
+                epoch,
+                changelog_offset,
+            } => format!("{}.{}", epoch, changelog_offset),
+        }
     }
 }
 
@@ -74,7 +111,7 @@ pub struct HttpRegistry<'cfg> {
     cache_path: Filesystem,
     source_id: SourceId,
     config: &'cfg Config,
-    at: Cell<Option<(Version, InternedString)>>,
+    at: Cell<(ChangelogState, InternedString)>,
     checked_for_at: Cell<bool>,
     http: RefCell<Option<Easy>>,
     // dirty: RefCell<HashSet<String>>
@@ -87,7 +124,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            at: Cell::new(None),
+            at: Cell::new(ChangelogState::Unknown.into()),
             checked_for_at: Cell::new(false),
             http: RefCell::new(None),
         }
@@ -119,17 +156,18 @@ const LAST_UPDATED_FILE: &str = ".last-updated";
 
 impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
-        if self.at.get().is_none() && !self.checked_for_at.get() {
+        if self.at.get().0.is_unknown() && !self.checked_for_at.get() {
             self.checked_for_at.set(true);
             let path = self.config.assert_package_cache_locked(&self.index_path);
             if path.exists() {
-                let version = paths::read(&path.join(LAST_UPDATED_FILE))?;
-                let version: Version = version
+                let cl_state = paths::read(&path.join(LAST_UPDATED_FILE))?;
+                let cl_state: ChangelogState = cl_state
                     .parse()
                     .map_err(|e| anyhow::anyhow!("{}", e))
-                    .chain_err(|| format!("failed to parse last version: '{}'", version))?;
-                let as_str = InternedString::from(version.to_string());
-                self.at.set(Some((version, as_str)));
+                    .chain_err(|| {
+                        format!("failed to parse last changelog state: '{}'", cl_state)
+                    })?;
+                self.at.set(cl_state.into());
             }
         }
 
@@ -182,7 +220,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn current_version(&self) -> Option<InternedString> {
-        self.at.get().map(|(_, as_str)| as_str)
+        let cl_state = self.at.get();
+        if cl_state.0.is_unknown() {
+            None
+        } else {
+            Some(cl_state.1)
+        }
     }
 
     fn load(
@@ -192,9 +235,33 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
         let pkg = root.join(path);
-        if pkg.exists() {
-            return data(&paths::read_bytes(&pkg)?);
-        }
+        let bytes;
+        let was = if pkg.exists() {
+            bytes = paths::read_bytes(&pkg)?;
+            let mut lines = bytes.splitn(3, |&c| c == b'\n');
+            let etag = lines.next().expect("splitn always returns >=1 item");
+            let last_modified = if let Some(lm) = lines.next() {
+                lm
+            } else {
+                anyhow::bail!("index file is missing HTTP header header");
+            };
+            let rest = if let Some(rest) = lines.next() {
+                rest
+            } else {
+                anyhow::bail!("index file is missing HTTP header header");
+            };
+
+            if !self.at.get().0.is_unsupported() || self.config.offline() {
+                return data(rest);
+            } else {
+                // we cannot trust the index files -- need to check with server
+                let etag = std::str::from_utf8(etag)?;
+                let last_modified = std::str::from_utf8(last_modified)?;
+                Some((etag, last_modified))
+            }
+        } else {
+            None
+        };
 
         let url = self.source_id.url();
         if self.config.offline() {
@@ -208,11 +275,56 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let mut handle = self.http()?;
         handle.url(&format!("{}{}", url, path.display()))?;
 
+        if let Some((etag, last_modified)) = was {
+            let mut list = List::new();
+            list.append(&format!("If-None-Match: {}", etag))?;
+            list.append(&format!("If-Modified-Since: {}", last_modified))?;
+            handle.http_headers(list)?;
+        }
+
         let mut contents = Vec::new();
+        let mut etag = None;
+        let mut last_modified = None;
         let mut transfer = handle.transfer();
         transfer.write_function(|buf| {
             contents.extend_from_slice(buf);
             Ok(buf.len())
+        })?;
+
+        // capture ETag and Last-Modified
+        transfer.header_function(|buf| {
+            const ETAG: &'static [u8] = b"ETag:";
+            const LAST_MODIFIED: &'static [u8] = b"Last-Modified:";
+
+            let (tag, buf) =
+                if buf.len() >= ETAG.len() && buf[..ETAG.len()].eq_ignore_ascii_case(ETAG) {
+                    (ETAG, &buf[ETAG.len()..])
+                } else if buf.len() >= LAST_MODIFIED.len()
+                    && buf[..LAST_MODIFIED.len()].eq_ignore_ascii_case(LAST_MODIFIED)
+                {
+                    (LAST_MODIFIED, &buf[LAST_MODIFIED.len()..])
+                } else {
+                    return true;
+                };
+
+            // don't let server sneak more lines into index file
+            if buf.contains(&b'\n') {
+                return true;
+            }
+
+            if let Ok(buf) = std::str::from_utf8(buf) {
+                let buf = buf.trim();
+                let mut s = String::with_capacity(buf.len() + 1);
+                s.push_str(buf);
+                s.push('\n');
+                if tag == ETAG {
+                    etag = Some(s);
+                } else if tag == LAST_MODIFIED {
+                    last_modified = Some(s);
+                }
+            }
+
+            true
         })?;
 
         // TODO: should we display transfer status here somehow?
@@ -222,8 +334,17 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             .chain_err(|| format!("failed to fetch index file `{}`", path.display()))?;
         drop(transfer);
 
+        // don't send If-Modified-Since with future requests
+        let mut list = List::new();
+        list.append("If-Modified-Since:")?;
+        handle.http_headers(list)?;
+
         match handle.response_code()? {
             200 => {}
+            304 => {
+                // not modified
+                assert!(was.is_some());
+            }
             404 | 410 | 451 => {
                 // crate was deleted from the registry.
                 // nothing to do here since we already deleted the file from the index.
@@ -235,7 +356,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
-        paths::write(&root.join(path), &contents)?;
+        let mut file = paths::create(&root.join(path))?;
+        file.write_all(etag.as_deref().unwrap_or("\n").as_bytes())?;
+        file.write_all(last_modified.as_deref().unwrap_or("\n").as_bytes())?;
+        file.write_all(&contents)?;
+        file.flush()?;
         data(&contents)
     }
 
@@ -283,26 +408,38 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             /// We are fetching the changelog with no historical context.
             FirstFetch { full: bool },
             /// We are trying to follow the changelog to update our view of the index.
-            Follow(Version),
+            Follow {
+                epoch: usize,
+                changelog_offset: usize,
+            },
         }
 
         let mut handle = self.http()?;
         // TODO: .join? may do the wrong thing if url does not end with /
         handle.url(&format!("{}/changelog", url))?;
-        let mut plan = if let Some((version, _)) = self.at.get() {
-            ChangelogUse::Follow(version)
+        let mut plan = if let ChangelogState::Synchronized {
+            epoch,
+            changelog_offset,
+        } = self.at.get().0
+        {
+            ChangelogUse::Follow {
+                epoch,
+                changelog_offset,
+            }
         } else {
             ChangelogUse::FirstFetch { full: false }
         };
 
-        let all_dirty = 'changelog: loop {
+        'changelog: loop {
             // reset in case we looped
             handle.range("")?;
             handle.resume_from(0)?;
 
             match plan {
-                ChangelogUse::Follow(version) => {
-                    handle.resume_from(version.changelog_offset as u64)?;
+                ChangelogUse::Follow {
+                    changelog_offset, ..
+                } => {
+                    handle.resume_from(changelog_offset as u64)?;
                 }
                 ChangelogUse::FirstFetch { full: false } => {
                     // we really just need the epoch number and file size,
@@ -378,14 +515,21 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     // server does not support Range:
                     // so we need to manually slice contents
                     let total_bytes = contents.len();
-                    if let ChangelogUse::Follow(version) = plan {
-                        if contents.len() < version.changelog_offset {
+                    if let ChangelogUse::Follow {
+                        changelog_offset, ..
+                    } = plan
+                    {
+                        if contents.len() < changelog_offset {
                             // must have rolled over.
                             // luckily, since the server sent the whole response,
                             // we can just continue as if that was our plan all along.
                             plan = ChangelogUse::FirstFetch { full: true };
                         } else {
-                            contents = &contents[version.changelog_offset..];
+                            contents = &contents[changelog_offset..];
+                            if contents.is_empty() {
+                                // no changes in changelog
+                                break;
+                            }
                         }
                     }
                     total_bytes
@@ -404,9 +548,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                                     plan = ChangelogUse::FirstFetch { full: true };
                                     continue;
                                 }
-                                ChangelogUse::Follow(version) => {
-                                    version.changelog_offset + contents.len()
-                                }
+                                ChangelogUse::Follow {
+                                    changelog_offset, ..
+                                } => changelog_offset + contents.len(),
                             }
                         }
                         Some(b) => b,
@@ -414,11 +558,18 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 204 => {
                     // no changes in changelog
-                    break false;
+                    assert!(self.at.get().0.is_synchronized());
+                    break;
                 }
                 404 => {
                     // server does not have a changelog
-                    break true;
+                    if self.at.get().0.is_synchronized() {
+                        // we used to have a changelog, but now we don't. it's important that we
+                        // record that fact so that later calls to load() will all double-check
+                        // with the server.
+                        self.at.set(ChangelogState::Unsupported.into());
+                    }
+                    break;
                 }
                 416 => {
                     // Range Not Satisfiable
@@ -437,6 +588,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             };
 
             let mut line = String::new();
+            let mut new_changelog = false;
+            let mut fetched_epoch = None;
             while contents.read_line(&mut line)? != 0 {
                 let mut parts = line.trim().splitn(2, ' ');
                 let epoch = parts.next().expect("split always has one element");
@@ -445,49 +598,50 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     continue;
                 }
                 let epoch = if let Ok(epoch) = epoch.parse::<usize>() {
+                    fetched_epoch = Some(epoch);
                     epoch
                 } else {
                     warn!("index {} changelog has invalid lines", url);
-                    break 'changelog true;
+                    // ensure that all future index fetches check with server
+                    self.at.set(ChangelogState::Unsupported.into());
+                    break 'changelog;
                 };
 
-                let mismatch = match plan {
-                    ChangelogUse::FirstFetch { .. } => true,
-                    ChangelogUse::Follow(ref version) if version.epoch != epoch => {
+                match plan {
+                    ChangelogUse::FirstFetch { .. } => {
+                        new_changelog = true;
+
+                        // we don't actually care about the remainder of the changelog,
+                        // since we've completely purged our local index.
+                        break;
+                    }
+                    ChangelogUse::Follow {
+                        epoch: last_epoch, ..
+                    } if last_epoch != epoch => {
                         debug!("index {} changelog has rolled over", url);
                         // TODO: try previous changelog if available?
-                        true
+
+                        new_changelog = true;
+                        break;
                     }
-                    ChangelogUse::Follow(_) => false,
-                };
-
-                if mismatch {
-                    debug!(
-                        "index {} is at epoch {} (offset: {})",
-                        url, epoch, total_bytes
-                    );
-
-                    let version = Version {
-                        epoch,
-                        changelog_offset: total_bytes,
-                    };
-                    let as_str = InternedString::from(version.to_string());
-                    self.at.set(Some((version, as_str)));
-
-                    break 'changelog true;
+                    ChangelogUse::Follow { .. } => {}
                 }
 
                 let rest = if let Some(rest) = parts.next() {
                     rest
                 } else {
                     warn!("index {} changelog has invalid lines", url);
-                    break 'changelog true;
+                    // ensure that all future index fetches check with server
+                    self.at.set(ChangelogState::Unsupported.into());
+                    break 'changelog;
                 };
                 let mut parts = rest.rsplitn(2, ' ');
                 let krate = parts.next().expect("rsplit always has one element");
                 if krate.is_empty() {
                     warn!("index {} changelog has invalid lines", url);
-                    break 'changelog true;
+                    // ensure that all future index fetches check with server
+                    self.at.set(ChangelogState::Unsupported.into());
+                    break 'changelog;
                 }
 
                 // remove the index file -- we'll have to re-fetch it
@@ -497,44 +651,61 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
             }
 
-            match plan {
-                ChangelogUse::Follow(version) => {
-                    // update version so that index cache won't be used and load will be called
-                    let version = Version {
-                        epoch: version.epoch,
-                        changelog_offset: total_bytes,
-                    };
-                    let as_str = InternedString::from(version.to_string());
-                    self.at.set(Some((version, as_str)));
-
-                    break false;
-                }
-                ChangelogUse::FirstFetch { .. } => {
-                    // we can only get here if the changelog was empty.
-                    // what do we do? we don't know what the current epoch is!
-                    // mark everything as dirty and don't write out a version.
-                    self.at.set(None);
-                    break true;
-                }
+            if total_bytes == 0 {
+                // the changelog has rolled over, but we didn't realize since we didn't actually
+                // _observe_ another epoch number. catch that here.
+                new_changelog = true;
             }
-        };
+
+            if new_changelog {
+                if let Some(epoch) = fetched_epoch {
+                    debug!(
+                        "index {} is at epoch {} (offset: {})",
+                        url, epoch, total_bytes
+                    );
+
+                    // we don't know which index entries are now invalid and which are not.
+                    // so we purge them all.
+                    // XXX: will this cause issues with directory locking?
+                    paths::remove_dir_all(&path)?;
+                    paths::create_dir_all(&path)?;
+
+                    // but from this point forward we're synchronized
+                    self.at.set(
+                        ChangelogState::Synchronized {
+                            epoch,
+                            changelog_offset: total_bytes,
+                        }
+                        .into(),
+                    );
+                } else {
+                    // we have a new changelog, but we don't know what the epoch of that changelog
+                    // is since it was empty (otherwise fetched_epoch would be Some).
+                    self.at.set(ChangelogState::Unknown.into());
+                }
+                break;
+            }
+
+            // keep track of our new byte offset in the changelog
+            let epoch = fetched_epoch.expect("changelog was non-empty (total_bytes != 0)");
+            self.at.set(
+                ChangelogState::Synchronized {
+                    epoch,
+                    changelog_offset: total_bytes,
+                }
+                .into(),
+            );
+            break;
+        }
 
         // reset the http handle
         handle.range("")?;
         handle.resume_from(0)?;
 
-        if all_dirty {
-            // mark all files in index as dirty
-            // TODO: this is obviously sub-optimal
-            paths::remove_dir_all(&path)?;
-        }
-
         self.config.updated_sources().insert(self.source_id);
 
         // Record the latest known state of the index.
-        if let Some((_, version)) = self.at.get() {
-            paths::write(&path.join(LAST_UPDATED_FILE), version.as_bytes())?;
-        }
+        paths::write(&path.join(LAST_UPDATED_FILE), self.at.get().1.as_bytes())?;
 
         Ok(())
     }
