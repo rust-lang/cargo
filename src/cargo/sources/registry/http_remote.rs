@@ -10,7 +10,6 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
-use anyhow::Context;
 use curl::easy::{Easy, List};
 use log::{debug, trace, warn};
 use std::cell::{Cell, RefCell, RefMut};
@@ -85,25 +84,6 @@ impl ToString for ChangelogState {
             } => format!("{}.{}", epoch, changelog_offset),
         }
     }
-}
-
-// When dynamically linked against libcurl, we want to ignore some failures
-// when using old versions that don't support certain features.
-//
-// NOTE: lifted from src/cargo/core/package.rs
-macro_rules! try_old_curl {
-    ($e:expr, $msg:expr) => {
-        let result = $e;
-        if cfg!(target_os = "macos") {
-            if let Err(e) = result {
-                warn!("ignoring libcurl {} error: {}", $msg, e);
-            }
-        } else {
-            result.with_context(|| {
-                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
-            })?;
-        }
-    };
 }
 
 pub struct HttpRegistry<'cfg> {

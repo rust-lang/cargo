@@ -47,3 +47,21 @@ impl<T: fmt::Display> fmt::Debug for DisplayAsDebug<T> {
         fmt::Display::fmt(&self.0, f)
     }
 }
+
+// When dynamically linked against libcurl, we want to ignore some failures
+// when using old versions that don't support certain features.
+macro_rules! try_old_curl {
+    ($e:expr, $msg:expr) => {
+        let result = $e;
+        if cfg!(target_os = "macos") {
+            if let Err(e) = result {
+                log::warn!("ignoring libcurl {} error: {}", $msg, e);
+            }
+        } else {
+            use anyhow::Context;
+            result.with_context(|| {
+                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
+            })?;
+        }
+    };
+}

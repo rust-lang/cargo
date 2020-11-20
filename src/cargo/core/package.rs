@@ -8,12 +8,11 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use anyhow::Context;
 use bytesize::ByteSize;
 use curl::easy::{Easy, HttpVersion};
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
-use log::{debug, warn};
+use log::debug;
 use semver::Version;
 use serde::Serialize;
 
@@ -577,23 +576,6 @@ impl<'cfg> PackageSet<'cfg> {
         let other_sources = set.sources.into_inner();
         sources.add_source_map(other_sources);
     }
-}
-
-// When dynamically linked against libcurl, we want to ignore some failures
-// when using old versions that don't support certain features.
-macro_rules! try_old_curl {
-    ($e:expr, $msg:expr) => {
-        let result = $e;
-        if cfg!(target_os = "macos") {
-            if let Err(e) = result {
-                warn!("ignoring libcurl {} error: {}", $msg, e);
-            }
-        } else {
-            result.with_context(|| {
-                anyhow::format_err!("failed to enable {}, is curl not built right?", $msg)
-            })?;
-        }
-    };
 }
 
 impl<'a, 'cfg> Downloads<'a, 'cfg> {
