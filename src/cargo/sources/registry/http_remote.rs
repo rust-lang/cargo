@@ -37,7 +37,6 @@ enum ChangelogState {
     ///
     /// In this state, we must double-check with the server every time we want to load an index
     /// file in case that file has changed upstream.
-    // TODO: we may need each Unsupported to have a distinct string representation to bust caches?
     Unsupported,
 
     /// The server served us a changelog in the past.
@@ -239,10 +238,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
     fn current_version(&self) -> Option<InternedString> {
         let cl_state = self.at.get();
-        if cl_state.0.is_unknown() {
-            None
-        } else {
+        if cl_state.0.is_synchronized() {
             Some(cl_state.1)
+        } else {
+            None
         }
     }
 
