@@ -207,7 +207,18 @@ restore the source replacement configuration to continue the build
         let mut srcs = Vec::new();
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_registry(&url)?);
+            if url.scheme().starts_with("rfc+") {
+                // NOTE: it is illegal to use set_scheme to change rfc+http(s) to http(s).
+                let url = url
+                    .to_string()
+                    .strip_prefix("rfc+")
+                    .unwrap()
+                    .into_url()
+                    .unwrap();
+                srcs.push(SourceId::for_http_registry(&url)?);
+            } else {
+                srcs.push(SourceId::for_registry(&url)?);
+            }
         }
         if let Some(local_registry) = def.local_registry {
             let path = local_registry.resolve_path(self.config);
