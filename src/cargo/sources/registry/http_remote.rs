@@ -427,6 +427,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
         }
 
+        paths::create_dir_all(pkg.parent().expect("pkg is a file"))?;
         let mut file = paths::create(&root.join(path))?;
         file.write_all(etag.as_deref().unwrap_or("\n").as_bytes())?;
         file.write_all(last_modified.as_deref().unwrap_or("\n").as_bytes())?;
@@ -885,8 +886,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 // so we have to purge them all.
                 //
                 // TODO: Will this cause issues with directory locking?
-                paths::remove_dir_all(&path)?;
-                paths::create_dir_all(&path)?;
+                if path.exists() {
+                    paths::remove_dir_all(&path)?;
+                    paths::create_dir_all(&path)?;
+                }
 
                 // From this point forward, we're synchronized with the changelog!
                 self.at.set(
@@ -916,7 +919,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         self.config.updated_sources().insert(self.source_id);
 
         // Record the latest known state of the index.
-        paths::write(&path.join(LAST_UPDATED_FILE), self.at.get().1.as_bytes())?;
+        if !path.exists() {
+            paths::create_dir_all(&path)?;
+        }
+        let mut file = paths::create(&path.join(LAST_UPDATED_FILE))?;
+        file.write_all(self.at.get().1.as_bytes())?;
+        file.flush()?;
 
         Ok(())
     }
