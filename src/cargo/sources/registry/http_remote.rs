@@ -63,9 +63,6 @@ impl ChangelogState {
     fn is_unknown(&self) -> bool {
         matches!(self, ChangelogState::Unknown)
     }
-    fn is_unsupported(&self) -> bool {
-        matches!(self, ChangelogState::Unsupported)
-    }
 }
 
 impl Into<(ChangelogState, InternedString)> for ChangelogState {
@@ -292,7 +289,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             };
 
             // NOTE: We should always double-check for changes to config.json.
-            let double_check = self.at.get().0.is_unsupported() || path.ends_with("config.json");
+            let double_check = !self.at.get().0.is_synchronized() || path.ends_with("config.json");
 
             // NOTE: If we're in offline mode, we don't double-check with the server.
             if !double_check || self.config.offline() {
