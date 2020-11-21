@@ -274,6 +274,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let bytes;
         let was = if pkg.exists() {
             // We have a local copy -- extract the `Last-Modified` and `Etag` headers.
+            trace!("load {} from disk", path.display());
+
             bytes = paths::read_bytes(&pkg)?;
             let mut lines = bytes.splitn(3, |&c| c == b'\n');
             let etag = lines.next().expect("splitn always returns >=1 item");
@@ -290,6 +292,22 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
             // NOTE: We should always double-check for changes to config.json.
             let double_check = !self.at.get().0.is_synchronized() || path.ends_with("config.json");
+
+            if double_check {
+                if self.config.offline() {
+                    debug!(
+                        "not double-checking freshness of {} due to offline",
+                        path.display()
+                    );
+                } else {
+                    debug!("double-checking freshness of {}", path.display());
+                }
+            } else {
+                debug!(
+                    "using {} from cache as changelog is synchronized",
+                    path.display()
+                );
+            }
 
             // NOTE: If we're in offline mode, we don't double-check with the server.
             if !double_check || self.config.offline() {
@@ -314,6 +332,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         self.prepare()?;
         let mut handle = self.http()?;
+        debug!("fetch {}{}", url, path.display());
         handle.url(&format!("{}{}", url, path.display()))?;
 
         if let Some((ref etag, ref last_modified, _)) = was {
@@ -382,6 +401,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         list.append("If-None-Match:")?;
         handle.http_headers(list)?;
 
+        debug!(
+            "index file downloaded with status code {}",
+            handle.response_code()?
+        );
         match handle.response_code()? {
             200 => {}
             304 => {
