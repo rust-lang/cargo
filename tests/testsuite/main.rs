@@ -56,6 +56,7 @@ mod git_auth;
 mod git_gc;
 mod glob_targets;
 mod help;
+mod http_registry;
 mod init;
 mod install;
 mod install_upgrade;

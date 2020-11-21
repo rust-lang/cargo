@@ -7,7 +7,12 @@ use flate2::Compression;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::io::BufReader;
+use std::net::{SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -211,6 +216,230 @@ pub fn init() {
         alt_api_url(),
         alt_api_path(),
     );
+}
+
+pub enum RegistryServerConfiguration {
+    NoChangelog,
+    WithChangelog,
+    ChangelogNoRange,
+}
+
+pub struct RegistryServer {
+    done: Arc<AtomicBool>,
+    server: Option<thread::JoinHandle<()>>,
+    addr: SocketAddr,
+}
+
+impl RegistryServer {
+    pub fn addr(&self) -> SocketAddr {
+        self.addr
+    }
+}
+
+impl Drop for RegistryServer {
+    fn drop(&mut self) {
+        self.done.store(true, Ordering::SeqCst);
+        // NOTE: we can't actually await the server since it's blocked in accept()
+        let _ = self.server.take().unwrap();
+    }
+}
+
+#[must_use]
+pub fn serve_registry(
+    registry_path: PathBuf,
+    config: RegistryServerConfiguration,
+) -> RegistryServer {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let done = Arc::new(AtomicBool::new(false));
+    let done2 = done.clone();
+
+    let t = thread::spawn(move || {
+        let support_range = !matches!(config, RegistryServerConfiguration::ChangelogNoRange);
+
+        let mut line = String::new();
+        'server: while !done2.load(Ordering::SeqCst) {
+            let (socket, _) = listener.accept().unwrap();
+            // Let's implement a very naive static file HTTP server.
+            let mut buf = BufReader::new(socket);
+
+            // First, the request line:
+            // GET /path HTTPVERSION
+            line.clear();
+            if buf.read_line(&mut line).unwrap() == 0 {
+                // Connection terminated.
+                continue;
+            }
+
+            assert!(line.starts_with("GET "), "got non-GET request: {}", line);
+            let path = PathBuf::from(
+                line.split_whitespace()
+                    .skip(1)
+                    .next()
+                    .unwrap()
+                    .trim_start_matches('/'),
+            );
+
+            let file = registry_path.join(path);
+            let mut exists = file.exists();
+            if file.ends_with("changelog")
+                && matches!(config, RegistryServerConfiguration::NoChangelog)
+            {
+                exists = false;
+            }
+
+            if exists {
+                // Grab some other headers we may care about.
+                let mut range = None;
+                let mut if_modified_since = None;
+                let mut if_none_match = None;
+                loop {
+                    line.clear();
+                    if buf.read_line(&mut line).unwrap() == 0 {
+                        continue 'server;
+                    }
+
+                    if line == "\r\n" {
+                        // End of headers.
+                        line.clear();
+                        break;
+                    }
+
+                    let value = line
+                        .splitn(2, ':')
+                        .skip(1)
+                        .next()
+                        .map(|v| v.trim())
+                        .unwrap();
+
+                    if line.starts_with("Range:") {
+                        let value = value.strip_prefix("bytes=").unwrap_or(value);
+                        if !value.is_empty() {
+                            let mut parts = value.split('-');
+                            let start = parts.next().unwrap().parse::<usize>().unwrap();
+                            let end = parts.next().unwrap();
+                            let end = if end.is_empty() {
+                                None
+                            } else {
+                                Some(end.parse::<usize>().unwrap())
+                            };
+                            range = Some((start, end));
+                        }
+                    } else if line.starts_with("If-Modified-Since:") {
+                        if_modified_since = Some(value.to_owned());
+                    } else if line.starts_with("If-None-Match:") {
+                        if_none_match = Some(value.trim_matches('"').to_owned());
+                    }
+                }
+
+                // Now grab info about the file.
+                let data = fs::read(&file).unwrap();
+                let etag = Sha256::new().update(&data).finish_hex();
+                let last_modified = format!("{:?}", file.metadata().unwrap().modified().unwrap());
+
+                // Start to construct our response:
+                let mut any_match = false;
+                let mut all_match = true;
+                if let Some(expected) = if_none_match {
+                    if etag != expected {
+                        all_match = false;
+                    } else {
+                        any_match = true;
+                    }
+                }
+                if let Some(expected) = if_modified_since {
+                    // NOTE: Equality comparison is good enough for tests.
+                    if last_modified != expected {
+                        all_match = false;
+                    } else {
+                        any_match = true;
+                    }
+                }
+                if any_match {
+                    assert!(range.is_none());
+                }
+
+                // Write out the main response line.
+                let data_len = data.len();
+                let mut data = &data[..];
+                if any_match && all_match {
+                    buf.get_mut()
+                        .write_all(b"HTTP/1.1 304 Not Modified\r\n")
+                        .unwrap();
+                } else if range.is_none() || !support_range {
+                    buf.get_mut().write_all(b"HTTP/1.1 200 OK\r\n").unwrap();
+                } else if let Some((start, end)) = range {
+                    if start >= data.len()
+                        || end.unwrap_or(0) >= data.len()
+                        || end.unwrap_or(start) <= start
+                    {
+                        buf.get_mut()
+                            .write_all(b"HTTP/1.1 416 Range Not Satisfiable\r\n")
+                            .unwrap();
+                    } else {
+                        buf.get_mut()
+                            .write_all(b"HTTP/1.1 206 Partial Content\r\n")
+                            .unwrap();
+
+                        // Slice the data as requested and include a header indicating that.
+                        // Note that start and end are both inclusive!
+                        data = &data[start..=end.unwrap_or(data_len - 1)];
+                        buf.get_mut()
+                            .write_all(
+                                format!(
+                                    "Content-Range: bytes {}-{}/{}\r\n",
+                                    start,
+                                    end.unwrap_or(data_len - 1),
+                                    data_len
+                                )
+                                .as_bytes(),
+                            )
+                            .unwrap();
+                    }
+                }
+                // TODO: Support 451 for crate index deletions.
+
+                // Write out other headers.
+                buf.get_mut()
+                    .write_all(format!("Content-Length: {}\r\n", data.len()).as_bytes())
+                    .unwrap();
+                buf.get_mut()
+                    .write_all(format!("ETag: \"{}\"\r\n", etag).as_bytes())
+                    .unwrap();
+                buf.get_mut()
+                    .write_all(format!("Last-Modified: {}\r\n", last_modified).as_bytes())
+                    .unwrap();
+
+                // And finally, write out the body.
+                buf.get_mut().write_all(b"\r\n").unwrap();
+                buf.get_mut().write_all(data).unwrap();
+            } else {
+                loop {
+                    line.clear();
+                    if buf.read_line(&mut line).unwrap() == 0 {
+                        // Connection terminated.
+                        continue 'server;
+                    }
+
+                    if line == "\r\n" {
+                        break;
+                    }
+                }
+
+                buf.get_mut()
+                    .write_all(b"HTTP/1.1 404 Not Found\r\n\r\n")
+                    .unwrap();
+                buf.get_mut().write_all(b"\r\n").unwrap();
+            }
+            buf.get_mut().flush().unwrap();
+        }
+    });
+
+    RegistryServer {
+        addr,
+        server: Some(t),
+        done,
+    }
 }
 
 pub fn init_registry(registry_path: PathBuf, dl_url: String, api_url: Url, api_path: PathBuf) {
@@ -453,6 +682,26 @@ impl Package {
         let prev = fs::read_to_string(&dst).unwrap_or_default();
         t!(fs::create_dir_all(dst.parent().unwrap()));
         t!(fs::write(&dst, prev + &line[..] + "\n"));
+
+        // Update changelog.
+        let dst = registry_path.join("changelog");
+        t!(fs::create_dir_all(dst.parent().unwrap()));
+        let mut epoch = 1;
+        if dst.exists() {
+            // Fish out the current epoch.
+            let prev = fs::read_to_string(&dst).unwrap_or_default();
+            let e = prev.split_whitespace().next().unwrap();
+            if !e.is_empty() {
+                epoch = e.parse::<usize>().unwrap();
+            }
+        }
+        let mut changelog = t!(fs::OpenOptions::new().append(true).create(true).open(dst));
+        t!(writeln!(
+            changelog,
+            "{} 2020-11-20 16:54:07 {}",
+            epoch, name
+        ));
+        t!(changelog.flush());
 
         // Add the new file to the index.
         if !self.local {
