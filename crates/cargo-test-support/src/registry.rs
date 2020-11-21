@@ -218,6 +218,7 @@ pub fn init() {
     );
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum RegistryServerConfiguration {
     NoChangelog,
     WithChangelog,
