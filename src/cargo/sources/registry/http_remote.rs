@@ -582,6 +582,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 200 => {
                     // The server does not support Range: requests,
                     // so we need to manually slice the bytes we got back.
+                    //
+                    // TODO: This is a really bad operating state! We're fetching the _entire_
+                    // changelog each time we update the changelog. Not clear if that's better than
+                    // just validating each index lookup?
                     let total_bytes = contents.len();
                     if let ChangelogStrategy::Follow { length, .. } = plan {
                         if contents.len() < length || contents.len() == 0 {
