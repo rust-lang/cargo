@@ -27,12 +27,6 @@ use std::str;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// The last known state of the changelog.
 enum ChangelogState {
-    /// The changelog is in an unknown state.
-    ///
-    /// This can be because we've never fetched it before, or because it was empty last time we
-    /// looked (so it did not contain an `epoch`).
-    Unknown,
-
     /// The server does not host a changelog.
     ///
     /// In this state, we must double-check with the server every time we want to load an index
@@ -59,9 +53,6 @@ impl ChangelogState {
     fn is_synchronized(&self) -> bool {
         matches!(self, ChangelogState::Synchronized { .. })
     }
-    fn is_unknown(&self) -> bool {
-        matches!(self, ChangelogState::Unknown)
-    }
 }
 
 impl Into<(ChangelogState, InternedString)> for ChangelogState {
@@ -75,9 +66,6 @@ impl std::str::FromStr for ChangelogState {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "unknown" {
-            return Ok(ChangelogState::Unknown);
-        }
         if s == "unsupported" {
             return Ok(ChangelogState::Unsupported);
         }
@@ -94,7 +82,6 @@ impl std::str::FromStr for ChangelogState {
 impl ToString for ChangelogState {
     fn to_string(&self) -> String {
         match *self {
-            ChangelogState::Unknown => String::from("unknown"),
             ChangelogState::Unsupported => String::from("unsupported"),
             ChangelogState::Synchronized { epoch, length } => format!("{}.{}", epoch, length),
         }
@@ -138,7 +125,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
-            at: Cell::new(ChangelogState::Unknown.into()),
+            at: Cell::new(ChangelogState::Unsupported.into()),
             checked_for_at: Cell::new(false),
             http: RefCell::new(None),
         }
@@ -171,7 +158,7 @@ const LAST_UPDATED_FILE: &str = ".last-updated";
 impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
         // Load last known changelog state from LAST_UPDATED_FILE.
-        if self.at.get().0.is_unknown() && !self.checked_for_at.get() {
+        if !self.checked_for_at.get() {
             self.checked_for_at.set(true);
             let path = self.config.assert_package_cache_locked(&self.index_path);
             if path.exists() {
@@ -675,7 +662,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             if contents.len() == 0 {
                 if total_bytes == 0 {
                     // We can't use the changelog, since we don't know its epoch.
-                    self.at.set(ChangelogState::Unknown.into());
+                    self.at.set(ChangelogState::Unsupported.into());
                 } else {
                     // There are no changes in changelog, so there's supposedly nothing to update.
                     //
