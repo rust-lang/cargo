@@ -710,6 +710,19 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 let epoch = parts.next().expect("split always has one element");
                 let krate = parts.skip(2).next();
 
+                if epoch.is_empty() {
+                    // Skip empty lines.
+
+                    // We _have_ observed a line change though,
+                    // so the next epoch read is guaranteed to read a complete epoch.
+                    if let WhatLine::First = at {
+                        at = WhatLine::Second {
+                            first_failed: false,
+                        };
+                    }
+                    continue;
+                }
+
                 let epoch = if let Ok(epoch) = epoch.parse::<usize>() {
                     fetched_epoch = Some(epoch);
                     epoch
