@@ -363,7 +363,7 @@ fn rebuilds_when_changing() {
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--extern-html-root-url 'bar=https://example.com/bar/1.0.0/[..]' [..]",
+            "[RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]",
         )
         .run();
 }
