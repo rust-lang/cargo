@@ -55,7 +55,7 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
 #[derive(serde::Deserialize, Debug, Default)]
 #[serde(default)]
 pub struct RustdocExternMap {
-    registries: HashMap<String, String>,
+    pub(crate) registries: HashMap<String, String>,
     std: Option<RustdocExternMode>,
 }
 
@@ -80,10 +80,6 @@ pub fn add_root_urls(
         return Ok(());
     }
     let map = config.doc_extern_map()?;
-    if map.registries.is_empty() && map.std.is_none() {
-        // Skip doing unnecessary work.
-        return Ok(());
-    }
     let mut unstable_opts = false;
     // Collect mapping of registry name -> index url.
     let name2url: HashMap<&String, Url> = map

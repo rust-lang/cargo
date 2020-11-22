@@ -1217,8 +1217,15 @@ impl Config {
         // Note: This does not support environment variables. The `Unit`
         // fundamentally does not have access to the registry name, so there is
         // nothing to query. Plumbing the name into SourceId is quite challenging.
-        self.doc_extern_map
-            .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
+        self.doc_extern_map.try_borrow_with(|| {
+            let mut extern_map = self.get::<RustdocExternMap>("doc.extern-map");
+            if let Ok(map) = &mut extern_map {
+                map.registries
+                    .entry("crates-io".into())
+                    .or_insert("https://docs.rs/".into());
+            }
+            extern_map
+        })
     }
 
     /// Returns the `[target]` table definition for the given target triple.
