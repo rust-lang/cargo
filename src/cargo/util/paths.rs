@@ -90,7 +90,7 @@ pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
         let paths = env::var_os("PATH").ok_or_else(|| anyhow::format_err!("no PATH"))?;
         let candidates = env::split_paths(&paths).flat_map(|path| {
             let candidate = path.join(&exec);
-            let with_exe = if env::consts::EXE_EXTENSION == "" {
+            let with_exe = if env::consts::EXE_EXTENSION.is_empty() {
                 None
             } else {
                 Some(candidate.with_extension(env::consts::EXE_EXTENSION))

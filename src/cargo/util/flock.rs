@@ -373,12 +373,7 @@ mod sys {
     }
 
     pub(super) fn error_unsupported(err: &Error) -> bool {
-        match err.raw_os_error() {
-            Some(libc::ENOTSUP) => true,
-            #[cfg(target_os = "linux")]
-            Some(libc::ENOSYS) => true,
-            _ => false,
-        }
+        matches!(err.raw_os_error(), Some(libc::ENOTSUP) | Some(libc::ENOSYS))
     }
 
     #[cfg(not(target_os = "solaris"))]

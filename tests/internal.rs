@@ -6,12 +6,7 @@ fn check_forbidden_code() {
     // Do not use certain macros, functions, etc.
     if !cargo::util::is_ci() {
         // Only check these on CI, otherwise it could be annoying.
-        use std::io::Write;
-        writeln!(
-            std::io::stderr(),
-            "\nSkipping check_forbidden_code test, set CI=1 to enable"
-        )
-        .unwrap();
+        eprintln!("\nSkipping check_forbidden_code test, set CI=1 to enable");
         return;
     }
     let root_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
