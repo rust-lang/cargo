@@ -353,13 +353,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     return true;
                 };
 
-            // Don't let server sneak more lines into index file.
-            if buf.contains(&b'\n') {
-                return true;
-            }
-
             if let Ok(buf) = std::str::from_utf8(buf) {
                 let buf = buf.trim();
+
+                // Don't let server sneak more lines into index file.
+                if buf.contains('\n') {
+                    return true;
+                }
+
                 // Append a new line to each so we can easily prepend to the index file.
                 let mut s = String::with_capacity(buf.len() + 1);
                 s.push_str(buf);
