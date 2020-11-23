@@ -28,6 +28,14 @@ use crate::util::{self, paths, validate_package_name, Config, IntoUrl};
 mod targets;
 use self::targets::targets;
 
+/// Loads a `Cargo.toml` from a file on disk.
+///
+/// This could result in a real or virtual manifest being returned.
+///
+/// A list of nested paths is also returned, one for each path dependency
+/// within the manfiest. For virtual manifests, these paths can only
+/// come from patched or replaced dependencies. These paths are not
+/// canonicalized.
 pub fn read_manifest(
     path: &Path,
     source_id: SourceId,
@@ -121,6 +129,12 @@ fn do_read_manifest(
     }
 }
 
+/// Attempts to parse a string into a [`toml::Value`]. This is not specific to any
+/// particular kind of TOML file.
+///
+/// The purpose of this wrapper is to detect invalid TOML which was previously
+/// accepted and display a warning to the user in that case. The `file` and `config`
+/// parameters are only used by this fallback path.
 pub fn parse(toml: &str, file: &Path, config: &Config) -> CargoResult<toml::Value> {
     let first_error = match toml.parse() {
         Ok(ret) => return Ok(ret),
@@ -176,7 +190,12 @@ type TomlBenchTarget = TomlTarget;
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
+    /// In the simple format, only a version is specified, eg.
+    /// `package = "<version>"`
     Simple(String),
+    /// The simple format is equivalent to a detailed dependency
+    /// specifying only a version, eg.
+    /// `package = { version = "<version>" }`
     Detailed(DetailedTomlDependency),
 }
 
@@ -243,6 +262,7 @@ pub struct DetailedTomlDependency {
     public: Option<bool>,
 }
 
+/// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
@@ -847,6 +867,9 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
+    /// Prepares the manfiest for publishing.
+    // - Path and git components of dependency specifications are removed.
+    // - License path is updated to point within the package.
     pub fn prepare_for_publish(
         &self,
         ws: &Workspace<'_>,
@@ -1489,6 +1512,7 @@ impl TomlManifest {
         Ok(patch)
     }
 
+    /// Returns the path to the build script if one exists for this crate.
     fn maybe_custom_build(
         &self,
         build: &Option<StringOrBool>,

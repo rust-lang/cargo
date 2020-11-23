@@ -25,6 +25,8 @@ pub enum EitherManifest {
 }
 
 /// Contains all the information about a package, as loaded from a `Cargo.toml`.
+///
+/// This is deserialized using the [`TomlManifest`] type.
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
