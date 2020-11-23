@@ -700,7 +700,7 @@ impl Package {
         t!(writeln!(
             changelog,
             "{} 2020-11-20 16:54:07 {}",
-            epoch, name
+            epoch, self.name
         ));
         t!(changelog.flush());
 
