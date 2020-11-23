@@ -645,7 +645,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (author_name, email) = discover_author()?;
+    let (author_name, email) = discover_author(path)?;
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
@@ -781,8 +781,8 @@ fn get_environment_variable(variables: &[&str]) -> Option<String> {
     variables.iter().filter_map(|var| env::var(var).ok()).next()
 }
 
-fn discover_author() -> CargoResult<(String, Option<String>)> {
-    let git_config = find_git_config();
+fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
+    let git_config = find_git_config(path);
     let git_config = git_config.as_ref();
 
     let name_variables = [
@@ -833,10 +833,10 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
     Ok((name, email))
 }
 
-fn find_git_config() -> Option<GitConfig> {
+fn find_git_config(path: &Path) -> Option<GitConfig> {
     match env::var("__CARGO_TEST_ROOT") {
         Ok(test_root) => find_tests_git_config(test_root),
-        Err(_) => find_real_git_config(),
+        Err(_) => find_real_git_config(path),
     }
 }
 
@@ -851,12 +851,9 @@ fn find_tests_git_config(cargo_test_root: String) -> Option<GitConfig> {
     }
 }
 
-fn find_real_git_config() -> Option<GitConfig> {
-    match env::current_dir() {
-        Ok(cwd) => GitRepository::discover(cwd)
-            .and_then(|repo| repo.config())
-            .or_else(|_| GitConfig::open_default())
-            .ok(),
-        Err(_) => GitConfig::open_default().ok(),
-    }
+fn find_real_git_config(path: &Path) -> Option<GitConfig> {
+    GitRepository::discover(path)
+        .and_then(|repo| repo.config())
+        .or_else(|_| GitConfig::open_default())
+        .ok()
 }
