@@ -482,6 +482,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         };
 
         // NOTE: Loop in case of rollover, in which case we need to fetch it starting at byte 0.
+        let was = self.at.get();
         'changelog: loop {
             // Reset in case we looped.
             handle.range("")?;
@@ -618,7 +619,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         // with the server.
                         self.at.set(ChangelogState::Unsupported.into());
                     }
-                    break;
+                    break 'changelog;
                 }
                 416 => {
                     // 416 Range Not Satisfiable
@@ -922,13 +923,16 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         self.config.updated_sources().insert(self.source_id);
 
-        // Record the latest known state of the index.
-        if !path.exists() {
-            paths::create_dir_all(&path)?;
+        // Record the latest known state of the index if it changed.
+        let lu_file = path.join(LAST_UPDATED_FILE);
+        if !lu_file.exists() || was != self.at.get() {
+            if !path.exists() {
+                paths::create_dir_all(&path)?;
+            }
+            let mut file = paths::create(&lu_file)?;
+            file.write_all(self.at.get().1.as_bytes())?;
+            file.flush()?;
         }
-        let mut file = paths::create(&path.join(LAST_UPDATED_FILE))?;
-        file.write_all(self.at.get().1.as_bytes())?;
-        file.flush()?;
 
         Ok(())
     }
