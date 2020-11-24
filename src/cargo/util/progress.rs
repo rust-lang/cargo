@@ -71,7 +71,9 @@ impl<'cfg> Progress<'cfg> {
                 format: Format {
                     style,
                     max_width: n,
-                    max_print: 80,
+                    // 50 gives some space for text after the progress bar,
+                    // even on narrow (e.g. 80 char) terminals.
+                    max_print: 50,
                 },
                 name: name.to_string(),
                 done: false,
