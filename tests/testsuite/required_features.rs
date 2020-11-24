@@ -417,6 +417,7 @@ fn test_multiple_required_features() {
 #[cargo_test]
 fn bench_default_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -489,6 +490,7 @@ Consider enabling them by passing, e.g., `--features=\"a\"`
 #[cargo_test]
 fn bench_arg_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 
@@ -536,6 +538,7 @@ fn bench_arg_features() {
 #[cargo_test]
 fn bench_multiple_required_features() {
     if !is_nightly() {
+        // #[bench] is unstable
         return;
     }
 

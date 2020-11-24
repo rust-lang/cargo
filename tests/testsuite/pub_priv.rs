@@ -6,6 +6,7 @@ use cargo_test_support::{is_nightly, project};
 #[cargo_test]
 fn exported_priv_warning() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("priv_dep", "0.1.0")
@@ -48,6 +49,7 @@ src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep'
 #[cargo_test]
 fn exported_pub_dep() {
     if !is_nightly() {
+        // exported_private_dependencies lint is unstable
         return;
     }
     Package::new("pub_dep", "0.1.0")
