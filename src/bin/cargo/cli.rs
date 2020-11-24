@@ -302,6 +302,8 @@ Some common cargo commands are (see all commands with --list):
     publish     Package and upload this package to the registry
     install     Install a Rust binary. Default location is $HOME/.cargo/bin
     uninstall   Uninstall a Rust binary
+    fmt         Format every crate in this workspace
+    clippy      Run a code linter to catch common bugs or Rust idioms
 
 See 'cargo help <command>' for more information on a specific command.\n",
         )
