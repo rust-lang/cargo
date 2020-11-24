@@ -230,7 +230,7 @@ fn no_rewrite_if_no_change() {
 #[cargo_test]
 fn relative_depinfo_paths_ws() {
     if !is_nightly() {
-        // See https://github.com/rust-lang/rust/issues/63012
+        // -Z binary-dep-depinfo is unstable (https://github.com/rust-lang/rust/issues/63012)
         return;
     }
 
@@ -368,7 +368,7 @@ fn relative_depinfo_paths_ws() {
 #[cargo_test]
 fn relative_depinfo_paths_no_ws() {
     if !is_nightly() {
-        // See https://github.com/rust-lang/rust/issues/63012
+        // -Z binary-dep-depinfo is unstable (https://github.com/rust-lang/rust/issues/63012)
         return;
     }
 
@@ -535,7 +535,7 @@ fn reg_dep_source_not_tracked() {
 #[cargo_test]
 fn canonical_path() {
     if !is_nightly() {
-        // See https://github.com/rust-lang/rust/issues/63012
+        // -Z binary-dep-depinfo is unstable (https://github.com/rust-lang/rust/issues/63012)
         return;
     }
     if !cargo_test_support::symlink_supported() {
