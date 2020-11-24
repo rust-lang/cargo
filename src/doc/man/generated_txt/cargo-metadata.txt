@@ -122,6 +122,8 @@ OUTPUT FORMAT
                                   This property is not included if no required features are set.
                                */
                                "required-features": ["feat1"],
+                               /* Whether the target should be documented by `cargo doc`. */
+                               "doc": true,
                                /* Whether or not this target has doc tests enabled, and
                                   the target is compatible with doc testing.
                                */

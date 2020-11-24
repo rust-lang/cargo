@@ -3144,6 +3144,7 @@ fn compiler_json_error_format() {
                 "target":{
                     "kind":["custom-build"],
                     "crate_types":["bin"],
+                    "doc": false,
                     "doctest": false,
                     "edition": "2015",
                     "name":"build-script-build",
@@ -3169,6 +3170,7 @@ fn compiler_json_error_format() {
                 "target":{
                     "kind":["lib"],
                     "crate_types":["lib"],
+                    "doc": true,
                     "doctest": true,
                     "edition": "2015",
                     "name":"bar",
@@ -3193,6 +3195,7 @@ fn compiler_json_error_format() {
                 "target":{
                     "kind":["lib"],
                     "crate_types":["lib"],
+                    "doc": true,
                     "doctest": true,
                     "edition": "2015",
                     "name":"bar",
@@ -3222,6 +3225,7 @@ fn compiler_json_error_format() {
                 "target":{
                     "kind":["bin"],
                     "crate_types":["bin"],
+                    "doc": true,
                     "doctest": false,
                     "edition": "2015",
                     "name":"foo",
@@ -3237,6 +3241,7 @@ fn compiler_json_error_format() {
                 "target":{
                     "kind":["bin"],
                     "crate_types":["bin"],
+                    "doc": true,
                     "doctest": false,
                     "edition": "2015",
                     "name":"foo",
@@ -3306,6 +3311,7 @@ fn message_format_json_forward_stderr() {
                     "target":{
                         "kind":["bin"],
                         "crate_types":["bin"],
+                        "doc": true,
                         "doctest": false,
                         "edition": "2015",
                         "name":"foo",
@@ -3321,6 +3327,7 @@ fn message_format_json_forward_stderr() {
                     "target":{
                         "kind":["bin"],
                         "crate_types":["bin"],
+                        "doc": true,
                         "doctest": false,
                         "edition": "2015",
                         "name":"foo",

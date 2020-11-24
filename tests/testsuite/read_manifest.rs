@@ -28,6 +28,7 @@ fn manifest_output(readme_value: &str) -> String {
     "targets":[{{
         "kind":["bin"],
         "crate_types":["bin"],
+        "doc": true,
         "doctest": false,
         "test": true,
         "edition": "2015",

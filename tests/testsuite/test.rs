@@ -3539,6 +3539,7 @@ fn json_artifact_includes_test_flag() {
                     "target":{
                         "kind":["lib"],
                         "crate_types":["lib"],
+                        "doc": true,
                         "doctest": true,
                         "edition": "2015",
                         "name":"foo",
@@ -3576,6 +3577,7 @@ fn json_artifact_includes_executable_for_library_tests() {
                     "target": {
                         "crate_types": [ "lib" ],
                         "kind": [ "lib" ],
+                        "doc": true,
                         "doctest": true,
                         "edition": "2015",
                         "name": "foo",
@@ -3613,6 +3615,7 @@ fn json_artifact_includes_executable_for_integration_tests() {
                     "target": {
                         "crate_types": [ "bin" ],
                         "kind": [ "test" ],
+                        "doc": false,
                         "doctest": false,
                         "edition": "2015",
                         "name": "integration_test",
