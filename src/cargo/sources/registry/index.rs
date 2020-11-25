@@ -471,8 +471,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         //
         // We have the advantage here of being able to play fast and loose with the exact
         // dependency requirements. It's fine if we fetch a bit too much, since the incremental
-        // cost of each index file is small. It's even fine if we fetch too few index files --
-        // they'll just have to be fetched on the slow path later.
+        // cost of each index file is small.
         if self.config.offline() || !load.start_prefetch()? {
             // Backend does not support prefetching.
             return Ok(());
@@ -509,14 +508,14 @@ impl<'cfg> RegistryIndex<'cfg> {
         // Now, continuously iterate by walking dependencies we've loaded and fetching the index
         // entry for _their_ dependencies.
         while let Some(fetched) = load.next_prefetched()? {
-            let summaries = if let Some(s) = self.summaries_cache.get_mut(&fetched.name) {
+            let summaries = if let Some(s) = self.summaries_cache.get_mut(&fetched.name()) {
                 s
             } else {
                 let summaries = Summaries::parse(
                     index_version.as_deref(),
                     root,
                     &cache_root,
-                    &fetched.path,
+                    fetched.path(),
                     self.source_id,
                     load,
                     self.config,
@@ -524,7 +523,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
                 let summaries = if let Some(s) = summaries { s } else { continue };
 
-                match self.summaries_cache.entry(fetched.name) {
+                match self.summaries_cache.entry(fetched.name()) {
                     Entry::Vacant(v) => v.insert(summaries),
                     Entry::Occupied(mut o) => {
                         let _ = o.insert(summaries);
@@ -534,7 +533,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             };
 
             for (version, maybe_summary) in &mut summaries.versions {
-                if !fetched.req.matches(&version) {
+                if !fetched.version_req().matches(&version) {
                     // The crate that pulled in this crate as a dependency did not care about this
                     // particular version, so we don't need to walk its dependencies.
                     //

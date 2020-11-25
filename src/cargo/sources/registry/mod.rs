@@ -369,29 +369,60 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+/// An indicator that the prefetching for a given package has completed.
+///
+/// To retrieve the index data for the package, use `Summaries::parse`.
 pub struct Fetched {
     name: InternedString,
     path: PathBuf,
     req: semver::VersionReq,
 }
 
+impl Fetched {
+    pub fn name(&self) -> InternedString {
+        self.name
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn version_req(&self) -> &semver::VersionReq {
+        &self.req
+    }
+}
+
 pub trait RegistryData {
     fn prepare(&self) -> CargoResult<()>;
     fn index_path(&self) -> &Filesystem;
 
+    /// Initiate a prefetch phase.
+    ///
+    /// During prefetch, a greedy dependency solver will talk the transitive dependency closure of
+    /// the package being built and call `prefetch` on each dependency. This allows an
+    /// implementation to pipeline the download of information for those dependencies, rather than
+    /// relying on synchronous calls to `load` later on.
+    ///
+    /// If this method returns `false` (the default), no prefetching happens.
     fn start_prefetch(&mut self) -> CargoResult<bool> {
         Ok(false)
     }
-    // Must over-approximate.
+
+    /// Enqueue a prefetch of the given package.
+    ///
+    /// The package path, name, and dependency versions requirements are passed back from
+    /// `next_prefetched` so that they can be used to inform future calls to `prefetch`.
     fn prefetch(
         &mut self,
-        _: &Path,
-        _: &Path,
-        _: InternedString,
-        _: &semver::VersionReq,
+        _root: &Path,
+        _path: &Path,
+        _name: InternedString,
+        _req: &semver::VersionReq,
     ) -> CargoResult<()> {
         Ok(())
     }
+
+    /// Dequeue the next available prefetched index file.
     fn next_prefetched(&mut self) -> CargoResult<Option<Fetched>> {
         Ok(None)
     }
