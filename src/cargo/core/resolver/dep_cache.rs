@@ -19,6 +19,7 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::Config;
 use log::debug;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -262,6 +263,16 @@ impl<'a> RegistryQueryer<'a> {
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
         let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+
+        // Then, allow the source to batch pre-fetch dependencies we may need.
+        self.registry
+            .prefetch(&mut deps.iter().map(|(d, _)| Cow::Borrowed(d)))
+            .chain_err(|| {
+                anyhow::format_err!(
+                    "failed to prefetch dependencies of {}",
+                    describe_path(&cx.parents.path_to_bottom(&candidate.package_id())),
+                )
+            })?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.

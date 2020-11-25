@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::hash_map::HashMap;
 use std::fmt;
 
@@ -26,6 +27,9 @@ pub trait Source {
     /// Returns whether or not this source will return summaries with
     /// the `precise` field in the source id listed.
     fn requires_precise(&self) -> bool;
+
+    /// Give source the opportunity to batch pre-fetch dependency information.
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
 
     /// Attempts to find the packages that match a dependency request.
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
@@ -129,6 +133,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).requires_precise()
     }
 
+    /// Forwards to `Source::prefetch`.
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        (**self).prefetch(deps)
+    }
+
     /// Forwards to `Source::query`.
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
@@ -195,6 +204,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn requires_precise(&self) -> bool {
         (**self).requires_precise()
+    }
+
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        (**self).prefetch(deps)
     }
 
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {

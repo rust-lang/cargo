@@ -113,6 +113,14 @@ impl ToString for ChangelogState {
 /// the client to fetch the changelog, invalidate its locally cached index files for only the
 /// changed crates, and then not worry about double-checking with the server for each index file.
 ///
+/// In order to take advantage of HTTP/2's ability to efficiently send multiple concurrent HTTP
+/// requests over a single connection, `HttpRegistry` also supports asynchronous prefetching. The
+/// caller queues up a number of index files they think it is likely they will want to access, and
+/// `HttpRegistry` fires off requests for each one without synchronously waiting for the response.
+/// The caller then drives the processing of the responses, which update the index files that are
+/// stored on disk, before moving on to the _actual_ dependency resolution. See
+/// [`RegistryIndex::prefetch`] for more details.
+///
 /// [RFC XXX]: https://github.com/rust-lang/rfcs/pull/2789
 pub struct HttpRegistry<'cfg> {
     index_path: Filesystem,
@@ -124,6 +132,7 @@ pub struct HttpRegistry<'cfg> {
     http: RefCell<Option<Easy>>,
     prefetch: Multi,
     multiplexing: bool,
+    prefetched: bool,
     downloads: Downloads,
 }
 
@@ -139,6 +148,7 @@ impl<'cfg> HttpRegistry<'cfg> {
             http: RefCell::new(None),
             prefetch: Multi::new(),
             multiplexing: false,
+            prefetched: false,
             downloads: Downloads::default(),
         }
     }
@@ -267,10 +277,18 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // let's not flood crates.io with connections
         self.prefetch.set_max_host_connections(2)?;
 
+        self.prefetched = true;
+
         Ok(true)
     }
 
-    fn prefetch(&mut self, root: &Path, path: &Path, req: &semver::VersionReq) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        root: &Path,
+        path: &Path,
+        name: InternedString,
+        req: &semver::VersionReq,
+    ) -> CargoResult<()> {
         // A quick overview of what goes on below:
         //
         // We first check if we have a local copy of the given index file.
@@ -310,6 +328,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     self.downloads.eager.push(MultiVersionFetched {
                         primary: Fetched {
                             path: path.to_path_buf(),
+                            name,
                             req: req.clone(),
                         },
                         others: HashSet::new(),
@@ -348,7 +367,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // If the path is already being fetched, don't fetch it again.
         // Just note down the version requirement and move on.
         if let Some(token) = self.downloads.pending_ids.get(path) {
-            let (dl, _) = &mut self.downloads.pending[token];
+            let (dl, _) = self
+                .downloads
+                .pending
+                .get_mut(token)
+                .expect("invalid token");
             if &dl.req != req {
                 dl.additional_reqs.insert(req.clone());
             }
@@ -414,6 +437,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             token,
             data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
+            name,
             req: req.clone(),
             additional_reqs: HashSet::new(),
             etag: RefCell::new(None),
@@ -476,7 +500,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
         let mut handle = self.prefetch.add(handle)?;
-        handle.set_token(token);
+        handle.set_token(token)?;
         self.downloads.pending.insert(dl.token, (dl, handle));
 
         Ok(())
@@ -487,13 +511,16 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             // We may already have packages that are ready to go. This takes care of grabbing the
             // next of those, while ensuring that we yield every distinct version requirement for
             // each package.
-            if let Some(fetched) = self.downloads.eager.pop() {
+            if let Some(mut fetched) = self.downloads.eager.pop() {
                 return if let Some(req) = fetched.others.iter().next().cloned() {
                     fetched.others.remove(&req);
-                    Ok(Some(Fetched {
+                    let ret = Ok(Some(Fetched {
                         path: fetched.primary.path.clone(),
+                        name: fetched.primary.name,
                         req,
-                    }))
+                    }));
+                    self.downloads.eager.push(fetched);
+                    ret
                 } else {
                     Ok(Some(fetched.primary))
                 };
@@ -533,13 +560,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             while let Some((token, result)) = results.pop() {
                 debug!("{} finished with {:?}", token, result);
 
-                let (mut dl, handle) = self
+                let (dl, handle) = self
                     .downloads
                     .pending
                     .remove(&token)
                     .expect("got a token for a non-in-progress transfer");
 
-                // TODO: Re-use this memory for another download?
                 let data = dl.data.into_inner();
                 let mut handle = self.prefetch.remove(handle)?;
                 self.downloads.pending_ids.remove(&dl.path);
@@ -547,6 +573,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 let fetched = MultiVersionFetched {
                     primary: Fetched {
                         path: dl.path,
+                        name: dl.name,
                         req: dl.req,
                     },
                     others: dl.additional_reqs,
@@ -586,7 +613,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         // The only thing that matters is telling the caller about this package.
                         self.downloads.eager.push(fetched);
                     }
-                    404 | 410 | 451 => {
+                    404 => {
+                        // Not Found response.
+                        // The crate doesn't exist, so we simply do not yield it.
+                    }
+                    410 | 451 => {
                         // The crate was deleted from the registry.
                         todo!();
                     }
@@ -671,7 +702,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             let double_check = !self.at.get().0.is_synchronized() || path.ends_with("config.json");
 
             if double_check {
-                if self.config.offline() {
+                if self.prefetched {
+                    trace!(
+                        "not double-checking freshness of {} after prefetch",
+                        path.display()
+                    );
+                } else if self.config.offline() {
                     debug!(
                         "not double-checking freshness of {} due to offline",
                         path.display()
@@ -731,8 +767,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Capture ETag and Last-Modified.
         transfer.header_function(|buf| {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
-                let is_etag = buf.eq_ignore_ascii_case(ETAG);
-                let is_lm = buf.eq_ignore_ascii_case(LAST_MODIFIED);
+                let is_etag = tag.eq_ignore_ascii_case(ETAG);
+                let is_lm = tag.eq_ignore_ascii_case(LAST_MODIFIED);
                 if is_etag || is_lm {
                     // Append a new line to each so we can easily prepend to the index file.
                     let mut s = String::with_capacity(value.len() + 1);
@@ -828,6 +864,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // in case it has wisened up since then.
 
         debug!("updating the index");
+
+        // Make sure that subsequent loads double-check with the server again.
+        self.prefetched = false;
 
         self.prepare()?;
         let path = self.config.assert_package_cache_locked(&self.index_path);
@@ -1422,8 +1461,6 @@ pub struct Downloads {
     eager: Vec<MultiVersionFetched>,
     /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
-    /// Indicates *all* downloads were successful.
-    success: bool,
 }
 
 struct Download {
@@ -1431,8 +1468,11 @@ struct Download {
     /// and stored in `EasyHandle` as well.
     token: usize,
 
-    /// The package that we're downloading.
+    /// The path of the package that we're downloading.
     path: PathBuf,
+
+    /// The name of the package that we're downloading.
+    name: InternedString,
 
     /// The version requirements for the dependency line that triggered this fetch.
     req: semver::VersionReq,

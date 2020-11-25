@@ -74,7 +74,8 @@ use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 use log::info;
 use semver::{Version, VersionReq};
-use std::collections::{HashMap, HashSet};
+use std::borrow::Cow;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::str;
@@ -351,7 +352,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                 root,
                 &cache_root,
                 path.as_ref(),
-                req,
                 self.source_id,
                 load,
                 self.config,
@@ -456,17 +456,11 @@ impl<'cfg> RegistryIndex<'cfg> {
             .any(|summary| summary.yanked);
         Ok(found)
     }
-}
 
-impl Summaries {
-    pub fn prefetch<'a>(
-        index_version: Option<&str>,
-        root: &Path,
-        cache_root: &Path,
-        deps: &[Dependency],
-        source_id: SourceId,
+    pub fn prefetch(
+        &mut self,
+        deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>,
         load: &mut dyn RegistryData,
-        config: &Config,
     ) -> CargoResult<()> {
         // For some registry backends, it's expensive to fetch each individual index file, and the
         // process can be sped up significantly by fetching many index files in advance. For
@@ -479,9 +473,16 @@ impl Summaries {
         // dependency requirements. It's fine if we fetch a bit too much, since the incremental
         // cost of each index file is small. It's even fine if we fetch too few index files --
         // they'll just have to be fetched on the slow path later.
-        if config.offline() || !load.start_prefetch()? {
+        if self.config.offline() || !load.start_prefetch()? {
             // Backend does not support prefetching.
+            return Ok(());
         }
+
+        load.prepare()?;
+
+        let root = load.assert_index_locked(&self.path);
+        let cache_root = root.join(".cache");
+        let index_version = load.current_version();
 
         log::debug!("prefetching transitive dependencies");
 
@@ -494,31 +495,45 @@ impl Summaries {
 
         // Seed the prefetching with the root dependencies.
         for dep in deps {
-            // TODO: Skip if in cache?
-            load.prefetch(
-                root,
-                Path::new(&relative(&dep.package_name())),
-                dep.version_req(),
-            )?;
+            let raw_path = relative(&*dep.package_name());
+            for relative in UncanonicalizedIter::new(&raw_path).take(1024) {
+                load.prefetch(
+                    root,
+                    &Path::new(&relative),
+                    dep.package_name(),
+                    dep.version_req(),
+                )?;
+            }
         }
 
         // Now, continuously iterate by walking dependencies we've loaded and fetching the index
         // entry for _their_ dependencies.
         while let Some(fetched) = load.next_prefetched()? {
-            // TODO: make use of RegistryIndex::summaries_cache
-            let summaries = Self::parse(
-                index_version,
-                root,
-                cache_root,
-                &fetched.path,
-                source_id,
-                load,
-                config,
-            )?;
+            let summaries = if let Some(s) = self.summaries_cache.get_mut(&fetched.name) {
+                s
+            } else {
+                let summaries = Summaries::parse(
+                    index_version.as_deref(),
+                    root,
+                    &cache_root,
+                    &fetched.path,
+                    self.source_id,
+                    load,
+                    self.config,
+                )?;
 
-            let summaries = if let Some(s) = summaries { s } else { continue };
+                let summaries = if let Some(s) = summaries { s } else { continue };
 
-            for (version, maybe_summary) in summaries.versions {
+                match self.summaries_cache.entry(fetched.name) {
+                    Entry::Vacant(v) => v.insert(summaries),
+                    Entry::Occupied(mut o) => {
+                        let _ = o.insert(summaries);
+                        o.into_mut()
+                    }
+                }
+            };
+
+            for (version, maybe_summary) in &mut summaries.versions {
                 if !fetched.req.matches(&version) {
                     // The crate that pulled in this crate as a dependency did not care about this
                     // particular version, so we don't need to walk its dependencies.
@@ -534,7 +549,8 @@ impl Summaries {
                     continue;
                 }
 
-                let summary = maybe_summary.parse(config, &summaries.raw_data, source_id)?;
+                let summary =
+                    maybe_summary.parse(self.config, &summaries.raw_data, self.source_id)?;
 
                 if summary.yanked {
                     // This version has been yanked, so let's not even go there.
@@ -542,7 +558,7 @@ impl Summaries {
                 }
 
                 for dep in summary.summary.dependencies() {
-                    if dep.source_id() != source_id {
+                    if dep.source_id() != self.source_id {
                         // This dependency lives in a different source, so we won't be prefetching
                         // anything from there anyway.
                         //
@@ -556,18 +572,22 @@ impl Summaries {
                     for relative in UncanonicalizedIter::new(&raw_path).take(1024) {
                         // NOTE: Many of these prefetches will "miss", but that's okay.
                         // They're going to be pipelined anyway.
-                        load.prefetch(root, Path::new(&relative), dep.version_req());
+                        load.prefetch(
+                            root,
+                            Path::new(&relative),
+                            dep.package_name(),
+                            dep.version_req(),
+                        )?;
                     }
-
-                    // TODO: make sure that the things we prefetch do not get
-                    // double-checked later on _unless_ there has been an update_index.
                 }
             }
         }
 
         Ok(())
     }
+}
 
+impl Summaries {
     /// Parse out a `Summaries` instances from on-disk state.
     ///
     /// This will attempt to prefer parsing a previous cache file that already

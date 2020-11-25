@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 use crate::core::PackageSet;
@@ -15,6 +16,9 @@ use url::Url;
 ///
 /// See also `core::Source`.
 pub trait Registry {
+    /// Give source the opportunity to batch pre-fetch dependency information.
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
+
     /// Attempt to find the packages that match a dependency request.
     fn query(
         &mut self,
@@ -482,6 +486,44 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        assert!(self.patches_locked);
+
+        if self.sources.len() == 1 {
+            // Fast path -- there is only one source, so no need to partition by SourceId.
+            self.sources
+                .sources_mut()
+                .next()
+                .unwrap()
+                .1
+                .prefetch(deps)?;
+        } else {
+            // We need to partition deps so that we can prefetch dependencies from different
+            // sources. Note that we do not prefetch from overrides.
+            let mut deps_per_source = HashMap::new();
+            for dep in deps {
+                deps_per_source
+                    .entry(dep.source_id())
+                    .or_insert_with(Vec::new)
+                    .push(dep);
+            }
+
+            for (s, deps) in deps_per_source {
+                // Ensure the requested source_id is loaded
+                self.ensure_loaded(s, Kind::Normal).chain_err(|| {
+                    anyhow::format_err!("failed to load source for dependency prefetching",)
+                })?;
+
+                self.sources
+                    .get_mut(s)
+                    .unwrap()
+                    .prefetch(&mut deps.into_iter())?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn query(
         &mut self,
         dep: &Dependency,

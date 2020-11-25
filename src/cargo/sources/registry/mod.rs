@@ -370,6 +370,7 @@ impl<'a> RegistryDependency<'a> {
 }
 
 pub struct Fetched {
+    name: InternedString,
     path: PathBuf,
     req: semver::VersionReq,
 }
@@ -381,7 +382,14 @@ pub trait RegistryData {
     fn start_prefetch(&mut self) -> CargoResult<bool> {
         Ok(false)
     }
-    fn prefetch(&mut self, root: &Path, path: &Path, req: &semver::VersionReq) -> CargoResult<()> {
+    // Must over-approximate.
+    fn prefetch(
+        &mut self,
+        _: &Path,
+        _: &Path,
+        _: InternedString,
+        _: &semver::VersionReq,
+    ) -> CargoResult<()> {
         Ok(())
     }
     fn next_prefetched(&mut self) -> CargoResult<Option<Fetched>> {
@@ -591,6 +599,12 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        // TODO: conditional index update?
+        self.index.prefetch(deps, &mut *self.ops)?;
+        Ok(())
+    }
+
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we

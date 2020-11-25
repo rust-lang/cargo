@@ -1,6 +1,7 @@
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
+use std::borrow::Cow;
 
 pub struct ReplacedSource<'cfg> {
     to_replace: SourceId,
@@ -37,6 +38,22 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         self.inner.requires_precise()
+    }
+
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        let (replace_with, to_replace) = (self.replace_with, self.to_replace);
+        self.inner
+            .prefetch(
+                &mut deps
+                    .map(|dep| Cow::Owned(dep.into_owned().map_source(to_replace, replace_with))),
+            )
+            .chain_err(|| {
+                format!(
+                    "failed to prefetch from replaced source {}",
+                    self.to_replace
+                )
+            })?;
+        Ok(())
     }
 
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {

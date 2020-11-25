@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -469,6 +470,10 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
+    fn prefetch(&mut self, _: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        Ok(())
+    }
+
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {

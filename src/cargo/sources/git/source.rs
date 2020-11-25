@@ -8,6 +8,7 @@ use crate::util::hex::short_hash;
 use crate::util::Config;
 use anyhow::Context;
 use log::trace;
+use std::borrow::Cow;
 use std::fmt::{self, Debug, Formatter};
 use url::Url;
 
@@ -83,6 +84,10 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
+    fn prefetch(&mut self, _: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+        Ok(())
+    }
+
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let src = self
             .path_source
