@@ -511,7 +511,10 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             for (s, deps) in deps_per_source {
                 // Ensure the requested source_id is loaded
                 self.ensure_loaded(s, Kind::Normal).chain_err(|| {
-                    anyhow::format_err!("failed to load source for dependency prefetching",)
+                    anyhow::format_err!(
+                        "failed to load source for dependency `{}` during prefetching",
+                        deps[0].package_name()
+                    )
                 })?;
 
                 self.sources
