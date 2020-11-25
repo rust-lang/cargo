@@ -511,7 +511,7 @@ fn error_message_for_missing_manifest() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 [..]`
+[ERROR] failed to prefetch dependencies of package `foo v0.5.0 [..]`
 
 Caused by:
   failed to load source for dependency `bar`

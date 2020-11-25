@@ -2302,7 +2302,7 @@ fn invalid_missing() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to get `x` as a dependency of package `foo v0.1.0 [..]`
+[ERROR] failed to prefetch dependencies of package `foo v0.1.0 [..]`
 
 Caused by:
   failed to load source for dependency `x`
