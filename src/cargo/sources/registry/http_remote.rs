@@ -127,13 +127,29 @@ pub struct HttpRegistry<'cfg> {
     cache_path: Filesystem,
     source_id: SourceId,
     config: &'cfg Config,
+
+    /// The current (last known) state of the changelog.
     at: Cell<(ChangelogState, InternedString)>,
+
+    /// Have we loaded self.at from .last-updated (by calling prepare) yet?
     checked_for_at: Cell<bool>,
+
+    /// Cached HTTP handle for synchronous requests (changelog + RegistryData::load).
     http: RefCell<Option<Easy>>,
+
+    /// HTTP multi-handle for asynchronous/parallel requests during prefetching.
     prefetch: Multi,
-    multiplexing: bool,
-    prefetched: bool,
+
+    /// State for currently pending prefetch downloads.
     downloads: Downloads,
+
+    /// Does the config say that we can use HTTP multiplexing?
+    multiplexing: bool,
+
+    /// Has a prefetch phase been run?
+    ///
+    /// If so, we do not need to double-check any index files -- the prefetch stage already did.
+    prefetched: bool,
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
