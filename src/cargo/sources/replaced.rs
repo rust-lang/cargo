@@ -40,7 +40,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.requires_precise()
     }
 
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         self.inner
             .prefetch(

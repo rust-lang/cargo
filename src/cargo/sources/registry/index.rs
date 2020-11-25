@@ -459,7 +459,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     pub fn prefetch(
         &mut self,
-        deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
         load: &mut dyn RegistryData,
     ) -> CargoResult<()> {
         // For some registry backends, it's expensive to fetch each individual index file, and the

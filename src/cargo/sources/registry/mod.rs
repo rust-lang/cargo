@@ -599,7 +599,10 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         // TODO: conditional index update?
         self.index.prefetch(deps, &mut *self.ops)?;
         Ok(())

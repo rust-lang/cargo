@@ -84,7 +84,10 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn prefetch(&mut self, _: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        _: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         Ok(())
     }
 

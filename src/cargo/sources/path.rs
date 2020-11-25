@@ -470,7 +470,10 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn prefetch(&mut self, _: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        _: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         Ok(())
     }
 

@@ -29,7 +29,10 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Give source the opportunity to batch pre-fetch dependency information.
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()>;
 
     /// Attempts to find the packages that match a dependency request.
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
@@ -134,7 +137,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::prefetch`.
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         (**self).prefetch(deps)
     }
 
@@ -206,7 +212,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         (**self).prefetch(deps)
     }
 

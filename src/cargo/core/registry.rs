@@ -17,7 +17,10 @@ use url::Url;
 /// See also `core::Source`.
 pub trait Registry {
     /// Give source the opportunity to batch pre-fetch dependency information.
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()>;
 
     /// Attempt to find the packages that match a dependency request.
     fn query(
@@ -486,42 +489,57 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
+    fn prefetch(
+        &mut self,
+        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
         assert!(self.patches_locked);
+        let ndeps = deps.len();
 
-        if self.sources.len() == 1 {
-            // Fast path -- there is only one source, so no need to partition by SourceId.
+        // We need to partition deps so that we can prefetch dependencies from different
+        // sources. Note that we do not prefetch from overrides.
+        let mut deps_per_source = HashMap::with_capacity(ndeps);
+        for dep in deps {
+            // We need to check for patches, as they may tell us to look at a different source.
+            // If they do, we want to make sure we don't access the original registry
+            // unnecessarily.
+            let mut patches = Vec::<Summary>::new();
+            if let Some(extra) = self.patches.get(dep.source_id().canonical_url()) {
+                patches.extend(
+                    extra
+                        .iter()
+                        .filter(|s| dep.matches_ignoring_source(s.package_id()))
+                        .cloned(),
+                );
+            }
+
+            let source_id = if patches.len() == 1 && dep.is_locked() {
+                // Perform the prefetch from the patched-in source instead.
+                patches.remove(0).source_id()
+            } else {
+                // The code in `fn query` accesses the original source here, so we do too.
+                dep.source_id()
+            };
+
+            deps_per_source
+                .entry(source_id)
+                .or_insert_with(|| Vec::with_capacity(ndeps))
+                .push(dep);
+        }
+
+        for (s, deps) in deps_per_source {
+            // Ensure the requested source_id is loaded
+            self.ensure_loaded(s, Kind::Normal).chain_err(|| {
+                anyhow::format_err!(
+                    "failed to load source for dependency `{}` during prefetching",
+                    deps[0].package_name()
+                )
+            })?;
+
             self.sources
-                .sources_mut()
-                .next()
+                .get_mut(s)
                 .unwrap()
-                .1
-                .prefetch(deps)?;
-        } else {
-            // We need to partition deps so that we can prefetch dependencies from different
-            // sources. Note that we do not prefetch from overrides.
-            let mut deps_per_source = HashMap::new();
-            for dep in deps {
-                deps_per_source
-                    .entry(dep.source_id())
-                    .or_insert_with(Vec::new)
-                    .push(dep);
-            }
-
-            for (s, deps) in deps_per_source {
-                // Ensure the requested source_id is loaded
-                self.ensure_loaded(s, Kind::Normal).chain_err(|| {
-                    anyhow::format_err!(
-                        "failed to load source for dependency `{}` during prefetching",
-                        deps[0].package_name()
-                    )
-                })?;
-
-                self.sources
-                    .get_mut(s)
-                    .unwrap()
-                    .prefetch(&mut deps.into_iter())?;
-            }
+                .prefetch(&mut deps.into_iter())?;
         }
 
         Ok(())
