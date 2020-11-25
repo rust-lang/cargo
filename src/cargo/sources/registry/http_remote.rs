@@ -140,6 +140,11 @@ pub struct HttpRegistry<'cfg> {
     /// HTTP multi-handle for asynchronous/parallel requests during prefetching.
     prefetch: Multi,
 
+    /// Has the client requested a cache update?
+    ///
+    /// Only if they have do we double-check the freshness of each locally-stored index file.
+    requested_update: bool,
+
     /// State for currently pending prefetch downloads.
     downloads: Downloads,
 
@@ -150,6 +155,9 @@ pub struct HttpRegistry<'cfg> {
     ///
     /// If so, we do not need to double-check any index files -- the prefetch stage already did.
     prefetched: bool,
+
+    /// If we are currently prefetching, all calls to RegistryData::load should go to disk.
+    is_prefetching: bool,
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
@@ -164,8 +172,10 @@ impl<'cfg> HttpRegistry<'cfg> {
             http: RefCell::new(None),
             prefetch: Multi::new(),
             multiplexing: false,
-            prefetched: false,
             downloads: Downloads::default(),
+            prefetched: false,
+            requested_update: false,
+            is_prefetching: false,
         }
     }
 
@@ -250,9 +260,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 handle.get(true)?;
                 handle.follow_location(true)?;
 
-                // TODO: explicitly enable HTTP2?
-                // https://github.com/rust-lang/cargo/blob/905134577c1955ad7865bcf4b31440d4bc882cde/src/cargo/core/package.rs#L651-L703
-
                 // NOTE: lifted from src/cargo/core/package.rs
                 //
                 // This is an option to `libcurl` which indicates that if there's a
@@ -293,8 +300,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // let's not flood crates.io with connections
         self.prefetch.set_max_host_connections(2)?;
 
-        self.prefetched = true;
-
+        self.is_prefetching = true;
         Ok(true)
     }
 
@@ -326,11 +332,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let pkg = root.join(path);
         let bytes;
         let was = if pkg.exists() {
-            if self.at.get().0.is_synchronized() {
+            if self.at.get().0.is_synchronized() || !self.requested_update {
+                debug!("not prefetching fresh {}", name);
+
                 // We already have this file locally, and we don't need to double-check it with
-                // upstream because we have a changelog, so there's really nothing to prefetch.
-                // We do keep track of the request though so that we will eventually yield this
-                // back to the caller who may then want to prefetch other transitive dependencies.
+                // upstream because we have a changelog, or because the client hasn't requested an
+                // index update. So there's really nothing to prefetch. We do keep track of the
+                // request though so that we will eventually yield this back to the caller who may
+                // then want to prefetch other transitive dependencies.
                 if let Some(f) = self
                     .downloads
                     .eager
@@ -600,8 +609,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     "index file downloaded with status code {}",
                     handle.response_code()?
                 );
-                // TODO: How do we ensure that the next call to load doesn't _also_ send an HTTP
-                // request? Do we need to keep track of each fetched prefetched path or something?
                 match code {
                     200 => {
                         // We got data back, hooray!
@@ -649,7 +656,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
             if self.downloads.pending.is_empty() {
                 // We're all done!
-                return Ok(None);
+                break;
             }
 
             // We have no more replies to provide the caller with,
@@ -662,6 +669,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 .wait(&mut [], timeout)
                 .chain_err(|| "failed to wait on curl `Multi`")?;
         }
+
+        debug!("prefetched all transitive dependencies");
+        self.is_prefetching = false;
+        self.prefetched = true;
         Ok(None)
     }
 
@@ -714,8 +725,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 anyhow::bail!("index file is missing HTTP header header");
             };
 
-            // NOTE: We should always double-check for changes to config.json.
-            let double_check = !self.at.get().0.is_synchronized() || path.ends_with("config.json");
+            let is_synchronized = self.at.get().0.is_synchronized();
+            let is_fresh =
+                is_synchronized || !self.requested_update || self.prefetched || self.is_prefetching;
+
+            // NOTE: We should double-check for changes to config.json even if synchronized.
+            let double_check =
+                !is_fresh || (self.requested_update && path.ends_with("config.json"));
 
             if double_check {
                 if self.prefetched {
@@ -731,11 +747,15 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 } else {
                     debug!("double-checking freshness of {}", path.display());
                 }
-            } else {
-                debug!(
-                    "using {} from cache as changelog is synchronized",
+            } else if is_synchronized {
+                trace!(
+                    "using local {} as changelog is synchronized",
                     path.display()
                 );
+            } else if self.is_prefetching {
+                trace!("using local {} in load while prefetching", path.display());
+            } else {
+                debug!("using local {} as it is fresh enough", path.display());
             }
 
             // NOTE: If we're in offline mode, we don't double-check with the server.
@@ -748,6 +768,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 Some((etag, last_modified, rest))
             }
         } else {
+            assert!(!self.is_prefetching);
             None
         };
 
@@ -882,6 +903,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         debug!("updating the index");
 
         // Make sure that subsequent loads double-check with the server again.
+        self.requested_update = true;
         self.prefetched = false;
 
         self.prepare()?;

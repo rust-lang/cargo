@@ -440,25 +440,16 @@ fn update_publish_then_update(config: RegistryServerConfiguration) {
     // Finally, build the first project again (with our newer Cargo.lock) which
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
-    //
-    // However, if the server does not support a changelog, the index file will be double-checked
-    // with the backend when it is loaded, and will be updated at that time. There is no index
-    // update.
-    let updating = if matches!(config, RegistryServerConfiguration::NoChangelog) {
-        ""
-    } else {
-        "[UPDATING] [..]\n"
-    };
     p.cargo("build")
         .with_stderr(format!(
-            "{u}\
+            "\
+[UPDATING] [..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.1 (http registry `{reg}`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            u = updating,
             reg = url
         ))
         .run();
