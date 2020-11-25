@@ -205,9 +205,9 @@ hello_utils = { path = "hello_utils", version = "0.1.0" }
 
 It is possible to specify both a registry version and a `git` or `path`
 location. The `git` or `path` dependency will be used locally (in which case
-the `version` is ignored), and when published to a registry like [crates.io],
-it will use the registry version. Other combinations are not allowed.
-Examples:
+the `version` is checked against the local copy), and when published to a
+registry like [crates.io], it will use the registry version. Other
+combinations are not allowed. Examples:
 
 ```toml
 [dependencies]
@@ -218,6 +218,8 @@ bitflags = { path = "my-bitflags", version = "1.0" }
 # Uses the given git repo when used locally, and uses
 # version 1.0 from crates.io when published.
 smallvec = { git = "https://github.com/servo/rust-smallvec", version = "1.0" }
+
+# N.B. that if a version doesn't match, Cargo will fail to compile!
 ```
 
 One example where this can be useful is when you have split up a library into
