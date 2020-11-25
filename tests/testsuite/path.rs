@@ -1049,7 +1049,7 @@ fn deep_path_error() {
     ... which is depended on by `foo v0.1.0 [..]`
 
 Caused by:
-  failed to load source for dependency `c` during prefetching
+  failed to load source for dependency `c`
 
 Caused by:
   Unable to update [..]/foo/c
