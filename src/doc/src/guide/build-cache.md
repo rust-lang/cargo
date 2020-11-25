@@ -1,9 +1,10 @@
 ## Build cache
 
 Cargo stores the output of a build into the "target" directory. By default,
-this is the directory named `target` in the root of your workspace. To change
-the location, you can set the `CARGO_TARGET_DIR` [environment variable], the
-[`build.target-dir`] config value, or the `--target-dir` command-line flag.
+this is the directory named `target` in the root of your
+[*workspace*][def-worksapce]. To change the location, you can set the
+`CARGO_TARGET_DIR` [environment variable], the [`build.target-dir`] config
+value, or the `--target-dir` command-line flag.
 
 The directory layout depends on whether or not you are using the `--target`
 flag to build for a specific platform. If `--target` is not specified, Cargo
@@ -90,6 +91,7 @@ configuration][config]. Refer to sccache documentation for more details.
 [`cargo publish`]: ../commands/cargo-publish.md
 [build scripts]: ../reference/build-scripts.md
 [config]: ../reference/config.md
+[def-workspace]:  ../appendix/glossary.md#workspace  '"workspace" (glossary entry)'
 [environment variable]: ../reference/environment-variables.md
 [incremental output]: ../reference/profiles.md#incremental
 [sccache]: https://github.com/mozilla/sccache

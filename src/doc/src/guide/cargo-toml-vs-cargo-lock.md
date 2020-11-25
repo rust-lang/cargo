@@ -8,18 +8,20 @@ about them, here’s a summary:
 * `Cargo.lock` contains exact information about your dependencies. It is
   maintained by Cargo and should not be manually edited.
 
-If you’re building a non-end product, such as a rust library that other rust packages will depend on, put
-`Cargo.lock` in your `.gitignore`. If you’re building an end product, which are executable
-like command-line tool or an application, or a system library with crate-type of `staticlib` or `cdylib`,
-check `Cargo.lock` into `git`. If you're curious about why that is, see
+If you’re building a non-end product, such as a rust library that other rust
+[packages][def-package] will depend on, put `Cargo.lock` in your
+`.gitignore`. If you’re building an end product, which are executable like
+command-line tool or an application, or a system library with crate-type of
+`staticlib` or `cdylib`, check `Cargo.lock` into `git`. If you're curious
+about why that is, see
 ["Why do binaries have `Cargo.lock` in version control, but not libraries?" in the
 FAQ](../faq.md#why-do-binaries-have-cargolock-in-version-control-but-not-libraries).
 
 Let’s dig in a little bit more.
 
-`Cargo.toml` is a **manifest** file in which we can specify a bunch of
-different metadata about our package. For example, we can say that we depend
-on another package:
+`Cargo.toml` is a [**manifest**][def-manifest] file in which we can specify a
+bunch of different metadata about our package. For example, we can say that we
+depend on another package:
 
 ```toml
 [package]
@@ -101,3 +103,6 @@ This will write out a new `Cargo.lock` with the new version information. Note
 that the argument to `cargo update` is actually a
 [Package ID Specification](../reference/pkgid-spec.md) and `rand` is just a short
 specification.
+
+[def-manifest]:  ../appendix/glossary.md#manifest  '"manifest" (glossary entry)'
+[def-package]:   ../appendix/glossary.md#package   '"package" (glossary entry)'

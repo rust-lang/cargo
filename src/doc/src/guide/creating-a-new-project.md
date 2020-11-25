@@ -1,6 +1,6 @@
 ## Creating a New Package
 
-To start a new package with Cargo, use `cargo new`:
+To start a new [package][def-package] with Cargo, use `cargo new`:
 
 ```console
 $ cargo new hello_world --bin
@@ -36,9 +36,9 @@ edition = "2018"
 
 ```
 
-This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your package. This file is written in the [TOML] format
-(pronounced /tɑməl/).
+This is called a [***manifest***][def-manifest], and it contains all of the
+metadata that Cargo needs to compile your package. This file is written in the
+[TOML] format (pronounced /tɑməl/).
 
 Here’s what’s in `src/main.rs`:
 
@@ -48,7 +48,8 @@ fn main() {
 }
 ```
 
-Cargo generated a “hello world” for us. Let’s compile it:
+Cargo generated a “hello world” program for us, otherwise known as a
+[*binary crate*][def-crate]. Let’s compile it:
 
 ```console
 $ cargo build
@@ -92,3 +93,6 @@ shorter since the compiler doesn't do optimizations, but the code will run
 slower. Release mode takes longer to compile, but the code will run faster.
 
 [TOML]: https://toml.io/
+[def-crate]:     ../appendix/glossary.md#crate     '"crate" (glossary entry)'
+[def-manifest]:  ../appendix/glossary.md#manifest  '"manifest" (glossary entry)'
+[def-package]:   ../appendix/glossary.md#package   '"package" (glossary entry)'
