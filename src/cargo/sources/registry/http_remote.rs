@@ -7,22 +7,28 @@ use crate::ops;
 use crate::sources::registry::make_dep_prefix;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
+    Fetched, RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
     VERSION_TEMPLATE,
 };
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{Config, Filesystem, Sha256};
-use curl::easy::{Easy, List};
+use curl::easy::{Easy, HttpVersion, List};
+use curl::multi::{EasyHandle, Multi};
 use log::{debug, trace, warn};
 use std::cell::{Cell, RefCell, RefMut};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as FmtWrite;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str;
+use std::time::Duration;
+
+const ETAG: &'static [u8] = b"ETag";
+const LAST_MODIFIED: &'static [u8] = b"Last-Modified";
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// The last known state of the changelog.
@@ -116,6 +122,9 @@ pub struct HttpRegistry<'cfg> {
     at: Cell<(ChangelogState, InternedString)>,
     checked_for_at: Cell<bool>,
     http: RefCell<Option<Easy>>,
+    prefetch: Multi,
+    multiplexing: bool,
+    downloads: Downloads,
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
@@ -128,6 +137,9 @@ impl<'cfg> HttpRegistry<'cfg> {
             at: Cell::new(ChangelogState::Unsupported.into()),
             checked_for_at: Cell::new(false),
             http: RefCell::new(None),
+            prefetch: Multi::new(),
+            multiplexing: false,
+            downloads: Downloads::default(),
         }
     }
 
@@ -150,6 +162,25 @@ impl<'cfg> HttpRegistry<'cfg> {
                 opt.as_mut().expect("!handle.is_none() implies Some")
             }))
         }
+    }
+
+    fn handle_http_header(buf: &[u8]) -> Option<(&[u8], &str)> {
+        if buf.is_empty() {
+            return None;
+        }
+
+        let mut parts = buf.splitn(2, |&c| c == b':');
+        let tag = parts.next().expect("first item of split is always Some");
+        let rest = parts.next()?;
+        let rest = std::str::from_utf8(rest).ok()?;
+        let rest = rest.trim();
+
+        // Don't let server sneak extra lines anywhere.
+        if rest.contains('\n') {
+            return None;
+        }
+
+        Some((tag, rest))
     }
 }
 
@@ -209,7 +240,382 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 *http = Some(handle);
             }
         }
+
         Ok(())
+    }
+
+    fn start_prefetch(&mut self) -> CargoResult<bool> {
+        // NOTE: lifted from src/cargo/core/package.rs
+        //
+        // We've enabled the `http2` feature of `curl` in Cargo, so treat
+        // failures here as fatal as it would indicate a build-time problem.
+        //
+        // Note that the multiplexing support is pretty new so we're having it
+        // off-by-default temporarily.
+        //
+        // Also note that pipelining is disabled as curl authors have indicated
+        // that it's buggy, and we've empirically seen that it's buggy with HTTP
+        // proxies.
+        //
+        // TODO: Is that still the case? We probably want pipelining here if possible.
+        self.multiplexing = self.config.http_config()?.multiplexing.unwrap_or(true);
+
+        self.prefetch
+            .pipelining(false, self.multiplexing)
+            .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;
+
+        // let's not flood crates.io with connections
+        self.prefetch.set_max_host_connections(2)?;
+
+        Ok(true)
+    }
+
+    fn prefetch(&mut self, root: &Path, path: &Path, req: &semver::VersionReq) -> CargoResult<()> {
+        // A quick overview of what goes on below:
+        //
+        // We first check if we have a local copy of the given index file.
+        //
+        // If we do, and the server has a changelog, then we know that the index file is up to
+        // date (as of when we last checked the changelog), so there's no need to double-check with
+        // the server that the file isn't stale. We can just tell the next call to
+        // `next_prefetched` to go ahead with this path immediately. If we _need_ a newer version
+        // of it, `update_index` will be called and then `prefetch` will be called again.
+        //
+        // If we do, but the server does not have a changelog, we need to check with the server if
+        // the index file has changed upstream. We do this using a conditional HTTP request using
+        // the `Last-Modified` and `ETag` headers we got when we fetched the currently cached index
+        // file (those headers are stored in the first two lines of each index file). That way, if
+        // nothing has changed (likely the common case), the server doesn't have to send us
+        // any data, just a 304 Not Modified.
+        //
+        // If we don't have a local copy of the index file, we need to fetch it from the server.
+        let pkg = root.join(path);
+        let bytes;
+        let was = if pkg.exists() {
+            if self.at.get().0.is_synchronized() {
+                // We already have this file locally, and we don't need to double-check it with
+                // upstream because we have a changelog, so there's really nothing to prefetch.
+                // We do keep track of the request though so that we will eventually yield this
+                // back to the caller who may then want to prefetch other transitive dependencies.
+                if let Some(f) = self
+                    .downloads
+                    .eager
+                    .iter_mut()
+                    .find(|f| f.primary.path == path)
+                {
+                    if &f.primary.req != req {
+                        f.others.insert(req.clone());
+                    }
+                } else {
+                    self.downloads.eager.push(MultiVersionFetched {
+                        primary: Fetched {
+                            path: path.to_path_buf(),
+                            req: req.clone(),
+                        },
+                        others: HashSet::new(),
+                    });
+                }
+                return Ok(());
+            }
+
+            // We have a local copy that we need to double-check the contents of.
+            // First, extract the `Last-Modified` and `Etag` headers.
+            trace!("prefetch load {} from disk", path.display());
+            bytes = paths::read_bytes(&pkg)?;
+            let mut lines = bytes.splitn(3, |&c| c == b'\n');
+            let etag = lines.next().expect("splitn always returns >=1 item");
+            let last_modified = if let Some(lm) = lines.next() {
+                lm
+            } else {
+                anyhow::bail!("index file is missing HTTP header header");
+            };
+            let rest = if let Some(rest) = lines.next() {
+                rest
+            } else {
+                anyhow::bail!("index file is missing HTTP header header");
+            };
+
+            assert!(!self.config.offline());
+            debug!("double-checking freshness of {}", path.display());
+
+            let etag = std::str::from_utf8(etag)?;
+            let last_modified = std::str::from_utf8(last_modified)?;
+            Some((etag, last_modified, rest))
+        } else {
+            None
+        };
+
+        // If the path is already being fetched, don't fetch it again.
+        // Just note down the version requirement and move on.
+        if let Some(token) = self.downloads.pending_ids.get(path) {
+            let (dl, _) = &mut self.downloads.pending[token];
+            if &dl.req != req {
+                dl.additional_reqs.insert(req.clone());
+            }
+            return Ok(());
+        } else if let Some(f) = self
+            .downloads
+            .eager
+            .iter_mut()
+            .find(|f| f.primary.path == path)
+        {
+            if &f.primary.req != req {
+                f.others.insert(req.clone());
+            }
+            return Ok(());
+        }
+
+        // Looks like we're going to have to bite the bullet and do a network request.
+        let url = self.source_id.url();
+        self.prepare()?;
+
+        let mut handle = ops::http_handle(self.config)?;
+        debug!("fetch {}{}", url, path.display());
+        handle.get(true)?;
+        handle.url(&format!("{}{}", url, path.display()))?;
+        handle.follow_location(true)?;
+
+        // Enable HTTP/2 if possible.
+        if self.multiplexing {
+            try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
+        } else {
+            handle.http_version(HttpVersion::V11)?;
+        }
+
+        // This is an option to `libcurl` which indicates that if there's a
+        // bunch of parallel requests to the same host they all wait until the
+        // pipelining status of the host is known. This means that we won't
+        // initiate dozens of connections to crates.io, but rather only one.
+        // Once the main one is opened we realized that pipelining is possible
+        // and multiplexing is possible with static.crates.io. All in all this
+        // reduces the number of connections done to a more manageable state.
+        try_old_curl!(handle.pipewait(true), "pipewait");
+
+        // Make sure we don't send data back if it's the same as we have in the index.
+        if let Some((ref etag, ref last_modified, _)) = was {
+            let mut list = List::new();
+            list.append(&format!("If-None-Match: {}", etag))?;
+            list.append(&format!("If-Modified-Since: {}", last_modified))?;
+            handle.http_headers(list)?;
+        }
+
+        // We're going to have a bunch of downloads all happening "at the same time".
+        // So, we need some way to track what headers/data/responses are for which request.
+        // We do that through this token. Each request (and associated response) gets one.
+        let token = self.downloads.next;
+        self.downloads.next += 1;
+        debug!("downloading {} as {}", path.display(), token);
+        assert_eq!(
+            self.downloads.pending_ids.insert(path.to_path_buf(), token),
+            None,
+            "path queued for download more than once"
+        );
+        let dl = Download {
+            token,
+            data: RefCell::new(Vec::new()),
+            path: path.to_path_buf(),
+            req: req.clone(),
+            additional_reqs: HashSet::new(),
+            etag: RefCell::new(None),
+            last_modified: RefCell::new(None),
+        };
+
+        // Each write should go to self.downloads.pending[&token].data.
+        // Since the write function must be 'static, we access downloads through a thread-local.
+        // That thread-local is set up in `next_prefetched` when it calls self.prefetch.perform,
+        // which is what ultimately calls this method.
+        handle.write_function(move |buf| {
+            debug!("{} - {} bytes of data", token, buf.len());
+            tls::with(|downloads| {
+                if let Some(downloads) = downloads {
+                    downloads.pending[&token]
+                        .0
+                        .data
+                        .borrow_mut()
+                        .extend_from_slice(buf);
+                }
+            });
+            Ok(buf.len())
+        })?;
+
+        // Same goes for the header function -- it goes through thread-local storage.
+        handle.header_function(move |buf| {
+            if let Some((tag, value)) = Self::handle_http_header(buf) {
+                let is_etag = buf.eq_ignore_ascii_case(ETAG);
+                let is_lm = buf.eq_ignore_ascii_case(LAST_MODIFIED);
+                if is_etag || is_lm {
+                    debug!(
+                        "{} - got header {}: {}",
+                        token,
+                        std::str::from_utf8(tag)
+                            .expect("both ETAG and LAST_MODIFIED are valid strs"),
+                        value
+                    );
+
+                    // Append a new line to each so we can easily prepend to the index file.
+                    let mut s = String::with_capacity(value.len() + 1);
+                    s.push_str(value);
+                    s.push('\n');
+                    tls::with(|downloads| {
+                        if let Some(downloads) = downloads {
+                            let into = if is_etag {
+                                &downloads.pending[&token].0.etag
+                            } else {
+                                &downloads.pending[&token].0.last_modified
+                            };
+                            *into.borrow_mut() = Some(s);
+                        }
+                    })
+                }
+            }
+
+            true
+        })?;
+
+        // TODO: Track and display download progress (see `Downloads` in `core/pacakge.rs`).
+
+        // Finally add the request we've lined up to the pool of requests that cURL manages.
+        let mut handle = self.prefetch.add(handle)?;
+        handle.set_token(token);
+        self.downloads.pending.insert(dl.token, (dl, handle));
+
+        Ok(())
+    }
+
+    fn next_prefetched(&mut self) -> CargoResult<Option<Fetched>> {
+        while !self.downloads.pending.is_empty() && !self.downloads.eager.is_empty() {
+            // We may already have packages that are ready to go. This takes care of grabbing the
+            // next of those, while ensuring that we yield every distinct version requirement for
+            // each package.
+            if let Some(fetched) = self.downloads.eager.pop() {
+                return if let Some(req) = fetched.others.iter().next().cloned() {
+                    fetched.others.remove(&req);
+                    Ok(Some(Fetched {
+                        path: fetched.primary.path.clone(),
+                        req,
+                    }))
+                } else {
+                    Ok(Some(fetched.primary))
+                };
+            }
+
+            // We don't have any fetched results immediately ready to be yielded,
+            // so we need to check if curl has made any progress.
+            assert_eq!(
+                self.downloads.pending.len(),
+                self.downloads.pending_ids.len()
+            );
+            // Note the `tls::set` here which sets up the thread-local storage needed to access
+            // self.downloads from `write_function` and `header_function` above.
+            let remaining_in_multi = tls::set(&self.downloads, || {
+                self.prefetch
+                    .perform()
+                    .chain_err(|| "failed to perform http requests")
+            })?;
+            debug!("handles remaining: {}", remaining_in_multi);
+
+            // Walk all the messages cURL came across in case anything completed.
+            let results = &mut self.downloads.results;
+            let pending = &self.downloads.pending;
+            self.prefetch.messages(|msg| {
+                let token = msg.token().expect("failed to read token");
+                let handle = &pending[&token].1;
+                if let Some(result) = msg.result_for(handle) {
+                    results.push((token, result));
+                } else {
+                    debug!("message without a result (?)");
+                }
+            });
+
+            // Walk all the requests that completed and handle their responses.
+            //
+            // This will ultimately add more replies to self.downloads.eager, which we'll
+            while let Some((token, result)) = results.pop() {
+                debug!("{} finished with {:?}", token, result);
+
+                let (mut dl, handle) = self
+                    .downloads
+                    .pending
+                    .remove(&token)
+                    .expect("got a token for a non-in-progress transfer");
+
+                // TODO: Re-use this memory for another download?
+                let data = dl.data.into_inner();
+                let mut handle = self.prefetch.remove(handle)?;
+                self.downloads.pending_ids.remove(&dl.path);
+
+                let fetched = MultiVersionFetched {
+                    primary: Fetched {
+                        path: dl.path,
+                        req: dl.req,
+                    },
+                    others: dl.additional_reqs,
+                };
+
+                let code = handle.response_code()?;
+                debug!(
+                    "index file downloaded with status code {}",
+                    handle.response_code()?
+                );
+                // TODO: How do we ensure that the next call to load doesn't _also_ send an HTTP
+                // request? Do we need to keep track of each fetched prefetched path or something?
+                match code {
+                    200 => {
+                        // We got data back, hooray!
+                        // Let's update the index file.
+                        let path = self.config.assert_package_cache_locked(&self.index_path);
+                        let pkg = path.join(&fetched.primary.path);
+                        paths::create_dir_all(pkg.parent().expect("pkg is a file"))?;
+                        let mut file = paths::create(pkg)?;
+                        file.write_all(dl.etag.into_inner().as_deref().unwrap_or("\n").as_bytes())?;
+                        file.write_all(
+                            dl.last_modified
+                                .into_inner()
+                                .as_deref()
+                                .unwrap_or("\n")
+                                .as_bytes(),
+                        )?;
+                        file.write_all(&data)?;
+                        file.flush()?;
+
+                        self.downloads.eager.push(fetched);
+                    }
+                    304 => {
+                        // Not Modified response.
+                        // There's nothing for us to do -- the index file is up to date.
+                        // The only thing that matters is telling the caller about this package.
+                        self.downloads.eager.push(fetched);
+                    }
+                    404 | 410 | 451 => {
+                        // The crate was deleted from the registry.
+                        todo!();
+                    }
+                    code => {
+                        anyhow::bail!("server returned unexpected HTTP status code {}", code);
+                    }
+                }
+            }
+
+            if !self.downloads.eager.is_empty() {
+                continue;
+            }
+
+            if self.downloads.pending.is_empty() {
+                // We're all done!
+                return Ok(None);
+            }
+
+            // We have no more replies to provide the caller with,
+            // so we need to wait until cURL has something new for us.
+            let timeout = self
+                .prefetch
+                .get_timeout()?
+                .unwrap_or_else(|| Duration::new(5, 0));
+            self.prefetch
+                .wait(&mut [], timeout)
+                .chain_err(|| "failed to wait on curl `Multi`")?;
+        }
+        Ok(None)
     }
 
     fn index_path(&self) -> &Filesystem {
@@ -238,24 +644,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
-        // A quick overview of what goes on below:
-        //
-        // We first check if we have a local copy of the given index file.
-        //
-        // If we do, and the server has a changelog, then we know that the index file is up to
-        // date (as of when we last checked the changelog), so there's no need to double-check with
-        // the server that the file isn't stale. We can just return its contents directly. If we
-        // _need_ a newer version of it, `update_index` will be called and then `load` will be
-        // called again.
-        //
-        // If we do, but the server does not have a changelog, we need to check with the server if
-        // the index file has changed upstream. We do this using a conditional HTTP request using
-        // the `Last-Modified` and `ETag` headers we got when we fetched the currently cached index
-        // file (those headers are stored in the first two lines of each index file). That way, if
-        // nothing has changed (likely the common case), the server doesn't have to send us
-        // any data, just a 304 Not Modified.
-        //
-        // If we don't have a local copy of the index file, we need to fetch it from the server.
+        // NOTE: This is pretty much a synchronous version of the prefetch() + next_prefetched()
+        // dance. Much of the code is sort-of duplicated, which isn't great, but it works.
+
         let pkg = root.join(path);
         let bytes;
         let was = if pkg.exists() {
@@ -339,36 +730,19 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Capture ETag and Last-Modified.
         transfer.header_function(|buf| {
-            const ETAG: &'static [u8] = b"ETag:";
-            const LAST_MODIFIED: &'static [u8] = b"Last-Modified:";
-
-            let (tag, buf) =
-                if buf.len() >= ETAG.len() && buf[..ETAG.len()].eq_ignore_ascii_case(ETAG) {
-                    (ETAG, &buf[ETAG.len()..])
-                } else if buf.len() >= LAST_MODIFIED.len()
-                    && buf[..LAST_MODIFIED.len()].eq_ignore_ascii_case(LAST_MODIFIED)
-                {
-                    (LAST_MODIFIED, &buf[LAST_MODIFIED.len()..])
-                } else {
-                    return true;
-                };
-
-            if let Ok(buf) = std::str::from_utf8(buf) {
-                let buf = buf.trim();
-
-                // Don't let server sneak more lines into index file.
-                if buf.contains('\n') {
-                    return true;
-                }
-
-                // Append a new line to each so we can easily prepend to the index file.
-                let mut s = String::with_capacity(buf.len() + 1);
-                s.push_str(buf);
-                s.push('\n');
-                if tag == ETAG {
-                    etag = Some(s);
-                } else if tag == LAST_MODIFIED {
-                    last_modified = Some(s);
+            if let Some((tag, value)) = Self::handle_http_header(buf) {
+                let is_etag = buf.eq_ignore_ascii_case(ETAG);
+                let is_lm = buf.eq_ignore_ascii_case(LAST_MODIFIED);
+                if is_etag || is_lm {
+                    // Append a new line to each so we can easily prepend to the index file.
+                    let mut s = String::with_capacity(value.len() + 1);
+                    s.push_str(value);
+                    s.push('\n');
+                    if is_etag {
+                        etag = Some(s);
+                    } else if is_lm {
+                        last_modified = Some(s);
+                    }
                 }
             }
 
@@ -1019,5 +1393,90 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             return meta.len() > 0;
         }
         false
+    }
+}
+
+struct MultiVersionFetched {
+    primary: Fetched,
+    others: HashSet<semver::VersionReq>,
+}
+
+// NOTE: what follows is lifted from src/cargo/core/package.rs and tweaked
+
+/// Helper for downloading crates.
+#[derive(Default)]
+pub struct Downloads {
+    /// When a download is started, it is added to this map. The key is a
+    /// "token" (see `Download::token`). It is removed once the download is
+    /// finished.
+    pending: HashMap<usize, (Download, EasyHandle)>,
+    /// Set of paths currently being downloaded, mapped to their tokens.
+    /// This should stay in sync with `pending`.
+    pending_ids: HashMap<PathBuf, usize>,
+    /// The final result of each download. A pair `(token, result)`. This is a
+    /// temporary holding area, needed because curl can report multiple
+    /// downloads at once, but the main loop (`wait`) is written to only
+    /// handle one at a time.
+    results: Vec<(usize, Result<(), curl::Error>)>,
+    /// Prefetch requests that we already have a response to.
+    eager: Vec<MultiVersionFetched>,
+    /// The next ID to use for creating a token (see `Download::token`).
+    next: usize,
+    /// Indicates *all* downloads were successful.
+    success: bool,
+}
+
+struct Download {
+    /// The token for this download, used as the key of the `Downloads::pending` map
+    /// and stored in `EasyHandle` as well.
+    token: usize,
+
+    /// The package that we're downloading.
+    path: PathBuf,
+
+    /// The version requirements for the dependency line that triggered this fetch.
+    req: semver::VersionReq,
+
+    /// Additional version requirements for same package.
+    additional_reqs: HashSet<semver::VersionReq>,
+
+    /// Actual downloaded data, updated throughout the lifetime of this download.
+    data: RefCell<Vec<u8>>,
+
+    /// ETag and Last-Modified headers received from the server (if any).
+    etag: RefCell<Option<String>>,
+    last_modified: RefCell<Option<String>>,
+}
+
+mod tls {
+    use std::cell::Cell;
+
+    use super::Downloads;
+
+    thread_local!(static PTR: Cell<usize> = Cell::new(0));
+
+    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads>) -> R) -> R {
+        let ptr = PTR.with(|p| p.get());
+        if ptr == 0 {
+            f(None)
+        } else {
+            unsafe { f(Some(&*(ptr as *const Downloads))) }
+        }
+    }
+
+    pub(crate) fn set<R>(dl: &Downloads, f: impl FnOnce() -> R) -> R {
+        struct Reset<'a, T: Copy>(&'a Cell<T>, T);
+
+        impl<'a, T: Copy> Drop for Reset<'a, T> {
+            fn drop(&mut self) {
+                self.0.set(self.1);
+            }
+        }
+
+        PTR.with(|p| {
+            let _reset = Reset(p, p.get());
+            p.set(dl as *const Downloads as usize);
+            f()
+        })
     }
 }

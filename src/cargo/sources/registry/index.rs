@@ -68,7 +68,7 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{RegistryData, RegistryPackage};
+use crate::sources::registry::{make_dep_prefix, RegistryData, RegistryPackage};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
@@ -351,6 +351,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 root,
                 &cache_root,
                 path.as_ref(),
+                req,
                 self.source_id,
                 load,
                 self.config,
@@ -458,6 +459,115 @@ impl<'cfg> RegistryIndex<'cfg> {
 }
 
 impl Summaries {
+    pub fn prefetch<'a>(
+        index_version: Option<&str>,
+        root: &Path,
+        cache_root: &Path,
+        deps: &[Dependency],
+        source_id: SourceId,
+        load: &mut dyn RegistryData,
+        config: &Config,
+    ) -> CargoResult<()> {
+        // For some registry backends, it's expensive to fetch each individual index file, and the
+        // process can be sped up significantly by fetching many index files in advance. For
+        // backends where that is the case, we do an approximate walk of all transitive
+        // dependencies and fetch their index file in a pipelined fashion. This means that by the
+        // time the individual loads (see load.load in Summary::parse), those should all be quite
+        // fast.
+        //
+        // We have the advantage here of being able to play fast and loose with the exact
+        // dependency requirements. It's fine if we fetch a bit too much, since the incremental
+        // cost of each index file is small. It's even fine if we fetch too few index files --
+        // they'll just have to be fetched on the slow path later.
+        if config.offline() || !load.start_prefetch()? {
+            // Backend does not support prefetching.
+        }
+
+        log::debug!("prefetching transitive dependencies");
+
+        let relative = |name: &str| {
+            let mut prefix = make_dep_prefix(name);
+            prefix.push('/');
+            prefix.push_str(name);
+            prefix
+        };
+
+        // Seed the prefetching with the root dependencies.
+        for dep in deps {
+            // TODO: Skip if in cache?
+            load.prefetch(
+                root,
+                Path::new(&relative(&dep.package_name())),
+                dep.version_req(),
+            )?;
+        }
+
+        // Now, continuously iterate by walking dependencies we've loaded and fetching the index
+        // entry for _their_ dependencies.
+        while let Some(fetched) = load.next_prefetched()? {
+            // TODO: make use of RegistryIndex::summaries_cache
+            let summaries = Self::parse(
+                index_version,
+                root,
+                cache_root,
+                &fetched.path,
+                source_id,
+                load,
+                config,
+            )?;
+
+            let summaries = if let Some(s) = summaries { s } else { continue };
+
+            for (version, maybe_summary) in summaries.versions {
+                if !fetched.req.matches(&version) {
+                    // The crate that pulled in this crate as a dependency did not care about this
+                    // particular version, so we don't need to walk its dependencies.
+                    //
+                    // We _could_ simply walk every transitive dependency, and it probably wouldn't
+                    // be _that_ bad. But over time it'd mean that a bunch of index files are
+                    // pulled down even though they're no longer used anywhere in the dependency
+                    // closure. This, again, probably doesn't matter, and it would make the logic
+                    // here _much_ simpler, but for now we try to do better.
+                    //
+                    // Note that another crate in the dependency closure might still pull in this
+                    // version because that crate has a different set of requirements.
+                    continue;
+                }
+
+                let summary = maybe_summary.parse(config, &summaries.raw_data, source_id)?;
+
+                if summary.yanked {
+                    // This version has been yanked, so let's not even go there.
+                    continue;
+                }
+
+                for dep in summary.summary.dependencies() {
+                    if dep.source_id() != source_id {
+                        // This dependency lives in a different source, so we won't be prefetching
+                        // anything from there anyway.
+                        //
+                        // It is _technically_ possible that a dependency in a different source
+                        // then pulls in a dependency from _this_ source again, but we'll let that
+                        // go to the slow path.
+                        continue;
+                    }
+
+                    let raw_path = relative(&*dep.package_name());
+                    for relative in UncanonicalizedIter::new(&raw_path).take(1024) {
+                        // NOTE: Many of these prefetches will "miss", but that's okay.
+                        // They're going to be pipelined anyway.
+                        load.prefetch(root, Path::new(&relative), dep.version_req());
+                    }
+
+                    // TODO: make sure that the things we prefetch do not get
+                    // double-checked later on _unless_ there has been an update_index.
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Parse out a `Summaries` instances from on-disk state.
     ///
     /// This will attempt to prefer parsing a previous cache file that already
@@ -485,7 +595,7 @@ impl Summaries {
         cache_root: &Path,
         relative: &Path,
         source_id: SourceId,
-        load: &mut dyn RegistryData,
+        load: &dyn RegistryData,
         config: &Config,
     ) -> CargoResult<Option<Summaries>> {
         // First up, attempt to load the cache. This could fail for all manner

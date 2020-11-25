@@ -369,9 +369,25 @@ impl<'a> RegistryDependency<'a> {
     }
 }
 
+pub struct Fetched {
+    path: PathBuf,
+    req: semver::VersionReq,
+}
+
 pub trait RegistryData {
     fn prepare(&self) -> CargoResult<()>;
     fn index_path(&self) -> &Filesystem;
+
+    fn start_prefetch(&mut self) -> CargoResult<bool> {
+        Ok(false)
+    }
+    fn prefetch(&mut self, root: &Path, path: &Path, req: &semver::VersionReq) -> CargoResult<()> {
+        Ok(())
+    }
+    fn next_prefetched(&mut self) -> CargoResult<Option<Fetched>> {
+        Ok(None)
+    }
+
     fn load(
         &self,
         root: &Path,
