@@ -112,6 +112,9 @@ impl<'s> Iterator for UncanonicalizedIter<'s> {
             return None;
         }
 
+        // TODO:
+        // This implementation can currently generate paths like en/v-/env_logger,
+        // which doesn't _seem_ like a useful candidate to test?
         let ret = Some(
             self.input
                 .chars()
@@ -494,15 +497,16 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         // Seed the prefetching with the root dependencies.
         for dep in deps {
-            let raw_path = relative(&*dep.package_name());
-            for relative in UncanonicalizedIter::new(&raw_path).take(1024) {
-                load.prefetch(
-                    root,
-                    &Path::new(&relative),
-                    dep.package_name(),
-                    dep.version_req(),
-                )?;
-            }
+            let relative = relative(&*dep.package_name());
+            // NOTE: We do not use UncanonicalizedIter here or below because if the user gave a
+            // misspelling, it's fine if we don't prefetch their misspelling. The resolver will be
+            // a bit slower, but then give them an error.
+            load.prefetch(
+                root,
+                &Path::new(&relative),
+                dep.package_name(),
+                dep.version_req(),
+            )?;
         }
 
         // Now, continuously iterate by walking dependencies we've loaded and fetching the index
@@ -567,17 +571,13 @@ impl<'cfg> RegistryIndex<'cfg> {
                         continue;
                     }
 
-                    let raw_path = relative(&*dep.package_name());
-                    for relative in UncanonicalizedIter::new(&raw_path).take(1024) {
-                        // NOTE: Many of these prefetches will "miss", but that's okay.
-                        // They're going to be pipelined anyway.
-                        load.prefetch(
-                            root,
-                            Path::new(&relative),
-                            dep.package_name(),
-                            dep.version_req(),
-                        )?;
-                    }
+                    let relative = relative(&*dep.package_name());
+                    load.prefetch(
+                        root,
+                        Path::new(&relative),
+                        dep.package_name(),
+                        dep.version_req(),
+                    )?;
                 }
             }
         }
