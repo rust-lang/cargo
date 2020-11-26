@@ -52,11 +52,34 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Default)]
+#[derive(serde::Deserialize, Debug)]
 #[serde(default)]
 pub struct RustdocExternMap {
+    #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
     pub(crate) registries: HashMap<String, String>,
     std: Option<RustdocExternMode>,
+}
+
+impl Default for RustdocExternMap {
+    fn default() -> Self {
+        let mut registries = HashMap::new();
+        registries.insert("crates-io".into(), "https://docs.rs/".into());
+        Self {
+            registries,
+            std: None,
+        }
+    }
+}
+
+fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
+    de: D,
+) -> Result<HashMap<String, String>, D::Error> {
+    use serde::Deserialize;
+    let mut registries = HashMap::deserialize(de)?;
+    if !registries.contains_key("crates-io") {
+        registries.insert("crates-io".into(), "https://docs.rs/".into());
+    }
+    Ok(registries)
 }
 
 impl hash::Hash for RustdocExternMap {
