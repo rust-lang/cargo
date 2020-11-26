@@ -537,7 +537,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             };
 
             for (version, maybe_summary) in &mut summaries.versions {
-                if !fetched.version_req().matches(&version) {
+                if !fetched.version_reqs().any(|vr| vr.matches(&version)) {
                     // The crate that pulled in this crate as a dependency did not care about this
                     // particular version, so we don't need to walk its dependencies.
                     //

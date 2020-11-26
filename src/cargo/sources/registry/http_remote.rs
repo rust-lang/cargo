@@ -346,19 +346,18 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 use std::collections::btree_map::Entry;
                 match self.downloads.eager.entry(path.to_path_buf()) {
                     Entry::Occupied(mut o) => {
-                        let o = o.get_mut();
-                        if &o.primary.req != req {
-                            o.others.insert(req.clone());
-                        }
+                        o.get_mut().reqs.insert(req.clone());
                     }
                     Entry::Vacant(v) => {
-                        v.insert(MultiVersionFetched {
-                            primary: Fetched {
-                                path: path.to_path_buf(),
-                                name,
-                                req: req.clone(),
-                            },
-                            others: HashSet::new(),
+                        if self.prefetched.contains(path) {
+                            debug!("yielding already-prefetched {}", name);
+                        }
+                        let mut reqs = HashSet::new();
+                        reqs.insert(req.clone());
+                        v.insert(Fetched {
+                            path: path.to_path_buf(),
+                            name,
+                            reqs,
                         });
                     }
                 }
@@ -399,14 +398,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 .pending
                 .get_mut(token)
                 .expect("invalid token");
-            if &dl.req != req {
-                dl.additional_reqs.insert(req.clone());
-            }
+            dl.reqs.insert(req.clone());
             return Ok(());
         } else if let Some(f) = self.downloads.eager.get_mut(path) {
-            if &f.primary.req != req {
-                f.others.insert(req.clone());
-            }
+            f.reqs.insert(req.clone());
             return Ok(());
         }
 
@@ -459,13 +454,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             None,
             "path queued for download more than once"
         );
+        let mut reqs = HashSet::new();
+        reqs.insert(req.clone());
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
             path: path.to_path_buf(),
             name,
-            req: req.clone(),
-            additional_reqs: HashSet::new(),
+            reqs,
             etag: RefCell::new(None),
             last_modified: RefCell::new(None),
         };
@@ -540,26 +536,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             //
             // TODO: Use the nightly BTreeMap::pop_first when stable.
             if let Some(path) = self.downloads.eager.keys().next().cloned() {
-                use std::collections::btree_map::Entry;
-                let mut fetched = if let Entry::Occupied(o) = self.downloads.eager.entry(path) {
-                    o
-                } else {
-                    unreachable!();
-                };
-
-                return if let Some(req) = fetched.get().others.iter().next().cloned() {
-                    let fetched = fetched.get_mut();
-                    fetched.others.remove(&req);
-                    let ret = Ok(Some(Fetched {
-                        path: fetched.primary.path.clone(),
-                        name: fetched.primary.name,
-                        req,
-                    }));
-                    ret
-                } else {
-                    let fetched = fetched.remove();
-                    Ok(Some(fetched.primary))
-                };
+                let fetched = self.downloads.eager.remove(&path).unwrap();
+                return Ok(Some(fetched));
             }
 
             // We don't have any fetched results immediately ready to be yielded,
@@ -606,23 +584,20 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 let mut handle = self.prefetch.remove(handle)?;
                 self.downloads.pending_ids.remove(&dl.path);
 
-                let fetched = MultiVersionFetched {
-                    primary: Fetched {
-                        path: dl.path,
-                        name: dl.name,
-                        req: dl.req,
-                    },
-                    others: dl.additional_reqs,
+                let fetched = Fetched {
+                    path: dl.path,
+                    name: dl.name,
+                    reqs: dl.reqs,
                 };
                 assert!(
-                    self.prefetched.insert(fetched.primary.path.clone()),
+                    self.prefetched.insert(fetched.path.clone()),
                     "downloaded the same path twice during prefetching"
                 );
 
                 let code = handle.response_code()?;
                 debug!(
                     "index file for {} downloaded with status code {}",
-                    fetched.primary.name,
+                    fetched.name,
                     handle.response_code()?
                 );
                 match code {
@@ -630,7 +605,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         // We got data back, hooray!
                         // Let's update the index file.
                         let path = self.config.assert_package_cache_locked(&self.index_path);
-                        let pkg = path.join(&fetched.primary.path);
+                        let pkg = path.join(&fetched.path);
                         paths::create_dir_all(pkg.parent().expect("pkg is a file"))?;
                         let mut file = paths::create(pkg)?;
                         file.write_all(dl.etag.into_inner().as_deref().unwrap_or("\n").as_bytes())?;
@@ -647,7 +622,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         assert!(
                             self.downloads
                                 .eager
-                                .insert(fetched.primary.path.clone(), fetched)
+                                .insert(fetched.path.clone(), fetched)
                                 .is_none(),
                             "download finished for already-finished path"
                         );
@@ -659,7 +634,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         assert!(
                             self.downloads
                                 .eager
-                                .insert(fetched.primary.path.clone(), fetched)
+                                .insert(fetched.path.clone(), fetched)
                                 .is_none(),
                             "download finished for already-finished path"
                         );
@@ -1502,11 +1477,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 }
 
-struct MultiVersionFetched {
-    primary: Fetched,
-    others: HashSet<semver::VersionReq>,
-}
-
 // NOTE: what follows is lifted from src/cargo/core/package.rs and tweaked
 
 /// Helper for downloading crates.
@@ -1526,7 +1496,7 @@ pub struct Downloads {
     results: Vec<(usize, Result<(), curl::Error>)>,
     /// Prefetch requests that we already have a response to.
     /// NOTE: Should this maybe be some kind of heap?
-    eager: BTreeMap<PathBuf, MultiVersionFetched>,
+    eager: BTreeMap<PathBuf, Fetched>,
     /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
 }
@@ -1543,10 +1513,8 @@ struct Download {
     name: InternedString,
 
     /// The version requirements for the dependency line that triggered this fetch.
-    req: semver::VersionReq,
-
-    /// Additional version requirements for same package.
-    additional_reqs: HashSet<semver::VersionReq>,
+    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
+    reqs: HashSet<semver::VersionReq>,
 
     /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,

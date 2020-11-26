@@ -375,7 +375,8 @@ impl<'a> RegistryDependency<'a> {
 pub struct Fetched {
     name: InternedString,
     path: PathBuf,
-    req: semver::VersionReq,
+    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
+    reqs: HashSet<semver::VersionReq>,
 }
 
 impl Fetched {
@@ -387,8 +388,8 @@ impl Fetched {
         &self.path
     }
 
-    pub fn version_req(&self) -> &semver::VersionReq {
-        &self.req
+    pub fn version_reqs(&self) -> impl Iterator<Item = &semver::VersionReq> {
+        self.reqs.iter()
     }
 }
 
