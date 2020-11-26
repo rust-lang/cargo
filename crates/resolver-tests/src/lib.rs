@@ -1,6 +1,7 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::needless_range_loop)] // false positives
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
@@ -125,6 +126,14 @@ pub fn resolve_with_config_raw(
         used: HashSet<PackageId>,
     };
     impl<'a> Registry for MyRegistry<'a> {
+        fn prefetch(
+            &mut self,
+            _deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+        ) -> CargoResult<()> {
+            // Doing nothing is a valid way to prefetch.
+            Ok(())
+        }
+
         fn query(
             &mut self,
             dep: &Dependency,
