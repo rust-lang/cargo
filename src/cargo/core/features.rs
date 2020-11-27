@@ -426,7 +426,7 @@ impl CliUnstable {
                 bail!("flag -Z{} does not take a value, found: `{}`", key, v);
             }
             Ok(true)
-        };
+        }
 
         fn parse_usize_opt(value: Option<&str>) -> CargoResult<Option<usize>> {
             Ok(match value {
