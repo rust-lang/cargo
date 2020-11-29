@@ -16,7 +16,7 @@ use url::Url;
 pub enum RustdocExternMode {
     /// Use a local `file://` URL.
     Local,
-    /// Use a remote URL to https://doc.rust-lang.org/ (default).
+    /// Use a remote URL to <https://doc.rust-lang.org/> (default).
     Remote,
     /// An arbitrary URL.
     Url(String),

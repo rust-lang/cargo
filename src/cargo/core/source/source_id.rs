@@ -19,8 +19,6 @@ lazy_static::lazy_static! {
 }
 
 /// Unique identifier for a source of packages.
-///
-/// See also: [`SourceKind`].
 #[derive(Clone, Copy, Eq, Debug)]
 pub struct SourceId {
     inner: &'static SourceIdInner,
