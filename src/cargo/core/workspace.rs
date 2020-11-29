@@ -445,7 +445,7 @@ impl<'cfg> Workspace<'cfg> {
                 .join("Cargo.toml");
             debug!("find_root - pointer {}", path.display());
             Ok(paths::normalize_path(&path))
-        };
+        }
 
         {
             let current = self.packages.load(manifest_path)?;
