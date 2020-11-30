@@ -360,6 +360,7 @@ pub struct CliUnstable {
     pub namespaced_features: bool,
     pub weak_dep_features: bool,
     pub extra_link_arg: bool,
+    pub http_registry: bool,
 }
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -468,6 +469,7 @@ impl CliUnstable {
             "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
+            "http-registry" => self.http_registry = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
