@@ -370,7 +370,11 @@ impl<'cfg> JobQueue<'cfg> {
             }
         }
 
-        self.queue.queue(unit.clone(), job, queue_deps);
+        // For now we use a fixed placeholder value for the cost of each unit, but
+        // in the future this could be used to allow users to provide hints about
+        // relative expected costs of units, or this could be automatically set in
+        // a smarter way using timing data from a previous compilation.
+        self.queue.queue(unit.clone(), job, queue_deps, 100);
         *self.counts.entry(unit.pkg.package_id()).or_insert(0) += 1;
         Ok(())
     }
