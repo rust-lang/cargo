@@ -368,8 +368,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Also note that pipelining is disabled as curl authors have indicated
         // that it's buggy, and we've empirically seen that it's buggy with HTTP
         // proxies.
-        //
-        // TODO: Is that still the case? We probably want pipelining here if possible.
         self.multiplexing = self.config.http_config()?.multiplexing.unwrap_or(true);
 
         self.prefetch
