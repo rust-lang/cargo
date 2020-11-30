@@ -188,7 +188,7 @@ pub trait AppExt: Sized {
         ._arg(opt("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
-                .possible_values(&["2015", "2018"])
+                .possible_values(&["2015", "2018", "2021"])
                 .value_name("YEAR"),
         )
         ._arg(
