@@ -950,8 +950,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 ChangelogStrategy::FirstFetch { full: false } => {
                     // We really just need the epoch number and file size,
                     // which we can get at by fetching just the first line.
-                    // "1 2019-10-18 23:51:23 ".len() == 22
-                    handle.range("0-22")?;
+                    // "1 2019-10-18T23:51:23Z ".len() == 23
+                    handle.range("0-23")?;
                 }
                 ChangelogStrategy::FirstFetch { full: _ } => {}
             }
@@ -1096,7 +1096,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         }
                         // We must assume we're in case 1.
                         (ChangelogStrategy::FirstFetch { full }, _) => {
-                            // Our request for just the start of the changelog (Range: 0-22) failed.
+                            // Our request for just the start of the changelog (Range: 0-23) failed.
                             // This probably means that the changelog is empty, but we do a full fetch
                             // to make sure.
                             assert!(!full);
@@ -1150,7 +1150,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 // epoch number! Should that happen, we need to detect it.
                 //
                 // Lines _should_ look like this:
-                // 1 2019-10-18 23:52:00 anyhow
+                // 1 2019-10-18T23:52:00Z anyhow
                 //
                 // That is: epoch date time crate.
                 let mut parts = line.trim().split_whitespace();
