@@ -13,7 +13,8 @@ use crate::sources::registry::{
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{Config, Filesystem, Sha256};
+use crate::util::{self, Config, Filesystem, Progress, ProgressStyle, Sha256};
+use bytesize::ByteSize;
 use curl::easy::{Easy, HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
 use log::{debug, trace, warn};
@@ -26,6 +27,7 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::time::Duration;
+use std::time::Instant;
 
 const ETAG: &'static [u8] = b"ETag";
 const LAST_MODIFIED: &'static [u8] = b"Last-Modified";
@@ -146,7 +148,7 @@ pub struct HttpRegistry<'cfg> {
     requested_update: bool,
 
     /// State for currently pending prefetch downloads.
-    downloads: Downloads,
+    downloads: Downloads<'cfg>,
 
     /// Does the config say that we can use HTTP multiplexing?
     multiplexing: bool,
@@ -158,6 +160,67 @@ pub struct HttpRegistry<'cfg> {
 
     /// If we are currently prefetching, all calls to RegistryData::load should go to disk.
     is_prefetching: bool,
+}
+
+// NOTE: the download bits are lifted from src/cargo/core/package.rs and tweaked
+
+/// Helper for downloading crates.
+pub struct Downloads<'cfg> {
+    config: &'cfg Config,
+    /// When a download is started, it is added to this map. The key is a
+    /// "token" (see `Download::token`). It is removed once the download is
+    /// finished.
+    pending: HashMap<usize, (Download, EasyHandle)>,
+    /// Set of paths currently being downloaded, mapped to their tokens.
+    /// This should stay in sync with `pending`.
+    pending_ids: HashMap<PathBuf, usize>,
+    /// The final result of each download. A pair `(token, result)`. This is a
+    /// temporary holding area, needed because curl can report multiple
+    /// downloads at once, but the main loop (`wait`) is written to only
+    /// handle one at a time.
+    results: Vec<(usize, Result<(), curl::Error>)>,
+    /// Prefetch requests that we already have a response to.
+    /// NOTE: Should this maybe be some kind of heap?
+    eager: BTreeMap<PathBuf, Fetched>,
+    /// The next ID to use for creating a token (see `Download::token`).
+    next: usize,
+    /// Progress bar.
+    progress: RefCell<Option<Progress<'cfg>>>,
+    /// Number of downloads that have successfully finished.
+    downloads_finished: usize,
+    /// Total bytes for all successfully downloaded index files.
+    downloaded_bytes: u64,
+    /// Time when downloading started.
+    start: Instant,
+    /// Indicates *all* downloads were successful.
+    success: bool,
+}
+
+struct Download {
+    /// The token for this download, used as the key of the `Downloads::pending` map
+    /// and stored in `EasyHandle` as well.
+    token: usize,
+
+    /// The path of the package that we're downloading.
+    path: PathBuf,
+
+    /// The name of the package that we're downloading.
+    name: InternedString,
+
+    /// The version requirements for the dependency line that triggered this fetch.
+    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
+    reqs: HashSet<semver::VersionReq>,
+
+    /// Actual downloaded data, updated throughout the lifetime of this download.
+    data: RefCell<Vec<u8>>,
+
+    /// ETag and Last-Modified headers received from the server (if any).
+    etag: RefCell<Option<String>>,
+    last_modified: RefCell<Option<String>>,
+
+    /// Statistics updated from the progress callback in libcurl.
+    total: Cell<u64>,
+    current: Cell<u64>,
 }
 
 impl<'cfg> HttpRegistry<'cfg> {
@@ -172,7 +235,23 @@ impl<'cfg> HttpRegistry<'cfg> {
             http: RefCell::new(None),
             prefetch: Multi::new(),
             multiplexing: false,
-            downloads: Downloads::default(),
+            downloads: Downloads {
+                start: Instant::now(),
+                config,
+                next: 0,
+                pending: HashMap::new(),
+                pending_ids: HashMap::new(),
+                eager: BTreeMap::new(),
+                results: Vec::new(),
+                progress: RefCell::new(Some(Progress::with_style(
+                    "Prefetching",
+                    ProgressStyle::Ratio,
+                    config,
+                ))),
+                downloads_finished: 0,
+                downloaded_bytes: 0,
+                success: false,
+            },
             prefetched: HashSet::new(),
             requested_update: false,
             is_prefetching: false,
@@ -456,15 +535,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         );
         let mut reqs = HashSet::new();
         reqs.insert(req.clone());
-        let dl = Download {
-            token,
-            data: RefCell::new(Vec::new()),
-            path: path.to_path_buf(),
-            name,
-            reqs,
-            etag: RefCell::new(None),
-            last_modified: RefCell::new(None),
-        };
 
         // Each write should go to self.downloads.pending[&token].data.
         // Since the write function must be 'static, we access downloads through a thread-local.
@@ -484,7 +554,16 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             Ok(buf.len())
         })?;
 
-        // Same goes for the header function -- it goes through thread-local storage.
+        // Same goes for the progress function -- it goes through thread-local storage.
+        handle.progress(true)?;
+        handle.progress_function(move |dl_total, dl_cur, _, _| {
+            tls::with(|downloads| match downloads {
+                Some(d) => d.progress(token, dl_total as u64, dl_cur as u64),
+                None => false,
+            })
+        })?;
+
+        // And ditto for the header function.
         handle.header_function(move |buf| {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
                 let is_etag = buf.eq_ignore_ascii_case(ETAG);
@@ -518,12 +597,42 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             true
         })?;
 
-        // TODO: Track and display download progress (see `Downloads` in `core/pacakge.rs`).
+        // If the progress bar isn't enabled then it may be awhile before the
+        // first index file finishes downloading so we inform immediately that
+        // we're prefetching here.
+        if self.downloads.downloads_finished == 0
+            && self.downloads.pending.is_empty()
+            && !self
+                .downloads
+                .progress
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .is_enabled()
+        {
+            self.downloads
+                .config
+                .shell()
+                .status("Prefetching", "index files ...")?;
+        }
+
+        let dl = Download {
+            token,
+            data: RefCell::new(Vec::new()),
+            path: path.to_path_buf(),
+            name,
+            reqs,
+            etag: RefCell::new(None),
+            last_modified: RefCell::new(None),
+            total: Cell::new(0),
+            current: Cell::new(0),
+        };
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
         let mut handle = self.prefetch.add(handle)?;
         handle.set_token(token)?;
         self.downloads.pending.insert(dl.token, (dl, handle));
+        self.downloads.tick(WhyTick::DownloadStarted)?;
 
         Ok(())
     }
@@ -571,7 +680,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             // Walk all the requests that completed and handle their responses.
             //
             // This will ultimately add more replies to self.downloads.eager, which we'll
-            while let Some((token, result)) = results.pop() {
+            while let Some((token, result)) = self.downloads.results.pop() {
                 trace!("{} finished with {:?}", token, result);
 
                 let (dl, handle) = self
@@ -600,6 +709,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     fetched.name,
                     handle.response_code()?
                 );
+
+                // This gets really noisy very quickly:
+                // self.config.shell().status("Prefetched", &fetched.name)?;
+
+                self.downloads.downloads_finished += 1;
+                self.downloads.downloaded_bytes += dl.total.get();
+                self.downloads.tick(WhyTick::DownloadFinished)?;
+
                 match code {
                     200 => {
                         // We got data back, hooray!
@@ -826,8 +943,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             true
         })?;
 
-        // TODO: Should we display transfer status here somehow?
-
         transfer
             .perform()
             .chain_err(|| format!("failed to fetch index file `{}`", path.display()))?;
@@ -1012,8 +1127,6 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 }
                 true
             })?;
-
-            // TODO: Should we show progress here somehow?
 
             transfer
                 .perform()
@@ -1477,51 +1590,77 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 }
 
-// NOTE: what follows is lifted from src/cargo/core/package.rs and tweaked
+impl<'cfg> Downloads<'cfg> {
+    fn progress(&self, token: usize, total: u64, cur: u64) -> bool {
+        let dl = &self.pending[&token].0;
+        dl.total.set(total);
+        dl.current.set(cur);
+        if self.tick(WhyTick::DownloadUpdate).is_err() {
+            return false;
+        }
 
-/// Helper for downloading crates.
-#[derive(Default)]
-pub struct Downloads {
-    /// When a download is started, it is added to this map. The key is a
-    /// "token" (see `Download::token`). It is removed once the download is
-    /// finished.
-    pending: HashMap<usize, (Download, EasyHandle)>,
-    /// Set of paths currently being downloaded, mapped to their tokens.
-    /// This should stay in sync with `pending`.
-    pending_ids: HashMap<PathBuf, usize>,
-    /// The final result of each download. A pair `(token, result)`. This is a
-    /// temporary holding area, needed because curl can report multiple
-    /// downloads at once, but the main loop (`wait`) is written to only
-    /// handle one at a time.
-    results: Vec<(usize, Result<(), curl::Error>)>,
-    /// Prefetch requests that we already have a response to.
-    /// NOTE: Should this maybe be some kind of heap?
-    eager: BTreeMap<PathBuf, Fetched>,
-    /// The next ID to use for creating a token (see `Download::token`).
-    next: usize,
+        true
+    }
+
+    fn tick(&self, why: WhyTick) -> CargoResult<()> {
+        let mut progress = self.progress.borrow_mut();
+        let progress = progress.as_mut().unwrap();
+
+        if let WhyTick::DownloadUpdate = why {
+            if !progress.update_allowed() {
+                return Ok(());
+            }
+        }
+        let pending = self.pending.len();
+        let msg = if pending == 1 {
+            format!("{} index file", pending)
+        } else {
+            format!("{} index files", pending)
+        };
+        progress.print_now(&msg)
+    }
 }
 
-struct Download {
-    /// The token for this download, used as the key of the `Downloads::pending` map
-    /// and stored in `EasyHandle` as well.
-    token: usize,
+#[derive(Copy, Clone)]
+enum WhyTick {
+    DownloadStarted,
+    DownloadUpdate,
+    DownloadFinished,
+}
 
-    /// The path of the package that we're downloading.
-    path: PathBuf,
-
-    /// The name of the package that we're downloading.
-    name: InternedString,
-
-    /// The version requirements for the dependency line that triggered this fetch.
-    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
-    reqs: HashSet<semver::VersionReq>,
-
-    /// Actual downloaded data, updated throughout the lifetime of this download.
-    data: RefCell<Vec<u8>>,
-
-    /// ETag and Last-Modified headers received from the server (if any).
-    etag: RefCell<Option<String>>,
-    last_modified: RefCell<Option<String>>,
+impl<'cfg> Drop for Downloads<'cfg> {
+    fn drop(&mut self) {
+        let progress = self.progress.get_mut().take().unwrap();
+        // Don't print a download summary if we're not using a progress bar,
+        // we've already printed lots of `Prefetching...` items.
+        if !progress.is_enabled() {
+            return;
+        }
+        // If we didn't download anything, no need for a summary.
+        if self.downloads_finished == 0 {
+            return;
+        }
+        // If an error happened, let's not clutter up the output.
+        if !self.success {
+            return;
+        }
+        // pick the correct plural of crate(s)
+        let index_files = if self.downloads_finished == 1 {
+            "index file"
+        } else {
+            "index files"
+        };
+        let status = format!(
+            "{} {} ({}) in {}",
+            self.downloads_finished,
+            index_files,
+            ByteSize(self.downloaded_bytes),
+            util::elapsed(self.start.elapsed())
+        );
+        // Clear progress before displaying final summary.
+        drop(progress);
+        drop(self.config.shell().status("Prefetched", status));
+    }
 }
 
 mod tls {
@@ -1531,16 +1670,16 @@ mod tls {
 
     thread_local!(static PTR: Cell<usize> = Cell::new(0));
 
-    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads>) -> R) -> R {
+    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads<'_>>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());
         if ptr == 0 {
             f(None)
         } else {
-            unsafe { f(Some(&*(ptr as *const Downloads))) }
+            unsafe { f(Some(&*(ptr as *const Downloads<'_>))) }
         }
     }
 
-    pub(crate) fn set<R>(dl: &Downloads, f: impl FnOnce() -> R) -> R {
+    pub(crate) fn set<R>(dl: &Downloads<'_>, f: impl FnOnce() -> R) -> R {
         struct Reset<'a, T: Copy>(&'a Cell<T>, T);
 
         impl<'a, T: Copy> Drop for Reset<'a, T> {
@@ -1551,7 +1690,7 @@ mod tls {
 
         PTR.with(|p| {
             let _reset = Reset(p, p.get());
-            p.set(dl as *const Downloads as usize);
+            p.set(dl as *const Downloads<'_> as usize);
             f()
         })
     }
