@@ -175,7 +175,7 @@ fn cargo_test_quiet_with_harness() {
             "
 running 1 test
 .
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 ",
         )
@@ -1552,7 +1552,7 @@ fn test_filtered_excludes_compiling_examples() {
 running 1 test
 test tests::foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 ",
         )
@@ -3724,13 +3724,13 @@ pub fn foo() -> u8 { 1 }
 running 1 test
 test tests::it_works ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 
 running 1 test
 test src/lib.rs - foo (line 1) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 \n",
         )
         .run();
@@ -3746,7 +3746,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 running 1 test
 test tests::it_works ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 \n",
         )
         .run();
@@ -3763,7 +3763,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 running 1 test
 test src/lib.rs - foo (line 1) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
 
 ",
         )
@@ -3877,14 +3877,14 @@ fn cargo_test_doctest_xcompile_ignores() {
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test")
         .with_stdout_contains(
-            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
         )
         .run();
     #[cfg(target_arch = "x86_64")]
     p.cargo("test")
         .with_status(101)
         .with_stdout_contains(
-            "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out",
+            "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out[..]",
         )
         .run();
 
@@ -3892,7 +3892,7 @@ fn cargo_test_doctest_xcompile_ignores() {
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains(
-            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
         )
         .run();
 
@@ -3900,7 +3900,7 @@ fn cargo_test_doctest_xcompile_ignores() {
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo()
         .with_stdout_contains(
-            "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out",
+            "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out[..]",
         )
         .run();
 }
@@ -3940,7 +3940,7 @@ fn cargo_test_doctest_xcompile() {
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
     .run();
 }
@@ -4020,7 +4020,7 @@ fn cargo_test_doctest_xcompile_runner() {
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
     .with_stderr_contains("this is a runner")
     .run();
@@ -4064,7 +4064,7 @@ fn cargo_test_doctest_xcompile_no_runner() {
     ))
     .masquerade_as_nightly_cargo()
     .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
     )
     .run();
 }
