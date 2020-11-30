@@ -388,7 +388,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         root: &Path,
         path: &Path,
         name: InternedString,
-        req: &semver::VersionReq,
+        req: Option<&semver::VersionReq>,
     ) -> CargoResult<()> {
         // A quick overview of what goes on below:
         //
@@ -415,6 +415,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 || !self.requested_update
                 || self.prefetched.contains(path)
             {
+                let req = if let Some(req) = req {
+                    req
+                } else {
+                    // We don't need to fetch this file, and the caller does not care about it,
+                    // so we can just return.
+                    return Ok(());
+                };
+
                 trace!("not prefetching fresh {}", name);
 
                 // We already have this file locally, and we don't need to double-check it with
@@ -477,10 +485,17 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 .pending
                 .get_mut(token)
                 .expect("invalid token");
-            dl.reqs.insert(req.clone());
+
+            if let Some(req) = req {
+                dl.reqs.insert(req.clone());
+            }
+
             return Ok(());
         } else if let Some(f) = self.downloads.eager.get_mut(path) {
-            f.reqs.insert(req.clone());
+            if let Some(req) = req {
+                f.reqs.insert(req.clone());
+            }
+
             return Ok(());
         }
 
@@ -534,7 +549,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             "path queued for download more than once"
         );
         let mut reqs = HashSet::new();
-        reqs.insert(req.clone());
+        if let Some(req) = req {
+            reqs.insert(req.clone());
+        }
 
         // Each write should go to self.downloads.pending[&token].data.
         // Since the write function must be 'static, we access downloads through a thread-local.
@@ -646,6 +663,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             // TODO: Use the nightly BTreeMap::pop_first when stable.
             if let Some(path) = self.downloads.eager.keys().next().cloned() {
                 let fetched = self.downloads.eager.remove(&path).unwrap();
+
+                if fetched.reqs.is_empty() {
+                    // This index file was proactively fetched even though it did not appear as a
+                    // dependency, so we should not yield it back for future exploration.
+                    continue;
+                }
                 return Ok(Some(fetched));
             }
 

@@ -413,12 +413,16 @@ pub trait RegistryData {
     ///
     /// The package path, name, and dependency versions requirements are passed back from
     /// `next_prefetched` so that they can be used to inform future calls to `prefetch`.
+    ///
+    /// If `req` is `None`, the index file will be downloaded, but will not be yielded by
+    /// `next_prefetched`. This is useful if you already have transitive closure of index entries
+    /// you wish to fetch.
     fn prefetch(
         &mut self,
         _root: &Path,
         _path: &Path,
         _name: InternedString,
-        _req: &semver::VersionReq,
+        _req: Option<&semver::VersionReq>,
     ) -> CargoResult<()> {
         Ok(())
     }
@@ -636,7 +640,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
     ) -> CargoResult<()> {
         // TODO: conditional index update?
-        self.index.prefetch(deps, &mut *self.ops)?;
+        self.index
+            .prefetch(deps, &self.yanked_whitelist, &mut *self.ops)?;
         Ok(())
     }
 

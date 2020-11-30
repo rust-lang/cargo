@@ -463,6 +463,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn prefetch(
         &mut self,
         deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+        yanked_whitelist: &HashSet<PackageId>,
         load: &mut dyn RegistryData,
     ) -> CargoResult<()> {
         // For some registry backends, it's expensive to fetch each individual index file, and the
@@ -502,6 +503,24 @@ impl<'cfg> RegistryIndex<'cfg> {
         // already looked at and just don't walk them again.
         let mut walked = HashSet::new();
 
+        // Seed the prefetching with everything from the lockfile.
+        //
+        // This allows us to start downloads of a tonne of index files we otherwise would not
+        // discover until much later, which saves us many RTTs. On a dependency graph like that of
+        // cargo itself, it cut my download time to 1/5th.
+        //
+        // Note that the greedy fetch below actually ends up fetching additional dependencies even
+        // if nothing has change in the dependency graph. This is because the lockfile contains
+        // only the dependencies we actually _used_ last time. Thus, any dependencies that the
+        // greedy algorithm (erroneously) thinks we need will still need to be queued for download.
+        for pkg in yanked_whitelist {
+            if pkg.source_id() == self.source_id {
+                let name = pkg.name();
+                let relative = relative(&*name);
+                load.prefetch(root, &Path::new(&relative), name, None)?;
+            }
+        }
+
         // Seed the prefetching with the root dependencies.
         for dep in deps {
             walked.insert((dep.package_name(), dep.version_req().clone()));
@@ -514,7 +533,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 root,
                 &Path::new(&relative),
                 dep.package_name(),
-                dep.version_req(),
+                Some(dep.version_req()),
             )?;
         }
 
@@ -590,7 +609,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                         root,
                         Path::new(&relative),
                         dep.package_name(),
-                        dep.version_req(),
+                        Some(dep.version_req()),
                     )?;
                 }
             }
