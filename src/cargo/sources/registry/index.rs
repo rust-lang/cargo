@@ -495,8 +495,17 @@ impl<'cfg> RegistryIndex<'cfg> {
             prefix
         };
 
+        // Since we allow dependency cycles in crates, we may end up walking in circles forever if
+        // we just iteratively handled each candidate as we discovered it. The real resolver is
+        // smart about how it avoids walking endlessly in cycles, but in this simple greedy
+        // resolver we play fast-and-loose, and instead just keep track of dependencies we have
+        // already looked at and just don't walk them again.
+        let mut walked = HashSet::new();
+
         // Seed the prefetching with the root dependencies.
         for dep in deps {
+            walked.insert((dep.package_name(), dep.version_req().clone()));
+
             let relative = relative(&*dep.package_name());
             // NOTE: We do not use UncanonicalizedIter here or below because if the user gave a
             // misspelling, it's fine if we don't prefetch their misspelling. The resolver will be
@@ -568,6 +577,11 @@ impl<'cfg> RegistryIndex<'cfg> {
                         // It is _technically_ possible that a dependency in a different source
                         // then pulls in a dependency from _this_ source again, but we'll let that
                         // go to the slow path.
+                        continue;
+                    }
+
+                    if !walked.insert((dep.package_name(), dep.version_req().clone())) {
+                        // We've already walked this dependency -- no need to do so again.
                         continue;
                     }
 
