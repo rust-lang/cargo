@@ -1653,21 +1653,19 @@ impl<'cfg> Downloads<'cfg> {
     }
 
     fn tick(&self, why: WhyTick) -> CargoResult<()> {
+        if let WhyTick::DownloadUpdate = why {
+            // We don't show progress for individual downloads.
+            return Ok(());
+        }
+
         let mut progress = self.progress.borrow_mut();
         let progress = progress.as_mut().unwrap();
 
-        if let WhyTick::DownloadUpdate = why {
-            if !progress.update_allowed() {
-                return Ok(());
-            }
-        }
-        let pending = self.pending.len();
-        let msg = if pending == 1 {
-            format!("{} index file", pending)
-        } else {
-            format!("{} index files", pending)
-        };
-        progress.print_now(&msg)
+        // NOTE: should we show something about self.eager?
+        progress.tick(
+            self.downloads_finished,
+            self.downloads_finished + self.pending.len(),
+        )
     }
 }
 
