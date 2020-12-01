@@ -14,6 +14,13 @@ use cargo_test_support::{basic_manifest, project};
 use std::fs;
 use std::path::Path;
 
+fn cargo(p: &cargo_test_support::Project, s: &str) -> cargo_test_support::Execs {
+    let mut e = p.cargo(s);
+    e.arg("-Zhttp-registry")
+        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly");
+    e
+}
+
 fn setup(config: RegistryServerConfiguration) -> RegistryServer {
     let server = serve_registry(registry_path(), config);
 
@@ -77,10 +84,11 @@ fn simple(config: RegistryServerConfiguration) {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (http registry `{reg}`)
 [COMPILING] bar v0.0.1
@@ -91,12 +99,13 @@ fn simple(config: RegistryServerConfiguration) {
         ))
         .run();
 
-    p.cargo("clean").run();
+    cargo(&p, "clean").run();
 
     // Don't download a second time
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(
             "\
+[PREFETCHING] index files ...
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -128,10 +137,11 @@ fn deps(config: RegistryServerConfiguration) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (http registry `{reg}`)
 [DOWNLOADED] [..] v0.0.1 (http registry `{reg}`)
@@ -166,11 +176,12 @@ fn nonexistent(config: RegistryServerConfiguration) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] [..] index
+[PREFETCHING] index files ...
 error: no matching package named `nonexistent` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
@@ -201,7 +212,7 @@ fn update_registry(config: RegistryServerConfiguration) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_status(101)
         .with_stderr_contains(
             "\
@@ -214,10 +225,11 @@ required by package `foo v0.0.1 ([..])`
 
     Package::new("notyet", "0.0.1").publish();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(format!(
             "\
 [UPDATING] `{reg}` index
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (http registry `{reg}`)
 [COMPILING] notyet v0.0.1
@@ -252,7 +264,7 @@ fn invalidate_index_on_rollover(config: RegistryServerConfiguration) {
         .file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 
     // Fish out the path to the .last-updated file
     let last_updated = if !matches!(config, RegistryServerConfiguration::NoChangelog) {
@@ -309,10 +321,11 @@ fn invalidate_index_on_rollover(config: RegistryServerConfiguration) {
 
     // NOTE: we see UPDATING even when the changelog isn't used even though it is a no-op since
     // update_index is called whenever a version is not in the index cache.
-    p2.cargo("build")
+    cargo(&p2, "build")
         .with_stderr(format!(
             "\
 [UPDATING] [..]
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.1 (http registry `{reg}`)
 [COMPILING] a v0.1.1
@@ -359,10 +372,11 @@ fn invalidate_index_on_rollover(config: RegistryServerConfiguration) {
 
     // NOTE: again, we see UPDATING even when the changelog isn't used even though it is a no-op
     // since update_index is called whenever a version is not in the index cache.
-    p3.cargo("build")
+    cargo(&p3, "build")
         .with_stderr(format!(
             "\
 [UPDATING] [..]
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.2 (http registry `{reg}`)
 [COMPILING] a v0.1.2
@@ -402,7 +416,7 @@ fn update_publish_then_update(config: RegistryServerConfiguration) {
         .file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 
     // Next, publish a new package and back up the copy of the registry we just
     // created.
@@ -429,7 +443,7 @@ fn update_publish_then_update(config: RegistryServerConfiguration) {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p2.cargo("build").run();
+    cargo(&p2, "build").run();
     registry.rm_rf();
     t!(fs::rename(&backup, &registry));
     t!(fs::rename(
@@ -440,10 +454,11 @@ fn update_publish_then_update(config: RegistryServerConfiguration) {
     // Finally, build the first project again (with our newer Cargo.lock) which
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(format!(
             "\
 [UPDATING] [..]
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.1 (http registry `{reg}`)
 [COMPILING] a v0.1.1
@@ -481,32 +496,34 @@ fn update_multiple_packages(config: RegistryServerConfiguration) {
     Package::new("b", "0.1.0").publish();
     Package::new("c", "0.1.0").publish();
 
-    p.cargo("fetch").run();
+    cargo(&p, "fetch").run();
 
     Package::new("a", "0.1.1").publish();
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    p.cargo("update -pa -pb")
+    cargo(&p, "update -pa -pb")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[PREFETCHING] index files ...
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
         )
         .run();
 
-    p.cargo("update -pb -pc")
+    cargo(&p, "update -pb -pc")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[PREFETCHING] index files ...
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
         )
         .run();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr_contains(format!("[DOWNLOADED] a v0.1.1 (http registry `{}`)", url))
         .with_stderr_contains(format!("[DOWNLOADED] b v0.1.1 (http registry `{}`)", url))
         .with_stderr_contains(format!("[DOWNLOADED] c v0.1.1 (http registry `{}`)", url))
@@ -557,7 +574,7 @@ fn bundled_crate_in_registry(config: RegistryServerConfiguration) {
         .file("bar/src/lib.rs", "")
         .publish();
 
-    p.cargo("run").run();
+    cargo(&p, "run").run();
 }
 
 test_w_wo_changelog!(update_same_prefix_oh_my_how_was_this_a_bug);
@@ -584,8 +601,8 @@ fn update_same_prefix_oh_my_how_was_this_a_bug(config: RegistryServerConfigurati
         .dep("foobar", "0.2.0")
         .publish();
 
-    p.cargo("generate-lockfile").run();
-    p.cargo("update -pfoobar --precise=0.2.0").run();
+    cargo(&p, "generate-lockfile").run();
+    cargo(&p, "update -pfoobar --precise=0.2.0").run();
 }
 
 test_w_wo_changelog!(use_semver);
@@ -609,7 +626,7 @@ fn use_semver(config: RegistryServerConfiguration) {
 
     Package::new("foo", "1.2.3-alpha.0").publish();
 
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 }
 
 test_w_wo_changelog!(use_semver_package_incorrectly);
@@ -648,7 +665,7 @@ fn use_semver_package_incorrectly(config: RegistryServerConfiguration) {
         .file("b/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_status(101)
         .with_stderr(
             "\
@@ -689,10 +706,11 @@ fn only_download_relevant(config: RegistryServerConfiguration) {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0
@@ -727,7 +745,7 @@ fn resolve_and_backtracking(config: RegistryServerConfiguration) {
         .publish();
     Package::new("foo", "0.1.0").publish();
 
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 }
 
 test_w_wo_changelog!(disallow_network);
@@ -750,11 +768,11 @@ fn disallow_network(config: RegistryServerConfiguration) {
         .build();
 
     // TODO: this should also check that we don't access the network for things we have in cache.
-    p.cargo("build --frozen")
+    cargo(&p, "build --frozen")
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to prefetch dependencies of package `bar v0.5.0 [..]`
+[ERROR] failed to prefetch dependencies
 
 Caused by:
   failed to load source for dependency `foo`
@@ -806,7 +824,7 @@ fn add_dep_dont_update_registry(config: RegistryServerConfiguration) {
 
     Package::new("remote", "0.3.4").publish();
 
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 
     p.change_file(
         "Cargo.toml",
@@ -822,9 +840,10 @@ fn add_dep_dont_update_registry(config: RegistryServerConfiguration) {
         "#,
     );
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(
             "\
+[PREFETCHING] index files ...
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] [..]
 ",
@@ -866,7 +885,7 @@ fn bump_version_dont_update_registry(config: RegistryServerConfiguration) {
 
     Package::new("remote", "0.3.4").publish();
 
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 
     p.change_file(
         "Cargo.toml",
@@ -881,7 +900,7 @@ fn bump_version_dont_update_registry(config: RegistryServerConfiguration) {
         "#,
     );
 
-    p.cargo("build")
+    cargo(&p, "build")
         .with_stderr(
             "\
 [COMPILING] bar v0.6.0 ([..])
@@ -928,7 +947,7 @@ fn toml_lies_but_index_is_truth(config: RegistryServerConfiguration) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v").run();
+    cargo(&p, "build -v").run();
 }
 
 test_w_wo_changelog!(rename_deps_and_features);
@@ -986,9 +1005,9 @@ fn rename_deps_and_features(config: RegistryServerConfiguration) {
         )
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build --features bar/foo01").run();
-    p.cargo("build --features bar/another").run();
+    cargo(&p, "build").run();
+    cargo(&p, "build --features bar/foo01").run();
+    cargo(&p, "build --features bar/another").run();
 }
 
 test_w_wo_changelog!(ignore_invalid_json_lines);
@@ -1015,7 +1034,7 @@ fn ignore_invalid_json_lines(config: RegistryServerConfiguration) {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    cargo(&p, "build").run();
 }
 
 test_w_wo_changelog!(readonly_registry_still_works);
@@ -1039,10 +1058,10 @@ fn readonly_registry_still_works(config: RegistryServerConfiguration) {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("generate-lockfile").run();
-    p.cargo("fetch --locked").run();
+    cargo(&p, "generate-lockfile").run();
+    cargo(&p, "fetch --locked").run();
     chmod_readonly(&paths::home(), true);
-    p.cargo("build").run();
+    cargo(&p, "build").run();
     // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
     chmod_readonly(&paths::home(), false);
 

@@ -1525,6 +1525,7 @@ fn substitute_macros(input: &str) -> String {
         ("[DOCUMENTING]", " Documenting"),
         ("[FRESH]", "       Fresh"),
         ("[UPDATING]", "    Updating"),
+        ("[PREFETCHING]", " Prefetching"),
         ("[ADDING]", "      Adding"),
         ("[REMOVING]", "    Removing"),
         ("[DOCTEST]", "   Doc-tests"),
