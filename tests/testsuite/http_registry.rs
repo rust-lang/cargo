@@ -35,7 +35,7 @@ fn setup(config: RegistryServerConfiguration) -> RegistryServer {
             replace-with = 'my-awesome-http-registry'
 
             [source.my-awesome-http-registry]
-            registry = 'rfc+http://{}'
+            registry = 'sparse+http://{}'
         ",
             server.addr()
         )

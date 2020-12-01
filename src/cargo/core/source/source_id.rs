@@ -139,7 +139,7 @@ impl SourceId {
                 Ok(SourceId::new(SourceKind::Registry, url)?
                     .with_precise(Some("locked".to_string())))
             }
-            "rfc" => {
+            "sparse" => {
                 let url = url.into_url()?;
                 Ok(SourceId::new(SourceKind::Http, url)?.with_precise(Some("locked".to_string())))
             }
@@ -600,7 +600,7 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
                 kind: SourceKind::Http,
                 ref url,
                 ..
-            } => write!(f, "rfc+{}", url),
+            } => write!(f, "sparse+{}", url),
             SourceIdInner {
                 kind: SourceKind::Registry,
                 ref url,

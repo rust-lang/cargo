@@ -838,8 +838,13 @@ fn get_source_id(
 ) -> CargoResult<SourceId> {
     match (reg, index) {
         (Some(r), _) => SourceId::alt_registry(config, r),
-        // TODO: this should go through from_url
-        (_, Some(i)) => SourceId::for_registry(&i.into_url()?),
+        (_, Some(i)) => {
+            if let Some(i) = i.strip_prefix("sparse+") {
+                SourceId::for_http_registry(&i.into_url()?)
+            } else {
+                SourceId::for_registry(&i.into_url()?)
+            }
+        }
         _ => {
             let map = SourceConfigMap::new(config)?;
             let src = map.load(SourceId::crates_io(config)?, &HashSet::new())?;

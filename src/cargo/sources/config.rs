@@ -208,15 +208,15 @@ restore the source replacement configuration to continue the build
         if let Some(registry) = def.registry {
             let url = url(&registry, &format!("source.{}.registry", name))?;
 
-            if url.scheme().starts_with("rfc+") {
+            if url.scheme().starts_with("sparse+") {
                 if !self.config.cli_unstable().http_registry {
                     bail!("Usage of HTTP-based registries requires `-Z http-registry`")
                 }
 
-                // NOTE: it is illegal to use set_scheme to change rfc+http(s) to http(s).
+                // NOTE: it is illegal to use set_scheme to change sparse+http(s) to http(s).
                 let url = url
                     .to_string()
-                    .strip_prefix("rfc+")
+                    .strip_prefix("sparse+")
                     .unwrap()
                     .into_url()
                     .unwrap();
