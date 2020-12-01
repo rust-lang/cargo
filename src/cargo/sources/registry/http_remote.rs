@@ -490,12 +490,18 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
 
             return Ok(());
-        } else if let Some(f) = self.downloads.eager.get_mut(path) {
-            if let Some(req) = req {
-                f.reqs.insert(req.clone());
-            }
-
+        } else if self.prefetched.contains(path) {
+            // This must have been a 404 when we initially prefetched it.
             return Ok(());
+        } else if let Some(f) = self.downloads.eager.get_mut(path) {
+            // We can't hit this case.
+            // The index file must exist for the path to be in `eager`,
+            // but since that's the case, we should have caught this
+            // in the eager check _in_ the pkg.exists() path.
+            unreachable!(
+                "index file `{}` is in eager, but file doesn't exist",
+                f.path.display()
+            );
         }
 
         if was.is_some() {
@@ -722,7 +728,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 };
                 assert!(
                     self.prefetched.insert(fetched.path.clone()),
-                    "downloaded the same path twice during prefetching"
+                    "downloaded the index file `{}` twice during prefetching",
+                    fetched.path.display(),
                 );
 
                 let code = handle.response_code()?;
@@ -781,10 +788,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     404 => {
                         // Not Found response.
                         // The crate doesn't exist, so we simply do not yield it.
+                        // Errors will eventually be yielded by load().
                     }
                     410 | 451 => {
                         // The crate was deleted from the registry.
-                        todo!();
+                        // Errors will eventually be yielded by load().
+                        todo!("we should delete the local index file here if it exists");
                     }
                     code => {
                         anyhow::bail!("server returned unexpected HTTP status code {}", code);
@@ -869,8 +878,11 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             let is_synchronized = self.at.get().0.is_synchronized();
 
             let is_fresh = if is_synchronized {
-                if self.requested_update && path.ends_with("config.json") {
-                    debug!("double-checking freshness of {} on update", path.display());
+                if self.requested_update
+                    && path.ends_with("config.json")
+                    && !self.prefetched.contains(path)
+                {
+                    debug!("double-checking freshness of config.json on update");
                     false
                 } else {
                     trace!(
@@ -910,6 +922,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 let last_modified = std::str::from_utf8(last_modified)?;
                 Some((etag, last_modified, rest))
             }
+        } else if self.prefetched.contains(path) {
+            // This must have been a 404.
+            anyhow::bail!("crate does not exist in the registry");
         } else {
             assert!(!self.is_prefetching);
             None
@@ -975,12 +990,19 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         list.append("If-Modified-Since:")?;
         list.append("If-None-Match:")?;
         handle.http_headers(list)?;
+        let response_code = handle.response_code()?;
+        drop(handle);
 
-        debug!(
-            "index file downloaded with status code {}",
-            handle.response_code()?
+        debug!("index file downloaded with status code {}", response_code,);
+
+        // Make sure we don't double-check the file again if it's loaded again.
+        assert!(
+            self.prefetched.insert(path.to_path_buf()),
+            "downloaded the index file `{}` twice",
+            path.display(),
         );
-        match handle.response_code()? {
+
+        match response_code {
             200 => {}
             304 => {
                 // Not Modified response.
