@@ -110,12 +110,25 @@ pub trait CargoPathExt {
 }
 
 impl CargoPathExt for Path {
-    /* Technically there is a potential race condition, but we don't
-     * care all that much for our tests
-     */
     fn rm_rf(&self) {
-        if self.exists() {
+        let meta = match self.symlink_metadata() {
+            Ok(meta) => meta,
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    return;
+                }
+                panic!("failed to remove {:?}, could not read: {:?}", self, e);
+            }
+        };
+        // There is a race condition between fetching the metadata and
+        // actually performing the removal, but we don't care all that much
+        // for our tests.
+        if meta.is_dir() {
             if let Err(e) = remove_dir_all::remove_dir_all(self) {
+                panic!("failed to remove {:?}: {:?}", self, e)
+            }
+        } else {
+            if let Err(e) = fs::remove_file(self) {
                 panic!("failed to remove {:?}: {:?}", self, e)
             }
         }
