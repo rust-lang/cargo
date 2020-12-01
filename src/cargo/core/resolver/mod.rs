@@ -47,6 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
@@ -57,7 +58,7 @@ use log::{debug, trace};
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::config::Config;
-use crate::util::errors::CargoResult;
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
 
 use self::context::Context;
@@ -133,6 +134,16 @@ pub fn resolve(
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
+
+    // First, allow the source to batch pre-fetch dependencies we may need.
+    registry
+        .prefetch(
+            &mut summaries
+                .iter()
+                .flat_map(|summary| summary.0.dependencies().iter().map(Cow::Borrowed)),
+        )
+        .chain_err(|| "failed to prefetch dependencies")?;
+
     let mut registry =
         RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;

@@ -17,10 +17,7 @@ use url::Url;
 /// See also `core::Source`.
 pub trait Registry {
     /// Give source the opportunity to batch pre-fetch dependency information.
-    fn prefetch(
-        &mut self,
-        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
-    ) -> CargoResult<()>;
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
 
     /// Attempt to find the packages that match a dependency request.
     fn query(
@@ -489,16 +486,12 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn prefetch(
-        &mut self,
-        deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
-    ) -> CargoResult<()> {
+    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()> {
         assert!(self.patches_locked);
-        let ndeps = deps.len();
 
         // We need to partition deps so that we can prefetch dependencies from different
         // sources. Note that we do not prefetch from overrides.
-        let mut deps_per_source = HashMap::with_capacity(ndeps);
+        let mut deps_per_source = HashMap::new();
         for dep in deps {
             // We need to check for patches, as they may tell us to look at a different source.
             // If they do, we want to make sure we don't access the original registry
@@ -523,7 +516,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
             deps_per_source
                 .entry(source_id)
-                .or_insert_with(|| Vec::with_capacity(ndeps))
+                .or_insert_with(Vec::new)
                 .push(dep);
         }
 
