@@ -307,6 +307,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         if !self.checked_for_at.get() {
             self.checked_for_at.set(true);
             let path = self.config.assert_package_cache_locked(&self.index_path);
+            let path = path.join(LAST_UPDATED_FILE);
             if path.exists() {
                 let cl_state = paths::read(&path.join(LAST_UPDATED_FILE))?;
                 let cl_state: ChangelogState = cl_state
