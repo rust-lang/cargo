@@ -159,7 +159,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn load(
-        &self,
+        &mut self,
         _root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,

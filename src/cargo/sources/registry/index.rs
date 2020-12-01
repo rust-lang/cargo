@@ -647,7 +647,7 @@ impl Summaries {
         cache_root: &Path,
         relative: &Path,
         source_id: SourceId,
-        load: &dyn RegistryData,
+        load: &mut dyn RegistryData,
         config: &Config,
     ) -> CargoResult<Option<Summaries>> {
         // First up, attempt to load the cache. This could fail for all manner

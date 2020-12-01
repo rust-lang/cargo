@@ -433,7 +433,7 @@ pub trait RegistryData {
     }
 
     fn load(
-        &self,
+        &mut self,
         root: &Path,
         path: &Path,
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
