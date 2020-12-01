@@ -359,7 +359,7 @@ fn invalid_dir_bad() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to prefetch dependencies of package `foo v0.0.1 [..]`
+[ERROR] failed to prefetch dependencies
 
 Caused by:
   failed to load source for dependency `bar`

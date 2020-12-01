@@ -511,7 +511,7 @@ fn error_message_for_missing_manifest() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to prefetch dependencies of package `foo v0.5.0 [..]`
+[ERROR] failed to prefetch dependencies
 
 Caused by:
   failed to load source for dependency `bar`
@@ -1044,7 +1044,7 @@ fn deep_path_error() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to prefetch dependencies of package `b v0.1.0 [..]`
+[ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
     ... which is depended on by `a v0.1.0 [..]`
     ... which is depended on by `foo v0.1.0 [..]`
 
