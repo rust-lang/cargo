@@ -784,7 +784,7 @@ Caused by:
   failed to update replaced source registry `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
-  attempting to make an HTTP request, but --frozen was specified
+  attempting to update a http repository, but --frozen was specified
 ",
         )
         .run();

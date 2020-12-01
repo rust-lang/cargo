@@ -1053,6 +1053,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         if self.config.cli_unstable().no_index_update {
             return Ok(());
         }
+        if self.config.frozen() {
+            anyhow::bail!("attempting to update a http repository, but --frozen was specified")
+        }
+        if !self.config.network_allowed() {
+            anyhow::bail!("can't update a http repository in offline mode")
+        }
         // Make sure the index is only updated once per session since it is an
         // expensive operation. This generally only happens when the resolver
         // is run multiple times, such as during `cargo publish`.
