@@ -128,7 +128,7 @@ pub fn resolve_with_config_raw(
     impl<'a> Registry for MyRegistry<'a> {
         fn prefetch(
             &mut self,
-            _deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
+            _deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>,
         ) -> CargoResult<()> {
             // Doing nothing is a valid way to prefetch.
             Ok(())
