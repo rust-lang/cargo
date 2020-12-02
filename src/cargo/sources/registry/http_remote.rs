@@ -660,7 +660,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     }
 
     fn next_prefetched(&mut self) -> CargoResult<Option<Fetched>> {
-        while !self.downloads.pending.is_empty() || self.downloads.eager.is_empty() {
+        while !self.downloads.pending.is_empty() || !self.downloads.eager.is_empty() {
             // We may already have packages that are ready to go. This takes care of grabbing the
             // next of those, while ensuring that we yield every distinct version requirement for
             // each package.
