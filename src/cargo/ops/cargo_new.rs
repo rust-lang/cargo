@@ -835,20 +835,21 @@ fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
 
 fn find_git_config(path: &Path) -> Option<GitConfig> {
     match env::var("__CARGO_TEST_ROOT") {
-        Ok(test_root) => find_tests_git_config(test_root),
+        Ok(_) => find_tests_git_config(path),
         Err(_) => find_real_git_config(path),
     }
 }
 
-fn find_tests_git_config(cargo_test_root: String) -> Option<GitConfig> {
-    // Path where 'git config --local' puts variables when run from inside a test
-    let test_git_config = PathBuf::from(cargo_test_root).join(".git").join("config");
-
-    if test_git_config.exists() {
-        GitConfig::open(&test_git_config).ok()
-    } else {
-        GitConfig::open_default().ok()
+fn find_tests_git_config(path: &Path) -> Option<GitConfig> {
+    // Don't escape the test sandbox when looking for a git repository.
+    // NOTE: libgit2 has support to define the path ceiling in
+    // git_repository_discover, but the git2 bindings do not expose that.
+    for path in paths::ancestors(path) {
+        if let Ok(repo) = GitRepository::open(path) {
+            return Some(repo.config().expect("test repo should have valid config"));
+        }
     }
+    GitConfig::open_default().ok()
 }
 
 fn find_real_git_config(path: &Path) -> Option<GitConfig> {
