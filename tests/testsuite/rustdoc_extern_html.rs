@@ -32,21 +32,10 @@ fn basic_project() -> Project {
         .build()
 }
 
-fn docs_rs(p: &Project) {
-    p.change_file(
-        ".cargo/config",
-        r#"
-            [doc.extern-map.registries]
-            crates-io = "https://docs.rs/"
-        "#,
-    );
-}
-
 #[cargo_test]
 fn ignores_on_stable() {
     // Requires -Zrustdoc-map to use.
     let p = basic_project();
-    docs_rs(&p);
     p.cargo("doc -v --no-deps")
         .with_stderr_does_not_contain("[..]--extern-html-root-url[..]")
         .run();
@@ -60,7 +49,6 @@ fn simple() {
         return;
     }
     let p = basic_project();
-    docs_rs(&p);
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
@@ -157,7 +145,6 @@ fn renamed_dep() {
             "#,
         )
         .build();
-    docs_rs(&p);
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
@@ -211,7 +198,6 @@ fn lib_name() {
             "#,
         )
         .build();
-    docs_rs(&p);
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
@@ -338,7 +324,6 @@ fn multiple_versions() {
             ",
         )
         .build();
-    docs_rs(&p);
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(
@@ -364,12 +349,21 @@ fn rebuilds_when_changing() {
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
-        .with_stderr_does_not_contain("[..]--extern-html-root-url[..]")
+        .with_stderr_contains("[..]--extern-html-root-url[..]")
         .run();
 
-    docs_rs(&p);
+    // This also tests that the map for docs.rs can be overridden.
+    p.change_file(
+        ".cargo/config",
+        r#"
+            [doc.extern-map.registries]
+            crates-io = "https://example.com/"
+        "#,
+    );
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[..]--extern-html-root-url[..]")
+        .with_stderr_contains(
+            "[RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]",
+        )
         .run();
 }

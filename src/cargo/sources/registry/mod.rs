@@ -240,7 +240,7 @@ pub struct RegistryPackage<'a> {
     yanked: Option<bool>,
     /// Native library name this package links to.
     ///
-    /// Added early 2018 (see https://github.com/rust-lang/cargo/pull/4978),
+    /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
     links: Option<InternedString>,
 }

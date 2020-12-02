@@ -1352,10 +1352,6 @@ pub fn foo() {}
 
 #[cargo_test]
 fn doc_cap_lints() {
-    if !is_nightly() {
-        // This can be removed once intra_doc_link_resolution_failure fails on stable.
-        return;
-    }
     let a = git::new("a", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
             .file("src/lib.rs", BAD_INTRA_LINK_LIB)
@@ -1401,10 +1397,6 @@ fn doc_cap_lints() {
 
 #[cargo_test]
 fn doc_message_format() {
-    if !is_nightly() {
-        // This can be removed once intra_doc_link_resolution_failure fails on stable.
-        return;
-    }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
 
     p.cargo("doc --message-format=json")
@@ -1431,10 +1423,6 @@ fn doc_message_format() {
 
 #[cargo_test]
 fn short_message_format() {
-    if !is_nightly() {
-        // This can be removed once intra_doc_link_resolution_failure fails on stable.
-        return;
-    }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
     p.cargo("doc --message-format=short")
         .with_status(101)

@@ -1,7 +1,7 @@
 ## Package Layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
-Cargo package:
+Cargo [package][def-package]:
 
 ```text
 .
@@ -44,9 +44,9 @@ Cargo package:
 * Integration tests go in the `tests` directory.
 
 If a binary, example, bench, or integration test consists of multiple source
-files, place a `main.rs` file along with the extra modules within a
-subdirectory of the `src/bin`, `examples`, `benches`, or `tests` directory.
-The name of the executable will be the directory name.
+files, place a `main.rs` file along with the extra [*modules*][def-module]
+within a subdirectory of the `src/bin`, `examples`, `benches`, or `tests`
+directory. The name of the executable will be the directory name.
 
 You can learn more about Rust's module system in [the book][book-modules].
 
@@ -56,4 +56,6 @@ automatically infers target names.
 
 [book-modules]: ../../book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html
 [Configuring a target]: ../reference/cargo-targets.md#configuring-a-target
+[def-package]:           ../appendix/glossary.md#package          '"package" (glossary entry)'
+[def-module]:            ../appendix/glossary.md#module           '"module" (glossary entry)'
 [Target auto-discovery]: ../reference/cargo-targets.md#target-auto-discovery

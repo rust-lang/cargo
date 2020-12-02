@@ -1,7 +1,7 @@
 ## Working on an Existing Cargo Package
 
-If you download an existing package that uses Cargo, it’s really easy
-to get going.
+If you download an existing [package][def-package] that uses Cargo, it’s
+really easy to get going.
 
 First, get the package from somewhere. In this example, we’ll use `rand`
 cloned from its repository on GitHub:
@@ -20,3 +20,5 @@ $ cargo build
 
 This will fetch all of the dependencies and then build them, along with the
 package.
+
+[def-package]:  ../appendix/glossary.md#package  '"package" (glossary entry)'

@@ -1,6 +1,6 @@
 //! Tests for the `cargo new` command.
 
-use cargo_test_support::paths;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{cargo_process, git_process};
 use std::env;
 use std::fs::{self, File};
@@ -303,6 +303,50 @@ fn finds_git_author() {
     let toml = paths::root().join("foo/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
+}
+
+#[cargo_test]
+fn finds_git_author_in_included_config() {
+    let included_gitconfig = paths::root().join("foo").join(".gitconfig");
+    included_gitconfig.parent().unwrap().mkdir_p();
+    fs::write(
+        &included_gitconfig,
+        r#"
+        [user]
+            name = foo
+            email = bar
+        "#,
+    )
+    .unwrap();
+
+    let gitconfig = paths::home().join(".gitconfig");
+    fs::write(
+        &gitconfig,
+        format!(
+            r#"
+            [includeIf "gitdir/i:{}"]
+                path = {}
+            "#,
+            included_gitconfig
+                .parent()
+                .unwrap()
+                .join("")
+                .display()
+                .to_string()
+                .replace("\\", "/"),
+            included_gitconfig.display().to_string().replace("\\", "/"),
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    cargo_process("new foo/bar")
+        // Avoid the special treatment of tests to find git configuration
+        .env_remove("__CARGO_TEST_ROOT")
+        .run();
+    let toml = paths::root().join("foo/bar/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["foo <bar>"]"#), contents,);
 }
 
 #[cargo_test]

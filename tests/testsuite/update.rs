@@ -469,6 +469,7 @@ fn update_precise_first_run() {
           "crate_types": [
             "lib"
           ],
+          "doc": true,
           "doctest": true,
           "test": true,
           "edition": "2015",
@@ -507,6 +508,7 @@ fn update_precise_first_run() {
           "crate_types": [
             "lib"
           ],
+          "doc": true,
           "doctest": true,
           "edition": "2015",
           "kind": [
