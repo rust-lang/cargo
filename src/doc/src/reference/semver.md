@@ -224,7 +224,7 @@ pub struct Foo {
 ///////////////////////////////////////////////////////////
 // Example usage that will break.
 fn main() {
-    let x = updated_crate::Foo { f1: 123 }; // Error: missing field `f2`
+    let x = updated_crate::Foo { f1: 123 }; // Error: cannot construct `Foo`
 }
 ```
 
@@ -738,7 +738,7 @@ pub struct Foo<A: Eq> {
 use updated_crate::Foo;
 
 fn main() {
-    let s = Foo { f1: 1.23 }; // Error: the trait bound `{float}: std::cmp::Eq` is not satisfied
+    let s = Foo { f1: 1.23 }; // Error: the trait bound `{float}: Eq` is not satisfied
 }
 ```
 
@@ -1070,7 +1070,7 @@ pub fn foo<T: Copy + IntoIterator<Item = u8>>(x: T) {}
 use updated_crate::foo;
 
 fn main() {
-    foo(vec![1, 2, 3]); // Error: `std::marker::Copy` is not implemented for `std::vec::Vec<u8>`
+    foo(vec![1, 2, 3]); // Error: `Copy` is not implemented for `Vec<u8>`
 }
 ```
 
