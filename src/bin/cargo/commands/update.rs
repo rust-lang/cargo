@@ -7,6 +7,7 @@ pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
+        .arg(opt("workspace", "Only update the workspace packages").short("w"))
         .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",
@@ -30,6 +31,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         precise: args.value_of("precise"),
         to_update: values(args, "package"),
         dry_run: args.is_present("dry-run"),
+        workspace: args.is_present("workspace"),
         config,
     };
     ops::update_lockfile(&ws, &update_opts)?;
