@@ -210,7 +210,7 @@ sometimes rebuild code when you're not expecting it!
 We've long [wanted to provide better diagnostics about
 this](https://github.com/rust-lang/cargo/issues/2904) but unfortunately haven't
 been able to make progress on that issue in quite some time. In the meantime,
-however, you can debug a rebuild at least a little by by setting the `CARGO_LOG`
+however, you can debug a rebuild at least a little by setting the `CARGO_LOG`
 environment variable:
 
 ```sh
@@ -233,7 +233,7 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 
 * Two successive Cargo builds may differ in the set of features enabled for some
   dependencies. For example if the first build command builds the whole
-  workspace and the second command builds only one crate, this may causes a
+  workspace and the second command builds only one crate, this may cause a
   dependency on crates.io to have a different set of features enabled, causing
   it and everything that depends on it to get rebuilt. There's unfortunately not
   really a great fix for this, although if possible it's best to have the set of
@@ -243,7 +243,7 @@ Some issues we've seen historically which can cause crates to get rebuilt are:
 * Some filesystems exhibit unusual behavior around timestamps. Cargo primarily
   uses timestamps on files to govern whether rebuilding needs to happen, but if
   you're using a nonstandard filesystem it may be affecting the timestamps
-  somehow (e.g. truncating them, causing them to drift, etc). In this scenario
+  somehow (e.g. truncating them, causing them to drift, etc). In this scenario,
   feel free to open an issue and we can see if we can accomodate the filesystem
   somehow.
 
