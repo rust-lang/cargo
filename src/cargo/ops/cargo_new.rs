@@ -645,27 +645,37 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (author_name, email) = discover_author(path)?;
-    let author = match (cfg.name, cfg.email, author_name, email) {
-        (Some(name), Some(email), _, _)
-        | (Some(name), None, _, Some(email))
-        | (None, Some(email), Some(name), _)
-        | (None, None, Some(name), Some(email)) => {
+    let (discovered_name, discovered_email) = discover_author(path)?;
+
+    // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
+    // cfg takes priority over the discovered ones
+    let author_name = match (cfg.name, discovered_name) {
+        (Some(name), _) | (_, Some(name)) => Some(name),
+        (None, None) => None,
+    };
+
+    let author_email = match (cfg.email, discovered_email) {
+        (Some(email), _) | (_, Some(email)) => Some(email),
+        (None, None) => None,
+    };
+
+    let author = match (author_name, author_email) {
+        (Some(name), Some(email)) => {
             if email.is_empty() {
-                name
+                Some(name)
             } else {
-                format!("{} <{}>", name, email)
+                Some(format!("{} <{}>", name, email))
             }
         }
-        (Some(name), None, _, None) | (None, None, Some(name), None) => name,
-        (None, Some(email), None, _) | (None, None, None, Some(email)) => {
+        (Some(name), None) => Some(name),
+        (None, Some(email)) => {
             if email.is_empty() {
-                "".to_string()
+                None
             } else {
-                format!("<{}>", email)
+                Some(format!("<{}>", email))
             }
         }
-        (None, None, None, None) => "".to_string(),
+        (None, None) => None,
     };
 
     let mut cargotoml_path_specifier = String::new();
@@ -714,10 +724,9 @@ edition = {}
 [dependencies]
 {}"#,
             name,
-            if author.is_empty() {
-                format!("")
-            } else {
-                format!("{}", toml::Value::String(author))
+            match author {
+                Some(value) => format!("{}", toml::Value::String(value)),
+                None => format!(""),
             },
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
