@@ -42,6 +42,15 @@ the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
 .RE
 .sp
+\fB\-w\fR, 
+\fB\-\-workspace\fR
+.RS 4
+Attempt to update only packages defined in the workspace. Other packages
+are updated only if they don't already exist in the lockfile. This
+option is useful for updating \fBCargo.lock\fR after you've changed version
+numbers in \fBCargo.toml\fR\&.
+.RE
+.sp
 \fB\-\-dry\-run\fR
 .RS 4
 Displays what would be updated, but doesn't actually write the lockfile.

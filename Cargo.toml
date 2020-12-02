@@ -78,7 +78,7 @@ rustc-workspace-hack = "1.0.0"
 core-foundation = { version = "0.9.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
-miow = "0.3.1"
+miow = "0.3.6"
 fwdansi = "1.1.0"
 
 [target.'cfg(windows)'.dependencies.winapi]
@@ -103,8 +103,8 @@ features = [
 ]
 
 [dev-dependencies]
-cargo-test-macro = { path = "crates/cargo-test-macro", version = "0.1.0" }
-cargo-test-support = { path = "crates/cargo-test-support", version = "0.1.0" }
+cargo-test-macro = { path = "crates/cargo-test-macro" }
+cargo-test-support = { path = "crates/cargo-test-support" }
 
 [build-dependencies]
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }

@@ -62,7 +62,7 @@ fn custom_target_minimal() {
 #[cargo_test]
 fn custom_target_dependency() {
     if !is_nightly() {
-        // Requires features no_core, lang_items, optin_builtin_traits
+        // Requires features no_core, lang_items, auto_traits
         return;
     }
     let p = project()
@@ -84,7 +84,7 @@ fn custom_target_dependency() {
             r#"
                 #![feature(no_core)]
                 #![feature(lang_items)]
-                #![feature(optin_builtin_traits)]
+                #![feature(auto_traits)]
                 #![no_core]
 
                 extern crate bar;
