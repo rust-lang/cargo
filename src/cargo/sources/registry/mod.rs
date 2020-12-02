@@ -379,7 +379,7 @@ impl<'a> RegistryDependency<'a> {
 pub struct Fetched {
     name: InternedString,
     path: PathBuf,
-    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
+    // NOTE: we can get rid of the HashSet (and other complexity) if we had VersionReq::union
     reqs: HashSet<semver::VersionReq>,
     is_transitive: bool,
 }

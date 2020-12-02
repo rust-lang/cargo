@@ -516,14 +516,24 @@ impl<'cfg> RegistryIndex<'cfg> {
         for pkg in yanked_whitelist {
             if pkg.source_id() == self.source_id {
                 let name = pkg.name();
+                log::trace!("prefetching from lockfile: {}", name);
                 let relative = relative(&*name);
                 load.prefetch(root, &Path::new(&relative), name, None, true)?;
             }
         }
 
-        // Seed the prefetching with the root dependencies.
+        // Also seed the prefetching with the root dependencies.
+        //
+        // It's important that we do this _before_ we handle any responses to downloads,
+        // since all the prefetches from above are marked as being transitive. We need to mark
+        // direct depenendencies as such before we start iterating, otherwise we will erroneously
+        // ignore their dev-dependencies when they're yielded by next_prefetched.
         for dep in deps {
             walked.insert((dep.package_name(), dep.version_req().clone()));
+            log::trace!(
+                "prefetching from direct dependencies: {}",
+                dep.package_name()
+            );
 
             let relative = relative(&*dep.package_name());
             // NOTE: We do not use UncanonicalizedIter here or below because if the user gave a
@@ -541,6 +551,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // Now, continuously iterate by walking dependencies we've loaded and fetching the index
         // entry for _their_ dependencies.
         while let Some(fetched) = load.next_prefetched()? {
+            log::trace!("got prefetched {}", fetched.name);
             let summaries = if let Some(s) = self.summaries_cache.get_mut(&fetched.name()) {
                 s
             } else {
@@ -567,6 +578,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
             let mut matched = false;
             for (version, maybe_summary) in &mut summaries.versions {
+                log::trace!("consider prefetching version {}", version);
                 if !fetched.version_reqs().any(|vr| vr.matches(&version)) {
                     // The crate that pulled in this crate as a dependency did not care about this
                     // particular version, so we don't need to walk its dependencies.
@@ -593,6 +605,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                         //
                         // But that seems highly unlikely. If that happens, it's fine if we don't
                         // prefetch transitive dependencies of 0.5 -- that'll be handled by load().
+                        log::trace!("stopping version search on first non-match after match");
                         break;
                     }
                     continue;
@@ -620,6 +633,10 @@ impl<'cfg> RegistryIndex<'cfg> {
 
                     // Don't pull in dev-dependencies of transitive dependencies.
                     if fetched.is_transitive && !dep.is_transitive() {
+                        log::trace!(
+                            "not prefetching transitive dev-dependency {}",
+                            dep.package_name()
+                        );
                         continue;
                     }
 
@@ -628,6 +645,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                         continue;
                     }
 
+                    log::trace!("prefetching transitive dependency {}", dep.package_name());
                     let relative = relative(&*dep.package_name());
                     load.prefetch(
                         root,

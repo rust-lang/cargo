@@ -493,7 +493,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 .get_mut(token)
                 .expect("invalid token");
 
+            trace!("amending dependency that we're already fetching: {}", name);
             if let Some(req) = req {
+                trace!("adding req {}", req);
                 dl.reqs.insert(req.clone());
             }
             dl.is_transitive &= is_transitive;
@@ -572,7 +574,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // That thread-local is set up in `next_prefetched` when it calls self.prefetch.perform,
         // which is what ultimately calls this method.
         handle.write_function(move |buf| {
-            trace!("{} - {} bytes of data", token, buf.len());
+            // trace!("{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
                 if let Some(downloads) = downloads {
                     downloads.pending[&token]
@@ -682,8 +684,13 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 if fetched.reqs.is_empty() {
                     // This index file was proactively fetched even though it did not appear as a
                     // dependency, so we should not yield it back for future exploration.
+                    trace!(
+                        "not yielding fetch result for {} with no requirements",
+                        fetched.name
+                    );
                     continue;
                 }
+                trace!("yielding fetch result for {}", fetched.name);
                 return Ok(Some(fetched));
             }
 
@@ -695,12 +702,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             );
             // Note the `tls::set` here which sets up the thread-local storage needed to access
             // self.downloads from `write_function` and `header_function` above.
-            let remaining_in_multi = tls::set(&self.downloads, || {
+            let _remaining_in_multi = tls::set(&self.downloads, || {
                 self.prefetch
                     .perform()
                     .chain_err(|| "failed to perform http requests")
             })?;
-            trace!("handles remaining: {}", remaining_in_multi);
+            // trace!("handles remaining: {}", _remaining_in_multi);
 
             // Walk all the messages cURL came across in case anything completed.
             let results = &mut self.downloads.results;
