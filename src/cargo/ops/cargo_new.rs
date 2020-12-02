@@ -649,15 +649,8 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
     // cfg takes priority over the discovered ones
-    let author_name = match (cfg.name, discovered_name) {
-        (Some(name), _) | (_, Some(name)) => Some(name),
-        (None, None) => None,
-    };
-
-    let author_email = match (cfg.email, discovered_email) {
-        (Some(email), _) | (_, Some(email)) => Some(email),
-        (None, None) => None,
-    };
+    let author_name = cfg.name.or(discovered_name);
+    let author_email = cfg.email.or(discovered_email);
 
     let author = match (author_name, author_email) {
         (Some(name), Some(email)) => {
