@@ -645,7 +645,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (discovered_name, discovered_email) = discover_author(path)?;
+    let (discovered_name, discovered_email) = discover_author(path);
 
     // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
     // cfg takes priority over the discovered ones
@@ -802,7 +802,7 @@ fn get_environment_variable(variables: &[&str]) -> Option<String> {
     variables.iter().filter_map(|var| env::var(var).ok()).next()
 }
 
-fn discover_author(path: &Path) -> CargoResult<(Option<String>, Option<String>)> {
+fn discover_author(path: &Path) -> (Option<String>, Option<String>) {
     let git_config = find_git_config(path);
     let git_config = git_config.as_ref();
 
@@ -845,7 +845,7 @@ fn discover_author(path: &Path) -> CargoResult<(Option<String>, Option<String>)>
         s.to_string()
     });
 
-    Ok((name, email))
+    (name, email)
 }
 
 fn find_git_config(path: &Path) -> Option<GitConfig> {
