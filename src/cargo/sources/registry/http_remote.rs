@@ -153,10 +153,10 @@ pub struct HttpRegistry<'cfg> {
     /// Does the config say that we can use HTTP multiplexing?
     multiplexing: bool,
 
-    /// What paths have we already prefetched?
+    /// What paths have we already fetched since the last index update?
     ///
-    /// We do not need to double-check any of these index files -- the prefetch stage already did.
-    prefetched: HashSet<PathBuf>,
+    /// We do not need to double-check any of these index files since we have already done so.
+    fresh: HashSet<PathBuf>,
 
     /// If we are currently prefetching, all calls to RegistryData::load should go to disk.
     is_prefetching: bool,
@@ -252,7 +252,7 @@ impl<'cfg> HttpRegistry<'cfg> {
                 downloaded_bytes: 0,
                 success: false,
             },
-            prefetched: HashSet::new(),
+            fresh: HashSet::new(),
             requested_update: false,
             is_prefetching: false,
         }
@@ -412,7 +412,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         let was = if pkg.exists() {
             if self.at.get().0.is_synchronized()
                 || !self.requested_update
-                || self.prefetched.contains(path)
+                || self.fresh.contains(path)
             {
                 let req = if let Some(req) = req {
                     req
@@ -435,7 +435,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         o.get_mut().reqs.insert(req.clone());
                     }
                     Entry::Vacant(v) => {
-                        if self.prefetched.contains(path) {
+                        if self.fresh.contains(path) {
                             debug!("yielding already-prefetched {}", name);
                         }
                         let mut reqs = HashSet::new();
@@ -490,7 +490,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             }
 
             return Ok(());
-        } else if self.prefetched.contains(path) {
+        } else if self.fresh.contains(path) {
             // This must have been a 404 when we initially prefetched it.
             return Ok(());
         } else if let Some(f) = self.downloads.eager.get_mut(path) {
@@ -727,7 +727,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     reqs: dl.reqs,
                 };
                 assert!(
-                    self.prefetched.insert(fetched.path.clone()),
+                    self.fresh.insert(fetched.path.clone()),
                     "downloaded the index file `{}` twice during prefetching",
                     fetched.path.display(),
                 );
@@ -880,7 +880,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             let is_fresh = if is_synchronized {
                 if self.requested_update
                     && path.ends_with("config.json")
-                    && !self.prefetched.contains(path)
+                    && !self.fresh.contains(path)
                 {
                     debug!("double-checking freshness of config.json on update");
                     false
@@ -903,7 +903,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             } else if self.is_prefetching {
                 trace!("using local {} in load while prefetching", path.display());
                 true
-            } else if self.prefetched.contains(path) {
+            } else if self.fresh.contains(path) {
                 trace!(
                     "using local {} as it was already prefetched",
                     path.display()
@@ -922,7 +922,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 let last_modified = std::str::from_utf8(last_modified)?;
                 Some((etag, last_modified, rest))
             }
-        } else if self.prefetched.contains(path) {
+        } else if self.fresh.contains(path) {
             // This must have been a 404.
             anyhow::bail!("crate does not exist in the registry");
         } else {
@@ -997,7 +997,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Make sure we don't double-check the file again if it's loaded again.
         assert!(
-            self.prefetched.insert(path.to_path_buf()),
+            self.fresh.insert(path.to_path_buf()),
             "downloaded the index file `{}` twice",
             path.display(),
         );
@@ -1073,7 +1073,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
         // Make sure that subsequent loads double-check with the server again.
         self.requested_update = true;
-        self.prefetched.clear();
+        self.fresh.clear();
 
         self.prepare()?;
         let path = self.config.assert_package_cache_locked(&self.index_path);
