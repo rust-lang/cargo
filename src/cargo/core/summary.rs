@@ -460,11 +460,11 @@ fn validate_feature_name(config: &Config, pkg_id: PackageId, name: &str) -> Carg
         }
     }
     for ch in chars {
-        if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+') {
+        if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             config.shell().warn(&format!(
                 "invalid character `{}` in feature `{}` in package {}, \
-                characters must be Unicode XID characters or `+` \
-                (numbers, `+`, `-`, `_`, or most letters)\n\
+                characters must be Unicode XID characters, `+`, or `.` \
+                (numbers, `+`, `-`, `_`, `.`, or most letters)\n\
                 {}",
                 ch, name, pkg_id, FUTURE
             ))?;
