@@ -207,8 +207,13 @@ impl SourceId {
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
+        let (kind, url) = if let Some(url) = url.to_string().strip_prefix("sparse+") {
+            (SourceKind::Http, url.into_url()?)
+        } else {
+            (SourceKind::Registry, url)
+        };
         Ok(SourceId::wrap(SourceIdInner {
-            kind: SourceKind::Registry,
+            kind,
             canonical_url: CanonicalUrl::new(&url)?,
             url,
             precise: None,

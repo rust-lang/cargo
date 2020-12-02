@@ -60,7 +60,7 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    registry: Option<&'a str>,
+    registry: Option<String>,
 }
 
 impl ser::Serialize for Dependency {
@@ -79,7 +79,7 @@ impl ser::Serialize for Dependency {
             features: self.features(),
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
-            registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
+            registry: registry_id.as_ref().map(|sid| sid.as_url().to_string()),
         }
         .serialize(s)
     }
