@@ -381,6 +381,7 @@ pub struct Fetched {
     path: PathBuf,
     // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
     reqs: HashSet<semver::VersionReq>,
+    is_transitive: bool,
 }
 
 impl Fetched {
@@ -427,6 +428,7 @@ pub trait RegistryData {
         _path: &Path,
         _name: InternedString,
         _req: Option<&semver::VersionReq>,
+        _is_transitive: bool,
     ) -> CargoResult<()> {
         Ok(())
     }

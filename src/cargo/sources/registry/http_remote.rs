@@ -211,6 +211,9 @@ struct Download {
     // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
     reqs: HashSet<semver::VersionReq>,
 
+    /// True if this download is of a direct dependency of the root crate.
+    is_transitive: bool,
+
     /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
 
@@ -388,6 +391,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         path: &Path,
         name: InternedString,
         req: Option<&semver::VersionReq>,
+        is_transitive: bool,
     ) -> CargoResult<()> {
         // A quick overview of what goes on below:
         //
@@ -433,6 +437,9 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 match self.downloads.eager.entry(path.to_path_buf()) {
                     Entry::Occupied(mut o) => {
                         o.get_mut().reqs.insert(req.clone());
+                        // We trust a signal that something is _not_ transitive
+                        // more than a signal that it is transitive.
+                        o.get_mut().is_transitive &= is_transitive;
                     }
                     Entry::Vacant(v) => {
                         if self.fresh.contains(path) {
@@ -444,6 +451,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             path: path.to_path_buf(),
                             name,
                             reqs,
+                            is_transitive,
                         });
                     }
                 }
@@ -488,6 +496,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             if let Some(req) = req {
                 dl.reqs.insert(req.clone());
             }
+            dl.is_transitive &= is_transitive;
 
             return Ok(());
         } else if self.fresh.contains(path) {
@@ -644,6 +653,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             path: path.to_path_buf(),
             name,
             reqs,
+            is_transitive,
             etag: RefCell::new(None),
             last_modified: RefCell::new(None),
             total: Cell::new(0),
@@ -725,6 +735,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     path: dl.path,
                     name: dl.name,
                     reqs: dl.reqs,
+                    is_transitive: dl.is_transitive,
                 };
                 assert!(
                     self.fresh.insert(fetched.path.clone()),

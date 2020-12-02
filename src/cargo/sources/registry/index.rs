@@ -517,7 +517,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             if pkg.source_id() == self.source_id {
                 let name = pkg.name();
                 let relative = relative(&*name);
-                load.prefetch(root, &Path::new(&relative), name, None)?;
+                load.prefetch(root, &Path::new(&relative), name, None, true)?;
             }
         }
 
@@ -534,6 +534,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 &Path::new(&relative),
                 dep.package_name(),
                 Some(dep.version_req()),
+                false,
             )?;
         }
 
@@ -599,6 +600,11 @@ impl<'cfg> RegistryIndex<'cfg> {
                         continue;
                     }
 
+                    // Don't pull in dev-dependencies of transitive dependencies.
+                    if fetched.is_transitive && !dep.is_transitive() {
+                        continue;
+                    }
+
                     if !walked.insert((dep.package_name(), dep.version_req().clone())) {
                         // We've already walked this dependency -- no need to do so again.
                         continue;
@@ -610,6 +616,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                         Path::new(&relative),
                         dep.package_name(),
                         Some(dep.version_req()),
+                        true,
                     )?;
                 }
             }
