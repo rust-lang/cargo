@@ -340,10 +340,7 @@ fn finds_git_author_in_included_config() {
     )
     .unwrap();
 
-    cargo_process("new foo/bar")
-        // Avoid the special treatment of tests to find git configuration
-        .env_remove("__CARGO_TEST_ROOT")
-        .run();
+    cargo_process("new foo/bar").run();
     let toml = paths::root().join("foo/bar/Cargo.toml");
     let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#), contents,);
