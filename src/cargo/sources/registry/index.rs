@@ -576,7 +576,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                 }
             };
 
-            let mut matched = false;
             for (version, maybe_summary) in &mut summaries.versions {
                 log::trace!("consider prefetching version {}", version);
                 if !fetched.version_reqs().any(|vr| vr.matches(&version)) {
@@ -591,27 +590,9 @@ impl<'cfg> RegistryIndex<'cfg> {
                     //
                     // Note that another crate in the dependency closure might still pull in this
                     // version because that crate has a different set of requirements.
-
-                    if matched {
-                        // This is a sneaky optimization. We know that the summaries come in order
-                        // from newest to oldest. If our version requirement has matched at least
-                        // once, then it's highly unlikely that a _later_ (i.e., older) version
-                        // will match once the current version does not match. So, we can cut off
-                        // the search early.
-                        //
-                        // The exception to this would be if a crate has a dependency like:
-                        //
-                        //   >=1.0 || =0.5
-                        //
-                        // But that seems highly unlikely. If that happens, it's fine if we don't
-                        // prefetch transitive dependencies of 0.5 -- that'll be handled by load().
-                        log::trace!("stopping version search on first non-match after match");
-                        break;
-                    }
                     continue;
                 }
 
-                matched = true;
                 let summary =
                     maybe_summary.parse(self.config, &summaries.raw_data, self.source_id)?;
 
