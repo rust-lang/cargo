@@ -645,19 +645,30 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
 
-    let (author_name, email) = discover_author(path)?;
-    let author = match (cfg.name, cfg.email, author_name, email) {
-        (Some(name), Some(email), _, _)
-        | (Some(name), None, _, Some(email))
-        | (None, Some(email), name, _)
-        | (None, None, name, Some(email)) => {
+    let (discovered_name, discovered_email) = discover_author(path);
+
+    // "Name <email>" or "Name" or "<email>" or None if neither name nor email is obtained
+    // cfg takes priority over the discovered ones
+    let author_name = cfg.name.or(discovered_name);
+    let author_email = cfg.email.or(discovered_email);
+
+    let author = match (author_name, author_email) {
+        (Some(name), Some(email)) => {
             if email.is_empty() {
-                name
+                Some(name)
             } else {
-                format!("{} <{}>", name, email)
+                Some(format!("{} <{}>", name, email))
             }
         }
-        (Some(name), None, _, None) | (None, None, name, None) => name,
+        (Some(name), None) => Some(name),
+        (None, Some(email)) => {
+            if email.is_empty() {
+                None
+            } else {
+                Some(format!("<{}>", email))
+            }
+        }
+        (None, None) => None,
     };
 
     let mut cargotoml_path_specifier = String::new();
@@ -706,7 +717,10 @@ edition = {}
 [dependencies]
 {}"#,
             name,
-            toml::Value::String(author),
+            match author {
+                Some(value) => format!("{}", toml::Value::String(value)),
+                None => format!(""),
+            },
             match opts.edition {
                 Some(edition) => toml::Value::String(edition.to_string()),
                 None => toml::Value::String("2018".to_string()),
@@ -781,7 +795,7 @@ fn get_environment_variable(variables: &[&str]) -> Option<String> {
     variables.iter().filter_map(|var| env::var(var).ok()).next()
 }
 
-fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
+fn discover_author(path: &Path) -> (Option<String>, Option<String>) {
     let git_config = find_git_config(path);
     let git_config = git_config.as_ref();
 
@@ -798,15 +812,10 @@ fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
         .or_else(|| get_environment_variable(&name_variables[3..]));
 
     let name = match name {
-        Some(name) => name,
-        None => {
-            let username_var = if cfg!(windows) { "USERNAME" } else { "USER" };
-            anyhow::bail!(
-                "could not determine the current user, please set ${}",
-                username_var
-            )
-        }
+        Some(namestr) => Some(namestr.trim().to_string()),
+        None => None,
     };
+
     let email_variables = [
         "CARGO_EMAIL",
         "GIT_AUTHOR_EMAIL",
@@ -817,7 +826,6 @@ fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
         .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
         .or_else(|| get_environment_variable(&email_variables[3..]));
 
-    let name = name.trim().to_string();
     let email = email.map(|s| {
         let mut s = s.trim();
 
@@ -830,7 +838,7 @@ fn discover_author(path: &Path) -> CargoResult<(String, Option<String>)> {
         s.to_string()
     });
 
-    Ok((name, email))
+    (name, email)
 }
 
 fn find_git_config(path: &Path) -> Option<GitConfig> {

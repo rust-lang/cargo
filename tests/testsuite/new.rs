@@ -200,6 +200,37 @@ fn finds_author_user() {
 }
 
 #[cargo_test]
+fn author_without_user_or_email() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env_remove("USER")
+        .env_remove("USERNAME")
+        .env_remove("NAME")
+        .env_remove("EMAIL")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = []"#));
+}
+
+#[cargo_test]
+fn finds_author_email_only() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env_remove("USER")
+        .env_remove("USERNAME")
+        .env_remove("NAME")
+        .env_remove("EMAIL")
+        .env("EMAIL", "baz")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let contents = fs::read_to_string(&toml).unwrap();
+    assert!(contents.contains(r#"authors = ["<baz>"]"#));
+}
+
+#[cargo_test]
 fn finds_author_user_escaped() {
     create_empty_gitconfig();
     cargo_process("new foo").env("USER", "foo \"bar\"").run();
