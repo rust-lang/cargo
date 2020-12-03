@@ -217,7 +217,11 @@ fn author_without_user_or_email() {
 #[cargo_test]
 fn finds_author_email_only() {
     create_empty_gitconfig();
-    cargo_process("new foo").env("EMAIL", "baz").run();
+    cargo_process("new foo")
+        .env_remove("USER")
+        .env_remove("USERNAME")
+        .env_remove("NAME")
+        .env_remove("EMAIL").env("EMAIL", "baz").run();
 
     let toml = paths::root().join("foo/Cargo.toml");
     println!("{:?}", toml);
