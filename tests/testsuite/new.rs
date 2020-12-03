@@ -226,7 +226,6 @@ fn finds_author_email_only() {
         .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
-    println!("{:?}", toml);
     let contents = fs::read_to_string(&toml).unwrap();
     assert!(contents.contains(r#"authors = ["<baz>"]"#));
 }
