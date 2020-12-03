@@ -218,13 +218,6 @@ pub fn init() {
     );
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum RegistryServerConfiguration {
-    NoChangelog,
-    WithChangelog,
-    ChangelogNoRange,
-}
-
 pub struct RegistryServer {
     done: Arc<AtomicBool>,
     server: Option<thread::JoinHandle<()>>,
@@ -246,18 +239,13 @@ impl Drop for RegistryServer {
 }
 
 #[must_use]
-pub fn serve_registry(
-    registry_path: PathBuf,
-    config: RegistryServerConfiguration,
-) -> RegistryServer {
+pub fn serve_registry(registry_path: PathBuf) -> RegistryServer {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
     let done = Arc::new(AtomicBool::new(false));
     let done2 = done.clone();
 
     let t = thread::spawn(move || {
-        let support_range = !matches!(config, RegistryServerConfiguration::ChangelogNoRange);
-
         let mut line = String::new();
         'server: while !done2.load(Ordering::SeqCst) {
             let (socket, _) = listener.accept().unwrap();
@@ -282,16 +270,8 @@ pub fn serve_registry(
             );
 
             let file = registry_path.join(path);
-            let mut exists = file.exists();
-            if file.ends_with("changelog")
-                && matches!(config, RegistryServerConfiguration::NoChangelog)
-            {
-                exists = false;
-            }
-
-            if exists {
+            if file.exists() {
                 // Grab some other headers we may care about.
-                let mut range = None;
                 let mut if_modified_since = None;
                 let mut if_none_match = None;
                 loop {
@@ -313,20 +293,7 @@ pub fn serve_registry(
                         .map(|v| v.trim())
                         .unwrap();
 
-                    if line.starts_with("Range:") {
-                        let value = value.strip_prefix("bytes=").unwrap_or(value);
-                        if !value.is_empty() {
-                            let mut parts = value.split('-');
-                            let start = parts.next().unwrap().parse::<usize>().unwrap();
-                            let end = parts.next().unwrap();
-                            let end = if end.is_empty() {
-                                None
-                            } else {
-                                Some(end.parse::<usize>().unwrap())
-                            };
-                            range = Some((start, end));
-                        }
-                    } else if line.starts_with("If-Modified-Since:") {
+                    if line.starts_with("If-Modified-Since:") {
                         if_modified_since = Some(value.to_owned());
                     } else if line.starts_with("If-None-Match:") {
                         if_none_match = Some(value.trim_matches('"').to_owned());
@@ -356,47 +323,14 @@ pub fn serve_registry(
                         any_match = true;
                     }
                 }
-                if any_match {
-                    assert!(range.is_none());
-                }
 
                 // Write out the main response line.
-                let data_len = data.len();
-                let mut data = &data[..];
                 if any_match && all_match {
                     buf.get_mut()
                         .write_all(b"HTTP/1.1 304 Not Modified\r\n")
                         .unwrap();
-                } else if range.is_none() || !support_range {
+                } else {
                     buf.get_mut().write_all(b"HTTP/1.1 200 OK\r\n").unwrap();
-                } else if let Some((start, end)) = range {
-                    if start >= data.len()
-                        || end.unwrap_or(0) >= data.len()
-                        || end.unwrap_or(start) <= start
-                    {
-                        buf.get_mut()
-                            .write_all(b"HTTP/1.1 416 Range Not Satisfiable\r\n")
-                            .unwrap();
-                    } else {
-                        buf.get_mut()
-                            .write_all(b"HTTP/1.1 206 Partial Content\r\n")
-                            .unwrap();
-
-                        // Slice the data as requested and include a header indicating that.
-                        // Note that start and end are both inclusive!
-                        data = &data[start..=end.unwrap_or(data_len - 1)];
-                        buf.get_mut()
-                            .write_all(
-                                format!(
-                                    "Content-Range: bytes {}-{}/{}\r\n",
-                                    start,
-                                    end.unwrap_or(data_len - 1),
-                                    data_len
-                                )
-                                .as_bytes(),
-                            )
-                            .unwrap();
-                    }
                 }
                 // TODO: Support 451 for crate index deletions.
 
@@ -413,7 +347,7 @@ pub fn serve_registry(
 
                 // And finally, write out the body.
                 buf.get_mut().write_all(b"\r\n").unwrap();
-                buf.get_mut().write_all(data).unwrap();
+                buf.get_mut().write_all(&data).unwrap();
             } else {
                 loop {
                     line.clear();
@@ -683,26 +617,6 @@ impl Package {
         let prev = fs::read_to_string(&dst).unwrap_or_default();
         t!(fs::create_dir_all(dst.parent().unwrap()));
         t!(fs::write(&dst, prev + &line[..] + "\n"));
-
-        // Update changelog.
-        let dst = registry_path.join("changelog");
-        t!(fs::create_dir_all(dst.parent().unwrap()));
-        let mut epoch = 1;
-        if dst.exists() {
-            // Fish out the current epoch.
-            let prev = fs::read_to_string(&dst).unwrap_or_default();
-            let e = prev.split_whitespace().next().unwrap();
-            if !e.is_empty() {
-                epoch = e.parse::<usize>().unwrap();
-            }
-        }
-        let mut changelog = t!(fs::OpenOptions::new().append(true).create(true).open(dst));
-        t!(writeln!(
-            changelog,
-            "{} 2020-11-20 16:54:07 {}",
-            epoch, self.name
-        ));
-        t!(changelog.flush());
 
         // Add the new file to the index.
         if !self.local {
