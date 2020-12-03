@@ -221,7 +221,9 @@ fn finds_author_email_only() {
         .env_remove("USER")
         .env_remove("USERNAME")
         .env_remove("NAME")
-        .env_remove("EMAIL").env("EMAIL", "baz").run();
+        .env_remove("EMAIL")
+        .env("EMAIL", "baz")
+        .run();
 
     let toml = paths::root().join("foo/Cargo.toml");
     println!("{:?}", toml);
