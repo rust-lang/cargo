@@ -795,7 +795,7 @@ fn alt_reg_metadata() {
                                 "uses_default_features": true,
                                 "features": [],
                                 "target": null,
-                                "registry": "file:[..]/alternative-registry"
+                                "registry": "registry+file:[..]/alternative-registry"
                             },
                             {
                                 "name": "iodep",
@@ -948,7 +948,7 @@ fn alt_reg_metadata() {
                                 "uses_default_features": true,
                                 "features": [],
                                 "target": null,
-                                "registry": "file:[..]/alternative-registry"
+                                "registry": "registry+file:[..]/alternative-registry"
                             },
                             {
                                 "name": "iodep",
@@ -997,7 +997,7 @@ fn alt_reg_metadata() {
                                 "uses_default_features": true,
                                 "features": [],
                                 "target": null,
-                                "registry": "file:[..]/alternative-registry"
+                                "registry": "registry+file:[..]/alternative-registry"
                             }
                         ],
                         "targets": "{...}",
@@ -1092,7 +1092,7 @@ fn unknown_registry() {
                       "uses_default_features": true,
                       "features": [],
                       "target": null,
-                      "registry": "file:[..]/alternative-registry"
+                      "registry": "registry+file:[..]/alternative-registry"
                     }
                   ],
                   "targets": "{...}",
