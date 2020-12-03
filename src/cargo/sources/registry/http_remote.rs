@@ -1054,9 +1054,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
         debug!("loading config");
         self.prepare()?;
-        self.config.assert_package_cache_locked(&self.index_path);
+        let path = self
+            .config
+            .assert_package_cache_locked(&self.index_path)
+            .to_path_buf();
         let mut config = None;
-        self.load(Path::new(""), Path::new("config.json"), &mut |json| {
+        self.load(&path, Path::new("config.json"), &mut |json| {
             config = Some(serde_json::from_slice(json)?);
             Ok(())
         })?;
