@@ -803,8 +803,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             "download finished for already-finished path"
                         );
                     }
-                    404 => {
+                    403 | 404 => {
                         // Not Found response.
+                        // We treat Forbidden as just being another expression for 404
+                        // from a server that does not want to reveal file names.
                         // The crate doesn't exist, so we simply do not yield it.
                         // Errors will eventually be yielded by load().
                     }
@@ -1028,7 +1030,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     was.expect("conditional request response implies we have local index file");
                 return data(bytes);
             }
-            404 | 410 | 451 => {
+            403 | 404 | 410 | 451 => {
                 // The crate was deleted from the registry.
                 if was.is_some() {
                     // Make sure we delete the local index file.
@@ -1250,7 +1252,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         Some(b) => b,
                     }
                 }
-                404 => {
+                403 | 404 => {
                     // The server does not have a changelog.
                     if self.at.get().0.is_synchronized() {
                         // We used to have a changelog, but now we don't. It's important that we
