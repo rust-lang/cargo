@@ -816,7 +816,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         todo!("we should delete the local index file here if it exists");
                     }
                     code => {
-                        anyhow::bail!("server returned unexpected HTTP status code {}", code);
+                        anyhow::bail!(
+                            "prefetch: server returned unexpected HTTP status code {} for {}{}",
+                            code,
+                            self.source_id.url(),
+                            fetched.path.display()
+                        );
                     }
                 }
             }
@@ -1040,7 +1045,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 anyhow::bail!("crate has been deleted from the registry");
             }
             code => {
-                anyhow::bail!("server returned unexpected HTTP status code {}", code);
+                anyhow::bail!(
+                    "load: server returned unexpected HTTP status code {} for {}{}",
+                    code,
+                    self.source_id.url(),
+                    path.display()
+                );
             }
         }
 
@@ -1298,7 +1308,10 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     }
                 }
                 code => {
-                    anyhow::bail!("server returned unexpected HTTP status code {}", code);
+                    anyhow::bail!(
+                        "server returned unexpected HTTP status code {} for changelog",
+                        code
+                    );
                 }
             };
 
