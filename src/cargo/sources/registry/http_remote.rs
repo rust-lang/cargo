@@ -134,7 +134,7 @@ struct Download {
     name: InternedString,
 
     /// The version requirements for the dependency line that triggered this fetch.
-    // NOTE: with https://github.com/steveklabnik/semver/issues/170 the HashSet is unnecessary
+    // NOTE: we can get rid of the HashSet (and other complexity) if we had VersionReq::union
     reqs: HashSet<semver::VersionReq>,
 
     /// True if this download is of a direct dependency of the root crate.
@@ -426,7 +426,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         self.prepare()?;
 
         let mut handle = ops::http_handle(self.config)?;
-        debug!("fetch {}{}", url, path.display());
+        debug!("prefetch {}{}", url, path.display());
         handle.get(true)?;
         handle.url(&format!("{}{}", url, path.display()))?;
         handle.follow_location(true)?;

@@ -645,7 +645,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         &mut self,
         deps: &mut dyn ExactSizeIterator<Item = Cow<'_, Dependency>>,
     ) -> CargoResult<()> {
-        // TODO: conditional index update?
+        // In query, if a dependency is locked, we see if we can get away with querying it without
+        // doing an index update. Only if that fails do we update the index and then try again.
+        // Since we're in the prefetching stage here, we never want to update the index regardless
+        // of whether any given dependency is locked or not. Instead, we just prefetch all the
+        // current dependencies regardless of whether they're locked or not. If an index update is
+        // needed later, we'll deal with it at that time.
         self.index
             .prefetch(deps, &self.yanked_whitelist, &mut *self.ops)?;
         Ok(())
