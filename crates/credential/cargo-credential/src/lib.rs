@@ -8,6 +8,11 @@
 //!     cargo_credential::main(MyCredential);
 //! }
 //! ```
+//!
+//! This will determine the action to perform (get/store/erase) by looking at
+//! the CLI arguments for the first argument that does not start with `-`. It
+//! will then call the corresponding method of the trait to perform the
+//! requested action.
 
 pub type Error = Box<dyn std::error::Error>;
 
