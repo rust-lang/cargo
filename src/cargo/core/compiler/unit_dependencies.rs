@@ -62,6 +62,12 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 ) -> CargoResult<UnitGraph> {
+    if roots.is_empty() {
+        // If -Zbuild-std, don't attach units if there is nothing to build.
+        // Otherwise, other parts of the code may be confused by seeing units
+        // in the dep graph without a root.
+        return Ok(HashMap::new());
+    }
     let (std_resolve, std_features) = match std_resolve {
         Some((r, f)) => (Some(r), Some(f)),
         None => (None, None),
