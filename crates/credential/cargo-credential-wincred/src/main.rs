@@ -10,8 +10,14 @@ use winapi::um::winnt::LPWSTR;
 
 struct WindowsCredential;
 
+/// Converts a string to a nul-terminated wide UTF-16 byte sequence.
 fn wstr(s: &str) -> Vec<u16> {
-    OsStr::new(s).encode_wide().chain(Some(0)).collect()
+    let mut wide: Vec<u16> = OsStr::new(s).encode_wide().collect();
+    if wide.iter().any(|b| *b == 0) {
+        panic!("nul byte in wide string");
+    }
+    wide.push(0);
+    wide
 }
 
 fn target_name(registry_name: &str) -> Vec<u16> {
