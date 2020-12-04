@@ -438,6 +438,10 @@ pub trait RegistryData {
         Ok(None)
     }
 
+    fn update_index_file(&mut self, _root: &Path, _path: &Path) -> CargoResult<bool> {
+        Ok(false)
+    }
+
     fn load(
         &mut self,
         root: &Path,
@@ -603,6 +607,11 @@ impl<'cfg> RegistrySource<'cfg> {
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
+        // NOTE: It is really bad if this method is called after prefetching has completed.
+        // It will cause every subsequent `load` to double-check with the server again
+        // _synchronously_. If this is ever called, we should arguably re-run prefetching, or the
+        // following build will be quite slow. Consider using update_index_file instead.
+
         self.ops.update_index()?;
         let path = self.ops.index_path();
         self.index = index::RegistryIndex::new(self.source_id, path, self.config);
@@ -674,8 +683,25 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             if called {
                 return Ok(());
             } else {
-                debug!("falling back to an update");
-                self.do_update()?;
+                // We failed to query the dependency based on the currently available index files.
+                // This probably means that our index file for `dep` is outdated, and does not
+                // contain the requested version.
+                //
+                // If the registry we are using supports per-file index updates, we tell it to
+                // update just the given index file and then try the query again. Otherwise, we
+                // fall back to a full index update.
+                if self
+                    .index
+                    .update_index_file(dep.package_name(), &mut *self.ops)?
+                {
+                    debug!(
+                        "selectively refreshed index file for {}",
+                        dep.package_name()
+                    );
+                } else {
+                    debug!("falling back to an update");
+                    self.do_update()?;
+                }
             }
         }
 
@@ -750,7 +776,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
         if !self.updated {
-            self.do_update()?;
+            // Try selectively updating just the index file for this package if possible.
+            if !self.index.update_index_file(pkg.name(), &mut *self.ops)? {
+                // It's not, so update the whole index.
+                self.do_update()?;
+            }
         }
         self.index.is_yanked(pkg, &mut *self.ops)
     }

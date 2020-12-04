@@ -371,6 +371,24 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok(self.summaries_cache.get_mut(&name).unwrap())
     }
 
+    pub fn update_index_file(
+        &mut self,
+        pkg: InternedString,
+        load: &mut dyn RegistryData,
+    ) -> CargoResult<bool> {
+        let path = load.index_path();
+        let root = load.assert_index_locked(path).to_path_buf();
+        let mut path = make_dep_prefix(&pkg);
+        path.push('/');
+        path.push_str(&pkg);
+        if load.update_index_file(&root, &Path::new(&path))? {
+            self.summaries_cache.remove(&pkg);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     pub fn query_inner(
         &mut self,
         dep: &Dependency,

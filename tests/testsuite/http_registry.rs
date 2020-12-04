@@ -282,12 +282,11 @@ fn update_publish_then_update() {
     ));
 
     // Finally, build the first project again (with our newer Cargo.lock) which
-    // should force an update of the old registry, download the new crate, and
+    // should download the new index file from the registry, download the new crate, and
     // then build everything again.
     cargo(&p, "build")
         .with_stderr(format!(
             "\
-[UPDATING] [..]
 [PREFETCHING] index files ...
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.1 (http registry `{reg}`)

@@ -769,6 +769,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         None
     }
 
+    fn update_index_file(&mut self, root: &Path, path: &Path) -> CargoResult<bool> {
+        let pkg = root.join(path);
+        if pkg.exists() {
+            paths::remove_file(&pkg)?;
+        }
+        Ok(true)
+    }
+
     fn load(
         &mut self,
         root: &Path,
