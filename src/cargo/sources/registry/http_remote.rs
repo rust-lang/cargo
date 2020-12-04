@@ -774,6 +774,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         if pkg.exists() {
             paths::remove_file(&pkg)?;
         }
+        // Also reset self.fresh so we don't hit an assertion failure if we re-download.
+        self.fresh.remove(path);
         Ok(true)
     }
 
