@@ -68,7 +68,7 @@
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::sources::registry::{make_dep_prefix, RegistryData, RegistryPackage};
+use crate::sources::registry::{make_dep_index_path, RegistryData, RegistryPackage};
 use crate::util::interning::InternedString;
 use crate::util::paths;
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
@@ -333,16 +333,8 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
-        let fs_name = name
-            .chars()
-            .flat_map(|c| c.to_lowercase())
-            .collect::<String>();
-        let raw_path = match fs_name.len() {
-            1 => format!("1/{}", fs_name),
-            2 => format!("2/{}", fs_name),
-            3 => format!("3/{}/{}", &fs_name[..1], fs_name),
-            _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
-        };
+        let raw_path = make_dep_index_path(&name);
+        let raw_path = raw_path.to_string_lossy();
 
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
@@ -378,10 +370,8 @@ impl<'cfg> RegistryIndex<'cfg> {
     ) -> CargoResult<bool> {
         let path = load.index_path();
         let root = load.assert_index_locked(path).to_path_buf();
-        let mut path = make_dep_prefix(&pkg);
-        path.push('/');
-        path.push_str(&pkg);
-        if load.update_index_file(&root, &Path::new(&path))? {
+        let path = make_dep_index_path(&pkg);
+        if load.update_index_file(&root, &path)? {
             self.summaries_cache.remove(&pkg);
             Ok(true)
         } else {
@@ -507,13 +497,6 @@ impl<'cfg> RegistryIndex<'cfg> {
 
         log::debug!("prefetching transitive dependencies");
 
-        let relative = |name: &str| {
-            let mut prefix = make_dep_prefix(name);
-            prefix.push('/');
-            prefix.push_str(name);
-            prefix
-        };
-
         // Since we allow dependency cycles in crates, we may end up walking in circles forever if
         // we just iteratively handled each candidate as we discovered it. The real resolver is
         // smart about how it avoids walking endlessly in cycles, but in this simple greedy
@@ -535,8 +518,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             if pkg.source_id() == self.source_id {
                 let name = pkg.name();
                 log::trace!("prefetching from lockfile: {}", name);
-                let relative = relative(&*name);
-                load.prefetch(root, &Path::new(&relative), name, None, true)?;
+                load.prefetch(root, &make_dep_index_path(&*name), name, None, true)?;
             }
         }
 
@@ -553,13 +535,12 @@ impl<'cfg> RegistryIndex<'cfg> {
                 dep.package_name()
             );
 
-            let relative = relative(&*dep.package_name());
             // NOTE: We do not use UncanonicalizedIter here or below because if the user gave a
             // misspelling, it's fine if we don't prefetch their misspelling. The resolver will be
             // a bit slower, but then give them an error.
             load.prefetch(
                 root,
-                &Path::new(&relative),
+                &make_dep_index_path(&*dep.package_name()),
                 dep.package_name(),
                 Some(dep.version_req()),
                 false,
@@ -645,10 +626,9 @@ impl<'cfg> RegistryIndex<'cfg> {
                     }
 
                     log::trace!("prefetching transitive dependency {}", dep.package_name());
-                    let relative = relative(&*dep.package_name());
                     load.prefetch(
                         root,
-                        Path::new(&relative),
+                        &make_dep_index_path(&*dep.package_name()),
                         dep.package_name(),
                         Some(dep.version_req()),
                         true,

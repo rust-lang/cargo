@@ -786,6 +786,20 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 }
 
+fn make_dep_index_path(name: &str) -> PathBuf {
+    let fs_name = name
+        .chars()
+        .flat_map(|c| c.to_lowercase())
+        .collect::<String>();
+    let raw_path = match fs_name.len() {
+        1 => format!("1/{}", fs_name),
+        2 => format!("2/{}", fs_name),
+        3 => format!("3/{}/{}", &fs_name[..1], fs_name),
+        _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
+    };
+    PathBuf::from(raw_path)
+}
+
 fn make_dep_prefix(name: &str) -> String {
     match name.len() {
         1 => String::from("1"),
@@ -797,7 +811,20 @@ fn make_dep_prefix(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::make_dep_prefix;
+    use super::{make_dep_index_path, make_dep_prefix};
+
+    #[test]
+    fn dep_path() {
+        use std::path::Path;
+        assert_eq!(make_dep_index_path("a"), Path::new("1/a"));
+        assert_eq!(make_dep_index_path("A"), Path::new("1/a"));
+        assert_eq!(make_dep_index_path("ab"), Path::new("2/ab"));
+        assert_eq!(make_dep_index_path("Ab"), Path::new("2/ab"));
+        assert_eq!(make_dep_index_path("abc"), Path::new("3/a/abc"));
+        assert_eq!(make_dep_index_path("Abc"), Path::new("3/a/abc"));
+        assert_eq!(make_dep_index_path("AbCd"), Path::new("ab/cd/abcd"));
+        assert_eq!(make_dep_index_path("aBcDe"), Path::new("ab/cd/abcde"));
+    }
 
     #[test]
     fn dep_prefix() {
