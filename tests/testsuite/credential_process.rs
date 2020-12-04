@@ -448,3 +448,45 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn invalid_token_output() {
+    // Error when credential process does not output the expected format for a token.
+    registry::init();
+    paths::home().join(".cargo/credentials").rm_rf();
+    let cred_proj = project()
+        .at("cred_proj")
+        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
+        .file("src/main.rs", r#"fn main() { print!("a\nb\n"); } "#)
+        .build();
+    cred_proj.cargo("build").run();
+
+    cargo::util::paths::append(
+        &paths::home().join(".cargo/config"),
+        format!(
+            r#"
+                [registry]
+                credential-process = ["{}"]
+            "#,
+            toml_bin(&cred_proj, "test-cred")
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative -Z credential-process")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] credential process `[..]test-cred[EXE]` returned more than one line of output; expected a single token
+",
+        )
+        .run();
+}

@@ -164,6 +164,13 @@ fn run_command(
                     )
                 })?;
             if let Some(end) = buffer.find('\n') {
+                if buffer.len() > end + 1 {
+                    bail!(
+                        "credential process `{}` returned more than one line of output; \
+                         expected a single token",
+                        exe.display()
+                    );
+                }
                 buffer.truncate(end);
             }
             token = Some(buffer);
