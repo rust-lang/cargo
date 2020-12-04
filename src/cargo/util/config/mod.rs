@@ -450,6 +450,10 @@ impl Config {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            if dir.to_str().unwrap().trim() == "" {
+                return Ok(Some(Filesystem::new(self.cwd.join("target"))));
+            }
+
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = &self.build_config()?.target_dir {
             let val = val.resolve_path(self);
