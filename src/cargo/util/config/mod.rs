@@ -451,7 +451,7 @@ impl Config {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             if dir.to_str().unwrap().trim() == "" {
-                return Ok(Some(Filesystem::new(self.cwd.join("target"))));
+                anyhow::bail!("The CARGO_TARGET_DIR environment variable is an empty string. Try adding the target directory name to it or deleting the variable.")
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
