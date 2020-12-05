@@ -509,6 +509,11 @@ fn strip_works() {
 
 #[cargo_test]
 fn strip_requires_cargo_feature() {
+    if !is_nightly() {
+        // -Zstrip is unstable
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -542,6 +547,11 @@ Caused by:
 
 #[cargo_test]
 fn strip_rejects_invalid_option() {
+    if !is_nightly() {
+        // -Zstrip is unstable
+        return;
+    }
+
     let p = project()
         .file(
             "Cargo.toml",
@@ -567,7 +577,79 @@ fn strip_rejects_invalid_option() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  unknown variant `wrong`, expected one of `debuginfo`, `none`, `symbols` for key [..]
+  unknown variant `wrong`, expected one of `debuginfo`, `none`, `symbols` for key `strip`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn strip_accepts_true_to_strip_symbols() {
+    if !is_nightly() {
+        // -Zstrip is unstable
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["strip"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release]
+                strip = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -Z strip=symbols [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn strip_accepts_false_to_disable_strip() {
+    if !is_nightly() {
+        // -Zstrip is unstable
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["strip"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [profile.release]
+                strip = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..] -Z strip=none
+ [..]`
+[FINISHED] [..]
 ",
         )
         .run();

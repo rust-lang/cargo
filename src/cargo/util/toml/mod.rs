@@ -16,7 +16,6 @@ use url::Url;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::nightly_features_allowed;
-use crate::core::profiles::Strip;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -442,7 +441,7 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     pub dir_name: Option<InternedString>,
     pub inherits: Option<InternedString>,
-    pub strip: Option<Strip>,
+    pub strip: Option<StringOrBool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -561,6 +560,18 @@ impl TomlProfile {
 
         if self.strip.is_some() {
             features.require(Feature::strip())?;
+            match self.strip {
+                Some(StringOrBool::Bool(_)) => {}
+                Some(StringOrBool::String(ref n)) => match n.as_str() {
+                    "off" | "n" | "none" | "no" | "debuginfo" | "symbols" => {}
+                    _ => bail!(
+                        "`strip` setting of `{}` is not a valid setting,\
+                         must be `symbols`, `debuginfo`, `none`, `true`, or `false`",
+                        n
+                    ),
+                },
+                None => {}
+            }
         }
         Ok(())
     }
@@ -686,8 +697,8 @@ impl TomlProfile {
             self.dir_name = Some(*v);
         }
 
-        if let Some(v) = profile.strip {
-            self.strip = Some(v);
+        if let Some(v) = &profile.strip {
+            self.strip = Some(v.clone());
         }
     }
 }
@@ -766,6 +777,15 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
         }
 
         deserializer.deserialize_any(Visitor)
+    }
+}
+
+impl fmt::Display for StringOrBool {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::String(s) => write!(f, "{}", &s),
+            Self::Bool(b) => write!(f, "{}", b),
+        }
     }
 }
 

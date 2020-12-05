@@ -590,9 +590,21 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(incremental) = toml.incremental {
         profile.incremental = incremental;
     }
-    if let Some(strip) = toml.strip {
-        profile.strip = strip;
-    }
+    profile.strip = match toml.strip {
+        Some(StringOrBool::Bool(enabled)) if enabled => Strip::Symbols,
+        Some(StringOrBool::Bool(enabled)) if !enabled => Strip::None,
+        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "off" | "n" | "no" | "none") => {
+            Strip::None
+        }
+        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "debuginfo") => Strip::DebugInfo,
+        Some(StringOrBool::String(ref n)) if matches!(n.as_str(), "symbols") => Strip::Symbols,
+        None => Strip::None,
+        Some(ref strip) => panic!(
+            "unknown variant `{}`, expected one of `debuginfo`, `none`, `symbols` for key `strip`
+            ",
+            strip
+        ),
+    };
 }
 
 /// The root profile (dev/release).
