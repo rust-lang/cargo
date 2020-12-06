@@ -526,7 +526,7 @@ fn cdylib_and_rlib() {
 [RUNNING] [..]target/release/deps/bar-[..]
 [RUNNING] [..]target/release/deps/b-[..]
 [DOCTEST] bar
-[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --test [..]-C embed-bitcode=no[..]
+[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C embed-bitcode=no[..]
 ",
         )
         .run();
