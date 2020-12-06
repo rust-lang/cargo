@@ -963,7 +963,7 @@ dependency. However, unlike the normal `serde/std` syntax, it will not enable
 the optional dependency `serde` unless something else has included it.
 
 ### credential-process
-* Tracking Issue: [#XXXX](https://github.com/rust-lang/cargo/issues/XXXX)
+* Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
 * RFC: [#2730](https://github.com/rust-lang/rfcs/pull/2730)
 
 The `credential-process` feature adds a config setting to fetch registry
