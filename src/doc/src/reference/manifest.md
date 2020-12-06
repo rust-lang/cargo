@@ -120,7 +120,7 @@ brackets at the end of each author.
 
 You can opt in to a specific [Rust Edition] for your package with the
 `edition` key in `Cargo.toml`. If you don't specify the edition, it will
-default to 2015.
+default to 2018.
 
 ```toml
 [package]
