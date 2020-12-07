@@ -334,7 +334,7 @@ use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{internal, profile, ProcessBuilder};
+use crate::util::{internal, path_args, profile, ProcessBuilder};
 
 use super::custom_build::BuildDeps;
 use super::job::{Job, Work};
@@ -1313,7 +1313,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(super::path_args(cx.bcx, unit).0),
+        path: util::hash_u64(path_args(cx.bcx.ws, unit).0),
         features: format!("{:?}", unit.features),
         deps,
         local: Mutex::new(local),
