@@ -119,8 +119,8 @@ brackets at the end of each author.
 #### The `edition` field
 
 The `edition` key is an optional key that affects which edition your package
-is compiled with. Cargo will always generate packages via [`cargo new`] with
-the `edition` key set to the latest edition. Setting the `edition` key in
+is compiled with. [`cargo new`] will generate a package with the `edition` key
+set to the latest edition. Setting the `edition` key in
 `[package]` will affect all targets/crates in the package, including test
 suites, benchmarks, binaries, examples, etc.
 
