@@ -354,52 +354,55 @@ pub fn registry_configuration(
     config: &Config,
     registry: Option<&str>,
 ) -> CargoResult<RegistryConfig> {
+    let err_both = |token_key: &str, proc_key: &str| {
+        Err(format_err!(
+            "both `{TOKEN_KEY}` and `{PROC_KEY}` \
+             were specified in the config\n\
+             Only one of these values may be set, remove one or the other to proceed.",
+            TOKEN_KEY = token_key,
+            PROC_KEY = proc_key,
+        ))
+    };
     // `registry.default` is handled in command-line parsing.
-    let (index, token, process, token_key, proc_key) = match registry {
+    let (index, token, process) = match registry {
         Some(registry) => {
             validate_package_name(&registry, "registry name", "")?;
             let index = Some(config.get_registry_index(&registry)?.to_string());
             let token_key = format!("registries.{}.token", registry);
             let token = config.get_string(&token_key)?.map(|p| p.val);
-            let mut proc_key = format!("registries.{}.credential-process", registry);
-            let mut process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
-            if process.is_none() {
-                proc_key = String::from("registry.credential-process");
-                process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
-            }
-            (index, token, process, token_key, proc_key)
+            let process = if config.cli_unstable().credential_process {
+                let mut proc_key = format!("registries.{}.credential-process", registry);
+                let mut process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
+                if process.is_none() && token.is_none() {
+                    // This explicitly ignores the global credential-process if
+                    // the token is set, as that is "more specific".
+                    proc_key = String::from("registry.credential-process");
+                    process = config.get::<Option<config::PathAndArgs>>(&proc_key)?;
+                } else if process.is_some() && token.is_some() {
+                    return err_both(&token_key, &proc_key);
+                }
+                process
+            } else {
+                None
+            };
+            (index, token, process)
         }
         None => {
             // Use crates.io default.
             config.check_registry_index_not_set()?;
             let token = config.get_string("registry.token")?.map(|p| p.val);
-            let process =
-                config.get::<Option<config::PathAndArgs>>("registry.credential-process")?;
-            (
-                None,
-                token,
-                process,
-                String::from("registry.token"),
-                String::from("registry.credential-process"),
-            )
+            let process = if config.cli_unstable().credential_process {
+                let process =
+                    config.get::<Option<config::PathAndArgs>>("registry.credential-process")?;
+                if token.is_some() && process.is_some() {
+                    return err_both("registry.token", "registry.credential-process");
+                }
+                process
+            } else {
+                None
+            };
+            (None, token, process)
         }
-    };
-
-    let process = if config.cli_unstable().credential_process {
-        if token.is_some() && process.is_some() {
-            config.shell().warn(format!(
-                "both `{TOKEN_KEY}` and `{PROC_KEY}` \
-                were specified in the config, only `{TOKEN_KEY}` will be used\n\
-                Specify only one value to silence this warning.",
-                TOKEN_KEY = token_key,
-                PROC_KEY = proc_key,
-            ))?;
-            None
-        } else {
-            process
-        }
-    } else {
-        None
     };
 
     let credential_process =

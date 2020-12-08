@@ -92,19 +92,18 @@ fn warn_both_token_and_process() {
 
     p.cargo("publish --no-verify --registry alternative -Z credential-process")
         .masquerade_as_nightly_cargo()
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] both `registries.alternative.token` and `registries.alternative.credential-process` \
-were specified in the config, only `registries.alternative.token` will be used
-Specify only one value to silence this warning.
-[UPDATING] [..]
-[PACKAGING] foo v0.1.0 [..]
-[UPLOADING] foo v0.1.0 [..]
+[ERROR] both `registries.alternative.token` and `registries.alternative.credential-process` \
+were specified in the config\n\
+Only one of these values may be set, remove one or the other to proceed.
 ",
         )
         .run();
 
     // Try with global credential-process, and registry-specific `token`.
+    // This should silently use the config token, and not run the "false" exe.
     p.change_file(
         ".cargo/config",
         r#"
@@ -119,9 +118,6 @@ Specify only one value to silence this warning.
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
-[WARNING] both `registries.alternative.token` and `registry.credential-process` \
-were specified in the config, only `registries.alternative.token` will be used
-Specify only one value to silence this warning.
 [UPDATING] [..]
 [PACKAGING] foo v0.1.0 [..]
 [UPLOADING] foo v0.1.0 [..]
