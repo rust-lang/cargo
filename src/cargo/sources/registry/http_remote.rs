@@ -452,8 +452,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         // Make sure we don't send data back if it's the same as we have in the index.
         if let Some((ref etag, ref last_modified, _)) = was {
             let mut list = List::new();
-            list.append(&format!("If-None-Match: {}", etag))?;
-            list.append(&format!("If-Modified-Since: {}", last_modified))?;
+            if !etag.is_empty() {
+                list.append(&format!("If-None-Match: {}", etag))?;
+            }
+            if !last_modified.is_empty() {
+                list.append(&format!("If-Modified-Since: {}", last_modified))?;
+            }
             handle.http_headers(list)?;
         }
 
