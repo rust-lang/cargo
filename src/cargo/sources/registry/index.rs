@@ -334,7 +334,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         // See module comment in `registry/mod.rs` for why this is structured
         // the way it is.
         let raw_path = make_dep_index_path(&name);
-        let raw_path = raw_path.to_string_lossy();
+        let raw_path = raw_path
+            .to_str()
+            .expect("path was generated from utf-8 name");
 
         // Attempt to handle misspellings by searching for a chain of related
         // names to the original `raw_path` name. Only return summaries
