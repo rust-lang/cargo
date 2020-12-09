@@ -126,14 +126,6 @@ pub fn resolve_with_config_raw(
         used: HashSet<PackageId>,
     };
     impl<'a> Registry for MyRegistry<'a> {
-        fn prefetch(
-            &mut self,
-            _deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>,
-        ) -> CargoResult<()> {
-            // Doing nothing is a valid way to prefetch.
-            Ok(())
-        }
-
         fn query(
             &mut self,
             dep: &Dependency,

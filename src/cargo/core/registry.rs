@@ -17,7 +17,12 @@ use url::Url;
 /// See also `core::Source`.
 pub trait Registry {
     /// Give source the opportunity to batch pre-fetch dependency information.
-    fn prefetch(&mut self, deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>) -> CargoResult<()>;
+    fn prefetch(
+        &mut self,
+        _deps: &mut dyn Iterator<Item = Cow<'_, Dependency>>,
+    ) -> CargoResult<()> {
+        Ok(())
+    }
 
     /// Attempt to find the packages that match a dependency request.
     fn query(
