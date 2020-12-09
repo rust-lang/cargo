@@ -803,7 +803,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
         // NOTE: This is pretty much a synchronous version of the prefetch() + next_prefetched()
-        // dance. Much of the code is sort-of duplicated, which isn't great, but it's moderalyte
+        // dance. Much of the code is sort-of duplicated, which isn't great, but it's moderately
         // straightforward and works. When the real resolver supports a load returning "not yet",
         // load and prefetch can be merged.
 
