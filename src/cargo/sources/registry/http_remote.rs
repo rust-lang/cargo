@@ -230,38 +230,40 @@ const LAST_UPDATED_FILE: &str = ".last-updated";
 
 impl<'cfg> RegistryData for HttpRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
-        if !self.config.offline() {
-            let mut http = if let Ok(h) = self.http.try_borrow_mut() {
-                h
-            } else {
-                anyhow::bail!("concurrent index downloads are not yet supported");
-            };
+        if self.config.offline() {
+            return Ok(());
+        }
 
-            if http.is_none() {
-                // NOTE: lifted from src/cargo/core/package.rs
-                //
-                // Ensure that we'll actually be able to acquire an HTTP handle later on
-                // once we start trying to download crates. This will weed out any
-                // problems with `.cargo/config` configuration related to HTTP.
-                //
-                // This way if there's a problem the error gets printed before we even
-                // hit the index, which may not actually read this configuration.
-                let mut handle = ops::http_handle(&self.config)?;
-                handle.get(true)?;
-                handle.follow_location(true)?;
+        let mut http = if let Ok(h) = self.http.try_borrow_mut() {
+            h
+        } else {
+            anyhow::bail!("concurrent index downloads are not yet supported");
+        };
 
-                // NOTE: lifted from src/cargo/core/package.rs
-                //
-                // This is an option to `libcurl` which indicates that if there's a
-                // bunch of parallel requests to the same host they all wait until the
-                // pipelining status of the host is known. This means that we won't
-                // initiate dozens of connections to crates.io, but rather only one.
-                // Once the main one is opened we realized that pipelining is possible
-                // and multiplexing is possible with static.crates.io. All in all this
-                // reduces the number of connections done to a more manageable state.
-                try_old_curl!(handle.pipewait(true), "pipewait");
-                *http = Some(handle);
-            }
+        if http.is_none() {
+            // NOTE: lifted from src/cargo/core/package.rs
+            //
+            // Ensure that we'll actually be able to acquire an HTTP handle later on
+            // once we start trying to download crates. This will weed out any
+            // problems with `.cargo/config` configuration related to HTTP.
+            //
+            // This way if there's a problem the error gets printed before we even
+            // hit the index, which may not actually read this configuration.
+            let mut handle = ops::http_handle(&self.config)?;
+            handle.get(true)?;
+            handle.follow_location(true)?;
+
+            // NOTE: lifted from src/cargo/core/package.rs
+            //
+            // This is an option to `libcurl` which indicates that if there's a
+            // bunch of parallel requests to the same host they all wait until the
+            // pipelining status of the host is known. This means that we won't
+            // initiate dozens of connections to crates.io, but rather only one.
+            // Once the main one is opened we realized that pipelining is possible
+            // and multiplexing is possible with static.crates.io. All in all this
+            // reduces the number of connections done to a more manageable state.
+            try_old_curl!(handle.pipewait(true), "pipewait");
+            *http = Some(handle);
         }
 
         Ok(())
