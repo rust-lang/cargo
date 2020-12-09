@@ -1017,9 +1017,6 @@ credential-process = "cargo:macos-keychain"
 The current wrappers are:
 
 * `cargo:macos-keychain`: Uses the macOS Keychain to store the token.
-* `cargo:gnome-secret`: Uses
-  [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store the token on
-  Linux systems running GNOME.
 * `cargo:wincred`: Uses the Windows Credential Manager to store the token.
 * `cargo:1password`: Uses the 1password `op` CLI to store the token. You must
   install the `op` CLI from the [1password
@@ -1033,6 +1030,20 @@ The current wrappers are:
   * `--vault`: The vault name to use.
   * `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
   * `--email`: The email address to sign in with.
+
+A wrapper is available for GNOME
+[libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on
+Linux systems. Due to build limitations, this wrapper is not available as a
+pre-compiled binary. This can be built and installed manually. First, install
+libsecret using your system package manager (for example, `sudo apt install
+libsecret-1-dev`). Then build and install the wrapper with `cargo install
+--git https://github.com/rust-lang/cargo.git cargo-credential-gnome-secret`.
+In the config, use a path to the binary like this:
+
+```toml
+[registry]
+credential-process = "cargo-credential-gnome-secret {action}"
+```
 
 #### `credential-process` Interface
 
