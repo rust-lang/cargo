@@ -632,7 +632,8 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
 
             // Walk all the requests that completed and handle their responses.
             //
-            // This will ultimately add more replies to self.downloads.eager, which we'll
+            // This will ultimately add more replies to self.downloads.eager, which we'll yield as
+            // we continue around the outer loop.
             while let Some((token, result)) = self.downloads.results.pop() {
                 trace!("{} finished with {:?}", token, result);
 
