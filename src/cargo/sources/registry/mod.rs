@@ -466,6 +466,7 @@ pub enum MaybeLock {
     Download { url: String, descriptor: String },
 }
 
+mod download;
 mod http_remote;
 mod index;
 mod local;

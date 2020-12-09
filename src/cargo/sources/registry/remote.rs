@@ -1,22 +1,16 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
-use crate::sources::registry::make_dep_prefix;
+use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
-use crate::sources::registry::{
-    RegistryConfig, RegistryData, CRATE_TEMPLATE, LOWER_PREFIX_TEMPLATE, PREFIX_TEMPLATE,
-    VERSION_TEMPLATE,
-};
+use crate::sources::registry::{RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{Config, Filesystem, Sha256};
+use crate::util::{Config, Filesystem};
 use lazycell::LazyCell;
 use log::{debug, trace};
 use std::cell::{Cell, Ref, RefCell};
-use std::fmt::Write as FmtWrite;
-use std::fs::{self, File, OpenOptions};
-use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
@@ -127,10 +121,6 @@ impl<'cfg> RemoteRegistry<'cfg> {
         *self.tree.borrow_mut() = Some(tree);
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
-
-    fn filename(&self, pkg: PackageId) -> String {
-        format!("{}-{}.crate", pkg.name(), pkg.version())
-    }
 }
 
 const LAST_UPDATED_FILE: &str = ".last-updated";
@@ -239,44 +229,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
-        let filename = self.filename(pkg);
-
-        // Attempt to open an read-only copy first to avoid an exclusive write
-        // lock and also work with read-only filesystems. Note that we check the
-        // length of the file like below to handle interrupted downloads.
-        //
-        // If this fails then we fall through to the exclusive path where we may
-        // have to redownload the file.
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+        let filename = download::filename(pkg);
         let path = self.cache_path.join(&filename);
         let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(dst) = File::open(&path) {
-            let meta = dst.metadata()?;
-            if meta.len() > 0 {
-                return Ok(MaybeLock::Ready(dst));
-            }
-        }
-
-        let config = self.config()?.unwrap();
-        let mut url = config.dl;
-        if !url.contains(CRATE_TEMPLATE)
-            && !url.contains(VERSION_TEMPLATE)
-            && !url.contains(PREFIX_TEMPLATE)
-            && !url.contains(LOWER_PREFIX_TEMPLATE)
-        {
-            write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
-        }
-        let prefix = make_dep_prefix(&*pkg.name());
-        let url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase());
-
-        Ok(MaybeLock::Download {
-            url,
-            descriptor: pkg.to_string(),
-        })
+        download::download(self, &path, pkg, checksum)
     }
 
     fn finish_download(
@@ -285,42 +242,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<File> {
-        // Verify what we just downloaded
-        let actual = Sha256::new().update(data).finish_hex();
-        if actual != checksum {
-            anyhow::bail!("failed to verify the checksum of `{}`", pkg)
-        }
-
-        let filename = self.filename(pkg);
-        self.cache_path.create_dir()?;
-        let path = self.cache_path.join(&filename);
-        let path = self.config.assert_package_cache_locked(&path);
-        let mut dst = OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&path)
-            .chain_err(|| format!("failed to open `{}`", path.display()))?;
-        let meta = dst.metadata()?;
-        if meta.len() > 0 {
-            return Ok(dst);
-        }
-
-        dst.write_all(data)?;
-        dst.seek(SeekFrom::Start(0))?;
-        Ok(dst)
+        download::finish_download(&self.cache_path, &self.config, pkg, checksum, data)
     }
 
     fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let path = Path::new(&filename);
-
-        let path = self.cache_path.join(path);
-        let path = self.config.assert_package_cache_locked(&path);
-        if let Ok(meta) = fs::metadata(path) {
-            return meta.len() > 0;
-        }
-        false
+        download::is_crate_downloaded(&self.cache_path, &self.config, pkg)
     }
 }
 
