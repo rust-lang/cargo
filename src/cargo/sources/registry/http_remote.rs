@@ -732,10 +732,14 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                     }
                     code => {
                         anyhow::bail!(
-                            "prefetch: server returned unexpected HTTP status code {} for {}{}",
+                            "prefetch: server returned unexpected HTTP status code {} for {}{}: {}",
                             code,
                             self.source_id.url(),
-                            fetched.path.display()
+                            fetched.path.display(),
+                            String::from_utf8_lossy(&data)
+                                .lines()
+                                .next()
+                                .expect("there is always a first line"),
                         );
                     }
                 }
