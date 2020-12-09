@@ -10,7 +10,7 @@ use crate::sources::registry::{Fetched, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::interning::InternedString;
 use crate::util::paths;
-use crate::util::{self, Config, Filesystem, Progress, ProgressStyle};
+use crate::util::{self, Config, Filesystem, IntoUrl, Progress, ProgressStyle};
 use bytesize::ByteSize;
 use curl::easy::{Easy, HttpVersion, List};
 use curl::multi::{EasyHandle, Multi};
@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::time::Duration;
 use std::time::Instant;
+use url::Url;
 
 const ETAG: &'static [u8] = b"ETag";
 const LAST_MODIFIED: &'static [u8] = b"Last-Modified";
@@ -56,6 +57,9 @@ pub struct HttpRegistry<'cfg> {
     cache_path: Filesystem,
     source_id: SourceId,
     config: &'cfg Config,
+
+    /// Store the server URL without the protocol prefix (sparse+)
+    url: Url,
 
     /// Cached HTTP handle for synchronous requests (RegistryData::load).
     http: RefCell<Option<Easy>>,
@@ -149,11 +153,19 @@ struct Download {
 
 impl<'cfg> HttpRegistry<'cfg> {
     pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> HttpRegistry<'cfg> {
+        let url = source_id
+            .url()
+            .to_string()
+            .trim_start_matches("sparse+")
+            .into_url()
+            .expect("a url with the protocol stripped should still be valid");
+
         HttpRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
             config,
+            url,
             http: RefCell::new(None),
             prefetch: Multi::new(),
             multiplexing: false,
@@ -415,13 +427,12 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
         }
 
         // Looks like we're going to have to bite the bullet and do a network request.
-        let url = self.source_id.url();
         self.prepare()?;
 
         let mut handle = ops::http_handle(self.config)?;
-        debug!("prefetch {}{}", url, path.display());
+        debug!("prefetch {}{}", self.url, path.display());
         handle.get(true)?;
-        handle.url(&format!("{}{}", url, path.display()))?;
+        handle.url(&format!("{}{}", self.url, path.display()))?;
         handle.follow_location(true)?;
 
         // Enable HTTP/2 if possible.
@@ -725,7 +736,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                         anyhow::bail!(
                             "prefetch: server returned unexpected HTTP status code {} for {}{}: {}",
                             code,
-                            self.source_id.url(),
+                            self.url,
                             fetched.path.display(),
                             String::from_utf8_lossy(&data)
                                 .lines()
@@ -857,18 +868,17 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
             None
         };
 
-        let url = self.source_id.url();
         if self.config.offline() {
             anyhow::bail!(
                 "can't download index file from '{}': you are in offline mode (--offline)",
-                url
+                self.url
             );
         }
 
         self.prepare()?;
         let mut handle = self.http()?;
-        debug!("fetch {}{}", url, path.display());
-        handle.url(&format!("{}{}", url, path.display()))?;
+        debug!("fetch {}{}", self.url, path.display());
+        handle.url(&format!("{}{}", self.url, path.display()))?;
 
         if let Some((ref etag, ref last_modified, _)) = was {
             let mut list = List::new();
@@ -950,7 +960,7 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                 anyhow::bail!(
                     "load: server returned unexpected HTTP status code {} for {}{}",
                     code,
-                    self.source_id.url(),
+                    self.url,
                     path.display()
                 );
             }

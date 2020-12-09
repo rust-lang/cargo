@@ -322,11 +322,7 @@ impl<'a> RegistryDependency<'a> {
         } = self;
 
         let id = if let Some(registry) = &registry {
-            if let Some(registry) = registry.strip_prefix("sparse+") {
-                SourceId::for_http_registry(&registry.into_url()?)?
-            } else {
-                SourceId::for_registry(&registry.into_url()?)?
-            }
+            SourceId::for_registry(&registry.into_url()?)?
         } else {
             default
         };

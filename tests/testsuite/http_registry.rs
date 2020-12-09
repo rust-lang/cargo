@@ -47,7 +47,7 @@ fn setup() -> RegistryServer {
 #[cargo_test]
 fn simple() {
     let server = setup();
-    let url = format!("http://{}/", server.addr());
+    let url = format!("sparse+http://{}", server.addr());
     let p = project()
         .file(
             "Cargo.toml",
@@ -72,7 +72,7 @@ fn simple() {
 [UPDATING] `{reg}` index
 [PREFETCHING] index files ...
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (http registry `{reg}`)
+[DOWNLOADED] bar v0.0.1 (registry `{reg}`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -99,7 +99,7 @@ fn simple() {
 #[cargo_test]
 fn deps() {
     let server = setup();
-    let url = format!("http://{}/", server.addr());
+    let url = format!("sparse+http://{}", server.addr());
     let p = project()
         .file(
             "Cargo.toml",
@@ -125,8 +125,8 @@ fn deps() {
 [UPDATING] `{reg}` index
 [PREFETCHING] index files ...
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (http registry `{reg}`)
-[DOWNLOADED] [..] v0.0.1 (http registry `{reg}`)
+[DOWNLOADED] [..] v0.0.1 (registry `{reg}`)
+[DOWNLOADED] [..] v0.0.1 (registry `{reg}`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -175,7 +175,7 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn update_registry() {
     let server = setup();
-    let url = format!("http://{}/", server.addr());
+    let url = format!("sparse+http://{}", server.addr());
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -213,7 +213,7 @@ required by package `foo v0.0.1 ([..])`
 [UPDATING] `{reg}` index
 [PREFETCHING] index files ...
 [DOWNLOADING] crates ...
-[DOWNLOADED] notyet v0.0.1 (http registry `{reg}`)
+[DOWNLOADED] notyet v0.0.1 (registry `{reg}`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -226,7 +226,7 @@ required by package `foo v0.0.1 ([..])`
 #[cargo_test]
 fn update_publish_then_update() {
     let server = setup();
-    let url = format!("http://{}/", server.addr());
+    let url = format!("sparse+http://{}", server.addr());
 
     // First generate a Cargo.lock and a clone of the registry index at the
     // "head" of the current registry.
@@ -289,7 +289,7 @@ fn update_publish_then_update() {
             "\
 [PREFETCHING] index files ...
 [DOWNLOADING] crates ...
-[DOWNLOADED] a v0.1.1 (http registry `{reg}`)
+[DOWNLOADED] a v0.1.1 (registry `{reg}`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -302,7 +302,7 @@ fn update_publish_then_update() {
 #[cargo_test]
 fn update_multiple_packages() {
     let server = setup();
-    let url = format!("http://{}/", server.addr());
+    let url = format!("sparse+http://{}", server.addr());
     let p = project()
         .file(
             "Cargo.toml",
@@ -353,9 +353,9 @@ fn update_multiple_packages() {
         .run();
 
     cargo(&p, "build")
-        .with_stderr_contains(format!("[DOWNLOADED] a v0.1.1 (http registry `{}`)", url))
-        .with_stderr_contains(format!("[DOWNLOADED] b v0.1.1 (http registry `{}`)", url))
-        .with_stderr_contains(format!("[DOWNLOADED] c v0.1.1 (http registry `{}`)", url))
+        .with_stderr_contains(format!("[DOWNLOADED] a v0.1.1 (registry `{}`)", url))
+        .with_stderr_contains(format!("[DOWNLOADED] b v0.1.1 (registry `{}`)", url))
+        .with_stderr_contains(format!("[DOWNLOADED] c v0.1.1 (registry `{}`)", url))
         .with_stderr_contains("[COMPILING] a v0.1.1")
         .with_stderr_contains("[COMPILING] b v0.1.1")
         .with_stderr_contains("[COMPILING] c v0.1.1")
