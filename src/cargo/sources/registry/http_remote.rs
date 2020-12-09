@@ -712,17 +712,23 @@ impl<'cfg> RegistryData for HttpRegistry<'cfg> {
                             "download finished for already-finished path"
                         );
                     }
-                    403 | 404 => {
-                        // Not Found response.
-                        // We treat Forbidden as just being another expression for 404
-                        // from a server that does not want to reveal file names.
-                        // The crate doesn't exist, so we simply do not yield it.
-                        // Errors will eventually be yielded by load().
-                    }
-                    410 | 451 => {
-                        // The crate was deleted from the registry.
-                        // Errors will eventually be yielded by load().
-                        todo!("we should delete the local index file here if it exists");
+                    403 | 404 | 410 | 451 => {
+                        // Variants of a Not Found response.
+                        //
+                        // We treat Forbidden as just being another expression for 404 from a
+                        // server that does not want to reveal file names.
+                        //
+                        // We treat Gone and Unavailable for Legal Reasons as equivalent to 404,
+                        // since they still mean that the crate isn't there.
+                        //
+                        // Since the crate doesn't exist, we simply do not yield it. We also remove
+                        // the index file if it exists. Errors will eventually be yielded by
+                        // load().
+                        let path = self.config.assert_package_cache_locked(&self.index_path);
+                        let pkg = path.join(&fetched.path);
+                        if pkg.exists() {
+                            paths::remove_file(pkg)?;
+                        }
                     }
                     code => {
                         anyhow::bail!(
