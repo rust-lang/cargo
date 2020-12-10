@@ -7,6 +7,7 @@ use std::slice;
 
 use glob::glob;
 use log::debug;
+use normpath::BasePath;
 use url::Url;
 
 use crate::core::features::Features;
@@ -1198,7 +1199,10 @@ impl WorkspaceRootConfig {
         let mut expanded_list = Vec::new();
 
         for glob in globs {
-            let pathbuf = self.root_dir.join(glob);
+            let pathbuf = BasePath::new(&self.root_dir)
+                .chain_err(|| "failed to read the current directory")?
+                .join(glob)
+                .into_path_buf();
             let expanded_paths = Self::expand_member_path(&pathbuf)?;
 
             // If glob does not find any valid paths, then put the original
