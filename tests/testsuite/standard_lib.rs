@@ -667,11 +667,6 @@ fn no_roots() {
     p.cargo("build")
         .build_std(&setup)
         .target_host()
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_contains("[FINISHED] [..]")
         .run();
 }
