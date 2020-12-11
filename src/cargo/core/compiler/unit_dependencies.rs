@@ -630,8 +630,17 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
         // example a library might depend on a build script, so this map will
         // have the build script as the key and the library would be in the
         // value's set.
+        //
+        // Note that as an important part here we're skipping "test" units. Test
+        // units depend on the execution of a build script, but
+        // links-dependencies only propagate through `[dependencies]`, nothing
+        // else. We don't want to pull in a links-dependency through a
+        // dev-dependency since that could create a cycle.
         let mut reverse_deps_map = HashMap::new();
         for (unit, deps) in unit_dependencies.iter() {
+            if unit.mode.is_any_test() {
+                continue;
+            }
             for dep in deps {
                 if dep.unit.mode == CompileMode::RunCustomBuild {
                     reverse_deps_map
@@ -655,7 +664,8 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
             .keys()
             .filter(|k| k.mode == CompileMode::RunCustomBuild)
         {
-            // This is the lib that runs this custom build.
+            // This list of dependencies all depend on `unit`, an execution of
+            // the build script.
             let reverse_deps = match reverse_deps_map.get(unit) {
                 Some(set) => set,
                 None => continue,
@@ -663,7 +673,7 @@ fn connect_run_custom_build_deps(unit_dependencies: &mut UnitGraph) {
 
             let to_add = reverse_deps
                 .iter()
-                // Get all deps for lib.
+                // Get all sibling dependencies of `unit`
                 .flat_map(|reverse_dep| unit_dependencies[reverse_dep].iter())
                 // Only deps with `links`.
                 .filter(|other| {
