@@ -7,7 +7,7 @@ use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::{HasDevUnits, ResolveOpts};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::CargoResult;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
@@ -52,8 +52,7 @@ pub fn resolve_std<'cfg>(
 
     // If rust-src contains a "vendor" directory, then patch in all the crates it contains.
     let vendor_path = src_path.join("vendor");
-    let vendor_dir = fs::read_dir(&vendor_path)
-        .chain_err(|| format!("could not read vendor path {}", vendor_path.display()))?;
+    let vendor_dir = fs::read_dir(vendor_path)?;
     let patches = vendor_dir
         .into_iter()
         .map(|entry| {
@@ -75,8 +74,7 @@ pub fn resolve_std<'cfg>(
             let dep = Dependency::parse_no_deprecated(&name, None, source_path)?;
             Ok(dep)
         })
-        .collect::<CargoResult<Vec<_>>>()
-        .chain_err(|| "failed to generate vendor patches")?;
+        .collect::<CargoResult<Vec<_>>>()?;
 
     let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
     let mut patch = HashMap::new();
