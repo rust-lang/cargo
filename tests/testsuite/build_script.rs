@@ -4034,3 +4034,40 @@ Caused by:
     // Restore permissions so that the directory can be deleted.
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }
+
+#[cargo_test]
+fn dev_dep_with_links() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+                links = "x"
+
+                [dev-dependencies]
+                bar = { path = "./bar" }
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                links = "y"
+
+                [dependencies]
+                foo = { path = ".." }
+            "#,
+        )
+        .file("bar/build.rs", "fn main() {}")
+        .file("bar/src/lib.rs", "")
+        .build();
+    p.cargo("check --tests").run()
+}
