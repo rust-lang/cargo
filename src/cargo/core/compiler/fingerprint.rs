@@ -1700,7 +1700,7 @@ where
         let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(v) => {
-                let mtime = match paths::mtime(path) {
+                let mtime = match paths::mtime_recursive(path) {
                     Ok(mtime) => mtime,
                     Err(..) => return Some(StaleItem::MissingFile(path.to_path_buf())),
                 };
