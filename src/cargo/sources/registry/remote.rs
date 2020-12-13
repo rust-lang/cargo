@@ -73,6 +73,9 @@ impl<'cfg> RemoteRegistry<'cfg> {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
                     drop(paths::remove_dir_all(&path));
+                    paths::create_dir_all_excluded_from_backups_atomic(
+                        self.config.home().join("registry").as_path_unlocked(),
+                    )?;
                     paths::create_dir_all(&path)?;
 
                     // Note that we'd actually prefer to use a bare repository

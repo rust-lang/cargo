@@ -220,6 +220,9 @@ impl GitRemote {
         if into.exists() {
             paths::remove_dir_all(into)?;
         }
+        paths::create_dir_all_excluded_from_backups_atomic(
+            cargo_config.home().join("git").as_path_unlocked(),
+        )?;
         paths::create_dir_all(into)?;
         let mut repo = init(into, true)?;
         fetch(&mut repo, self.url.as_str(), reference, cargo_config)
