@@ -9,7 +9,7 @@ Currently, rustfix is split into two crates:
 - `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs
 - and `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code.
 
-The magic of rustfix is entirely dependent on the diagnostics implement in the Rust compiler (and external lints, like [clippy]).
+The magic of rustfix is entirely dependent on the diagnostics implemented in the Rust compiler (and external lints, like [clippy]).
 
 [clippy]: https://github.com/rust-lang-nursery/rust-clippy
 
