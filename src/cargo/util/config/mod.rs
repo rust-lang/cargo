@@ -327,10 +327,6 @@ impl Config {
             &self.build_config()?.rustc_workspace_wrapper,
         );
 
-        if !self.cli_unstable().unstable_options && rustc_workspace_wrapper.is_some() {
-            bail!("Usage of `RUSTC_WORKSPACE_WRAPPER` requires `-Z unstable-options`")
-        }
-
         Rustc::new(
             self.get_tool("rustc", &self.build_config()?.rustc),
             wrapper,
