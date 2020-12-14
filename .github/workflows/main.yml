@@ -18,12 +18,12 @@ jobs:
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all -- --check
-    - run: cd crates/cargo-test-macro && cargo fmt --all -- --check
-    - run: cd crates/cargo-test-support && cargo fmt --all -- --check
-    - run: cd crates/crates-io && cargo fmt --all -- --check
-    - run: cd crates/resolver-tests && cargo fmt --all -- --check
-    - run: cd crates/cargo-platform && cargo fmt --all -- --check
-    - run: cd crates/mdman && cargo fmt --all -- --check
+    - run: |
+        for manifest in `find crates -name Cargo.toml`
+        do
+          echo check fmt for $manifest
+          cargo fmt --all --manifest-path $manifest -- --check
+        done
 
   test:
     runs-on: ${{ matrix.os }}
@@ -58,7 +58,7 @@ jobs:
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
-    - run: sudo apt update -y && sudo apt install gcc-multilib -y
+    - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
       if: matrix.os == 'ubuntu-latest'
     - run: rustup component add rustfmt || echo "rustfmt not available"
 
@@ -67,6 +67,13 @@ jobs:
     - run: cargo test --features 'deny-warnings' -p cargo-test-support
     - run: cargo test -p cargo-platform
     - run: cargo test --manifest-path crates/mdman/Cargo.toml
+    - run: cargo build --manifest-path crates/credential/cargo-credential-1password/Cargo.toml
+    - run: cargo build --manifest-path crates/credential/cargo-credential-gnome-secret/Cargo.toml
+      if: matrix.os == 'ubuntu-latest'
+    - run: cargo build --manifest-path crates/credential/cargo-credential-macos-keychain/Cargo.toml
+      if: matrix.os == 'macos-latest'
+    - run: cargo build --manifest-path crates/credential/cargo-credential-wincred/Cargo.toml
+      if: matrix.os == 'windows-latest'
 
   resolver:
     runs-on: ubuntu-latest
