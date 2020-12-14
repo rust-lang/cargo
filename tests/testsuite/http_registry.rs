@@ -16,8 +16,7 @@ use std::path::Path;
 
 fn cargo(p: &cargo_test_support::Project, s: &str) -> cargo_test_support::Execs {
     let mut e = p.cargo(s);
-    e.arg("-Zhttp-registry")
-        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly");
+    e.arg("-Zhttp-registry").masquerade_as_nightly_cargo();
     e
 }
 
