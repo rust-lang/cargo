@@ -44,7 +44,7 @@ Available unstable (nightly-only) flags:
     -Z terminal-width      -- Provide a terminal width to rustc for error truncation
     -Z namespaced-features -- Allow features with `dep:` prefix
     -Z weak-dep-features   -- Allow `dep_name?/feature` feature syntax
-    -Z http-registries     -- Support HTTP-based crate registries
+    -Z http-registry       -- Support HTTP-based crate registries
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
