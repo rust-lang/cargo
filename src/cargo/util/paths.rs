@@ -190,13 +190,34 @@ pub fn mtime_recursive(path: &Path) -> CargoResult<FileTime> {
     let max_meta = walkdir::WalkDir::new(path)
         .follow_links(true)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(|e| match e {
+            Ok(e) => Some(e),
+            Err(e) => {
+                // Ignore errors while walking. If Cargo can't access it, the
+                // build script probably can't access it, either.
+                log::debug!("failed to determine mtime while walking directory: {}", e);
+                None
+            }
+        })
         .filter_map(|e| {
             if e.path_is_symlink() {
                 // Use the mtime of both the symlink and its target, to
                 // handle the case where the symlink is modified to a
                 // different target.
-                let sym_meta = std::fs::symlink_metadata(e.path()).ok()?;
+                let sym_meta = match std::fs::symlink_metadata(e.path()) {
+                    Ok(m) => m,
+                    Err(err) => {
+                        // I'm not sure when this is really possible (maybe a
+                        // race with unlinking?). Regardless, if Cargo can't
+                        // read it, the build script probably can't either.
+                        log::debug!(
+                            "failed to determine mtime while fetching symlink metdata of {}: {}",
+                            e.path().display(),
+                            err
+                        );
+                        return None;
+                    }
+                };
                 let sym_mtime = FileTime::from_last_modification_time(&sym_meta);
                 // Walkdir follows symlinks.
                 match e.metadata() {
@@ -204,14 +225,38 @@ pub fn mtime_recursive(path: &Path) -> CargoResult<FileTime> {
                         let target_mtime = FileTime::from_last_modification_time(&target_meta);
                         Some(sym_mtime.max(target_mtime))
                     }
-                    Err(_) => Some(sym_mtime),
+                    Err(err) => {
+                        // Can't access the symlink target. If Cargo can't
+                        // access it, the build script probably can't access
+                        // it either.
+                        log::debug!(
+                            "failed to determine mtime of symlink target for {}: {}",
+                            e.path().display(),
+                            err
+                        );
+                        Some(sym_mtime)
+                    }
                 }
             } else {
-                let meta = e.metadata().ok()?;
+                let meta = match e.metadata() {
+                    Ok(m) => m,
+                    Err(err) => {
+                        // I'm not sure when this is really possible (maybe a
+                        // race with unlinking?). Regardless, if Cargo can't
+                        // read it, the build script probably can't either.
+                        log::debug!(
+                            "failed to determine mtime while fetching metadata of {}: {}",
+                            e.path().display(),
+                            err
+                        );
+                        return None;
+                    }
+                };
                 Some(FileTime::from_last_modification_time(&meta))
             }
         })
         .max()
+        // or_else handles the case where there are no files in the directory.
         .unwrap_or_else(|| FileTime::from_last_modification_time(&meta));
     Ok(max_meta)
 }
