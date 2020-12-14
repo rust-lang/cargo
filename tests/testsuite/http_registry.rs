@@ -68,7 +68,7 @@ fn not_on_stable() {
         .with_status(101)
         .with_stderr(&format!(
             "\
-error: failed to prefetch dependencies
+error: failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
 
 Caused by:
   failed to load source for dependency `bar`

@@ -199,7 +199,7 @@ fn nightly_feature_requires_nightly_in_dep() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `a` as a dependency of package `b v0.0.1 ([..])`
 
 Caused by:
   failed to load source for dependency `a`

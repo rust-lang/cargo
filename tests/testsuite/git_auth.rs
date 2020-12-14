@@ -137,7 +137,7 @@ fn http_auth_offered() {
         .with_stderr_contains(&format!(
             "\
 [UPDATING] git repository `http://{addr}/foo/bar`
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 [..]`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -299,7 +299,7 @@ fn net_err_suggests_fetch_with_cli() {
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
 warning: spurious network error[..]
 warning: spurious network error[..]
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 [..]`
 
 Caused by:
   failed to load source for dependency `foo`
@@ -368,7 +368,7 @@ fn instead_of_url_printed() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `https://foo.bar/foo/bar`
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `bar` as a dependency of package `foo [..]`
 
 Caused by:
   failed to load source for dependency `bar`

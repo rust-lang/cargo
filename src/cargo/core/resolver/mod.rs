@@ -136,13 +136,15 @@ pub fn resolve(
     };
 
     // First, allow the source to batch pre-fetch dependencies we may need.
-    registry
-        .prefetch(
-            &mut summaries
-                .iter()
-                .flat_map(|summary| summary.0.dependencies().iter().map(Cow::Borrowed)),
-        )
-        .chain_err(|| "failed to prefetch dependencies")?;
+    if config.map_or(false, |c| c.cli_unstable().http_registry) {
+        registry
+            .prefetch(
+                &mut summaries
+                    .iter()
+                    .flat_map(|summary| summary.0.dependencies().iter().map(Cow::Borrowed)),
+            )
+            .chain_err(|| "failed to prefetch dependencies")?;
+    }
 
     let mut registry =
         RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions, config);

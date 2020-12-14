@@ -938,7 +938,7 @@ fn dep_with_bad_submodule() {
         "\
 [UPDATING] git repository [..]
 [UPDATING] git submodule `file://[..]/dep2`
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
 
 Caused by:
   failed to load source for dependency `dep1`
@@ -2362,7 +2362,7 @@ fn invalid_git_dependency_manifest() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
-[ERROR] failed to prefetch dependencies
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([..])`
 
 Caused by:
   failed to load source for dependency `dep1`
