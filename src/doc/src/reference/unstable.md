@@ -961,3 +961,179 @@ std = ["serde?/std"]
 In this example, the `std` feature enables the `std` feature on the `serde`
 dependency. However, unlike the normal `serde/std` syntax, it will not enable
 the optional dependency `serde` unless something else has included it.
+
+### credential-process
+* Tracking Issue: [#8933](https://github.com/rust-lang/cargo/issues/8933)
+* RFC: [#2730](https://github.com/rust-lang/rfcs/pull/2730)
+
+The `credential-process` feature adds a config setting to fetch registry
+authentication tokens by calling an external process.
+
+Token authentication is used by the [`cargo login`], [`cargo publish`],
+[`cargo owner`], and [`cargo yank`] commands. Additionally, this feature adds
+a new `cargo logout` command.
+
+To use this feature, you must pass the `-Z credential-process` flag on the
+command-line. Additionally, you must remove any current tokens currently saved
+in the [`credentials` file] (which can be done with the new `logout` command).
+
+#### `credential-process` Configuration
+
+To configure which process to run to fetch the token, specify the process in
+the `registry` table in a [config file]:
+
+```toml
+[registry]
+credential-process = "/usr/bin/cargo-creds"
+```
+
+If you want to use a different process for a specific registry, it can be
+specified in the `registries` table:
+
+```toml
+[registries.my-registry]
+credential-process = "/usr/bin/cargo-creds"
+```
+
+The value can be a string with spaces separating arguments or it can be a TOML
+array of strings.
+
+Command-line arguments allow special placeholders which will be replaced with
+the corresponding value:
+
+* `{name}` — The name of the registry.
+* `{api_url}` — The base URL of the registry API endpoints.
+* `{action}` — The authentication action (described below).
+
+Process names with the prefix `cargo:` are loaded from the `libexec` directory
+next to cargo. Several experimental credential wrappers are included with
+Cargo, and this provides convenient access to them:
+
+```toml
+[registry]
+credential-process = "cargo:macos-keychain"
+```
+
+The current wrappers are:
+
+* `cargo:macos-keychain`: Uses the macOS Keychain to store the token.
+* `cargo:wincred`: Uses the Windows Credential Manager to store the token.
+* `cargo:1password`: Uses the 1password `op` CLI to store the token. You must
+  install the `op` CLI from the [1password
+  website](https://1password.com/downloads/command-line/). You must run `op
+  signin` at least once with the appropriate arguments (such as `op signin
+  my.1password.com user@example.com`), unless you provide the sign-in-address
+  and email arguments. The master password will be required on each request
+  unless the appropriate `OP_SESSION` environment variable is set. It supports
+  the following command-line arguments:
+  * `--account`: The account shorthand name to use.
+  * `--vault`: The vault name to use.
+  * `--sign-in-address`: The sign-in-address, which is a web address such as `my.1password.com`.
+  * `--email`: The email address to sign in with.
+
+A wrapper is available for GNOME
+[libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens on
+Linux systems. Due to build limitations, this wrapper is not available as a
+pre-compiled binary. This can be built and installed manually. First, install
+libsecret using your system package manager (for example, `sudo apt install
+libsecret-1-dev`). Then build and install the wrapper with `cargo install
+--git https://github.com/rust-lang/cargo.git cargo-credential-gnome-secret`.
+In the config, use a path to the binary like this:
+
+```toml
+[registry]
+credential-process = "cargo-credential-gnome-secret {action}"
+```
+
+#### `credential-process` Interface
+
+There are two different kinds of token processes that Cargo supports. The
+simple "basic" kind will only be called by Cargo when it needs a token. This
+is intended for simple and easy integration with password managers, that can
+often use pre-existing tooling. The more advanced "Cargo" kind supports
+different actions passed as a command-line argument. This is intended for more
+pleasant integration experience, at the expense of requiring a Cargo-specific
+process to glue to the password manager. Cargo will determine which kind is
+supported by the `credential-process` definition. If it contains the
+`{action}` argument, then it uses the advanced style, otherwise it assumes it
+only supports the "basic" kind.
+
+##### Basic authenticator
+
+A basic authenticator is a process that returns a token on stdout. Newlines
+will be trimmed. The process inherits the user's stdin and stderr. It should
+exit 0 on success, and nonzero on error.
+
+With this form, [`cargo login`] and `cargo logout` are not supported and
+return an error if used.
+
+##### Cargo authenticator
+
+The protocol between the Cargo and the process is very basic, intended to
+ensure the credential process is kept as simple as possible. Cargo will
+execute the process with the `{action}` argument indicating which action to
+perform:
+
+* `store` — Store the given token in secure storage.
+* `get` — Get a token from storage.
+* `erase` — Remove a token from storage.
+
+The `cargo login` command uses `store` to save a token. Commands that require
+authentication, like `cargo publish`, uses `get` to retrieve a token. `cargo
+logout` uses the `erase` command to remove a token.
+
+The process inherits the user's stderr, so the process can display messages.
+Some values are passed in via environment variables (see below). The expected
+interactions are:
+
+* `store` — The token is sent to the process's stdin, terminated by a newline.
+  The process should store the token keyed off the registry name. If the
+  process fails, it should exit with a nonzero exit status.
+
+* `get` — The process should send the token to its stdout (trailing newline
+  will be trimmed). The process inherits the user's stdin, should it need to
+  receive input.
+
+  If the process is unable to fulfill the request, it should exit with a
+  nonzero exit code.
+
+* `erase` — The process should remove the token associated with the registry
+  name. If the token is not found, the process should exit with a 0 exit
+  status.
+
+##### Environment
+
+The following environment variables will be provided to the executed command:
+
+* `CARGO` — Path to the `cargo` binary executing the command.
+* `CARGO_REGISTRY_NAME` — Name of the registry the authentication token is for.
+* `CARGO_REGISTRY_API_URL` — The URL of the registry API.
+
+#### `cargo logout`
+
+A new `cargo logout` command has been added to make it easier to remove a
+token from storage. This supports both [`credentials` file] tokens and
+`credential-process` tokens.
+
+When used with `credentials` file tokens, it needs the `-Z unstable-options`
+command-line option:
+
+```console
+cargo logout -Z unstable-options`
+```
+
+When used with the `credential-process` config, use the `-Z
+credential-process` command-line option:
+
+
+```console
+cargo logout -Z credential-process`
+```
+
+[`cargo login`]: ../commands/cargo-login.md
+[`cargo publish`]: ../commands/cargo-publish.md
+[`cargo owner`]: ../commands/cargo-owner.md
+[`cargo yank`]: ../commands/cargo-yank.md
+[`credentials` file]: config.md#credentials
+[crates.io]: https://crates.io/
+[config file]: config.md

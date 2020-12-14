@@ -360,6 +360,7 @@ pub struct CliUnstable {
     pub namespaced_features: bool,
     pub weak_dep_features: bool,
     pub extra_link_arg: bool,
+    pub credential_process: bool,
     pub http_registry: bool,
 }
 
@@ -469,6 +470,7 @@ impl CliUnstable {
             "namespaced-features" => self.namespaced_features = parse_empty(k, v)?,
             "weak-dep-features" => self.weak_dep_features = parse_empty(k, v)?,
             "extra-link-arg" => self.extra_link_arg = parse_empty(k, v)?,
+            "credential-process" => self.credential_process = parse_empty(k, v)?,
             "http-registry" => self.http_registry = parse_empty(k, v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
