@@ -44,6 +44,46 @@ fn setup() -> RegistryServer {
 }
 
 #[cargo_test]
+fn not_on_stable() {
+    let _server = setup();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(&format!(
+            "\
+error: failed to prefetch dependencies
+
+Caused by:
+  failed to load source for dependency `bar`
+
+Caused by:
+  Unable to update registry `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  Usage of HTTP-based registries requires `-Z http-registry`
+"
+        ))
+        .run();
+}
+
+#[cargo_test]
 fn simple() {
     let server = setup();
     let url = format!("sparse+http://{}", server.addr());
