@@ -8,8 +8,8 @@ use std::thread;
 use cargo::util::paths::remove_dir_all;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, cross_compile, project};
-use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier};
+use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project};
+use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 
 #[cargo_test]
 fn custom_build_script_failed() {
@@ -4070,4 +4070,91 @@ fn dev_dep_with_links() {
         .file("bar/src/lib.rs", "")
         .build();
     p.cargo("check --tests").run()
+}
+
+#[cargo_test]
+fn rerun_if_directory() {
+    if !symlink_supported() {
+        return;
+    }
+
+    // rerun-if-changed of a directory should rerun if any file in the directory changes.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-changed=somedir");
+                }
+            "#,
+        )
+        .build();
+
+    let dirty = || {
+        p.cargo("check")
+            .with_stderr(
+                "[COMPILING] foo [..]\n\
+                 [FINISHED] [..]",
+            )
+            .run();
+    };
+
+    let fresh = || {
+        p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    };
+
+    // Start with a missing directory.
+    dirty();
+    // Because the directory doesn't exist, it will trigger a rebuild every time.
+    // https://github.com/rust-lang/cargo/issues/6003
+    dirty();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    // Empty directory.
+    fs::create_dir(p.root().join("somedir")).unwrap();
+    dirty();
+    fresh();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    // Add a file.
+    p.change_file("somedir/foo", "");
+    p.change_file("somedir/bar", "");
+    dirty();
+    fresh();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    // Add a symlink.
+    p.symlink("foo", "somedir/link");
+    dirty();
+    fresh();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    // Move the symlink.
+    fs::remove_file(p.root().join("somedir/link")).unwrap();
+    p.symlink("bar", "somedir/link");
+    dirty();
+    fresh();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    // Remove a file.
+    fs::remove_file(p.root().join("somedir/foo")).unwrap();
+    dirty();
+    fresh();
 }
