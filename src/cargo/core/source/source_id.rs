@@ -280,14 +280,11 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
-            SourceKind::Registry if self.url().scheme().starts_with("sparse+") => Ok(Box::new(
-                RegistrySource::rfc_http(self, yanked_whitelist, config),
-            )),
             SourceKind::Registry => Ok(Box::new(RegistrySource::remote(
                 self,
                 yanked_whitelist,
                 config,
-            ))),
+            )?)),
             SourceKind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
