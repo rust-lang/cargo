@@ -29,6 +29,7 @@ use std::sync::Arc;
 use crate::core::compiler::standard_lib;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::cfg;
 use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -284,7 +285,10 @@ pub fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph)?;
         return Ok(Compilation::new(&bcx)?);
     }
-
+    if options.build_config.cfg {
+        cfg::emit_serialized_rustc_cfg(&bcx.target_data, &bcx.build_config.requested_kinds)?;
+        return Ok(Compilation::new(&bcx)?);
+    }
     let _p = profile::start("compiling");
     let cx = Context::new(&bcx)?;
     cx.compile(exec)

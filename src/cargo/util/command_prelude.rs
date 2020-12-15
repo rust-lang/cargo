@@ -172,6 +172,10 @@ pub trait AppExt: Sized {
         self._arg(opt("unit-graph", "Output build graph in JSON (unstable)").hidden(true))
     }
 
+    fn arg_rustc_cfg(self) -> Self {
+        self._arg(opt("cfg", "Output the ructc configuration to STDOUT").hidden(true))
+    }
+
     fn arg_new_opts(self) -> Self {
         self._arg(
             opt(
@@ -469,6 +473,7 @@ pub trait ArgMatchesExt {
         build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
         build_config.build_plan = self._is_present("build-plan");
         build_config.unit_graph = self._is_present("unit-graph");
+        build_config.cfg = self._is_present("cfg");
         if build_config.build_plan {
             config
                 .cli_unstable()
