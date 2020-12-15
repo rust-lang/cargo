@@ -5,7 +5,7 @@ use crate::core::shell::Verbosity;
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{CargoTestError, Config, ProcessError, Test};
+use crate::util::{add_path_args, CargoTestError, Config, ProcessError, Test};
 
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
@@ -30,7 +30,7 @@ pub fn run_tests(
         return Ok(Some(CargoTestError::new(test, errors)));
     }
 
-    let (doctest, docerrors) = run_doc_tests(ws.config(), options, test_args, &compilation)?;
+    let (doctest, docerrors) = run_doc_tests(ws, options, test_args, &compilation)?;
     let test = if docerrors.is_empty() { test } else { doctest };
     errors.extend(docerrors);
     if errors.is_empty() {
@@ -131,11 +131,12 @@ fn run_unit_tests(
 }
 
 fn run_doc_tests(
-    config: &Config,
+    ws: &Workspace<'_>,
     options: &TestOptions,
     test_args: &[&str],
     compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
+    let config = ws.config();
     let mut errors = Vec::new();
     let doctest_xcompile = config.cli_unstable().doctest_xcompile;
 
@@ -161,10 +162,9 @@ fn run_doc_tests(
 
         config.shell().status("Doc-tests", unit.target.name())?;
         let mut p = compilation.rustdoc_process(unit)?;
-        p.arg("--test")
-            .arg(unit.target.src_path().path().unwrap())
-            .arg("--crate-name")
-            .arg(&unit.target.crate_name());
+        p.arg("--crate-name").arg(&unit.target.crate_name());
+        p.arg("--test");
+        add_path_args(ws, unit, &mut p);
 
         if doctest_xcompile {
             if let CompileKind::Target(target) = unit.kind {

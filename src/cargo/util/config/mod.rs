@@ -63,7 +63,7 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::Instant;
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, format_err};
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
@@ -1620,7 +1620,11 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
     ::home::cargo_home_with_cwd(cwd).ok()
 }
 
-pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+pub fn save_credentials(
+    cfg: &Config,
+    token: Option<String>,
+    registry: Option<&str>,
+) -> CargoResult<()> {
     // If 'credentials.toml' exists, we should write to that, otherwise
     // use the legacy 'credentials'. There's no need to print the warning
     // here, because it would already be printed at load time.
@@ -1637,25 +1641,6 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
         cfg.home_path.create_dir()?;
         cfg.home_path
             .open_rw(filename, cfg, "credentials' config file")?
-    };
-
-    let (key, mut value) = {
-        let key = "token".to_string();
-        let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
-        let mut map = HashMap::new();
-        map.insert(key, value);
-        let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
-
-        if let Some(registry) = registry.clone() {
-            let mut map = HashMap::new();
-            map.insert(registry, table);
-            (
-                "registries".into(),
-                CV::Table(map, Definition::Path(file.path().to_path_buf())),
-            )
-        } else {
-            ("registry".into(), table)
-        }
     };
 
     let mut contents = String::new();
@@ -1677,13 +1662,55 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
             .insert("registry".into(), map.into());
     }
 
-    if registry.is_some() {
-        if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
-            let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
-            value.merge(v, false)?;
+    if let Some(token) = token {
+        // login
+        let (key, mut value) = {
+            let key = "token".to_string();
+            let value = ConfigValue::String(token, Definition::Path(file.path().to_path_buf()));
+            let mut map = HashMap::new();
+            map.insert(key, value);
+            let table = CV::Table(map, Definition::Path(file.path().to_path_buf()));
+
+            if let Some(registry) = registry {
+                let mut map = HashMap::new();
+                map.insert(registry.to_string(), table);
+                (
+                    "registries".into(),
+                    CV::Table(map, Definition::Path(file.path().to_path_buf())),
+                )
+            } else {
+                ("registry".into(), table)
+            }
+        };
+
+        if registry.is_some() {
+            if let Some(table) = toml.as_table_mut().unwrap().remove("registries") {
+                let v = CV::from_toml(Definition::Path(file.path().to_path_buf()), table)?;
+                value.merge(v, false)?;
+            }
+        }
+        toml.as_table_mut().unwrap().insert(key, value.into_toml());
+    } else {
+        // logout
+        let table = toml.as_table_mut().unwrap();
+        if let Some(registry) = registry {
+            if let Some(registries) = table.get_mut("registries") {
+                if let Some(reg) = registries.get_mut(registry) {
+                    let rtable = reg.as_table_mut().ok_or_else(|| {
+                        format_err!("expected `[registries.{}]` to be a table", registry)
+                    })?;
+                    rtable.remove("token");
+                }
+            }
+        } else {
+            if let Some(registry) = table.get_mut("registry") {
+                let reg_table = registry
+                    .as_table_mut()
+                    .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
+                reg_table.remove("token");
+            }
         }
     }
-    toml.as_table_mut().unwrap().insert(key, value.into_toml());
 
     let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;

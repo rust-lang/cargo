@@ -1544,6 +1544,10 @@ fn substitute_macros(input: &str) -> String {
         ("[INSTALLED]", "   Installed"),
         ("[REPLACED]", "    Replaced"),
         ("[BUILDING]", "    Building"),
+        ("[LOGIN]", "       Login"),
+        ("[LOGOUT]", "      Logout"),
+        ("[YANK]", "        Yank"),
+        ("[OWNER]", "       Owner"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

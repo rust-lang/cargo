@@ -43,6 +43,14 @@ the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).</dd>
 
 
+<dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>
+<dt class="option-term" id="option-cargo-update---workspace"><a class="option-anchor" href="#option-cargo-update---workspace"></a><code>--workspace</code></dt>
+<dd class="option-desc">Attempt to update only packages defined in the workspace. Other packages
+are updated only if they don't already exist in the lockfile. This
+option is useful for updating <code>Cargo.lock</code> after you've changed version
+numbers in <code>Cargo.toml</code>.</dd>
+
+
 <dt class="option-term" id="option-cargo-update---dry-run"><a class="option-anchor" href="#option-cargo-update---dry-run"></a><code>--dry-run</code></dt>
 <dd class="option-desc">Displays what would be updated, but doesn't actually write the lockfile.</dd>
 

@@ -258,19 +258,16 @@ filesystem last-modified "mtime" timestamp to determine if the file has
 changed. It compares against an internal cached timestamp of when the build
 script last ran.
 
-If the path points to a directory, it does *not* automatically traverse the
-directory for changes. Only the mtime change of the directory itself is
-considered (which corresponds to some types of changes within the directory,
-depending on platform). To request a re-run on any changes within an entire
-directory, print a line for the directory and separate lines for everything
-inside it, recursively.
+If the path points to a directory, it will scan the entire directory for
+any modifications.
 
 If the build script inherently does not need to re-run under any circumstance,
 then emitting `cargo:rerun-if-changed=build.rs` is a simple way to prevent it
-from being re-run. Cargo automatically handles whether or not the script
-itself needs to be recompiled, and of course the script will be re-run after
-it has been recompiled. Otherwise, specifying `build.rs` is redundant and
-unnecessary.
+from being re-run (otherwise, the default if no `rerun-if` instructions are
+emitted is to scan the entire package directory for changes). Cargo
+automatically handles whether or not the script itself needs to be recompiled,
+and of course the script will be re-run after it has been recompiled.
+Otherwise, specifying `build.rs` is redundant and unnecessary.
 
 <a id="rerun-if-env-changed"></a>
 #### `cargo:rerun-if-env-changed=NAME`

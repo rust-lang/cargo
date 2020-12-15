@@ -4,10 +4,10 @@
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::Cursor;
+use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use curl::easy::{Easy, List};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
@@ -161,7 +161,7 @@ impl Registry {
         Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
-    pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<Warnings> {
+    pub fn publish(&mut self, krate: &NewCrate, mut tarball: &File) -> Result<Warnings> {
         let json = serde_json::to_string(krate)?;
         // Prepare the body. The format of the upload request is:
         //
@@ -169,15 +169,26 @@ impl Registry {
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = tarball.metadata()?;
+
+        // NOTE: This can be replaced with `stream_len` if it is ever stabilized.
+        //
+        // This checks the length using seeking instead of metadata, because
+        // on some filesystems, getting the metadata will fail because
+        // the file was renamed in ops::package.
+        let tarball_len = tarball
+            .seek(SeekFrom::End(0))
+            .with_context(|| "failed to seek tarball")?;
+        tarball
+            .seek(SeekFrom::Start(0))
+            .with_context(|| "failed to seek tarball")?;
         let header = {
             let mut w = Vec::new();
             w.extend(&(json.len() as u32).to_le_bytes());
             w.extend(json.as_bytes().iter().cloned());
-            w.extend(&(stat.len() as u32).to_le_bytes());
+            w.extend(&(tarball_len as u32).to_le_bytes());
             w
         };
-        let size = stat.len() as usize + header.len();
+        let size = tarball_len as usize + header.len();
         let mut body = Cursor::new(header).chain(tarball);
 
         let url = format!("{}/api/v1/crates/new", self.host);
