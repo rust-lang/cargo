@@ -55,6 +55,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg_unit_graph()
+        .arg_rustc_cfg()
         .after_help("Run `cargo help test` for more detailed information.\n")
 }
 
